@@ -15,10 +15,13 @@ builder.Services.AddIdentityInfrastructure(builder.Configuration);
 builder.Services.AddScoped<ProvisionTenantUseCase>();
 builder.Services.AddHostedService<DatabaseSeeder>();
 
+var publicIssuer = builder.Configuration["Identity:PublicIssuer"];
+
+var spaOrigin = builder.Configuration["Cors:SpaOrigin"] ?? "http://localhost:5173";
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("spa", policy => policy
-        .WithOrigins("http://localhost:5173")
+        .WithOrigins(spaOrigin)
         .AllowAnyHeader()
         .AllowAnyMethod());
 });
@@ -42,10 +45,20 @@ builder.Services.AddOpenIddict()
             OpenIddictConstants.Scopes.Email,
             OpenIddictConstants.Scopes.OfflineAccess,
             "tenant_id",
-            "services-api");
+            "services-api",
+            "identity-admin");
 
-        options.AddDevelopmentEncryptionCertificate()
-               .AddDevelopmentSigningCertificate();
+        if (builder.Environment.IsDevelopment())
+        {
+            // Dev-only: persisted in the user cert store across restarts.
+            // Production must configure real signing/encryption
+            // credentials (e.g. a mounted X.509 cert) - without them,
+            // OpenIddict fails startup validation, which is intentional:
+            // ephemeral/dev credentials break token validation across
+            // restarts and multi-instance deployments.
+            options.AddDevelopmentEncryptionCertificate()
+                   .AddDevelopmentSigningCertificate();
+        }
 
         // Resource servers (services-service's plain JwtBearer middleware,
         // assistant-service's PyJWT/JWKS validation) need a standard signed
@@ -61,7 +74,6 @@ builder.Services.AddOpenIddict()
         // identity-service:8080 - two different "iss" values for tokens
         // that must validate the same way everywhere. Pinning it to the
         // externally-reachable URL keeps it consistent for every caller.
-        var publicIssuer = builder.Configuration["Identity:PublicIssuer"];
         if (!string.IsNullOrEmpty(publicIssuer))
         {
             options.SetIssuer(new Uri(publicIssuer));
@@ -89,6 +101,15 @@ builder.Services.AddOpenIddict()
     });
 
 var app = builder.Build();
+
+if (string.IsNullOrEmpty(publicIssuer) && !app.Environment.IsDevelopment())
+{
+    app.Logger.LogWarning(
+        "'Identity:PublicIssuer' is not configured outside Development - " +
+        "the issuer will be inferred per-request, which breaks token " +
+        "validation for callers reaching this service via a different " +
+        "host/port than the one that issued the token.");
+}
 
 if (app.Environment.IsDevelopment())
 {

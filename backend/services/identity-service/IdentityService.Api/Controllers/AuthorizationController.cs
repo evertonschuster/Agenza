@@ -58,15 +58,7 @@ public class AuthorizationController : Controller
         var user = await _userManager.GetUserAsync(result.Principal)
             ?? throw new InvalidOperationException("The user details cannot be retrieved.");
 
-        var principal = await _signInManager.CreateUserPrincipalAsync(user);
-
-        principal.SetScopes(request.GetScopes());
-        principal.SetResources(await _scopeManager.ListResourcesAsync(principal.GetScopes()).ToListAsync());
-
-        foreach (var claim in principal.Claims)
-        {
-            claim.SetDestinations(GetDestinations(claim, principal));
-        }
+        var principal = await CreateSignedInPrincipalAsync(user, request.GetScopes());
 
         return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
@@ -94,15 +86,7 @@ public class AuthorizationController : Controller
                     }));
             }
 
-            var principal = await _signInManager.CreateUserPrincipalAsync(user);
-
-            principal.SetScopes(result.Principal!.GetScopes());
-            principal.SetResources(await _scopeManager.ListResourcesAsync(principal.GetScopes()).ToListAsync());
-
-            foreach (var claim in principal.Claims)
-            {
-                claim.SetDestinations(GetDestinations(claim, principal));
-            }
+            var principal = await CreateSignedInPrincipalAsync(user, result.Principal!.GetScopes());
 
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
@@ -133,6 +117,21 @@ public class AuthorizationController : Controller
         }
 
         throw new NotImplementedException("The specified grant type is not supported.");
+    }
+
+    private async Task<ClaimsPrincipal> CreateSignedInPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes)
+    {
+        var principal = await _signInManager.CreateUserPrincipalAsync(user);
+
+        principal.SetScopes(scopes);
+        principal.SetResources(await _scopeManager.ListResourcesAsync(principal.GetScopes()).ToListAsync());
+
+        foreach (var claim in principal.Claims)
+        {
+            claim.SetDestinations(GetDestinations(claim, principal));
+        }
+
+        return principal;
     }
 
     private static IEnumerable<string> GetDestinations(Claim claim, ClaimsPrincipal principal)

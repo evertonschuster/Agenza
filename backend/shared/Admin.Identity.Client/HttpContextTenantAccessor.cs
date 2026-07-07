@@ -27,4 +27,16 @@ public class HttpContextTenantAccessor : ITenantAccessor
             return Guid.Parse(claim.Value);
         }
     }
+
+    public bool TryGetTenantId(out Guid tenantId)
+    {
+        var claim = _httpContextAccessor.HttpContext?.User.FindFirst("tenant_id");
+        if (claim is not null && Guid.TryParse(claim.Value, out tenantId))
+        {
+            return true;
+        }
+
+        tenantId = Guid.Empty;
+        return false;
+    }
 }

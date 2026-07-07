@@ -61,6 +61,14 @@ describe('AuthenticatedHttpClient', () => {
     expect((error as ApiError).message).toBe('Widget not found')
   })
 
+  it('throws UnauthenticatedError on a 401 response', async () => {
+    server.use(http.get(`${baseUrl}/widgets/1`, () => HttpResponse.json({}, { status: 401 })))
+
+    const client = new AuthenticatedHttpClient(baseUrl, () => Promise.resolve('token-123'))
+
+    await expect(client.get('/widgets/1')).rejects.toThrow(UnauthenticatedError)
+  })
+
   it('resolves to undefined for a 204 response on delete', async () => {
     server.use(http.delete(`${baseUrl}/widgets/1`, () => new HttpResponse(null, { status: 204 })))
 

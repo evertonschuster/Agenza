@@ -53,9 +53,15 @@ export class AuthenticatedHttpClient implements HttpClient {
       init.body = JSON.stringify(body)
     }
 
-    const response = await fetch(`${this.baseUrl}${path}`, init)
+    const response = await fetch(`${this.baseUrl}${path}`, {
+      ...init,
+      signal: AbortSignal.timeout(15000),
+    })
 
     if (!response.ok) {
+      if (response.status === 401) {
+        throw new UnauthenticatedError()
+      }
       const payload = (await response.json().catch(() => null)) as ErrorPayload | null
       throw new ApiError(response.status, payload?.message ?? response.statusText, payload?.details)
     }

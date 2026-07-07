@@ -35,12 +35,33 @@ public class ProvisionTenantUseCaseTests
         }
     }
 
+    private class ThrowingUserAccountService : IUserAccountService
+    {
+        public Task<UserAccountResult> CreateOwnerAsync(
+            Guid tenantId,
+            string email,
+            string password,
+            CancellationToken cancellationToken)
+            => throw new InvalidOperationException("Simulated owner creation failure.");
+    }
+
+    // Just runs the operation directly - real rollback-on-failure is
+    // exercised against a real Postgres transaction by UnitOfWork, which
+    // fakes can't meaningfully simulate.
+    private class FakeUnitOfWork : IUnitOfWork
+    {
+        public Task ExecuteInTransactionAsync(
+            Func<CancellationToken, Task> operation,
+            CancellationToken cancellationToken)
+            => operation(cancellationToken);
+    }
+
     [Fact]
     public async Task ExecuteAsync_CreatesTenantAndOwnerUser()
     {
         var tenantRepository = new FakeTenantRepository();
         var userAccountService = new FakeUserAccountService();
-        var useCase = new ProvisionTenantUseCase(tenantRepository, userAccountService);
+        var useCase = new ProvisionTenantUseCase(tenantRepository, userAccountService, new FakeUnitOfWork());
 
         var result = await useCase.ExecuteAsync(
             new ProvisionTenantRequest("Demo Business", "owner@demo.local", "Passw0rd!"),
@@ -53,5 +74,19 @@ public class ProvisionTenantUseCaseTests
         Assert.Single(userAccountService.CreatedOwners);
         Assert.Equal(result.TenantId, userAccountService.CreatedOwners[0].TenantId);
         Assert.Equal("owner@demo.local", userAccountService.CreatedOwners[0].Email);
+    }
+
+    [Fact]
+    public async Task ExecuteAsync_PropagatesOwnerCreationFailure()
+    {
+        var tenantRepository = new FakeTenantRepository();
+        var useCase = new ProvisionTenantUseCase(
+            tenantRepository,
+            new ThrowingUserAccountService(),
+            new FakeUnitOfWork());
+
+        await Assert.ThrowsAsync<InvalidOperationException>(() => useCase.ExecuteAsync(
+            new ProvisionTenantRequest("Demo Business", "owner@demo.local", "Passw0rd!"),
+            CancellationToken.None));
     }
 }

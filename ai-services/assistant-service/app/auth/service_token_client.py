@@ -1,3 +1,4 @@
+import asyncio
 import time
 
 import httpx
@@ -15,32 +16,40 @@ class ServiceTokenClient:
         self._config = config
         self._access_token: str | None = None
         self._expires_at: float = 0.0
+        self._lock = asyncio.Lock()
 
     async def get_access_token(self) -> str:
-        now = time.monotonic()
-        if self._access_token is not None and now < self._expires_at:
+        if self._access_token is not None and time.monotonic() < self._expires_at:
             return self._access_token
 
-        if not self._config.client_secret:
-            raise RuntimeError(
-                "Missing IDENTITY_CLIENT_SECRET environment variable - required to "
-                "request M2M tokens from identity-service."
-            )
+        # Concurrent callers can all miss the cache at once; the lock
+        # collapses them into a single refresh instead of a thundering
+        # herd against identity-service's /connect/token.
+        async with self._lock:
+            now = time.monotonic()
+            if self._access_token is not None and now < self._expires_at:
+                return self._access_token
 
-        async with httpx.AsyncClient(base_url=self._config.authority) as client:
-            response = await client.post(
-                "/connect/token",
-                data={
-                    "grant_type": "client_credentials",
-                    "client_id": self._config.client_id,
-                    "client_secret": self._config.client_secret,
-                    "scope": self._config.scope,
-                },
-            )
-            response.raise_for_status()
-            payload = response.json()
+            if not self._config.client_secret:
+                raise RuntimeError(
+                    "Missing IDENTITY_CLIENT_SECRET environment variable - required to "
+                    "request M2M tokens from identity-service."
+                )
 
-        self._access_token = payload["access_token"]
-        self._expires_at = now + max(payload.get("expires_in", 300) - 30, 0)
+            async with httpx.AsyncClient(base_url=self._config.authority) as client:
+                response = await client.post(
+                    "/connect/token",
+                    data={
+                        "grant_type": "client_credentials",
+                        "client_id": self._config.client_id,
+                        "client_secret": self._config.client_secret,
+                        "scope": self._config.scope,
+                    },
+                )
+                response.raise_for_status()
+                payload = response.json()
 
-        return self._access_token
+            self._access_token = payload["access_token"]
+            self._expires_at = now + max(payload.get("expires_in", 300) - 30, 0)
+
+            return self._access_token

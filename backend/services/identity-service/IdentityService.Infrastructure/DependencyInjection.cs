@@ -45,6 +45,7 @@ public static class DependencyInjection
 
         services.AddScoped<ITenantRepository, TenantRepository>();
         services.AddScoped<IUserAccountService, UserAccountService>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         // Wires the OpenIddict Core services to the same DbContext/Guid
         // keys used above. Server/Validation (HTTP endpoints, flows,

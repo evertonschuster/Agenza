@@ -106,12 +106,12 @@ public class DatabaseSeeder : IHostedService
             }, cancellationToken);
         }
 
-        var workerSecret = _configuration["IdentityClients:AssistantServiceWorker:Secret"]
-            ?? throw new InvalidOperationException(
-                "Missing 'IdentityClients:AssistantServiceWorker:Secret' configuration.");
-
         if (await applicationManager.FindByClientIdAsync("assistant-service-worker", cancellationToken) is null)
         {
+            var workerSecret = _configuration["IdentityClients:AssistantServiceWorker:Secret"]
+                ?? throw new InvalidOperationException(
+                    "Missing 'IdentityClients:AssistantServiceWorker:Secret' configuration.");
+
             await applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
             {
                 ClientId = "assistant-service-worker",
@@ -122,6 +122,26 @@ public class DatabaseSeeder : IHostedService
                     OpenIddictConstants.Permissions.Endpoints.Token,
                     OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
                     OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
+                },
+            }, cancellationToken);
+        }
+
+        if (await applicationManager.FindByClientIdAsync("tenant-provisioning-cli", cancellationToken) is null)
+        {
+            var provisioningSecret = _configuration["IdentityClients:TenantProvisioning:Secret"]
+                ?? throw new InvalidOperationException(
+                    "Missing 'IdentityClients:TenantProvisioning:Secret' configuration.");
+
+            await applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
+            {
+                ClientId = "tenant-provisioning-cli",
+                ClientSecret = provisioningSecret,
+                DisplayName = "Tenant Provisioning (ops M2M)",
+                Permissions =
+                {
+                    OpenIddictConstants.Permissions.Endpoints.Token,
+                    OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "identity-admin",
                 },
             }, cancellationToken);
         }

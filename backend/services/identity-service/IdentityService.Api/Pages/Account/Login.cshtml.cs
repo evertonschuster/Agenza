@@ -32,7 +32,7 @@ public class LoginModel : PageModel
             Email,
             Password,
             isPersistent: true,
-            lockoutOnFailure: false);
+            lockoutOnFailure: true);
 
         if (!result.Succeeded)
         {

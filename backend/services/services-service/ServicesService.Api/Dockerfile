@@ -19,5 +19,6 @@ RUN dotnet publish "ServicesService.Api.csproj" -c Release -o /app/publish /p:Us
 
 FROM base AS final
 WORKDIR /app
+USER $APP_UID
 COPY --from=publish /app/publish .
 ENTRYPOINT ["dotnet", "ServicesService.Api.dll"]
