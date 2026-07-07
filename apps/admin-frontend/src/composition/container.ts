@@ -34,10 +34,13 @@ export function createAppContainer(): AppContainer {
   const userManager = createUserManager()
   const authRepository: AuthRepository = new OidcAuthRepository(userManager)
 
-  const httpClient: HttpClient = new AuthenticatedHttpClient(import.meta.env.VITE_API_BASE_URL, async () => {
-    const session = await authRepository.getCurrentSession()
-    return session?.accessToken ?? null
-  })
+  const httpClient: HttpClient = new AuthenticatedHttpClient(
+    import.meta.env.VITE_API_BASE_URL,
+    async () => {
+      const session = await authRepository.getCurrentSession()
+      return session?.accessToken ?? null
+    },
+  )
 
   return {
     authRepository,
