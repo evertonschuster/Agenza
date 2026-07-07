@@ -22,29 +22,20 @@ services:
     ports:
       - "5080:8080"
     environment:
-      - ConnectionStrings__Default=Host=services-db;Database=services;Username=postgres;Password=postgres
+      # Shared Postgres instance (see `postgres` service below) - each
+      # microservice gets its own schema in the same database, not a
+      # separate database. Once EF Core is wired up here, ServicesDataContext
+      # should call modelBuilder.HasDefaultSchema("services") so its tables
+      # land under that schema (see IdentityDataContext for the pattern).
+      - ConnectionStrings__Default=Host=postgres;Database=appdb;Username=postgres;Password=postgres
       - ASPNETCORE_ENVIRONMENT=Development
       - Identity__Authority=http://identity-service:8080
       - Identity__RequireHttpsMetadata=false
     depends_on:
-      services-db:
+      postgres:
         condition: service_healthy
       identity-service:
         condition: service_started
-
-  services-db:
-    image: postgres:16
-    environment:
-      - POSTGRES_DB=services
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=postgres
-    ports:
-      - "5432:5432"
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   assistant-service:
     build:
@@ -69,20 +60,28 @@ services:
     ports:
       - "5081:8080"
     environment:
-      - ConnectionStrings__Default=Host=identity-db;Database=identity;Username=postgres;Password=postgres
+      # Shared Postgres instance - identity-service's tables live under the
+      # "identity" schema (IdentityDataContext.OnModelCreating), not a
+      # separate database.
+      - ConnectionStrings__Default=Host=postgres;Database=appdb;Username=postgres;Password=postgres
       - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
-      identity-db:
+      postgres:
         condition: service_healthy
 
-  identity-db:
+  # One Postgres instance shared by every microservice. Each service owns
+  # its own schema in this database (identity-service -> "identity",
+  # services-service -> "services", etc.) instead of getting its own
+  # database - keeps local dev to a single container while still keeping
+  # services' tables logically separated.
+  postgres:
     image: postgres:16
     environment:
-      - POSTGRES_DB=identity
+      - POSTGRES_DB=appdb
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
-      - "5433:5432"
+      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s

@@ -25,7 +25,14 @@ admin/
 2. `dotnet sln backend/AdminBackend.slnx add <new project paths>`.
 3. Wire references so Domain has zero deps, Application → Domain,
    Infrastructure → Application, Api → Application + Infrastructure.
-4. Add it to `infra/docker-compose.yml` once it has a Dockerfile.
+4. Add it to `infra/docker-compose.yml` once it has a Dockerfile, pointing
+   `ConnectionStrings__Default` at the shared `postgres` service
+   (`Host=postgres;Database=appdb;...`) - don't add a new database container.
+5. If the service persists data, call `modelBuilder.HasDefaultSchema("<service-name>")`
+   in its `DbContext.OnModelCreating` (see `IdentityDataContext` for the
+   pattern). Every microservice shares one Postgres instance/database but
+   owns its own schema, so migrations never collide with another service's
+   tables.
 
 ## Adding a new AI service
 
