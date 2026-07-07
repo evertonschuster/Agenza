@@ -1,0 +1,7 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(cd \"C:\\\\Users\\\\evert\\\\Downloads\\\\admin-complete\\\\admin\" && mkdir -p apps/admin-frontend packages/shared-types/src backend/services \"ai-services/assistant-service/app\" \"ai-services/assistant-service/tests\" infra && ls)"
+    ]
+  }
+}
