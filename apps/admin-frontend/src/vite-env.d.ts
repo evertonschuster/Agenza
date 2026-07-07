@@ -14,6 +14,8 @@ interface ImportMetaEnv {
   readonly VITE_OIDC_POST_LOGOUT_REDIRECT_URI: string
   /** Space-separated OAuth scopes, e.g. "openid profile tenant_id". */
   readonly VITE_OIDC_SCOPE: string
+  /** Base URL for backend microservice REST calls, e.g. http://localhost:5080. */
+  readonly VITE_API_BASE_URL: string
 }
 
 interface ImportMeta {

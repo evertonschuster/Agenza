@@ -1,6 +1,8 @@
 import { createUserManager } from '../infrastructure/config/createUserManager'
 import { OidcAuthRepository } from '../infrastructure/auth/OidcAuthRepository'
+import { AuthenticatedHttpClient } from '../infrastructure/http/AuthenticatedHttpClient'
 import type { AuthRepository } from '../application/repositories/AuthRepository'
+import type { HttpClient } from '../application/ports/HttpClient'
 import { InitiateLogin } from '../application/use-cases/auth/InitiateLogin'
 import { HandleAuthCallback } from '../application/use-cases/auth/HandleAuthCallback'
 import { GetCurrentSession } from '../application/use-cases/auth/GetCurrentSession'
@@ -8,6 +10,7 @@ import { Logout } from '../application/use-cases/auth/Logout'
 
 export interface AppContainer {
   authRepository: AuthRepository
+  httpClient: HttpClient
   useCases: {
     initiateLogin: InitiateLogin
     handleAuthCallback: HandleAuthCallback
@@ -31,8 +34,14 @@ export function createAppContainer(): AppContainer {
   const userManager = createUserManager()
   const authRepository: AuthRepository = new OidcAuthRepository(userManager)
 
+  const httpClient: HttpClient = new AuthenticatedHttpClient(import.meta.env.VITE_API_BASE_URL, async () => {
+    const session = await authRepository.getCurrentSession()
+    return session?.accessToken ?? null
+  })
+
   return {
     authRepository,
+    httpClient,
     useCases: {
       initiateLogin: new InitiateLogin(authRepository),
       handleAuthCallback: new HandleAuthCallback(authRepository),
