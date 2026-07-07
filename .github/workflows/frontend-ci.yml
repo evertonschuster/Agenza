@@ -34,7 +34,13 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        run: npm ci
+        # Not `npm ci`: package-lock.json was generated on Windows and only
+        # pins the win32 native binding for @tailwindcss/oxide (and similar
+        # optional platform packages). `npm ci` installs strictly from the
+        # lockfile and has nothing to install for linux-x64 here, failing
+        # with "Cannot find native binding" (npm/cli#4828). `npm install`
+        # re-resolves optionalDependencies against the current platform.
+        run: npm install
 
       - name: Format check
         run: npm run format:check --workspace=apps/admin-frontend
