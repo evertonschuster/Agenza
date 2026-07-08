@@ -17,7 +17,8 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  build-and-test:
+  ai-services-build-and-test:
+    name: ai-services-build-and-test
     runs-on: ubuntu-latest
     permissions:
       contents: read
