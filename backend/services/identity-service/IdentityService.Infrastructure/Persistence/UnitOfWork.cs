@@ -24,7 +24,18 @@ public class UnitOfWork : IUnitOfWork
         }
         catch
         {
-            await transaction.RollbackAsync(cancellationToken);
+            try
+            {
+                // Best-effort: a failed rollback (e.g. connection already
+                // dropped) must not hide the original failure below, and
+                // the DB rolls back an uncommitted transaction on
+                // disconnect regardless.
+                await transaction.RollbackAsync(CancellationToken.None);
+            }
+            catch
+            {
+            }
+
             throw;
         }
     }

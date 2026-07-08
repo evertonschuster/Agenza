@@ -22,6 +22,9 @@ concurrency:
   group: frontend-ci-${{ github.ref }}
   cancel-in-progress: true
 
+permissions:
+  contents: read
+
 jobs:
   frontend-build-and-test:
     name: frontend-build-and-test

@@ -36,7 +36,10 @@ class ServiceTokenClient:
                     "request M2M tokens from identity-service."
                 )
 
-            async with httpx.AsyncClient(base_url=self._config.authority) as client:
+            async with httpx.AsyncClient(
+                base_url=self._config.authority,
+                timeout=httpx.Timeout(10.0, connect=5.0),
+            ) as client:
                 response = await client.post(
                     "/connect/token",
                     data={
@@ -49,7 +52,13 @@ class ServiceTokenClient:
                 response.raise_for_status()
                 payload = response.json()
 
-            self._access_token = payload["access_token"]
+            access_token = payload.get("access_token")
+            if not access_token:
+                raise RuntimeError(
+                    "Token endpoint returned 200 but no 'access_token' in response."
+                )
+
+            self._access_token = access_token
             self._expires_at = now + max(payload.get("expires_in", 300) - 30, 0)
 
             return self._access_token
