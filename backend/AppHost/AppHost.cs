@@ -29,12 +29,15 @@ var assistantService = builder.AddUvicornApp(
     .WithHttpEndpoint(port: 8001, env: "PORT")
     .WithReference(identityService)
     // Mirrors infra/docker-compose.yml's assistant-service env vars.
-    // IDENTITY_ISSUER needs the trailing slash to exactly match the "iss"
-    // claim OpenIddict stamps on tokens (Identity:PublicIssuer) - the
-    // Python config's own fallback (authority without a slash) doesn't
-    // match it, which fails token validation with "Invalid issuer".
-    .WithEnvironment("IDENTITY_AUTHORITY", "http://localhost:5081")
-    .WithEnvironment("IDENTITY_ISSUER", "http://localhost:5081/")
+    // Derived from identityService's own endpoint (like VITE_API_BASE_URL
+    // below) rather than hardcoded, so this doesn't silently drift if the
+    // pinned port ever changes. IDENTITY_ISSUER needs the trailing slash
+    // to exactly match the "iss" claim OpenIddict stamps on tokens
+    // (Identity:PublicIssuer) - the Python config's own fallback
+    // (authority without a slash) doesn't match it, which fails token
+    // validation with "Invalid issuer".
+    .WithEnvironment("IDENTITY_AUTHORITY", identityService.GetEndpoint("http"))
+    .WithEnvironment("IDENTITY_ISSUER", ReferenceExpression.Create($"{identityService.GetEndpoint("http")}/"))
     .WithEnvironment("IDENTITY_AUDIENCE", "services-api")
     .WithEnvironment("IDENTITY_CLIENT_ID", "assistant-service-worker")
     .WithEnvironment("IDENTITY_CLIENT_SECRET", workerSecret)
