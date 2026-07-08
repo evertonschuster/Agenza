@@ -6,6 +6,8 @@ admin/
 │   └── admin-frontend/     Vite + React 19 + TypeScript admin panel (see its own docs/)
 ├── backend/
 │   ├── AdminBackend.slnx   .NET solution (dotnet 10 uses .slnx, not .sln)
+│   ├── AppHost/            .NET Aspire orchestrator — local dev only, see below
+│   ├── ServiceDefaults/    shared OpenTelemetry/health-check/service-discovery wiring
 │   └── services/
 │       └── services-service/   reference microservice — copy this layout for new services
 ├── ai-services/
@@ -17,6 +19,29 @@ admin/
 └── docs/                   monorepo-level docs only — app/service-specific docs live
                              inside that app/service's own folder
 ```
+
+## Local development
+
+Two ways to run the full stack (frontend, both .NET services, assistant-service,
+Postgres) together locally:
+
+- **`dotnet run --project backend/AppHost`** (recommended) — .NET Aspire starts
+  every resource with one command and opens a dashboard (URL printed on
+  startup) with live logs, traces, and health across all five resources.
+  Ports are pinned to match `docker-compose`'s (5081/5080/8001/5173) since
+  identity-service's `Identity:PublicIssuer` and CORS origin are fixed to
+  those values. Requires Docker running (Postgres) and Node/Python deps
+  already installed (`npm install` at root, the assistant-service `.venv`).
+  Set the one local secret once: `dotnet user-secrets set
+  "Parameters:assistant-worker-secret" "<value>" --project backend/AppHost`.
+- **`docker-compose -f infra/docker-compose.yml up`** — fully containerized,
+  no .NET/Node/Python toolchain required on the host. Still the option to
+  reach for if you don't have the SDKs installed, or want production-like
+  container builds.
+
+Aspire is local-dev tooling only here — it doesn't change how any service is
+built, tested, or deployed; `AppHost`/`ServiceDefaults` are not referenced by
+any `*.Tests.csproj` and aren't part of the CI or Docker image build paths.
 
 ## Adding a new backend microservice
 
@@ -50,7 +75,5 @@ their own native tooling (`dotnet`, `pip`/venv).
 - Husky git hooks live under `apps/admin-frontend/.husky/` but git root is now the
   monorepo root — hooks won't fire until Husky is reconfigured from the root
   (`npx husky init` at root + a root lint-staged config that delegates per workspace).
-- `ServicesService.Api` and `assistant-service` have no Dockerfiles yet —
-  `infra/docker-compose.yml` references paths that don't exist until those are added.
 - `apps/admin-frontend/graphify-out/` is stale (generated before the restructure) —
   regenerate rather than trust it.
