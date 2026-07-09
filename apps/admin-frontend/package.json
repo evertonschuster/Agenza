@@ -14,8 +14,7 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "preview": "vite preview",
-    "prepare": "husky"
+    "preview": "vite preview"
   },
   "dependencies": {
     "oidc-client-ts": "^3.5.0",
@@ -33,15 +32,14 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.2",
+    "@vitest/coverage-v8": "^4.1.10",
     "@vitest/ui": "^4.1.9",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
     "eslint-plugin-react-refresh": "^0.5.3",
     "globals": "^17.7.0",
-    "husky": "^9.1.7",
     "jsdom": "^29.1.1",
-    "lint-staged": "^17.0.8",
     "msw": "^2.14.6",
     "prettier": "^3.9.1",
     "tailwindcss": "^4.3.2",

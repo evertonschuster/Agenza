@@ -1,0 +1,64 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'apps/admin-frontend/**'
+      - 'packages/shared-types/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/frontend-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/admin-frontend/**'
+      - 'packages/shared-types/**'
+      - 'package.json'
+      - 'package-lock.json'
+      - '.github/workflows/frontend-ci.yml'
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  frontend-build-and-test:
+    name: frontend-build-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # The lockfile is regenerated in a clean Linux container with no
+        # node_modules mounted, which makes npm record EVERY platform's
+        # optional native binding (18 variants of @tailwindcss/oxide etc.)
+        # with resolved+integrity fields - that sidesteps npm/cli#4828 and
+        # lets npm ci work on any OS. If this step ever fails with
+        # "Cannot find native binding", regenerate the lock the same way:
+        #   docker run --rm -v "$PWD:/w" -w /w node:22 sh -c \
+        #     "rm -rf node_modules apps/*/node_modules packages/*/node_modules package-lock.json \
+        #      && npm install --package-lock-only --ignore-scripts"
+        run: npm ci
+
+      - name: Format check
+        run: npm run format:check --workspace=apps/admin-frontend
+
+      - name: Lint
+        run: npm run lint --workspace=apps/admin-frontend
+
+      - name: Typecheck + build
+        run: npm run build --workspace=apps/admin-frontend
+
+      - name: Test
+        run: npm run test:coverage --workspace=apps/admin-frontend

@@ -1,0 +1,41 @@
+version: 2
+updates:
+  # JS/TS — root lockfile covers all npm workspaces (apps/*, packages/*)
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      npm-minor-and-patch:
+        update-types: [minor, patch]
+
+  # .NET — every csproj under backend/ is discovered from here
+  - package-ecosystem: nuget
+    directory: /backend
+    schedule:
+      interval: weekly
+    groups:
+      nuget-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: pip
+    directory: /ai-services/assistant-service
+    schedule:
+      interval: weekly
+    groups:
+      pip-minor-and-patch:
+        update-types: [minor, patch]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+
+  - package-ecosystem: docker
+    directories:
+      - /apps/admin-frontend
+      - /backend/services/identity-service/IdentityService.Api
+      - /backend/services/services-service/ServicesService.Api
+      - /ai-services/assistant-service
+    schedule:
+      interval: weekly

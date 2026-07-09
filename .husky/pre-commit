@@ -1,0 +1,5 @@
+# Run each workspace's lint-staged from inside that workspace so its
+# local node_modules/.bin tools (eslint, prettier) resolve - workspace
+# deps are not hoisted to the root. Add one line per workspace that has
+# a lint-staged config file.
+cd apps/admin-frontend && npx lint-staged

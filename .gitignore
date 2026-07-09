@@ -4,11 +4,16 @@ dist/
 dist-ssr/
 *.local
 npm-debug.log*
+coverage/
 
 # .NET
 bin/
 obj/
 *.user
+coverage-results/
+TestResults/
+**/coverage.json
+**/coverage.cobertura.xml
 
 # Python
 __pycache__/
@@ -16,6 +21,8 @@ __pycache__/
 .venv/
 *.egg-info/
 .pytest_cache/
+.coverage
+build/
 
 # Editors / OS
 .vs/

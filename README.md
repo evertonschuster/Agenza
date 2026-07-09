@@ -16,6 +16,10 @@ monorepo: React frontend, .NET backend microservices, Python AI services.
 See [docs/MONOREPO.md](docs/MONOREPO.md) for conventions, and each stack's own
 `CLAUDE.md`/`README.md` for stack-specific guidance.
 
+This repo is built AI-first: the docs are the spec, agents execute, CI
+verifies. **[docs/SDD-GUIDE.md](docs/SDD-GUIDE.md)** is the developer
+guide — the workflow, worked example prompts, and what stays human.
+
 ## Quickstart
 
 ```bash

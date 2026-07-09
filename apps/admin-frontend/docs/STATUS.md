@@ -19,15 +19,15 @@ what's blocked, and what order to build things in.
 
 ## Infrastructure
 
-| Piece                                              | Status | Notes                                        |
-| -------------------------------------------------- | ------ | -------------------------------------------- |
-| TypeScript strict config                           | `done` |                                              |
-| ESLint + Prettier                                  | `done` |                                              |
-| Vitest + RTL + MSW                                 | `done` |                                              |
-| Husky + lint-staged                                | `done` |                                              |
-| `HttpClient` interface + `AuthenticatedHttpClient` | `stub` | Needed before any REST feature               |
-| MSW handlers (auth)                                | `stub` | Auth uses OIDC not REST — no handlers needed |
-| MSW handlers (REST features)                       | `stub` | Add per-feature as specs arrive              |
+| Piece                                              | Status | Notes                                                          |
+| -------------------------------------------------- | ------ | -------------------------------------------------------------- |
+| TypeScript strict config                           | `done` |                                                                |
+| ESLint + Prettier                                  | `done` |                                                                |
+| Vitest + RTL + MSW                                 | `done` |                                                                |
+| Husky + lint-staged                                | `done` |                                                                |
+| `HttpClient` interface + `AuthenticatedHttpClient` | `done` | Bearer token via AuthRepository, ApiError/UnauthenticatedError |
+| MSW handlers (auth)                                | `stub` | Auth uses OIDC not REST — no handlers needed                   |
+| MSW handlers (REST features)                       | `stub` | Add per-feature as specs arrive                                |
 
 ---
 
@@ -162,13 +162,15 @@ what's blocked, and what order to build things in.
 
 ## Test counts
 
-| Session                                                  | Tests added | Total |
-| -------------------------------------------------------- | ----------- | ----- |
-| Initial setup                                            | 0           | 0     |
-| Domain (Tenant, User, Session)                           | 17          | 17    |
-| Application (4 use cases)                                | 7           | 24    |
-| Infrastructure (mapper + OidcAuthRepository)             | 13          | 37    |
-| Composition + hooks (useAsync, useAuth, useAppContainer) | 10          | 47    |
-| Presentation (ProtectedRoute, LoginPage)                 | 6           | 53    |
+| Session                                                                                    | Tests added | Total |
+| ------------------------------------------------------------------------------------------ | ----------- | ----- |
+| Initial setup                                                                              | 0           | 0     |
+| Domain (Tenant, User, Session)                                                             | 17          | 17    |
+| Application (4 use cases)                                                                  | 7           | 24    |
+| Infrastructure (mapper + OidcAuthRepository)                                               | 13          | 37    |
+| Composition + hooks (useAsync, useAuth, useAppContainer)                                   | 10          | 47    |
+| Presentation (ProtectedRoute, LoginPage)                                                   | 6           | 53    |
+| HttpClient (AuthenticatedHttpClient via MSW)                                               | 6           | 59    |
+| Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager) | 14          | 73    |
 
 Update the test count row whenever a feature vertical is completed.

@@ -6,8 +6,14 @@ services:
       - "5173:5173"
     environment:
       - VITE_API_BASE_URL=http://localhost:5080
+      - VITE_OIDC_AUTHORITY=http://localhost:5081
+      - VITE_OIDC_CLIENT_ID=admin-panel
+      - VITE_OIDC_REDIRECT_URI=http://localhost:5173/callback
+      - VITE_OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5173/login
+      - VITE_OIDC_SCOPE=openid profile tenant_id offline_access
     depends_on:
       - services-service
+      - identity-service
 
   services-service:
     build:
@@ -16,16 +22,62 @@ services:
     ports:
       - "5080:8080"
     environment:
-      - ConnectionStrings__Default=Host=services-db;Database=services;Username=postgres;Password=postgres
+      # Shared Postgres instance (see `postgres` service below) - each
+      # microservice gets its own schema in the same database, not a
+      # separate database. Once EF Core is wired up here, ServicesDataContext
+      # should call modelBuilder.HasDefaultSchema("services") so its tables
+      # land under that schema (see IdentityDataContext for the pattern).
+      - ConnectionStrings__Default=Host=postgres;Database=appdb;Username=postgres;Password=postgres
+      - ASPNETCORE_ENVIRONMENT=Development
+      - Identity__Authority=http://identity-service:8080
+      - Identity__RequireHttpsMetadata=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+      identity-service:
+        condition: service_started
+
+  assistant-service:
+    build:
+      context: ../ai-services/assistant-service
+    ports:
+      - "8001:8001"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8001
+    environment:
+      - IDENTITY_AUTHORITY=http://identity-service:8080
+      - IDENTITY_ISSUER=http://localhost:5081/
+      - IDENTITY_AUDIENCE=services-api
+      - IDENTITY_CLIENT_ID=assistant-service-worker
+      - IDENTITY_CLIENT_SECRET=dev-assistant-worker-secret-change-me
+      - IDENTITY_SCOPE=services-api
+    depends_on:
+      - identity-service
+
+  identity-service:
+    build:
+      context: ../backend
+      dockerfile: services/identity-service/IdentityService.Api/Dockerfile
+    ports:
+      - "5081:8080"
+    environment:
+      # Shared Postgres instance - identity-service's tables live under the
+      # "identity" schema (IdentityDataContext.OnModelCreating), not a
+      # separate database.
+      - ConnectionStrings__Default=Host=postgres;Database=appdb;Username=postgres;Password=postgres
       - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
-      services-db:
+      postgres:
         condition: service_healthy
 
-  services-db:
+  # One Postgres instance shared by every microservice. Each service owns
+  # its own schema in this database (identity-service -> "identity",
+  # services-service -> "services", etc.) instead of getting its own
+  # database - keeps local dev to a single container while still keeping
+  # services' tables logically separated.
+  postgres:
     image: postgres:16
     environment:
-      - POSTGRES_DB=services
+      - POSTGRES_DB=appdb
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
     ports:
@@ -35,10 +87,3 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-
-  assistant-service:
-    build:
-      context: ../ai-services/assistant-service
-    ports:
-      - "8001:8001"
-    command: uvicorn app.main:app --host 0.0.0.0 --port 8001

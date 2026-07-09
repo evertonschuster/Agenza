@@ -93,5 +93,5 @@ Copy `.env.example` to `.env.local`. Never commit `.env.local`.
 ## Current state (see docs/STATUS.md for full detail)
 
 - ✅ Tooling, Auth vertical, composition root, presentation shell
-- 🔲 `HttpClient` — needed before any REST feature, build this first
+- ✅ `HttpClient` (`AuthenticatedHttpClient`) — REST features are unblocked
 - 🔲 Services → Clients → Appointments → Inbox → Dashboard → Settings
