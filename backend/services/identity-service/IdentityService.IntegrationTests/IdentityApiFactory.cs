@@ -1,3 +1,4 @@
+using DotNet.Testcontainers.Builders;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Testcontainers.PostgreSql;
@@ -17,6 +18,7 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>, IAsyncL
 
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()
         .WithImage("postgres:16")
+        .WithWaitStrategy(Wait.ForUnixContainer().UntilCommandIsCompleted("pg_isready"))
         .Build();
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
