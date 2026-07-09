@@ -32,6 +32,13 @@ export default tseslint.config(
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': ['warn', { allowExpressions: true }],
+      // A repository port's method signature is the interface contract
+      // (e.g. every TagRepository method takes tenantContext structurally,
+      // per admin-feature-vertical skill); a specific adapter - like an
+      // HTTP one where the tenant travels in the JWT instead - may not
+      // need to read that parameter. Leading underscore marks that
+      // deliberately, distinct from a genuinely forgotten unused variable.
+      '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
     },
   },
   {

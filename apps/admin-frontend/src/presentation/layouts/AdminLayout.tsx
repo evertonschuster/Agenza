@@ -13,6 +13,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Services', to: '/services' },
   { label: 'Clients', to: '/clients' },
   { label: 'Inbox', to: '/inbox' },
+  { label: 'Tags', to: '/tags' },
   { label: 'Settings', to: '/settings' },
 ]
 
