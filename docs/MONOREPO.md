@@ -11,9 +11,8 @@ admin/
 │   ├── shared/
 │   │   └── Admin.Identity.Client/  JWT validation + ITenantAccessor for resource services
 │   └── services/
-│       ├── identity-service/   OIDC provider (OpenIddict) — the reference implementation
-│       └── services-service/   template layout — copy its structure, but mirror
-│                               identity-service's patterns for real content
+│       ├── identity-service/   OIDC provider (OpenIddict), tenants, users, M2M tokens
+│       └── services-service/   the business's offerings — Tags is the first vertical
 ├── ai-services/
 │   └── assistant-service/  placeholder Python/FastAPI AI service
 ├── packages/

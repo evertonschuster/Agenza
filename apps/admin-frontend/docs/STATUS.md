@@ -63,18 +63,17 @@ what's blocked, and what order to build things in.
 
 ### Tags
 
-| Piece                                    | Status | Notes                                   |
-| ---------------------------------------- | ------ | --------------------------------------- |
-| `Tag` entity                             | `stub` | Spec confirmed in DOMAIN.md + API.md    |
-| `TagRepository` interface                | `stub` |                                         |
-| Use cases (List, Create, Update, Delete) | `stub` |                                         |
-| `ApiTagRepository` + `tagMapper`         | `stub` |                                         |
-| `useTags` hook                           | `stub` |                                         |
-| `TagsPage` + nav entry                   | `stub` |                                         |
-| Backend (services-service `/api/tags`)   | `stub` | First real vertical in services-service |
+| Piece                                    | Status | Notes                                        |
+| ---------------------------------------- | ------ | -------------------------------------------- |
+| `Tag` entity                             | `done` |                                              |
+| `TagRepository` interface                | `done` |                                              |
+| Use cases (List, Create, Update, Delete) | `done` |                                              |
+| `ApiTagRepository` + `tagMapper`         | `done` |                                              |
+| `useTags` hook                           | `done` |                                              |
+| `TagsPage` + nav entry                   | `done` | Inline create/edit form, delete with confirm |
+| Backend (services-service `/api/tags`)   | `done` | First real vertical in services-service      |
 
-**Blocked on:** nothing — API spec confirmed (API.md), `HttpClient` done.
-**Dependency:** none. First REST vertical end-to-end.
+**Dependency:** none. First REST vertical built end-to-end (backend + frontend).
 
 ---
 

@@ -22,10 +22,11 @@ context (e.g. notifications/email, billing).
 ## Steps
 
 1. **Copy the five-project layout** of `services/services-service/`
-   (Domain, Application, Infrastructure, Api, Tests) with your service's
-   name. For the *content* of each project, mirror `identity-service` —
-   it is the real reference; services-service is still template
-   scaffolding.
+   (Domain, Application, Infrastructure, Api, Tests, IntegrationTests)
+   with your service's name. Both `services-service` and
+   `identity-service` are real, fully-built services — mirror either's
+   patterns for the *content* of each project (rich domain entities,
+   use cases, EF Core repositories, thin controllers).
 
 2. **Add to the solution**:
    `dotnet sln backend/AdminBackend.slnx add <each new csproj>`

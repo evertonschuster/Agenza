@@ -17,11 +17,10 @@ services/<service-name>/
 └── <Service>.Tests/           xUnit — references Application + Domain
 ```
 
-`identity-service` is the **reference implementation** (real domain,
-use cases, EF Core persistence, OpenIddict, tests) — mirror its patterns.
-`services-service` still has the template *layout* to copy for a new
-service's project structure. Conventions and how-to guides live in
-[CLAUDE.md](CLAUDE.md) and [.skills/](.skills/).
+Both `identity-service` and `services-service` are real, fully-built
+services — mirror either's patterns for a new service's project
+structure. Conventions and how-to guides live in [CLAUDE.md](CLAUDE.md)
+and [.skills/](.skills/).
 
 There is also `shared/Admin.Identity.Client` — the JWT-validation +
 `ITenantAccessor` library every resource service references instead of
@@ -43,6 +42,6 @@ Api/Infrastructure and are exempt from the gate — see `../docs/QUALITY.md`.
 
 ## Known gaps
 
-- `ServicesService` is still webapi-template scaffolding (WeatherForecast
-  controller, empty Domain/Application/Infrastructure) — it awaits the
-  Services feature vertical.
+- `ServicesService` has one real vertical (Tags, `/api/tags`) — the
+  Services/Appointments/Clients verticals mentioned in
+  `apps/admin-frontend/docs/STATUS.md` are still unbuilt.

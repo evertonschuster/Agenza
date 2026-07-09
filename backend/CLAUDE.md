@@ -5,9 +5,10 @@
 A small set of **context-aggregated services** (see docs/adr/0001): each
 service owns one explicit business context end-to-end. Not nano-services —
 a service may aggregate several related capabilities (identity-service
-owns authentication AND tenant provisioning). `identity-service` is the
-**live reference implementation** — copy its patterns, not the
-`services-service` template (which is still webapi-template scaffolding).
+owns authentication AND tenant provisioning; services-service owns the
+business's offerings, starting with Tags). Both `identity-service` and
+`services-service` are real, fully-built services — copy either's
+patterns for a new service.
 
 ## Read these before doing any work
 

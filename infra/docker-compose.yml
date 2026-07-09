@@ -10,7 +10,7 @@ services:
       - VITE_OIDC_CLIENT_ID=admin-panel
       - VITE_OIDC_REDIRECT_URI=http://localhost:5173/callback
       - VITE_OIDC_POST_LOGOUT_REDIRECT_URI=http://localhost:5173/login
-      - VITE_OIDC_SCOPE=openid profile tenant_id offline_access
+      - VITE_OIDC_SCOPE=openid profile tenant_id services-api offline_access
     depends_on:
       - services-service
       - identity-service

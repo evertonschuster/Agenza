@@ -2,10 +2,12 @@ import type { HttpClient } from '../../application/ports/HttpClient'
 import { ApiError } from './ApiError'
 import { UnauthenticatedError } from './UnauthenticatedError'
 
-interface ErrorPayload {
-  error?: string
-  message?: string
-  details?: unknown
+/** RFC 7807 Problem Details - the confirmed error shape (docs/API.md). */
+interface ProblemDetails {
+  type?: string
+  title?: string
+  status?: number
+  detail?: string
 }
 
 /**
@@ -62,8 +64,9 @@ export class AuthenticatedHttpClient implements HttpClient {
       if (response.status === 401) {
         throw new UnauthenticatedError()
       }
-      const payload = (await response.json().catch(() => null)) as ErrorPayload | null
-      throw new ApiError(response.status, payload?.message ?? response.statusText, payload?.details)
+      const payload = (await response.json().catch(() => null)) as ProblemDetails | null
+      const message = payload?.title ?? payload?.detail ?? response.statusText
+      throw new ApiError(response.status, message, payload ?? undefined)
     }
 
     if (response.status === 204) {
