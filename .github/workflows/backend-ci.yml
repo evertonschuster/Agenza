@@ -37,11 +37,11 @@ jobs:
       - name: Build
         run: dotnet build backend/AdminBackend.slnx -c Release --no-restore
 
-      - name: Test with coverage gate (80% line coverage)
-        # Scope note: coverlet instruments the assemblies each *.Tests
-        # project references - Domain + Application per service. Api and
-        # Infrastructure are NOT measured by this gate; they are covered
-        # by integration tests once those exist (see docs/QUALITY.md).
-        run: >
-          dotnet test backend/AdminBackend.slnx -c Release --no-build --logger trx
-          -p:CollectCoverage=true -p:Threshold=80 -p:ThresholdType=line -p:ThresholdStat=total
+      - name: Test (unit + integration)
+        # The 80% line-coverage gate for *.Tests projects is configured in
+        # backend/Directory.Build.props (Domain + Application scope).
+        # *.IntegrationTests projects run WebApplicationFactory +
+        # Testcontainers suites against real Postgres (Docker is available
+        # on ubuntu-latest runners) and are exempt from the gate - see
+        # docs/QUALITY.md.
+        run: dotnet test backend/AdminBackend.slnx -c Release --no-build --logger trx

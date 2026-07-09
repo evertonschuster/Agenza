@@ -31,18 +31,18 @@ hand-rolling token handling.
 
 ```bash
 dotnet build AdminBackend.slnx
-dotnet test AdminBackend.slnx -p:CollectCoverage=true -p:Threshold=80 -p:ThresholdType=line -p:ThresholdStat=total
+dotnet test AdminBackend.slnx    # unit + integration; integration needs Docker running
 dotnet run --project services/services-service/ServicesService.Api
 ```
 
-The coverage flags match CI (`backend-ci.yml`) — the gate measures
-Domain + Application per service (see `../docs/QUALITY.md`).
+The 80% line-coverage gate for `*.Tests` projects (Domain + Application
+scope) is configured in `Directory.Build.props`, so local `dotnet test`
+enforces exactly what CI enforces. `*.IntegrationTests` projects
+(`WebApplicationFactory` + Testcontainers, real Postgres) cover
+Api/Infrastructure and are exempt from the gate — see `../docs/QUALITY.md`.
 
 ## Known gaps
 
 - `ServicesService` is still webapi-template scaffolding (WeatherForecast
   controller, empty Domain/Application/Infrastructure) — it awaits the
   Services feature vertical.
-- No integration tests yet — Api/Infrastructure layers are outside the
-  coverage gate until `WebApplicationFactory` + Testcontainers suites are
-  added.

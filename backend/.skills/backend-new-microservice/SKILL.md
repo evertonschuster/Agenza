@@ -35,8 +35,13 @@ context (e.g. notifications/email, billing).
    `shared/Admin.Identity.Client` + `ServiceDefaults`; Tests →
    Application + Domain, plus `coverlet.msbuild`, `xunit`,
    `Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio` — copy the
-   ItemGroup from an existing Tests csproj so the CI coverage gate
-   picks the project up).
+   ItemGroup from an existing Tests csproj; the 80% coverage gate from
+   `backend/Directory.Build.props` applies to any `*.Tests` project
+   automatically). Once the service has real endpoints, add a
+   `<Service>.IntegrationTests` project too (copy
+   `IdentityService.IntegrationTests`: Mvc.Testing +
+   Testcontainers.PostgreSql, `public partial class Program;` in the
+   Api's Program.cs).
 
 4. **Auth**: in `Program.cs`, call
    `AddIdentityServiceAuthentication(builder.Configuration, "<audience>")`

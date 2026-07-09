@@ -130,3 +130,7 @@ app.MapRazorPages();
 app.MapDefaultEndpoints();
 
 app.Run();
+
+// Exposes the implicit Program class of this top-level-statements file to
+// WebApplicationFactory<Program> in IdentityService.IntegrationTests.
+public partial class Program;

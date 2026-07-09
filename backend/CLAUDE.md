@@ -62,16 +62,21 @@ Tests           → Application + Domain (unit); Api (integration, when added)
 
 ### Tests
 
-- xUnit; unit tests use hand-written fakes for Abstractions interfaces
-  (see `ProvisionTenantUseCaseTests`) — no mocking library.
-- CI gates 80% line coverage over Domain + Application per service.
+- xUnit; unit tests (`<Service>.Tests`) use hand-written fakes for
+  Abstractions interfaces (see `ProvisionTenantUseCaseTests`) — no
+  mocking library. The 80% line-coverage gate over Domain + Application
+  is configured in `Directory.Build.props` and applies automatically.
 - Api/Infrastructure are covered by integration tests
-  (`WebApplicationFactory` + Testcontainers) — add them as endpoints
-  become real.
+  (`<Service>.IntegrationTests`): `WebApplicationFactory` +
+  Testcontainers against real Postgres — see
+  `identity-service/IdentityService.IntegrationTests` for the pattern.
+  Requires Docker running. Exempt from the line-coverage gate.
+- New endpoint = new integration test exercising auth (401/403) and the
+  happy path.
 
 ## Both must pass before every commit
 
 ```bash
 dotnet build backend/AdminBackend.slnx
-dotnet test backend/AdminBackend.slnx -p:CollectCoverage=true -p:Threshold=80 -p:ThresholdType=line -p:ThresholdStat=total
+dotnet test backend/AdminBackend.slnx   # coverage gate applied via Directory.Build.props
 ```

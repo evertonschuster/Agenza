@@ -78,11 +78,19 @@ UseCases/CancelAppointment/
 - `[Authorize]` by default; scope checks (`User.HasScope(...)`) for
   M2M-only endpoints (see `TenantsController`).
 
+### 7. Integration test for the new endpoint
+
+- In the service's `<Service>.IntegrationTests` project (pattern:
+  `IdentityService.IntegrationTests` — WebApplicationFactory +
+  Testcontainers Postgres, shared via `IClassFixture`).
+- Minimum: unauthenticated request → 401, wrong scope/tenant → 403,
+  happy path → expected status + persisted effect.
+
 ## Definition of done
 
 ```bash
 dotnet build backend/AdminBackend.slnx
-dotnet test backend/AdminBackend.slnx -p:CollectCoverage=true -p:Threshold=80 -p:ThresholdType=line -p:ThresholdStat=total
+dotnet test backend/AdminBackend.slnx   # coverage gate via Directory.Build.props; integration needs Docker
 ```
 
 Both green, coverage gate passing, no new NU1903 (vulnerable package)

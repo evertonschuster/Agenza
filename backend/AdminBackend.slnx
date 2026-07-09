@@ -5,6 +5,7 @@
     <Project Path="services/identity-service/IdentityService.Application/IdentityService.Application.csproj" />
     <Project Path="services/identity-service/IdentityService.Domain/IdentityService.Domain.csproj" />
     <Project Path="services/identity-service/IdentityService.Infrastructure/IdentityService.Infrastructure.csproj" />
+    <Project Path="services/identity-service/IdentityService.IntegrationTests/IdentityService.IntegrationTests.csproj" />
     <Project Path="services/identity-service/IdentityService.Tests/IdentityService.Tests.csproj" />
   </Folder>
   <Folder Name="/services/services-service/">

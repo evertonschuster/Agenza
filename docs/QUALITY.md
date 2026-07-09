@@ -23,12 +23,14 @@ NuGet, pip, Docker base images, and the workflows' actions.
   declarative wiring (`main.tsx`, `App.tsx`, the route table) and the
   stub pages listed explicitly in the config — remove a stub from that
   list when its feature vertical is implemented.
-- **Backend**: coverlet instruments the assemblies referenced by each
-  `*.Tests` project — **Domain + Application only**. `Api` and
-  `Infrastructure` are invisible to the gate. That is a deliberate v1
-  trade-off: business logic lives in the measured layers. The gap is
-  integration tests (`WebApplicationFactory` + Testcontainers) covering
-  Api/Infrastructure — add them per service as endpoints become real.
+- **Backend**: two test tiers, configured in `backend/Directory.Build.props`.
+  `*.Tests` (unit): coverlet instruments the assemblies each project
+  references — **Domain + Application** — gated at 80% line coverage.
+  `*.IntegrationTests`: `WebApplicationFactory` + Testcontainers suites
+  that boot the real host against real Postgres and exercise
+  Api/Infrastructure end-to-end (auth challenges, token flows, EF
+  persistence); exempt from the line gate. Both tiers run in the same
+  `dotnet test` locally and in CI (Docker required for integration).
 - **AI services**: `--cov=app` in `pyproject.toml` measures the whole
   package, gate at 80% (`--cov-fail-under=80`).
 
