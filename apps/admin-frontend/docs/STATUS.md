@@ -61,6 +61,23 @@ what's blocked, and what order to build things in.
 
 ## Feature verticals
 
+### Tags
+
+| Piece                                    | Status | Notes                                   |
+| ---------------------------------------- | ------ | --------------------------------------- |
+| `Tag` entity                             | `stub` | Spec confirmed in DOMAIN.md + API.md    |
+| `TagRepository` interface                | `stub` |                                         |
+| Use cases (List, Create, Update, Delete) | `stub` |                                         |
+| `ApiTagRepository` + `tagMapper`         | `stub` |                                         |
+| `useTags` hook                           | `stub` |                                         |
+| `TagsPage` + nav entry                   | `stub` |                                         |
+| Backend (services-service `/api/tags`)   | `stub` | First real vertical in services-service |
+
+**Blocked on:** nothing — API spec confirmed (API.md), `HttpClient` done.
+**Dependency:** none. First REST vertical end-to-end.
+
+---
+
 ### Services
 
 | Piece                                    | Status | Notes                        |

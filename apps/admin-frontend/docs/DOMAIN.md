@@ -107,6 +107,26 @@ Client history = their list of Appointments under this Business.
 
 ---
 
+## Tag
+
+A tenant-scoped label the business defines to organize its records —
+"VIP", "New client", "Allergic to X". In v1 the Tags vertical manages
+the tag _catalog_ only; attaching tags to Clients/Conversations ships
+with those verticals.
+
+Key fields:
+
+- `id`
+- `name` — 1–40 chars, trimmed, unique per Business (case-insensitive)
+- `color` — one hex value from the fixed 8-color palette (see API.md);
+  free-form colors are not allowed
+- `description` — optional, max 200 chars, guidance on when to use the tag
+
+Tags are **tenant-scoped**: two businesses can both have a "VIP" tag;
+they are unrelated records.
+
+---
+
 ## Conversation
 
 An interaction between a client and the AI receptionist (or a staff

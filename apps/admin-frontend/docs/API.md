@@ -57,13 +57,15 @@ This means:
 
 ## Error shape
 
-**To be confirmed when the backend is built.** Placeholder assumption:
+**Confirmed** (services-service, ASP.NET Core): errors are RFC 7807
+Problem Details:
 
 ```json
 {
-  "error": "string — machine-readable code",
-  "message": "string — human-readable description",
-  "details": {}
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "Tag name is already in use.",
+  "status": 409,
+  "detail": "A tag named 'VIP' already exists."
 }
 ```
 
@@ -74,12 +76,11 @@ HTTP status codes:
 - `403` — forbidden (authenticated but not allowed)
 - `404` — resource not found
 - `409` — conflict (e.g. duplicate)
-- `422` — unprocessable entity (business rule violation)
 - `500` — server error
 
-The `ApiError` class in `AuthenticatedHttpClient` should carry at least
-`status: number` and `message: string`. Update this doc with the real
-shape once the backend is live.
+The `ApiError` class in `AuthenticatedHttpClient` carries
+`status: number` and `message: string` — populate `message` from
+`title` (fall back to `detail`, then to the raw body).
 
 ---
 
@@ -96,6 +97,47 @@ abstraction before seeing the actual shape.
 ---
 
 ## Resource endpoints (fill in as each vertical is built)
+
+### Tags
+
+Served by **services-service** (`VITE_API_BASE_URL`). Tenant scope comes
+from the JWT's `tenant_id` claim — never sent explicitly.
+
+| Method   | Path             | Success                                     |
+| -------- | ---------------- | ------------------------------------------- |
+| `GET`    | `/api/tags`      | `200` — `TagDto[]`, ordered by name (asc)   |
+| `POST`   | `/api/tags`      | `201` — created `TagDto`, `Location` header |
+| `PUT`    | `/api/tags/{id}` | `200` — updated `TagDto`                    |
+| `DELETE` | `/api/tags/{id}` | `204` — no body                             |
+
+`TagDto`:
+
+```json
+{
+  "id": "0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e",
+  "name": "VIP",
+  "color": "#0d9488",
+  "description": "High-value returning client"
+}
+```
+
+`description` is `null` when unset. Request body for `POST`/`PUT` is the
+same shape minus `id` (`description` optional).
+
+Validation rules (server-enforced, mirror them client-side):
+
+- `name`: required, trimmed, 1–40 chars, **unique per tenant**
+  (case-insensitive) → violations: `400` (shape) / `409` (duplicate)
+- `color`: required, must be one of the fixed palette below → `400`
+- `description`: optional, trimmed, max 200 chars → `400`
+- Unknown `{id}` within the tenant → `404`
+
+Fixed color palette (the only accepted `color` values):
+
+```
+#0d9488 (teal)   #0ea5e9 (sky)    #8b5cf6 (violet) #ec4899 (pink)
+#ef4444 (red)    #f59e0b (amber)  #22c55e (green)  #64748b (slate)
+```
 
 ### Services
 
