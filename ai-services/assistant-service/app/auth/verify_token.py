@@ -1,3 +1,4 @@
+from functools import lru_cache
 from typing import Annotated, Any
 
 import jwt
@@ -37,10 +38,16 @@ class TokenValidator:
             ) from error
 
 
-_validator = TokenValidator(load_identity_config())
+@lru_cache(maxsize=1)
+def get_token_validator() -> TokenValidator:
+    """Lazy singleton: the environment is read on first request instead of
+    at import time, so importing this module (tests, tooling) never
+    requires identity configuration, and tests can call cache_clear() to
+    re-read a patched environment."""
+    return TokenValidator(load_identity_config())
 
 
 def require_valid_token(
     credentials: Annotated[HTTPAuthorizationCredentials, Depends(_bearer_scheme)],
 ) -> dict[str, Any]:
-    return _validator.validate(credentials.credentials)
+    return get_token_validator().validate(credentials.credentials)
