@@ -9,6 +9,7 @@ import { ServicesPage } from '../pages/ServicesPage/ServicesPage'
 import { ClientsPage } from '../pages/ClientsPage/ClientsPage'
 import { InboxPage } from '../pages/InboxPage/InboxPage'
 import { SettingsPage } from '../pages/SettingsPage/SettingsPage'
+import { TagsPage } from '../pages/TagsPage/TagsPage'
 
 export const router = createBrowserRouter([
   {
@@ -33,6 +34,7 @@ export const router = createBrowserRouter([
           { path: 'services', element: <ServicesPage /> },
           { path: 'clients', element: <ClientsPage /> },
           { path: 'inbox', element: <InboxPage /> },
+          { path: 'tags', element: <TagsPage /> },
           { path: 'settings', element: <SettingsPage /> },
         ],
       },

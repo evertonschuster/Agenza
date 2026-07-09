@@ -1,0 +1,22 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation" Version="12.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Both consumers (identity-service, services-service) are ASP.NET
+         Core Web APIs, so ResultExtensions.cs (Result -> IActionResult)
+         living here - instead of duplicated per-service - costs nothing
+         in practice. Also brings DI abstractions (IServiceCollection etc)
+         transitively, so no separate package reference is needed for those. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+</Project>

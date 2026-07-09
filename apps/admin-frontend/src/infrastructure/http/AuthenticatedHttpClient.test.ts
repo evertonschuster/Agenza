@@ -45,10 +45,13 @@ describe('AuthenticatedHttpClient', () => {
     await expect(client.get('/widgets/1')).rejects.toThrow(UnauthenticatedError)
   })
 
-  it('throws ApiError with the status and message on a non-2xx response', async () => {
+  it('throws ApiError with the status and title on a non-2xx Problem Details response', async () => {
     server.use(
       http.get(`${baseUrl}/widgets/missing`, () =>
-        HttpResponse.json({ error: 'not_found', message: 'Widget not found' }, { status: 404 }),
+        HttpResponse.json(
+          { title: 'Widget not found', status: 404, detail: 'No widget with that id.' },
+          { status: 404 },
+        ),
       ),
     )
 
@@ -59,6 +62,27 @@ describe('AuthenticatedHttpClient', () => {
     expect(error).toBeInstanceOf(ApiError)
     expect((error as ApiError).status).toBe(404)
     expect((error as ApiError).message).toBe('Widget not found')
+  })
+
+  it('falls back to detail, then statusText, when title is absent', async () => {
+    server.use(
+      http.get(`${baseUrl}/widgets/detail-only`, () =>
+        HttpResponse.json({ detail: 'Only a detail here.' }, { status: 400 }),
+      ),
+      http.get(`${baseUrl}/widgets/empty-body`, () => new HttpResponse(null, { status: 500 })),
+    )
+
+    const client = new AuthenticatedHttpClient(baseUrl, () => Promise.resolve('token-123'))
+
+    const detailOnlyError = await client
+      .get('/widgets/detail-only')
+      .catch((thrown: unknown) => thrown)
+    expect((detailOnlyError as ApiError).message).toBe('Only a detail here.')
+
+    const emptyBodyError = await client
+      .get('/widgets/empty-body')
+      .catch((thrown: unknown) => thrown)
+    expect((emptyBodyError as ApiError).message).toBe('Internal Server Error')
   })
 
   it('throws UnauthenticatedError on a 401 response', async () => {

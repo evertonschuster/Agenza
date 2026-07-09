@@ -61,6 +61,22 @@ what's blocked, and what order to build things in.
 
 ## Feature verticals
 
+### Tags
+
+| Piece                                    | Status | Notes                                        |
+| ---------------------------------------- | ------ | -------------------------------------------- |
+| `Tag` entity                             | `done` |                                              |
+| `TagRepository` interface                | `done` |                                              |
+| Use cases (List, Create, Update, Delete) | `done` |                                              |
+| `ApiTagRepository` + `tagMapper`         | `done` |                                              |
+| `useTags` hook                           | `done` |                                              |
+| `TagsPage` + nav entry                   | `done` | Inline create/edit form, delete with confirm |
+| Backend (services-service `/api/tags`)   | `done` | First real vertical in services-service      |
+
+**Dependency:** none. First REST vertical built end-to-end (backend + frontend).
+
+---
+
 ### Services
 
 | Piece                                    | Status | Notes                        |

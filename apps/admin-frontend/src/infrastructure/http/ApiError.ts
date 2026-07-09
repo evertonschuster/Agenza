@@ -1,7 +1,8 @@
 /**
- * Thrown by AuthenticatedHttpClient for any non-2xx response. Shape
- * matches the placeholder error contract in docs/API.md - update both
- * once the backend's real error shape is confirmed.
+ * Thrown by AuthenticatedHttpClient for any non-2xx response. `message`
+ * is populated from the backend's RFC 7807 Problem Details body (`title`,
+ * falling back to `detail` - see docs/API.md); `details` carries the raw
+ * parsed body for callers that need more than the message.
  */
 export class ApiError extends Error {
   readonly status: number

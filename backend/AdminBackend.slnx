@@ -13,10 +13,13 @@
     <Project Path="services/services-service/ServicesService.Application/ServicesService.Application.csproj" />
     <Project Path="services/services-service/ServicesService.Domain/ServicesService.Domain.csproj" />
     <Project Path="services/services-service/ServicesService.Infrastructure/ServicesService.Infrastructure.csproj" />
+    <Project Path="services/services-service/ServicesService.IntegrationTests/ServicesService.IntegrationTests.csproj" />
     <Project Path="services/services-service/ServicesService.Tests/ServicesService.Tests.csproj" />
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/Admin.Identity.Client/Admin.Identity.Client.csproj" />
+    <Project Path="shared/Admin.SharedKernel.Tests/Admin.SharedKernel.Tests.csproj" />
+    <Project Path="shared/Admin.SharedKernel/Admin.SharedKernel.csproj" />
   </Folder>
   <Project Path="AppHost/AppHost.csproj" />
   <Project Path="ServiceDefaults/ServiceDefaults.csproj" />

@@ -14,6 +14,9 @@ unlocks the open-source tier of several commercial tools.
 | ------------------- | -------------------------------------- | ----------------------------- |
 | Coverage gates ≥80% | coverlet (.NET), Vitest v8 (TS), pytest-cov (Py) | OSS               |
 | Lint/format         | ESLint+Prettier (TS), Ruff (Py)        | OSS                           |
+| .NET test assertions | AwesomeAssertions                      | OSS (Apache 2.0, permanent - see docs/adr/0005 on why not FluentAssertions v8+) |
+| .NET validation     | FluentValidation                       | OSS (Apache 2.0)              |
+| .NET API versioning | Asp.Versioning.Mvc                     | OSS (MIT, .NET Foundation)    |
 | Security SAST       | CodeQL                                 | Free for public repos         |
 | Code quality/smells | SonarQube Cloud (3 monorepo projects)  | Free for public repos         |
 | AI code review      | CodeRabbit                             | Pro free for public repos     |

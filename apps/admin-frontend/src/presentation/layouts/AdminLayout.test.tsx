@@ -49,7 +49,15 @@ describe('AdminLayout', () => {
   it('renders every navigation item and the child route content', () => {
     renderLayout(buildContainer(buildTenantContext()))
 
-    for (const label of ['Dashboard', 'Appointments', 'Services', 'Clients', 'Inbox', 'Settings']) {
+    for (const label of [
+      'Dashboard',
+      'Appointments',
+      'Services',
+      'Clients',
+      'Inbox',
+      'Tags',
+      'Settings',
+    ]) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
     expect(screen.getByText('Dashboard content')).toBeInTheDocument()
