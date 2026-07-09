@@ -16,18 +16,19 @@ public class TagTests
 
         var tag = new Tag(id, tenantId, "  VIP  ", Teal, "  High-value client  ");
 
-        Assert.Equal(id, tag.Id);
-        Assert.Equal(tenantId, tag.TenantId);
-        Assert.Equal("VIP", tag.Name);
-        Assert.Equal("#0d9488", tag.Color.Value);
-        Assert.Equal("High-value client", tag.Description);
+        tag.Id.Should().Be(id);
+        tag.TenantId.Should().Be(tenantId);
+        tag.Name.Should().Be("VIP");
+        tag.Color.Value.Should().Be("#0d9488");
+        tag.Description.Should().Be("High-value client");
     }
 
     [Fact]
     public void Constructor_WithEmptyTenant_Throws()
     {
-        Assert.Throws<InvalidTagException>(
-            () => new Tag(Guid.NewGuid(), Guid.Empty, "VIP", Teal, null));
+        var act = () => new Tag(Guid.NewGuid(), Guid.Empty, "VIP", Teal, null);
+
+        act.Should().Throw<InvalidTagException>();
     }
 
     [Theory]
@@ -35,8 +36,9 @@ public class TagTests
     [InlineData("   ")]
     public void Constructor_WithMissingName_Throws(string name)
     {
-        Assert.Throws<InvalidTagException>(
-            () => new Tag(Guid.NewGuid(), Guid.NewGuid(), name, Teal, null));
+        var act = () => new Tag(Guid.NewGuid(), Guid.NewGuid(), name, Teal, null);
+
+        act.Should().Throw<InvalidTagException>();
     }
 
     [Fact]
@@ -44,8 +46,9 @@ public class TagTests
     {
         var name = new string('x', Tag.NameMaxLength + 1);
 
-        Assert.Throws<InvalidTagException>(
-            () => new Tag(Guid.NewGuid(), Guid.NewGuid(), name, Teal, null));
+        var act = () => new Tag(Guid.NewGuid(), Guid.NewGuid(), name, Teal, null);
+
+        act.Should().Throw<InvalidTagException>();
     }
 
     [Theory]
@@ -56,7 +59,7 @@ public class TagTests
     {
         var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, description);
 
-        Assert.Null(tag.Description);
+        tag.Description.Should().BeNull();
     }
 
     [Fact]
@@ -64,8 +67,9 @@ public class TagTests
     {
         var description = new string('x', Tag.DescriptionMaxLength + 1);
 
-        Assert.Throws<InvalidTagException>(
-            () => new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, description));
+        var act = () => new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, description);
+
+        act.Should().Throw<InvalidTagException>();
     }
 
     [Fact]
@@ -75,9 +79,9 @@ public class TagTests
 
         tag.Update("  Returning  ", TagColor.From("#ef4444"), null);
 
-        Assert.Equal("Returning", tag.Name);
-        Assert.Equal("#ef4444", tag.Color.Value);
-        Assert.Null(tag.Description);
+        tag.Name.Should().Be("Returning");
+        tag.Color.Value.Should().Be("#ef4444");
+        tag.Description.Should().BeNull();
     }
 
     [Fact]
@@ -85,8 +89,10 @@ public class TagTests
     {
         var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null);
 
-        Assert.Throws<InvalidTagException>(() => tag.Update("", Teal, null));
-        Assert.Equal("VIP", tag.Name);
+        var act = () => tag.Update("", Teal, null);
+
+        act.Should().Throw<InvalidTagException>();
+        tag.Name.Should().Be("VIP");
     }
 }
 
@@ -97,7 +103,7 @@ public class TagColorTests
     {
         var color = TagColor.From("  #0D9488  ");
 
-        Assert.Equal("#0d9488", color.Value);
+        color.Value.Should().Be("#0d9488");
     }
 
     [Theory]
@@ -106,13 +112,15 @@ public class TagColorTests
     [InlineData("")]
     public void From_RejectsValuesOutsideThePalette(string value)
     {
-        Assert.Throws<InvalidTagException>(() => TagColor.From(value));
+        var act = () => TagColor.From(value);
+
+        act.Should().Throw<InvalidTagException>();
     }
 
     [Fact]
     public void Palette_HasEightDistinctColors()
     {
-        Assert.Equal(8, TagColor.Palette.Count);
-        Assert.Equal(8, TagColor.Palette.Distinct().Count());
+        TagColor.Palette.Should().HaveCount(8);
+        TagColor.Palette.Distinct().Should().HaveCount(8);
     }
 }

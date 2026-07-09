@@ -2,6 +2,11 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ServicesService.Domain\ServicesService.Domain.csproj" />
+    <ProjectReference Include="..\..\..\shared\Admin.SharedKernel\Admin.SharedKernel.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
   </ItemGroup>
 
   <PropertyGroup>

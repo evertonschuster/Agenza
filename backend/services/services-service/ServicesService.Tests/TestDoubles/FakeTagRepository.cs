@@ -4,14 +4,15 @@ using ServicesService.Domain.Entities;
 namespace ServicesService.Tests.TestDoubles;
 
 /// <summary>
-/// Hand-written in-memory ITagRepository for use case tests (repo
+/// Hand-written in-memory ITagRepository for handler tests (repo
 /// convention: fakes over mocking libraries). Filters by tenant exactly
 /// like the real repository so tenant pass-through is actually exercised.
+/// Add/Remove only stage the change, matching the real repository - a
+/// handler still commits via FakeUnitOfWork.
 /// </summary>
 public class FakeTagRepository : ITagRepository
 {
     public List<Tag> Tags { get; } = [];
-    public int SaveChangesCalls { get; private set; }
 
     public Task<IReadOnlyList<Tag>> ListAsync(Guid tenantId, CancellationToken cancellationToken)
     {
@@ -42,21 +43,7 @@ public class FakeTagRepository : ITagRepository
         return Task.FromResult(exists);
     }
 
-    public Task AddAsync(Tag tag, CancellationToken cancellationToken)
-    {
-        Tags.Add(tag);
-        return Task.CompletedTask;
-    }
+    public void Add(Tag tag) => Tags.Add(tag);
 
-    public Task RemoveAsync(Tag tag, CancellationToken cancellationToken)
-    {
-        Tags.Remove(tag);
-        return Task.CompletedTask;
-    }
-
-    public Task SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        SaveChangesCalls++;
-        return Task.CompletedTask;
-    }
+    public void Remove(Tag tag) => Tags.Remove(tag);
 }

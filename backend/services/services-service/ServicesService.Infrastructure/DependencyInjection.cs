@@ -19,6 +19,7 @@ public static class DependencyInjection
         services.AddDbContext<ServicesDataContext>(options => options.UseNpgsql(connectionString));
 
         services.AddScoped<ITagRepository, TagRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;
     }
