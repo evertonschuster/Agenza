@@ -66,10 +66,14 @@ Root `package.json` declares `apps/*` and `packages/*` as npm workspaces. Only t
 JS/TS side is workspace-managed; .NET and Python projects are self-contained and use
 their own native tooling (`dotnet`, `pip`/venv).
 
+## Git hooks
+
+Husky lives at the repo root (`.husky/`, installed by the root `prepare`
+script). The pre-commit hook runs each workspace's lint-staged from
+inside that workspace — add a line to `.husky/pre-commit` when a new
+workspace gains a lint-staged config.
+
 ## Known gaps (tracked, not blocking)
 
-- Husky git hooks live under `apps/admin-frontend/.husky/` but git root is now the
-  monorepo root — hooks won't fire until Husky is reconfigured from the root
-  (`npx husky init` at root + a root lint-staged config that delegates per workspace).
 - `apps/admin-frontend/graphify-out/` is stale (generated before the restructure) —
   regenerate rather than trust it.

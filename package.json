@@ -10,6 +10,11 @@
     "dev:frontend": "npm run dev --workspace=apps/admin-frontend",
     "build:frontend": "npm run build --workspace=apps/admin-frontend",
     "test:frontend": "npm run test --workspace=apps/admin-frontend",
-    "lint:frontend": "npm run lint --workspace=apps/admin-frontend"
+    "lint:frontend": "npm run lint --workspace=apps/admin-frontend",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^17.0.8"
   }
 }
