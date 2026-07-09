@@ -23,8 +23,11 @@
   [apps/admin-frontend/CLAUDE.md](apps/admin-frontend/CLAUDE.md) — it has the full
   TypeScript/architecture/testing rules for that app.
 - Working on a .NET microservice (`backend/`)? Read
-  [backend/README.md](backend/README.md) for solution layout and layering
-  conventions.
+  [backend/CLAUDE.md](backend/CLAUDE.md) — layering, rich-domain, tenant-scoping,
+  and testing conventions, plus skills for use cases and new services.
 - Working on a Python AI service (`ai-services/<service>`)? Read that service's own
   `README.md`.
 - Repo structure and workspace conventions: [docs/MONOREPO.md](docs/MONOREPO.md).
+- Where the platform is heading (planned apps/services): [docs/VISION.md](docs/VISION.md).
+- CI, coverage gates, Sonar/CodeQL/review tooling: [docs/QUALITY.md](docs/QUALITY.md).
+- Cross-cutting decisions with rationale: [docs/adr/](docs/adr/).

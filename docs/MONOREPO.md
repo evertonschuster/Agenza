@@ -8,8 +8,12 @@ admin/
 │   ├── AdminBackend.slnx   .NET solution (dotnet 10 uses .slnx, not .sln)
 │   ├── AppHost/            .NET Aspire orchestrator — local dev only, see below
 │   ├── ServiceDefaults/    shared OpenTelemetry/health-check/service-discovery wiring
+│   ├── shared/
+│   │   └── Admin.Identity.Client/  JWT validation + ITenantAccessor for resource services
 │   └── services/
-│       └── services-service/   reference microservice — copy this layout for new services
+│       ├── identity-service/   OIDC provider (OpenIddict) — the reference implementation
+│       └── services-service/   template layout — copy its structure, but mirror
+│                               identity-service's patterns for real content
 ├── ai-services/
 │   └── assistant-service/  placeholder Python/FastAPI AI service
 ├── packages/
@@ -45,19 +49,11 @@ any `*.Tests.csproj` and aren't part of the CI or Docker image build paths.
 
 ## Adding a new backend microservice
 
-1. Copy the layout of `backend/services/services-service/` (Domain, Application,
-   Infrastructure, Api, Tests projects).
-2. `dotnet sln backend/AdminBackend.slnx add <new project paths>`.
-3. Wire references so Domain has zero deps, Application → Domain,
-   Infrastructure → Application, Api → Application + Infrastructure.
-4. Add it to `infra/docker-compose.yml` once it has a Dockerfile, pointing
-   `ConnectionStrings__Default` at the shared `postgres` service
-   (`Host=postgres;Database=appdb;...`) - don't add a new database container.
-5. If the service persists data, call `modelBuilder.HasDefaultSchema("<service-name>")`
-   in its `DbContext.OnModelCreating` (see `IdentityDataContext` for the
-   pattern). Every microservice shares one Postgres instance/database but
-   owns its own schema, so migrations never collide with another service's
-   tables.
+Follow `backend/.skills/backend-new-microservice/SKILL.md` — it covers the
+full checklist (layout, solution wiring, auth via Admin.Identity.Client,
+shared-Postgres schema convention, Docker/Aspire, CI, docs). The short
+version: copy the five-project layout, mirror identity-service's patterns,
+one schema per service in the shared Postgres.
 
 ## Adding a new AI service
 

@@ -17,24 +17,32 @@ services/<service-name>/
 └── <Service>.Tests/           xUnit — references Application + Domain
 ```
 
-`services-service` (backing the "Services" feature vertical from the frontend's
-`docs/STATUS.md`) is the reference implementation — copy its structure when adding a
-new microservice, then add the new projects to `AdminBackend.slnx` with `dotnet sln add`.
+`identity-service` is the **reference implementation** (real domain,
+use cases, EF Core persistence, OpenIddict, tests) — mirror its patterns.
+`services-service` still has the template *layout* to copy for a new
+service's project structure. Conventions and how-to guides live in
+[CLAUDE.md](CLAUDE.md) and [.skills/](.skills/).
+
+There is also `shared/Admin.Identity.Client` — the JWT-validation +
+`ITenantAccessor` library every resource service references instead of
+hand-rolling token handling.
 
 ## Commands
 
 ```bash
 dotnet build AdminBackend.slnx
-dotnet test AdminBackend.slnx
+dotnet test AdminBackend.slnx -p:CollectCoverage=true -p:Threshold=80 -p:ThresholdType=line -p:ThresholdStat=total
 dotnet run --project services/services-service/ServicesService.Api
 ```
 
+The coverage flags match CI (`backend-ci.yml`) — the gate measures
+Domain + Application per service (see `../docs/QUALITY.md`).
+
 ## Known gaps
 
-- `ServicesService.Api` currently has no Dockerfile — add one before wiring it into
-  `infra/docker-compose.yml` for real (the compose file references a path that doesn't
-  exist yet).
-- The webapi template pulled in `Microsoft.OpenApi` 2.0.0, which has a known advisory
-  (GHSA-v5pm-xwqc-g5wc). Bump it before shipping anything real.
-- No persistence/EF Core is wired yet — `ServicesService.Infrastructure` is an empty
-  class library.
+- `ServicesService` is still webapi-template scaffolding (WeatherForecast
+  controller, empty Domain/Application/Infrastructure) — it awaits the
+  Services feature vertical.
+- No integration tests yet — Api/Infrastructure layers are outside the
+  coverage gate until `WebApplicationFactory` + Testcontainers suites are
+  added.
