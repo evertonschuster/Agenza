@@ -1,0 +1,171 @@
+# SonarQube Cloud analysis - free for public repositories.
+#
+# One-time setup (see docs/QUALITY.md for the step-by-step):
+#   1. Import the repo at https://sonarcloud.io (login with GitHub).
+#   2. Create it as a monorepo with three projects:
+#        agenza-frontend / agenza-backend / agenza-ai-services
+#      (adjust the projectKey args below if you pick different keys).
+#   3. Disable "Automatic Analysis" for each project (Administration >
+#      Analysis Method) - it conflicts with CI-based analysis.
+#   4. Add the SONAR_TOKEN repository secret on GitHub.
+#
+# Until SONAR_TOKEN exists, every job here skips instead of failing, so
+# merging this workflow before the SonarCloud setup is safe.
+name: Sonar
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: sonar-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check-token:
+    name: sonar-check-token
+    runs-on: ubuntu-latest
+    outputs:
+      has-token: ${{ steps.check.outputs.has-token }}
+    steps:
+      - id: check
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: |
+          if [ -n "$SONAR_TOKEN" ]; then
+            echo "has-token=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has-token=false" >> "$GITHUB_OUTPUT"
+            echo "SONAR_TOKEN secret is not configured - skipping Sonar analysis."
+          fi
+
+  frontend:
+    name: sonar-frontend
+    needs: check-token
+    if: needs.check-token.outputs.has-token == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0 # Sonar needs history for accurate blame/new-code detection
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: 'npm'
+
+      - name: Install dependencies
+        # Same lockfile workaround as frontend-ci.yml (npm/cli#4828).
+        run: rm -f package-lock.json && npm install
+
+      - name: Test with coverage (produces coverage/lcov.info)
+        run: npm run test:coverage --workspace=apps/admin-frontend
+
+      - uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          projectBaseDir: apps/admin-frontend
+          args: >
+            -Dsonar.organization=evertonschuster
+            -Dsonar.projectKey=agenza-frontend
+            -Dsonar.sources=src
+            -Dsonar.tests=src
+            -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx
+            -Dsonar.exclusions=**/*.test.ts,**/*.test.tsx,src/test/**
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+
+  backend:
+    name: sonar-backend
+    needs: check-token
+    if: needs.check-token.outputs.has-token == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      # The Sonar scanner for .NET runs on Java
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - name: Install Sonar scanner for .NET
+        run: dotnet tool install --global dotnet-sonarscanner
+
+      - name: Begin analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: >
+          dotnet-sonarscanner begin
+          /k:"agenza-backend"
+          /o:"evertonschuster"
+          /d:sonar.token="$SONAR_TOKEN"
+          /d:sonar.host.url="https://sonarcloud.io"
+          /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
+          /d:sonar.scanner.scanAll=false
+
+      - name: Build
+        run: dotnet build backend/AdminBackend.slnx -c Release
+
+      - name: Test with coverage (OpenCover format for Sonar)
+        run: >
+          dotnet test backend/AdminBackend.slnx -c Release --no-build
+          -p:CollectCoverage=true -p:CoverletOutputFormat=opencover
+
+      - name: End analysis
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+  ai-services:
+    name: sonar-ai-services
+    needs: check-token
+    if: needs.check-token.outputs.has-token == 'true'
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ai-services/assistant-service
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: 'pip'
+          cache-dependency-path: ai-services/assistant-service/pyproject.toml
+
+      - name: Install dependencies
+        run: pip install -e ".[dev]"
+
+      - name: Test with coverage (produces coverage.xml)
+        run: pytest --cov-report=xml
+
+      - uses: SonarSource/sonarqube-scan-action@v6
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          projectBaseDir: ai-services/assistant-service
+          args: >
+            -Dsonar.organization=evertonschuster
+            -Dsonar.projectKey=agenza-ai-services
+            -Dsonar.sources=app
+            -Dsonar.tests=tests
+            -Dsonar.python.coverage.reportPaths=coverage.xml

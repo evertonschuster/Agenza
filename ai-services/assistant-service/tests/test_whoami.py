@@ -1,7 +1,6 @@
-from fastapi.testclient import TestClient
-
 from app.auth.verify_token import require_valid_token
 from app.main import app
+from fastapi.testclient import TestClient
 
 client = TestClient(app)
 
@@ -22,4 +21,7 @@ def test_whoami_returns_claims_for_a_valid_token() -> None:
         app.dependency_overrides.clear()
 
     assert response.status_code == 200
-    assert response.json() == {"client_id": "assistant-service-worker", "scope": "services-api"}
+    assert response.json() == {
+        "client_id": "assistant-service-worker",
+        "scope": "services-api",
+    }

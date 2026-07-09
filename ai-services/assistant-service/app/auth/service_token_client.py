@@ -54,9 +54,7 @@ class ServiceTokenClient:
 
             access_token = payload.get("access_token")
             if not access_token:
-                raise RuntimeError(
-                    "Token endpoint returned 200 but no 'access_token' in response."
-                )
+                raise RuntimeError("Token endpoint returned 200 but no 'access_token' in response.")
 
             self._access_token = access_token
             self._expires_at = now + max(payload.get("expires_in", 300) - 30, 0)

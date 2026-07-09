@@ -1,6 +1,5 @@
 import httpx
 import pytest
-
 from app.auth.config import IdentityConfig
 from app.auth.service_token_client import ServiceTokenClient
 

@@ -1,9 +1,8 @@
 import jwt
 import pytest
-from fastapi import HTTPException
-
 from app.auth.config import IdentityConfig
 from app.auth.verify_token import TokenValidator
+from fastapi import HTTPException
 
 
 def _config() -> IdentityConfig:
@@ -26,14 +25,19 @@ class _FakeJwkClient:
         return _FakeSigningKey()
 
 
-def test_validate_returns_claims_for_a_valid_token(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_validate_returns_claims_for_a_valid_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     validator = TokenValidator(_config())
     validator._jwk_client = _FakeJwkClient()  # noqa: SLF001
 
     monkeypatch.setattr(
         jwt,
         "decode",
-        lambda token, key, algorithms, audience, issuer: {"sub": "worker", "scope": "services-api"},
+        lambda token, key, algorithms, audience, issuer: {
+            "sub": "worker",
+            "scope": "services-api",
+        },
     )
 
     claims = validator.validate("any-token")
@@ -41,7 +45,9 @@ def test_validate_returns_claims_for_a_valid_token(monkeypatch: pytest.MonkeyPat
     assert claims == {"sub": "worker", "scope": "services-api"}
 
 
-def test_validate_raises_401_for_an_invalid_token(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_validate_raises_401_for_an_invalid_token(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     validator = TokenValidator(_config())
     validator._jwk_client = _FakeJwkClient()  # noqa: SLF001
 

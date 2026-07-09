@@ -13,7 +13,9 @@ def health() -> dict[str, str]:
 
 
 @app.get("/internal/whoami")
-def whoami(claims: Annotated[dict[str, Any], Depends(require_valid_token)]) -> dict[str, Any]:
+def whoami(
+    claims: Annotated[dict[str, Any], Depends(require_valid_token)],
+) -> dict[str, Any]:
     """Demonstrates inbound M2M validation: any caller must present a
     valid access token from identity-service (e.g. a services-service ->
     assistant-service call, or vice versa)."""
