@@ -92,3 +92,205 @@ context (e.g. notifications/email, billing).
 
 11. **Docs**: add the service to `docs/MONOREPO.md`'s tree and note its
     context in `docs/VISION.md`.
+
+---
+
+## Copy-paste templates
+
+A fictional **WidgetService** — rename throughout for your real service.
+Swap `WidgetService`/`Widgets`/`widget-service` for your service/context/
+kebab-case name.
+
+### Program.cs (services-service's exact shape — copy, then adjust)
+
+```csharp
+using Admin.Identity.Client;
+using Admin.SharedKernel;
+using Asp.Versioning;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc.Authorization;
+using WidgetService.Application;
+using WidgetService.Infrastructure;
+
+var builder = WebApplication.CreateBuilder(args);
+
+builder.AddServiceDefaults();
+
+builder.Services.AddControllers(options =>
+{
+    // Secure by default: every endpoint requires a valid access token from
+    // identity-service unless explicitly marked [AllowAnonymous].
+    options.Filters.Add(new AuthorizeFilter());
+});
+builder.Services.AddOpenApi();
+
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+    })
+    .AddMvc();
+
+// "widget-service-api" here becomes the audience resource servers check
+// and the scope name identity-service must seed (step 4 above).
+builder.Services.AddIdentityServiceAuthentication(builder.Configuration, audience: "widget-service-api");
+
+builder.Services.AddSharedKernel();
+builder.Services.AddWidgetServiceApplication();       // your Application/DependencyInjection.cs (below)
+builder.Services.AddWidgetServiceInfrastructure(builder.Configuration); // your Infrastructure/DependencyInjection.cs
+
+// Only if this service migrates its own schema on startup (copy
+// ServicesService.Api/Setup/DatabaseMigrator.cs):
+// builder.Services.AddHostedService<DatabaseMigrator>();
+
+var spaOrigin = builder.Configuration["Cors:SpaOrigin"] ?? "http://localhost:5173";
+builder.Services.AddCors(options =>
+{
+    options.AddPolicy("spa", policy => policy
+        .WithOrigins(spaOrigin)
+        .AllowAnyHeader()
+        .AllowAnyMethod());
+});
+
+var app = builder.Build();
+
+if (app.Environment.IsDevelopment())
+{
+    app.MapOpenApi();
+}
+
+app.UseHttpsRedirection();
+app.UseCors("spa");
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapControllers();
+app.MapDefaultEndpoints();
+
+app.Run();
+
+// Exposes the implicit Program class of this top-level-statements file to
+// WebApplicationFactory<Program> in WidgetService.IntegrationTests.
+public partial class Program;
+```
+
+### Application/DependencyInjection.cs
+
+```csharp
+using System.Reflection;
+using Admin.SharedKernel;
+using FluentValidation;
+using Microsoft.Extensions.DependencyInjection;
+
+namespace WidgetService.Application;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddWidgetServiceApplication(this IServiceCollection services)
+    {
+        var assembly = Assembly.GetExecutingAssembly();
+        services.AddValidatorsFromAssembly(assembly);
+        services.AddHandlersFromAssembly(assembly);
+        return services;
+    }
+}
+```
+
+### Infrastructure/DependencyInjection.cs (single-DbContext shape — copy services-service's)
+
+```csharp
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.DependencyInjection;
+using WidgetService.Application.Abstractions;
+using WidgetService.Infrastructure.Persistence;
+using WidgetService.Infrastructure.Repositories;
+
+namespace WidgetService.Infrastructure;
+
+public static class DependencyInjection
+{
+    public static IServiceCollection AddWidgetServiceInfrastructure(
+        this IServiceCollection services, IConfiguration configuration)
+    {
+        var connectionString = configuration.GetConnectionString("Default")
+            ?? throw new InvalidOperationException("Missing 'ConnectionStrings:Default' configuration.");
+
+        services.AddDbContext<WidgetServiceDataContext>(options => options.UseNpgsql(connectionString));
+
+        services.AddScoped<IWidgetRepository, WidgetRepository>();
+        services.AddScoped<IUnitOfWork, UnitOfWork>(); // shape it to this service's real need - see backend-use-case skill
+
+        return services;
+    }
+}
+```
+
+### csproj ItemGroups (Application project — the part that differs from a plain class library)
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\WidgetService.Domain\WidgetService.Domain.csproj" />
+  <ProjectReference Include="..\..\..\shared\Admin.SharedKernel\Admin.SharedKernel.csproj" />
+</ItemGroup>
+
+<ItemGroup>
+  <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+</ItemGroup>
+```
+
+### csproj ItemGroups (Api project)
+
+```xml
+<ItemGroup>
+  <PackageReference Include="Asp.Versioning.Mvc" Version="10.0.0" />
+  <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
+  <!-- The webapi template's Microsoft.AspNetCore.OpenApi pulls in
+       Microsoft.OpenApi 2.0.0 transitively, which has a known High
+       advisory (GHSA-v5pm-xwqc-g5wc) - pin the patched version directly
+       (3.x breaks Microsoft.AspNetCore.OpenApi's source generators as of
+       this writing, so don't jump to the latest major without checking). -->
+  <PackageReference Include="Microsoft.OpenApi" Version="2.10.0" />
+  <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
+    <!-- dotnet-ef requires Design on the STARTUP project, not just Infrastructure -->
+    <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    <PrivateAssets>all</PrivateAssets>
+  </PackageReference>
+</ItemGroup>
+
+<ItemGroup>
+  <ProjectReference Include="..\WidgetService.Application\WidgetService.Application.csproj" />
+  <ProjectReference Include="..\WidgetService.Infrastructure\WidgetService.Infrastructure.csproj" />
+  <ProjectReference Include="..\..\..\shared\Admin.Identity.Client\Admin.Identity.Client.csproj" />
+  <ProjectReference Include="..\..\..\ServiceDefaults\ServiceDefaults.csproj" />
+</ItemGroup>
+```
+
+### csproj ItemGroups (Tests project)
+
+```xml
+<ItemGroup>
+  <PackageReference Include="AwesomeAssertions" Version="9.4.0" />
+  <PackageReference Include="coverlet.msbuild" Version="6.0.4" />
+  <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+  <PackageReference Include="xunit" Version="2.9.3" />
+  <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+</ItemGroup>
+
+<ItemGroup>
+  <Using Include="Xunit" />
+  <Using Include="AwesomeAssertions" />
+</ItemGroup>
+
+<ItemGroup>
+  <ProjectReference Include="..\WidgetService.Application\WidgetService.Application.csproj" />
+  <ProjectReference Include="..\WidgetService.Domain\WidgetService.Domain.csproj" />
+</ItemGroup>
+<!-- 80% coverage gate applies automatically via backend/Directory.Build.props/.targets -->
+```
+
+If a version pin above looks stale by the time you use it, `dotnet add
+package <Name>` without `--version` picks up the current latest — don't
+hand-copy an outdated number just to match this file exactly.
