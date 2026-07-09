@@ -40,14 +40,16 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        # package-lock.json was generated on Windows and only pins the win32
-        # native binding for @tailwindcss/oxide (and similar optional platform
-        # packages). Neither `npm ci` nor `npm install` re-resolves an optional
-        # native dependency once *some* platform variant is already pinned in
-        # the lock, so both fail here with "Cannot find native binding"
-        # (npm/cli#4828). Removing the lockfile forces a full fresh resolve
-        # against this runner's actual platform (linux-x64-gnu).
-        run: rm -f package-lock.json && npm install
+        # The lockfile is regenerated in a clean Linux container with no
+        # node_modules mounted, which makes npm record EVERY platform's
+        # optional native binding (18 variants of @tailwindcss/oxide etc.)
+        # with resolved+integrity fields - that sidesteps npm/cli#4828 and
+        # lets npm ci work on any OS. If this step ever fails with
+        # "Cannot find native binding", regenerate the lock the same way:
+        #   docker run --rm -v "$PWD:/w" -w /w node:22 sh -c \
+        #     "rm -rf node_modules apps/*/node_modules packages/*/node_modules package-lock.json \
+        #      && npm install --package-lock-only --ignore-scripts"
+        run: npm ci
 
       - name: Format check
         run: npm run format:check --workspace=apps/admin-frontend

@@ -61,8 +61,7 @@ jobs:
           cache: 'npm'
 
       - name: Install dependencies
-        # Same lockfile workaround as frontend-ci.yml (npm/cli#4828).
-        run: rm -f package-lock.json && npm install
+        run: npm ci
 
       - name: Test with coverage (produces coverage/lcov.info)
         run: npm run test:coverage --workspace=apps/admin-frontend
