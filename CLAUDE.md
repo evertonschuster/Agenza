@@ -29,5 +29,6 @@
   `README.md`.
 - Repo structure and workspace conventions: [docs/MONOREPO.md](docs/MONOREPO.md).
 - Where the platform is heading (planned apps/services): [docs/VISION.md](docs/VISION.md).
+- How developers direct agents here (workflow + example prompts): [docs/SDD-GUIDE.md](docs/SDD-GUIDE.md).
 - CI, coverage gates, Sonar/CodeQL/review tooling: [docs/QUALITY.md](docs/QUALITY.md).
 - Cross-cutting decisions with rationale: [docs/adr/](docs/adr/).

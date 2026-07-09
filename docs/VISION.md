@@ -45,7 +45,8 @@ credentials. They never touch another service's database.
 
 ## How we build (SDD — spec/agent-driven development)
 
-The repo is optimized for AI-assisted delivery:
+The repo is optimized for AI-assisted delivery — the developer-facing
+walkthrough with worked example prompts is [SDD-GUIDE.md](SDD-GUIDE.md):
 
 1. **Instructions are layered**: root `CLAUDE.md` → per-area `CLAUDE.md`
    (frontend, backend) → `.skills/` how-to guides → `docs/` references
