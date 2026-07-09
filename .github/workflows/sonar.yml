@@ -50,7 +50,7 @@ jobs:
     if: needs.check-token.outputs.has-token == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0 # Sonar needs history for accurate blame/new-code detection
@@ -87,7 +87,7 @@ jobs:
     if: needs.check-token.outputs.has-token == 'true'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
@@ -139,7 +139,7 @@ jobs:
       run:
         working-directory: ai-services/assistant-service
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           persist-credentials: false
           fetch-depth: 0
