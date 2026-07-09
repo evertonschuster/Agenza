@@ -9,7 +9,9 @@ admin/
 │   ├── AppHost/            .NET Aspire orchestrator — local dev only, see below
 │   ├── ServiceDefaults/    shared OpenTelemetry/health-check/service-discovery wiring
 │   ├── shared/
-│   │   └── Admin.Identity.Client/  JWT validation + ITenantAccessor for resource services
+│   │   ├── Admin.Identity.Client/  JWT validation + ITenantAccessor for resource services
+│   │   └── Admin.SharedKernel/     CQRS/Result-pattern kernel (docs/adr/0005) — Result,
+│   │                               ICommand/IQuery + handlers, IDispatcher, HTTP mapping
 │   └── services/
 │       ├── identity-service/   OIDC provider (OpenIddict), tenants, users, M2M tokens
 │       └── services-service/   the business's offerings — Tags is the first vertical
