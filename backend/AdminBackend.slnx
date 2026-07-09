@@ -18,6 +18,8 @@
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/Admin.Identity.Client/Admin.Identity.Client.csproj" />
+    <Project Path="shared/Admin.SharedKernel.Tests/Admin.SharedKernel.Tests.csproj" />
+    <Project Path="shared/Admin.SharedKernel/Admin.SharedKernel.csproj" />
   </Folder>
   <Project Path="AppHost/AppHost.csproj" />
   <Project Path="ServiceDefaults/ServiceDefaults.csproj" />
