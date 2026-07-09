@@ -66,7 +66,7 @@ jobs:
       - name: Test with coverage (produces coverage/lcov.info)
         run: npm run test:coverage --workspace=apps/admin-frontend
 
-      - uses: SonarSource/sonarqube-scan-action@v6
+      - uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
@@ -156,7 +156,7 @@ jobs:
       - name: Test with coverage (produces coverage.xml)
         run: pytest --cov-report=xml
 
-      - uses: SonarSource/sonarqube-scan-action@v6
+      - uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
