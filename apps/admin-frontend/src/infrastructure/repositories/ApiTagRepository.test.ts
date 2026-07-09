@@ -33,7 +33,7 @@ describe('ApiTagRepository', () => {
 
   it('creates a tag and returns the mapped result', async () => {
     server.use(
-      http.post(`${baseUrl}/api/tags`, async ({ request }) => {
+      http.post(`${baseUrl}/api/v1/tags`, async ({ request }) => {
         expect(await request.json()).toEqual({ name: 'VIP', color: '#0d9488' })
         return HttpResponse.json(tagFixture, { status: 201 })
       }),
@@ -47,7 +47,7 @@ describe('ApiTagRepository', () => {
 
   it('updates a tag at the correct path', async () => {
     server.use(
-      http.put(`${baseUrl}/api/tags/tag-1`, async ({ request }) => {
+      http.put(`${baseUrl}/api/v1/tags/tag-1`, async ({ request }) => {
         expect(await request.json()).toEqual({ name: 'Renamed', color: '#ef4444' })
         return HttpResponse.json({ ...tagFixture, name: 'Renamed', color: '#ef4444' })
       }),
@@ -65,7 +65,7 @@ describe('ApiTagRepository', () => {
   it('deletes a tag at the correct path', async () => {
     let deleteWasCalled = false
     server.use(
-      http.delete(`${baseUrl}/api/tags/tag-1`, () => {
+      http.delete(`${baseUrl}/api/v1/tags/tag-1`, () => {
         deleteWasCalled = true
         return new HttpResponse(null, { status: 204 })
       }),
@@ -79,7 +79,7 @@ describe('ApiTagRepository', () => {
 
   it('propagates ApiError from the HttpClient on a non-2xx response', async () => {
     server.use(
-      http.get(`${baseUrl}/api/tags`, () =>
+      http.get(`${baseUrl}/api/v1/tags`, () =>
         HttpResponse.json({ title: 'Something went wrong' }, { status: 500 }),
       ),
     )

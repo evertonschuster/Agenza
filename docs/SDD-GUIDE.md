@@ -67,13 +67,15 @@ incomplete — fix the spec, not the diff.
 ### 2. Add a backend use case / endpoint
 
 > In identity-service, add a "rename tenant" operation:
-> PUT /internal/tenants/{id} with { name }, guarded by the
+> PUT /internal/v1/tenants/{id} with { name }, guarded by the
 > identity-admin scope. Follow the backend-use-case skill.
 
-Expect: a `RenameTenant` use case folder with Request/Result records, a
-behavior method on the `Tenant` entity (not a public setter), unit tests
-with fakes, an integration test hitting 401/403/happy-path, and the
-coverage gate still green.
+Expect: a `RenameTenant` command slice (Command/Handler/Validator) under
+`Application/Tenants/`, a behavior method on the `Tenant` entity (not a
+public setter), the handler returning `Result` instead of throwing for
+a not-found tenant, unit tests with fakes asserting on the `Result`,
+an integration test hitting 401/403/400/happy-path, and the coverage
+gate still green.
 
 ### 3. Stand up a new microservice
 

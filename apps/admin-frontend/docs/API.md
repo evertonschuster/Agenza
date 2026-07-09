@@ -101,14 +101,16 @@ abstraction before seeing the actual shape.
 ### Tags
 
 Served by **services-service** (`VITE_API_BASE_URL`). Tenant scope comes
-from the JWT's `tenant_id` claim — never sent explicitly.
+from the JWT's `tenant_id` claim — never sent explicitly. Routes are
+versioned (`Asp.Versioning.Mvc`, docs/adr/0005) — omitting the segment
+falls back to v1, but the frontend always sends it explicitly.
 
-| Method   | Path             | Success                                     |
-| -------- | ---------------- | ------------------------------------------- |
-| `GET`    | `/api/tags`      | `200` — `TagDto[]`, ordered by name (asc)   |
-| `POST`   | `/api/tags`      | `201` — created `TagDto`, `Location` header |
-| `PUT`    | `/api/tags/{id}` | `200` — updated `TagDto`                    |
-| `DELETE` | `/api/tags/{id}` | `204` — no body                             |
+| Method   | Path                | Success                                     |
+| -------- | ------------------- | ------------------------------------------- |
+| `GET`    | `/api/v1/tags`      | `200` — `TagDto[]`, ordered by name (asc)   |
+| `POST`   | `/api/v1/tags`      | `201` — created `TagDto`, `Location` header |
+| `PUT`    | `/api/v1/tags/{id}` | `200` — updated `TagDto`                    |
+| `DELETE` | `/api/v1/tags/{id}` | `204` — no body                             |
 
 `TagDto`:
 

@@ -1,11 +1,12 @@
 using Admin.Identity.Client;
+using Admin.SharedKernel;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using ServicesService.Application.Exceptions;
-using ServicesService.Application.UseCases.CreateTag;
-using ServicesService.Application.UseCases.DeleteTag;
-using ServicesService.Application.UseCases.ListTags;
-using ServicesService.Application.UseCases.UpdateTag;
-using ServicesService.Domain.Exceptions;
+using ServicesService.Application.Tags;
+using ServicesService.Application.Tags.CreateTag;
+using ServicesService.Application.Tags.DeleteTag;
+using ServicesService.Application.Tags.ListTags;
+using ServicesService.Application.Tags.UpdateTag;
 
 namespace ServicesService.Api.Controllers;
 
@@ -13,30 +14,23 @@ namespace ServicesService.Api.Controllers;
 /// The /api/tags contract from the frontend's docs/API.md. Authentication
 /// comes from the global AuthorizeFilter (Program.cs); the tenant comes
 /// exclusively from the authenticated principal's tenant_id claim via
-/// ITenantAccessor - never from the request payload.
+/// ITenantAccessor - never from the request payload. Every action just
+/// builds a command/query and dispatches it - validation, business
+/// rules, and persistence all live in the Application layer's Tags
+/// vertical slices.
 /// </summary>
 [ApiController]
-[Route("api/tags")]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/tags")]
 public class TagsController : ControllerBase
 {
     private readonly ITenantAccessor _tenantAccessor;
-    private readonly ListTagsUseCase _listTags;
-    private readonly CreateTagUseCase _createTag;
-    private readonly UpdateTagUseCase _updateTag;
-    private readonly DeleteTagUseCase _deleteTag;
+    private readonly IDispatcher _dispatcher;
 
-    public TagsController(
-        ITenantAccessor tenantAccessor,
-        ListTagsUseCase listTags,
-        CreateTagUseCase createTag,
-        UpdateTagUseCase updateTag,
-        DeleteTagUseCase deleteTag)
+    public TagsController(ITenantAccessor tenantAccessor, IDispatcher dispatcher)
     {
         _tenantAccessor = tenantAccessor;
-        _listTags = listTags;
-        _createTag = createTag;
-        _updateTag = updateTag;
-        _deleteTag = deleteTag;
+        _dispatcher = dispatcher;
     }
 
     public record TagBody(string Name, string Color, string? Description);
@@ -51,8 +45,8 @@ public class TagsController : ControllerBase
             return Forbid();
         }
 
-        var tags = await _listTags.ExecuteAsync(new ListTagsRequest(tenantId), cancellationToken);
-        return Ok(tags);
+        var result = await _dispatcher.Query(new ListTagsQuery(tenantId), cancellationToken);
+        return result.ToActionResult(this, tags => Ok(tags));
     }
 
     [HttpPost]
@@ -63,22 +57,10 @@ public class TagsController : ControllerBase
             return Forbid();
         }
 
-        try
-        {
-            var created = await _createTag.ExecuteAsync(
-                new CreateTagRequest(tenantId, body.Name, body.Color, body.Description),
-                cancellationToken);
+        var command = new CreateTagCommand(tenantId, body.Name, body.Color, body.Description);
+        var result = await _dispatcher.Send(command, cancellationToken);
 
-            return Created($"/api/tags/{created.Id}", created);
-        }
-        catch (InvalidTagException exception)
-        {
-            return Problem(title: exception.Message, statusCode: StatusCodes.Status400BadRequest);
-        }
-        catch (DuplicateTagNameException exception)
-        {
-            return Problem(title: exception.Message, statusCode: StatusCodes.Status409Conflict);
-        }
+        return result.ToActionResult(this, tag => Created($"/api/v1/tags/{tag.Id}", tag));
     }
 
     [HttpPut("{id:guid}")]
@@ -89,26 +71,10 @@ public class TagsController : ControllerBase
             return Forbid();
         }
 
-        try
-        {
-            var updated = await _updateTag.ExecuteAsync(
-                new UpdateTagRequest(tenantId, id, body.Name, body.Color, body.Description),
-                cancellationToken);
+        var command = new UpdateTagCommand(tenantId, id, body.Name, body.Color, body.Description);
+        var result = await _dispatcher.Send(command, cancellationToken);
 
-            return Ok(updated);
-        }
-        catch (TagNotFoundException exception)
-        {
-            return Problem(title: exception.Message, statusCode: StatusCodes.Status404NotFound);
-        }
-        catch (InvalidTagException exception)
-        {
-            return Problem(title: exception.Message, statusCode: StatusCodes.Status400BadRequest);
-        }
-        catch (DuplicateTagNameException exception)
-        {
-            return Problem(title: exception.Message, statusCode: StatusCodes.Status409Conflict);
-        }
+        return result.ToActionResult(this, tag => Ok(tag));
     }
 
     [HttpDelete("{id:guid}")]
@@ -119,14 +85,7 @@ public class TagsController : ControllerBase
             return Forbid();
         }
 
-        try
-        {
-            await _deleteTag.ExecuteAsync(new DeleteTagRequest(tenantId, id), cancellationToken);
-            return NoContent();
-        }
-        catch (TagNotFoundException exception)
-        {
-            return Problem(title: exception.Message, statusCode: StatusCodes.Status404NotFound);
-        }
+        var result = await _dispatcher.Send(new DeleteTagCommand(tenantId, id), cancellationToken);
+        return result.ToActionResult(this, NoContent);
     }
 }

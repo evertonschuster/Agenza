@@ -1,11 +1,10 @@
 using Admin.Identity.Client;
+using Admin.SharedKernel;
+using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
 using ServicesService.Api.Setup;
-using ServicesService.Application.UseCases.CreateTag;
-using ServicesService.Application.UseCases.DeleteTag;
-using ServicesService.Application.UseCases.ListTags;
-using ServicesService.Application.UseCases.UpdateTag;
+using ServicesService.Application;
 using ServicesService.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -20,13 +19,20 @@ builder.Services.AddControllers(options =>
 });
 builder.Services.AddOpenApi();
 
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+    })
+    .AddMvc();
+
 builder.Services.AddIdentityServiceAuthentication(builder.Configuration, audience: "services-api");
 
+builder.Services.AddSharedKernel();
+builder.Services.AddServicesApplication();
 builder.Services.AddServicesInfrastructure(builder.Configuration);
-builder.Services.AddScoped<ListTagsUseCase>();
-builder.Services.AddScoped<CreateTagUseCase>();
-builder.Services.AddScoped<UpdateTagUseCase>();
-builder.Services.AddScoped<DeleteTagUseCase>();
 builder.Services.AddHostedService<DatabaseMigrator>();
 
 // The SPA calls this API straight from the browser, so its origin must be

@@ -1,0 +1,20 @@
+<Project>
+  <!--
+    Import order matters here: coverlet.msbuild's own coverlet.msbuild.props
+    sets Exclude to '' by default ONLY when it's still empty at that point,
+    and NuGet package .props files import before a project's own body -
+    sometimes before, sometimes after Directory.Build.props depending on
+    SDK version, so setting Exclude there was silently overwritten.
+    Directory.Build.targets imports after every package's .targets/.props,
+    guaranteeing this value wins.
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) And !$(MSBuildProjectName.EndsWith('.IntegrationTests')) And '$(MSBuildProjectName)' != 'Admin.SharedKernel.Tests'">
+    <!-- Admin.SharedKernel has its own dedicated test project
+         (Admin.SharedKernel.Tests) and gate - counting it again against
+         every consuming service's Tests project would let a service's
+         OWN under-tested Domain/Application code hide behind the
+         kernel's coverage (or vice versa: fail a service's gate for
+         kernel code that project didn't write). -->
+    <Exclude>[Admin.SharedKernel]*</Exclude>
+  </PropertyGroup>
+</Project>

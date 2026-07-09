@@ -1,3 +1,4 @@
+using Admin.SharedKernel;
 using IdentityService.Application.Abstractions;
 using Microsoft.AspNetCore.Identity;
 
@@ -12,7 +13,7 @@ public class UserAccountService : IUserAccountService
         _userManager = userManager;
     }
 
-    public async Task<UserAccountResult> CreateOwnerAsync(
+    public async Task<Result<UserAccountResult>> CreateOwnerAsync(
         Guid tenantId,
         string email,
         string password,
@@ -31,7 +32,7 @@ public class UserAccountService : IUserAccountService
         if (!result.Succeeded)
         {
             var errors = string.Join("; ", result.Errors.Select(e => e.Description));
-            throw new InvalidOperationException($"Failed to create user '{email}': {errors}");
+            return Result.Failure<UserAccountResult>(Error.Validation("Owner.CreationFailed", errors));
         }
 
         return new UserAccountResult(user.Id, email);

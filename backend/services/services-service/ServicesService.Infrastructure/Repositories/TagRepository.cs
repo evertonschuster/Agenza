@@ -45,20 +45,11 @@ public class TagRepository : ITagRepository
             cancellationToken);
     }
 
-    public async Task AddAsync(Tag tag, CancellationToken cancellationToken)
-    {
-        await _dbContext.Tags.AddAsync(tag, cancellationToken);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
+    // Add/Remove only stage the change on the tracked DbContext - they
+    // don't call SaveChangesAsync themselves. The command handler commits
+    // explicitly via IUnitOfWork, so the commit boundary is the handler's
+    // decision, not the repository's.
+    public void Add(Tag tag) => _dbContext.Tags.Add(tag);
 
-    public async Task RemoveAsync(Tag tag, CancellationToken cancellationToken)
-    {
-        _dbContext.Tags.Remove(tag);
-        await _dbContext.SaveChangesAsync(cancellationToken);
-    }
-
-    public Task SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        return _dbContext.SaveChangesAsync(cancellationToken);
-    }
+    public void Remove(Tag tag) => _dbContext.Tags.Remove(tag);
 }

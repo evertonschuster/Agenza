@@ -5,7 +5,8 @@ namespace ServicesService.Application.Abstractions;
 /// <summary>
 /// Port for Tag persistence. Every method takes the tenant id explicitly
 /// (repo non-negotiable): a Tag can only ever be read or written inside
-/// the tenant it belongs to.
+/// the tenant it belongs to. AddAsync/RemoveAsync only stage the change -
+/// call IUnitOfWork.SaveChangesAsync to commit (see its doc comment).
 /// </summary>
 public interface ITagRepository
 {
@@ -22,10 +23,7 @@ public interface ITagRepository
     /// </summary>
     Task<bool> NameExistsAsync(Guid tenantId, string name, Guid? excludeTagId, CancellationToken cancellationToken);
 
-    Task AddAsync(Tag tag, CancellationToken cancellationToken);
+    void Add(Tag tag);
 
-    Task RemoveAsync(Tag tag, CancellationToken cancellationToken);
-
-    /// <summary>Persists mutations made on tracked entities (updates).</summary>
-    Task SaveChangesAsync(CancellationToken cancellationToken);
+    void Remove(Tag tag);
 }
