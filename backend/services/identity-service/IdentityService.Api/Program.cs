@@ -1,5 +1,7 @@
+using Admin.SharedKernel;
+using Asp.Versioning;
 using IdentityService.Api.Seed;
-using IdentityService.Application.UseCases.ProvisionTenant;
+using IdentityService.Application;
 using IdentityService.Infrastructure;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
@@ -13,8 +15,18 @@ builder.Services.AddControllers();
 builder.Services.AddRazorPages();
 builder.Services.AddOpenApi();
 
+builder.Services
+    .AddApiVersioning(options =>
+    {
+        options.DefaultApiVersion = new ApiVersion(1, 0);
+        options.AssumeDefaultVersionWhenUnspecified = true;
+        options.ReportApiVersions = true;
+    })
+    .AddMvc();
+
 builder.Services.AddIdentityInfrastructure(builder.Configuration);
-builder.Services.AddScoped<ProvisionTenantUseCase>();
+builder.Services.AddSharedKernel();
+builder.Services.AddIdentityApplication();
 builder.Services.AddHostedService<DatabaseSeeder>();
 
 var publicIssuer = builder.Configuration["Identity:PublicIssuer"];

@@ -1,4 +1,6 @@
-using IdentityService.Application.UseCases.ProvisionTenant;
+using Admin.SharedKernel;
+using Asp.Versioning;
+using IdentityService.Application.Tenants.ProvisionTenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
@@ -12,15 +14,16 @@ namespace IdentityService.Api.Controllers;
 /// M2M token carrying the "identity-admin" scope.
 /// </summary>
 [ApiController]
-[Route("internal/tenants")]
+[ApiVersion("1.0")]
+[Route("internal/v{version:apiVersion}/tenants")]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
 public class TenantsController : ControllerBase
 {
-    private readonly ProvisionTenantUseCase _provisionTenant;
+    private readonly IDispatcher _dispatcher;
 
-    public TenantsController(ProvisionTenantUseCase provisionTenant)
+    public TenantsController(IDispatcher dispatcher)
     {
-        _provisionTenant = provisionTenant;
+        _dispatcher = dispatcher;
     }
 
     public record ProvisionTenantBody(string TenantName, string OwnerEmail, string OwnerPassword);
@@ -33,10 +36,11 @@ public class TenantsController : ControllerBase
             return Forbid();
         }
 
-        var result = await _provisionTenant.ExecuteAsync(
-            new ProvisionTenantRequest(body.TenantName, body.OwnerEmail, body.OwnerPassword),
-            cancellationToken);
+        var command = new ProvisionTenantCommand(body.TenantName, body.OwnerEmail, body.OwnerPassword);
+        var result = await _dispatcher.Send(command, cancellationToken);
 
-        return Created($"/internal/tenants/{result.TenantId}", result);
+        return result.ToActionResult(
+            this,
+            tenant => Created($"/internal/v1/tenants/{tenant.TenantId}", tenant));
     }
 }

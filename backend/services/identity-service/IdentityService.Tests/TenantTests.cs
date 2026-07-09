@@ -11,8 +11,8 @@ public class TenantTests
 
         var tenant = new Tenant(id, "Bella Studio");
 
-        Assert.Equal(id, tenant.Id);
-        Assert.Equal("Bella Studio", tenant.Name);
+        tenant.Id.Should().Be(id);
+        tenant.Name.Should().Be("Bella Studio");
     }
 
     [Theory]
@@ -20,9 +20,8 @@ public class TenantTests
     [InlineData("   ")]
     public void Constructor_WithMissingName_Throws(string name)
     {
-        var exception = Assert.Throws<ArgumentException>(
-            () => new Tenant(Guid.NewGuid(), name));
+        var act = () => new Tenant(Guid.NewGuid(), name);
 
-        Assert.Equal("name", exception.ParamName);
+        act.Should().Throw<ArgumentException>().And.ParamName.Should().Be("name");
     }
 }

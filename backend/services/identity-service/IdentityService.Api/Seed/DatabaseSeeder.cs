@@ -1,4 +1,5 @@
-using IdentityService.Application.UseCases.ProvisionTenant;
+using Admin.SharedKernel;
+using IdentityService.Application.Tenants.ProvisionTenant;
 using IdentityService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
@@ -15,11 +16,13 @@ public class DatabaseSeeder : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
     private readonly IConfiguration _configuration;
+    private readonly ILogger<DatabaseSeeder> _logger;
 
-    public DatabaseSeeder(IServiceProvider serviceProvider, IConfiguration configuration)
+    public DatabaseSeeder(IServiceProvider serviceProvider, IConfiguration configuration, ILogger<DatabaseSeeder> logger)
     {
         _serviceProvider = serviceProvider;
         _configuration = configuration;
+        _logger = logger;
     }
 
     public async Task StartAsync(CancellationToken cancellationToken)
@@ -168,9 +171,20 @@ public class DatabaseSeeder : IHostedService
             return;
         }
 
-        var provisionTenant = services.GetRequiredService<ProvisionTenantUseCase>();
-        await provisionTenant.ExecuteAsync(
-            new ProvisionTenantRequest(demoTenantName, demoOwnerEmail, demoOwnerPassword),
+        var dispatcher = services.GetRequiredService<IDispatcher>();
+        var result = await dispatcher.Send(
+            new ProvisionTenantCommand(demoTenantName, demoOwnerEmail, demoOwnerPassword),
             cancellationToken);
+
+        if (result.IsFailure)
+        {
+            // Not fatal to startup - dev-only convenience seeding - but
+            // silently doing nothing would be confusing when the SPA's
+            // demo login then fails, so surface why.
+            _logger.LogWarning(
+                "Demo tenant seeding failed: {ErrorCode} {ErrorMessage}",
+                result.Error.Code,
+                result.Error.Message);
+        }
     }
 }

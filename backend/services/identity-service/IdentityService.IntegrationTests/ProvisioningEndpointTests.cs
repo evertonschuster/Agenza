@@ -13,6 +13,8 @@ namespace IdentityService.IntegrationTests;
 /// </summary>
 public class ProvisioningEndpointTests : IClassFixture<IdentityApiFactory>
 {
+    private const string TenantsUrl = "/internal/v1/tenants";
+
     private readonly IdentityApiFactory _factory;
 
     public ProvisioningEndpointTests(IdentityApiFactory factory)
@@ -29,7 +31,7 @@ public class ProvisioningEndpointTests : IClassFixture<IdentityApiFactory>
 
         response.EnsureSuccessStatusCode();
         using var document = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
-        Assert.EndsWith("/connect/token", document.RootElement.GetProperty("token_endpoint").GetString());
+        document.RootElement.GetProperty("token_endpoint").GetString().Should().EndWith("/connect/token");
     }
 
     [Fact]
@@ -40,7 +42,7 @@ public class ProvisioningEndpointTests : IClassFixture<IdentityApiFactory>
         var token = await RequestTokenAsync(
             client, "tenant-provisioning-cli", IdentityApiFactory.ProvisioningSecret, "identity-admin");
 
-        Assert.False(string.IsNullOrWhiteSpace(token));
+        token.Should().NotBeNullOrWhiteSpace();
     }
 
     [Fact]
@@ -51,8 +53,8 @@ public class ProvisioningEndpointTests : IClassFixture<IdentityApiFactory>
         var response = await client.PostAsync("/connect/token", TokenRequestContent(
             "tenant-provisioning-cli", "wrong-secret", "identity-admin"));
 
-        Assert.False(response.IsSuccessStatusCode);
-        Assert.Contains("invalid_client", await response.Content.ReadAsStringAsync());
+        response.IsSuccessStatusCode.Should().BeFalse();
+        (await response.Content.ReadAsStringAsync()).Should().Contain("invalid_client");
     }
 
     [Fact]
@@ -60,14 +62,14 @@ public class ProvisioningEndpointTests : IClassFixture<IdentityApiFactory>
     {
         var client = _factory.CreateClient();
 
-        var response = await client.PostAsJsonAsync("/internal/tenants", new
+        var response = await client.PostAsJsonAsync(TenantsUrl, new
         {
             tenantName = "No Token Studio",
             ownerEmail = "no-token@example.com",
             ownerPassword = "OwnerPass123",
         });
 
-        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
     }
 
     [Fact]
@@ -78,37 +80,93 @@ public class ProvisioningEndpointTests : IClassFixture<IdentityApiFactory>
             client, "assistant-service-worker", IdentityApiFactory.WorkerSecret, "services-api");
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", workerToken);
 
-        var response = await client.PostAsJsonAsync("/internal/tenants", new
+        var response = await client.PostAsJsonAsync(TenantsUrl, new
         {
             tenantName = "Wrong Scope Studio",
             ownerEmail = "wrong-scope@example.com",
             ownerPassword = "OwnerPass123",
         });
 
-        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Forbidden);
+    }
+
+    [Fact]
+    public async Task Provisioning_with_an_empty_tenant_name_is_rejected_by_validation()
+    {
+        var client = await AdminClientAsync();
+
+        var response = await client.PostAsJsonAsync(TenantsUrl, new
+        {
+            tenantName = "",
+            ownerEmail = "empty-name@example.com",
+            ownerPassword = "OwnerPass123",
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
     public async Task Provisioning_with_the_admin_scope_creates_tenant_and_owner()
     {
-        var client = _factory.CreateClient();
-        var adminToken = await RequestTokenAsync(
-            client, "tenant-provisioning-cli", IdentityApiFactory.ProvisioningSecret, "identity-admin");
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        var client = await AdminClientAsync();
 
-        var response = await client.PostAsJsonAsync("/internal/tenants", new
+        var response = await client.PostAsJsonAsync(TenantsUrl, new
         {
             tenantName = "Bella Studio",
             ownerEmail = "owner@bella-studio.example.com",
             ownerPassword = "OwnerPass123",
         });
 
-        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        response.StatusCode.Should().Be(HttpStatusCode.Created);
         using var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync());
         var tenantId = body.RootElement.GetProperty("tenantId").GetGuid();
-        Assert.NotEqual(Guid.Empty, tenantId);
-        Assert.NotEqual(Guid.Empty, body.RootElement.GetProperty("ownerUserId").GetGuid());
-        Assert.EndsWith($"/internal/tenants/{tenantId}", response.Headers.Location?.ToString());
+        tenantId.Should().NotBe(Guid.Empty);
+        body.RootElement.GetProperty("ownerUserId").GetGuid().Should().NotBe(Guid.Empty);
+        response.Headers.Location?.ToString().Should().EndWith($"/internal/v1/tenants/{tenantId}");
+    }
+
+    [Fact]
+    public async Task Provisioning_with_an_email_already_in_use_fails_and_rolls_back_the_tenant()
+    {
+        var client = await AdminClientAsync();
+        const string reusedEmail = "reused-owner@example.com";
+        await client.PostAsJsonAsync(TenantsUrl, new
+        {
+            tenantName = "Owner Reuse Business One",
+            ownerEmail = reusedEmail,
+            ownerPassword = "OwnerPass123",
+        });
+
+        var conflictingResponse = await client.PostAsJsonAsync(TenantsUrl, new
+        {
+            tenantName = "Owner Reuse Business Two",
+            ownerEmail = reusedEmail, // already used by the tenant above
+            ownerPassword = "OwnerPass123",
+        });
+
+        conflictingResponse.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+
+        // If the failed attempt's tenant row wasn't rolled back, its
+        // unique tenant-name index would still be occupied and this
+        // retry (a fresh owner email, same tenant name) would fail with
+        // a database constraint error instead of succeeding.
+        var retryResponse = await client.PostAsJsonAsync(TenantsUrl, new
+        {
+            tenantName = "Owner Reuse Business Two",
+            ownerEmail = "distinct-owner@example.com",
+            ownerPassword = "OwnerPass123",
+        });
+
+        retryResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    private async Task<HttpClient> AdminClientAsync()
+    {
+        var client = _factory.CreateClient();
+        var adminToken = await RequestTokenAsync(
+            client, "tenant-provisioning-cli", IdentityApiFactory.ProvisioningSecret, "identity-admin");
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", adminToken);
+        return client;
     }
 
     private static FormUrlEncodedContent TokenRequestContent(string clientId, string secret, string scope) =>
