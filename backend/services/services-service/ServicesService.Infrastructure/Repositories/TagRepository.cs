@@ -12,26 +12,17 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
     {
     }
 
-    public Task<IReadOnlyList<Tag>> ListAsync(Guid tenantId, CancellationToken cancellationToken) =>
-        ListAsync(t => t.TenantId == tenantId, query => query.OrderBy(t => t.Name), cancellationToken);
+    public Task<IReadOnlyList<Tag>> ListAsync(CancellationToken cancellationToken) =>
+        ListAsync(query => query.OrderBy(t => t.Name), cancellationToken);
 
-    public Task<Tag?> GetByIdAsync(Guid tenantId, Guid tagId, CancellationToken cancellationToken) =>
-        FindAsync(t => t.TenantId == tenantId && t.Id == tagId, cancellationToken);
+    public Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken) =>
+        FindAsync(t => t.Id == tagId, cancellationToken);
 
-    public Task<bool> NameExistsAsync(
-        Guid tenantId,
-        string name,
-        Guid? excludeTagId,
-        CancellationToken cancellationToken)
+    public Task<bool> NameExistsAsync(string name, Guid? excludeTagId, CancellationToken cancellationToken)
     {
         var normalized = name.Trim().ToLower();
-
-        // t.Name.ToLower() translates to Postgres lower(), so the
-        // case-insensitive uniqueness rule is evaluated in the database.
         return AnyAsync(
-            t => t.TenantId == tenantId
-                && t.Name.ToLower() == normalized
-                && (excludeTagId == null || t.Id != excludeTagId),
+            t => t.Name.ToLower() == normalized && (excludeTagId == null || t.Id != excludeTagId),
             cancellationToken);
     }
 }

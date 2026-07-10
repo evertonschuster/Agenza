@@ -3,24 +3,16 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Admin.SharedKernel.EntityFrameworkCore;
 
-/// <summary>
-/// Applies BaseEntity's soft-delete query filter and a DeletedAt index to
-/// every entity type assignable to <paramref name="baseEntityType"/> -
-/// so a new entity gets both for free just by inheriting BaseEntity, no
-/// per-configuration HasQueryFilter/HasIndex boilerplate (docs/adr/0006).
-///
-/// Takes the concrete BaseEntity type as a runtime <see cref="Type"/>
-/// instead of a generic parameter because each service owns its own copy
-/// of BaseEntity (Domain has zero project references, backend/CLAUDE.md)
-/// - this stays framework-only, with no reference back to any service's
-/// Domain. Relies on the type having a `DeletedAt` property of type
-/// `DateTimeOffset?`, which is BaseEntity's contract in every service.
-/// </summary>
 public static class ModelBuilderExtensions
 {
     private const string DeletedAtPropertyName = "DeletedAt";
+    private const string TenantIdPropertyName = "TenantId";
 
-    public static void ApplyAuditableConventions(this ModelBuilder modelBuilder, Type baseEntityType)
+    public static void ApplyAuditableConventions(
+        this ModelBuilder modelBuilder,
+        Type baseEntityType,
+        Type? tenantOwnedType = null,
+        Guid? currentTenantId = null)
     {
         foreach (var entityType in modelBuilder.Model.GetEntityTypes())
         {
@@ -29,17 +21,35 @@ public static class ModelBuilderExtensions
                 continue;
             }
 
+            var isTenantOwned = tenantOwnedType?.IsAssignableFrom(entityType.ClrType) ?? false;
             var entityBuilder = modelBuilder.Entity(entityType.ClrType);
-            entityBuilder.HasQueryFilter(BuildSoftDeleteFilter(entityType.ClrType));
+
+            entityBuilder.HasQueryFilter(BuildFilter(entityType.ClrType, isTenantOwned, currentTenantId));
             entityBuilder.HasIndex(DeletedAtPropertyName);
+
+            if (isTenantOwned)
+            {
+                entityBuilder.HasIndex(TenantIdPropertyName);
+            }
         }
     }
 
-    private static LambdaExpression BuildSoftDeleteFilter(Type entityType)
+    private static LambdaExpression BuildFilter(Type entityType, bool isTenantOwned, Guid? currentTenantId)
     {
         var parameter = Expression.Parameter(entityType, "entity");
         var deletedAt = Expression.Property(parameter, DeletedAtPropertyName);
-        var isNull = Expression.Equal(deletedAt, Expression.Constant(null, typeof(DateTimeOffset?)));
-        return Expression.Lambda(isNull, parameter);
+        Expression predicate = Expression.Equal(deletedAt, Expression.Constant(null, typeof(DateTimeOffset?)));
+
+        if (isTenantOwned)
+        {
+            // No tenant in context (background work, M2M) falls back to
+            // Guid.Empty, which no real tenant-owned row ever has - fail
+            // closed to an empty result set rather than every tenant's data.
+            var tenantId = Expression.Property(parameter, TenantIdPropertyName);
+            var expected = Expression.Constant(currentTenantId ?? Guid.Empty, typeof(Guid));
+            predicate = Expression.AndAlso(predicate, Expression.Equal(tenantId, expected));
+        }
+
+        return Expression.Lambda(predicate, parameter);
     }
 }

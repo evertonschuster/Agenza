@@ -92,24 +92,35 @@ context (e.g. notifications/email, billing).
    every aggregate root to inherit, and copy
    `AuditableEntitySaveChangesInterceptor` into
    `Infrastructure/Persistence/Interceptors/` (wired in step 4's
-   `AddWidgetServiceInfrastructure` above). After
-   `ApplyConfigurationsFromAssembly` in `OnModelCreating`, call
-   `builder.ApplyAuditableConventions(typeof(BaseEntity))`
-   (`Admin.SharedKernel.EntityFrameworkCore`) — applies the soft-delete
-   query filter + `DeletedAt` index to every `BaseEntity` automatically,
-   so entity configurations never write `HasQueryFilter` by hand.
+   `AddWidgetServiceInfrastructure` above). If this service has
+   tenant-owned entities, also add `{Service}.Domain/Common/ITenantOwned.cs`
+   (copy verbatim), `ICurrentTenantProvider` in `Application/Abstractions/`
+   + its `Infrastructure/Security/CurrentTenantProvider.cs` implementation
+   (registered as scoped), and give the `DbContext` an optional
+   `ICurrentTenantProvider?` constructor parameter (defaults to `null` so
+   `dotnet ef` design-time tooling still works) that it uses to capture
+   the current tenant id. After `ApplyConfigurationsFromAssembly` in
+   `OnModelCreating`, call `builder.ApplyAuditableConventions(typeof(BaseEntity),
+   typeof(ITenantOwned), currentTenantId)` (`Admin.SharedKernel.EntityFrameworkCore`)
+   — applies the soft-delete filter/index to every `BaseEntity`, and the
+   tenant filter/index to every `ITenantOwned` entity, automatically. No
+   entity configuration or repository method needs an explicit tenant id
+   (docs/adr/0006).
 
 8. **Exceptions**: add `{Service}.Domain/Exceptions/BusinessException.cs`
    (copy verbatim — `Code` + `Message`, docs/adr/0006); every domain
    invariant exception inherits it. Add
    `{Service}.Api/ExceptionHandling/BusinessExceptionHandler.cs` (copy
    verbatim, only the `using {Service}.Domain.Exceptions;` changes) and
-   register it in `Program.cs`:
+   register both handlers in `Program.cs`, in this order:
    `builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
+   builder.Services.AddExceptionHandler<GenericExceptionHandler>();
    builder.Services.AddProblemDetails();`, then `app.UseExceptionHandler();`
-   early in the pipeline (before `MapControllers`). Command handlers that
-   construct/mutate a domain entity never wrap it in try/catch — see
-   `backend-use-case` skill step 3.
+   early in the pipeline (before `MapControllers`).
+   `Admin.SharedKernel.GenericExceptionHandler` is shared (no per-service
+   copy needed) - it logs and 500s anything `BusinessExceptionHandler`
+   didn't handle. Command handlers that construct/mutate a domain entity
+   never wrap it in try/catch — see `backend-use-case` skill step 3.
 
 9. **Observability**: `builder.AddServiceDefaults()` +
    `app.MapDefaultEndpoints()` (health checks + OpenTelemetry come free).
@@ -160,9 +171,8 @@ builder.Services.AddControllers(options =>
 });
 builder.Services.AddOpenApi();
 
-// Maps a BusinessException escaping a handler to a 400 Problem Details
-// response (docs/adr/0006, step 8 above).
 builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
+builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services

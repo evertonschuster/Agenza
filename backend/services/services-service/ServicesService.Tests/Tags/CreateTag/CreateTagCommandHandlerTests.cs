@@ -8,17 +8,24 @@ namespace ServicesService.Tests.Tags.CreateTag;
 
 public class CreateTagCommandHandlerTests
 {
+    private static ICurrentTenantProvider CurrentTenant(Guid tenantId)
+    {
+        var provider = Substitute.For<ICurrentTenantProvider>();
+        provider.TenantId.Returns(tenantId);
+        return provider;
+    }
+
     [Fact]
     public async Task Handle_WithValidCommand_PersistsAndReturnsTheTag()
     {
         var tenantId = Guid.NewGuid();
         var repository = Substitute.For<ITagRepository>();
-        repository.NameExistsAsync(tenantId, "VIP", null, Arg.Any<CancellationToken>()).Returns(false);
+        repository.NameExistsAsync("VIP", null, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
-        var handler = new CreateTagCommandHandler(repository, unitOfWork);
+        var handler = new CreateTagCommandHandler(repository, unitOfWork, CurrentTenant(tenantId));
 
         var result = await handler.Handle(
-            new CreateTagCommand(tenantId, "VIP", "#0d9488", "High-value client"),
+            new CreateTagCommand("VIP", "#0d9488", "High-value client"),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -30,16 +37,15 @@ public class CreateTagCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithDuplicateNameInSameTenant_ReturnsConflictAndDoesNotPersist()
+    public async Task Handle_WithDuplicateName_ReturnsConflictAndDoesNotPersist()
     {
-        var tenantId = Guid.NewGuid();
         var repository = Substitute.For<ITagRepository>();
-        repository.NameExistsAsync(tenantId, "vip", null, Arg.Any<CancellationToken>()).Returns(true);
+        repository.NameExistsAsync("vip", null, Arg.Any<CancellationToken>()).Returns(true);
         var unitOfWork = Substitute.For<IUnitOfWork>();
-        var handler = new CreateTagCommandHandler(repository, unitOfWork);
+        var handler = new CreateTagCommandHandler(repository, unitOfWork, CurrentTenant(Guid.NewGuid()));
 
         var result = await handler.Handle(
-            new CreateTagCommand(tenantId, "vip", "#ef4444", null), // case-insensitive match
+            new CreateTagCommand("vip", "#ef4444", null), // case-insensitive match
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -50,33 +56,14 @@ public class CreateTagCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithSameNameInDifferentTenant_Succeeds()
-    {
-        var repository = Substitute.For<ITagRepository>();
-        repository.NameExistsAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        var handler = new CreateTagCommandHandler(repository, Substitute.For<IUnitOfWork>());
-
-        var result = await handler.Handle(
-            new CreateTagCommand(Guid.NewGuid(), "VIP", "#0d9488", null),
-            CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Name.Should().Be("VIP");
-    }
-
-    [Fact]
     public async Task Handle_WithInvalidColor_ThrowsAndDoesNotPersist()
     {
-        // Reached only if a caller bypasses CreateTagCommandValidator -
-        // the handler no longer catches this itself, the Api's global
-        // BusinessExceptionHandler maps it to a 400 (docs/adr/0006).
         var repository = Substitute.For<ITagRepository>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
-        var handler = new CreateTagCommandHandler(repository, unitOfWork);
+        var handler = new CreateTagCommandHandler(repository, unitOfWork, CurrentTenant(Guid.NewGuid()));
 
         var act = () => handler.Handle(
-            new CreateTagCommand(Guid.NewGuid(), "VIP", "#123456", null),
+            new CreateTagCommand("VIP", "#123456", null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidTagException>();

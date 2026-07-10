@@ -1,4 +1,4 @@
-# ADR 0006 — Tenant header validation, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions
+# ADR 0006 — Tenant header validation, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions, automatic tenant scoping
 
 Status: accepted (2026-07)
 
@@ -28,6 +28,15 @@ services and the shared libraries:
    purpose-built domain exception.
 7. Each entity's `IEntityTypeConfiguration` repeated the same
    `HasQueryFilter(e => e.DeletedAt == null)` line by hand.
+8. Every controller/command/repository method in the Tags slice threaded
+   `Guid tenantId` by hand end to end (`TagsController` → `CreateTagCommand`
+   → `CreateTagCommandHandler` → `ITagRepository.ListAsync(tenantId, ...)`),
+   even though the value always came from the same place
+   (`ITenantAccessor`) and every read needed the identical `.Where(t =>
+   t.TenantId == tenantId)` clause.
+9. `BusinessExceptionHandler` left every non-`BusinessException` to 500
+   with no logging - a real bug would fail silently from the API's
+   perspective.
 
 ## Decisions
 
@@ -124,11 +133,10 @@ avoiding the b-tree fragmentation fully random v4 ids cause at scale.
 each service's Infrastructure - never by Application/Domain) provides
 `RepositoryBase<TEntity>` with predicate-based `FindAsync`/`ListAsync`/
 `AnyAsync` and `Add`/`Remove` over a `DbContext`. `TagRepository`/
-`TenantRepository` extend it and add their own tenant-scoped,
-intention-revealing public methods (`ListAsync(tenantId, ct)`,
-`NameExistsAsync(...)`) on top - the port interfaces
-(`ITagRepository`/`ITenantRepository`) are unchanged, so this is purely
-an implementation-side de-duplication.
+`TenantRepository` extend it and add their own intention-revealing public
+methods on top - the port interfaces (`ITagRepository`/`ITenantRepository`)
+own their own shape, so this is purely an implementation-side
+de-duplication.
 
 Kept as a **separate project from `Admin.SharedKernel`**, not folded in:
 `Admin.SharedKernel` is referenced directly by every service's
@@ -138,9 +146,9 @@ so it gets its own project that only Infrastructure references.
 
 Not a single rigid interface across services: Tenant isn't itself
 tenant-scoped (it *is* the tenant), so `RepositoryBase` only supplies
-Add/Remove/Find/List primitives - each concrete repository still decides
-its own tenant-scoping shape, keeping the "every repository method takes
-the tenant id explicitly" rule intact.
+Add/Remove/Find/List primitives, not tenant scoping - see "Automatic
+tenant scoping" below for how tenant-owned entities like `Tag` get
+scoped instead.
 
 ### NSubstitute replaces hand-written fakes for unit tests
 
@@ -201,6 +209,55 @@ reserved for the single case they now consistently cover: a Domain
 invariant violation that should have been caught by
 FluentValidation/dispatcher and reaches Domain construction anyway.
 
+### Automatic tenant scoping: ITenantOwned + ICurrentTenantProvider, no more manual tenantId threading
+
+Tenant-owned entities implement `ITenantOwned` (`Guid TenantId { get; }`,
+`{Service}.Domain/Common/ITenantOwned.cs` - a marker interface, not part
+of `BaseEntity`, since not every entity is tenant-owned; `Tenant` itself
+never implements it). The `DbContext` captures the current request's
+tenant id (via `ICurrentTenantProvider`, optional constructor parameter
+defaulting to `null` for `dotnet ef` design-time tooling) and passes it
+into `ApplyAuditableConventions(baseEntityType, tenantOwnedType,
+currentTenantId)`, which now also adds `HasQueryFilter(e => e.TenantId
+== currentTenantId)` (combined with the soft-delete filter into one
+predicate - EF Core only allows one `HasQueryFilter` per entity type) and
+a `TenantId` index for any `ITenantOwned` type. Every query against a
+tenant-owned `DbSet` is scoped to the current tenant automatically; with
+no tenant in context (background work, an M2M token) the filter falls
+back to `Guid.Empty`, which no real row has, so the result set is empty
+rather than every tenant's data.
+
+This makes `ITagRepository`'s methods and `Tag`'s command/query records
+**tenant-blind**: `ListAsync(ct)`, `GetByIdAsync(tagId, ct)`,
+`NameExistsAsync(name, excludeTagId, ct)`, `CreateTagCommand(Name,
+Color, Description)` (no `TenantId` field at all) - the tenant never
+needs to be threaded through Controller → Command → Handler → Repository
+by hand. The one place a tenant-owned entity is *constructed* still
+needs the tenant explicitly (a domain invariant: "a tag must belong to a
+tenant"), sourced from `ICurrentTenantProvider` injected directly into
+that handler (`CreateTagCommandHandler`) - a port in
+`Application/Abstractions/`, implemented in Infrastructure by wrapping
+`ITenantAccessor`, so Application still never depends on
+`Admin.Identity.Client`/ASP.NET Core directly. `TagsController` no
+longer needs `ITenantAccessor` at all.
+
+`TenantHeaderFilter` (see above) is still what makes this safe: by the
+time any handler or the `DbContext` runs, the request's tenant has
+already been validated against the JWT claim. The `DbContext`-level
+filter is defense in depth on top of that, not the primary control.
+
+### GenericExceptionHandler: a shared, logging catch-all after BusinessExceptionHandler
+
+`Admin.SharedKernel.GenericExceptionHandler` (shared - no Domain
+dependency, so no reason to duplicate per service) is registered after
+`BusinessExceptionHandler` (`IExceptionHandler`s run in registration
+order until one returns `true`). It logs the exception at Error level
+via `ILogger<GenericExceptionHandler>` and writes a generic 500 Problem
+Details response with no exception details in the body. Replaces the
+previous "left unhandled, still 500s" behavior with an explicit,
+logged, non-leaking response for anything that isn't a
+`BusinessException`.
+
 ## Consequences
 
 - A new controller action gets tenant scoping for free (global filter);
@@ -225,7 +282,14 @@ FluentValidation/dispatcher and reaches Domain construction anyway.
 - A new domain invariant exception: inherit that service's
   `BusinessException`, give it a `Code`. No try/catch needed in the
   handler that constructs the entity - the Api's global
-  `BusinessExceptionHandler` covers it.
+  `BusinessExceptionHandler` covers it, and `GenericExceptionHandler`
+  logs/500s anything that isn't a `BusinessException`.
+- A new tenant-owned entity: implement `ITenantOwned`, pass its
+  `ClrType` and the current tenant id through to
+  `ApplyAuditableConventions` from the `DbContext` (copy the existing
+  wiring). Its repository/commands/queries never need an explicit
+  `tenantId` parameter; the one handler that constructs a new instance
+  gets the tenant from `ICurrentTenantProvider`.
 - New unit tests use `Substitute.For<T>()`, not a new hand-written fake
   class per port.
 - `backend/CLAUDE.md`, `backend-use-case`/`backend-new-microservice`

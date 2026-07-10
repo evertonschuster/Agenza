@@ -23,11 +23,11 @@ builder.Services.AddControllers(options =>
 });
 builder.Services.AddOpenApi();
 
-// Maps a BusinessException escaping a handler to a 400 Problem Details
-// response (docs/adr/0006) - must be registered before any middleware
-// that could itself throw, and app.UseExceptionHandler() below runs
-// first in the pipeline so it wraps everything after it.
+// Handlers run in registration order until one returns true -
+// BusinessExceptionHandler first, GenericExceptionHandler as the
+// logging catch-all for everything else.
 builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
+builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
 
 builder.Services

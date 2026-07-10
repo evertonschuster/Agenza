@@ -12,16 +12,15 @@ public class UpdateTagCommandHandlerTests
     [Fact]
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
     {
-        var tenantId = Guid.NewGuid();
-        var tag = new Tag(Guid.NewGuid(), tenantId, "VIP", TagColor.From("#0d9488"), null);
+        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
-        repository.GetByIdAsync(tenantId, tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
-        repository.NameExistsAsync(tenantId, "Returning", tag.Id, Arg.Any<CancellationToken>()).Returns(false);
+        repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        repository.NameExistsAsync("Returning", tag.Id, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new UpdateTagCommandHandler(repository, unitOfWork);
 
         var result = await handler.Handle(
-            new UpdateTagCommand(tenantId, tag.Id, "Returning", "#ef4444", "Came back"),
+            new UpdateTagCommand(tag.Id, "Returning", "#ef4444", "Came back"),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -34,15 +33,14 @@ public class UpdateTagCommandHandlerTests
     [Fact]
     public async Task Handle_RenamingToItsOwnCurrentName_DoesNotConflict()
     {
-        var tenantId = Guid.NewGuid();
-        var tag = new Tag(Guid.NewGuid(), tenantId, "VIP", TagColor.From("#0d9488"), null);
+        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
-        repository.GetByIdAsync(tenantId, tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
-        repository.NameExistsAsync(tenantId, "VIP", tag.Id, Arg.Any<CancellationToken>()).Returns(false);
+        repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        repository.NameExistsAsync("VIP", tag.Id, Arg.Any<CancellationToken>()).Returns(false);
         var handler = new UpdateTagCommandHandler(repository, Substitute.For<IUnitOfWork>());
 
         var result = await handler.Handle(
-            new UpdateTagCommand(tenantId, tag.Id, "VIP", "#ef4444", null),
+            new UpdateTagCommand(tag.Id, "VIP", "#ef4444", null),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -52,16 +50,14 @@ public class UpdateTagCommandHandlerTests
     [Fact]
     public async Task Handle_RenamingToAnotherTagsName_ReturnsConflict()
     {
-        var tenantId = Guid.NewGuid();
-        var tagToRename = new Tag(Guid.NewGuid(), tenantId, "VIP", TagColor.From("#0d9488"), null);
+        var tagToRename = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
-        repository.GetByIdAsync(tenantId, tagToRename.Id, Arg.Any<CancellationToken>()).Returns(tagToRename);
-        repository.NameExistsAsync(tenantId, "returning", tagToRename.Id, Arg.Any<CancellationToken>())
-            .Returns(true);
+        repository.GetByIdAsync(tagToRename.Id, Arg.Any<CancellationToken>()).Returns(tagToRename);
+        repository.NameExistsAsync("returning", tagToRename.Id, Arg.Any<CancellationToken>()).Returns(true);
         var handler = new UpdateTagCommandHandler(repository, Substitute.For<IUnitOfWork>());
 
         var result = await handler.Handle(
-            new UpdateTagCommand(tenantId, tagToRename.Id, "returning", "#0d9488", null),
+            new UpdateTagCommand(tagToRename.Id, "returning", "#0d9488", null),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -72,32 +68,11 @@ public class UpdateTagCommandHandlerTests
     public async Task Handle_WithUnknownTagId_ReturnsNotFound()
     {
         var repository = Substitute.For<ITagRepository>();
-        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns((Tag?)null);
+        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Tag?)null);
         var handler = new UpdateTagCommandHandler(repository, Substitute.For<IUnitOfWork>());
 
         var result = await handler.Handle(
-            new UpdateTagCommand(Guid.NewGuid(), Guid.NewGuid(), "VIP", "#0d9488", null),
-            CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.NotFound);
-    }
-
-    [Fact]
-    public async Task Handle_WithTagIdFromAnotherTenant_ReturnsNotFound()
-    {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
-        var repository = Substitute.For<ITagRepository>();
-        // GetByIdAsync is tenant-scoped by the real repository - a
-        // request for a different tenant id than the tag's own returns
-        // null, exactly like the caller passing an unknown tag id.
-        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<Guid>(), Arg.Any<CancellationToken>())
-            .Returns((Tag?)null);
-        var handler = new UpdateTagCommandHandler(repository, Substitute.For<IUnitOfWork>());
-
-        var result = await handler.Handle(
-            new UpdateTagCommand(Guid.NewGuid(), tag.Id, "Renamed", "#0d9488", null),
+            new UpdateTagCommand(Guid.NewGuid(), "VIP", "#0d9488", null),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -107,19 +82,15 @@ public class UpdateTagCommandHandlerTests
     [Fact]
     public async Task Handle_WithInvalidColor_ThrowsAndKeepsOriginalState()
     {
-        // Reached only if a caller bypasses UpdateTagCommandValidator -
-        // the handler no longer catches this itself, the Api's global
-        // BusinessExceptionHandler maps it to a 400 (docs/adr/0006).
-        var tenantId = Guid.NewGuid();
-        var tag = new Tag(Guid.NewGuid(), tenantId, "VIP", TagColor.From("#0d9488"), null);
+        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
-        repository.GetByIdAsync(tenantId, tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
-        repository.NameExistsAsync(tenantId, "VIP", tag.Id, Arg.Any<CancellationToken>()).Returns(false);
+        repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        repository.NameExistsAsync("VIP", tag.Id, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new UpdateTagCommandHandler(repository, unitOfWork);
 
         var act = () => handler.Handle(
-            new UpdateTagCommand(tenantId, tag.Id, "VIP", "#123456", null),
+            new UpdateTagCommand(tag.Id, "VIP", "#123456", null),
             CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidTagException>();

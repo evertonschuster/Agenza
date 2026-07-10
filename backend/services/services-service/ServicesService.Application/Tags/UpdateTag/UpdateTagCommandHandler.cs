@@ -17,7 +17,7 @@ public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, 
 
     public async Task<Result<TagResponse>> Handle(UpdateTagCommand command, CancellationToken cancellationToken)
     {
-        var tag = await _tagRepository.GetByIdAsync(command.TenantId, command.TagId, cancellationToken);
+        var tag = await _tagRepository.GetByIdAsync(command.TagId, cancellationToken);
         if (tag is null)
         {
             return Result.Failure<TagResponse>(
@@ -25,15 +25,12 @@ public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, 
         }
 
         var newName = command.Name.Trim();
-        if (await _tagRepository.NameExistsAsync(command.TenantId, newName, tag.Id, cancellationToken))
+        if (await _tagRepository.NameExistsAsync(newName, tag.Id, cancellationToken))
         {
             return Result.Failure<TagResponse>(
                 Error.Conflict("Tag.DuplicateName", $"A tag named '{newName}' already exists."));
         }
 
-        // tag.Update can throw InvalidTagException (a BusinessException) if
-        // a caller bypasses UpdateTagCommandValidator - left uncaught on
-        // purpose, see CreateTagCommandHandler's comment.
         var color = TagColor.From(command.Color);
         tag.Update(command.Name, color, command.Description);
 

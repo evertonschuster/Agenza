@@ -16,7 +16,7 @@ public sealed class ListTagsQueryHandler : IQueryHandler<ListTagsQuery, IReadOnl
         ListTagsQuery query,
         CancellationToken cancellationToken)
     {
-        var tags = await _tagRepository.ListAsync(query.TenantId, cancellationToken);
+        var tags = await _tagRepository.ListAsync(cancellationToken);
         IReadOnlyList<TagResponse> response = tags.Select(TagResponse.FromTag).ToList();
 
         return Result.Success(response);

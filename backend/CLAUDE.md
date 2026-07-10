@@ -25,7 +25,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/QUALITY.md`                           | What CI gates, before pushing               |
 | `../docs/adr/0005-...md`                       | CQRS/vertical-slice/Result convention rationale |
 | `../docs/adr/`                                 | Cross-cutting decisions with rationale      |
-| `../docs/adr/0006-...md`                       | Tenant header, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute |
+| `../docs/adr/0006-...md`                       | Tenant header/automatic scoping, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions |
 
 ## Critical constraints (non-negotiable)
 
@@ -98,11 +98,21 @@ see it.
   provisioning, OIDC protocol endpoints). Once the filter has run, read
   `ITenantAccessor.TenantId` directly (the throwing property) — don't
   repeat the check in the action.
-- Every repository/query method takes the tenant id explicitly; EF
-  queries filter by it. A cross-tenant read is a security bug, not a
-  code-style issue.
-- See docs/adr/0006 for why the filter is wired into services-service's
-  `Program.cs` only, not identity-service's.
+- A tenant-owned entity implements `ITenantOwned` (`{Service}.Domain/Common/ITenantOwned.cs`,
+  `Guid TenantId { get; }`). Its `DbContext` gets scoped to the current
+  tenant automatically (`ApplyAuditableConventions(baseEntityType,
+  typeof(ITenantOwned), currentTenantId)`, sourced from
+  `ICurrentTenantProvider`) — repository methods, commands, and queries
+  for that entity never take an explicit `tenantId` parameter (see
+  `ITagRepository`/`CreateTagCommand`). The one handler that constructs a
+  new instance gets the tenant from `ICurrentTenantProvider` (an
+  `Application/Abstractions/` port, implemented in Infrastructure) since
+  the entity's own invariants require it. A cross-tenant read is still a
+  security bug, not a code-style issue — the automatic filter is defense
+  in depth on top of `TenantHeaderFilter`, not a replacement for it.
+- See docs/adr/0006 for why the header filter is wired into
+  services-service's `Program.cs` only, not identity-service's, and for
+  the automatic tenant-scoping mechanism in full.
 
 ### CQRS + vertical slices
 
@@ -148,9 +158,10 @@ see it.
   registered via `AddExceptionHandler<T>()` + `app.UseExceptionHandler()`
   in `Program.cs`) is the *one* place that turns a `BusinessException`
   into an HTTP response (400 Problem Details, `Title` = `Code`, `Detail`
-  = `Message`). Anything that isn't a `BusinessException` is left
-  unhandled and still 500s — that raw, unhandled case still means an
-  actual bug or infrastructure failure.
+  = `Message`). `Admin.SharedKernel.GenericExceptionHandler`, registered
+  right after it, catches everything else: logs at Error level via
+  `ILogger`, returns a generic 500 Problem Details with no exception
+  details in the body.
 
 ### FluentValidation
 

@@ -5,6 +5,7 @@ using ServicesService.Application.Abstractions;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Persistence.Interceptors;
 using ServicesService.Infrastructure.Repositories;
+using ServicesService.Infrastructure.Security;
 
 namespace ServicesService.Infrastructure;
 
@@ -19,6 +20,7 @@ public static class DependencyInjection
 
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<AuditableEntitySaveChangesInterceptor>();
+        services.AddScoped<ICurrentTenantProvider, CurrentTenantProvider>();
 
         services.AddDbContext<ServicesDataContext>((serviceProvider, options) =>
             options

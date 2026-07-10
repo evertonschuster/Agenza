@@ -14,7 +14,7 @@ namespace ServicesService.Domain.Entities;
 /// here - this entity guards everything a single Tag can know about
 /// itself.
 /// </summary>
-public class Tag : BaseEntity
+public class Tag : BaseEntity, ITenantOwned
 {
     public const int NameMaxLength = 40;
     public const int DescriptionMaxLength = 200;

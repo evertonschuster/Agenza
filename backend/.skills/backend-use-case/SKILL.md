@@ -41,6 +41,10 @@ just adapt the templates.
   `DeletedBy`, `IsDeleted` for free (docs/adr/0006). Call `base(id)` from
   your constructor; never set the audit fields yourself, the EF
   interceptor does that.
+- If the entity belongs to a tenant, also implement `{Service}.Domain.Common.ITenantOwned`
+  (`Guid TenantId { get; }`) — a plain property is enough, no extra base
+  class. This is what lets the DbContext scope every query to it
+  automatically (step 5).
 - Constructor/factory validates every invariant; throw a dedicated
   exception inheriting that service's `{Service}.Domain.Exceptions.BusinessException`
   (`Code` + `Message`, e.g. `InvalidWidgetException(string message) :
@@ -62,8 +66,11 @@ just adapt the templates.
 - Narrow, intention-revealing methods (`Add`, `GetByIdAsync`) — not a
   generic interface. `Add`/`Remove` are synchronous and only stage the
   change (no internal commit) — see step 3's UnitOfWork note for why.
-- Every method that touches tenant-owned data takes the tenant id (or an
-  aggregate that carries it) explicitly, plus a `CancellationToken`.
+- If the entity is `ITenantOwned`, its methods do NOT take a tenant id
+  parameter (`ListAsync(ct)`, `GetByIdAsync(id, ct)`) — the DbContext
+  scopes the query automatically (step 5, docs/adr/0006). Only
+  entities that aren't tenant-owned (like `Tenant` itself) pass an
+  explicit id another way.
 - The **implementation** (step 5) extends
   `Admin.SharedKernel.EntityFrameworkCore.RepositoryBase<TEntity>` for
   the Add/Remove/Find/List boilerplate underneath this interface
@@ -122,15 +129,16 @@ Application/Tags/
 
 - Repository extends `Admin.SharedKernel.EntityFrameworkCore.RepositoryBase<TEntity>`
   and implements the port, using the base's protected `FindAsync`/
-  `ListAsync`/`AnyAsync`/`Add`/`Remove` for the boilerplate underneath
-  your tenant-scoped public methods (docs/adr/0006). `Add`/`Remove` only
-  stage the change — no `SaveChangesAsync` inside the repository (the
-  handler commits via `IUnitOfWork`).
+  `ListAsync`/`AnyAsync`/`Add`/`Remove` (docs/adr/0006). `Add`/`Remove`
+  only stage the change — no `SaveChangesAsync` inside the repository
+  (the handler commits via `IUnitOfWork`).
 - EF configuration lives in `Infrastructure/Persistence/Configurations/`.
   The soft-delete query filter and `DeletedAt` index apply automatically
-  to every `BaseEntity` (the `DbContext` calls `ApplyAuditableConventions`
-  once, docs/adr/0006) — don't add `HasQueryFilter` by hand. If the
-  entity has a uniqueness rule, filter that index with
+  to every `BaseEntity`, and (if `ITenantOwned`) the tenant filter +
+  `TenantId` index too — the `DbContext` calls
+  `ApplyAuditableConventions(typeof(BaseEntity), typeof(ITenantOwned),
+  currentTenantId)` once (docs/adr/0006). Never add `HasQueryFilter` by
+  hand. If the entity has a uniqueness rule, filter that index with
   `.HasFilter("\"DeletedAt\" IS NULL")` so a soft-deleted row doesn't
   block reusing its unique value.
 - New tables → `dotnet ef migrations add <Name>` from the Api project
@@ -139,22 +147,21 @@ Application/Tags/
 
 ### 6. Controller (thin)
 
-- Constructor-inject `IDispatcher` (never a concrete handler type) and
-  `ITenantAccessor` (from `shared/Admin.Identity.Client`) when the route
-  is tenant-scoped.
-- `[ApiVersion("1.0")]` + `[Route("api/v{version:apiVersion}/...")]` (or
-  `internal/v{version:apiVersion}/...` for M2M-only routes).
-- Don't check the tenant yourself — the global `TenantHeaderFilter`
+- Constructor-inject `IDispatcher` (never a concrete handler type) —
+  nothing else, for a tenant-owned entity. The global `TenantHeaderFilter`
   (registered in `Program.cs`) already rejected the request with 403
   before this action runs unless the `X-Tenant-Id` header matched the
-  token's `tenant_id` claim (docs/adr/0006). Just read
-  `_tenantAccessor.TenantId` (the throwing property, not
-  `TryGetTenantId`). Mark the controller/action `[IgnoreTenant]` instead
-  if it genuinely isn't tenant-scoped (M2M, protocol endpoints).
-- Each action: build the command/query with `_tenantAccessor.TenantId` →
-  `await _dispatcher.Send(...)` / `.Query(...)` →
-  `result.ToActionResult(this, value => Ok(value))` (or `Created`/
-  `NoContent`). No try/catch per exception type.
+  token's `tenant_id` claim (docs/adr/0006); the tenant itself never
+  needs to reach the controller — the DbContext scopes reads
+  automatically and the one handler that constructs a new entity gets it
+  from `ICurrentTenantProvider` (step 3). Mark the controller/action
+  `[IgnoreTenant]` instead if it genuinely isn't tenant-scoped (M2M,
+  protocol endpoints).
+- `[ApiVersion("1.0")]` + `[Route("api/v{version:apiVersion}/...")]` (or
+  `internal/v{version:apiVersion}/...` for M2M-only routes).
+- Each action: build the command/query → `await _dispatcher.Send(...)` /
+  `.Query(...)` → `result.ToActionResult(this, value => Ok(value))` (or
+  `Created`/`NoContent`). No try/catch per exception type.
 - `[Authorize]` by default; scope checks (`User.HasScope(...)`) for
   M2M-only endpoints (see `TenantsController`, which is also
   `[IgnoreTenant]`).
@@ -201,7 +208,7 @@ using Admin.SharedKernel;
 
 namespace {Service}.Application.Widgets.CreateWidget;
 
-public sealed record CreateWidgetCommand(Guid TenantId, string Name) : ICommand<WidgetResponse>;
+public sealed record CreateWidgetCommand(string Name) : ICommand<WidgetResponse>;
 ```
 
 ```csharp
@@ -251,25 +258,23 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
 {
     private readonly IWidgetRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ICurrentTenantProvider _currentTenant;
 
-    public CreateWidgetCommandHandler(IWidgetRepository repository, IUnitOfWork unitOfWork)
+    public CreateWidgetCommandHandler(
+        IWidgetRepository repository, IUnitOfWork unitOfWork, ICurrentTenantProvider currentTenant)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
+        _currentTenant = currentTenant;
     }
 
     public async Task<Result<WidgetResponse>> Handle(CreateWidgetCommand command, CancellationToken cancellationToken)
     {
-        // Construction can throw InvalidWidgetException (a
-        // BusinessException) if a caller bypasses
-        // CreateWidgetCommandValidator - left uncaught on purpose, the
-        // Api's global BusinessExceptionHandler maps it to a 400 Problem
-        // Details response (docs/adr/0006). Never wrap this in try/catch.
-        var widget = new Widget(Guid.CreateVersion7(), command.TenantId, command.Name);
+        var widget = new Widget(Guid.CreateVersion7(), _currentTenant.TenantId, command.Name);
 
         // Cross-aggregate rule needing the repository - delete this
         // block if the feature has no uniqueness rule:
-        if (await _repository.NameExistsAsync(command.TenantId, widget.Name, excludeId: null, cancellationToken))
+        if (await _repository.NameExistsAsync(widget.Name, excludeId: null, cancellationToken))
         {
             return Result.Failure<WidgetResponse>(
                 Error.Conflict("Widget.DuplicateName", $"A widget named '{widget.Name}' already exists."));
@@ -283,6 +288,14 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
 }
 ```
 
+`ICurrentTenantProvider` (`{Service}.Application/Abstractions/ICurrentTenantProvider.cs`
+— `Guid TenantId { get; }` + `bool TryGetTenantId(out Guid tenantId)`) is
+only needed by the handler that constructs a new tenant-owned entity;
+everything else (read/update/delete) doesn't need the tenant at all,
+the DbContext already scopes it (docs/adr/0006). Implementation lives in
+Infrastructure (`Security/CurrentTenantProvider.cs`, wraps
+`ITenantAccessor`) — copy `ServicesService`'s verbatim.
+
 ### Command with no response (Delete-shaped)
 
 ```csharp
@@ -291,7 +304,7 @@ using Admin.SharedKernel;
 
 namespace {Service}.Application.Widgets.DeleteWidget;
 
-public sealed record DeleteWidgetCommand(Guid TenantId, Guid WidgetId) : ICommand;
+public sealed record DeleteWidgetCommand(Guid WidgetId) : ICommand;
 ```
 
 ```csharp
@@ -314,7 +327,7 @@ public sealed class DeleteWidgetCommandHandler : ICommandHandler<DeleteWidgetCom
 
     public async Task<Result> Handle(DeleteWidgetCommand command, CancellationToken cancellationToken)
     {
-        var widget = await _repository.GetByIdAsync(command.TenantId, command.WidgetId, cancellationToken);
+        var widget = await _repository.GetByIdAsync(command.WidgetId, cancellationToken);
         if (widget is null)
         {
             return Result.Failure(Error.NotFound("Widget.NotFound", $"Widget '{command.WidgetId}' was not found."));
@@ -336,7 +349,7 @@ using Admin.SharedKernel;
 
 namespace {Service}.Application.Widgets.ListWidgets;
 
-public sealed record ListWidgetsQuery(Guid TenantId) : IQuery<IReadOnlyList<WidgetResponse>>;
+public sealed record ListWidgetsQuery : IQuery<IReadOnlyList<WidgetResponse>>;
 ```
 
 ```csharp
@@ -359,12 +372,12 @@ public sealed class ListWidgetsQueryHandler : IQueryHandler<ListWidgetsQuery, IR
     public async Task<Result<IReadOnlyList<WidgetResponse>>> Handle(
         ListWidgetsQuery query, CancellationToken cancellationToken)
     {
-        var widgets = await _repository.ListAsync(query.TenantId, cancellationToken);
+        var widgets = await _repository.ListAsync(cancellationToken);
         IReadOnlyList<WidgetResponse> response = widgets.Select(WidgetResponse.FromWidget).ToList();
         return Result.Success(response);
     }
 }
-// No validator needed unless the query takes user input beyond the tenant id.
+// No validator needed unless the query takes user input.
 ```
 
 ### Shared feature DTO (once per feature, not per operation)
@@ -384,7 +397,6 @@ public sealed record WidgetResponse(Guid Id, string Name)
 ### Controller (dispatch + Result → HTTP)
 
 ```csharp
-using Admin.Identity.Client;
 using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
@@ -399,34 +411,31 @@ namespace {Service}.Api.Controllers;
 [Route("api/v{version:apiVersion}/widgets")]
 public class WidgetsController : ControllerBase
 {
-    private readonly ITenantAccessor _tenantAccessor;
     private readonly IDispatcher _dispatcher;
 
-    public WidgetsController(ITenantAccessor tenantAccessor, IDispatcher dispatcher)
+    public WidgetsController(IDispatcher dispatcher)
     {
-        _tenantAccessor = tenantAccessor;
         _dispatcher = dispatcher;
     }
 
     public record WidgetBody(string Name);
 
-    // No TryGetTenantId/Forbid boilerplate: the global TenantHeaderFilter
-    // (Program.cs) already rejected the request with 403 before this
-    // action runs unless X-Tenant-Id matched the token's tenant_id claim
-    // (docs/adr/0006). Mark this controller/action [IgnoreTenant] instead
-    // if it genuinely isn't tenant-scoped.
+    // Global TenantHeaderFilter (Program.cs) already rejected the
+    // request with 403 unless X-Tenant-Id matched the token's
+    // tenant_id claim (docs/adr/0006) - mark [IgnoreTenant] instead if
+    // this controller/action genuinely isn't tenant-scoped.
 
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.Query(new ListWidgetsQuery(_tenantAccessor.TenantId), cancellationToken);
+        var result = await _dispatcher.Query(new ListWidgetsQuery(), cancellationToken);
         return result.ToActionResult(this, widgets => Ok(widgets));
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(WidgetBody body, CancellationToken cancellationToken)
     {
-        var command = new CreateWidgetCommand(_tenantAccessor.TenantId, body.Name);
+        var command = new CreateWidgetCommand(body.Name);
         var result = await _dispatcher.Send(command, cancellationToken);
         return result.ToActionResult(this, widget => Created($"/api/v1/widgets/{widget.Id}", widget));
     }
@@ -434,7 +443,7 @@ public class WidgetsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var command = new DeleteWidgetCommand(_tenantAccessor.TenantId, id);
+        var command = new DeleteWidgetCommand(id);
         var result = await _dispatcher.Send(command, cancellationToken);
         return result.ToActionResult(this, NoContent);
     }
@@ -455,34 +464,39 @@ namespace {Service}.Tests.Widgets.CreateWidget;
 
 public class CreateWidgetCommandHandlerTests
 {
+    private static ICurrentTenantProvider CurrentTenant(Guid tenantId)
+    {
+        var provider = Substitute.For<ICurrentTenantProvider>();
+        provider.TenantId.Returns(tenantId);
+        return provider;
+    }
+
     [Fact]
     public async Task Handle_WithValidCommand_PersistsAndReturnsTheValue()
     {
         var tenantId = Guid.NewGuid();
         var repository = Substitute.For<IWidgetRepository>();
-        repository.NameExistsAsync(tenantId, "Example", null, Arg.Any<CancellationToken>()).Returns(false);
+        repository.NameExistsAsync("Example", null, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
-        var handler = new CreateWidgetCommandHandler(repository, unitOfWork);
+        var handler = new CreateWidgetCommandHandler(repository, unitOfWork, CurrentTenant(tenantId));
 
-        var result = await handler.Handle(
-            new CreateWidgetCommand(tenantId, "Example"), CancellationToken.None);
+        var result = await handler.Handle(new CreateWidgetCommand("Example"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Name.Should().Be("Example");
-        repository.Received(1).Add(Arg.Is<Widget>(w => w.Id == result.Value.Id));
+        repository.Received(1).Add(Arg.Is<Widget>(w => w.Id == result.Value.Id && w.TenantId == tenantId));
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_WithDuplicateNameInSameTenant_ReturnsConflict()
+    public async Task Handle_WithDuplicateName_ReturnsConflict()
     {
-        var tenantId = Guid.NewGuid();
         var repository = Substitute.For<IWidgetRepository>();
-        repository.NameExistsAsync(tenantId, "example", null, Arg.Any<CancellationToken>()).Returns(true);
-        var handler = new CreateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>());
+        repository.NameExistsAsync("example", null, Arg.Any<CancellationToken>()).Returns(true);
+        var handler = new CreateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>(), CurrentTenant(Guid.NewGuid()));
 
         var result = await handler.Handle(
-            new CreateWidgetCommand(tenantId, "example"), CancellationToken.None); // case-insensitive match
+            new CreateWidgetCommand("example"), CancellationToken.None); // case-insensitive match
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
@@ -495,9 +509,9 @@ public class CreateWidgetCommandHandlerTests
         // - handler unit tests call Handle(...) directly, so they exercise
         // this path even though production traffic never does.
         var handler = new CreateWidgetCommandHandler(
-            Substitute.For<IWidgetRepository>(), Substitute.For<IUnitOfWork>());
+            Substitute.For<IWidgetRepository>(), Substitute.For<IUnitOfWork>(), CurrentTenant(Guid.NewGuid()));
 
-        var act = () => handler.Handle(new CreateWidgetCommand(Guid.NewGuid(), ""), CancellationToken.None);
+        var act = () => handler.Handle(new CreateWidgetCommand(""), CancellationToken.None);
 
         await act.Should().ThrowAsync<InvalidWidgetException>();
     }
@@ -517,13 +531,13 @@ public class CreateWidgetCommandValidatorTests
     [Fact]
     public void Validate_WithValidCommand_Passes()
     {
-        _validator.Validate(new CreateWidgetCommand(Guid.NewGuid(), "Example")).IsValid.Should().BeTrue();
+        _validator.Validate(new CreateWidgetCommand("Example")).IsValid.Should().BeTrue();
     }
 
     [Fact]
     public void Validate_WithEmptyName_Fails()
     {
-        _validator.Validate(new CreateWidgetCommand(Guid.NewGuid(), "")).IsValid.Should().BeFalse();
+        _validator.Validate(new CreateWidgetCommand("")).IsValid.Should().BeFalse();
     }
 }
 ```
