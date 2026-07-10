@@ -1,5 +1,6 @@
 using Admin.SharedKernel;
 using IdentityService.Application.Abstractions;
+using IdentityService.Application.Tenants;
 using IdentityService.Application.Tenants.ProvisionTenant;
 using IdentityService.Domain.Entities;
 
@@ -7,83 +8,64 @@ namespace IdentityService.Tests.Tenants.ProvisionTenant;
 
 public class ProvisionTenantCommandHandlerTests
 {
-    private class FakeTenantRepository : ITenantRepository
+    private static IUnitOfWork CreatePassthroughUnitOfWork()
     {
-        public List<Tenant> Tenants { get; } = [];
+        // Just runs the operation directly - real rollback-on-failure is
+        // exercised against a real Postgres transaction by UnitOfWork,
+        // which a mock can't meaningfully simulate (see
+        // IdentityService.IntegrationTests).
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        unitOfWork
+            .ExecuteInTransactionAsync(
+                Arg.Any<Func<CancellationToken, Task<Result<ProvisionTenantResponse>>>>(),
+                Arg.Any<CancellationToken>())
+            .Returns(callInfo => callInfo.Arg<Func<CancellationToken, Task<Result<ProvisionTenantResponse>>>>()(
+                callInfo.Arg<CancellationToken>()));
 
-        public Task<Tenant?> GetByIdAsync(Guid tenantId, CancellationToken cancellationToken) =>
-            Task.FromResult(Tenants.FirstOrDefault(t => t.Id == tenantId));
-
-        public Task AddAsync(Tenant tenant, CancellationToken cancellationToken)
-        {
-            Tenants.Add(tenant);
-            return Task.CompletedTask;
-        }
-    }
-
-    private class FakeUserAccountService : IUserAccountService
-    {
-        public List<(Guid TenantId, string Email)> CreatedOwners { get; } = [];
-
-        public Task<Result<UserAccountResult>> CreateOwnerAsync(
-            Guid tenantId,
-            string email,
-            string password,
-            CancellationToken cancellationToken)
-        {
-            CreatedOwners.Add((tenantId, email));
-            return Task.FromResult(Result.Success(new UserAccountResult(Guid.NewGuid(), email)));
-        }
-    }
-
-    private class FailingUserAccountService : IUserAccountService
-    {
-        public Task<Result<UserAccountResult>> CreateOwnerAsync(
-            Guid tenantId,
-            string email,
-            string password,
-            CancellationToken cancellationToken) =>
-            Task.FromResult(Result.Failure<UserAccountResult>(
-                Error.Validation("Owner.CreationFailed", "Simulated owner creation failure.")));
-    }
-
-    // Just runs the operation directly - real rollback-on-failure is
-    // exercised against a real Postgres transaction by UnitOfWork, which
-    // fakes can't meaningfully simulate (see IdentityService.IntegrationTests).
-    private class FakeUnitOfWork : IUnitOfWork
-    {
-        public Task<Result<TResult>> ExecuteInTransactionAsync<TResult>(
-            Func<CancellationToken, Task<Result<TResult>>> operation,
-            CancellationToken cancellationToken) =>
-            operation(cancellationToken);
+        return unitOfWork;
     }
 
     [Fact]
     public async Task Handle_WithValidCommand_CreatesTenantAndOwnerUser()
     {
-        var tenantRepository = new FakeTenantRepository();
-        var userAccountService = new FakeUserAccountService();
-        var handler = new ProvisionTenantCommandHandler(tenantRepository, userAccountService, new FakeUnitOfWork());
+        var tenantRepository = Substitute.For<ITenantRepository>();
+        var userAccountService = Substitute.For<IUserAccountService>();
+        userAccountService
+            .CreateOwnerAsync(Arg.Any<Guid>(), "owner@demo.local", "Passw0rd!", Arg.Any<CancellationToken>())
+            .Returns(Result.Success(new UserAccountResult(Guid.NewGuid(), "owner@demo.local")));
+        var handler = new ProvisionTenantCommandHandler(
+            tenantRepository,
+            userAccountService,
+            CreatePassthroughUnitOfWork());
 
         var result = await handler.Handle(
             new ProvisionTenantCommand("Demo Business", "owner@demo.local", "Passw0rd!"),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        tenantRepository.Tenants.Should().ContainSingle().Which.Name.Should().Be("Demo Business");
-        result.Value.TenantId.Should().Be(tenantRepository.Tenants[0].Id);
-        userAccountService.CreatedOwners.Should().ContainSingle(owner =>
-            owner.TenantId == result.Value.TenantId && owner.Email == "owner@demo.local");
+        await tenantRepository.Received(1).AddAsync(
+            Arg.Is<Tenant>(tenant => tenant.Name == "Demo Business"),
+            Arg.Any<CancellationToken>());
+        await userAccountService.Received(1).CreateOwnerAsync(
+            result.Value.TenantId,
+            "owner@demo.local",
+            "Passw0rd!",
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WhenOwnerCreationFails_ReturnsTheFailure()
     {
-        var tenantRepository = new FakeTenantRepository();
+        var tenantRepository = Substitute.For<ITenantRepository>();
+        var userAccountService = Substitute.For<IUserAccountService>();
+        userAccountService
+            .CreateOwnerAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Result.Failure<UserAccountResult>(
+                Error.Validation("Owner.CreationFailed", "Simulated owner creation failure.")));
         var handler = new ProvisionTenantCommandHandler(
             tenantRepository,
-            new FailingUserAccountService(),
-            new FakeUnitOfWork());
+            userAccountService,
+            CreatePassthroughUnitOfWork());
 
         var result = await handler.Handle(
             new ProvisionTenantCommand("Demo Business", "owner@demo.local", "Passw0rd!"),

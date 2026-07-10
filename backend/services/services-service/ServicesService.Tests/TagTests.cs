@@ -94,6 +94,48 @@ public class TagTests
         act.Should().Throw<InvalidTagException>();
         tag.Name.Should().Be("VIP");
     }
+
+    [Fact]
+    public void MarkCreated_SetsCreatedAtAndCreatedBy()
+    {
+        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null);
+        var actorId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        tag.MarkCreated(actorId, now);
+
+        tag.CreatedAt.Should().Be(now);
+        tag.CreatedBy.Should().Be(actorId);
+    }
+
+    [Fact]
+    public void MarkUpdated_SetsUpdatedAtAndUpdatedBy()
+    {
+        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null);
+        var actorId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        tag.MarkUpdated(actorId, now);
+
+        tag.UpdatedAt.Should().Be(now);
+        tag.UpdatedBy.Should().Be(actorId);
+    }
+
+    [Fact]
+    public void MarkDeleted_SetsDeletedAtAndDeletedByAndIsDeleted()
+    {
+        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null);
+        var actorId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        tag.IsDeleted.Should().BeFalse();
+
+        tag.MarkDeleted(actorId, now);
+
+        tag.DeletedAt.Should().Be(now);
+        tag.DeletedBy.Should().Be(actorId);
+        tag.IsDeleted.Should().BeTrue();
+    }
 }
 
 public class TagColorTests

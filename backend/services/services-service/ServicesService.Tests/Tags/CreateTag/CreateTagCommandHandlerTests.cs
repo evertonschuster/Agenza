@@ -1,8 +1,8 @@
 using Admin.SharedKernel;
+using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.CreateTag;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
-using ServicesService.Tests.TestDoubles;
 
 namespace ServicesService.Tests.Tags.CreateTag;
 
@@ -12,8 +12,9 @@ public class CreateTagCommandHandlerTests
     public async Task Handle_WithValidCommand_PersistsAndReturnsTheTag()
     {
         var tenantId = Guid.NewGuid();
-        var repository = new FakeTagRepository();
-        var unitOfWork = new FakeUnitOfWork();
+        var repository = Substitute.For<ITagRepository>();
+        repository.NameExistsAsync(tenantId, "VIP", null, Arg.Any<CancellationToken>()).Returns(false);
+        var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new CreateTagCommandHandler(repository, unitOfWork);
 
         var result = await handler.Handle(
@@ -24,17 +25,17 @@ public class CreateTagCommandHandlerTests
         result.Value.Name.Should().Be("VIP");
         result.Value.Color.Should().Be("#0d9488");
         result.Value.Description.Should().Be("High-value client");
-        repository.Tags.Should().ContainSingle(tag => tag.Id == result.Value.Id);
-        unitOfWork.SaveChangesCalls.Should().Be(1);
+        repository.Received(1).Add(Arg.Is<Tag>(tag => tag.Id == result.Value.Id && tag.TenantId == tenantId));
+        await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithDuplicateNameInSameTenant_ReturnsConflictAndDoesNotPersist()
     {
         var tenantId = Guid.NewGuid();
-        var repository = new FakeTagRepository();
-        repository.Tags.Add(new Tag(Guid.NewGuid(), tenantId, "VIP", TagColor.From("#0d9488"), null));
-        var unitOfWork = new FakeUnitOfWork();
+        var repository = Substitute.For<ITagRepository>();
+        repository.NameExistsAsync(tenantId, "vip", null, Arg.Any<CancellationToken>()).Returns(true);
+        var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new CreateTagCommandHandler(repository, unitOfWork);
 
         var result = await handler.Handle(
@@ -44,16 +45,17 @@ public class CreateTagCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Tag.DuplicateName");
-        repository.Tags.Should().HaveCount(1);
-        unitOfWork.SaveChangesCalls.Should().Be(0);
+        repository.DidNotReceive().Add(Arg.Any<Tag>());
+        await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithSameNameInDifferentTenant_Succeeds()
     {
-        var repository = new FakeTagRepository();
-        repository.Tags.Add(new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null));
-        var handler = new CreateTagCommandHandler(repository, new FakeUnitOfWork());
+        var repository = Substitute.For<ITagRepository>();
+        repository.NameExistsAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        var handler = new CreateTagCommandHandler(repository, Substitute.For<IUnitOfWork>());
 
         var result = await handler.Handle(
             new CreateTagCommand(Guid.NewGuid(), "VIP", "#0d9488", null),
@@ -66,8 +68,8 @@ public class CreateTagCommandHandlerTests
     [Fact]
     public async Task Handle_WithInvalidColor_ReturnsValidationErrorAndDoesNotPersist()
     {
-        var repository = new FakeTagRepository();
-        var unitOfWork = new FakeUnitOfWork();
+        var repository = Substitute.For<ITagRepository>();
+        var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new CreateTagCommandHandler(repository, unitOfWork);
 
         var result = await handler.Handle(
@@ -76,7 +78,7 @@ public class CreateTagCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Validation);
-        repository.Tags.Should().BeEmpty();
-        unitOfWork.SaveChangesCalls.Should().Be(0);
+        repository.DidNotReceive().Add(Arg.Any<Tag>());
+        await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

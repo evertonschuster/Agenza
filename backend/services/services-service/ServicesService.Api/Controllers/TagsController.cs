@@ -12,9 +12,9 @@ namespace ServicesService.Api.Controllers;
 
 /// <summary>
 /// The /api/tags contract from the frontend's docs/API.md. Authentication
-/// comes from the global AuthorizeFilter (Program.cs); the tenant comes
-/// exclusively from the authenticated principal's tenant_id claim via
-/// ITenantAccessor - never from the request payload. Every action just
+/// comes from the global AuthorizeFilter, the tenant from the global
+/// TenantHeaderFilter (Program.cs) - both run before any action here, so
+/// ITenantAccessor.TenantId is always safe to read. Every action just
 /// builds a command/query and dispatches it - validation, business
 /// rules, and persistence all live in the Application layer's Tags
 /// vertical slices.
@@ -38,26 +38,14 @@ public class TagsController : ControllerBase
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
     {
-        if (!_tenantAccessor.TryGetTenantId(out var tenantId))
-        {
-            // Authenticated but not tenant-bound (e.g. an M2M token) -
-            // this endpoint only makes sense for a tenant principal.
-            return Forbid();
-        }
-
-        var result = await _dispatcher.Query(new ListTagsQuery(tenantId), cancellationToken);
+        var result = await _dispatcher.Query(new ListTagsQuery(_tenantAccessor.TenantId), cancellationToken);
         return result.ToActionResult(this, tags => Ok(tags));
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(TagBody body, CancellationToken cancellationToken)
     {
-        if (!_tenantAccessor.TryGetTenantId(out var tenantId))
-        {
-            return Forbid();
-        }
-
-        var command = new CreateTagCommand(tenantId, body.Name, body.Color, body.Description);
+        var command = new CreateTagCommand(_tenantAccessor.TenantId, body.Name, body.Color, body.Description);
         var result = await _dispatcher.Send(command, cancellationToken);
 
         return result.ToActionResult(this, tag => Created($"/api/v1/tags/{tag.Id}", tag));
@@ -66,12 +54,7 @@ public class TagsController : ControllerBase
     [HttpPut("{id:guid}")]
     public async Task<IActionResult> Update(Guid id, TagBody body, CancellationToken cancellationToken)
     {
-        if (!_tenantAccessor.TryGetTenantId(out var tenantId))
-        {
-            return Forbid();
-        }
-
-        var command = new UpdateTagCommand(tenantId, id, body.Name, body.Color, body.Description);
+        var command = new UpdateTagCommand(_tenantAccessor.TenantId, id, body.Name, body.Color, body.Description);
         var result = await _dispatcher.Send(command, cancellationToken);
 
         return result.ToActionResult(this, tag => Ok(tag));
@@ -80,12 +63,7 @@ public class TagsController : ControllerBase
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        if (!_tenantAccessor.TryGetTenantId(out var tenantId))
-        {
-            return Forbid();
-        }
-
-        var result = await _dispatcher.Send(new DeleteTagCommand(tenantId, id), cancellationToken);
+        var result = await _dispatcher.Send(new DeleteTagCommand(_tenantAccessor.TenantId, id), cancellationToken);
         return result.ToActionResult(this, NoContent);
     }
 }

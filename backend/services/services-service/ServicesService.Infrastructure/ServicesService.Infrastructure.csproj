@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <ProjectReference Include="..\ServicesService.Application\ServicesService.Application.csproj" />
+    <ProjectReference Include="..\..\..\shared\Admin.Identity.Client\Admin.Identity.Client.csproj" />
+    <ProjectReference Include="..\..\..\shared\Admin.SharedKernel.EntityFrameworkCore\Admin.SharedKernel.EntityFrameworkCore.csproj" />
   </ItemGroup>
 
   <ItemGroup>

@@ -25,6 +25,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/QUALITY.md`                           | What CI gates, before pushing               |
 | `../docs/adr/0005-...md`                       | CQRS/vertical-slice/Result convention rationale |
 | `../docs/adr/`                                 | Cross-cutting decisions with rationale      |
+| `../docs/adr/0006-...md`                       | Tenant header, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute |
 
 ## Critical constraints (non-negotiable)
 
@@ -33,7 +34,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 ```
 Domain          zero project references, zero NuGet framework deps
 Application     → Domain, Admin.SharedKernel. Ports live in Abstractions/
-Infrastructure  → Application. EF Core, external HTTP, OpenIddict stores
+Infrastructure  → Application, Admin.Identity.Client, Admin.SharedKernel.EntityFrameworkCore
 Api             → Application + Infrastructure. Controllers stay thin
 Tests           → Application + Domain (unit); Api (integration)
 ```
@@ -41,7 +42,10 @@ Tests           → Application + Domain (unit); Api (integration)
 `backend/shared/Admin.SharedKernel` is cross-cutting CQRS/Result
 infrastructure (like `Admin.Identity.Client` is for auth) — every
 service's Application layer references it. It is NOT a place for
-business logic.
+business logic. `backend/shared/Admin.SharedKernel.EntityFrameworkCore`
+is a separate project (generic `RepositoryBase<TEntity>`, docs/adr/0006)
+because it needs EF Core — Infrastructure-only, Application must never
+see it.
 
 ### Rich domain model — no anemic entities
 
@@ -56,16 +60,40 @@ business logic.
   objects in Domain, not raw strings/decimals passed around.
 - Business rules live in Domain/Application — never in controllers,
   never in EF configurations.
+- Every aggregate root inherits `BaseEntity` (`{Service}.Domain/Common/`
+  — one copy per service, Domain can't reference a shared assembly).
+  Gives `Id`, `CreatedAt`/`CreatedBy`, `UpdatedAt`/`UpdatedBy`,
+  `DeletedAt`/`DeletedBy`, `IsDeleted`, set only via `MarkCreated`/
+  `MarkUpdated`/`MarkDeleted` — never public setters. Delete is a real
+  soft delete: each service's `AuditableEntitySaveChangesInterceptor`
+  turns a tracked `Deleted` entry into `Modified` and calls
+  `MarkDeleted`; a `HasQueryFilter(e => e.DeletedAt == null)` on every
+  entity configuration hides soft-deleted rows from ordinary reads (see
+  docs/adr/0006).
+- New entity ids come from `Admin.SharedKernel.IdGenerator.NewId()`
+  (UUID v7 via `Guid.CreateVersion7()`), not `Guid.NewGuid()`.
 
 ### Tenant scoping (repo-wide non-negotiable)
 
 - Resource services validate JWTs via `shared/Admin.Identity.Client`'s
   `AddIdentityServiceAuthentication(...)` — do not hand-roll JwtBearer.
-- Tenant id comes from `ITenantAccessor` (reads the `tenant_id` claim of
-  the authenticated principal). **Never** from route/query/body.
+- The client sends the tenant id in the `X-Tenant-Id` header on every
+  request (admin-frontend's `AuthenticatedHttpClient` attaches it
+  automatically). It is **never trusted on its own**: `Admin.Identity.Client`'s
+  `TenantHeaderFilter` (a global `IAsyncActionFilter`, wired into
+  `AddControllers(options => options.Filters.Add<TenantHeaderFilter>())`)
+  rejects the request with 403 before any action runs unless the header
+  equals the token's `tenant_id` claim. **Every action requires a
+  validated tenant by default** — opt out with `[IgnoreTenant]` (class or
+  method) for actions that genuinely aren't tenant-scoped (M2M
+  provisioning, OIDC protocol endpoints). Once the filter has run, read
+  `ITenantAccessor.TenantId` directly (the throwing property) — don't
+  repeat the check in the action.
 - Every repository/query method takes the tenant id explicitly; EF
   queries filter by it. A cross-tenant read is a security bug, not a
   code-style issue.
+- See docs/adr/0006 for why the filter is wired into services-service's
+  `Program.cs` only, not identity-service's.
 
 ### CQRS + vertical slices
 
@@ -152,8 +180,10 @@ business logic.
   the actively-maintained free fork, see docs/adr/0005). Global
   `using AwesomeAssertions;` is set per test csproj.
 - Unit tests (`<Service>.Tests`) target **handlers**, not controllers:
-  hand-written fakes for `Abstractions/` interfaces (no mocking
-  library), asserting on the returned `Result`
+  **NSubstitute** mocks for `Abstractions/` interfaces
+  (`Substitute.For<IPort>()`, `.Returns(...)`, `.Received(n)`/
+  `.DidNotReceive()` — not hand-written fakes, see docs/adr/0006),
+  asserting on the returned `Result`
   (`result.IsSuccess`/`result.Error.Type`/`result.Value`). The 80%
   line-coverage gate over Domain + Application is configured in
   `Directory.Build.props`/`.targets` and applies automatically —

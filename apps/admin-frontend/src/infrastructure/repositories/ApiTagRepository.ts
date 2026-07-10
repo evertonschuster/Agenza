@@ -12,9 +12,10 @@ const TAGS_URL = '/api/v1/tags'
 
 /**
  * The /api/v1/tags contract from docs/API.md. Tenant scope travels in
- * the JWT the HttpClient attaches - tenantContext is accepted (structural
- * enforcement, see admin-feature-vertical skill) but never sent as a
- * separate header or query param.
+ * the X-Tenant-Id header the HttpClient attaches (verified server-side
+ * against the JWT's tenant_id claim) - tenantContext is accepted here
+ * only for structural enforcement (see admin-feature-vertical skill),
+ * never read directly.
  */
 export class ApiTagRepository implements TagRepository {
   private readonly httpClient: HttpClient

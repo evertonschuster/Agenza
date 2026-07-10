@@ -1,3 +1,4 @@
+using ServicesService.Domain.Common;
 using ServicesService.Domain.Exceptions;
 using ServicesService.Domain.ValueObjects;
 
@@ -13,12 +14,11 @@ namespace ServicesService.Domain.Entities;
 /// here - this entity guards everything a single Tag can know about
 /// itself.
 /// </summary>
-public class Tag
+public class Tag : BaseEntity
 {
     public const int NameMaxLength = 40;
     public const int DescriptionMaxLength = 200;
 
-    public Guid Id { get; private set; }
     public Guid TenantId { get; private set; }
     public string Name { get; private set; }
     public TagColor Color { get; private set; }
@@ -32,13 +32,13 @@ public class Tag
     }
 
     public Tag(Guid id, Guid tenantId, string name, TagColor color, string? description)
+        : base(id)
     {
         if (tenantId == Guid.Empty)
         {
             throw new InvalidTagException("A tag must belong to a tenant.");
         }
 
-        Id = id;
         TenantId = tenantId;
         Name = ValidateName(name);
         Color = color;

@@ -1,7 +1,7 @@
+using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.ListTags;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
-using ServicesService.Tests.TestDoubles;
 
 namespace ServicesService.Tests.Tags.ListTags;
 
@@ -13,10 +13,9 @@ public class ListTagsQueryHandlerTests
     public async Task Handle_ReturnsOnlyTagsForTheRequestedTenant()
     {
         var tenantId = Guid.NewGuid();
-        var otherTenantId = Guid.NewGuid();
-        var repository = new FakeTagRepository();
-        repository.Tags.Add(new Tag(Guid.NewGuid(), tenantId, "VIP", Teal, null));
-        repository.Tags.Add(new Tag(Guid.NewGuid(), otherTenantId, "Not mine", Teal, null));
+        var repository = Substitute.For<ITagRepository>();
+        repository.ListAsync(tenantId, Arg.Any<CancellationToken>())
+            .Returns(new[] { new Tag(Guid.NewGuid(), tenantId, "VIP", Teal, null) });
         var handler = new ListTagsQueryHandler(repository);
 
         var result = await handler.Handle(new ListTagsQuery(tenantId), CancellationToken.None);
@@ -28,7 +27,10 @@ public class ListTagsQueryHandlerTests
     [Fact]
     public async Task Handle_WithNoTags_ReturnsEmptyList()
     {
-        var handler = new ListTagsQueryHandler(new FakeTagRepository());
+        var repository = Substitute.For<ITagRepository>();
+        repository.ListAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
+            .Returns(Array.Empty<Tag>());
+        var handler = new ListTagsQueryHandler(repository);
 
         var result = await handler.Handle(new ListTagsQuery(Guid.NewGuid()), CancellationToken.None);
 

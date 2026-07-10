@@ -23,7 +23,7 @@ public sealed class CreateTagCommandHandler : ICommandHandler<CreateTagCommand, 
         try
         {
             var color = TagColor.From(command.Color);
-            tag = new Tag(Guid.NewGuid(), command.TenantId, command.Name, color, command.Description);
+            tag = new Tag(IdGenerator.NewId(), command.TenantId, command.Name, color, command.Description);
         }
         catch (InvalidTagException exception)
         {

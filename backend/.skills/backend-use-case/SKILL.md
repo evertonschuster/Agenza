@@ -36,6 +36,11 @@ just adapt the templates.
 
 ### 1. Domain entity or value object
 
+- Inherit `{Service}.Domain.Common.BaseEntity` — gives `Id`,
+  `CreatedAt`/`CreatedBy`, `UpdatedAt`/`UpdatedBy`, `DeletedAt`/
+  `DeletedBy`, `IsDeleted` for free (docs/adr/0006). Call `base(id)` from
+  your constructor; never set the audit fields yourself, the EF
+  interceptor does that.
 - Constructor/factory validates every invariant; throw `ArgumentException`
   or a dedicated domain exception with a clear message. Domain stays
   exception-based even though the rest of the stack uses Result — see
@@ -45,16 +50,21 @@ just adapt the templates.
   needs it, and keep it private.
 - State changes go through named behavior methods (`Rename`, `Cancel`,
   `Reschedule`), each keeping the entity valid.
-- Tests: plain xUnit + AwesomeAssertions, no fakes needed — Domain has
-  zero dependencies.
+- Tests: plain xUnit + AwesomeAssertions, no mocks needed — Domain has
+  zero dependencies. Cover `MarkCreated`/`MarkUpdated`/`MarkDeleted` too
+  (inherited from `BaseEntity`) — they count toward the coverage gate.
 
 ### 2. Port (interface) in `Application/Abstractions/`
 
 - Narrow, intention-revealing methods (`Add`, `GetByIdAsync`) — not a
-  generic repository. `Add`/`Remove` are synchronous and only stage the
+  generic interface. `Add`/`Remove` are synchronous and only stage the
   change (no internal commit) — see step 3's UnitOfWork note for why.
 - Every method that touches tenant-owned data takes the tenant id (or an
   aggregate that carries it) explicitly, plus a `CancellationToken`.
+- The **implementation** (step 5) extends
+  `Admin.SharedKernel.EntityFrameworkCore.RepositoryBase<TEntity>` for
+  the Add/Remove/Find/List boilerplate underneath this interface
+  (docs/adr/0006) — the port itself stays a plain, narrow interface.
 
 ### 3. Command or query slice in `Application/<Feature>/<Operation>/`
 
@@ -92,11 +102,12 @@ Application/Tags/
   `Application/DependencyInjection.cs` scans the assembly for handlers
   and validators.
 
-### 4. Unit tests with hand-written fakes
+### 4. Unit tests with NSubstitute
 
-- One fake class per port, defined in the test project; capture calls
-  with simple lists/fields, not a mocking library. Include a
-  `FakeUnitOfWork` matching the service's `IUnitOfWork` shape.
+- `Substitute.For<IPort>()` per port used by the handler — no hand-written
+  fake classes (docs/adr/0006). Configure return values with
+  `.Returns(...)`; assert interaction with `.Received(1).Method(...)` /
+  `.DidNotReceive().Method(...)`.
 - AwesomeAssertions, asserting on the `Result`: `result.IsSuccess`,
   `result.Value.Xyz`, `result.Error.Type.Should().Be(ErrorType.Conflict)`.
 - Test the happy path AND every failure path (validation, not-found,
@@ -106,10 +117,16 @@ Application/Tags/
 
 ### 5. Infrastructure adapter
 
-- Repository implements the port via the service's `DbContext`.
-  `Add`/`Remove` only stage the change — no `SaveChangesAsync` inside
-  the repository (the handler commits via `IUnitOfWork`).
+- Repository extends `Admin.SharedKernel.EntityFrameworkCore.RepositoryBase<TEntity>`
+  and implements the port, using the base's protected `FindAsync`/
+  `ListAsync`/`AnyAsync`/`Add`/`Remove` for the boilerplate underneath
+  your tenant-scoped public methods (docs/adr/0006). `Add`/`Remove` only
+  stage the change — no `SaveChangesAsync` inside the repository (the
+  handler commits via `IUnitOfWork`).
 - EF configuration lives in `Infrastructure/Persistence/Configurations/`.
+  Add `builder.HasQueryFilter(e => e.DeletedAt == null)` (soft delete)
+  and filter any unique index with `.HasFilter("\"DeletedAt\" IS NULL")`
+  so a soft-deleted row doesn't block reusing its unique value.
 - New tables → `dotnet ef migrations add <Name>` from the Api project
   directory (the service's tables live in its own schema —
   `HasDefaultSchema` is already set in the DbContext).
@@ -121,12 +138,20 @@ Application/Tags/
   is tenant-scoped.
 - `[ApiVersion("1.0")]` + `[Route("api/v{version:apiVersion}/...")]` (or
   `internal/v{version:apiVersion}/...` for M2M-only routes).
-- Each action: resolve tenant (never from the request payload) → build
-  the command/query → `await _dispatcher.Send(...)` /
-  `.Query(...)` → `result.ToActionResult(this, value => Ok(value))`
-  (or `Created`/`NoContent`). No try/catch per exception type.
+- Don't check the tenant yourself — the global `TenantHeaderFilter`
+  (registered in `Program.cs`) already rejected the request with 403
+  before this action runs unless the `X-Tenant-Id` header matched the
+  token's `tenant_id` claim (docs/adr/0006). Just read
+  `_tenantAccessor.TenantId` (the throwing property, not
+  `TryGetTenantId`). Mark the controller/action `[IgnoreTenant]` instead
+  if it genuinely isn't tenant-scoped (M2M, protocol endpoints).
+- Each action: build the command/query with `_tenantAccessor.TenantId` →
+  `await _dispatcher.Send(...)` / `.Query(...)` →
+  `result.ToActionResult(this, value => Ok(value))` (or `Created`/
+  `NoContent`). No try/catch per exception type.
 - `[Authorize]` by default; scope checks (`User.HasScope(...)`) for
-  M2M-only endpoints (see `TenantsController`).
+  M2M-only endpoints (see `TenantsController`, which is also
+  `[IgnoreTenant]`).
 
 ### 7. Integration test for the new endpoint
 
@@ -220,7 +245,7 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
             // Construct/validate via the domain first - it normalizes
             // (trims, etc.) so the uniqueness check below runs against
             // the value that would actually be persisted.
-            widget = new Widget(Guid.NewGuid(), command.TenantId, command.Name);
+            widget = new Widget(IdGenerator.NewId(), command.TenantId, command.Name);
         }
         catch (InvalidWidgetException exception)
         {
@@ -373,97 +398,45 @@ public class WidgetsController : ControllerBase
 
     public record WidgetBody(string Name);
 
+    // No TryGetTenantId/Forbid boilerplate: the global TenantHeaderFilter
+    // (Program.cs) already rejected the request with 403 before this
+    // action runs unless X-Tenant-Id matched the token's tenant_id claim
+    // (docs/adr/0006). Mark this controller/action [IgnoreTenant] instead
+    // if it genuinely isn't tenant-scoped.
+
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
     {
-        if (!_tenantAccessor.TryGetTenantId(out var tenantId))
-        {
-            return Forbid(); // authenticated but not tenant-bound (e.g. an M2M token)
-        }
-
-        var result = await _dispatcher.Query(new ListWidgetsQuery(tenantId), cancellationToken);
+        var result = await _dispatcher.Query(new ListWidgetsQuery(_tenantAccessor.TenantId), cancellationToken);
         return result.ToActionResult(this, widgets => Ok(widgets));
     }
 
     [HttpPost]
     public async Task<IActionResult> Create(WidgetBody body, CancellationToken cancellationToken)
     {
-        if (!_tenantAccessor.TryGetTenantId(out var tenantId))
-        {
-            return Forbid();
-        }
-
-        var result = await _dispatcher.Send(new CreateWidgetCommand(tenantId, body.Name), cancellationToken);
+        var command = new CreateWidgetCommand(_tenantAccessor.TenantId, body.Name);
+        var result = await _dispatcher.Send(command, cancellationToken);
         return result.ToActionResult(this, widget => Created($"/api/v1/widgets/{widget.Id}", widget));
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        if (!_tenantAccessor.TryGetTenantId(out var tenantId))
-        {
-            return Forbid();
-        }
-
-        var result = await _dispatcher.Send(new DeleteWidgetCommand(tenantId, id), cancellationToken);
+        var command = new DeleteWidgetCommand(_tenantAccessor.TenantId, id);
+        var result = await _dispatcher.Send(command, cancellationToken);
         return result.ToActionResult(this, NoContent);
     }
 }
 ```
 
-### Fakes + unit tests (handler + validator)
-
-```csharp
-// Tests/TestDoubles/FakeWidgetRepository.cs
-using {Service}.Application.Abstractions;
-using {Service}.Domain.Entities;
-
-namespace {Service}.Tests.TestDoubles;
-
-public class FakeWidgetRepository : IWidgetRepository
-{
-    public List<Widget> Items { get; } = [];
-
-    public Task<IReadOnlyList<Widget>> ListAsync(Guid tenantId, CancellationToken cancellationToken) =>
-        Task.FromResult<IReadOnlyList<Widget>>(Items.Where(i => i.TenantId == tenantId).ToList());
-
-    public Task<Widget?> GetByIdAsync(Guid tenantId, Guid id, CancellationToken cancellationToken) =>
-        Task.FromResult(Items.FirstOrDefault(i => i.TenantId == tenantId && i.Id == id));
-
-    public Task<bool> NameExistsAsync(Guid tenantId, string name, Guid? excludeId, CancellationToken cancellationToken) =>
-        Task.FromResult(Items.Any(i => i.TenantId == tenantId
-            && string.Equals(i.Name, name.Trim(), StringComparison.OrdinalIgnoreCase)
-            && (excludeId is null || i.Id != excludeId)));
-
-    public void Add(Widget item) => Items.Add(item);
-    public void Remove(Widget item) => Items.Remove(item);
-}
-```
-
-```csharp
-// Tests/TestDoubles/FakeUnitOfWork.cs (skip if the service already has one)
-using {Service}.Application.Abstractions;
-
-namespace {Service}.Tests.TestDoubles;
-
-public class FakeUnitOfWork : IUnitOfWork
-{
-    public int SaveChangesCalls { get; private set; }
-
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken)
-    {
-        SaveChangesCalls++;
-        return Task.FromResult(0);
-    }
-}
-```
+### Unit tests with NSubstitute (handler + validator)
 
 ```csharp
 // Tests/Widgets/CreateWidget/CreateWidgetCommandHandlerTests.cs
 using Admin.SharedKernel;
+using {Service}.Application.Abstractions;
 using {Service}.Application.Widgets.CreateWidget;
 using {Service}.Domain.Entities;
-using {Service}.Tests.TestDoubles;
 
 namespace {Service}.Tests.Widgets.CreateWidget;
 
@@ -472,25 +445,28 @@ public class CreateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_WithValidCommand_PersistsAndReturnsTheValue()
     {
-        var repository = new FakeWidgetRepository();
-        var unitOfWork = new FakeUnitOfWork();
+        var tenantId = Guid.NewGuid();
+        var repository = Substitute.For<IWidgetRepository>();
+        repository.NameExistsAsync(tenantId, "Example", null, Arg.Any<CancellationToken>()).Returns(false);
+        var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new CreateWidgetCommandHandler(repository, unitOfWork);
 
         var result = await handler.Handle(
-            new CreateWidgetCommand(Guid.NewGuid(), "Example"), CancellationToken.None);
+            new CreateWidgetCommand(tenantId, "Example"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Name.Should().Be("Example");
-        unitOfWork.SaveChangesCalls.Should().Be(1);
+        repository.Received(1).Add(Arg.Is<Widget>(w => w.Id == result.Value.Id));
+        await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithDuplicateNameInSameTenant_ReturnsConflict()
     {
         var tenantId = Guid.NewGuid();
-        var repository = new FakeWidgetRepository();
-        repository.Items.Add(new Widget(Guid.NewGuid(), tenantId, "Example"));
-        var handler = new CreateWidgetCommandHandler(repository, new FakeUnitOfWork());
+        var repository = Substitute.For<IWidgetRepository>();
+        repository.NameExistsAsync(tenantId, "example", null, Arg.Any<CancellationToken>()).Returns(true);
+        var handler = new CreateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>());
 
         var result = await handler.Handle(
             new CreateWidgetCommand(tenantId, "example"), CancellationToken.None); // case-insensitive match

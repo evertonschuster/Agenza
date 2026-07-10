@@ -14,8 +14,11 @@ builder.AddServiceDefaults();
 builder.Services.AddControllers(options =>
 {
     // Secure by default: every endpoint requires a valid access token from
-    // identity-service unless explicitly marked [AllowAnonymous].
+    // identity-service unless explicitly marked [AllowAnonymous], and a
+    // tenant id (X-Tenant-Id header, verified against the token's
+    // tenant_id claim) unless explicitly marked [IgnoreTenant].
     options.Filters.Add(new AuthorizeFilter());
+    options.Filters.Add<TenantHeaderFilter>();
 });
 builder.Services.AddOpenApi();
 

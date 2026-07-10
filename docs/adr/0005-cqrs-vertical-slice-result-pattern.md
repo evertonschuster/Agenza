@@ -1,6 +1,8 @@
 # ADR 0005 — CQRS, vertical slices, Result pattern, and supporting conventions
 
-Status: accepted (2026-07)
+Status: accepted (2026-07); testing convention partially superseded by
+docs/adr/0006 (NSubstitute replaces the hand-written fakes described
+below)
 
 ## Context
 

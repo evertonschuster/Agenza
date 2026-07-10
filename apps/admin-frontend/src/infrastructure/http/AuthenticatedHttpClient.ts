@@ -13,16 +13,23 @@ interface ProblemDetails {
 /**
  * The only HttpClient implementation - every REST repository depends on
  * the HttpClient port, never on this class directly (docs/API.md). Reads
- * the access token via a callback rather than an AuthRepository reference
- * directly, so this class doesn't need to know how sessions are stored.
+ * the access token and tenant id via callbacks rather than an
+ * AuthRepository reference directly, so this class doesn't need to know
+ * how sessions are stored.
  */
 export class AuthenticatedHttpClient implements HttpClient {
   private readonly baseUrl: string
   private readonly getAccessToken: () => Promise<string | null>
+  private readonly getTenantId: () => Promise<string | null>
 
-  constructor(baseUrl: string, getAccessToken: () => Promise<string | null>) {
+  constructor(
+    baseUrl: string,
+    getAccessToken: () => Promise<string | null>,
+    getTenantId: () => Promise<string | null>,
+  ) {
     this.baseUrl = baseUrl
     this.getAccessToken = getAccessToken
+    this.getTenantId = getTenantId
   }
 
   async get<T>(path: string): Promise<T> {
@@ -48,6 +55,16 @@ export class AuthenticatedHttpClient implements HttpClient {
     }
 
     const headers: Record<string, string> = { Authorization: `Bearer ${accessToken}` }
+
+    // The backend verifies this header against the token's tenant_id
+    // claim and rejects any mismatch (repo non-negotiable: never trust a
+    // client-supplied tenant id without checking it against the
+    // authenticated principal) - sent whenever a tenant is known, absent
+    // for pre-tenant flows (e.g. before a session exists).
+    const tenantId = await this.getTenantId()
+    if (tenantId !== null) {
+      headers['X-Tenant-Id'] = tenantId
+    }
 
     const init: RequestInit = { method, headers }
     if (body !== undefined) {

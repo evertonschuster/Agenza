@@ -50,10 +50,17 @@ export function createAppContainer(): AppContainer {
     throw new Error('VITE_API_BASE_URL is not set. Check your .env.local (see .env.example).')
   }
 
-  const httpClient: HttpClient = new AuthenticatedHttpClient(apiBaseUrl, async () => {
-    const session = await authRepository.getCurrentSession()
-    return session?.accessToken ?? null
-  })
+  const httpClient: HttpClient = new AuthenticatedHttpClient(
+    apiBaseUrl,
+    async () => {
+      const session = await authRepository.getCurrentSession()
+      return session?.accessToken ?? null
+    },
+    async () => {
+      const session = await authRepository.getCurrentSession()
+      return session?.user.tenant.id ?? null
+    },
+  )
 
   const tagRepository: TagRepository = new ApiTagRepository(httpClient)
 

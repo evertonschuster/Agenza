@@ -41,7 +41,7 @@ public sealed class ProvisionTenantCommandHandler : ICommandHandler<ProvisionTen
             Tenant tenant;
             try
             {
-                tenant = new Tenant(Guid.NewGuid(), command.TenantName);
+                tenant = new Tenant(IdGenerator.NewId(), command.TenantName);
             }
             catch (ArgumentException exception)
             {

@@ -31,18 +31,22 @@ context (e.g. notifications/email, billing).
 2. **Add to the solution**:
    `dotnet sln backend/AdminBackend.slnx add <each new csproj>`
 
-3. **Wire references** (Domain: none; Application → Domain +
+3. **Wire references** (Domain: none — not even `Admin.SharedKernel`
+   (backend/CLAUDE.md's zero-reference rule); Application → Domain +
    `shared/Admin.SharedKernel` (CQRS/Result, docs/adr/0005) +
    `FluentValidation.DependencyInjectionExtensions`; Infrastructure →
-   Application; Api → Application + Infrastructure +
-   `shared/Admin.Identity.Client` + `ServiceDefaults` +
+   Application + `shared/Admin.Identity.Client` (ICurrentUserAccessor for
+   the audit interceptor) + `shared/Admin.SharedKernel.EntityFrameworkCore`
+   (`RepositoryBase<TEntity>`, docs/adr/0006); Api → Application +
+   Infrastructure + `shared/Admin.Identity.Client` + `ServiceDefaults` +
    `Asp.Versioning.Mvc`; Tests → Application + Domain, plus
-   `coverlet.msbuild`, `AwesomeAssertions`, `xunit`,
+   `coverlet.msbuild`, `AwesomeAssertions`, `NSubstitute`, `xunit`,
    `Microsoft.NET.Test.Sdk`, `xunit.runner.visualstudio` (global
-   `<Using Include="AwesomeAssertions" />` too) — copy the ItemGroup from
-   an existing Tests csproj; the 80% coverage gate from
-   `backend/Directory.Build.props`/`.targets` applies to any `*.Tests`
-   project automatically, with `Admin.SharedKernel` already excluded).
+   `<Using Include="AwesomeAssertions" />` + `<Using Include="NSubstitute" />`
+   too) — copy the ItemGroup from an existing Tests csproj; the 80%
+   coverage gate from `backend/Directory.Build.props`/`.targets` applies
+   to any `*.Tests` project automatically, with `Admin.SharedKernel`
+   already excluded).
    Once the service has real endpoints, add a `<Service>.IntegrationTests`
    project too (copy `ServicesService.IntegrationTests`: Mvc.Testing +
    Testcontainers.PostgreSql + AwesomeAssertions,
@@ -53,8 +57,13 @@ context (e.g. notifications/email, billing).
 4. **Auth**: in `Program.cs`, call
    `AddIdentityServiceAuthentication(builder.Configuration, "<audience>")`
    from `Admin.Identity.Client`; register the audience as a scope in
-   identity-service's `Program.cs` + `DatabaseSeeder`. Read tenant id
-   only via `ITenantAccessor`.
+   identity-service's `Program.cs` + `DatabaseSeeder`. Also add
+   `options.Filters.Add<TenantHeaderFilter>()` to `AddControllers` so
+   every tenant-scoped resource controller is protected by default
+   (docs/adr/0006) — mark any genuinely tenant-free action
+   `[IgnoreTenant]`. Read tenant id via `ITenantAccessor.TenantId` (the
+   filter already validated it — no `TryGetTenantId`/`Forbid()` needed in
+   the action).
 
 5. **CQRS/Application wiring**: in `Program.cs`, call
    `builder.Services.AddSharedKernel()` then your service's own
@@ -77,7 +86,13 @@ context (e.g. notifications/email, billing).
    `ConnectionStrings__Default` pointing at the shared `postgres` service.
    Define your own `IUnitOfWork` shape in `Application/Abstractions/`
    matching what this service's writes actually need (docs/adr/0005) —
-   don't assume either existing service's shape fits.
+   don't assume either existing service's shape fits. Add
+   `{Service}.Domain/Common/BaseEntity.cs` (copy verbatim from either
+   existing service — audit fields + soft delete, docs/adr/0006) for
+   every aggregate root to inherit, and copy
+   `AuditableEntitySaveChangesInterceptor` into
+   `Infrastructure/Persistence/Interceptors/` (wired in step 4's
+   `AddWidgetServiceInfrastructure` above).
 
 8. **Observability**: `builder.AddServiceDefaults()` +
    `app.MapDefaultEndpoints()` (health checks + OpenTelemetry come free).
@@ -119,8 +134,11 @@ builder.AddServiceDefaults();
 builder.Services.AddControllers(options =>
 {
     // Secure by default: every endpoint requires a valid access token from
-    // identity-service unless explicitly marked [AllowAnonymous].
+    // identity-service unless explicitly marked [AllowAnonymous], and a
+    // tenant id (X-Tenant-Id header, verified against the token's
+    // tenant_id claim) unless explicitly marked [IgnoreTenant].
     options.Filters.Add(new AuthorizeFilter());
+    options.Filters.Add<TenantHeaderFilter>();
 });
 builder.Services.AddOpenApi();
 
@@ -206,6 +224,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using WidgetService.Application.Abstractions;
 using WidgetService.Infrastructure.Persistence;
+using WidgetService.Infrastructure.Persistence.Interceptors;
 using WidgetService.Infrastructure.Repositories;
 
 namespace WidgetService.Infrastructure;
@@ -218,7 +237,17 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Missing 'ConnectionStrings:Default' configuration.");
 
-        services.AddDbContext<WidgetServiceDataContext>(options => options.UseNpgsql(connectionString));
+        // BaseEntity audit stamping + soft delete (docs/adr/0006) - copy
+        // AuditableEntitySaveChangesInterceptor from services-service or
+        // identity-service verbatim, only the Domain.Common.BaseEntity
+        // type it pattern-matches changes.
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<AuditableEntitySaveChangesInterceptor>();
+
+        services.AddDbContext<WidgetServiceDataContext>((serviceProvider, options) =>
+            options
+                .UseNpgsql(connectionString)
+                .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
 
         services.AddScoped<IWidgetRepository, WidgetRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>(); // shape it to this service's real need - see backend-use-case skill
@@ -227,6 +256,17 @@ public static class DependencyInjection
     }
 }
 ```
+
+`WidgetRepository` extends `Admin.SharedKernel.EntityFrameworkCore.RepositoryBase<Widget>`
+(docs/adr/0006) — see `backend-use-case` skill step 5.
+
+`ICurrentUserAccessor` (needed by the interceptor above) is registered
+by `AddIdentityServiceAuthentication` already if this service is a
+JwtBearer resource server (step 4) — nothing extra to do. If this
+service validates tokens a different way (like identity-service, the
+OIDC provider itself), register `services.AddHttpContextAccessor();
+services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();`
+directly.
 
 ### csproj ItemGroups (Application project — the part that differs from a plain class library)
 
@@ -238,6 +278,19 @@ public static class DependencyInjection
 
 <ItemGroup>
   <PackageReference Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
+</ItemGroup>
+```
+
+### csproj ItemGroups (Infrastructure project)
+
+```xml
+<ItemGroup>
+  <ProjectReference Include="..\WidgetService.Application\WidgetService.Application.csproj" />
+  <!-- ICurrentUserAccessor for the audit interceptor, RepositoryBase<TEntity>
+       for repositories (docs/adr/0006) - Infrastructure-only, never
+       referenced from Application/Domain. -->
+  <ProjectReference Include="..\..\..\shared\Admin.Identity.Client\Admin.Identity.Client.csproj" />
+  <ProjectReference Include="..\..\..\shared\Admin.SharedKernel.EntityFrameworkCore\Admin.SharedKernel.EntityFrameworkCore.csproj" />
 </ItemGroup>
 ```
 
@@ -275,6 +328,7 @@ public static class DependencyInjection
   <PackageReference Include="AwesomeAssertions" Version="9.4.0" />
   <PackageReference Include="coverlet.msbuild" Version="6.0.4" />
   <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+  <PackageReference Include="NSubstitute" Version="5.3.0" />
   <PackageReference Include="xunit" Version="2.9.3" />
   <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
 </ItemGroup>
@@ -282,6 +336,7 @@ public static class DependencyInjection
 <ItemGroup>
   <Using Include="Xunit" />
   <Using Include="AwesomeAssertions" />
+  <Using Include="NSubstitute" />
 </ItemGroup>
 
 <ItemGroup>

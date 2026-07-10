@@ -11,6 +11,10 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.ToTable("Tenants");
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Name).IsRequired().HasMaxLength(200);
-        builder.HasIndex(t => t.Name).IsUnique();
+
+        // Filtered to non-deleted rows - see TagConfiguration for why.
+        builder.HasIndex(t => t.Name).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
+
+        builder.HasQueryFilter(t => t.DeletedAt == null);
     }
 }
