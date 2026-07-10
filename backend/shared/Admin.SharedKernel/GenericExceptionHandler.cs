@@ -32,6 +32,8 @@ public class GenericExceptionHandler : IExceptionHandler
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "An unexpected error occurred.",
             },
+            options: null,
+            contentType: "application/problem+json",
             cancellationToken);
 
         return true;

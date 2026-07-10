@@ -24,6 +24,8 @@ public class BusinessExceptionHandler : IExceptionHandler
                 Title = businessException.Code,
                 Detail = businessException.Message,
             },
+            options: null,
+            contentType: "application/problem+json",
             cancellationToken);
 
         return true;
