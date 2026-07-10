@@ -223,6 +223,15 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
     {
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Test", tokenValue);
+
+        // TenantHeaderFilter requires X-Tenant-Id to match the token's
+        // tenant_id claim (docs/adr/0006) - "M2M" carries no tenant_id
+        // claim at all, so it deliberately gets no header either.
+        if (tokenValue != "M2M")
+        {
+            client.DefaultRequestHeaders.Add("X-Tenant-Id", tokenValue);
+        }
+
         return client;
     }
 }
