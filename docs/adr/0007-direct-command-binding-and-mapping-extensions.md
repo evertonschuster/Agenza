@@ -107,3 +107,9 @@ methods, it doesn't add new domain logic.
   call it from the handler instead of inlining the construction.
 - `backend-use-case` skill's templates and `backend/CLAUDE.md` are
   updated to teach this shape as the default.
+- The `ToModel(this CreateTagCommand command, Guid tenantId)` shape
+  above is what this decision looked like at the time — it's since
+  lost the `tenantId` parameter entirely (docs/adr/0008), and `Tag`'s
+  constructor lost its own `tenantId` parameter too
+  (docs/adr/0008, docs/adr/0009). The `ToModel`/`ApplyTo` extension
+  pattern itself is unchanged; only the tenant plumbing moved.

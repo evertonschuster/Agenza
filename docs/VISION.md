@@ -25,7 +25,7 @@ its own domain model, its own schema, its own API.
 | Service            | Status   | Context it owns                                              |
 | ------------------ | -------- | ------------------------------------------------------------ |
 | `identity-service` | active   | Authentication (OIDC/OpenIddict), tenants, users, M2M tokens |
-| `services-service` | active   | The business's offering: Tags (done) is the first vertical; services catalog, appointments and clients belong here too unless they grow enough to justify their own context |
+| `services-service` | active   | The business's offering: Tags and the services catalog (`ServiceOffering`) are done; appointments and clients belong here too unless they grow enough to justify their own context |
 | `notification-service` | planned | Email/SMS/push — one place for templates, delivery, retries |
 
 Cross-service communication: HTTP with M2M JWTs from identity-service
