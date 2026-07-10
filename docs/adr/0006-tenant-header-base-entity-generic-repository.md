@@ -1,10 +1,10 @@
-# ADR 0006 — Tenant header validation, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute
+# ADR 0006 — Tenant header validation, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions
 
 Status: accepted (2026-07)
 
 ## Context
 
-Five related conventions changed together, all cutting across both
+Seven related conventions changed together, all cutting across both
 services and the shared libraries:
 
 1. Every controller action repeated `if
@@ -21,6 +21,13 @@ services and the shared libraries:
    choice, to avoid a mocking library dependency) - workable with one
    repository per service, but every new port meant a new hand-written
    fake to keep in sync with the real interface by hand.
+6. Every command handler that constructed a domain entity repeated the
+   same `try { ... } catch (SomeSpecificDomainException exception) {
+   return Result.Failure(Error.Validation(...)); }` boilerplate, and
+   `Tenant`'s constructor threw a raw `ArgumentException` instead of a
+   purpose-built domain exception.
+7. Each entity's `IEntityTypeConfiguration` repeated the same
+   `HasQueryFilter(e => e.DeletedAt == null)` line by hand.
 
 ## Decisions
 
@@ -83,22 +90,33 @@ service's `BaseEntity` type) intercepts `SaveChanges(Async)`, stamps
 `Modified` entries via `ICurrentUserAccessor` (new - mirrors
 `ITenantAccessor`, reads the `sub` claim) and `TimeProvider`, and turns a
 tracked `Deleted` entry into `Modified` after calling `MarkDeleted` - so
-a repository's `Remove()` never actually deletes a row. Each entity
-configuration adds `HasQueryFilter(e => e.DeletedAt == null)` so every
-ordinary read excludes soft-deleted rows automatically, and the
-uniqueness indexes (`Tag(TenantId, Name)`, `Tenant(Name)`) are filtered
-(`HasFilter("\"DeletedAt\" IS NULL")`) so a soft-deleted row doesn't
-permanently block reusing its name.
+a repository's `Remove()` never actually deletes a row.
+
+The soft-delete query filter and a supporting `DeletedAt` index are
+**applied automatically**, not written by hand per entity:
+`Admin.SharedKernel.EntityFrameworkCore.ModelBuilderExtensions.ApplyAuditableConventions(Type baseEntityType)`
+walks every entity type in the model at `OnModelCreating` time and, for
+any type assignable to the service's own `BaseEntity`, adds
+`HasQueryFilter(e => e.DeletedAt == null)` and `HasIndex("DeletedAt")`
+via reflection/expression-tree building (it takes a runtime `Type`
+rather than a generic parameter so it doesn't need to reference any
+service's Domain). Each `DbContext.OnModelCreating` calls it once, after
+`ApplyConfigurationsFromAssembly`. A new entity gets both for free just
+by inheriting `BaseEntity` - an `IEntityTypeConfiguration` only needs to
+add a *business-specific* filtered unique index
+(`HasFilter("\"DeletedAt\" IS NULL")`) if it has a uniqueness rule; it
+never repeats the soft-delete filter itself.
 
 ### GUID v7 for every new entity id
 
-`Admin.SharedKernel.IdGenerator.NewId()` wraps `Guid.CreateVersion7()`
-(available since .NET 9; this repo targets .NET 10). Every handler that
-used to call `Guid.NewGuid()` to mint a new aggregate id
-(`CreateTagCommandHandler`, `ProvisionTenantCommandHandler`) now calls
-`IdGenerator.NewId()` instead. The timestamp-ordered prefix keeps primary
-key inserts roughly sequential, avoiding the b-tree fragmentation fully
-random v4 ids cause at scale.
+Handlers call `Guid.CreateVersion7()` directly (available since .NET 9;
+this repo targets .NET 10) wherever they used to call `Guid.NewGuid()`
+to mint a new aggregate id (`CreateTagCommandHandler`,
+`ProvisionTenantCommandHandler`). No wrapper - `Guid.CreateVersion7()` is
+already a one-line BCL call, so a `IdGenerator.NewId()` indirection
+around it added a name to learn without adding behavior. The
+timestamp-ordered prefix keeps primary key inserts roughly sequential,
+avoiding the b-tree fragmentation fully random v4 ids cause at scale.
 
 ### Generic RepositoryBase, in its own Infrastructure-only shared project
 
@@ -140,15 +158,61 @@ Pattern: `Substitute.For<IPort>()`, configure return values with
 A global `<Using Include="NSubstitute" />` is set per test csproj,
 alongside the existing `AwesomeAssertions` using.
 
+### BusinessException hierarchy + one global exception handler, not a try/catch per handler
+
+Every exception a Domain entity/value object throws for its own
+invariant violations now inherits `{Service}.Domain.Exceptions.BusinessException`
+(abstract, `Code` + `Message` - `InvalidTagException`/
+`InvalidTenantException` are the concrete types so far).
+**Duplicated per service**, same reasoning as `BaseEntity`: Domain has
+zero project references, so it can't reference a shared assembly even
+for a pure `Exception` subclass.
+
+Command handlers **no longer catch it themselves**. Each service's Api
+registers one `BusinessExceptionHandler : IExceptionHandler`
+(`builder.Services.AddExceptionHandler<BusinessExceptionHandler>()` +
+`AddProblemDetails()`, `app.UseExceptionHandler()` early in the
+pipeline) that catches any `BusinessException` reaching it and writes a
+400 Problem Details response (`Title` = `Code`, `Detail` = `Message`).
+Anything that isn't a `BusinessException` is left unhandled (`TryHandleAsync`
+returns `false`) and still 500s - the repo rule that an exception
+escaping this far is a real bug or infrastructure failure, not an
+expected outcome, is unchanged.
+
+This removes the `try { ... } catch (InvalidTagException exception) {
+return Result.Failure(...); }` boilerplate every handler used to repeat:
+`CreateTagCommandHandler`/`UpdateTagCommandHandler`/
+`ProvisionTenantCommandHandler` just construct/mutate the domain object
+directly now. **Only reachable in normal operation as a defense-in-depth
+safety net** - FluentValidation already rejects malformed shape before
+the handler runs, so a `BusinessException` at handler time means the
+validator and the domain disagree (a bug). Unit tests that call
+`Handle(...)` directly (bypassing the validator layer entirely, as
+handler tests do) exercise this path directly and assert
+`await act.Should().ThrowAsync<InvalidTagException>()` instead of
+inspecting a returned `Result`.
+
+Exceptions still never replace `Result.Failure` for **expected** outcomes
+- cross-aggregate rules that need a repository round-trip (uniqueness,
+existence) keep returning `Result.Failure(Error.Conflict/NotFound(...))`
+exactly as before; role/scope checks
+(`User.HasScope(...)`) keep returning `Forbid()`. Exceptions are
+reserved for the single case they now consistently cover: a Domain
+invariant violation that should have been caught by
+FluentValidation/dispatcher and reaches Domain construction anyway.
+
 ## Consequences
 
 - A new controller action gets tenant scoping for free (global filter);
   forgetting the check is no longer possible, only forgetting
   `[IgnoreTenant]` on a genuinely tenant-free action - a fail-closed
   default (403) rather than the old fail-open shape (an unscoped query).
-- A new entity: inherit `BaseEntity`, call `IdGenerator.NewId()` when
-  constructing it, add `HasQueryFilter`/filtered unique indexes in its
-  `IEntityTypeConfiguration`. The service's Infrastructure DI must wire
+- A new entity: inherit `BaseEntity`, call `Guid.CreateVersion7()` when
+  constructing it, add a filtered unique index in its
+  `IEntityTypeConfiguration` only if it has a uniqueness rule (the
+  soft-delete filter/`DeletedAt` index apply automatically via
+  `ApplyAuditableConventions`, called once from the `DbContext`). The
+  service's Infrastructure DI must wire
   `AuditableEntitySaveChangesInterceptor` via `AddInterceptors` (copy the
   existing services' `DependencyInjection.cs`) and register
   `ICurrentUserAccessor` if the service isn't already calling
@@ -158,6 +222,10 @@ alongside the existing `AwesomeAssertions` using.
 - A new repository: extend `RepositoryBase<TEntity>` from
   `Admin.SharedKernel.EntityFrameworkCore` instead of hand-rolling
   Add/Remove/Find/List.
+- A new domain invariant exception: inherit that service's
+  `BusinessException`, give it a `Code`. No try/catch needed in the
+  handler that constructs the entity - the Api's global
+  `BusinessExceptionHandler` covers it.
 - New unit tests use `Substitute.For<T>()`, not a new hand-written fake
   class per port.
 - `backend/CLAUDE.md`, `backend-use-case`/`backend-new-microservice`

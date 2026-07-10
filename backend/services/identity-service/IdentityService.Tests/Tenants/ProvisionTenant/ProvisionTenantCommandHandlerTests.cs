@@ -3,6 +3,7 @@ using IdentityService.Application.Abstractions;
 using IdentityService.Application.Tenants;
 using IdentityService.Application.Tenants.ProvisionTenant;
 using IdentityService.Domain.Entities;
+using IdentityService.Domain.Exceptions;
 
 namespace IdentityService.Tests.Tenants.ProvisionTenant;
 
@@ -73,6 +74,24 @@ public class ProvisionTenantCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Owner.CreationFailed");
+    }
+
+    [Fact]
+    public async Task Handle_WithBlankTenantName_Throws()
+    {
+        // Only reachable if a caller bypasses ProvisionTenantCommandValidator
+        // - the handler no longer catches this itself, the Api's global
+        // BusinessExceptionHandler maps it to a 400 (docs/adr/0006).
+        var handler = new ProvisionTenantCommandHandler(
+            Substitute.For<ITenantRepository>(),
+            Substitute.For<IUserAccountService>(),
+            CreatePassthroughUnitOfWork());
+
+        var act = () => handler.Handle(
+            new ProvisionTenantCommand("", "owner@demo.local", "Passw0rd!"),
+            CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidTenantException>();
     }
 
     [Fact]

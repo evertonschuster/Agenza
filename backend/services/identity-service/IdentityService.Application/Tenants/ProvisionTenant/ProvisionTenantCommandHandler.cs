@@ -38,20 +38,12 @@ public sealed class ProvisionTenantCommandHandler : ICommandHandler<ProvisionTen
         // returned here rolls back exactly like a thrown exception would.
         return _unitOfWork.ExecuteInTransactionAsync<ProvisionTenantResponse>(async ct =>
         {
-            Tenant tenant;
-            try
-            {
-                tenant = new Tenant(IdGenerator.NewId(), command.TenantName);
-            }
-            catch (ArgumentException exception)
-            {
-                // Reached only if a caller bypasses ProvisionTenantCommandValidator
-                // - the validator already rejects a blank name before this
-                // handler runs. Domain stays exception-based (zero deps,
-                // docs/adr/0005); the Application boundary still never
-                // lets one escape as an exception.
-                return Result.Failure<ProvisionTenantResponse>(Error.Validation("Tenant.Invalid", exception.Message));
-            }
+            // Domain construction can throw InvalidTenantException (a
+            // BusinessException) if a caller bypasses
+            // ProvisionTenantCommandValidator - left uncaught on purpose,
+            // the Api's global exception handler maps it to a 400 Problem
+            // Details response (docs/adr/0006).
+            var tenant = new Tenant(Guid.CreateVersion7(), command.TenantName);
 
             await _tenantRepository.AddAsync(tenant, ct);
 

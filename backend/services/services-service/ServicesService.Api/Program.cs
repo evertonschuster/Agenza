@@ -3,6 +3,7 @@ using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using ServicesService.Api.ExceptionHandling;
 using ServicesService.Api.Setup;
 using ServicesService.Application;
 using ServicesService.Infrastructure;
@@ -21,6 +22,13 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<TenantHeaderFilter>();
 });
 builder.Services.AddOpenApi();
+
+// Maps a BusinessException escaping a handler to a 400 Problem Details
+// response (docs/adr/0006) - must be registered before any middleware
+// that could itself throw, and app.UseExceptionHandler() below runs
+// first in the pipeline so it wraps everything after it.
+builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services
     .AddApiVersioning(options =>
@@ -50,6 +58,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

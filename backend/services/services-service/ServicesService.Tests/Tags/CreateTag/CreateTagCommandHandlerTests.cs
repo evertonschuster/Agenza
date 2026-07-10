@@ -2,7 +2,7 @@ using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.CreateTag;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
+using ServicesService.Domain.Exceptions;
 
 namespace ServicesService.Tests.Tags.CreateTag;
 
@@ -66,18 +66,20 @@ public class CreateTagCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithInvalidColor_ReturnsValidationErrorAndDoesNotPersist()
+    public async Task Handle_WithInvalidColor_ThrowsAndDoesNotPersist()
     {
+        // Reached only if a caller bypasses CreateTagCommandValidator -
+        // the handler no longer catches this itself, the Api's global
+        // BusinessExceptionHandler maps it to a 400 (docs/adr/0006).
         var repository = Substitute.For<ITagRepository>();
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new CreateTagCommandHandler(repository, unitOfWork);
 
-        var result = await handler.Handle(
+        var act = () => handler.Handle(
             new CreateTagCommand(Guid.NewGuid(), "VIP", "#123456", null),
             CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.Validation);
+        await act.Should().ThrowAsync<InvalidTagException>();
         repository.DidNotReceive().Add(Arg.Any<Tag>());
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }

@@ -29,13 +29,12 @@ public class TagConfiguration : IEntityTypeConfiguration<Tag>
         // non-deleted rows so a soft-deleted tag doesn't block reusing its
         // name - the unique index otherwise wouldn't know the query filter
         // below excludes it from every ordinary read.
+        // The soft-delete query filter itself (BaseEntity's DeletedAt) is
+        // applied automatically for every entity to ModelBuilder by
+        // ServicesDataContext.ApplyAuditableConventions - not repeated
+        // here.
         builder.HasIndex(t => new { t.TenantId, t.Name })
             .IsUnique()
             .HasFilter("\"DeletedAt\" IS NULL");
-
-        // BaseEntity's soft delete: DeletedAt/DeletedBy record the fact,
-        // this filter hides deleted rows from every query without every
-        // repository method needing to remember to add it.
-        builder.HasQueryFilter(t => t.DeletedAt == null);
     }
 }

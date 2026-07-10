@@ -67,11 +67,20 @@ see it.
   `MarkUpdated`/`MarkDeleted` — never public setters. Delete is a real
   soft delete: each service's `AuditableEntitySaveChangesInterceptor`
   turns a tracked `Deleted` entry into `Modified` and calls
-  `MarkDeleted`; a `HasQueryFilter(e => e.DeletedAt == null)` on every
-  entity configuration hides soft-deleted rows from ordinary reads (see
+  `MarkDeleted`. The query filter that hides soft-deleted rows from
+  ordinary reads, and a supporting `DeletedAt` index, are applied
+  **automatically** to every `BaseEntity` type by
+  `Admin.SharedKernel.EntityFrameworkCore`'s `ApplyAuditableConventions`
+  (called once from each `DbContext.OnModelCreating`) — don't add
+  `HasQueryFilter` by hand in an `IEntityTypeConfiguration` (see
   docs/adr/0006).
-- New entity ids come from `Admin.SharedKernel.IdGenerator.NewId()`
-  (UUID v7 via `Guid.CreateVersion7()`), not `Guid.NewGuid()`.
+- New entity ids come from `Guid.CreateVersion7()` directly (UUID v7),
+  not `Guid.NewGuid()`.
+- Domain exceptions inherit that service's `BusinessException`
+  (`{Service}.Domain/Exceptions/BusinessException.cs` — `Code` +
+  `Message`), not a raw `Exception`/`ArgumentException`. The Api's global
+  `BusinessExceptionHandler` (see "Result pattern" below) maps any
+  `BusinessException` to a 400 Problem Details response.
 
 ### Tenant scoping (repo-wide non-negotiable)
 
@@ -121,20 +130,27 @@ see it.
 ### Result pattern — where exceptions still live and where they don't
 
 - **Domain** (entity constructors/methods, value object factories):
-  still throws. It has zero project references, so it cannot depend on
-  `Admin.SharedKernel`'s `Result` type — and by the time a handler
-  constructs a domain object, FluentValidation has already checked
-  shape, so hitting a domain exception in normal operation means a
-  validator/domain mismatch bug, not a real user-facing outcome.
-- **Application handlers**: catch domain exceptions right where they
-  construct/mutate a domain object and convert to
-  `Result.Failure(Error.Validation(...))` — see any `*CommandHandler`
-  for the pattern. Cross-aggregate rules that need a repository
-  round-trip (uniqueness, existence) return `Result.Failure` directly,
-  no exception involved at any point.
-- **Nothing throws past the Application boundary** for a business
-  outcome. A raw, unhandled exception reaching the controller means an
-  actual bug or infrastructure failure — let it 500, don't catch it.
+  still throws — always a `BusinessException` subtype (`Code` +
+  `Message`), never a raw `Exception`/`ArgumentException`. Domain has
+  zero project references, so it cannot depend on `Admin.SharedKernel`'s
+  `Result` type — and by the time a handler constructs a domain object,
+  FluentValidation has already checked shape, so hitting a domain
+  exception in normal operation means a validator/domain mismatch bug,
+  not a real user-facing outcome.
+- **Application handlers do NOT catch it.** Let a `BusinessException`
+  propagate out of `Handle(...)` uncaught — no per-handler try/catch
+  (docs/adr/0006). Cross-aggregate rules that need a repository
+  round-trip (uniqueness, existence) still return `Result.Failure`
+  directly, no exception involved at any point; role/scope checks return
+  `Forbid()`. Exceptions are reserved for genuine Domain-invariant
+  violations only.
+- **The Api's global `BusinessExceptionHandler`** (`IExceptionHandler`,
+  registered via `AddExceptionHandler<T>()` + `app.UseExceptionHandler()`
+  in `Program.cs`) is the *one* place that turns a `BusinessException`
+  into an HTTP response (400 Problem Details, `Title` = `Code`, `Detail`
+  = `Message`). Anything that isn't a `BusinessException` is left
+  unhandled and still 500s — that raw, unhandled case still means an
+  actual bug or infrastructure failure.
 
 ### FluentValidation
 

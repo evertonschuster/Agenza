@@ -1,4 +1,5 @@
 using IdentityService.Domain.Common;
+using IdentityService.Domain.Exceptions;
 
 namespace IdentityService.Domain.Entities;
 
@@ -16,7 +17,7 @@ public class Tenant : BaseEntity
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new ArgumentException("Tenant name is required.", nameof(name));
+            throw new InvalidTenantException("Tenant name is required.");
         }
 
         Name = name;

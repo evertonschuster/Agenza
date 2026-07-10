@@ -41,11 +41,14 @@ just adapt the templates.
   `DeletedBy`, `IsDeleted` for free (docs/adr/0006). Call `base(id)` from
   your constructor; never set the audit fields yourself, the EF
   interceptor does that.
-- Constructor/factory validates every invariant; throw `ArgumentException`
-  or a dedicated domain exception with a clear message. Domain stays
-  exception-based even though the rest of the stack uses Result — see
-  docs/adr/0005 for why (zero project references; FluentValidation
-  already checked shape by the time Domain runs).
+- Constructor/factory validates every invariant; throw a dedicated
+  exception inheriting that service's `{Service}.Domain.Exceptions.BusinessException`
+  (`Code` + `Message`, e.g. `InvalidWidgetException(string message) :
+  base("Widget.Invalid", message)`) — never a raw `Exception`/
+  `ArgumentException`. Domain stays exception-based even though the rest
+  of the stack uses Result — see docs/adr/0005 for why (zero project
+  references; FluentValidation already checked shape by the time Domain
+  runs) and docs/adr/0006 for the `BusinessException` shape.
 - No public setters. Add a `private` parameterless constructor ONLY if EF
   needs it, and keep it private.
 - State changes go through named behavior methods (`Rename`, `Cancel`,
@@ -124,9 +127,12 @@ Application/Tags/
   stage the change — no `SaveChangesAsync` inside the repository (the
   handler commits via `IUnitOfWork`).
 - EF configuration lives in `Infrastructure/Persistence/Configurations/`.
-  Add `builder.HasQueryFilter(e => e.DeletedAt == null)` (soft delete)
-  and filter any unique index with `.HasFilter("\"DeletedAt\" IS NULL")`
-  so a soft-deleted row doesn't block reusing its unique value.
+  The soft-delete query filter and `DeletedAt` index apply automatically
+  to every `BaseEntity` (the `DbContext` calls `ApplyAuditableConventions`
+  once, docs/adr/0006) — don't add `HasQueryFilter` by hand. If the
+  entity has a uniqueness rule, filter that index with
+  `.HasFilter("\"DeletedAt\" IS NULL")` so a soft-deleted row doesn't
+  block reusing its unique value.
 - New tables → `dotnet ef migrations add <Name>` from the Api project
   directory (the service's tables live in its own schema —
   `HasDefaultSchema` is already set in the DbContext).
@@ -218,11 +224,26 @@ public sealed class CreateWidgetCommandValidator : AbstractValidator<CreateWidge
 ```
 
 ```csharp
+// Domain/Exceptions/InvalidWidgetException.cs
+namespace {Service}.Domain.Exceptions;
+
+public class InvalidWidgetException : BusinessException
+{
+    public InvalidWidgetException(string message)
+        : base("Widget.Invalid", message)
+    {
+    }
+}
+// BusinessException itself already exists per service
+// ({Service}.Domain/Exceptions/BusinessException.cs) - copy it once, not
+// per entity (docs/adr/0006).
+```
+
+```csharp
 // Application/Widgets/CreateWidget/CreateWidgetCommandHandler.cs
 using Admin.SharedKernel;
 using {Service}.Application.Abstractions;
 using {Service}.Domain.Entities;
-using {Service}.Domain.Exceptions;
 
 namespace {Service}.Application.Widgets.CreateWidget;
 
@@ -239,21 +260,12 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
 
     public async Task<Result<WidgetResponse>> Handle(CreateWidgetCommand command, CancellationToken cancellationToken)
     {
-        Widget widget;
-        try
-        {
-            // Construct/validate via the domain first - it normalizes
-            // (trims, etc.) so the uniqueness check below runs against
-            // the value that would actually be persisted.
-            widget = new Widget(IdGenerator.NewId(), command.TenantId, command.Name);
-        }
-        catch (InvalidWidgetException exception)
-        {
-            // Reached only if a caller bypasses CreateWidgetCommandValidator
-            // - the validator already rejects malformed shape before this
-            // handler runs (docs/adr/0005).
-            return Result.Failure<WidgetResponse>(Error.Validation("Widget.Invalid", exception.Message));
-        }
+        // Construction can throw InvalidWidgetException (a
+        // BusinessException) if a caller bypasses
+        // CreateWidgetCommandValidator - left uncaught on purpose, the
+        // Api's global BusinessExceptionHandler maps it to a 400 Problem
+        // Details response (docs/adr/0006). Never wrap this in try/catch.
+        var widget = new Widget(Guid.CreateVersion7(), command.TenantId, command.Name);
 
         // Cross-aggregate rule needing the repository - delete this
         // block if the feature has no uniqueness rule:
@@ -437,6 +449,7 @@ using Admin.SharedKernel;
 using {Service}.Application.Abstractions;
 using {Service}.Application.Widgets.CreateWidget;
 using {Service}.Domain.Entities;
+using {Service}.Domain.Exceptions;
 
 namespace {Service}.Tests.Widgets.CreateWidget;
 
@@ -473,6 +486,20 @@ public class CreateWidgetCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    [Fact]
+    public async Task Handle_WithInvalidName_Throws()
+    {
+        // Only reachable if a caller bypasses CreateWidgetCommandValidator
+        // - handler unit tests call Handle(...) directly, so they exercise
+        // this path even though production traffic never does.
+        var handler = new CreateWidgetCommandHandler(
+            Substitute.For<IWidgetRepository>(), Substitute.For<IUnitOfWork>());
+
+        var act = () => handler.Handle(new CreateWidgetCommand(Guid.NewGuid(), ""), CancellationToken.None);
+
+        await act.Should().ThrowAsync<InvalidWidgetException>();
     }
 }
 ```
@@ -558,6 +585,12 @@ public class WidgetsEndpointTests : IClassFixture<WidgetApiFactory>
         // ProvisioningEndpointTests.RequestTokenAsync.
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Test", tenantId.ToString());
+
+        // TenantHeaderFilter requires this to match the token's tenant_id
+        // claim (docs/adr/0006) - omit it entirely for an M2M-only test
+        // client that carries no tenant claim.
+        client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
+
         return client;
     }
 }

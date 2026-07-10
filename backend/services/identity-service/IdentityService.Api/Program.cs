@@ -1,5 +1,6 @@
 using Admin.SharedKernel;
 using Asp.Versioning;
+using IdentityService.Api.ExceptionHandling;
 using IdentityService.Api.Seed;
 using IdentityService.Application;
 using IdentityService.Infrastructure;
@@ -14,6 +15,11 @@ builder.AddServiceDefaults();
 builder.Services.AddControllers();
 builder.Services.AddRazorPages();
 builder.Services.AddOpenApi();
+
+// Maps a BusinessException escaping a handler to a 400 Problem Details
+// response (docs/adr/0006).
+builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services
     .AddApiVersioning(options =>
@@ -115,6 +121,8 @@ builder.Services.AddOpenIddict()
     });
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (string.IsNullOrEmpty(publicIssuer) && !app.Environment.IsDevelopment())
 {

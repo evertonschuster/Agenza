@@ -1,6 +1,5 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Exceptions;
 using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Tags.UpdateTag;
@@ -32,15 +31,11 @@ public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, 
                 Error.Conflict("Tag.DuplicateName", $"A tag named '{newName}' already exists."));
         }
 
-        try
-        {
-            var color = TagColor.From(command.Color);
-            tag.Update(command.Name, color, command.Description);
-        }
-        catch (InvalidTagException exception)
-        {
-            return Result.Failure<TagResponse>(Error.Validation("Tag.Invalid", exception.Message));
-        }
+        // tag.Update can throw InvalidTagException (a BusinessException) if
+        // a caller bypasses UpdateTagCommandValidator - left uncaught on
+        // purpose, see CreateTagCommandHandler's comment.
+        var color = TagColor.From(command.Color);
+        tag.Update(command.Name, color, command.Description);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

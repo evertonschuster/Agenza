@@ -2,6 +2,7 @@ using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.UpdateTag;
 using ServicesService.Domain.Entities;
+using ServicesService.Domain.Exceptions;
 using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Tags.UpdateTag;
@@ -104,8 +105,11 @@ public class UpdateTagCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithInvalidColor_ReturnsValidationErrorAndKeepsOriginalState()
+    public async Task Handle_WithInvalidColor_ThrowsAndKeepsOriginalState()
     {
+        // Reached only if a caller bypasses UpdateTagCommandValidator -
+        // the handler no longer catches this itself, the Api's global
+        // BusinessExceptionHandler maps it to a 400 (docs/adr/0006).
         var tenantId = Guid.NewGuid();
         var tag = new Tag(Guid.NewGuid(), tenantId, "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
@@ -114,12 +118,11 @@ public class UpdateTagCommandHandlerTests
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new UpdateTagCommandHandler(repository, unitOfWork);
 
-        var result = await handler.Handle(
+        var act = () => handler.Handle(
             new UpdateTagCommand(tenantId, tag.Id, "VIP", "#123456", null),
             CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.Validation);
+        await act.Should().ThrowAsync<InvalidTagException>();
         tag.Color.Value.Should().Be("#0d9488");
         await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }

@@ -12,9 +12,10 @@ public class TenantConfiguration : IEntityTypeConfiguration<Tenant>
         builder.HasKey(t => t.Id);
         builder.Property(t => t.Name).IsRequired().HasMaxLength(200);
 
-        // Filtered to non-deleted rows - see TagConfiguration for why.
+        // Filtered to non-deleted rows - see TagConfiguration for why. The
+        // soft-delete query filter itself is applied automatically by
+        // IdentityDataContext.ApplyAuditableConventions - not repeated
+        // here.
         builder.HasIndex(t => t.Name).IsUnique().HasFilter("\"DeletedAt\" IS NULL");
-
-        builder.HasQueryFilter(t => t.DeletedAt == null);
     }
 }

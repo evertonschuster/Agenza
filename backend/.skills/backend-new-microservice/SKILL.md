@@ -92,20 +92,37 @@ context (e.g. notifications/email, billing).
    every aggregate root to inherit, and copy
    `AuditableEntitySaveChangesInterceptor` into
    `Infrastructure/Persistence/Interceptors/` (wired in step 4's
-   `AddWidgetServiceInfrastructure` above).
+   `AddWidgetServiceInfrastructure` above). After
+   `ApplyConfigurationsFromAssembly` in `OnModelCreating`, call
+   `builder.ApplyAuditableConventions(typeof(BaseEntity))`
+   (`Admin.SharedKernel.EntityFrameworkCore`) — applies the soft-delete
+   query filter + `DeletedAt` index to every `BaseEntity` automatically,
+   so entity configurations never write `HasQueryFilter` by hand.
 
-8. **Observability**: `builder.AddServiceDefaults()` +
+8. **Exceptions**: add `{Service}.Domain/Exceptions/BusinessException.cs`
+   (copy verbatim — `Code` + `Message`, docs/adr/0006); every domain
+   invariant exception inherits it. Add
+   `{Service}.Api/ExceptionHandling/BusinessExceptionHandler.cs` (copy
+   verbatim, only the `using {Service}.Domain.Exceptions;` changes) and
+   register it in `Program.cs`:
+   `builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
+   builder.Services.AddProblemDetails();`, then `app.UseExceptionHandler();`
+   early in the pipeline (before `MapControllers`). Command handlers that
+   construct/mutate a domain entity never wrap it in try/catch — see
+   `backend-use-case` skill step 3.
+
+9. **Observability**: `builder.AddServiceDefaults()` +
    `app.MapDefaultEndpoints()` (health checks + OpenTelemetry come free).
 
-9. **Docker**: copy `identity-service`'s `Dockerfile` (build context is
-   `backend/`), add the service to `infra/docker-compose.yml` and to
-   `backend/AppHost/AppHost.cs` for Aspire local dev.
+10. **Docker**: copy `identity-service`'s `Dockerfile` (build context is
+    `backend/`), add the service to `infra/docker-compose.yml` and to
+    `backend/AppHost/AppHost.cs` for Aspire local dev.
 
-10. **CI**: nothing to do — `backend-ci.yml` builds/tests the whole
+11. **CI**: nothing to do — `backend-ci.yml` builds/tests the whole
     solution and the coverage gate applies automatically. Add the new
     Dockerfile directory to `.github/dependabot.yml`'s docker entry.
 
-11. **Docs**: add the service to `docs/MONOREPO.md`'s tree and note its
+12. **Docs**: add the service to `docs/MONOREPO.md`'s tree and note its
     context in `docs/VISION.md`.
 
 ---
@@ -124,6 +141,7 @@ using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using WidgetService.Api.ExceptionHandling;
 using WidgetService.Application;
 using WidgetService.Infrastructure;
 
@@ -141,6 +159,11 @@ builder.Services.AddControllers(options =>
     options.Filters.Add<TenantHeaderFilter>();
 });
 builder.Services.AddOpenApi();
+
+// Maps a BusinessException escaping a handler to a 400 Problem Details
+// response (docs/adr/0006, step 8 above).
+builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services
     .AddApiVersioning(options =>
@@ -173,6 +196,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

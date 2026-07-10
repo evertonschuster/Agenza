@@ -1,4 +1,5 @@
 using IdentityService.Domain.Entities;
+using IdentityService.Domain.Exceptions;
 
 namespace IdentityService.Tests;
 
@@ -22,7 +23,7 @@ public class TenantTests
     {
         var act = () => new Tenant(Guid.NewGuid(), name);
 
-        act.Should().Throw<ArgumentException>().And.ParamName.Should().Be("name");
+        act.Should().Throw<InvalidTenantException>().Which.Code.Should().Be("Tenant.Invalid");
     }
 
     [Fact]
