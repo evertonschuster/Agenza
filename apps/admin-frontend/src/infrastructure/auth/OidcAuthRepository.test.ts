@@ -113,7 +113,7 @@ describe('OidcAuthRepository', () => {
     })
 
     it('attempts silent renewal when the cached user is expired, and returns the renewed session on success', async () => {
-      const expiredUser = createFakeOidcUser({ expires_at: 1 }) // far in the past
+      const expiredUser = createFakeOidcUser({ expires_at: 1 })
       const renewedUser = createFakeOidcUser({ expires_at: 9_999_999_999 })
       const userManager = createFakeUserManager({
         getUser: vi.fn(() => Promise.resolve(expiredUser)),

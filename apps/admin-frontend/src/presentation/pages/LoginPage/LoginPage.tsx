@@ -33,9 +33,7 @@ export function LoginPage(): JSX.Element {
   return (
     <div className="flex min-h-screen items-center justify-center bg-slate-50 px-4">
       <div className="w-full max-w-sm">
-        {/* Card */}
         <div className="rounded-xl border border-slate-200 bg-white px-8 py-10 shadow-sm">
-          {/* Branding */}
           <div className="mb-8 text-center">
             <span className="text-xs font-semibold tracking-widest text-teal-700 uppercase">
               Receptionist AI
@@ -46,7 +44,6 @@ export function LoginPage(): JSX.Element {
             </p>
           </div>
 
-          {/* Action */}
           <button
             type="button"
             onClick={() => void handleSignIn()}

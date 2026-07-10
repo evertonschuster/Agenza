@@ -255,9 +255,7 @@ using {Service}.Domain.Entities;
 
 namespace {Service}.Application.Widgets.CreateWidget;
 
-// Shape only - cheap, synchronous rules. NOT the cross-aggregate rule
-// (uniqueness/existence) - that needs the repository, so it lives in
-// the handler below, not here.
+// Cross-aggregate rules (uniqueness/existence) need the repository, so they stay in the handler below, not here.
 public sealed class CreateWidgetCommandValidator : AbstractValidator<CreateWidgetCommand>
 {
     public CreateWidgetCommandValidator()
@@ -322,8 +320,7 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
     {
         var widget = command.ToModel();
 
-        // Cross-aggregate rule needing the repository - delete this
-        // block if the feature has no uniqueness rule:
+        // Delete this block if the feature has no uniqueness rule.
         if (await _repository.NameExistsAsync(widget.Name, excludeId: null, cancellationToken))
         {
             return Result.Failure<WidgetResponse>(
@@ -415,8 +412,7 @@ public sealed class UpdateWidgetCommandHandler : ICommandHandler<UpdateWidgetCom
                 Error.NotFound("Widget.NotFound", $"Widget '{command.WidgetId}' was not found."));
         }
 
-        // Cross-aggregate rule needing the repository - delete this
-        // block if the feature has no uniqueness rule:
+        // Delete this block if the feature has no uniqueness rule.
         if (await _repository.NameExistsAsync(command.Name, excludeId: widget.Id, cancellationToken))
         {
             return Result.Failure<WidgetResponse>(
@@ -789,9 +785,7 @@ public class WidgetsEndpointTests : IClassFixture<WidgetApiFactory>
 
     private HttpClient AuthenticatedClient(Guid tenantId)
     {
-        // If this service IS the OIDC provider (identity-service), get a
-        // real client-credentials token instead - see
-        // ProvisioningEndpointTests.RequestTokenAsync.
+        // If this service IS the OIDC provider, get a real token instead - see ProvisioningEndpointTests.RequestTokenAsync.
         var client = _factory.CreateClient();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Test", tenantId.ToString());
 

@@ -45,10 +45,7 @@ public class UnitOfWork : IUnitOfWork
     {
         try
         {
-            // Best-effort: a failed rollback (e.g. connection already
-            // dropped) must not hide the original failure/result below,
-            // and the DB rolls back an uncommitted transaction on
-            // disconnect regardless.
+            // Best-effort: a failed rollback must not hide the original failure - the DB rolls back on disconnect regardless.
             await transaction.RollbackAsync(CancellationToken.None);
         }
         catch

@@ -4,14 +4,6 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Admin.Identity.Client;
 
-/// <summary>
-/// Standard JWT-bearer + tenant-claim wiring every resource microservice
-/// needs to validate tokens issued by identity-service. Kept as a shared
-/// library (not copy-pasted per service) because this is security-critical
-/// cross-cutting infrastructure, not business logic - every service copied
-/// from the reference layout should reference this instead of
-/// reimplementing token validation.
-/// </summary>
 public static class IdentityJwtBearerExtensions
 {
     public static IServiceCollection AddIdentityServiceAuthentication(

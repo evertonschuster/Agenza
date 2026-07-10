@@ -2,12 +2,7 @@ using Microsoft.AspNetCore.Http;
 
 namespace Admin.Identity.Client;
 
-/// <summary>
-/// Reads tenant_id from the authenticated principal's claims - never from
-/// a client-supplied route/query/body value. Every microservice (repo
-/// non-negotiable) must scope its queries to a tenant verified against the
-/// authenticated principal, not trusted from the client.
-/// </summary>
+// Reads tenant_id from the authenticated principal's claims - never from a client-supplied value.
 public class HttpContextTenantAccessor : ITenantAccessor
 {
     private readonly IHttpContextAccessor _httpContextAccessor;

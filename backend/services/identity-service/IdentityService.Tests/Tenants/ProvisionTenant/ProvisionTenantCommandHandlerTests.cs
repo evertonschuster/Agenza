@@ -11,10 +11,7 @@ public class ProvisionTenantCommandHandlerTests
 {
     private static IUnitOfWork CreatePassthroughUnitOfWork()
     {
-        // Just runs the operation directly - real rollback-on-failure is
-        // exercised against a real Postgres transaction by UnitOfWork,
-        // which a mock can't meaningfully simulate (see
-        // IdentityService.IntegrationTests).
+        // Real rollback-on-failure is exercised against Postgres in IdentityService.IntegrationTests, not here.
         var unitOfWork = Substitute.For<IUnitOfWork>();
         unitOfWork
             .ExecuteInTransactionAsync(
@@ -79,9 +76,7 @@ public class ProvisionTenantCommandHandlerTests
     [Fact]
     public async Task Handle_WithBlankTenantName_Throws()
     {
-        // Only reachable if a caller bypasses ProvisionTenantCommandValidator
-        // - the handler no longer catches this itself, the Api's global
-        // BusinessExceptionHandler maps it to a 400 (docs/adr/0006).
+        // Only reachable if a caller bypasses ProvisionTenantCommandValidator.
         var handler = new ProvisionTenantCommandHandler(
             Substitute.For<ITenantRepository>(),
             Substitute.For<IUserAccountService>(),

@@ -6,12 +6,7 @@ using OpenIddict.Abstractions;
 
 namespace IdentityService.Api.Seed;
 
-/// <summary>
-/// Dev-time bootstrap: applies migrations, then idempotently seeds the
-/// OpenIddict clients/scopes and a demo Tenant+owner so the SPA has
-/// something to log in as locally without a signup UI. Safe to run on
-/// every startup - every step checks for existence first.
-/// </summary>
+// Dev-time bootstrap: migrates, then idempotently seeds OpenIddict clients/scopes and a demo Tenant+owner. Safe to run on every startup.
 public class DatabaseSeeder : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -158,8 +153,7 @@ public class DatabaseSeeder : IHostedService
             return;
         }
 
-        // Demo tenant is opt-in via config (present in appsettings.Development.json,
-        // absent elsewhere) - no demo credentials are seeded unless explicitly configured.
+        // Opt-in via config - no demo credentials are seeded unless explicitly configured.
         var demoTenantName = _configuration["DemoTenant:Name"];
         var demoOwnerEmail = _configuration["DemoTenant:OwnerEmail"];
         var demoOwnerPassword = _configuration["DemoTenant:OwnerPassword"];
@@ -178,9 +172,6 @@ public class DatabaseSeeder : IHostedService
 
         if (result.IsFailure)
         {
-            // Not fatal to startup - dev-only convenience seeding - but
-            // silently doing nothing would be confusing when the SPA's
-            // demo login then fails, so surface why.
             _logger.LogWarning(
                 "Demo tenant seeding failed: {ErrorCode} {ErrorMessage}",
                 result.Error.Code,

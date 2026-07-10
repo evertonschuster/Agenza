@@ -5,13 +5,6 @@ using System.Text.Json;
 
 namespace ServicesService.IntegrationTests;
 
-/// <summary>
-/// End-to-end coverage of /api/v1/tags against real Postgres - the layers
-/// (Api + Infrastructure) the unit-test coverage gate cannot see:
-/// authentication challenges, tenant scoping enforcement, EF persistence,
-/// FluentValidation running through the dispatcher, and the
-/// database-level unique-name-per-tenant constraint.
-/// </summary>
 public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
 {
     private const string TagsUrl = "/api/v1/tags";

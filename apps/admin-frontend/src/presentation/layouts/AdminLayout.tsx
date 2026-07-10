@@ -23,9 +23,7 @@ export function AdminLayout(): JSX.Element {
 
   return (
     <div className="flex h-screen bg-slate-50">
-      {/* Sidebar */}
       <aside className="flex w-60 flex-col border-r border-slate-200 bg-white">
-        {/* Brand */}
         <div className="border-b border-slate-200 px-6 py-5">
           <span className="text-sm font-semibold tracking-wide text-teal-700 uppercase">
             Receptionist AI
@@ -33,7 +31,6 @@ export function AdminLayout(): JSX.Element {
           <p className="mt-0.5 truncate text-xs text-slate-500">{businessName}</p>
         </div>
 
-        {/* Navigation */}
         <nav className="flex-1 overflow-y-auto px-3 py-4">
           <ul className="space-y-0.5">
             {NAV_ITEMS.map(({ label, to }) => (
@@ -56,7 +53,6 @@ export function AdminLayout(): JSX.Element {
           </ul>
         </nav>
 
-        {/* Logout */}
         <div className="border-t border-slate-200 p-4">
           <button
             onClick={() => void logout()}
@@ -68,7 +64,6 @@ export function AdminLayout(): JSX.Element {
         </div>
       </aside>
 
-      {/* Main content */}
       <main className="flex-1 overflow-y-auto">
         <div className="mx-auto max-w-5xl px-8 py-8">
           <Outlet />

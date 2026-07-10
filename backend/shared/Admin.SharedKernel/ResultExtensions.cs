@@ -15,12 +15,6 @@ public static class ResultExtensions
         _ => StatusCodes.Status400BadRequest,
     };
 
-    /// <summary>
-    /// Maps a failed Result to a Problem Details response (docs/API.md's
-    /// confirmed error shape) and a successful one to whatever the caller
-    /// wants to return - controllers stay a one-liner per action instead
-    /// of repeating an if(IsFailure) branch four times.
-    /// </summary>
     public static IActionResult ToActionResult(
         this Result result,
         ControllerBase controller,

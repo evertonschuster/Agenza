@@ -5,12 +5,6 @@ using Testcontainers.PostgreSql;
 
 namespace IdentityService.IntegrationTests;
 
-/// <summary>
-/// Boots the real identity-service host (Program.cs, OpenIddict, EF Core
-/// migrations via DatabaseSeeder) against a throwaway Postgres container.
-/// One container + one host are shared by every test in a class
-/// (IClassFixture) - the seeder is idempotent, so that is safe.
-/// </summary>
 public sealed class IdentityApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     public const string WorkerSecret = "integration-test-worker-secret";
@@ -28,8 +22,7 @@ public sealed class IdentityApiFactory : WebApplicationFactory<Program>, IAsyncL
         builder.UseSetting("IdentityClients:AssistantServiceWorker:Secret", WorkerSecret);
         builder.UseSetting("IdentityClients:TenantProvisioning:Secret", ProvisioningSecret);
 
-        // Keep the dev-convenience demo tenant out of these tests so
-        // assertions run against a deterministic, empty identity schema.
+        // Blank demo-tenant config keeps the seeded demo tenant out of these tests.
         builder.UseSetting("DemoTenant:Name", "");
         builder.UseSetting("DemoTenant:OwnerEmail", "");
         builder.UseSetting("DemoTenant:OwnerPassword", "");

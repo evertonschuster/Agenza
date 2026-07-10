@@ -4,13 +4,6 @@ using Microsoft.Extensions.Configuration;
 
 namespace IdentityService.Infrastructure.Persistence;
 
-/// <summary>
-/// Lets `dotnet ef migrations add` build the model without spinning up the
-/// full Api host. Reads the same appsettings.json / appsettings.{env}.json
-/// the Api project uses (dotnet-ef runs with the startup project's
-/// directory as the working directory) so the connection string - and its
-/// credentials - live in one place, not hardcoded here.
-/// </summary>
 public class IdentityDataContextFactory : IDesignTimeDbContextFactory<IdentityDataContext>
 {
     public IdentityDataContext CreateDbContext(string[] args)

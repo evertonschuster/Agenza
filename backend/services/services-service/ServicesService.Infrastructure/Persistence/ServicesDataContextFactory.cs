@@ -4,12 +4,6 @@ using Microsoft.Extensions.Configuration;
 
 namespace ServicesService.Infrastructure.Persistence;
 
-/// <summary>
-/// Lets `dotnet ef migrations add` build the model without spinning up
-/// the full Api host - same pattern as IdentityDataContextFactory: reads
-/// the startup project's appsettings so the connection string lives in
-/// one place, never hardcoded here.
-/// </summary>
 public class ServicesDataContextFactory : IDesignTimeDbContextFactory<ServicesDataContext>
 {
     public ServicesDataContext CreateDbContext(string[] args)

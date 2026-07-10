@@ -1,10 +1,6 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-// AddDatabase(name, databaseName): "name" becomes both the Aspire resource
-// name AND the injected ConnectionStrings__<name> env var key, while
-// databaseName is the actual database created inside Postgres. "Default"
-// here (not "appdb") is what makes configuration.GetConnectionString("Default")
-// keep working unchanged in both .NET services.
+// AddDatabase's first arg ("Default") is the ConnectionStrings__ env var key both services read - not the database name (that's "appdb").
 var postgres = builder.AddPostgres("postgres")
     .WithDataVolume();
 var appdb = postgres.AddDatabase("Default", "appdb");
@@ -28,14 +24,7 @@ var assistantService = builder.AddUvicornApp(
         "app.main:app")
     .WithHttpEndpoint(port: 8001, env: "PORT")
     .WithReference(identityService)
-    // Mirrors infra/docker-compose.yml's assistant-service env vars.
-    // Derived from identityService's own endpoint (like VITE_API_BASE_URL
-    // below) rather than hardcoded, so this doesn't silently drift if the
-    // pinned port ever changes. IDENTITY_ISSUER needs the trailing slash
-    // to exactly match the "iss" claim OpenIddict stamps on tokens
-    // (Identity:PublicIssuer) - the Python config's own fallback
-    // (authority without a slash) doesn't match it, which fails token
-    // validation with "Invalid issuer".
+    // IDENTITY_ISSUER needs the trailing slash to match OpenIddict's "iss" claim, or token validation fails with "Invalid issuer".
     .WithEnvironment("IDENTITY_AUTHORITY", identityService.GetEndpoint("http"))
     .WithEnvironment("IDENTITY_ISSUER", ReferenceExpression.Create($"{identityService.GetEndpoint("http")}/"))
     .WithEnvironment("IDENTITY_AUDIENCE", "services-api")

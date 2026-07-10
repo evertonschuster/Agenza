@@ -8,12 +8,6 @@ using Testcontainers.PostgreSql;
 
 namespace ServicesService.IntegrationTests;
 
-/// <summary>
-/// Boots the real services-service host (Program.cs, EF Core migrations
-/// via DatabaseMigrator) against a throwaway Postgres container - same
-/// shape as identity-service's IdentityApiFactory. The real JwtBearer
-/// scheme is swapped for TestAuthHandler (see its doc comment for why).
-/// </summary>
 public sealed class ServicesApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
 {
     private readonly PostgreSqlContainer _postgres = new PostgreSqlBuilder()

@@ -1,11 +1,5 @@
 namespace Admin.SharedKernel;
 
-/// <summary>
-/// Outcome of a command/query handler: success, or a business Error - no
-/// exception involved. Controllers map IsSuccess/Error to HTTP status
-/// codes (see ResultExtensions in each Api project) instead of a
-/// try/catch per handled exception type.
-/// </summary>
 public class Result
 {
     public bool IsSuccess { get; }
@@ -47,7 +41,7 @@ public sealed class Result<TValue> : Result
         _value = value;
     }
 
-    /// <summary>Throws if accessed on a failed result - callers must check IsSuccess/IsFailure first.</summary>
+    // Throws on a failed result - check IsSuccess/IsFailure first.
     public TValue Value => IsSuccess
         ? _value!
         : throw new InvalidOperationException("Cannot access the value of a failed result.");

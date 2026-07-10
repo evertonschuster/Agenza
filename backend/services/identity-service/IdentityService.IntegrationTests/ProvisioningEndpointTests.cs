@@ -5,12 +5,6 @@ using System.Text.Json;
 
 namespace IdentityService.IntegrationTests;
 
-/// <summary>
-/// End-to-end coverage of the M2M surface: OIDC discovery, the
-/// client-credentials flow, and the scope-guarded internal provisioning
-/// endpoint - the layers (Api + Infrastructure) the unit-test coverage
-/// gate cannot see.
-/// </summary>
 public class ProvisioningEndpointTests : IClassFixture<IdentityApiFactory>
 {
     private const string TenantsUrl = "/internal/v1/tenants";

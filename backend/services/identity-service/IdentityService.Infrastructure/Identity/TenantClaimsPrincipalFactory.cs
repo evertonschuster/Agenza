@@ -4,12 +4,6 @@ using Microsoft.Extensions.Options;
 
 namespace IdentityService.Infrastructure.Identity;
 
-/// <summary>
-/// Adds the tenant_id claim (docs/DOMAIN.md) onto every principal built for
-/// an ApplicationUser, so it flows into id_token/access_token whenever the
-/// "tenant_id" scope is requested - matching what the frontend's
-/// OidcAuthRepository/session mapper already expects.
-/// </summary>
 public class TenantClaimsPrincipalFactory : UserClaimsPrincipalFactory<ApplicationUser, IdentityRole<Guid>>
 {
     public TenantClaimsPrincipalFactory(
