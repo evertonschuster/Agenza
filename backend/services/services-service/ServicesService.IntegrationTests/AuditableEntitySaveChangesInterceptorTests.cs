@@ -50,7 +50,7 @@ public class AuditableEntitySaveChangesInterceptorTests
     {
         var tenantId = Guid.NewGuid();
         await using var context = CreateContext(tenantId);
-        var tag = new Tag(Guid.CreateVersion7(), Guid.Empty, "VIP", TagColor.From("#0d9488"), null);
+        var tag = new Tag(Guid.CreateVersion7(), "VIP", TagColor.From("#0d9488"), null);
         context.Tags.Add(tag);
 
         await context.SaveChangesAsync();
@@ -62,7 +62,7 @@ public class AuditableEntitySaveChangesInterceptorTests
     public async Task SavingANewTagWithNoTenantInContext_Throws()
     {
         await using var context = CreateContext(tenantId: null);
-        context.Tags.Add(new Tag(Guid.CreateVersion7(), Guid.Empty, "VIP", TagColor.From("#0d9488"), null));
+        context.Tags.Add(new Tag(Guid.CreateVersion7(), "VIP", TagColor.From("#0d9488"), null));
 
         var act = () => context.SaveChangesAsync();
 
@@ -74,7 +74,8 @@ public class AuditableEntitySaveChangesInterceptorTests
     {
         var explicitTenantId = Guid.NewGuid();
         await using var context = CreateContext(Guid.NewGuid());
-        var tag = new Tag(Guid.CreateVersion7(), explicitTenantId, "VIP", TagColor.From("#0d9488"), null);
+        var tag = new Tag(Guid.CreateVersion7(), "VIP", TagColor.From("#0d9488"), null);
+        tag.AssignTenant(explicitTenantId);
         context.Tags.Add(tag);
 
         await context.SaveChangesAsync();

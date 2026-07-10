@@ -47,13 +47,17 @@ public class ServicesDataContextTenantScopingTests
         // baked-in tenant filter constant would leak across requests.
         await using (var contextA = CreateContext(databaseName, tenantA))
         {
-            contextA.Tags.Add(new Tag(Guid.CreateVersion7(), tenantA, "A's Tag", TagColor.From("#0d9488"), null));
+            var tagA = new Tag(Guid.CreateVersion7(), "A's Tag", TagColor.From("#0d9488"), null);
+            tagA.AssignTenant(tenantA);
+            contextA.Tags.Add(tagA);
             await contextA.SaveChangesAsync();
         }
 
         await using (var contextB = CreateContext(databaseName, tenantB))
         {
-            contextB.Tags.Add(new Tag(Guid.CreateVersion7(), tenantB, "B's Tag", TagColor.From("#ef4444"), null));
+            var tagB = new Tag(Guid.CreateVersion7(), "B's Tag", TagColor.From("#ef4444"), null);
+            tagB.AssignTenant(tenantB);
+            contextB.Tags.Add(tagB);
             await contextB.SaveChangesAsync();
         }
 

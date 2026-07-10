@@ -21,6 +21,7 @@ public class ServicesDataContext : DbContext
     public Guid CurrentTenantId => _currentTenantId ?? Guid.Empty;
 
     public DbSet<Tag> Tags => Set<Tag>();
+    public DbSet<ServiceOffering> ServiceOfferings => Set<ServiceOffering>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

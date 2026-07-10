@@ -83,15 +83,15 @@ see it.
   `Message`), not a raw `Exception`/`ArgumentException`. The Api's global
   `BusinessExceptionHandler` (see "Result pattern" below) maps any
   `BusinessException` to a 400 Problem Details response.
-- A tenant-owned entity's constructor accepts a `Guid tenantId` but does
-  **not** require it to be non-empty — `AssignTenant(Guid tenantId)`
-  (implementing `ITenantOwned`) keeps that check instead, and
-  `AuditableEntitySaveChangesInterceptor` calls it automatically for a
-  newly added entity whose `TenantId` is still `Guid.Empty` (docs/adr/0008)
-  — mirrors `MarkCreated` exactly, just for a security-relevant field
-  instead of an audit one. A mapping extension (`ToModel()`, see CQRS
-  section below) constructs with `Guid.Empty` on purpose when it doesn't
-  know the tenant itself.
+- A tenant-owned entity's constructor never takes a `tenantId` parameter
+  at all — `TenantId` starts `Guid.Empty` and only `AssignTenant(Guid
+  tenantId)` (implementing `ITenantOwned`) can set it, throwing on empty
+  (docs/adr/0008). `AuditableEntitySaveChangesInterceptor` calls it
+  automatically for a newly added entity whose `TenantId` is still
+  `Guid.Empty` — mirrors `MarkCreated` exactly, just for a
+  security-relevant field instead of an audit one. A mapping extension
+  (`ToModel()`, see CQRS section below) is therefore parameterless too —
+  it never threads a tenant id through.
 
 ### Tenant scoping (repo-wide non-negotiable)
 

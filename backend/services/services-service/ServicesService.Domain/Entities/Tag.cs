@@ -31,10 +31,9 @@ public class Tag : BaseEntity, ITenantOwned
         Color = null!;
     }
 
-    public Tag(Guid id, Guid tenantId, string name, TagColor color, string? description)
+    public Tag(Guid id, string name, TagColor color, string? description)
         : base(id)
     {
-        TenantId = tenantId;
         Name = ValidateName(name);
         Color = color;
         Description = ValidateDescription(description);

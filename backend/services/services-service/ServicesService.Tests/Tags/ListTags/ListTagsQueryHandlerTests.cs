@@ -14,7 +14,7 @@ public class ListTagsQueryHandlerTests
     {
         var repository = Substitute.For<ITagRepository>();
         repository.ListAsync(Arg.Any<CancellationToken>())
-            .Returns(new[] { new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null) });
+            .Returns(new[] { new Tag(Guid.NewGuid(), "VIP", Teal, null) });
         var handler = new ListTagsQueryHandler(repository);
 
         var result = await handler.Handle(new ListTagsQuery(), CancellationToken.None);

@@ -12,32 +12,20 @@ public class TagTests
     public void Constructor_WithValidValues_TrimsAndSets()
     {
         var id = Guid.NewGuid();
-        var tenantId = Guid.NewGuid();
 
-        var tag = new Tag(id, tenantId, "  VIP  ", Teal, "  High-value client  ");
+        var tag = new Tag(id, "  VIP  ", Teal, "  High-value client  ");
 
         tag.Id.Should().Be(id);
-        tag.TenantId.Should().Be(tenantId);
+        tag.TenantId.Should().Be(Guid.Empty);
         tag.Name.Should().Be("VIP");
         tag.Color.Value.Should().Be("#0d9488");
         tag.Description.Should().Be("High-value client");
     }
 
     [Fact]
-    public void Constructor_WithEmptyTenant_DoesNotThrow()
-    {
-        // AuditableEntitySaveChangesInterceptor assigns the tenant on
-        // save (docs/adr/0008) - the constructor itself no longer
-        // enforces it, AssignTenant does.
-        var act = () => new Tag(Guid.NewGuid(), Guid.Empty, "VIP", Teal, null);
-
-        act.Should().NotThrow();
-    }
-
-    [Fact]
     public void AssignTenant_WithValidTenant_SetsTenantId()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.Empty, "VIP", Teal, null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
         var tenantId = Guid.NewGuid();
 
         tag.AssignTenant(tenantId);
@@ -48,7 +36,7 @@ public class TagTests
     [Fact]
     public void AssignTenant_WithEmptyTenant_Throws()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.Empty, "VIP", Teal, null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
 
         var act = () => tag.AssignTenant(Guid.Empty);
 
@@ -60,7 +48,7 @@ public class TagTests
     [InlineData("   ")]
     public void Constructor_WithMissingName_Throws(string name)
     {
-        var act = () => new Tag(Guid.NewGuid(), Guid.NewGuid(), name, Teal, null);
+        var act = () => new Tag(Guid.NewGuid(), name, Teal, null);
 
         act.Should().Throw<InvalidTagException>();
     }
@@ -70,7 +58,7 @@ public class TagTests
     {
         var name = new string('x', Tag.NameMaxLength + 1);
 
-        var act = () => new Tag(Guid.NewGuid(), Guid.NewGuid(), name, Teal, null);
+        var act = () => new Tag(Guid.NewGuid(), name, Teal, null);
 
         act.Should().Throw<InvalidTagException>();
     }
@@ -81,7 +69,7 @@ public class TagTests
     [InlineData("   ")]
     public void Constructor_WithBlankDescription_StoresNull(string? description)
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, description);
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, description);
 
         tag.Description.Should().BeNull();
     }
@@ -91,7 +79,7 @@ public class TagTests
     {
         var description = new string('x', Tag.DescriptionMaxLength + 1);
 
-        var act = () => new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, description);
+        var act = () => new Tag(Guid.NewGuid(), "VIP", Teal, description);
 
         act.Should().Throw<InvalidTagException>();
     }
@@ -99,7 +87,7 @@ public class TagTests
     [Fact]
     public void Update_WithValidValues_ReplacesEveryField()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, "old");
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, "old");
 
         tag.Update("  Returning  ", TagColor.From("#ef4444"), null);
 
@@ -111,7 +99,7 @@ public class TagTests
     [Fact]
     public void Update_WithInvalidName_ThrowsAndKeepsState()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
 
         var act = () => tag.Update("", Teal, null);
 
@@ -122,7 +110,7 @@ public class TagTests
     [Fact]
     public void MarkCreated_SetsCreatedAtAndCreatedBy()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
         var actorId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
@@ -135,7 +123,7 @@ public class TagTests
     [Fact]
     public void MarkUpdated_SetsUpdatedAtAndUpdatedBy()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
         var actorId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
@@ -148,7 +136,7 @@ public class TagTests
     [Fact]
     public void MarkDeleted_SetsDeletedAtAndDeletedByAndIsDeleted()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", Teal, null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
         var actorId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 

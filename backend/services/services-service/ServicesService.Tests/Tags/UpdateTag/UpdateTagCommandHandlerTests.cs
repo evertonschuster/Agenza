@@ -12,7 +12,7 @@ public class UpdateTagCommandHandlerTests
     [Fact]
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
         repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
         repository.NameExistsAsync("Returning", tag.Id, Arg.Any<CancellationToken>()).Returns(false);
@@ -33,7 +33,7 @@ public class UpdateTagCommandHandlerTests
     [Fact]
     public async Task Handle_RenamingToItsOwnCurrentName_DoesNotConflict()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
         repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
         repository.NameExistsAsync("VIP", tag.Id, Arg.Any<CancellationToken>()).Returns(false);
@@ -50,7 +50,7 @@ public class UpdateTagCommandHandlerTests
     [Fact]
     public async Task Handle_RenamingToAnotherTagsName_ReturnsConflict()
     {
-        var tagToRename = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tagToRename = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
         repository.GetByIdAsync(tagToRename.Id, Arg.Any<CancellationToken>()).Returns(tagToRename);
         repository.NameExistsAsync("returning", tagToRename.Id, Arg.Any<CancellationToken>()).Returns(true);
@@ -82,7 +82,7 @@ public class UpdateTagCommandHandlerTests
     [Fact]
     public async Task Handle_WithInvalidColor_ThrowsAndKeepsOriginalState()
     {
-        var tag = new Tag(Guid.NewGuid(), Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
         var repository = Substitute.For<ITagRepository>();
         repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
         repository.NameExistsAsync("VIP", tag.Id, Arg.Any<CancellationToken>()).Returns(false);

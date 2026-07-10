@@ -46,11 +46,11 @@ just adapt the templates.
   (`Guid TenantId { get; }` + `void AssignTenant(Guid tenantId)`). This
   is what lets the DbContext scope every query to it automatically (step
   5) AND lets `AuditableEntitySaveChangesInterceptor` assign the tenant
-  automatically on save (docs/adr/0008) — the constructor accepts
-  `tenantId` but should NOT validate it's non-empty; put that check in
-  `AssignTenant` instead (see `Tag`). A mapping extension (step 3)
-  constructs with `Guid.Empty` on purpose when the caller doesn't know
-  the tenant itself.
+  automatically on save (docs/adr/0008) — the constructor never takes a
+  `tenantId` parameter at all; `TenantId` starts `Guid.Empty` and only
+  `AssignTenant` can set it, throwing if given `Guid.Empty` (see `Tag`).
+  A mapping extension (step 3) is therefore parameterless too — it never
+  threads a tenant id through.
 - Constructor/factory validates every invariant; throw a dedicated
   exception inheriting that service's `{Service}.Domain.Exceptions.BusinessException`
   (`Code` + `Message`, e.g. `InvalidWidgetException(string message) :
@@ -284,12 +284,13 @@ using {Service}.Domain.Entities;
 namespace {Service}.Application.Widgets.CreateWidget;
 
 // Command -> Domain mapping lives here, not inlined in the handler
-// (docs/adr/0007). TenantId is intentionally Guid.Empty -
-// AuditableEntitySaveChangesInterceptor assigns it on save (docs/adr/0008).
+// (docs/adr/0007). The constructor never takes a tenantId - TenantId
+// starts Guid.Empty and AuditableEntitySaveChangesInterceptor assigns it
+// on save (docs/adr/0008).
 public static class CreateWidgetCommandExtensions
 {
     public static Widget ToModel(this CreateWidgetCommand command) =>
-        new(Guid.CreateVersion7(), Guid.Empty, command.Name);
+        new(Guid.CreateVersion7(), command.Name);
 }
 ```
 
@@ -688,7 +689,7 @@ public class UpdateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
     {
-        var widget = new Widget(Guid.NewGuid(), Guid.NewGuid(), "Old Name");
+        var widget = new Widget(Guid.NewGuid(), "Old Name");
         var repository = Substitute.For<IWidgetRepository>();
         repository.GetByIdAsync(widget.Id, Arg.Any<CancellationToken>()).Returns(widget);
         repository.NameExistsAsync("New Name", widget.Id, Arg.Any<CancellationToken>()).Returns(false);
