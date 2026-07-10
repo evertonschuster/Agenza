@@ -5,6 +5,8 @@ namespace ServicesService.Application.Tags.CreateTag;
 
 public static class CreateTagCommandExtensions
 {
-    public static Tag ToModel(this CreateTagCommand command, Guid tenantId) =>
-        new(Guid.CreateVersion7(), tenantId, command.Name, TagColor.From(command.Color), command.Description);
+    // TenantId is intentionally Guid.Empty - AuditableEntitySaveChangesInterceptor
+    // assigns it on save (docs/adr/0008).
+    public static Tag ToModel(this CreateTagCommand command) =>
+        new(Guid.CreateVersion7(), Guid.Empty, command.Name, TagColor.From(command.Color), command.Description);
 }

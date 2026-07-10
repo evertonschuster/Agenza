@@ -1,6 +1,7 @@
 using Admin.Identity.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
+using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Common;
 
 namespace ServicesService.Infrastructure.Persistence.Interceptors;
@@ -10,16 +11,23 @@ namespace ServicesService.Infrastructure.Persistence.Interceptors;
 /// delete into a soft delete (DeletedAt/DeletedBy set, state reverted to
 /// Modified) so a repository's Remove() never actually removes a row -
 /// the paired HasQueryFilter(DeletedAt == null) then hides it from every
-/// read.
+/// read. Also assigns TenantId on a newly added ITenantOwned entity that
+/// wasn't given one explicitly (docs/adr/0008) - throws rather than
+/// persisting a tenant-less row if no tenant is available.
 /// </summary>
 public class AuditableEntitySaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUserAccessor _currentUserAccessor;
+    private readonly ICurrentTenantProvider _currentTenantProvider;
     private readonly TimeProvider _timeProvider;
 
-    public AuditableEntitySaveChangesInterceptor(ICurrentUserAccessor currentUserAccessor, TimeProvider timeProvider)
+    public AuditableEntitySaveChangesInterceptor(
+        ICurrentUserAccessor currentUserAccessor,
+        ICurrentTenantProvider currentTenantProvider,
+        TimeProvider timeProvider)
     {
         _currentUserAccessor = currentUserAccessor;
+        _currentTenantProvider = currentTenantProvider;
         _timeProvider = timeProvider;
     }
 
@@ -54,6 +62,7 @@ public class AuditableEntitySaveChangesInterceptor : SaveChangesInterceptor
             {
                 case EntityState.Added:
                     entry.Entity.MarkCreated(actorId, now);
+                    AssignTenantIfNeeded(entry.Entity);
                     break;
                 case EntityState.Modified:
                     entry.Entity.MarkUpdated(actorId, now);
@@ -64,5 +73,21 @@ public class AuditableEntitySaveChangesInterceptor : SaveChangesInterceptor
                     break;
             }
         }
+    }
+
+    private void AssignTenantIfNeeded(BaseEntity entity)
+    {
+        if (entity is not ITenantOwned { TenantId: var tenantId } tenantOwned || tenantId != Guid.Empty)
+        {
+            return;
+        }
+
+        if (!_currentTenantProvider.TryGetTenantId(out var currentTenantId))
+        {
+            throw new InvalidOperationException(
+                $"Cannot persist a new {entity.GetType().Name} - no tenant is available in the current context.");
+        }
+
+        tenantOwned.AssignTenant(currentTenantId);
     }
 }

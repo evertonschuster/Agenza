@@ -24,9 +24,33 @@ public class TagTests
     }
 
     [Fact]
-    public void Constructor_WithEmptyTenant_Throws()
+    public void Constructor_WithEmptyTenant_DoesNotThrow()
     {
+        // AuditableEntitySaveChangesInterceptor assigns the tenant on
+        // save (docs/adr/0008) - the constructor itself no longer
+        // enforces it, AssignTenant does.
         var act = () => new Tag(Guid.NewGuid(), Guid.Empty, "VIP", Teal, null);
+
+        act.Should().NotThrow();
+    }
+
+    [Fact]
+    public void AssignTenant_WithValidTenant_SetsTenantId()
+    {
+        var tag = new Tag(Guid.NewGuid(), Guid.Empty, "VIP", Teal, null);
+        var tenantId = Guid.NewGuid();
+
+        tag.AssignTenant(tenantId);
+
+        tag.TenantId.Should().Be(tenantId);
+    }
+
+    [Fact]
+    public void AssignTenant_WithEmptyTenant_Throws()
+    {
+        var tag = new Tag(Guid.NewGuid(), Guid.Empty, "VIP", Teal, null);
+
+        var act = () => tag.AssignTenant(Guid.Empty);
 
         act.Should().Throw<InvalidTagException>();
     }

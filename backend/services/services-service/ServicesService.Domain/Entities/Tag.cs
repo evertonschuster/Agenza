@@ -34,15 +34,23 @@ public class Tag : BaseEntity, ITenantOwned
     public Tag(Guid id, Guid tenantId, string name, TagColor color, string? description)
         : base(id)
     {
+        TenantId = tenantId;
+        Name = ValidateName(name);
+        Color = color;
+        Description = ValidateDescription(description);
+    }
+
+    // A Tag can be constructed with an empty tenant when the caller
+    // relies on AuditableEntitySaveChangesInterceptor to assign it
+    // before save (docs/adr/0008) - this is the guard that runs then.
+    public void AssignTenant(Guid tenantId)
+    {
         if (tenantId == Guid.Empty)
         {
             throw new InvalidTagException("A tag must belong to a tenant.");
         }
 
         TenantId = tenantId;
-        Name = ValidateName(name);
-        Color = color;
-        Description = ValidateDescription(description);
     }
 
     public void Update(string name, TagColor color, string? description)

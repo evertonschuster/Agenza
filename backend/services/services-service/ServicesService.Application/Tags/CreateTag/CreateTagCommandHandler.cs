@@ -7,21 +7,16 @@ public sealed class CreateTagCommandHandler : ICommandHandler<CreateTagCommand, 
 {
     private readonly ITagRepository _tagRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ICurrentTenantProvider _currentTenant;
 
-    public CreateTagCommandHandler(
-        ITagRepository tagRepository,
-        IUnitOfWork unitOfWork,
-        ICurrentTenantProvider currentTenant)
+    public CreateTagCommandHandler(ITagRepository tagRepository, IUnitOfWork unitOfWork)
     {
         _tagRepository = tagRepository;
         _unitOfWork = unitOfWork;
-        _currentTenant = currentTenant;
     }
 
     public async Task<Result<TagResponse>> Handle(CreateTagCommand command, CancellationToken cancellationToken)
     {
-        var tag = command.ToModel(_currentTenant.TenantId);
+        var tag = command.ToModel();
 
         if (await _tagRepository.NameExistsAsync(tag.Name, excludeTagId: null, cancellationToken))
         {

@@ -27,6 +27,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/`                                 | Cross-cutting decisions with rationale      |
 | `../docs/adr/0006-...md`                       | Tenant header/automatic scoping, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions |
 | `../docs/adr/0007-...md`                       | Controllers bind commands directly (no per-endpoint body record), Command→Domain mapping extension methods |
+| `../docs/adr/0008-...md`                       | Automatic tenant assignment on save (AssignTenant + interceptor) |
 
 ## Critical constraints (non-negotiable)
 
@@ -82,6 +83,15 @@ see it.
   `Message`), not a raw `Exception`/`ArgumentException`. The Api's global
   `BusinessExceptionHandler` (see "Result pattern" below) maps any
   `BusinessException` to a 400 Problem Details response.
+- A tenant-owned entity's constructor accepts a `Guid tenantId` but does
+  **not** require it to be non-empty — `AssignTenant(Guid tenantId)`
+  (implementing `ITenantOwned`) keeps that check instead, and
+  `AuditableEntitySaveChangesInterceptor` calls it automatically for a
+  newly added entity whose `TenantId` is still `Guid.Empty` (docs/adr/0008)
+  — mirrors `MarkCreated` exactly, just for a security-relevant field
+  instead of an audit one. A mapping extension (`ToModel()`, see CQRS
+  section below) constructs with `Guid.Empty` on purpose when it doesn't
+  know the tenant itself.
 
 ### Tenant scoping (repo-wide non-negotiable)
 
@@ -100,21 +110,26 @@ see it.
   `ITenantAccessor.TenantId` directly (the throwing property) — don't
   repeat the check in the action.
 - A tenant-owned entity implements `ITenantOwned` (`{Service}.Domain/Common/ITenantOwned.cs`,
-  `Guid TenantId { get; }`). Its `DbContext` exposes a public
-  `CurrentTenantId` property (sourced from `ICurrentTenantProvider`) and
-  passes `this` + `typeof(ITenantOwned)` to `ApplyAuditableConventions` —
-  the query filter must read `CurrentTenantId` off the live instance,
-  never a value snapshotted at model-build time (EF Core caches the
-  compiled model per `DbContext` *type*, so a baked-in constant would
-  leak across every request — see docs/adr/0006 for the incident this
-  caught). Repository methods, commands, and queries for that entity
-  never take an explicit `tenantId` parameter (see
-  `ITagRepository`/`CreateTagCommand`). The one handler that constructs a
-  new instance gets the tenant from `ICurrentTenantProvider` (an
-  `Application/Abstractions/` port, implemented in Infrastructure) since
-  the entity's own invariants require it. A cross-tenant read is still a
-  security bug, not a code-style issue — the automatic filter is defense
-  in depth on top of `TenantHeaderFilter`, not a replacement for it.
+  `Guid TenantId { get; }` + `void AssignTenant(Guid tenantId)`). Its
+  `DbContext` exposes a public `CurrentTenantId` property (sourced from
+  `ICurrentTenantProvider`) and passes `this` + `typeof(ITenantOwned)` to
+  `ApplyAuditableConventions` — the query filter must read
+  `CurrentTenantId` off the live instance, never a value snapshotted at
+  model-build time (EF Core caches the compiled model per `DbContext`
+  *type*, so a baked-in constant would leak across every request — see
+  docs/adr/0006 for the incident this caught). Repository methods,
+  commands, and queries for that entity never take an explicit
+  `tenantId` parameter (see `ITagRepository`/`CreateTagCommand`).
+- **New-entity tenant assignment is automatic, not handler code**
+  (docs/adr/0008): a mapping extension constructs with `Guid.Empty`
+  (`command.ToModel()`, no tenant parameter needed) and
+  `AuditableEntitySaveChangesInterceptor` calls `AssignTenant` on save,
+  sourcing the tenant from `ICurrentTenantProvider` itself — the
+  interceptor throws rather than persisting a tenant-less row if none is
+  available. A cross-tenant read/write is still a security bug, not a
+  code-style issue — the automatic filter and automatic assignment are
+  defense in depth on top of `TenantHeaderFilter`, not a replacement for
+  it.
 - See docs/adr/0006 for why the header filter is wired into
   services-service's `Program.cs` only, not identity-service's, and for
   the automatic tenant-scoping mechanism in full.

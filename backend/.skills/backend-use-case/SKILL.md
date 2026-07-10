@@ -43,9 +43,14 @@ just adapt the templates.
   your constructor; never set the audit fields yourself, the EF
   interceptor does that.
 - If the entity belongs to a tenant, also implement `{Service}.Domain.Common.ITenantOwned`
-  (`Guid TenantId { get; }`) — a plain property is enough, no extra base
-  class. This is what lets the DbContext scope every query to it
-  automatically (step 5).
+  (`Guid TenantId { get; }` + `void AssignTenant(Guid tenantId)`). This
+  is what lets the DbContext scope every query to it automatically (step
+  5) AND lets `AuditableEntitySaveChangesInterceptor` assign the tenant
+  automatically on save (docs/adr/0008) — the constructor accepts
+  `tenantId` but should NOT validate it's non-empty; put that check in
+  `AssignTenant` instead (see `Tag`). A mapping extension (step 3)
+  constructs with `Guid.Empty` on purpose when the caller doesn't know
+  the tenant itself.
 - Constructor/factory validates every invariant; throw a dedicated
   exception inheriting that service's `{Service}.Domain.Exceptions.BusinessException`
   (`Code` + `Message`, e.g. `InvalidWidgetException(string message) :
@@ -59,8 +64,9 @@ just adapt the templates.
 - State changes go through named behavior methods (`Rename`, `Cancel`,
   `Reschedule`), each keeping the entity valid.
 - Tests: plain xUnit + AwesomeAssertions, no mocks needed — Domain has
-  zero dependencies. Cover `MarkCreated`/`MarkUpdated`/`MarkDeleted` too
-  (inherited from `BaseEntity`) — they count toward the coverage gate.
+  zero dependencies. Cover `MarkCreated`/`MarkUpdated`/`MarkDeleted`
+  (inherited from `BaseEntity`) and `AssignTenant` (if `ITenantOwned`)
+  too — they count toward the coverage gate.
 
 ### 2. Port (interface) in `Application/Abstractions/`
 
@@ -153,6 +159,11 @@ Application/Tags/
   `HasQueryFilter` by hand. If the entity has a uniqueness rule, filter
   that index with `.HasFilter("\"DeletedAt\" IS NULL")` so a soft-deleted
   row doesn't block reusing its unique value.
+- If the entity is tenant-owned, also pass `ICurrentTenantProvider` into
+  `AuditableEntitySaveChangesInterceptor`'s constructor (copy the
+  existing wiring) so it can call `AssignTenant` on a newly added entity
+  automatically (docs/adr/0008) — same DI registration you already added
+  for the `DbContext`'s `CurrentTenantId`, nothing new to register.
 - New tables → `dotnet ef migrations add <Name>` from the Api project
   directory (the service's tables live in its own schema —
   `HasDefaultSchema` is already set in the DbContext).
@@ -164,11 +175,11 @@ Application/Tags/
   (registered in `Program.cs`) already rejected the request with 403
   before this action runs unless the `X-Tenant-Id` header matched the
   token's `tenant_id` claim (docs/adr/0006); the tenant itself never
-  needs to reach the controller — the DbContext scopes reads
-  automatically and the one handler that constructs a new entity gets it
-  from `ICurrentTenantProvider` (step 3). Mark the controller/action
-  `[IgnoreTenant]` instead if it genuinely isn't tenant-scoped (M2M,
-  protocol endpoints).
+  needs to reach the controller at all — the DbContext scopes reads
+  automatically and `AuditableEntitySaveChangesInterceptor` assigns the
+  tenant automatically when a handler constructs a new entity
+  (docs/adr/0008). Mark the controller/action `[IgnoreTenant]` instead if
+  it genuinely isn't tenant-scoped (M2M, protocol endpoints).
 - `[ApiVersion("1.0")]` + `[Route("api/v{version:apiVersion}/...")]` (or
   `internal/v{version:apiVersion}/...` for M2M-only routes).
 - **Bind the command/query directly as the action parameter — don't
@@ -273,11 +284,12 @@ using {Service}.Domain.Entities;
 namespace {Service}.Application.Widgets.CreateWidget;
 
 // Command -> Domain mapping lives here, not inlined in the handler
-// (docs/adr/0007) - Handle(...) reads as orchestration only.
+// (docs/adr/0007). TenantId is intentionally Guid.Empty -
+// AuditableEntitySaveChangesInterceptor assigns it on save (docs/adr/0008).
 public static class CreateWidgetCommandExtensions
 {
-    public static Widget ToModel(this CreateWidgetCommand command, Guid tenantId) =>
-        new(Guid.CreateVersion7(), tenantId, command.Name);
+    public static Widget ToModel(this CreateWidgetCommand command) =>
+        new(Guid.CreateVersion7(), Guid.Empty, command.Name);
 }
 ```
 
@@ -292,19 +304,16 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
 {
     private readonly IWidgetRepository _repository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ICurrentTenantProvider _currentTenant;
 
-    public CreateWidgetCommandHandler(
-        IWidgetRepository repository, IUnitOfWork unitOfWork, ICurrentTenantProvider currentTenant)
+    public CreateWidgetCommandHandler(IWidgetRepository repository, IUnitOfWork unitOfWork)
     {
         _repository = repository;
         _unitOfWork = unitOfWork;
-        _currentTenant = currentTenant;
     }
 
     public async Task<Result<WidgetResponse>> Handle(CreateWidgetCommand command, CancellationToken cancellationToken)
     {
-        var widget = command.ToModel(_currentTenant.TenantId);
+        var widget = command.ToModel();
 
         // Cross-aggregate rule needing the repository - delete this
         // block if the feature has no uniqueness rule:
@@ -322,13 +331,10 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
 }
 ```
 
-`ICurrentTenantProvider` (`{Service}.Application/Abstractions/ICurrentTenantProvider.cs`
-— `Guid TenantId { get; }` + `bool TryGetTenantId(out Guid tenantId)`) is
-only needed by the handler that constructs a new tenant-owned entity;
-everything else (read/update/delete) doesn't need the tenant at all,
-the DbContext already scopes it (docs/adr/0006). Implementation lives in
-Infrastructure (`Security/CurrentTenantProvider.cs`, wraps
-`ITenantAccessor`) — copy `ServicesService`'s verbatim.
+No `ICurrentTenantProvider` needed in this handler at all — the tenant
+is assigned automatically on save (docs/adr/0008). Only the `DbContext`
+(query scoping) and `AuditableEntitySaveChangesInterceptor` (assignment)
+need it; see step 5.
 
 ### Command with a response and a route id (Update-shaped)
 
@@ -596,27 +602,22 @@ namespace {Service}.Tests.Widgets.CreateWidget;
 
 public class CreateWidgetCommandHandlerTests
 {
-    private static ICurrentTenantProvider CurrentTenant(Guid tenantId)
-    {
-        var provider = Substitute.For<ICurrentTenantProvider>();
-        provider.TenantId.Returns(tenantId);
-        return provider;
-    }
-
     [Fact]
     public async Task Handle_WithValidCommand_PersistsAndReturnsTheValue()
     {
-        var tenantId = Guid.NewGuid();
         var repository = Substitute.For<IWidgetRepository>();
         repository.NameExistsAsync("Example", null, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
-        var handler = new CreateWidgetCommandHandler(repository, unitOfWork, CurrentTenant(tenantId));
+        var handler = new CreateWidgetCommandHandler(repository, unitOfWork);
 
         var result = await handler.Handle(new CreateWidgetCommand("Example"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Name.Should().Be("Example");
-        repository.Received(1).Add(Arg.Is<Widget>(w => w.Id == result.Value.Id && w.TenantId == tenantId));
+        // TenantId stays Guid.Empty here - AuditableEntitySaveChangesInterceptor
+        // assigns it on save, which this handler-level test never runs
+        // (see AuditableEntitySaveChangesInterceptorTests for that, docs/adr/0008).
+        repository.Received(1).Add(Arg.Is<Widget>(w => w.Id == result.Value.Id));
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -625,7 +626,7 @@ public class CreateWidgetCommandHandlerTests
     {
         var repository = Substitute.For<IWidgetRepository>();
         repository.NameExistsAsync("example", null, Arg.Any<CancellationToken>()).Returns(true);
-        var handler = new CreateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>(), CurrentTenant(Guid.NewGuid()));
+        var handler = new CreateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>());
 
         var result = await handler.Handle(
             new CreateWidgetCommand("example"), CancellationToken.None); // case-insensitive match
@@ -640,8 +641,7 @@ public class CreateWidgetCommandHandlerTests
         // Only reachable if a caller bypasses CreateWidgetCommandValidator
         // - handler unit tests call Handle(...) directly, so they exercise
         // this path even though production traffic never does.
-        var handler = new CreateWidgetCommandHandler(
-            Substitute.For<IWidgetRepository>(), Substitute.For<IUnitOfWork>(), CurrentTenant(Guid.NewGuid()));
+        var handler = new CreateWidgetCommandHandler(Substitute.For<IWidgetRepository>(), Substitute.For<IUnitOfWork>());
 
         var act = () => handler.Handle(new CreateWidgetCommand(""), CancellationToken.None);
 
@@ -716,6 +716,19 @@ public class UpdateWidgetCommandHandlerTests
     }
 }
 ```
+
+### Regression test for automatic tenant assignment (EF Core InMemory, no Docker)
+
+Only needed once per service, the first time it gets a tenant-owned
+entity — not per feature. Copy
+`ServicesService.IntegrationTests/AuditableEntitySaveChangesInterceptorTests.cs`
+verbatim (rename the fake tenant provider/entity as needed): it wires
+the real `AuditableEntitySaveChangesInterceptor` against an
+`UseInMemoryDatabase` context and proves three things docs/adr/0008
+depends on — a newly added entity with `TenantId == Guid.Empty` gets
+the current tenant assigned on save, saving with no tenant available
+throws instead of persisting a tenant-less row, and an entity
+constructed with an explicit tenant is left alone.
 
 ### Integration test (real HTTP, real Postgres)
 
