@@ -96,13 +96,21 @@ context (e.g. notifications/email, billing).
    tenant-owned entities, also add `{Service}.Domain/Common/ITenantOwned.cs`
    (copy verbatim), `ICurrentTenantProvider` in `Application/Abstractions/`
    + its `Infrastructure/Security/CurrentTenantProvider.cs` implementation
-   (registered as scoped), and give the `DbContext` an optional
+   (registered as scoped), give the `DbContext` an optional
    `ICurrentTenantProvider?` constructor parameter (defaults to `null` so
    `dotnet ef` design-time tooling still works) that it uses to capture
-   the current tenant id. After `ApplyConfigurationsFromAssembly` in
-   `OnModelCreating`, call `builder.ApplyAuditableConventions(typeof(BaseEntity),
-   typeof(ITenantOwned), currentTenantId)` (`Admin.SharedKernel.EntityFrameworkCore`)
-   — applies the soft-delete filter/index to every `BaseEntity`, and the
+   the current tenant id, and expose it as a **public `CurrentTenantId`
+   property** (`_currentTenantId ?? Guid.Empty`) — the query filter has to
+   read this property off the live `DbContext` instance at query time, it
+   must never be baked in as a snapshotted `Guid` value (EF Core caches
+   the compiled model per `DbContext` *type*, so a baked-in constant
+   would leak across every request regardless of the real caller;
+   `ServicesDataContextTenantScopingTests` in `ServicesService.IntegrationTests`
+   is the regression test that catches this). After
+   `ApplyConfigurationsFromAssembly` in `OnModelCreating`, call
+   `builder.ApplyAuditableConventions(this, typeof(BaseEntity),
+   typeof(ITenantOwned))` (`Admin.SharedKernel.EntityFrameworkCore`) —
+   applies the soft-delete filter/index to every `BaseEntity`, and the
    tenant filter/index to every `ITenantOwned` entity, automatically. No
    entity configuration or repository method needs an explicit tenant id
    (docs/adr/0006).

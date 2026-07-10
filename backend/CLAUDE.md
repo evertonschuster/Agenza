@@ -99,11 +99,15 @@ see it.
   `ITenantAccessor.TenantId` directly (the throwing property) — don't
   repeat the check in the action.
 - A tenant-owned entity implements `ITenantOwned` (`{Service}.Domain/Common/ITenantOwned.cs`,
-  `Guid TenantId { get; }`). Its `DbContext` gets scoped to the current
-  tenant automatically (`ApplyAuditableConventions(baseEntityType,
-  typeof(ITenantOwned), currentTenantId)`, sourced from
-  `ICurrentTenantProvider`) — repository methods, commands, and queries
-  for that entity never take an explicit `tenantId` parameter (see
+  `Guid TenantId { get; }`). Its `DbContext` exposes a public
+  `CurrentTenantId` property (sourced from `ICurrentTenantProvider`) and
+  passes `this` + `typeof(ITenantOwned)` to `ApplyAuditableConventions` —
+  the query filter must read `CurrentTenantId` off the live instance,
+  never a value snapshotted at model-build time (EF Core caches the
+  compiled model per `DbContext` *type*, so a baked-in constant would
+  leak across every request — see docs/adr/0006 for the incident this
+  caught). Repository methods, commands, and queries for that entity
+  never take an explicit `tenantId` parameter (see
   `ITagRepository`/`CreateTagCommand`). The one handler that constructs a
   new instance gets the tenant from `ICurrentTenantProvider` (an
   `Application/Abstractions/` port, implemented in Infrastructure) since

@@ -136,11 +136,17 @@ Application/Tags/
   The soft-delete query filter and `DeletedAt` index apply automatically
   to every `BaseEntity`, and (if `ITenantOwned`) the tenant filter +
   `TenantId` index too — the `DbContext` calls
-  `ApplyAuditableConventions(typeof(BaseEntity), typeof(ITenantOwned),
-  currentTenantId)` once (docs/adr/0006). Never add `HasQueryFilter` by
-  hand. If the entity has a uniqueness rule, filter that index with
-  `.HasFilter("\"DeletedAt\" IS NULL")` so a soft-deleted row doesn't
-  block reusing its unique value.
+  `ApplyAuditableConventions(this, typeof(BaseEntity), typeof(ITenantOwned))`
+  once (docs/adr/0006). If the entity is tenant-owned, the `DbContext`
+  needs a public `CurrentTenantId` property (sourced from
+  `ICurrentTenantProvider`) — the filter reads it off the live instance
+  at query time, never bake a `Guid` value directly into the filter
+  expression (EF Core caches the compiled model per `DbContext` type, so
+  a baked-in constant leaks across every request regardless of the
+  actual caller — see `ServicesDataContext`/docs/adr/0006). Never add
+  `HasQueryFilter` by hand. If the entity has a uniqueness rule, filter
+  that index with `.HasFilter("\"DeletedAt\" IS NULL")` so a soft-deleted
+  row doesn't block reusing its unique value.
 - New tables → `dotnet ef migrations add <Name>` from the Api project
   directory (the service's tables live in its own schema —
   `HasDefaultSchema` is already set in the DbContext).

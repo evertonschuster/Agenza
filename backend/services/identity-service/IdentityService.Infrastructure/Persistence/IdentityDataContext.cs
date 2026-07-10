@@ -37,6 +37,6 @@ public class IdentityDataContext : IdentityDbContext<ApplicationUser, IdentityRo
         // Soft-delete query filter + DeletedAt index for every BaseEntity
         // (docs/adr/0006) - a new entity gets both for free just by
         // inheriting BaseEntity, no per-configuration boilerplate.
-        builder.ApplyAuditableConventions(typeof(BaseEntity));
+        builder.ApplyAuditableConventions(this, typeof(BaseEntity));
     }
 }

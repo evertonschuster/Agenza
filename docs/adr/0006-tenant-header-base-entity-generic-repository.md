@@ -103,13 +103,15 @@ a repository's `Remove()` never actually deletes a row.
 
 The soft-delete query filter and a supporting `DeletedAt` index are
 **applied automatically**, not written by hand per entity:
-`Admin.SharedKernel.EntityFrameworkCore.ModelBuilderExtensions.ApplyAuditableConventions(Type baseEntityType)`
-walks every entity type in the model at `OnModelCreating` time and, for
-any type assignable to the service's own `BaseEntity`, adds
-`HasQueryFilter(e => e.DeletedAt == null)` and `HasIndex("DeletedAt")`
-via reflection/expression-tree building (it takes a runtime `Type`
-rather than a generic parameter so it doesn't need to reference any
-service's Domain). Each `DbContext.OnModelCreating` calls it once, after
+`Admin.SharedKernel.EntityFrameworkCore.ModelBuilderExtensions.ApplyAuditableConventions(this,
+baseEntityType, tenantOwnedType)` walks every entity type in the model at
+`OnModelCreating` time and, for any type assignable to the service's own
+`BaseEntity`, adds `HasQueryFilter(e => e.DeletedAt == null)` and
+`HasIndex("DeletedAt")` via reflection/expression-tree building (it takes
+runtime `Type`s rather than generic parameters so it doesn't need to
+reference any service's Domain - see "Automatic tenant scoping" below
+for why it also takes the `DbContext` instance itself). Each
+`DbContext.OnModelCreating` calls it once, after
 `ApplyConfigurationsFromAssembly`. A new entity gets both for free just
 by inheriting `BaseEntity` - an `IEntityTypeConfiguration` only needs to
 add a *business-specific* filtered unique index
@@ -216,16 +218,33 @@ Tenant-owned entities implement `ITenantOwned` (`Guid TenantId { get; }`,
 of `BaseEntity`, since not every entity is tenant-owned; `Tenant` itself
 never implements it). The `DbContext` captures the current request's
 tenant id (via `ICurrentTenantProvider`, optional constructor parameter
-defaulting to `null` for `dotnet ef` design-time tooling) and passes it
-into `ApplyAuditableConventions(baseEntityType, tenantOwnedType,
-currentTenantId)`, which now also adds `HasQueryFilter(e => e.TenantId
-== currentTenantId)` (combined with the soft-delete filter into one
-predicate - EF Core only allows one `HasQueryFilter` per entity type) and
-a `TenantId` index for any `ITenantOwned` type. Every query against a
-tenant-owned `DbSet` is scoped to the current tenant automatically; with
-no tenant in context (background work, an M2M token) the filter falls
-back to `Guid.Empty`, which no real row has, so the result set is empty
-rather than every tenant's data.
+defaulting to `null` for `dotnet ef` design-time tooling) into a public
+`CurrentTenantId` property, and passes `this` into
+`ApplyAuditableConventions(this, baseEntityType, tenantOwnedType)`, which
+adds `HasQueryFilter(e => e.DeletedAt == null && e.TenantId ==
+CurrentTenantId)` (EF Core only allows one `HasQueryFilter` per entity
+type, so it's one combined predicate) and a `TenantId` index for any
+`ITenantOwned` type.
+
+**The filter must read `CurrentTenantId` off the live DbContext instance,
+not a value snapshotted at model-build time.** EF Core compiles and
+caches the model once per `DbContext` *type*, not per instance - an
+earlier version of this passed a `Guid?` value straight into the filter
+expression as a `ConstantExpression`, which meant whichever request
+happened to build the model first had its tenant id permanently baked in
+for every later request, regardless of who was actually asking (caught
+by `ServicesDataContextTenantScopingTests`, which constructs two
+`ServicesDataContext` instances for two different tenants against the
+same cached model and asserts each only sees its own rows). The fix:
+`ModelBuilderExtensions.BuildFilter` builds `Expression.Property(Expression.Constant(dbContext,
+dbContext.GetType()), currentTenantIdProperty)` instead of
+`Expression.Constant(guidValue)` - EF Core specially re-evaluates a
+`this`-instance member access against whichever context instance is
+actually executing a given query, which is exactly the documented
+pattern for multi-tenant global query filters. With no tenant in context
+(background work, an M2M token) `CurrentTenantId` defaults to
+`Guid.Empty`, which no real row has, so the result set is empty rather
+than every tenant's data.
 
 This makes `ITagRepository`'s methods and `Tag`'s command/query records
 **tenant-blind**: `ListAsync(ct)`, `GetByIdAsync(tagId, ct)`,
@@ -284,10 +303,12 @@ logged, non-leaking response for anything that isn't a
   handler that constructs the entity - the Api's global
   `BusinessExceptionHandler` covers it, and `GenericExceptionHandler`
   logs/500s anything that isn't a `BusinessException`.
-- A new tenant-owned entity: implement `ITenantOwned`, pass its
-  `ClrType` and the current tenant id through to
-  `ApplyAuditableConventions` from the `DbContext` (copy the existing
-  wiring). Its repository/commands/queries never need an explicit
+- A new tenant-owned entity: implement `ITenantOwned`. The `DbContext`
+  needs a public `CurrentTenantId` property and to pass `typeof(ITenantOwned)`
+  to `ApplyAuditableConventions` (copy the existing wiring exactly - the
+  filter must read that property off the live instance, never a
+  snapshotted value, see "Automatic tenant scoping" above). Its
+  repository/commands/queries never need an explicit
   `tenantId` parameter; the one handler that constructs a new instance
   gets the tenant from `ICurrentTenantProvider`.
 - New unit tests use `Substitute.For<T>()`, not a new hand-written fake

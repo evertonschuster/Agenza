@@ -18,6 +18,8 @@ public class ServicesDataContext : DbContext
             : null;
     }
 
+    public Guid CurrentTenantId => _currentTenantId ?? Guid.Empty;
+
     public DbSet<Tag> Tags => Set<Tag>();
 
     protected override void OnModelCreating(ModelBuilder builder)
@@ -27,6 +29,6 @@ public class ServicesDataContext : DbContext
         builder.HasDefaultSchema("services");
 
         builder.ApplyConfigurationsFromAssembly(typeof(ServicesDataContext).Assembly);
-        builder.ApplyAuditableConventions(typeof(BaseEntity), typeof(ITenantOwned), _currentTenantId);
+        builder.ApplyAuditableConventions(this, typeof(BaseEntity), typeof(ITenantOwned));
     }
 }
