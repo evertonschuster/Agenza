@@ -16,10 +16,11 @@ The reference implementation is `services-service`'s Tags vertical.
 Open these files and mirror their shape:
 
 - `ServicesService.Domain/Entities/Tag.cs`, `ValueObjects/TagColor.cs` — entity/VO with invariants
-- `ServicesService.Application/Tags/CreateTag/` — full command slice (Command/Handler/Validator)
+- `ServicesService.Application/Tags/CreateTag/` — full command slice (Command/Handler/Validator/`CreateTagCommandExtensions.ToModel`)
+- `ServicesService.Application/Tags/UpdateTag/` — same, plus `UpdateTagCommandExtensions.ApplyTo` (mutation-mapping shape)
 - `ServicesService.Application/Tags/TagResponse.cs` — DTO shared across the feature's operations
 - `ServicesService.Application/Abstractions/` — ports (`ITagRepository`, `IUnitOfWork`)
-- `ServicesService.Api/Controllers/TagsController.cs` — dispatch + Result → HTTP mapping
+- `ServicesService.Api/Controllers/TagsController.cs` — direct command binding + Result → HTTP mapping (docs/adr/0007)
 - `ServicesService.Tests/Tags/CreateTag/` — handler + validator unit tests
 - `ServicesService.IntegrationTests/TagsEndpointTests.cs` — end-to-end HTTP tests
 
@@ -111,6 +112,11 @@ Application/Tags/
 - Nothing to register by hand — each service's
   `Application/DependencyInjection.cs` scans the assembly for handlers
   and validators.
+- If the handler constructs or mutates a domain entity from the
+  command's fields, put that mapping in a `{Operation}CommandExtensions.cs`
+  extension method beside the command (`ToModel(...)` for construction,
+  `ApplyTo(entity)` for mutation) instead of inlining it in `Handle(...)`
+  (docs/adr/0007) — see `CreateTagCommandExtensions`/`UpdateTagCommandExtensions`.
 
 ### 4. Unit tests with NSubstitute
 
@@ -165,9 +171,17 @@ Application/Tags/
   protocol endpoints).
 - `[ApiVersion("1.0")]` + `[Route("api/v{version:apiVersion}/...")]` (or
   `internal/v{version:apiVersion}/...` for M2M-only routes).
-- Each action: build the command/query → `await _dispatcher.Send(...)` /
-  `.Query(...)` → `result.ToActionResult(this, value => Ok(value))` (or
-  `Created`/`NoContent`). No try/catch per exception type.
+- **Bind the command/query directly as the action parameter — don't
+  declare a local `...Body` record** (docs/adr/0007). `[ApiController]`
+  infers `[FromBody]` for a complex-type parameter automatically. A
+  route id binds into its own `Guid id` parameter and gets merged into
+  the command right before dispatching: `_dispatcher.Send(command with
+  { WidgetId = id }, cancellationToken)` — the client's JSON body never
+  carries the id, so the record's constructor gets `Guid.Empty` for it
+  until the `with` expression overwrites it.
+- Each action: `await _dispatcher.Send(...)` / `.Query(...)` →
+  `result.ToActionResult(this, value => Ok(value))` (or `Created`/
+  `NoContent`). No try/catch per exception type.
 - `[Authorize]` by default; scope checks (`User.HasScope(...)`) for
   M2M-only endpoints (see `TenantsController`, which is also
   `[IgnoreTenant]`).
@@ -206,7 +220,7 @@ for your real feature/entity/operations, keep everything else. Assume
 namespace root `{Service}` = your service's actual name
 (`ServicesService`, `IdentityService`, ...).
 
-### Command with a response (Create/Update-shaped)
+### Command with a response (Create-shaped)
 
 ```csharp
 // Application/Widgets/CreateWidget/CreateWidgetCommand.cs
@@ -253,10 +267,24 @@ public class InvalidWidgetException : BusinessException
 ```
 
 ```csharp
+// Application/Widgets/CreateWidget/CreateWidgetCommandExtensions.cs
+using {Service}.Domain.Entities;
+
+namespace {Service}.Application.Widgets.CreateWidget;
+
+// Command -> Domain mapping lives here, not inlined in the handler
+// (docs/adr/0007) - Handle(...) reads as orchestration only.
+public static class CreateWidgetCommandExtensions
+{
+    public static Widget ToModel(this CreateWidgetCommand command, Guid tenantId) =>
+        new(Guid.CreateVersion7(), tenantId, command.Name);
+}
+```
+
+```csharp
 // Application/Widgets/CreateWidget/CreateWidgetCommandHandler.cs
 using Admin.SharedKernel;
 using {Service}.Application.Abstractions;
-using {Service}.Domain.Entities;
 
 namespace {Service}.Application.Widgets.CreateWidget;
 
@@ -276,7 +304,7 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
 
     public async Task<Result<WidgetResponse>> Handle(CreateWidgetCommand command, CancellationToken cancellationToken)
     {
-        var widget = new Widget(Guid.CreateVersion7(), _currentTenant.TenantId, command.Name);
+        var widget = command.ToModel(_currentTenant.TenantId);
 
         // Cross-aggregate rule needing the repository - delete this
         // block if the feature has no uniqueness rule:
@@ -301,6 +329,94 @@ everything else (read/update/delete) doesn't need the tenant at all,
 the DbContext already scopes it (docs/adr/0006). Implementation lives in
 Infrastructure (`Security/CurrentTenantProvider.cs`, wraps
 `ITenantAccessor`) — copy `ServicesService`'s verbatim.
+
+### Command with a response and a route id (Update-shaped)
+
+```csharp
+// Application/Widgets/UpdateWidget/UpdateWidgetCommand.cs
+using Admin.SharedKernel;
+
+namespace {Service}.Application.Widgets.UpdateWidget;
+
+public sealed record UpdateWidgetCommand(Guid WidgetId, string Name) : ICommand<WidgetResponse>;
+```
+
+```csharp
+// Application/Widgets/UpdateWidget/UpdateWidgetCommandValidator.cs
+using FluentValidation;
+using {Service}.Domain.Entities;
+
+namespace {Service}.Application.Widgets.UpdateWidget;
+
+public sealed class UpdateWidgetCommandValidator : AbstractValidator<UpdateWidgetCommand>
+{
+    public UpdateWidgetCommandValidator()
+    {
+        RuleFor(command => command.WidgetId).NotEmpty();
+        RuleFor(command => command.Name).NotEmpty().MaximumLength(Widget.NameMaxLength);
+    }
+}
+// WidgetId is still validated even though it's route-sourced, not
+// user-typed: the controller merges the route id in via `with` BEFORE
+// dispatching (see the Controller template below), so by the time this
+// validator runs, WidgetId already holds the real value.
+```
+
+```csharp
+// Application/Widgets/UpdateWidget/UpdateWidgetCommandExtensions.cs
+using {Service}.Domain.Entities;
+
+namespace {Service}.Application.Widgets.UpdateWidget;
+
+public static class UpdateWidgetCommandExtensions
+{
+    public static void ApplyTo(this UpdateWidgetCommand command, Widget widget) =>
+        widget.Rename(command.Name);
+}
+```
+
+```csharp
+// Application/Widgets/UpdateWidget/UpdateWidgetCommandHandler.cs
+using Admin.SharedKernel;
+using {Service}.Application.Abstractions;
+
+namespace {Service}.Application.Widgets.UpdateWidget;
+
+public sealed class UpdateWidgetCommandHandler : ICommandHandler<UpdateWidgetCommand, WidgetResponse>
+{
+    private readonly IWidgetRepository _repository;
+    private readonly IUnitOfWork _unitOfWork;
+
+    public UpdateWidgetCommandHandler(IWidgetRepository repository, IUnitOfWork unitOfWork)
+    {
+        _repository = repository;
+        _unitOfWork = unitOfWork;
+    }
+
+    public async Task<Result<WidgetResponse>> Handle(UpdateWidgetCommand command, CancellationToken cancellationToken)
+    {
+        var widget = await _repository.GetByIdAsync(command.WidgetId, cancellationToken);
+        if (widget is null)
+        {
+            return Result.Failure<WidgetResponse>(
+                Error.NotFound("Widget.NotFound", $"Widget '{command.WidgetId}' was not found."));
+        }
+
+        // Cross-aggregate rule needing the repository - delete this
+        // block if the feature has no uniqueness rule:
+        if (await _repository.NameExistsAsync(command.Name, excludeId: widget.Id, cancellationToken))
+        {
+            return Result.Failure<WidgetResponse>(
+                Error.Conflict("Widget.DuplicateName", $"A widget named '{command.Name}' already exists."));
+        }
+
+        command.ApplyTo(widget);
+        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        return WidgetResponse.FromWidget(widget);
+    }
+}
+```
 
 ### Command with no response (Delete-shaped)
 
@@ -409,6 +525,7 @@ using Microsoft.AspNetCore.Mvc;
 using {Service}.Application.Widgets.CreateWidget;
 using {Service}.Application.Widgets.DeleteWidget;
 using {Service}.Application.Widgets.ListWidgets;
+using {Service}.Application.Widgets.UpdateWidget;
 
 namespace {Service}.Api.Controllers;
 
@@ -424,12 +541,14 @@ public class WidgetsController : ControllerBase
         _dispatcher = dispatcher;
     }
 
-    public record WidgetBody(string Name);
-
     // Global TenantHeaderFilter (Program.cs) already rejected the
     // request with 403 unless X-Tenant-Id matched the token's
     // tenant_id claim (docs/adr/0006) - mark [IgnoreTenant] instead if
     // this controller/action genuinely isn't tenant-scoped.
+    //
+    // Every command below binds directly as the action parameter - no
+    // local "...Body" record (docs/adr/0007). [ApiController] infers
+    // [FromBody] for it automatically.
 
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
@@ -439,18 +558,25 @@ public class WidgetsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(WidgetBody body, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(CreateWidgetCommand command, CancellationToken cancellationToken)
     {
-        var command = new CreateWidgetCommand(body.Name);
         var result = await _dispatcher.Send(command, cancellationToken);
         return result.ToActionResult(this, widget => Created($"/api/v1/widgets/{widget.Id}", widget));
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, UpdateWidgetCommand command, CancellationToken cancellationToken)
+    {
+        // The route id, not the (empty) value the body deserialized -
+        // WidgetId is never sent by the client, see docs/adr/0007.
+        var result = await _dispatcher.Send(command with { WidgetId = id }, cancellationToken);
+        return result.ToActionResult(this, widget => Ok(widget));
     }
 
     [HttpDelete("{id:guid}")]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
-        var command = new DeleteWidgetCommand(id);
-        var result = await _dispatcher.Send(command, cancellationToken);
+        var result = await _dispatcher.Send(new DeleteWidgetCommand(id), cancellationToken);
         return result.ToActionResult(this, NoContent);
     }
 }
@@ -544,6 +670,49 @@ public class CreateWidgetCommandValidatorTests
     public void Validate_WithEmptyName_Fails()
     {
         _validator.Validate(new CreateWidgetCommand("")).IsValid.Should().BeFalse();
+    }
+}
+```
+
+```csharp
+// Tests/Widgets/UpdateWidget/UpdateWidgetCommandHandlerTests.cs
+using Admin.SharedKernel;
+using {Service}.Application.Abstractions;
+using {Service}.Application.Widgets.UpdateWidget;
+using {Service}.Domain.Entities;
+
+namespace {Service}.Tests.Widgets.UpdateWidget;
+
+public class UpdateWidgetCommandHandlerTests
+{
+    [Fact]
+    public async Task Handle_WithValidCommand_UpdatesAndPersists()
+    {
+        var widget = new Widget(Guid.NewGuid(), Guid.NewGuid(), "Old Name");
+        var repository = Substitute.For<IWidgetRepository>();
+        repository.GetByIdAsync(widget.Id, Arg.Any<CancellationToken>()).Returns(widget);
+        repository.NameExistsAsync("New Name", widget.Id, Arg.Any<CancellationToken>()).Returns(false);
+        var unitOfWork = Substitute.For<IUnitOfWork>();
+        var handler = new UpdateWidgetCommandHandler(repository, unitOfWork);
+
+        var result = await handler.Handle(new UpdateWidgetCommand(widget.Id, "New Name"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Name.Should().Be("New Name");
+        await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithUnknownWidgetId_ReturnsNotFound()
+    {
+        var repository = Substitute.For<IWidgetRepository>();
+        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Widget?)null);
+        var handler = new UpdateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>());
+
+        var result = await handler.Handle(new UpdateWidgetCommand(Guid.NewGuid(), "New Name"), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.NotFound);
     }
 }
 ```

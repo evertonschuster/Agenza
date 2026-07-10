@@ -1,7 +1,5 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Tags.CreateTag;
 
@@ -23,8 +21,7 @@ public sealed class CreateTagCommandHandler : ICommandHandler<CreateTagCommand, 
 
     public async Task<Result<TagResponse>> Handle(CreateTagCommand command, CancellationToken cancellationToken)
     {
-        var color = TagColor.From(command.Color);
-        var tag = new Tag(Guid.CreateVersion7(), _currentTenant.TenantId, command.Name, color, command.Description);
+        var tag = command.ToModel(_currentTenant.TenantId);
 
         if (await _tagRepository.NameExistsAsync(tag.Name, excludeTagId: null, cancellationToken))
         {

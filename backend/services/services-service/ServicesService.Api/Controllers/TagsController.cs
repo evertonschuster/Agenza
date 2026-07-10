@@ -1,7 +1,6 @@
 using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
-using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.CreateTag;
 using ServicesService.Application.Tags.DeleteTag;
 using ServicesService.Application.Tags.ListTags;
@@ -21,8 +20,6 @@ public class TagsController : ControllerBase
         _dispatcher = dispatcher;
     }
 
-    public record TagBody(string Name, string Color, string? Description);
-
     [HttpGet]
     public async Task<IActionResult> List(CancellationToken cancellationToken)
     {
@@ -31,20 +28,16 @@ public class TagsController : ControllerBase
     }
 
     [HttpPost]
-    public async Task<IActionResult> Create(TagBody body, CancellationToken cancellationToken)
+    public async Task<IActionResult> Create(CreateTagCommand command, CancellationToken cancellationToken)
     {
-        var command = new CreateTagCommand(body.Name, body.Color, body.Description);
         var result = await _dispatcher.Send(command, cancellationToken);
-
         return result.ToActionResult(this, tag => Created($"/api/v1/tags/{tag.Id}", tag));
     }
 
     [HttpPut("{id:guid}")]
-    public async Task<IActionResult> Update(Guid id, TagBody body, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(Guid id, UpdateTagCommand command, CancellationToken cancellationToken)
     {
-        var command = new UpdateTagCommand(id, body.Name, body.Color, body.Description);
-        var result = await _dispatcher.Send(command, cancellationToken);
-
+        var result = await _dispatcher.Send(command with { TagId = id }, cancellationToken);
         return result.ToActionResult(this, tag => Ok(tag));
     }
 

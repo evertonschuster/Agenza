@@ -1,6 +1,5 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Tags.UpdateTag;
 
@@ -31,8 +30,7 @@ public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, 
                 Error.Conflict("Tag.DuplicateName", $"A tag named '{newName}' already exists."));
         }
 
-        var color = TagColor.From(command.Color);
-        tag.Update(command.Name, color, command.Description);
+        command.ApplyTo(tag);
 
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

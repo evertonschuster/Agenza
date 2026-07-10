@@ -26,6 +26,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0005-...md`                       | CQRS/vertical-slice/Result convention rationale |
 | `../docs/adr/`                                 | Cross-cutting decisions with rationale      |
 | `../docs/adr/0006-...md`                       | Tenant header/automatic scoping, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions |
+| `../docs/adr/0007-...md`                       | Controllers bind commands directly (no per-endpoint body record), Command→Domain mapping extension methods |
 
 ## Critical constraints (non-negotiable)
 
@@ -131,12 +132,25 @@ see it.
   `IQueryHandler<...>`), returning `Result` / `Result<TResponse>`
   (`Admin.SharedKernel`) — never throwing for an expected business
   outcome.
-- Controllers depend on `IDispatcher` (constructor-injected), build a
-  command/query, `await _dispatcher.Send(...)` /
-  `.Query(...)`, and map the `Result` with
-  `result.ToActionResult(this, value => Ok(value))` (or `Created`/
+- Controllers depend on `IDispatcher` (constructor-injected),
+  `await _dispatcher.Send(...)` / `.Query(...)`, and map the `Result`
+  with `result.ToActionResult(this, value => Ok(value))` (or `Created`/
   `NoContent`/etc.) — never a concrete handler type, never a try/catch
   per exception type.
+- **Bind the command/query itself as the action parameter — no
+  per-endpoint `...Body` record** (docs/adr/0007). `[ApiController]`
+  already infers `[FromBody]` for a complex-type parameter with no
+  explicit binding source; a route id binds into its own `Guid id`
+  parameter independently and gets merged in with a `with` expression
+  right before dispatching (`command with { TagId = id }`) since the
+  client's JSON body never carries it. See `TagsController` for the
+  pattern.
+- **Command → Domain mapping lives in an extension method next to the
+  command**, not inlined in the handler (docs/adr/0007):
+  `{Operation}CommandExtensions.ToModel(...)` for construction,
+  `.ApplyTo(entity)` for mutation. `Handle(...)` calls it and reads as
+  orchestration only. See `CreateTagCommandExtensions`/
+  `UpdateTagCommandExtensions`.
 - Register nothing by hand: each service's `Application/DependencyInjection.cs`
   (`AddXApplication()`) scans its own assembly for handlers and
   FluentValidation validators. A new slice just needs its files created.
