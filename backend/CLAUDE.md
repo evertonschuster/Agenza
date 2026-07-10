@@ -28,6 +28,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0006-...md`                       | Tenant header/automatic scoping, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions |
 | `../docs/adr/0007-...md`                       | Controllers bind commands directly (no per-endpoint body record), Command→Domain mapping extension methods |
 | `../docs/adr/0008-...md`                       | Automatic tenant assignment on save (AssignTenant + interceptor) |
+| `../docs/adr/0009-...md`                       | TenantOwnedEntity base class (BaseEntity + ITenantOwned combined) |
 
 ## Critical constraints (non-negotiable)
 
@@ -83,10 +84,17 @@ see it.
   `Message`), not a raw `Exception`/`ArgumentException`. The Api's global
   `BusinessExceptionHandler` (see "Result pattern" below) maps any
   `BusinessException` to a 400 Problem Details response.
-- A tenant-owned entity's constructor never takes a `tenantId` parameter
-  at all — `TenantId` starts `Guid.Empty` and only `AssignTenant(Guid
-  tenantId)` (implementing `ITenantOwned`) can set it, throwing on empty
-  (docs/adr/0008). `AuditableEntitySaveChangesInterceptor` calls it
+- A tenant-owned aggregate root inherits `TenantOwnedEntity`
+  (`{Service}.Domain/Common/TenantOwnedEntity.cs` — `BaseEntity` +
+  `ITenantOwned` combined, see `Tag`/`ServiceOffering`) instead of
+  `BaseEntity` directly. Its constructor never takes a `tenantId`
+  parameter at all — `TenantId` starts `Guid.Empty` and only
+  `AssignTenant(Guid tenantId)` can set it, throwing on empty
+  (docs/adr/0008). The only thing a subclass adds is
+  `protected override BusinessException CreateTenantRequiredException()`
+  so the 400 response still carries an entity-specific `Code`/`Message`
+  (`Tag.Invalid` vs `ServiceOffering.Invalid`) instead of a generic one.
+  `AuditableEntitySaveChangesInterceptor` calls `AssignTenant`
   automatically for a newly added entity whose `TenantId` is still
   `Guid.Empty` — mirrors `MarkCreated` exactly, just for a
   security-relevant field instead of an audit one. A mapping extension
@@ -109,9 +117,12 @@ see it.
   provisioning, OIDC protocol endpoints). Once the filter has run, read
   `ITenantAccessor.TenantId` directly (the throwing property) — don't
   repeat the check in the action.
-- A tenant-owned entity implements `ITenantOwned` (`{Service}.Domain/Common/ITenantOwned.cs`,
-  `Guid TenantId { get; }` + `void AssignTenant(Guid tenantId)`). Its
-  `DbContext` exposes a public `CurrentTenantId` property (sourced from
+- A tenant-owned entity inherits `TenantOwnedEntity`, which implements
+  `ITenantOwned` (`{Service}.Domain/Common/ITenantOwned.cs`,
+  `Guid TenantId { get; }` + `void AssignTenant(Guid tenantId)`) once for
+  every tenant-scoped aggregate in the service — don't implement the
+  interface directly on the entity. Its `DbContext` exposes a public
+  `CurrentTenantId` property (sourced from
   `ICurrentTenantProvider`) and passes `this` + `typeof(ITenantOwned)` to
   `ApplyAuditableConventions` — the query filter must read
   `CurrentTenantId` off the live instance, never a value snapshotted at

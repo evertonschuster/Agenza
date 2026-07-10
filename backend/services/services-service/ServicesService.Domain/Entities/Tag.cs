@@ -14,12 +14,11 @@ namespace ServicesService.Domain.Entities;
 /// here - this entity guards everything a single Tag can know about
 /// itself.
 /// </summary>
-public class Tag : BaseEntity, ITenantOwned
+public class Tag : TenantOwnedEntity
 {
     public const int NameMaxLength = 40;
     public const int DescriptionMaxLength = 200;
 
-    public Guid TenantId { get; private set; }
     public string Name { get; private set; }
     public TagColor Color { get; private set; }
     public string? Description { get; private set; }
@@ -39,18 +38,8 @@ public class Tag : BaseEntity, ITenantOwned
         Description = ValidateDescription(description);
     }
 
-    // A Tag can be constructed with an empty tenant when the caller
-    // relies on AuditableEntitySaveChangesInterceptor to assign it
-    // before save (docs/adr/0008) - this is the guard that runs then.
-    public void AssignTenant(Guid tenantId)
-    {
-        if (tenantId == Guid.Empty)
-        {
-            throw new InvalidTagException("A tag must belong to a tenant.");
-        }
-
-        TenantId = tenantId;
-    }
+    protected override BusinessException CreateTenantRequiredException() =>
+        new InvalidTagException("A tag must belong to a tenant.");
 
     public void Update(string name, TagColor color, string? description)
     {

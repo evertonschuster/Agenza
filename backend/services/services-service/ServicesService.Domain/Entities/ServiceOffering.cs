@@ -10,13 +10,12 @@ namespace ServicesService.Domain.Entities;
 /// and lives in the CreateServiceOffering/UpdateServiceOffering use cases
 /// (via IServiceOfferingRepository), mirroring Tag.
 /// </summary>
-public class ServiceOffering : BaseEntity, ITenantOwned
+public class ServiceOffering : TenantOwnedEntity
 {
     public const int NameMaxLength = 100;
     public const int DescriptionMaxLength = 500;
     public const int MaxDurationMinutes = 24 * 60;
 
-    public Guid TenantId { get; private set; }
     public string Name { get; private set; }
     public string? Description { get; private set; }
     public int DurationMinutes { get; private set; }
@@ -37,18 +36,8 @@ public class ServiceOffering : BaseEntity, ITenantOwned
         Price = ValidatePrice(price);
     }
 
-    // A ServiceOffering can be constructed with an empty tenant when the
-    // caller relies on AuditableEntitySaveChangesInterceptor to assign it
-    // before save (docs/adr/0008) - this is the guard that runs then.
-    public void AssignTenant(Guid tenantId)
-    {
-        if (tenantId == Guid.Empty)
-        {
-            throw new InvalidServiceOfferingException("A service offering must belong to a tenant.");
-        }
-
-        TenantId = tenantId;
-    }
+    protected override BusinessException CreateTenantRequiredException() =>
+        new InvalidServiceOfferingException("A service offering must belong to a tenant.");
 
     public void Update(string name, string? description, int durationMinutes, decimal price)
     {

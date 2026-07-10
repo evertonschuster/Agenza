@@ -52,11 +52,12 @@ supported — tests do this constantly) is left alone; the interceptor
 only fills the gap when nothing else set it.
 
 `CreateTagCommandExtensions.ToModel()` drops its `Guid tenantId`
-parameter and constructs with `TenantId = Guid.Empty` on purpose:
+parameter entirely — `Tag`'s constructor doesn't take one either
+(`TenantId` simply starts `Guid.Empty` until `AssignTenant` runs):
 
 ```csharp
 public static Tag ToModel(this CreateTagCommand command) =>
-    new(Guid.CreateVersion7(), Guid.Empty, command.Name, TagColor.From(command.Color), command.Description);
+    new(Guid.CreateVersion7(), command.Name, TagColor.From(command.Color), command.Description);
 ```
 
 `CreateTagCommandHandler` no longer needs `ICurrentTenantProvider`
@@ -103,3 +104,7 @@ throw rather than persist garbage.
   and leaving an explicitly-set tenant alone.
 - `backend/CLAUDE.md` and the `backend-use-case` skill are updated to
   teach this as the default for any future tenant-owned entity.
+- The `AssignTenant` guard shown above (and the `TenantId` property
+  itself) later moved out of `Tag` into a shared `TenantOwnedEntity`
+  base class once a second tenant-owned entity existed and the
+  duplication became real instead of hypothetical — see docs/adr/0009.
