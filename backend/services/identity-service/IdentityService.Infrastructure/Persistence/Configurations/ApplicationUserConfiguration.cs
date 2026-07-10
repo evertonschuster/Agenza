@@ -8,7 +8,6 @@ public class ApplicationUserConfiguration : IEntityTypeConfiguration<Application
 {
     public void Configure(EntityTypeBuilder<ApplicationUser> builder)
     {
-        // Every tenant-scoped user lookup filters on this column.
         builder.HasIndex(u => u.TenantId);
     }
 }

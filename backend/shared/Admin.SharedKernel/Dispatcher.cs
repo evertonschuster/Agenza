@@ -4,14 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Admin.SharedKernel;
 
-/// <summary>
-/// Hand-rolled instead of MediatR: MediatR 13+ requires a paid commercial
-/// license above a revenue threshold (docs/adr/0005), and this project's
-/// entire dispatch need - resolve the one handler registered for a
-/// command/query's concrete type, validate first if a FluentValidation
-/// validator is registered - fits in a small reflection-based class with
-/// zero external dependency risk.
-/// </summary>
+// Hand-rolled instead of MediatR - see docs/adr/0005 (licensing).
 public sealed class Dispatcher : IDispatcher
 {
     private readonly IServiceProvider _serviceProvider;
@@ -76,14 +69,6 @@ public sealed class Dispatcher : IDispatcher
         return await (Task<Result<TResponse>>)method.Invoke(handler, [query, cancellationToken])!;
     }
 
-    /// <summary>
-    /// Looks up IValidator&lt;{concrete request type}&gt; and runs it if one is
-    /// registered (not every query, and not every command, needs one).
-    /// Uses the non-generic IValidator.ValidateAsync(IValidationContext)
-    /// overload since the request's static type isn't known here - this
-    /// is FluentValidation's documented seam for exactly this kind of
-    /// reflection-driven pipeline.
-    /// </summary>
     private static async Task<Error?> ValidateAsync(
         IServiceProvider serviceProvider,
         object request,

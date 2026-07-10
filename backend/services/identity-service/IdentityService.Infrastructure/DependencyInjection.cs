@@ -42,12 +42,7 @@ public static class DependencyInjection
                 options.Password.RequireNonAlphanumeric = false;
                 options.User.RequireUniqueEmail = true;
 
-                // OpenIddict reads the short "sub"/"name"/"role" claim
-                // types (via ClaimsPrincipal.GetClaim/SetClaim), while
-                // ASP.NET Core Identity's defaults use the long
-                // ClaimTypes.* URIs. Without this remap,
-                // SignInManager.CreateUserPrincipalAsync() produces a
-                // principal OpenIddict rejects for having no "sub" claim.
+                // Without this remap to OpenIddict's short claim types, CreateUserPrincipalAsync() produces a principal OpenIddict rejects (no "sub" claim).
                 options.ClaimsIdentity.UserIdClaimType = OpenIddictConstants.Claims.Subject;
                 options.ClaimsIdentity.UserNameClaimType = OpenIddictConstants.Claims.Name;
                 options.ClaimsIdentity.RoleClaimType = OpenIddictConstants.Claims.Role;
@@ -62,9 +57,7 @@ public static class DependencyInjection
         services.AddScoped<IUserAccountService, UserAccountService>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
-        // Wires the OpenIddict Core services to the same DbContext/Guid
-        // keys used above. Server/Validation (HTTP endpoints, flows,
-        // signing) are configured in Api/Program.cs.
+        // Server/Validation (HTTP endpoints, flows, signing) are configured in Api/Program.cs.
         services.AddOpenIddict()
             .AddCore(options =>
             {

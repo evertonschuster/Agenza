@@ -4,13 +4,7 @@ using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Tags.CreateTag;
 
-/// <summary>
-/// Cheap, synchronous shape checks the dispatcher runs before the handler
-/// - fails fast without touching the repository. The cross-tenant name
-/// uniqueness rule is NOT here: it needs a repository round-trip, so it
-/// stays in CreateTagCommandHandler (Tag's own invariants are the
-/// second line of defense - see docs/adr/0005).
-/// </summary>
+// Cross-tenant name uniqueness needs a repository round-trip, so it stays in CreateTagCommandHandler, not here.
 public sealed class CreateTagCommandValidator : AbstractValidator<CreateTagCommand>
 {
     public CreateTagCommandValidator()

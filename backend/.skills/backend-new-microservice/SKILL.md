@@ -170,10 +170,7 @@ builder.AddServiceDefaults();
 
 builder.Services.AddControllers(options =>
 {
-    // Secure by default: every endpoint requires a valid access token from
-    // identity-service unless explicitly marked [AllowAnonymous], and a
-    // tenant id (X-Tenant-Id header, verified against the token's
-    // tenant_id claim) unless explicitly marked [IgnoreTenant].
+    // Fail-closed: auth required unless [AllowAnonymous]; a verified X-Tenant-Id header required unless [IgnoreTenant].
     options.Filters.Add(new AuthorizeFilter());
     options.Filters.Add<TenantHeaderFilter>();
 });
@@ -192,16 +189,13 @@ builder.Services
     })
     .AddMvc();
 
-// "widget-service-api" here becomes the audience resource servers check
-// and the scope name identity-service must seed (step 4 above).
 builder.Services.AddIdentityServiceAuthentication(builder.Configuration, audience: "widget-service-api");
 
 builder.Services.AddSharedKernel();
-builder.Services.AddWidgetServiceApplication();       // your Application/DependencyInjection.cs (below)
-builder.Services.AddWidgetServiceInfrastructure(builder.Configuration); // your Infrastructure/DependencyInjection.cs
+builder.Services.AddWidgetServiceApplication();
+builder.Services.AddWidgetServiceInfrastructure(builder.Configuration);
 
-// Only if this service migrates its own schema on startup (copy
-// ServicesService.Api/Setup/DatabaseMigrator.cs):
+// Only if this service migrates its own schema on startup - copy ServicesService.Api/Setup/DatabaseMigrator.cs:
 // builder.Services.AddHostedService<DatabaseMigrator>();
 
 var spaOrigin = builder.Configuration["Cors:SpaOrigin"] ?? "http://localhost:5173";
@@ -232,8 +226,7 @@ app.MapDefaultEndpoints();
 
 app.Run();
 
-// Exposes the implicit Program class of this top-level-statements file to
-// WebApplicationFactory<Program> in WidgetService.IntegrationTests.
+// Exposes Program to WebApplicationFactory<Program> in WidgetService.IntegrationTests.
 public partial class Program;
 ```
 
@@ -293,7 +286,7 @@ public static class DependencyInjection
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
 
         services.AddScoped<IWidgetRepository, WidgetRepository>();
-        services.AddScoped<IUnitOfWork, UnitOfWork>(); // shape it to this service's real need - see backend-use-case skill
+        services.AddScoped<IUnitOfWork, UnitOfWork>(); // shape to this service's need - see backend-use-case skill
 
         return services;
     }

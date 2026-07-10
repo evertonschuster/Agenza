@@ -6,24 +6,8 @@ using Microsoft.Extensions.Options;
 
 namespace ServicesService.IntegrationTests;
 
-/// <summary>
-/// Replaces the real JwtBearer scheme for these tests (see
-/// ServicesApiFactory). This service is a resource server, not an OIDC
-/// provider - it has no token endpoint of its own, so forging a real,
-/// signature-verifiable RS256 token would mean also booting a live
-/// identity-service. Since Admin.Identity.Client's JWT/JWKS validation is
-/// already exercised end-to-end by identity-service's own integration
-/// tests, this handler builds the ClaimsPrincipal directly from a test
-/// header and lets these tests focus on what's unique to this service:
-/// controller behavior, ITenantAccessor, tenant scoping, and EF
-/// persistence against real Postgres.
-///
-/// Header format: "Authorization: Test &lt;value&gt;"
-///   - missing header            -> unauthenticated (real 401 challenge)
-///   - value "M2M"               -> authenticated, no tenant_id claim
-///                                  (simulates a client-credentials/worker token)
-///   - value "&lt;tenant-guid&gt;"     -> authenticated, tenant_id = that guid
-/// </summary>
+// Replaces the real JwtBearer scheme (see ServicesApiFactory) - avoids booting a live identity-service just to forge a signed RS256 token.
+// Header format: "Authorization: Test <value>" - missing = unauthenticated, "M2M" = authenticated with no tenant_id claim, else tenant_id = <value>.
 public class TestAuthHandler : AuthenticationHandler<AuthenticationSchemeOptions>
 {
     public const string SchemeName = "Test";

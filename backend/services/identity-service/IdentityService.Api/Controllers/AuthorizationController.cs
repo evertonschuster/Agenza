@@ -10,15 +10,8 @@ using OpenIddict.Server.AspNetCore;
 
 namespace IdentityService.Api.Controllers;
 
-/// <summary>
-/// Implements the /connect/authorize and /connect/token endpoints.
-/// OpenIddict handles the protocol machinery (PKCE validation, token
-/// issuance/signing) - this controller only decides *who* the resulting
-/// principal is for each grant type, following the pattern from OpenIddict's
-/// own samples. admin-panel is a first-party, pre-approved client
-/// (ConsentType.Implicit, seeded in DatabaseSeeder), so there is no consent
-/// screen here.
-/// </summary>
+// OpenIddict handles the protocol machinery; this controller only decides *who* the resulting principal is for each grant type.
+// admin-panel is a pre-approved first-party client (seeded in DatabaseSeeder), so there is no consent screen here.
 public class AuthorizationController : Controller
 {
     private readonly IOpenIddictScopeManager _scopeManager;
@@ -93,9 +86,7 @@ public class AuthorizationController : Controller
 
         if (request.IsClientCredentialsGrantType())
         {
-            // M2M: the principal represents the calling service (its
-            // client_id), not an end user - there is no tenant_id claim,
-            // since a worker isn't scoped to a single Business.
+            // M2M: the principal represents the calling service, not a tenant - no tenant_id claim.
             var identity = new ClaimsIdentity(
                 authenticationType: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 nameType: OpenIddictConstants.Claims.Name,

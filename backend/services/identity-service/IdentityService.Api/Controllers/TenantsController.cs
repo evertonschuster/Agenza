@@ -8,11 +8,7 @@ using OpenIddict.Validation.AspNetCore;
 
 namespace IdentityService.Api.Controllers;
 
-/// <summary>
-/// Internal tenant/owner provisioning. Not exposed to end users - there is
-/// no public signup flow in v1 (docs/DOMAIN.md). Callers must present an
-/// M2M token carrying the "identity-admin" scope.
-/// </summary>
+// Internal tenant/owner provisioning - not exposed to end users. Callers must present an M2M token carrying the "identity-admin" scope.
 [ApiController]
 [ApiVersion("1.0")]
 [Route("internal/v{version:apiVersion}/tenants")]

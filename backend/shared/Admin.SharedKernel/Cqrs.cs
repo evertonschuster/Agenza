@@ -1,13 +1,5 @@
 namespace Admin.SharedKernel;
 
-/// <summary>
-/// CQRS markers and handler contracts. A command mutates state and
-/// returns Result (no data) or Result&lt;TResponse&gt; (e.g. the created
-/// resource); a query reads state and returns Result&lt;TResponse&gt;.
-/// Kept separate from IQuery even though the handler shape is identical,
-/// so a feature's intent (write vs read) is visible at the type level -
-/// the point of CQRS here, not a full read/write model split.
-/// </summary>
 public interface ICommand
 {
 }

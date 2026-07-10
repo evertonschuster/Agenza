@@ -14,10 +14,7 @@ builder.AddServiceDefaults();
 
 builder.Services.AddControllers(options =>
 {
-    // Secure by default: every endpoint requires a valid access token from
-    // identity-service unless explicitly marked [AllowAnonymous], and a
-    // tenant id (X-Tenant-Id header, verified against the token's
-    // tenant_id claim) unless explicitly marked [IgnoreTenant].
+    // Fail-closed: auth required unless [AllowAnonymous]; a verified X-Tenant-Id header required unless [IgnoreTenant].
     options.Filters.Add(new AuthorizeFilter());
     options.Filters.Add<TenantHeaderFilter>();
 });
@@ -46,8 +43,6 @@ builder.Services.AddServicesApplication();
 builder.Services.AddServicesInfrastructure(builder.Configuration);
 builder.Services.AddHostedService<DatabaseMigrator>();
 
-// The SPA calls this API straight from the browser, so its origin must be
-// allowed - same policy shape as identity-service's.
 var spaOrigin = builder.Configuration["Cors:SpaOrigin"] ?? "http://localhost:5173";
 builder.Services.AddCors(options =>
 {
@@ -78,6 +73,5 @@ app.MapDefaultEndpoints();
 
 app.Run();
 
-// Exposes the implicit Program class of this top-level-statements file to
-// WebApplicationFactory<Program> in ServicesService.IntegrationTests.
+// Exposes Program to WebApplicationFactory<Program> in ServicesService.IntegrationTests.
 public partial class Program;

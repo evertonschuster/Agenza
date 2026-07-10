@@ -4,16 +4,7 @@ using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Domain.Entities;
 
-/// <summary>
-/// A tenant-scoped label the business defines to organize its records
-/// (docs/DOMAIN.md "Tag"). v1 manages the tag catalog only; attaching
-/// tags to clients/conversations ships with those verticals.
-///
-/// Name uniqueness per tenant is a cross-aggregate rule and therefore
-/// lives in the CreateTag/UpdateTag use cases (via ITagRepository), not
-/// here - this entity guards everything a single Tag can know about
-/// itself.
-/// </summary>
+// Name uniqueness per tenant is a cross-aggregate rule, enforced in the CreateTag/UpdateTag use cases via ITagRepository, not here.
 public class Tag : TenantOwnedEntity
 {
     public const int NameMaxLength = 40;

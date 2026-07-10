@@ -69,30 +69,16 @@ builder.Services.AddOpenIddict()
 
         if (builder.Environment.IsDevelopment())
         {
-            // Dev-only: persisted in the user cert store across restarts.
-            // Production must configure real signing/encryption
-            // credentials (e.g. a mounted X.509 cert) - without them,
-            // OpenIddict fails startup validation, which is intentional:
-            // ephemeral/dev credentials break token validation across
-            // restarts and multi-instance deployments.
+            // Dev-only: production must configure real signing/encryption certs, or OpenIddict intentionally fails startup validation.
             options.AddDevelopmentEncryptionCertificate()
                    .AddDevelopmentSigningCertificate();
         }
 
-        // Resource servers (services-service's plain JwtBearer middleware,
-        // assistant-service's PyJWT/JWKS validation) need a standard signed
-        // JWT they can verify themselves - not OpenIddict's default
-        // encrypted token format, which only OpenIddict's own validation
-        // handler can decrypt.
+        // Resource servers verify the JWT themselves, so it can't use OpenIddict's default encrypted token format.
         options.DisableAccessTokenEncryption();
 
-        // Without a fixed issuer, OpenIddict infers "iss" from whichever
-        // host/port the current request came in on. That breaks token
-        // validation across the docker network: the SPA reaches this
-        // service via localhost:5081, while other containers reach it via
-        // identity-service:8080 - two different "iss" values for tokens
-        // that must validate the same way everywhere. Pinning it to the
-        // externally-reachable URL keeps it consistent for every caller.
+        // Without a fixed issuer, OpenIddict infers "iss" per-request, which breaks validation across the docker network
+        // (SPA reaches this via localhost:5081, other containers via identity-service:8080 - two different "iss" values).
         if (!string.IsNullOrEmpty(publicIssuer))
         {
             options.SetIssuer(new Uri(publicIssuer));
@@ -106,10 +92,7 @@ builder.Services.AddOpenIddict()
 
         if (builder.Environment.IsDevelopment())
         {
-            // Dev-only: the discovery/token endpoints are served over plain
-            // HTTP locally (docker-compose maps 5081 -> container 8080).
-            // Production must terminate TLS in front of this service and
-            // drop this line.
+            // Dev-only: production must terminate TLS in front of this service and drop this line.
             aspNetCoreBuilder.DisableTransportSecurityRequirement();
         }
     })
@@ -150,6 +133,5 @@ app.MapDefaultEndpoints();
 
 app.Run();
 
-// Exposes the implicit Program class of this top-level-statements file to
-// WebApplicationFactory<Program> in IdentityService.IntegrationTests.
+// Exposes Program to WebApplicationFactory<Program> in IdentityService.IntegrationTests.
 public partial class Program;

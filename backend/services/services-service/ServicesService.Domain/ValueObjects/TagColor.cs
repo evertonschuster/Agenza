@@ -2,12 +2,7 @@ using ServicesService.Domain.Exceptions;
 
 namespace ServicesService.Domain.ValueObjects;
 
-/// <summary>
-/// A tag's display color. Not a free-form hex value: the product decision
-/// (frontend docs/API.md) is a fixed 8-color palette so tags stay visually
-/// consistent, so the only valid values are the palette entries below.
-/// Record semantics give value equality by hex string.
-/// </summary>
+// Fixed 8-color palette (frontend docs/API.md) - not a free-form hex value.
 public sealed record TagColor
 {
     public static readonly IReadOnlyList<string> Palette =

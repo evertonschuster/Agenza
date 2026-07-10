@@ -50,6 +50,20 @@ is a separate project (generic `RepositoryBase<TEntity>`, docs/adr/0006)
 because it needs EF Core — Infrastructure-only, Application must never
 see it.
 
+### Comments — minimal, by default zero
+
+Default to no comments, including XML `<summary>` docblocks (none of
+these projects generate Swagger/API docs from them, so they're pure
+comments, not tooling input). Trust identifiers and structure — a class,
+method, or property name should carry its own meaning. Add a short
+inline comment only for something a careful reviewer would still get
+wrong without it: a security-relevant default (fail-closed auth), a
+protocol/library quirk (OpenIddict claim remapping, a docker-network
+issuer mismatch), or a non-obvious ordering/transaction constraint. One
+line, not a paragraph — rationale for *why* a pattern was chosen (CQRS
+vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
+`docs/adr/`, not repeated in every file that uses the pattern.
+
 ### Rich domain model — no anemic entities
 
 - Entities validate their invariants in constructors/factory methods and

@@ -21,17 +21,11 @@ public class IdentityDataContext : IdentityDbContext<ApplicationUser, IdentityRo
     {
         base.OnModelCreating(builder);
 
-        // This service shares one Postgres instance/database with every
-        // other microservice (infra/docker-compose.yml) - each service
-        // owns its own schema instead of its own database, so its tables
-        // never collide with another service's.
+        // Schema-per-service on a shared Postgres instance.
         builder.HasDefaultSchema("identity");
 
         builder.ApplyConfigurationsFromAssembly(typeof(IdentityDataContext).Assembly);
 
-        // Registers the entity sets OpenIddict needs (applications,
-        // authorizations, scopes, tokens) using Guid keys, consistent with
-        // ApplicationUser's key type.
         builder.UseOpenIddict<Guid>();
 
         // Soft-delete query filter + DeletedAt index for every BaseEntity
