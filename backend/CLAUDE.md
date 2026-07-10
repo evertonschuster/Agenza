@@ -87,13 +87,13 @@ see it.
 - A tenant-owned aggregate root inherits `TenantOwnedEntity`
   (`{Service}.Domain/Common/TenantOwnedEntity.cs` — `BaseEntity` +
   `ITenantOwned` combined, see `Tag`/`ServiceOffering`) instead of
-  `BaseEntity` directly. Its constructor never takes a `tenantId`
+  `BaseEntity` directly, and needs no `ITenantOwned`/`AssignTenant`
+  boilerplate of its own. Its constructor never takes a `tenantId`
   parameter at all — `TenantId` starts `Guid.Empty` and only
-  `AssignTenant(Guid tenantId)` can set it, throwing on empty
-  (docs/adr/0008). The only thing a subclass adds is
-  `protected override BusinessException CreateTenantRequiredException()`
-  so the 400 response still carries an entity-specific `Code`/`Message`
-  (`Tag.Invalid` vs `ServiceOffering.Invalid`) instead of a generic one.
+  `AssignTenant(Guid tenantId)` (inherited, not overridden) can set it,
+  throwing the shared `InvalidTenantException` on empty (docs/adr/0009)
+  — a missing tenant is a scoping bug, not an entity-specific invariant,
+  so every entity's 400 response uses the same `Code`.
   `AuditableEntitySaveChangesInterceptor` calls `AssignTenant`
   automatically for a newly added entity whose `TenantId` is still
   `Guid.Empty` — mirrors `MarkCreated` exactly, just for a

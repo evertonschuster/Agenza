@@ -6,10 +6,10 @@ Status: accepted (2026-07)
 
 Once `ServiceOffering` existed alongside `Tag`, both entities carried
 identical boilerplate for their `ITenantOwned` implementation: the same
-`TenantId` property, and an `AssignTenant` method that only differed in
-which `BusinessException` subtype it threw on `Guid.Empty`. With one
-entity this was fine (docs/adr/0008); with two it was real duplication
-that every future tenant-owned entity would repeat verbatim.
+`TenantId` property, and an `AssignTenant` method with the same
+`Guid.Empty` guard. With one entity this was fine (docs/adr/0008); with
+two it was real duplication that every future tenant-owned entity would
+repeat verbatim.
 
 ## Decision
 
@@ -28,36 +28,36 @@ public abstract class TenantOwnedEntity : BaseEntity, ITenantOwned
     {
         if (tenantId == Guid.Empty)
         {
-            throw CreateTenantRequiredException();
+            throw new InvalidTenantException();
         }
         TenantId = tenantId;
     }
-
-    protected abstract BusinessException CreateTenantRequiredException();
 }
 ```
 
 `Tag` and `ServiceOffering` inherit `TenantOwnedEntity` instead of
-`BaseEntity`/`ITenantOwned` directly, and each only supplies the one
-line that has to differ:
+`BaseEntity`/`ITenantOwned` directly, and add nothing else for the
+tenant concern — no `TenantId` property, no `AssignTenant` override.
 
-```csharp
-protected override BusinessException CreateTenantRequiredException() =>
-    new InvalidTagException("A tag must belong to a tenant.");
-```
-
-The `TenantId` property and the empty-guid guard live in exactly one
-place now. `CreateTenantRequiredException()` is the deliberate seam:
-without it, centralizing `AssignTenant` would force every entity's
-"missing tenant" 400 response through the same generic `Code`, losing
-`Tag.Invalid` vs `ServiceOffering.Invalid` as distinct, filterable error
-codes for API consumers.
+A missing tenant on `AssignTenant` always raises the same
+`InvalidTenantException` (`{Service}.Domain/Exceptions/InvalidTenantException.cs`),
+regardless of which entity. This is a deliberate departure from the
+per-entity `Tag.Invalid`/`ServiceOffering.Invalid` codes every other
+domain invariant uses: a tag with a bad name and a service offering
+with a bad name are different mistakes a caller can make, but "no
+tenant was available to assign" is the same scoping bug no matter which
+entity hit it — `AuditableEntitySaveChangesInterceptor` calling
+`AssignTenant(Guid.Empty)` is not supposed to happen in practice (it
+only calls it with a real, already-resolved tenant id — see
+docs/adr/0008), so this path exists as a defensive guard, not a
+user-facing validation message that needs entity-specific wording.
 
 ## Consequences
 
 - A new tenant-owned entity inherits `TenantOwnedEntity`, not
-  `BaseEntity` + `ITenantOwned` — one less interface to wire up, and no
-  copy-pasted `AssignTenant` guard to keep in sync across entities.
+  `BaseEntity` + `ITenantOwned` — one less interface to wire up, no
+  `TenantId` property to declare, and no `AssignTenant` guard to
+  copy-paste or override.
 - `typeof(ITenantOwned)` passed to `ApplyAuditableConventions` still
   matches every `TenantOwnedEntity` subclass unchanged — the interface
   is satisfied via inheritance, so the DbContext query-filter wiring
@@ -69,6 +69,5 @@ codes for API consumers.
   identity-service) inherit `BaseEntity` directly; everything else
   inherits `TenantOwnedEntity`.
 - `backend/CLAUDE.md` and the `backend-use-case` skill are updated to
-  teach `TenantOwnedEntity` as the default, with
-  `CreateTenantRequiredException()` as the one override every new
-  tenant-owned entity provides.
+  teach `TenantOwnedEntity` as the default — a new tenant-owned entity
+  needs no tenant-related code of its own at all.

@@ -40,7 +40,7 @@ public class TagTests
 
         var act = () => tag.AssignTenant(Guid.Empty);
 
-        act.Should().Throw<InvalidTagException>();
+        act.Should().Throw<InvalidTenantException>();
     }
 
     [Theory]

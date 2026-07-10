@@ -5,10 +5,11 @@ namespace ServicesService.Domain.Common;
 /// <summary>
 /// BaseEntity + ITenantOwned combined - the shape every tenant-scoped
 /// aggregate root in this service inherits instead of implementing
-/// ITenantOwned itself (docs/adr/0008). TenantId and the AssignTenant
-/// guard live here once; each entity only supplies the exception its
-/// own invariant violation should raise, so Tag.Invalid vs
-/// ServiceOffering.Invalid stay distinct in the 400 response.
+/// ITenantOwned itself (docs/adr/0008, docs/adr/0009). TenantId and the
+/// AssignTenant guard live here once; a missing tenant always raises the
+/// same InvalidTenantException regardless of which entity - it's a
+/// scoping bug, not an entity-specific invariant, so one shared 400
+/// response is enough.
 /// </summary>
 public abstract class TenantOwnedEntity : BaseEntity, ITenantOwned
 {
@@ -27,11 +28,9 @@ public abstract class TenantOwnedEntity : BaseEntity, ITenantOwned
     {
         if (tenantId == Guid.Empty)
         {
-            throw CreateTenantRequiredException();
+            throw new InvalidTenantException();
         }
 
         TenantId = tenantId;
     }
-
-    protected abstract BusinessException CreateTenantRequiredException();
 }

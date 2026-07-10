@@ -47,18 +47,16 @@ just adapt the templates.
   `{Service}.Domain.Common.TenantOwnedEntity` instead — it already
   inherits `BaseEntity` and implements `ITenantOwned` (`Guid TenantId
   { get; }` + `void AssignTenant(Guid tenantId)`) for you, so don't
-  implement `ITenantOwned` on the entity itself. This is what lets the
-  DbContext scope every query to it automatically (step 5) AND lets
-  `AuditableEntitySaveChangesInterceptor` assign the tenant automatically
-  on save (docs/adr/0008) — the constructor never takes a `tenantId`
-  parameter at all; `TenantId` starts `Guid.Empty` and only
-  `AssignTenant` can set it. The only thing your entity adds is
-  `protected override BusinessException CreateTenantRequiredException()`,
-  returning your entity's own exception (e.g. `new
-  InvalidWidgetException("A widget must belong to a tenant.")`) so the
-  400 response keeps an entity-specific `Code` (see `Tag`). A mapping
-  extension (step 3) is therefore parameterless too — it never threads a
-  tenant id through.
+  implement `ITenantOwned` or add an `AssignTenant` override on the
+  entity itself. This is what lets the DbContext scope every query to it
+  automatically (step 5) AND lets `AuditableEntitySaveChangesInterceptor`
+  assign the tenant automatically on save (docs/adr/0008) — the
+  constructor never takes a `tenantId` parameter at all; `TenantId`
+  starts `Guid.Empty` and only `AssignTenant` (inherited) can set it,
+  throwing the shared `InvalidTenantException` on empty (docs/adr/0009)
+  — a missing tenant is a scoping bug, not a per-entity invariant, so
+  there's nothing to override here. A mapping extension (step 3) is
+  therefore parameterless too — it never threads a tenant id through.
 - Constructor/factory validates every invariant; throw a dedicated
   exception inheriting that service's `{Service}.Domain.Exceptions.BusinessException`
   (`Code` + `Message`, e.g. `InvalidWidgetException(string message) :

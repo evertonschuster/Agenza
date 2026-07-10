@@ -38,7 +38,7 @@ public class ServiceOfferingTests
 
         var act = () => serviceOffering.AssignTenant(Guid.Empty);
 
-        act.Should().Throw<InvalidServiceOfferingException>();
+        act.Should().Throw<InvalidTenantException>();
     }
 
     [Theory]

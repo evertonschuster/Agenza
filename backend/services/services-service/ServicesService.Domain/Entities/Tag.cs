@@ -38,9 +38,6 @@ public class Tag : TenantOwnedEntity
         Description = ValidateDescription(description);
     }
 
-    protected override BusinessException CreateTenantRequiredException() =>
-        new InvalidTagException("A tag must belong to a tenant.");
-
     public void Update(string name, TagColor color, string? description)
     {
         Name = ValidateName(name);

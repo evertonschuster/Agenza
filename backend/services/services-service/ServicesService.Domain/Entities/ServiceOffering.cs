@@ -36,9 +36,6 @@ public class ServiceOffering : TenantOwnedEntity
         Price = ValidatePrice(price);
     }
 
-    protected override BusinessException CreateTenantRequiredException() =>
-        new InvalidServiceOfferingException("A service offering must belong to a tenant.");
-
     public void Update(string name, string? description, int durationMinutes, decimal price)
     {
         Name = ValidateName(name);
