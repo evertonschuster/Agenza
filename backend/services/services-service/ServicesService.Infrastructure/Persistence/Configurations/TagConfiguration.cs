@@ -25,7 +25,16 @@ public class TagConfiguration : IEntityTypeConfiguration<Tag>
         // Every query is tenant-scoped, so the tenant id leads the index.
         // Uniqueness here is the exact-match backstop; the case-insensitive
         // rule ("VIP" vs "vip") is enforced by the use cases via
-        // ITagRepository.NameExistsAsync before any write.
-        builder.HasIndex(t => new { t.TenantId, t.Name }).IsUnique();
+        // ITagRepository.NameExistsAsync before any write. Filtered to
+        // non-deleted rows so a soft-deleted tag doesn't block reusing its
+        // name - the unique index otherwise wouldn't know the query filter
+        // below excludes it from every ordinary read.
+        // The soft-delete query filter itself (BaseEntity's DeletedAt) is
+        // applied automatically for every entity to ModelBuilder by
+        // ServicesDataContext.ApplyAuditableConventions - not repeated
+        // here.
+        builder.HasIndex(t => new { t.TenantId, t.Name })
+            .IsUnique()
+            .HasFilter("\"DeletedAt\" IS NULL");
     }
 }

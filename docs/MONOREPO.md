@@ -14,7 +14,8 @@ admin/
 │   │                               ICommand/IQuery + handlers, IDispatcher, HTTP mapping
 │   └── services/
 │       ├── identity-service/   OIDC provider (OpenIddict), tenants, users, M2M tokens
-│       └── services-service/   the business's offerings — Tags is the first vertical
+│       └── services-service/   the business's offerings — Tags and
+│                               ServiceOfferings are the first two verticals
 ├── ai-services/
 │   └── assistant-service/  placeholder Python/FastAPI AI service
 ├── packages/

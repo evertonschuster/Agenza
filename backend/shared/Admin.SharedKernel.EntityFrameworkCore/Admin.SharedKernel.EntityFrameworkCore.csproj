@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- Infrastructure-only shared kernel: a generic EF repository base
+         needs Microsoft.EntityFrameworkCore, which Domain/Application must
+         never depend on (backend/CLAUDE.md layering). Kept as its own
+         project instead of folded into Admin.SharedKernel (which
+         Application references directly) so that boundary can't leak. -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.9" />
+  </ItemGroup>
+
+</Project>

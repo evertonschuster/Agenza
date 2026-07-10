@@ -1,4 +1,5 @@
 using IdentityService.Domain.Entities;
+using IdentityService.Domain.Exceptions;
 
 namespace IdentityService.Tests;
 
@@ -22,6 +23,48 @@ public class TenantTests
     {
         var act = () => new Tenant(Guid.NewGuid(), name);
 
-        act.Should().Throw<ArgumentException>().And.ParamName.Should().Be("name");
+        act.Should().Throw<InvalidTenantException>().Which.Code.Should().Be("Tenant.Invalid");
+    }
+
+    [Fact]
+    public void MarkCreated_SetsCreatedAtAndCreatedBy()
+    {
+        var tenant = new Tenant(Guid.NewGuid(), "Bella Studio");
+        var actorId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        tenant.MarkCreated(actorId, now);
+
+        tenant.CreatedAt.Should().Be(now);
+        tenant.CreatedBy.Should().Be(actorId);
+    }
+
+    [Fact]
+    public void MarkUpdated_SetsUpdatedAtAndUpdatedBy()
+    {
+        var tenant = new Tenant(Guid.NewGuid(), "Bella Studio");
+        var actorId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        tenant.MarkUpdated(actorId, now);
+
+        tenant.UpdatedAt.Should().Be(now);
+        tenant.UpdatedBy.Should().Be(actorId);
+    }
+
+    [Fact]
+    public void MarkDeleted_SetsDeletedAtAndDeletedByAndIsDeleted()
+    {
+        var tenant = new Tenant(Guid.NewGuid(), "Bella Studio");
+        var actorId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+
+        tenant.IsDeleted.Should().BeFalse();
+
+        tenant.MarkDeleted(actorId, now);
+
+        tenant.DeletedAt.Should().Be(now);
+        tenant.DeletedBy.Should().Be(actorId);
+        tenant.IsDeleted.Should().BeTrue();
     }
 }

@@ -1,3 +1,5 @@
+using Admin.SharedKernel.EntityFrameworkCore;
+using IdentityService.Domain.Common;
 using IdentityService.Domain.Entities;
 using IdentityService.Infrastructure.Identity;
 using Microsoft.AspNetCore.Identity;
@@ -31,5 +33,10 @@ public class IdentityDataContext : IdentityDbContext<ApplicationUser, IdentityRo
         // authorizations, scopes, tokens) using Guid keys, consistent with
         // ApplicationUser's key type.
         builder.UseOpenIddict<Guid>();
+
+        // Soft-delete query filter + DeletedAt index for every BaseEntity
+        // (docs/adr/0006) - a new entity gets both for free just by
+        // inheriting BaseEntity, no per-configuration boilerplate.
+        builder.ApplyAuditableConventions(this, typeof(BaseEntity));
     }
 }

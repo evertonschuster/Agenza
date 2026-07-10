@@ -24,6 +24,8 @@ public static class IdentityJwtBearerExtensions
 
         services.AddHttpContextAccessor();
         services.AddScoped<ITenantAccessor, HttpContextTenantAccessor>();
+        services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
+        services.AddScoped<TenantHeaderFilter>();
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

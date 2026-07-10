@@ -3,6 +3,7 @@ using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
+using ServicesService.Api.ExceptionHandling;
 using ServicesService.Api.Setup;
 using ServicesService.Application;
 using ServicesService.Infrastructure;
@@ -14,10 +15,20 @@ builder.AddServiceDefaults();
 builder.Services.AddControllers(options =>
 {
     // Secure by default: every endpoint requires a valid access token from
-    // identity-service unless explicitly marked [AllowAnonymous].
+    // identity-service unless explicitly marked [AllowAnonymous], and a
+    // tenant id (X-Tenant-Id header, verified against the token's
+    // tenant_id claim) unless explicitly marked [IgnoreTenant].
     options.Filters.Add(new AuthorizeFilter());
+    options.Filters.Add<TenantHeaderFilter>();
 });
 builder.Services.AddOpenApi();
+
+// Handlers run in registration order until one returns true -
+// BusinessExceptionHandler first, GenericExceptionHandler as the
+// logging catch-all for everything else.
+builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
+builder.Services.AddExceptionHandler<GenericExceptionHandler>();
+builder.Services.AddProblemDetails();
 
 builder.Services
     .AddApiVersioning(options =>
@@ -47,6 +58,8 @@ builder.Services.AddCors(options =>
 });
 
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {

@@ -10,14 +10,24 @@ import { useAuth } from '../../hooks/useAuth'
 export function LoginPage(): JSX.Element {
   const { login } = useAuth()
   const [isRedirecting, setIsRedirecting] = useState(false)
+  const [hasError, setHasError] = useState(false)
 
   async function handleSignIn(): Promise<void> {
+    setHasError(false)
     setIsRedirecting(true)
-    await login()
-    // If login() resolves without redirecting (e.g. in a test or if
-    // IdentityServer rejects the initiation), reset the button state so
-    // the user can try again.
-    setIsRedirecting(false)
+    try {
+      await login()
+      // If login() resolves without redirecting (e.g. in a test or if
+      // IdentityServer rejects the initiation), reset the button state so
+      // the user can try again.
+      setIsRedirecting(false)
+    } catch {
+      // signinRedirect() rejects when it can't reach IdentityServer (e.g.
+      // the discovery document fetch fails) - without this, the button
+      // would spin forever since the redirect never happens.
+      setHasError(true)
+      setIsRedirecting(false)
+    }
   }
 
   return (
@@ -52,6 +62,12 @@ export function LoginPage(): JSX.Element {
               'Sign in'
             )}
           </button>
+
+          {hasError ? (
+            <p className="mt-4 text-center text-sm text-red-600">
+              Couldn&apos;t reach the sign-in service. Please try again in a moment.
+            </p>
+          ) : null}
         </div>
 
         <p className="mt-6 text-center text-xs text-slate-400">

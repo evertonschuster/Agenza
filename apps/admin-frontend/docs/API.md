@@ -31,6 +31,7 @@ In `AuthenticatedHttpClient`, wire it like this:
 constructor(
   private readonly baseUrl: string,
   private readonly getAccessToken: () => Promise<string | null>,
+  private readonly getTenantId: () => Promise<string | null>,
 ) {}
 ```
 
@@ -42,16 +43,22 @@ an `UnauthenticatedError` rather than making a request without a token.
 
 ## Tenant scoping
 
-The tenant is identified by the `tenant_id` claim inside the JWT
-access token — the backend reads it from there. No extra header or
-path parameter is needed. The bearer token already proves tenant identity.
+The client sends the tenant id explicitly in the `X-Tenant-Id` header on
+every request (`AuthenticatedHttpClient` attaches it automatically from
+the current session's `user.tenant.id`) — the backend verifies it
+against the `tenant_id` claim inside the JWT access token and rejects
+the request with `403` on any mismatch or if the header is missing
+(docs/adr/0006 in the backend repo). The bearer token alone is no longer
+sufficient; the header is required by default for every tenant-scoped
+endpoint.
 
 This means:
 
 - Repository methods still take `TenantContext` as first param (structural
   enforcement in application layer)
-- But `AuthenticatedHttpClient` does NOT need to attach a separate
-  tenant header — the JWT covers it
+- `AuthenticatedHttpClient` attaches `X-Tenant-Id` whenever a tenant is
+  known (omitted only for pre-session calls, e.g. before login) —
+  individual repositories never set this header themselves
 
 ---
 
@@ -101,9 +108,10 @@ abstraction before seeing the actual shape.
 ### Tags
 
 Served by **services-service** (`VITE_API_BASE_URL`). Tenant scope comes
-from the JWT's `tenant_id` claim — never sent explicitly. Routes are
-versioned (`Asp.Versioning.Mvc`, docs/adr/0005) — omitting the segment
-falls back to v1, but the frontend always sends it explicitly.
+from the `X-Tenant-Id` header, verified against the JWT's `tenant_id`
+claim. Routes are versioned (`Asp.Versioning.Mvc`, docs/adr/0005) —
+omitting the segment falls back to v1, but the frontend always sends it
+explicitly.
 
 | Method   | Path                | Success                                     |
 | -------- | ------------------- | ------------------------------------------- |

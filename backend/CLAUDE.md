@@ -25,6 +25,10 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/QUALITY.md`                           | What CI gates, before pushing               |
 | `../docs/adr/0005-...md`                       | CQRS/vertical-slice/Result convention rationale |
 | `../docs/adr/`                                 | Cross-cutting decisions with rationale      |
+| `../docs/adr/0006-...md`                       | Tenant header/automatic scoping, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions |
+| `../docs/adr/0007-...md`                       | Controllers bind commands directly (no per-endpoint body record), Command→Domain mapping extension methods |
+| `../docs/adr/0008-...md`                       | Automatic tenant assignment on save (AssignTenant + interceptor) |
+| `../docs/adr/0009-...md`                       | TenantOwnedEntity base class (BaseEntity + ITenantOwned combined) |
 
 ## Critical constraints (non-negotiable)
 
@@ -33,7 +37,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 ```
 Domain          zero project references, zero NuGet framework deps
 Application     → Domain, Admin.SharedKernel. Ports live in Abstractions/
-Infrastructure  → Application. EF Core, external HTTP, OpenIddict stores
+Infrastructure  → Application, Admin.Identity.Client, Admin.SharedKernel.EntityFrameworkCore
 Api             → Application + Infrastructure. Controllers stay thin
 Tests           → Application + Domain (unit); Api (integration)
 ```
@@ -41,7 +45,10 @@ Tests           → Application + Domain (unit); Api (integration)
 `backend/shared/Admin.SharedKernel` is cross-cutting CQRS/Result
 infrastructure (like `Admin.Identity.Client` is for auth) — every
 service's Application layer references it. It is NOT a place for
-business logic.
+business logic. `backend/shared/Admin.SharedKernel.EntityFrameworkCore`
+is a separate project (generic `RepositoryBase<TEntity>`, docs/adr/0006)
+because it needs EF Core — Infrastructure-only, Application must never
+see it.
 
 ### Rich domain model — no anemic entities
 
@@ -56,16 +63,87 @@ business logic.
   objects in Domain, not raw strings/decimals passed around.
 - Business rules live in Domain/Application — never in controllers,
   never in EF configurations.
+- Every aggregate root inherits `BaseEntity` (`{Service}.Domain/Common/`
+  — one copy per service, Domain can't reference a shared assembly).
+  Gives `Id`, `CreatedAt`/`CreatedBy`, `UpdatedAt`/`UpdatedBy`,
+  `DeletedAt`/`DeletedBy`, `IsDeleted`, set only via `MarkCreated`/
+  `MarkUpdated`/`MarkDeleted` — never public setters. Delete is a real
+  soft delete: each service's `AuditableEntitySaveChangesInterceptor`
+  turns a tracked `Deleted` entry into `Modified` and calls
+  `MarkDeleted`. The query filter that hides soft-deleted rows from
+  ordinary reads, and a supporting `DeletedAt` index, are applied
+  **automatically** to every `BaseEntity` type by
+  `Admin.SharedKernel.EntityFrameworkCore`'s `ApplyAuditableConventions`
+  (called once from each `DbContext.OnModelCreating`) — don't add
+  `HasQueryFilter` by hand in an `IEntityTypeConfiguration` (see
+  docs/adr/0006).
+- New entity ids come from `Guid.CreateVersion7()` directly (UUID v7),
+  not `Guid.NewGuid()`.
+- Domain exceptions inherit that service's `BusinessException`
+  (`{Service}.Domain/Exceptions/BusinessException.cs` — `Code` +
+  `Message`), not a raw `Exception`/`ArgumentException`. The Api's global
+  `BusinessExceptionHandler` (see "Result pattern" below) maps any
+  `BusinessException` to a 400 Problem Details response.
+- A tenant-owned aggregate root inherits `TenantOwnedEntity`
+  (`{Service}.Domain/Common/TenantOwnedEntity.cs` — `BaseEntity` +
+  `ITenantOwned` combined, see `Tag`/`ServiceOffering`) instead of
+  `BaseEntity` directly, and needs no `ITenantOwned`/`AssignTenant`
+  boilerplate of its own. Its constructor never takes a `tenantId`
+  parameter at all — `TenantId` starts `Guid.Empty` and only
+  `AssignTenant(Guid tenantId)` (inherited, not overridden) can set it,
+  throwing the shared `InvalidTenantException` on empty (docs/adr/0009)
+  — a missing tenant is a scoping bug, not an entity-specific invariant,
+  so every entity's 400 response uses the same `Code`.
+  `AuditableEntitySaveChangesInterceptor` calls `AssignTenant`
+  automatically for a newly added entity whose `TenantId` is still
+  `Guid.Empty` — mirrors `MarkCreated` exactly, just for a
+  security-relevant field instead of an audit one. A mapping extension
+  (`ToModel()`, see CQRS section below) is therefore parameterless too —
+  it never threads a tenant id through.
 
 ### Tenant scoping (repo-wide non-negotiable)
 
 - Resource services validate JWTs via `shared/Admin.Identity.Client`'s
   `AddIdentityServiceAuthentication(...)` — do not hand-roll JwtBearer.
-- Tenant id comes from `ITenantAccessor` (reads the `tenant_id` claim of
-  the authenticated principal). **Never** from route/query/body.
-- Every repository/query method takes the tenant id explicitly; EF
-  queries filter by it. A cross-tenant read is a security bug, not a
-  code-style issue.
+- The client sends the tenant id in the `X-Tenant-Id` header on every
+  request (admin-frontend's `AuthenticatedHttpClient` attaches it
+  automatically). It is **never trusted on its own**: `Admin.Identity.Client`'s
+  `TenantHeaderFilter` (a global `IAsyncActionFilter`, wired into
+  `AddControllers(options => options.Filters.Add<TenantHeaderFilter>())`)
+  rejects the request with 403 before any action runs unless the header
+  equals the token's `tenant_id` claim. **Every action requires a
+  validated tenant by default** — opt out with `[IgnoreTenant]` (class or
+  method) for actions that genuinely aren't tenant-scoped (M2M
+  provisioning, OIDC protocol endpoints). Once the filter has run, read
+  `ITenantAccessor.TenantId` directly (the throwing property) — don't
+  repeat the check in the action.
+- A tenant-owned entity inherits `TenantOwnedEntity`, which implements
+  `ITenantOwned` (`{Service}.Domain/Common/ITenantOwned.cs`,
+  `Guid TenantId { get; }` + `void AssignTenant(Guid tenantId)`) once for
+  every tenant-scoped aggregate in the service — don't implement the
+  interface directly on the entity. Its `DbContext` exposes a public
+  `CurrentTenantId` property (sourced from
+  `ICurrentTenantProvider`) and passes `this` + `typeof(ITenantOwned)` to
+  `ApplyAuditableConventions` — the query filter must read
+  `CurrentTenantId` off the live instance, never a value snapshotted at
+  model-build time (EF Core caches the compiled model per `DbContext`
+  *type*, so a baked-in constant would leak across every request — see
+  docs/adr/0006 for the incident this caught). Repository methods,
+  commands, and queries for that entity never take an explicit
+  `tenantId` parameter (see `ITagRepository`/`CreateTagCommand`).
+- **New-entity tenant assignment is automatic, not handler code**
+  (docs/adr/0008): a mapping extension constructs with `Guid.Empty`
+  (`command.ToModel()`, no tenant parameter needed) and
+  `AuditableEntitySaveChangesInterceptor` calls `AssignTenant` on save,
+  sourcing the tenant from `ICurrentTenantProvider` itself — the
+  interceptor throws rather than persisting a tenant-less row if none is
+  available. A cross-tenant read/write is still a security bug, not a
+  code-style issue — the automatic filter and automatic assignment are
+  defense in depth on top of `TenantHeaderFilter`, not a replacement for
+  it.
+- See docs/adr/0006 for why the header filter is wired into
+  services-service's `Program.cs` only, not identity-service's, and for
+  the automatic tenant-scoping mechanism in full.
 
 ### CQRS + vertical slices
 
@@ -80,12 +158,25 @@ business logic.
   `IQueryHandler<...>`), returning `Result` / `Result<TResponse>`
   (`Admin.SharedKernel`) — never throwing for an expected business
   outcome.
-- Controllers depend on `IDispatcher` (constructor-injected), build a
-  command/query, `await _dispatcher.Send(...)` /
-  `.Query(...)`, and map the `Result` with
-  `result.ToActionResult(this, value => Ok(value))` (or `Created`/
+- Controllers depend on `IDispatcher` (constructor-injected),
+  `await _dispatcher.Send(...)` / `.Query(...)`, and map the `Result`
+  with `result.ToActionResult(this, value => Ok(value))` (or `Created`/
   `NoContent`/etc.) — never a concrete handler type, never a try/catch
   per exception type.
+- **Bind the command/query itself as the action parameter — no
+  per-endpoint `...Body` record** (docs/adr/0007). `[ApiController]`
+  already infers `[FromBody]` for a complex-type parameter with no
+  explicit binding source; a route id binds into its own `Guid id`
+  parameter independently and gets merged in with a `with` expression
+  right before dispatching (`command with { TagId = id }`) since the
+  client's JSON body never carries it. See `TagsController` for the
+  pattern.
+- **Command → Domain mapping lives in an extension method next to the
+  command**, not inlined in the handler (docs/adr/0007):
+  `{Operation}CommandExtensions.ToModel(...)` for construction,
+  `.ApplyTo(entity)` for mutation. `Handle(...)` calls it and reads as
+  orchestration only. See `CreateTagCommandExtensions`/
+  `UpdateTagCommandExtensions`.
 - Register nothing by hand: each service's `Application/DependencyInjection.cs`
   (`AddXApplication()`) scans its own assembly for handlers and
   FluentValidation validators. A new slice just needs its files created.
@@ -93,20 +184,28 @@ business logic.
 ### Result pattern — where exceptions still live and where they don't
 
 - **Domain** (entity constructors/methods, value object factories):
-  still throws. It has zero project references, so it cannot depend on
-  `Admin.SharedKernel`'s `Result` type — and by the time a handler
-  constructs a domain object, FluentValidation has already checked
-  shape, so hitting a domain exception in normal operation means a
-  validator/domain mismatch bug, not a real user-facing outcome.
-- **Application handlers**: catch domain exceptions right where they
-  construct/mutate a domain object and convert to
-  `Result.Failure(Error.Validation(...))` — see any `*CommandHandler`
-  for the pattern. Cross-aggregate rules that need a repository
-  round-trip (uniqueness, existence) return `Result.Failure` directly,
-  no exception involved at any point.
-- **Nothing throws past the Application boundary** for a business
-  outcome. A raw, unhandled exception reaching the controller means an
-  actual bug or infrastructure failure — let it 500, don't catch it.
+  still throws — always a `BusinessException` subtype (`Code` +
+  `Message`), never a raw `Exception`/`ArgumentException`. Domain has
+  zero project references, so it cannot depend on `Admin.SharedKernel`'s
+  `Result` type — and by the time a handler constructs a domain object,
+  FluentValidation has already checked shape, so hitting a domain
+  exception in normal operation means a validator/domain mismatch bug,
+  not a real user-facing outcome.
+- **Application handlers do NOT catch it.** Let a `BusinessException`
+  propagate out of `Handle(...)` uncaught — no per-handler try/catch
+  (docs/adr/0006). Cross-aggregate rules that need a repository
+  round-trip (uniqueness, existence) still return `Result.Failure`
+  directly, no exception involved at any point; role/scope checks return
+  `Forbid()`. Exceptions are reserved for genuine Domain-invariant
+  violations only.
+- **The Api's global `BusinessExceptionHandler`** (`IExceptionHandler`,
+  registered via `AddExceptionHandler<T>()` + `app.UseExceptionHandler()`
+  in `Program.cs`) is the *one* place that turns a `BusinessException`
+  into an HTTP response (400 Problem Details, `Title` = `Code`, `Detail`
+  = `Message`). `Admin.SharedKernel.GenericExceptionHandler`, registered
+  right after it, catches everything else: logs at Error level via
+  `ILogger`, returns a generic 500 Problem Details with no exception
+  details in the body.
 
 ### FluentValidation
 
@@ -152,8 +251,10 @@ business logic.
   the actively-maintained free fork, see docs/adr/0005). Global
   `using AwesomeAssertions;` is set per test csproj.
 - Unit tests (`<Service>.Tests`) target **handlers**, not controllers:
-  hand-written fakes for `Abstractions/` interfaces (no mocking
-  library), asserting on the returned `Result`
+  **NSubstitute** mocks for `Abstractions/` interfaces
+  (`Substitute.For<IPort>()`, `.Returns(...)`, `.Received(n)`/
+  `.DidNotReceive()` — not hand-written fakes, see docs/adr/0006),
+  asserting on the returned `Result`
   (`result.IsSuccess`/`result.Error.Type`/`result.Value`). The 80%
   line-coverage gate over Domain + Application is configured in
   `Directory.Build.props`/`.targets` and applies automatically —

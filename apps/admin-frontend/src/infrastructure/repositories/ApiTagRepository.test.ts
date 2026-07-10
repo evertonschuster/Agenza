@@ -11,7 +11,11 @@ import type { TenantContext } from '../../application/context/TenantContext'
 const baseUrl = 'https://api.test'
 
 function buildRepository(): ApiTagRepository {
-  const httpClient = new AuthenticatedHttpClient(baseUrl, () => Promise.resolve('token-123'))
+  const httpClient = new AuthenticatedHttpClient(
+    baseUrl,
+    () => Promise.resolve('token-123'),
+    () => Promise.resolve('tenant-123'),
+  )
   return new ApiTagRepository(httpClient)
 }
 

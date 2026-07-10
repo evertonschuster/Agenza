@@ -3,7 +3,9 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using ServicesService.Application.Abstractions;
 using ServicesService.Infrastructure.Persistence;
+using ServicesService.Infrastructure.Persistence.Interceptors;
 using ServicesService.Infrastructure.Repositories;
+using ServicesService.Infrastructure.Security;
 
 namespace ServicesService.Infrastructure;
 
@@ -16,9 +18,17 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Missing 'ConnectionStrings:Default' configuration.");
 
-        services.AddDbContext<ServicesDataContext>(options => options.UseNpgsql(connectionString));
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<AuditableEntitySaveChangesInterceptor>();
+        services.AddScoped<ICurrentTenantProvider, CurrentTenantProvider>();
+
+        services.AddDbContext<ServicesDataContext>((serviceProvider, options) =>
+            options
+                .UseNpgsql(connectionString)
+                .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
 
         services.AddScoped<ITagRepository, TagRepository>();
+        services.AddScoped<IServiceOfferingRepository, ServiceOfferingRepository>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

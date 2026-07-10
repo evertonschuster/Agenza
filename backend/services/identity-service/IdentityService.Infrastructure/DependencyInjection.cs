@@ -1,6 +1,8 @@
+using Admin.Identity.Client;
 using IdentityService.Application.Abstractions;
 using IdentityService.Infrastructure.Identity;
 using IdentityService.Infrastructure.Persistence;
+using IdentityService.Infrastructure.Persistence.Interceptors;
 using IdentityService.Infrastructure.Repositories;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
@@ -19,7 +21,20 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Missing 'ConnectionStrings:Default' configuration.");
 
-        services.AddDbContext<IdentityDataContext>(options => options.UseNpgsql(connectionString));
+        // Unlike services-service, this service is the identity provider
+        // itself (cookie/OpenIddict auth, not AddIdentityServiceAuthentication's
+        // JwtBearer wiring) - it must register ICurrentUserAccessor itself
+        // for the audit interceptor below to resolve.
+        services.AddHttpContextAccessor();
+        services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
+
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<AuditableEntitySaveChangesInterceptor>();
+
+        services.AddDbContext<IdentityDataContext>((serviceProvider, options) =>
+            options
+                .UseNpgsql(connectionString)
+                .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
 
         services
             .AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
