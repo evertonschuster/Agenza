@@ -20,14 +20,14 @@ public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, 
         if (tag is null)
         {
             return Result.Failure<TagResponse>(
-                Error.NotFound("Tag.NotFound", $"Tag '{command.TagId}' was not found."));
+                Error.NotFound("Tag.NotFound", $"Etiqueta '{command.TagId}' não foi encontrada."));
         }
 
         var newName = command.Name.Trim();
         if (await _tagRepository.NameExistsAsync(newName, tag.Id, cancellationToken))
         {
             return Result.Failure<TagResponse>(
-                Error.Conflict("Tag.DuplicateName", $"A tag named '{newName}' already exists."));
+                Error.Conflict("Tag.DuplicateName", $"Já existe uma etiqueta chamada '{newName}'."));
         }
 
         command.ApplyTo(tag);

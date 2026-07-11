@@ -1,5 +1,5 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi } from 'vitest'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TagsPage } from './TagsPage'
 import { AppContainerContext } from '../../providers/AppContainerContext'
@@ -60,7 +60,7 @@ describe('TagsPage', () => {
   it('shows an empty state when there are no tags', async () => {
     renderTagsPage(buildContainer({ listTags: { execute: vi.fn(() => Promise.resolve([])) } }))
 
-    expect(await screen.findByText(/no tags yet/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhuma etiqueta ainda/i)).toBeInTheDocument()
   })
 
   it('shows an error state when loading tags fails', async () => {
@@ -70,7 +70,9 @@ describe('TagsPage', () => {
       }),
     )
 
-    expect(await screen.findByText(/could not load tags: network down/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/não foi possível carregar as etiquetas: network down/i),
+    ).toBeInTheDocument()
   })
 
   it('creates a tag through the form and refreshes the list', async () => {
@@ -82,10 +84,10 @@ describe('TagsPage', () => {
     await screen.findByText('VIP')
     listTagsSpy.mockClear()
 
-    await userEvent.click(screen.getByRole('button', { name: /new tag/i }))
-    await userEvent.type(screen.getByLabelText(/name/i), 'Returning')
-    await userEvent.click(screen.getByRole('button', { name: 'Color #ef4444' }))
-    await userEvent.click(screen.getByRole('button', { name: /create tag/i }))
+    await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+    await userEvent.type(screen.getByLabelText(/nome/i), 'Returning')
+    await userEvent.click(screen.getByRole('button', { name: 'Cor #ef4444' }))
+    await userEvent.click(screen.getByRole('button', { name: /criar etiqueta/i }))
 
     expect(createTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
       name: 'Returning',
@@ -94,7 +96,38 @@ describe('TagsPage', () => {
     await vi.waitFor(() => {
       expect(listTagsSpy).toHaveBeenCalledTimes(1)
     })
-    expect(screen.queryByRole('button', { name: /create tag/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /criar etiqueta/i })).not.toBeInTheDocument()
+  })
+
+  it('disables the submit button until a non-blank name is entered', async () => {
+    renderTagsPage(buildContainer())
+    await screen.findByText('VIP')
+
+    await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+    const submitButton = screen.getByRole('button', { name: /criar etiqueta/i })
+    expect(submitButton).toBeDisabled()
+
+    await userEvent.type(screen.getByLabelText(/nome/i), '   ')
+    expect(submitButton).toBeDisabled()
+
+    await userEvent.type(screen.getByLabelText(/nome/i), 'Returning')
+    expect(submitButton).toBeEnabled()
+  })
+
+  it('does not carry a previously edited tag into a freshly opened create dialog', async () => {
+    renderTagsPage(buildContainer())
+    await screen.findByText('VIP')
+
+    await userEvent.click(screen.getByRole('button', { name: /editar/i }))
+    const editDialog = await screen.findByRole('dialog')
+    expect(within(editDialog).getByText('Editar etiqueta')).toBeInTheDocument()
+    expect(screen.getByLabelText(/nome/i)).toHaveValue('VIP')
+    await userEvent.click(screen.getByRole('button', { name: /cancelar/i }))
+
+    await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+    const createDialog = await screen.findByRole('dialog')
+    expect(within(createDialog).getByText('Nova etiqueta')).toBeInTheDocument()
+    expect(screen.getByLabelText(/nome/i)).toHaveValue('')
   })
 
   it('shows a form error when creation fails and keeps the form open', async () => {
@@ -107,12 +140,12 @@ describe('TagsPage', () => {
     )
     await screen.findByText('VIP')
 
-    await userEvent.click(screen.getByRole('button', { name: /new tag/i }))
-    await userEvent.type(screen.getByLabelText(/name/i), 'VIP')
-    await userEvent.click(screen.getByRole('button', { name: /create tag/i }))
+    await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+    await userEvent.type(screen.getByLabelText(/nome/i), 'VIP')
+    await userEvent.click(screen.getByRole('button', { name: /criar etiqueta/i }))
 
     expect(await screen.findByText('Tag name is already in use.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /create tag/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /criar etiqueta/i })).toBeInTheDocument()
   })
 
   it('edits a tag through the inline form', async () => {
@@ -120,11 +153,11 @@ describe('TagsPage', () => {
     renderTagsPage(buildContainer({ updateTag: { execute: updateTagSpy } }))
     await screen.findByText('VIP')
 
-    await userEvent.click(screen.getByRole('button', { name: /edit/i }))
-    const nameInput = screen.getByLabelText(/name/i)
+    await userEvent.click(screen.getByRole('button', { name: /editar/i }))
+    const nameInput = screen.getByLabelText(/nome/i)
     await userEvent.clear(nameInput)
     await userEvent.type(nameInput, 'Renamed')
-    await userEvent.click(screen.getByRole('button', { name: /save changes/i }))
+    await userEvent.click(screen.getByRole('button', { name: /salvar alterações/i }))
 
     expect(updateTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'tag-1', {
       name: 'Renamed',
@@ -134,35 +167,58 @@ describe('TagsPage', () => {
   })
 
   describe('delete', () => {
-    beforeEach(() => {
-      vi.spyOn(window, 'confirm')
-    })
+    it('shows a confirmation dialog naming the tag before deleting', async () => {
+      renderTagsPage(buildContainer())
+      await screen.findByText('VIP')
 
-    afterEach(() => {
-      vi.restoreAllMocks()
+      await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
+
+      const alertDialog = await screen.findByRole('alertdialog')
+      expect(within(alertDialog).getByText(/excluir etiqueta/i)).toBeInTheDocument()
+      expect(within(alertDialog).getByText(/"VIP"/)).toBeInTheDocument()
     })
 
     it('deletes the tag when the confirmation is accepted', async () => {
-      vi.mocked(window.confirm).mockReturnValue(true)
       const deleteTagSpy = vi.fn(() => Promise.resolve())
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
-      await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+      await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
+      const alertDialog = await screen.findByRole('alertdialog')
+      await userEvent.click(within(alertDialog).getByRole('button', { name: 'Excluir' }))
 
-      expect(window.confirm).toHaveBeenCalledExactlyOnceWith('Delete the "VIP" tag?')
       expect(deleteTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'tag-1')
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      })
     })
 
-    it('does not delete the tag when the confirmation is declined', async () => {
-      vi.mocked(window.confirm).mockReturnValue(false)
+    it('does not delete the tag when the confirmation is cancelled', async () => {
       const deleteTagSpy = vi.fn(() => Promise.resolve())
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
-      await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+      await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
+      const alertDialog = await screen.findByRole('alertdialog')
+      await userEvent.click(within(alertDialog).getByRole('button', { name: /cancelar/i }))
 
       expect(deleteTagSpy).not.toHaveBeenCalled()
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows an error and keeps the dialog open when deletion fails', async () => {
+      const deleteTagSpy = vi.fn(() => Promise.reject(new Error('Tag is in use.')))
+      renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
+      await screen.findByText('VIP')
+
+      await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
+      const alertDialog = await screen.findByRole('alertdialog')
+      await userEvent.click(within(alertDialog).getByRole('button', { name: 'Excluir' }))
+
+      expect(await within(alertDialog).findByText('Tag is in use.')).toBeInTheDocument()
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     })
   })
 })

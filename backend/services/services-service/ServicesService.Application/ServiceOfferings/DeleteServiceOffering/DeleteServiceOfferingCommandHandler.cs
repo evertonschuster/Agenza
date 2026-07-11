@@ -25,7 +25,7 @@ public sealed class DeleteServiceOfferingCommandHandler : ICommandHandler<Delete
             return Result.Failure(
                 Error.NotFound(
                     "ServiceOffering.NotFound",
-                    $"Service offering '{command.ServiceOfferingId}' was not found."));
+                    $"Serviço '{command.ServiceOfferingId}' não foi encontrado."));
         }
 
         _serviceOfferingRepository.Remove(serviceOffering);

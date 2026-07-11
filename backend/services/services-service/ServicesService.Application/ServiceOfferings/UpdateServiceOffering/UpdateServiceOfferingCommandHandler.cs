@@ -28,7 +28,7 @@ public sealed class UpdateServiceOfferingCommandHandler
             return Result.Failure<ServiceOfferingResponse>(
                 Error.NotFound(
                     "ServiceOffering.NotFound",
-                    $"Service offering '{command.ServiceOfferingId}' was not found."));
+                    $"Serviço '{command.ServiceOfferingId}' não foi encontrado."));
         }
 
         var newName = command.Name.Trim();
@@ -37,7 +37,7 @@ public sealed class UpdateServiceOfferingCommandHandler
             return Result.Failure<ServiceOfferingResponse>(
                 Error.Conflict(
                     "ServiceOffering.DuplicateName",
-                    $"A service offering named '{newName}' already exists."));
+                    $"Já existe um serviço chamado '{newName}'."));
         }
 
         command.ApplyTo(serviceOffering);

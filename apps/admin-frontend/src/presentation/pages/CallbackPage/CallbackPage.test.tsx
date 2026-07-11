@@ -38,7 +38,7 @@ describe('CallbackPage', () => {
     const handleCallback = vi.fn(() => new Promise<void>(() => {}))
     renderCallbackPage(buildContainer(handleCallback))
 
-    expect(screen.getByText(/completing sign in/i)).toBeInTheDocument()
+    expect(screen.getByText(/concluindo login/i)).toBeInTheDocument()
   })
 
   it('passes the full current URL to the callback use case', async () => {
@@ -59,7 +59,10 @@ describe('CallbackPage', () => {
   it('shows the error state with a way back to login when the callback fails', async () => {
     renderCallbackPage(buildContainer(vi.fn(() => Promise.reject(new Error('exchange failed')))))
 
-    expect(await screen.findByText(/sign-in failed/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /back to sign in/i })).toHaveAttribute('href', '/login')
+    expect(await screen.findByText(/falha no login/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /voltar para o login/i })).toHaveAttribute(
+      'href',
+      '/login',
+    )
   })
 })

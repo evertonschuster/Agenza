@@ -1,9 +1,10 @@
-import { describe, it, expect } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, beforeEach } from 'vitest'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { AdminLayout } from './AdminLayout'
 import { AppContainerContext } from '../providers/AppContainerContext'
+import { ThemeProvider } from '../providers/ThemeProvider'
 import type { AppContainer } from '../../composition/container'
 import type { TenantContext } from '../../application/context/TenantContext'
 import { Tenant } from '../../domain/value-objects/Tenant'
@@ -34,29 +35,35 @@ function buildContainer(
 function renderLayout(container: AppContainer): void {
   render(
     <AppContainerContext.Provider value={container}>
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <Routes>
-          <Route element={<AdminLayout />}>
-            <Route path="/dashboard" element={<div>Dashboard content</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>
+      <ThemeProvider>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <Routes>
+            <Route element={<AdminLayout />}>
+              <Route path="/dashboard" element={<div>Dashboard content</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </ThemeProvider>
     </AppContainerContext.Provider>,
   )
 }
 
 describe('AdminLayout', () => {
+  beforeEach(() => {
+    localStorage.clear()
+  })
+
   it('renders every navigation item and the child route content', () => {
     renderLayout(buildContainer(buildTenantContext()))
 
     for (const label of [
-      'Dashboard',
-      'Appointments',
-      'Services',
-      'Clients',
-      'Inbox',
-      'Tags',
-      'Settings',
+      'Painel',
+      'Agendamentos',
+      'Serviços',
+      'Clientes',
+      'Caixa de entrada',
+      'Etiquetas',
+      'Configurações',
     ]) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
@@ -72,15 +79,46 @@ describe('AdminLayout', () => {
   it('falls back to a generic business name when there is no session', async () => {
     renderLayout(buildContainer(null))
 
-    expect(await screen.findByText('My Business')).toBeInTheDocument()
+    expect(await screen.findByText('Minha Empresa')).toBeInTheDocument()
   })
 
   it('calls the logout use case when the sign out button is clicked', async () => {
     const logoutSpy = vi.fn(() => Promise.resolve())
     renderLayout(buildContainer(buildTenantContext(), logoutSpy))
 
-    await userEvent.click(screen.getByRole('button', { name: /sign out/i }))
+    await userEvent.click(screen.getByRole('button', { name: /sair/i }))
 
     expect(logoutSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('collapses the sidebar to icon-only and remembers the choice', async () => {
+    renderLayout(buildContainer(buildTenantContext()))
+
+    expect(screen.getByRole('link', { name: 'Painel' })).not.toHaveAttribute('title')
+
+    await userEvent.click(screen.getByRole('button', { name: /recolher menu lateral/i }))
+
+    expect(screen.getByRole('link', { name: 'Painel' })).toHaveAttribute('title', 'Painel')
+    expect(localStorage.getItem('admin-sidebar-collapsed')).toBe('true')
+
+    await userEvent.click(screen.getByRole('button', { name: /expandir menu lateral/i }))
+
+    expect(screen.getByRole('link', { name: 'Painel' })).not.toHaveAttribute('title')
+    expect(localStorage.getItem('admin-sidebar-collapsed')).toBe('false')
+  })
+
+  it('opens and closes the mobile sidebar drawer', async () => {
+    renderLayout(buildContainer(buildTenantContext()))
+
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /abrir menu/i }))
+    const drawer = await screen.findByRole('dialog')
+
+    await userEvent.click(within(drawer).getByRole('link', { name: 'Painel' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 })

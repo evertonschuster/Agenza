@@ -70,19 +70,50 @@ npm run lint    # architectural boundary rules enforced here
 
 ## Tech stack
 
-- Vite 8 + React 19 + TypeScript 6 (strict)
-- Tailwind CSS v4 (`@import "tailwindcss"` only — no config file)
-- React Router v7
+- Vite 8 + React 19 + TypeScript 7 (strict)
+- Tailwind CSS v4, CSS-variable theming (`src/index.css`) — no `tailwind.config.js`
+- shadcn/ui (Radix UI primitives, `src/components/ui/`) + `lucide-react` icons
+- React Router 8
 - oidc-client-ts (Auth Code + PKCE)
 - Vitest + React Testing Library + MSW
 - Husky + lint-staged
 
 ## Design language
 
-Background `bg-slate-50` · Cards `bg-white border border-slate-200 rounded-xl`
-Primary buttons `bg-teal-600 hover:bg-teal-700 text-white`
-Headings `text-slate-800 font-semibold` · Body `text-slate-600` · Muted `text-slate-400`
-Active `text-teal-700 border-teal-600`
+The stock shadcn/ui "Nova" theme, `neutral` base color, unmodified —
+no custom brand color, no custom shadows/radius. Light + dark mode,
+mobile down to 375px. Full detail — component inventory, the
+semantic-token table, icon conventions, mobile checklist — lives in
+`.skills/admin-feature-vertical/SKILL.md` (read it before building any
+page). The short version:
+
+- Use `src/components/ui/*` (shadcn/ui) exactly as the CLI generates
+  them. Don't add props, variants, or styling beyond what a page
+  genuinely needs right now — no speculative extensions.
+- Style everything with semantic tokens (`bg-background`, `bg-card`,
+  `text-foreground`, `text-muted-foreground`, `border-border`,
+  `text-primary`, `text-destructive`) — never raw `slate-*`/`teal-*`
+  Tailwind palette classes. Tokens are what make dark mode work; raw
+  classes silently break it.
+- A list of records is a `Table` (`src/components/ui/table.tsx`), not
+  stacked `Card`s. A create/edit form always opens in a `Dialog`
+  modal, never inline or as its own route.
+- Build pages from `src/components/ui/` (shadcn/ui) and the shared
+  composites in `src/presentation/components/` (`PageHeader`,
+  `StatusMessage`, `TextField`/`TextAreaField`, `CenteredScreen`,
+  `FullScreenSpinner`) — don't hand-roll markup shadcn or an existing
+  composite already covers.
+- `TagsPage`/`TagForm` is the reference implementation for a CRUD
+  list+form page (table + dialog). `AdminLayout` is the reference for
+  the page shell, including its off-canvas mobile sidebar — new pages
+  don't need their own mobile nav handling.
+- All user-facing text is Brazilian Portuguese (pt-BR) — labels,
+  messages, `aria-label`s, confirm prompts. See "Language" in
+  `.skills/admin-feature-vertical/SKILL.md`.
+- Dark mode is controlled by `ThemeProvider`
+  (`src/presentation/providers/`): defaults to the OS preference, an
+  explicit toggle (in `AdminLayout`'s sidebar footer) persists to
+  `localStorage` after that. Check every new page in both themes.
 
 ## Environment
 
@@ -94,4 +125,5 @@ Copy `.env.example` to `.env.local`. Never commit `.env.local`.
 
 - ✅ Tooling, Auth vertical, composition root, presentation shell
 - ✅ `HttpClient` (`AuthenticatedHttpClient`) — REST features are unblocked
+- ✅ shadcn/ui design system, dark mode, mobile-responsive `AdminLayout`
 - 🔲 Services → Clients → Appointments → Inbox → Dashboard → Settings

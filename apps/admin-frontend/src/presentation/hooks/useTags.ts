@@ -39,7 +39,7 @@ export function useTags(tenantContext: TenantContext | null): UseTagsResult {
   const createTag = useCallback(
     async (input: CreateTagInput): Promise<Tag> => {
       if (tenantContext === null) {
-        throw new Error('Cannot create a tag without an authenticated tenant context')
+        throw new Error('Não é possível criar uma etiqueta sem um contexto de tenant autenticado')
       }
       const tag = await useCases.createTag.execute(tenantContext, input)
       await execute()
@@ -51,7 +51,9 @@ export function useTags(tenantContext: TenantContext | null): UseTagsResult {
   const updateTag = useCallback(
     async (id: string, input: UpdateTagInput): Promise<Tag> => {
       if (tenantContext === null) {
-        throw new Error('Cannot update a tag without an authenticated tenant context')
+        throw new Error(
+          'Não é possível atualizar uma etiqueta sem um contexto de tenant autenticado',
+        )
       }
       const tag = await useCases.updateTag.execute(tenantContext, id, input)
       await execute()
@@ -63,7 +65,7 @@ export function useTags(tenantContext: TenantContext | null): UseTagsResult {
   const deleteTag = useCallback(
     async (id: string): Promise<void> => {
       if (tenantContext === null) {
-        throw new Error('Cannot delete a tag without an authenticated tenant context')
+        throw new Error('Não é possível excluir uma etiqueta sem um contexto de tenant autenticado')
       }
       await useCases.deleteTag.execute(tenantContext, id)
       await execute()

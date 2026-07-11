@@ -31,7 +31,7 @@ public sealed record TagColor
         if (!Palette.Contains(normalized))
         {
             throw new InvalidTagException(
-                $"Tag color must be one of the palette values: {string.Join(", ", Palette)}.");
+                $"A cor da etiqueta deve ser um dos valores da paleta: {string.Join(", ", Palette)}.");
         }
 
         return new TagColor(normalized);

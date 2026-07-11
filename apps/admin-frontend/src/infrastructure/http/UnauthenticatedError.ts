@@ -5,7 +5,7 @@
  */
 export class UnauthenticatedError extends Error {
   constructor() {
-    super('No valid session - the user must log in again.')
+    super('Sessão inválida - é necessário fazer login novamente.')
     this.name = 'UnauthenticatedError'
   }
 }

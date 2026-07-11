@@ -29,7 +29,7 @@ public sealed class CreateServiceOfferingCommandHandler
             return Result.Failure<ServiceOfferingResponse>(
                 Error.Conflict(
                     "ServiceOffering.DuplicateName",
-                    $"A service offering named '{serviceOffering.Name}' already exists."));
+                    $"Já existe um serviço chamado '{serviceOffering.Name}'."));
         }
 
         _serviceOfferingRepository.Add(serviceOffering);
