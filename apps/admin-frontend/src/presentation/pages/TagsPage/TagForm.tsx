@@ -89,7 +89,7 @@ export function TagForm({
       {error !== null && <StatusMessage tone="error">{error}</StatusMessage>}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={isSubmitting}>
+        <Button type="submit" disabled={isSubmitting || name.trim().length === 0}>
           {isSubmitting ? (
             <>
               <Spinner />

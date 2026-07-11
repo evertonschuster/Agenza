@@ -1,5 +1,5 @@
 import { useEffect, useState, type JSX } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useAppContainer } from '../../hooks/useAppContainer'
 import { CenteredScreen } from '../../components/CenteredScreen'
 import { Card, CardContent } from '@/components/ui/card'
@@ -35,12 +35,12 @@ export function CallbackPage(): JSX.Element {
             <p className="mt-2 text-sm text-muted-foreground">
               Algo deu errado ao concluir o login. Tente novamente.
             </p>
-            <a
-              href="/login"
+            <Link
+              to="/login"
               className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
             >
               Voltar para o login
-            </a>
+            </Link>
           </CardContent>
         </Card>
       </CenteredScreen>

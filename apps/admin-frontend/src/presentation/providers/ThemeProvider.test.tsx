@@ -71,4 +71,39 @@ describe('ThemeProvider', () => {
     expect(document.documentElement).toHaveClass('dark')
     expect(localStorage.getItem('admin-theme')).toBe('dark')
   })
+
+  it('does not let a later OS theme change override an explicit choice', async () => {
+    const capturedHandlers: ((event: MediaQueryListEvent) => void)[] = []
+    function captureHandler(_event: string, handler: (event: MediaQueryListEvent) => void): void {
+      capturedHandlers.push(handler)
+    }
+
+    vi.stubGlobal(
+      'matchMedia',
+      vi.fn().mockImplementation((query: string) => ({
+        matches: false,
+        media: query,
+        onchange: null,
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+        addEventListener: captureHandler,
+        removeEventListener: vi.fn(),
+        dispatchEvent: vi.fn(),
+      })),
+    )
+
+    render(
+      <ThemeProvider>
+        <ThemeReadout />
+      </ThemeProvider>,
+    )
+
+    await userEvent.click(screen.getByRole('button', { name: 'Go dark' }))
+    expect(screen.getByText('Current theme: dark')).toBeInTheDocument()
+
+    expect(capturedHandlers).toHaveLength(1)
+    capturedHandlers[0]?.({ matches: false } as MediaQueryListEvent)
+
+    expect(screen.getByText('Current theme: dark')).toBeInTheDocument()
+  })
 })

@@ -17,7 +17,7 @@ public class Tenant : BaseEntity
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new InvalidTenantException("Tenant name is required.");
+            throw new InvalidTenantException("O nome do tenant é obrigatório.");
         }
 
         Name = name;

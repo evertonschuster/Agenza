@@ -35,6 +35,12 @@ export function ThemeProvider({ children }: ThemeProviderProps): JSX.Element {
 
     const media = window.matchMedia('(prefers-color-scheme: dark)')
     function handleChange(event: MediaQueryListEvent): void {
+      // Re-check here, not just at effect setup: this listener stays attached
+      // for the component's lifetime, so an explicit setTheme() call after
+      // mount must still stop a later OS change from overriding it.
+      if (localStorage.getItem(STORAGE_KEY) !== null) {
+        return
+      }
       setThemeState(event.matches ? 'dark' : 'light')
     }
 

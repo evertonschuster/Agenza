@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { AdminLayout } from './AdminLayout'
@@ -110,9 +110,15 @@ describe('AdminLayout', () => {
   it('opens and closes the mobile sidebar drawer', async () => {
     renderLayout(buildContainer(buildTenantContext()))
 
-    await userEvent.click(screen.getByRole('button', { name: /abrir menu/i }))
-    await userEvent.click(screen.getByRole('link', { name: 'Painel' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
-    expect(screen.getByRole('link', { name: 'Painel' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /abrir menu/i }))
+    const drawer = await screen.findByRole('dialog')
+
+    await userEvent.click(within(drawer).getByRole('link', { name: 'Painel' }))
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 })

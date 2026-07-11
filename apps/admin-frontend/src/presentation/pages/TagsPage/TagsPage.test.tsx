@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TagsPage } from './TagsPage'
 import { AppContainerContext } from '../../providers/AppContainerContext'
@@ -97,6 +97,37 @@ describe('TagsPage', () => {
       expect(listTagsSpy).toHaveBeenCalledTimes(1)
     })
     expect(screen.queryByRole('button', { name: /criar etiqueta/i })).not.toBeInTheDocument()
+  })
+
+  it('disables the submit button until a non-blank name is entered', async () => {
+    renderTagsPage(buildContainer())
+    await screen.findByText('VIP')
+
+    await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+    const submitButton = screen.getByRole('button', { name: /criar etiqueta/i })
+    expect(submitButton).toBeDisabled()
+
+    await userEvent.type(screen.getByLabelText(/nome/i), '   ')
+    expect(submitButton).toBeDisabled()
+
+    await userEvent.type(screen.getByLabelText(/nome/i), 'Returning')
+    expect(submitButton).toBeEnabled()
+  })
+
+  it('does not carry a previously edited tag into a freshly opened create dialog', async () => {
+    renderTagsPage(buildContainer())
+    await screen.findByText('VIP')
+
+    await userEvent.click(screen.getByRole('button', { name: /editar/i }))
+    const editDialog = await screen.findByRole('dialog')
+    expect(within(editDialog).getByText('Editar etiqueta')).toBeInTheDocument()
+    expect(screen.getByLabelText(/nome/i)).toHaveValue('VIP')
+    await userEvent.click(screen.getByRole('button', { name: /cancelar/i }))
+
+    await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+    const createDialog = await screen.findByRole('dialog')
+    expect(within(createDialog).getByText('Nova etiqueta')).toBeInTheDocument()
+    expect(screen.getByLabelText(/nome/i)).toHaveValue('')
   })
 
   it('shows a form error when creation fails and keeps the form open', async () => {

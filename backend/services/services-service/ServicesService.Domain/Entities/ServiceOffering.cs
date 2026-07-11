@@ -51,7 +51,7 @@ public class ServiceOffering : TenantOwnedEntity
         if (trimmed.Length is 0 or > NameMaxLength)
         {
             throw new InvalidServiceOfferingException(
-                $"Service offering name is required and must be at most {NameMaxLength} characters.");
+                $"O nome do serviço é obrigatório e deve ter no máximo {NameMaxLength} caracteres.");
         }
 
         return trimmed;
@@ -69,7 +69,7 @@ public class ServiceOffering : TenantOwnedEntity
         if (trimmed.Length > DescriptionMaxLength)
         {
             throw new InvalidServiceOfferingException(
-                $"Service offering description must be at most {DescriptionMaxLength} characters.");
+                $"A descrição do serviço deve ter no máximo {DescriptionMaxLength} caracteres.");
         }
 
         return trimmed;
@@ -80,7 +80,7 @@ public class ServiceOffering : TenantOwnedEntity
         if (durationMinutes is < 1 or > MaxDurationMinutes)
         {
             throw new InvalidServiceOfferingException(
-                $"Service offering duration must be between 1 and {MaxDurationMinutes} minutes.");
+                $"A duração do serviço deve ser entre 1 e {MaxDurationMinutes} minutos.");
         }
 
         return durationMinutes;
@@ -90,7 +90,7 @@ public class ServiceOffering : TenantOwnedEntity
     {
         if (price < 0)
         {
-            throw new InvalidServiceOfferingException("Service offering price cannot be negative.");
+            throw new InvalidServiceOfferingException("O preço do serviço não pode ser negativo.");
         }
 
         return price;

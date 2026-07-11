@@ -46,20 +46,27 @@ export function TagsPage(): JSX.Element {
   const { tags, status, error, createTag, updateTag, deleteTag } = useTags(tenantContext)
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
+  const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   function openCreateForm(): void {
     setFormTarget('new')
+    setDisplayTarget('new')
     setFormError(null)
   }
 
   function openEditForm(tag: Tag): void {
     setFormTarget(tag)
+    setDisplayTarget(tag)
     setFormError(null)
   }
 
   function closeForm(): void {
+    // displayTarget is intentionally left as-is: Dialog fades out over ~100ms
+    // after `open` flips to false, and clearing displayTarget here would
+    // blank the title/form during that animation instead of after it.
     setFormTarget(null)
     setFormError(null)
   }
@@ -85,7 +92,12 @@ export function TagsPage(): JSX.Element {
     if (!window.confirm(`Excluir a etiqueta "${name}"?`)) {
       return
     }
-    await deleteTag(id)
+    setDeleteError(null)
+    try {
+      await deleteTag(id)
+    } catch (caughtError) {
+      setDeleteError(messageFrom(caughtError, 'Não foi possível excluir a etiqueta.'))
+    }
   }
 
   return (
@@ -94,6 +106,8 @@ export function TagsPage(): JSX.Element {
         title="Etiquetas"
         action={<Button onClick={openCreateForm}>Nova etiqueta</Button>}
       />
+
+      {deleteError !== null && <StatusMessage tone="error">{deleteError}</StatusMessage>}
 
       <div className="mt-6">
         {status === 'loading' && <StatusMessage>Carregando etiquetas…</StatusMessage>}
@@ -171,12 +185,17 @@ export function TagsPage(): JSX.Element {
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>{formTarget === 'new' ? 'Nova etiqueta' : 'Editar etiqueta'}</DialogTitle>
+            <DialogTitle>
+              {displayTarget === 'new' ? 'Nova etiqueta' : 'Editar etiqueta'}
+            </DialogTitle>
           </DialogHeader>
-          {formTarget !== null && (
+          {displayTarget !== null && (
             <TagForm
-              initialValues={formTarget === 'new' ? EMPTY_FORM_VALUES : toFormValues(formTarget)}
-              submitLabel={formTarget === 'new' ? 'Criar etiqueta' : 'Salvar alterações'}
+              key={displayTarget === 'new' ? 'new' : displayTarget.id}
+              initialValues={
+                displayTarget === 'new' ? EMPTY_FORM_VALUES : toFormValues(displayTarget)
+              }
+              submitLabel={displayTarget === 'new' ? 'Criar etiqueta' : 'Salvar alterações'}
               isSubmitting={isSubmitting}
               error={formError}
               onCancel={closeForm}

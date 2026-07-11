@@ -30,7 +30,7 @@ public class GenericExceptionHandler : IExceptionHandler
             new ProblemDetails
             {
                 Status = StatusCodes.Status500InternalServerError,
-                Title = "An unexpected error occurred.",
+                Title = "Ocorreu um erro inesperado.",
             },
             options: null,
             contentType: "application/problem+json",

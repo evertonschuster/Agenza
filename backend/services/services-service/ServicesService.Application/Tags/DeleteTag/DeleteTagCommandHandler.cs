@@ -19,7 +19,7 @@ public sealed class DeleteTagCommandHandler : ICommandHandler<DeleteTagCommand>
         var tag = await _tagRepository.GetByIdAsync(command.TagId, cancellationToken);
         if (tag is null)
         {
-            return Result.Failure(Error.NotFound("Tag.NotFound", $"Tag '{command.TagId}' was not found."));
+            return Result.Failure(Error.NotFound("Tag.NotFound", $"Etiqueta '{command.TagId}' não foi encontrada."));
         }
 
         _tagRepository.Remove(tag);

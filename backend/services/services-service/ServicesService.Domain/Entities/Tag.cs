@@ -43,7 +43,7 @@ public class Tag : TenantOwnedEntity
         if (trimmed.Length is 0 or > NameMaxLength)
         {
             throw new InvalidTagException(
-                $"Tag name is required and must be at most {NameMaxLength} characters.");
+                $"O nome da etiqueta é obrigatório e deve ter no máximo {NameMaxLength} caracteres.");
         }
 
         return trimmed;
@@ -61,7 +61,7 @@ public class Tag : TenantOwnedEntity
         if (trimmed.Length > DescriptionMaxLength)
         {
             throw new InvalidTagException(
-                $"Tag description must be at most {DescriptionMaxLength} characters.");
+                $"A descrição da etiqueta deve ter no máximo {DescriptionMaxLength} caracteres.");
         }
 
         return trimmed;
