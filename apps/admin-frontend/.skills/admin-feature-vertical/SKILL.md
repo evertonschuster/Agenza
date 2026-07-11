@@ -123,17 +123,141 @@ always non-null at this point.
 
 ### 8. Page component
 
-Replace the stub. Design language:
+Replace the stub. **`TagsPage`/`TagForm` is the reference implementation** —
+copy its structure (table list + dialog create/edit form +
+delete-with-confirm) rather than inventing a new pattern.
 
-- Background: `bg-slate-50`
-- Cards: `bg-white border border-slate-200 rounded-xl`
-- Primary buttons: `bg-teal-600 hover:bg-teal-700 text-white`
-- Headings: `text-slate-800 font-semibold`
-- Body: `text-slate-600` / Muted: `text-slate-400`
-- Accent: `text-teal-700 border-teal-600`
+#### List = `Table`, form = `Dialog` — always
 
-Handle all three `useAsync` states: loading → skeleton, error → message + retry,
-success → real UI.
+A page listing records renders a `Table` (`src/components/ui/table.tsx`):
+one row per record, actions (Edit/Delete) as buttons in the last
+column. Not stacked `Card`s per row — see `TagsPage`.
+
+A create/edit form always opens in a `Dialog`
+(`src/components/ui/dialog.tsx`) over the list — never inline in the
+page, never its own route. Use one `Dialog` instance whose content
+switches between create/edit based on which record (if any) triggered
+it, rather than a dialog per row — see `TagsPage`'s `formTarget` state.
+The form component itself (`TagForm`) stays a plain, dialog-agnostic
+`<form>` — the page wires it into the `Dialog`, keeping the two
+concerns separate.
+
+#### Build from existing components — don't hand-roll markup, don't extend speculatively
+
+shadcn/ui primitives live in `src/components/ui/` and are already themed:
+`button`, `card`, `input`, `textarea`, `label`, `spinner`, `table`,
+`dialog`. If a page needs something not in that list (select, badge,
+etc.), add it with `npx shadcn@latest add <component> -c apps/admin-frontend`
+from the repo root, then check the result compiles under this project's
+`exactOptionalPropertyTypes: true` (some generated files need fixing —
+see `dropdown-menu.tsx`'s removal for an example of when to give up and
+remove instead of patch).
+
+Use generated files as the CLI writes them. Don't add a prop, variant,
+or custom styling to a `src/components/ui/*` file unless a page
+genuinely needs it right now — no speculative extensions "in case a
+future page wants it." If a page needs a loading button or a
+destructive-styled link, do it at the call site (a conditional
+`<Spinner />` in `children`, a `className` override on an existing
+`variant`) rather than growing the shared component's API.
+
+Shared composites live in `src/presentation/components/` — reuse before
+writing a new one:
+
+| Component                     | Use for                                                         |
+| ----------------------------- | --------------------------------------------------------------- |
+| `PageHeader`                  | Title + primary action row at the top of every page             |
+| `StatusMessage`               | Loading / empty / error text (`tone="error"` for errors)        |
+| `TextField` / `TextAreaField` | Labeled form inputs (wraps shadcn `Label` + `Input`/`Textarea`) |
+| `CenteredScreen`              | Full-page centered content (pre-auth screens only)              |
+| `FullScreenSpinner`           | Full-page loading state                                         |
+| `ThemeToggle`                 | Already in `AdminLayout` — don't add another one                |
+
+`PlaceholderPage` is what the stub currently renders — delete its usage
+from the page file once real content replaces it (leave the component
+itself; other stubs still use it).
+
+#### Use semantic tokens — never raw palette classes
+
+This is the rule most likely to be missed and the one that silently
+breaks dark mode. `src/index.css` defines the whole palette as CSS
+variables, redefined under `.dark` — Tailwind classes like
+`bg-background`/`text-foreground` resolve to the right color in both
+themes automatically. A raw class like `bg-slate-50` or `text-slate-800`
+does **not** — it's a fixed light-mode color that looks broken once a
+user switches to dark.
+
+| Instead of (stale, don't use)       | Use                           | For                           |
+| ----------------------------------- | ----------------------------- | ----------------------------- |
+| `bg-slate-50`                       | `bg-background`               | Page background               |
+| `bg-white`                          | `bg-card`                     | Card/surface background       |
+| `border-slate-200`                  | `border-border`               | Card and divider borders      |
+| `text-slate-800`                    | `text-foreground`             | Headings, primary text        |
+| `text-slate-600` / `text-slate-400` | `text-muted-foreground`       | Secondary/muted text          |
+| `text-red-600`                      | `text-destructive`            | Error text                    |
+| `bg-teal-600` / `text-teal-700`     | `text-primary` / `bg-primary` | Brand accent, primary buttons |
+
+There's no brand color to special-case anymore — the whole app uses the
+stock shadcn/ui neutral theme (see `docs/DECISIONS.md` "Design
+language"). If in doubt, use a token; there's no exception to reach for.
+
+#### Icons
+
+Use `lucide-react` (already a dependency), matched to the icon already
+used for this section in `AdminLayout`'s nav (`Sparkles` for Services,
+`Users` for Clients, `CalendarDays` for Appointments, `Inbox` for Inbox,
+`Settings` for Settings, `LayoutDashboard` for Dashboard). Always add
+`aria-hidden="true"` on a decorative icon — see any nav item in
+`AdminLayout.tsx` for the pattern.
+
+#### Mobile responsiveness — every page must work at 375px wide
+
+- `Table` already scrolls horizontally on its own
+  (`data-slot="table-container"` wraps it in `overflow-x-auto`) — don't
+  add a second scroll wrapper, and don't fight it by forcing columns to
+  wrap or truncate unless a column's content is genuinely unbounded
+  (see the `Description` column in `TagsPage`, `max-w-64 truncate`).
+- `Dialog` is responsive by default (`max-w-[calc(100%-2rem)]` below its
+  `sm:` breakpoint) — a form inside it doesn't need its own width
+  handling.
+- Any `flex` row inside a form that could get tight (a color picker, a
+  button group) still needs `flex-wrap` — see `TagForm`'s color
+  swatches and button row.
+- Never use a fixed pixel width wider than ~300px without a responsive
+  override. Prefer `w-full` + `max-w-*`.
+- `AdminLayout` already handles the page shell (off-canvas sidebar below
+  `md`) — pages don't need their own mobile nav handling, just don't
+  break out of the `<main>` padding it provides.
+
+#### States
+
+Handle all three `useAsync` states: loading → `StatusMessage`, error →
+`StatusMessage tone="error"`, success → real UI (see `TagsPage`).
+
+#### Language — all user-facing text is Brazilian Portuguese (pt-BR)
+
+Every string a user reads or a screen reader announces — headings,
+button labels, `PageHeader`/`StatusMessage` text, form labels/hints,
+`aria-label`s, `window.confirm` prompts, error-message fallbacks passed
+to `messageFrom`-style helpers — is written in pt-BR. See `TagsPage`/
+`TagForm` for the pattern (e.g. "Nova etiqueta", "Não foi possível
+carregar as etiquetas", `aria-label="Cor ${paletteColor}"`).
+
+Code stays in English as usual: identifiers, comments, commit messages,
+this skill's own prose. Only what actually renders to the end user (or
+reaches them through an error message) needs translating — a
+`DomainError` thrown deep in an unreachable code path (see
+`domain/entities/Tag.ts` vs. `domain/errors/InvalidTenantError.ts`
+callers, traced in `docs/DECISIONS.md` "Language: pt-BR user-facing
+text") doesn't need the same urgency as anything a `StatusMessage` or
+`Dialog` can actually display, but translate it too when it's cheap to
+do at the same time.
+
+Nav labels (source of truth: `AdminLayout.tsx`'s `NAV_ITEMS`) are
+Painel, Agendamentos, Serviços, Clientes, Caixa de entrada, Etiquetas,
+Configurações — reuse the exact same word for a stub page's
+`PlaceholderPage title` and for that vertical's `PageHeader title` once
+built, so the sidebar and the page always agree.
 
 ---
 
@@ -168,7 +292,18 @@ Implementation `AuthenticatedHttpClient`:
 - [ ] Mapper: tested, all fields and failure paths covered
 - [ ] Infrastructure repo: tested with MSW, handler registered
 - [ ] Hook: built on `useAsync`, tested with fake container
-- [ ] Page: handles loading/error/success, follows design language
+- [ ] Page: handles loading/error/success, built from shadcn/ui primitives
+      and shared composites (not hand-rolled markup)
+- [ ] List uses `Table`, form opens in a `Dialog` — not stacked `Card`s
+      or an inline/routed form
+- [ ] No prop/variant added to a `src/components/ui/*` file unless this
+      page genuinely needs it right now
+- [ ] Page: uses semantic tokens only — no raw `slate-*`/`teal-*`/etc.
+      Tailwind palette classes (breaks dark mode)
+- [ ] Page: checked in dark mode (toggle in the sidebar footer)
+- [ ] Page: no horizontal overflow or clipped content at 375px wide
+- [ ] All user-facing text (labels, messages, `aria-label`s, confirm
+      prompts) is in pt-BR
 - [ ] `npm run build` clean (catches TypeScript strict mode issues)
 - [ ] `npm run lint` clean
 - [ ] `npm run test` all green

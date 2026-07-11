@@ -33,14 +33,14 @@ describe('LoginPage', () => {
   it('renders the sign-in button', () => {
     renderLoginPage(buildContainer())
 
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
   })
 
   it('calls login when the sign-in button is clicked', async () => {
     const loginSpy = vi.fn(() => Promise.resolve())
     renderLoginPage(buildContainer(loginSpy))
 
-    await userEvent.click(screen.getByRole('button', { name: /sign in/i }))
+    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
 
     expect(loginSpy).toHaveBeenCalledTimes(1)
   })
@@ -51,8 +51,8 @@ describe('LoginPage', () => {
     const loginFn = vi.fn(() => new Promise<void>(() => {}))
     renderLoginPage(buildContainer(loginFn))
 
-    await userEvent.click(screen.getByRole('button', { name: /sign in/i }))
+    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
 
-    expect(screen.getByRole('button', { name: /signing in/i })).toBeDisabled()
+    expect(screen.getByRole('button', { name: /entrando/i })).toBeDisabled()
   })
 })

@@ -60,7 +60,7 @@ describe('TagsPage', () => {
   it('shows an empty state when there are no tags', async () => {
     renderTagsPage(buildContainer({ listTags: { execute: vi.fn(() => Promise.resolve([])) } }))
 
-    expect(await screen.findByText(/no tags yet/i)).toBeInTheDocument()
+    expect(await screen.findByText(/nenhuma etiqueta ainda/i)).toBeInTheDocument()
   })
 
   it('shows an error state when loading tags fails', async () => {
@@ -70,7 +70,9 @@ describe('TagsPage', () => {
       }),
     )
 
-    expect(await screen.findByText(/could not load tags: network down/i)).toBeInTheDocument()
+    expect(
+      await screen.findByText(/não foi possível carregar as etiquetas: network down/i),
+    ).toBeInTheDocument()
   })
 
   it('creates a tag through the form and refreshes the list', async () => {
@@ -82,10 +84,10 @@ describe('TagsPage', () => {
     await screen.findByText('VIP')
     listTagsSpy.mockClear()
 
-    await userEvent.click(screen.getByRole('button', { name: /new tag/i }))
-    await userEvent.type(screen.getByLabelText(/name/i), 'Returning')
-    await userEvent.click(screen.getByRole('button', { name: 'Color #ef4444' }))
-    await userEvent.click(screen.getByRole('button', { name: /create tag/i }))
+    await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+    await userEvent.type(screen.getByLabelText(/nome/i), 'Returning')
+    await userEvent.click(screen.getByRole('button', { name: 'Cor #ef4444' }))
+    await userEvent.click(screen.getByRole('button', { name: /criar etiqueta/i }))
 
     expect(createTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
       name: 'Returning',
@@ -94,7 +96,7 @@ describe('TagsPage', () => {
     await vi.waitFor(() => {
       expect(listTagsSpy).toHaveBeenCalledTimes(1)
     })
-    expect(screen.queryByRole('button', { name: /create tag/i })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /criar etiqueta/i })).not.toBeInTheDocument()
   })
 
   it('shows a form error when creation fails and keeps the form open', async () => {
@@ -107,12 +109,12 @@ describe('TagsPage', () => {
     )
     await screen.findByText('VIP')
 
-    await userEvent.click(screen.getByRole('button', { name: /new tag/i }))
-    await userEvent.type(screen.getByLabelText(/name/i), 'VIP')
-    await userEvent.click(screen.getByRole('button', { name: /create tag/i }))
+    await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+    await userEvent.type(screen.getByLabelText(/nome/i), 'VIP')
+    await userEvent.click(screen.getByRole('button', { name: /criar etiqueta/i }))
 
     expect(await screen.findByText('Tag name is already in use.')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /create tag/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /criar etiqueta/i })).toBeInTheDocument()
   })
 
   it('edits a tag through the inline form', async () => {
@@ -120,11 +122,11 @@ describe('TagsPage', () => {
     renderTagsPage(buildContainer({ updateTag: { execute: updateTagSpy } }))
     await screen.findByText('VIP')
 
-    await userEvent.click(screen.getByRole('button', { name: /edit/i }))
-    const nameInput = screen.getByLabelText(/name/i)
+    await userEvent.click(screen.getByRole('button', { name: /editar/i }))
+    const nameInput = screen.getByLabelText(/nome/i)
     await userEvent.clear(nameInput)
     await userEvent.type(nameInput, 'Renamed')
-    await userEvent.click(screen.getByRole('button', { name: /save changes/i }))
+    await userEvent.click(screen.getByRole('button', { name: /salvar alterações/i }))
 
     expect(updateTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'tag-1', {
       name: 'Renamed',
@@ -148,9 +150,9 @@ describe('TagsPage', () => {
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
-      await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+      await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
 
-      expect(window.confirm).toHaveBeenCalledExactlyOnceWith('Delete the "VIP" tag?')
+      expect(window.confirm).toHaveBeenCalledExactlyOnceWith('Excluir a etiqueta "VIP"?')
       expect(deleteTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'tag-1')
     })
 
@@ -160,7 +162,7 @@ describe('TagsPage', () => {
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
-      await userEvent.click(screen.getByRole('button', { name: /delete/i }))
+      await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
 
       expect(deleteTagSpy).not.toHaveBeenCalled()
     })

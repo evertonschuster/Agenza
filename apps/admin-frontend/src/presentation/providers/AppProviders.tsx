@@ -1,5 +1,6 @@
 import { useState, type ReactNode, type JSX } from 'react'
 import { AppContainerContext } from './AppContainerContext'
+import { ThemeProvider } from './ThemeProvider'
 import { createAppContainer } from '../../composition/container'
 
 interface AppProvidersProps {
@@ -16,5 +17,9 @@ interface AppProvidersProps {
 export function AppProviders({ children }: AppProvidersProps): JSX.Element {
   const [container] = useState(() => createAppContainer())
 
-  return <AppContainerContext.Provider value={container}>{children}</AppContainerContext.Provider>
+  return (
+    <AppContainerContext.Provider value={container}>
+      <ThemeProvider>{children}</ThemeProvider>
+    </AppContainerContext.Provider>
+  )
 }

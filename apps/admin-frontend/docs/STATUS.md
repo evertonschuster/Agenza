@@ -19,43 +19,45 @@ what's blocked, and what order to build things in.
 
 ## Infrastructure
 
-| Piece                                              | Status | Notes                                                          |
-| -------------------------------------------------- | ------ | -------------------------------------------------------------- |
-| TypeScript strict config                           | `done` |                                                                |
-| ESLint + Prettier                                  | `done` |                                                                |
-| Vitest + RTL + MSW                                 | `done` |                                                                |
-| Husky + lint-staged                                | `done` |                                                                |
-| `HttpClient` interface + `AuthenticatedHttpClient` | `done` | Bearer token via AuthRepository, ApiError/UnauthenticatedError |
-| MSW handlers (auth)                                | `stub` | Auth uses OIDC not REST — no handlers needed                   |
-| MSW handlers (REST features)                       | `stub` | Add per-feature as specs arrive                                |
+| Piece                                              | Status | Notes                                                            |
+| -------------------------------------------------- | ------ | ---------------------------------------------------------------- |
+| TypeScript strict config                           | `done` |                                                                  |
+| ESLint + Prettier                                  | `done` |                                                                  |
+| Vitest + RTL + MSW                                 | `done` |                                                                  |
+| Husky + lint-staged                                | `done` |                                                                  |
+| `HttpClient` interface + `AuthenticatedHttpClient` | `done` | Bearer token via AuthRepository, ApiError/UnauthenticatedError   |
+| MSW handlers (auth)                                | `stub` | Auth uses OIDC not REST — no handlers needed                     |
+| MSW handlers (REST features)                       | `stub` | Add per-feature as specs arrive                                  |
+| shadcn/ui design system (`src/components/ui/`)     | `done` | Radix-based, stock "Nova"/neutral theme, unmodified; see ADR 005 |
+| `ThemeProvider` / `useTheme` / `ThemeToggle`       | `done` | Light/dark, defaults to OS preference, persists an override      |
 
 ---
 
 ## Auth vertical
 
-| Piece                         | Status | Notes                                          |
-| ----------------------------- | ------ | ---------------------------------------------- |
-| `Tenant` value object         | `done` |                                                |
-| `User` entity                 | `done` | email/name are unverified assumptions          |
-| `Session` entity              | `done` |                                                |
-| `AuthRepository` interface    | `done` |                                                |
-| `InitiateLogin` use case      | `done` |                                                |
-| `HandleAuthCallback` use case | `done` | errors propagated unwrapped (see DECISIONS.md) |
-| `GetCurrentSession` use case  | `done` |                                                |
-| `Logout` use case             | `done` |                                                |
-| `mapOidcUserToSession` mapper | `done` | tenant_id claim name unverified                |
-| `OidcAuthRepository`          | `done` |                                                |
-| `createUserManager` factory   | `done` | env vars are placeholders                      |
-| `createAppContainer`          | `done` |                                                |
-| `AppProviders`                | `done` |                                                |
-| `useAsync` hook               | `done` |                                                |
-| `useAuth` hook                | `done` |                                                |
-| `useAppContainer` hook        | `done` |                                                |
-| `ProtectedRoute`              | `done` |                                                |
-| `LoginPage`                   | `done` |                                                |
-| `CallbackPage`                | `done` |                                                |
-| `AdminLayout` + sidebar       | `done` |                                                |
-| Router                        | `done` |                                                |
+| Piece                         | Status | Notes                                                                                                                  |
+| ----------------------------- | ------ | ---------------------------------------------------------------------------------------------------------------------- |
+| `Tenant` value object         | `done` |                                                                                                                        |
+| `User` entity                 | `done` | email/name are unverified assumptions                                                                                  |
+| `Session` entity              | `done` |                                                                                                                        |
+| `AuthRepository` interface    | `done` |                                                                                                                        |
+| `InitiateLogin` use case      | `done` |                                                                                                                        |
+| `HandleAuthCallback` use case | `done` | errors propagated unwrapped (see DECISIONS.md)                                                                         |
+| `GetCurrentSession` use case  | `done` |                                                                                                                        |
+| `Logout` use case             | `done` |                                                                                                                        |
+| `mapOidcUserToSession` mapper | `done` | tenant_id claim name unverified                                                                                        |
+| `OidcAuthRepository`          | `done` |                                                                                                                        |
+| `createUserManager` factory   | `done` | env vars are placeholders                                                                                              |
+| `createAppContainer`          | `done` |                                                                                                                        |
+| `AppProviders`                | `done` |                                                                                                                        |
+| `useAsync` hook               | `done` |                                                                                                                        |
+| `useAuth` hook                | `done` |                                                                                                                        |
+| `useAppContainer` hook        | `done` |                                                                                                                        |
+| `ProtectedRoute`              | `done` |                                                                                                                        |
+| `LoginPage`                   | `done` |                                                                                                                        |
+| `CallbackPage`                | `done` |                                                                                                                        |
+| `AdminLayout` + sidebar       | `done` | Collapsible icon rail (desktop, persisted) + off-canvas drawer (mobile, below `md`); theme toggle + sign-out in footer |
+| Router                        | `done` |                                                                                                                        |
 
 ---
 
@@ -63,15 +65,15 @@ what's blocked, and what order to build things in.
 
 ### Tags
 
-| Piece                                    | Status | Notes                                        |
-| ---------------------------------------- | ------ | -------------------------------------------- |
-| `Tag` entity                             | `done` |                                              |
-| `TagRepository` interface                | `done` |                                              |
-| Use cases (List, Create, Update, Delete) | `done` |                                              |
-| `ApiTagRepository` + `tagMapper`         | `done` |                                              |
-| `useTags` hook                           | `done` |                                              |
-| `TagsPage` + nav entry                   | `done` | Inline create/edit form, delete with confirm |
-| Backend (services-service `/api/tags`)   | `done` | First real vertical in services-service      |
+| Piece                                    | Status | Notes                                                    |
+| ---------------------------------------- | ------ | -------------------------------------------------------- |
+| `Tag` entity                             | `done` |                                                          |
+| `TagRepository` interface                | `done` |                                                          |
+| Use cases (List, Create, Update, Delete) | `done` |                                                          |
+| `ApiTagRepository` + `tagMapper`         | `done` |                                                          |
+| `useTags` hook                           | `done` |                                                          |
+| `TagsPage` + nav entry                   | `done` | Table list, dialog create/edit form, delete with confirm |
+| Backend (services-service `/api/tags`)   | `done` | First real vertical in services-service                  |
 
 **Dependency:** none. First REST vertical built end-to-end (backend + frontend).
 
@@ -178,15 +180,17 @@ what's blocked, and what order to build things in.
 
 ## Test counts
 
-| Session                                                                                    | Tests added | Total |
-| ------------------------------------------------------------------------------------------ | ----------- | ----- |
-| Initial setup                                                                              | 0           | 0     |
-| Domain (Tenant, User, Session)                                                             | 17          | 17    |
-| Application (4 use cases)                                                                  | 7           | 24    |
-| Infrastructure (mapper + OidcAuthRepository)                                               | 13          | 37    |
-| Composition + hooks (useAsync, useAuth, useAppContainer)                                   | 10          | 47    |
-| Presentation (ProtectedRoute, LoginPage)                                                   | 6           | 53    |
-| HttpClient (AuthenticatedHttpClient via MSW)                                               | 6           | 59    |
-| Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager) | 14          | 73    |
+| Session                                                                                     | Tests added                            | Total                             |
+| ------------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------- |
+| Initial setup                                                                               | 0                                      | 0                                 |
+| Domain (Tenant, User, Session)                                                              | 17                                     | 17                                |
+| Application (4 use cases)                                                                   | 7                                      | 24                                |
+| Infrastructure (mapper + OidcAuthRepository)                                                | 13                                     | 37                                |
+| Composition + hooks (useAsync, useAuth, useAppContainer)                                    | 10                                     | 47                                |
+| Presentation (ProtectedRoute, LoginPage)                                                    | 6                                      | 53                                |
+| HttpClient (AuthenticatedHttpClient via MSW)                                                | 6                                      | 59                                |
+| Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager)  | 14                                     | 73                                |
+| Tags vertical + UI system (shadcn/ui migration, dark mode, mobile-responsive `AdminLayout`) | not logged incrementally               | 116 (verified via `npm run test`) |
+| UI reset to stock shadcn theme + Tags list/form → `Table`/`Dialog`                          | 0 (existing tests updated, none added) | 116 (verified via `npm run test`) |
 
 Update the test count row whenever a feature vertical is completed.
