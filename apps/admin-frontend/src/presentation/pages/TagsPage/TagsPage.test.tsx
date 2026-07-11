@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TagsPage } from './TagsPage'
@@ -167,35 +167,58 @@ describe('TagsPage', () => {
   })
 
   describe('delete', () => {
-    beforeEach(() => {
-      vi.spyOn(window, 'confirm')
-    })
+    it('shows a confirmation dialog naming the tag before deleting', async () => {
+      renderTagsPage(buildContainer())
+      await screen.findByText('VIP')
 
-    afterEach(() => {
-      vi.restoreAllMocks()
+      await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
+
+      const alertDialog = await screen.findByRole('alertdialog')
+      expect(within(alertDialog).getByText(/excluir etiqueta/i)).toBeInTheDocument()
+      expect(within(alertDialog).getByText(/"VIP"/)).toBeInTheDocument()
     })
 
     it('deletes the tag when the confirmation is accepted', async () => {
-      vi.mocked(window.confirm).mockReturnValue(true)
       const deleteTagSpy = vi.fn(() => Promise.resolve())
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
       await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
+      const alertDialog = await screen.findByRole('alertdialog')
+      await userEvent.click(within(alertDialog).getByRole('button', { name: 'Excluir' }))
 
-      expect(window.confirm).toHaveBeenCalledExactlyOnceWith('Excluir a etiqueta "VIP"?')
       expect(deleteTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'tag-1')
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      })
     })
 
-    it('does not delete the tag when the confirmation is declined', async () => {
-      vi.mocked(window.confirm).mockReturnValue(false)
+    it('does not delete the tag when the confirmation is cancelled', async () => {
       const deleteTagSpy = vi.fn(() => Promise.resolve())
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
       await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
+      const alertDialog = await screen.findByRole('alertdialog')
+      await userEvent.click(within(alertDialog).getByRole('button', { name: /cancelar/i }))
 
       expect(deleteTagSpy).not.toHaveBeenCalled()
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      })
+    })
+
+    it('shows an error and keeps the dialog open when deletion fails', async () => {
+      const deleteTagSpy = vi.fn(() => Promise.reject(new Error('Tag is in use.')))
+      renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
+      await screen.findByText('VIP')
+
+      await userEvent.click(screen.getByRole('button', { name: /excluir/i }))
+      const alertDialog = await screen.findByRole('alertdialog')
+      await userEvent.click(within(alertDialog).getByRole('button', { name: 'Excluir' }))
+
+      expect(await within(alertDialog).findByText('Tag is in use.')).toBeInTheDocument()
+      expect(screen.getByRole('alertdialog')).toBeInTheDocument()
     })
   })
 })

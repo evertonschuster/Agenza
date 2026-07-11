@@ -7,6 +7,16 @@ import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import {
   Table,
   TableBody,
   TableCell,
@@ -49,7 +59,9 @@ export function TagsPage(): JSX.Element {
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
   const [formError, setFormError] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
 
   function openCreateForm(): void {
     setFormTarget('new')
@@ -88,15 +100,24 @@ export function TagsPage(): JSX.Element {
     }
   }
 
-  async function handleDelete(id: string, name: string): Promise<void> {
-    if (!window.confirm(`Excluir a etiqueta "${name}"?`)) {
+  function requestDelete(tag: Tag): void {
+    setDeleteTarget(tag)
+    setDeleteError(null)
+  }
+
+  async function confirmDelete(): Promise<void> {
+    if (deleteTarget === null) {
       return
     }
+    setIsDeleting(true)
     setDeleteError(null)
     try {
-      await deleteTag(id)
+      await deleteTag(deleteTarget.id)
+      setDeleteTarget(null)
     } catch (caughtError) {
       setDeleteError(messageFrom(caughtError, 'Não foi possível excluir a etiqueta.'))
+    } finally {
+      setIsDeleting(false)
     }
   }
 
@@ -106,8 +127,6 @@ export function TagsPage(): JSX.Element {
         title="Etiquetas"
         action={<Button onClick={openCreateForm}>Nova etiqueta</Button>}
       />
-
-      {deleteError !== null && <StatusMessage tone="error">{deleteError}</StatusMessage>}
 
       <div className="mt-6">
         {status === 'loading' && <StatusMessage>Carregando etiquetas…</StatusMessage>}
@@ -163,7 +182,9 @@ export function TagsPage(): JSX.Element {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => void handleDelete(tag.id, tag.name)}
+                          onClick={() => {
+                            requestDelete(tag)
+                          }}
                         >
                           Excluir
                         </Button>
@@ -204,6 +225,40 @@ export function TagsPage(): JSX.Element {
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={open => {
+          if (!open) {
+            setDeleteTarget(null)
+            setDeleteError(null)
+          }
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir etiqueta</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza de que deseja excluir a etiqueta "{deleteTarget?.name}"? Essa ação não
+              pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          {deleteError !== null && <StatusMessage tone="error">{deleteError}</StatusMessage>}
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              disabled={isDeleting}
+              onClick={event => {
+                event.preventDefault()
+                void confirmDelete()
+              }}
+            >
+              {isDeleting ? 'Excluindo…' : 'Excluir'}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }

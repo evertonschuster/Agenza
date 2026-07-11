@@ -142,12 +142,22 @@ The form component itself (`TagForm`) stays a plain, dialog-agnostic
 `<form>` — the page wires it into the `Dialog`, keeping the two
 concerns separate.
 
+A destructive action (delete) is confirmed with `AlertDialog`
+(`src/components/ui/alert-dialog.tsx`) — never `window.confirm`. Same
+one-instance-per-page pattern as the create/edit `Dialog`: a
+`deleteTarget: Record | null` state opens it, `AlertDialogAction` runs
+the actual delete. `AlertDialogAction`'s click auto-closes the dialog by
+default — call `event.preventDefault()` in its `onClick` so the dialog
+stays open (showing a loading/error state) until the delete call
+actually resolves, then close it yourself on success. See `TagsPage`'s
+`requestDelete`/`confirmDelete`.
+
 #### Build from existing components — don't hand-roll markup, don't extend speculatively
 
 shadcn/ui primitives live in `src/components/ui/` and are already themed:
 `button`, `card`, `input`, `textarea`, `label`, `spinner`, `table`,
-`dialog`. If a page needs something not in that list (select, badge,
-etc.), add it with `npx shadcn@latest add <component> -c apps/admin-frontend`
+`dialog`, `alert-dialog`. If a page needs something not in that list
+(select, badge, etc.), add it with `npx shadcn@latest add <component> -c apps/admin-frontend`
 from the repo root, then check the result compiles under this project's
 `exactOptionalPropertyTypes: true` (some generated files need fixing —
 see `dropdown-menu.tsx`'s removal for an example of when to give up and
@@ -296,6 +306,7 @@ Implementation `AuthenticatedHttpClient`:
       and shared composites (not hand-rolled markup)
 - [ ] List uses `Table`, form opens in a `Dialog` — not stacked `Card`s
       or an inline/routed form
+- [ ] Destructive actions confirmed with `AlertDialog` — not `window.confirm`
 - [ ] No prop/variant added to a `src/components/ui/*` file unless this
       page genuinely needs it right now
 - [ ] Page: uses semantic tokens only — no raw `slate-*`/`teal-*`/etc.

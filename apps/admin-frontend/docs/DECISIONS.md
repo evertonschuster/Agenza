@@ -223,6 +223,25 @@ single `Dialog` instance whose content switches between create/edit
 based on which record (if any) triggered it, rather than one dialog per
 row.
 
+### Destructive-action confirmation: `AlertDialog`, not `window.confirm`
+
+**Decision:** Confirming a delete (or any other destructive action)
+uses shadcn/ui's `AlertDialog` (`src/components/ui/alert-dialog.tsx`),
+not the browser's native `window.confirm`.
+**Reason:** The project owner asked for "um componente mais bonito, de
+preferência da lib de UI" (a nicer component, preferably from the UI
+lib) after `window.confirm` shipped as the original Tags delete flow —
+a native browser dialog can't be styled or translated consistently with
+the rest of the app and can't be driven from automated tooling
+(confirmed as a real limitation when reviewing a live test run).
+**Impact:** Same one-instance-per-page pattern as the create/edit
+`Dialog`: a `deleteTarget` state opens the `AlertDialog`, naming the
+record in `AlertDialogDescription`. `AlertDialogAction` closes itself
+by default on click — `event.preventDefault()` inside its `onClick`
+keeps it open until the async delete actually resolves, so a failure
+can show an error inline (`StatusMessage`) instead of silently closing.
+See `TagsPage`'s `requestDelete`/`confirmDelete`.
+
 ### Language: pt-BR user-facing text
 
 **Decision:** Every string the app shows or announces to a user —
