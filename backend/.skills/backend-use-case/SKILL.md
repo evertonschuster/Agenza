@@ -64,7 +64,13 @@ just adapt the templates.
   `ArgumentException`. Domain stays exception-based even though the rest
   of the stack uses Result — see docs/adr/0005 for why (zero project
   references; FluentValidation already checked shape by the time Domain
-  runs) and docs/adr/0006 for the `BusinessException` shape.
+  runs) and docs/adr/0006 for the `BusinessException` shape. This is
+  still the right default for a new entity in a new service. (Once a
+  service's Domain rules end up fully duplicated in mature Create/Update
+  validators, dropping the Domain-side throw becomes a reasonable,
+  deliberate follow-up — see docs/adr/0011 for the one place this repo
+  has done that so far, `services-service`'s `Tag`/`Category`/`Service`.
+  Don't preemptively skip the throw here for a new entity.)
 - No public setters. Add a `private` parameterless constructor ONLY if EF
   needs it, and keep it private.
 - State changes go through named behavior methods (`Rename`, `Cancel`,
@@ -106,11 +112,19 @@ Application/Tags/
   (`Admin.SharedKernel`) — never throws for an expected business outcome
   (validation failure, not-found, conflict, forbidden). Use
   `Error.Validation/.NotFound/.Conflict/.Forbidden(code, message)`.
-- Validator (commands with user input only): cheap synchronous shape
-  rules — required, length, enum/palette membership. NOT cross-aggregate
-  rules (uniqueness, existence) — those need the repository, so they
-  stay in the handler. The dispatcher runs the validator automatically
-  before the handler; don't call it yourself.
+- Validator (commands with user input only): shape rules (required,
+  length, enum/palette membership) AND cross-aggregate rules needing a
+  repository round-trip (uniqueness, existence) — the latter as async
+  `MustAsync` rules, with the relevant repository interface(s)
+  constructor-injected into the validator (docs/adr/0010). Handlers
+  assume validated input and stay pure orchestration: fetch what's
+  needed → construct/apply → persist → return — no inline existence/
+  uniqueness `if` blocks. The dispatcher runs the validator automatically
+  before the handler; don't call it yourself. Note: the dispatcher
+  collapses every validator failure (shape or cross-aggregate) into a
+  generic 400 `Error.Validation`, ignoring `.WithErrorCode(...)` — set
+  it anyway, it's cheap and future-proofs a later Dispatcher change (see
+  docs/adr/0010's accepted trade-off).
 - Constructor-injected ports only — no EF, no HttpClient, no ASP.NET
   types in Application.
 - Multiple writes that must succeed together → wrap in
@@ -138,10 +152,22 @@ Application/Tags/
   `.DidNotReceive().Method(...)`.
 - AwesomeAssertions, asserting on the `Result`: `result.IsSuccess`,
   `result.Value.Xyz`, `result.Error.Type.Should().Be(ErrorType.Conflict)`.
-- Test the happy path AND every failure path (validation, not-found,
-  conflict) — each should return the right `ErrorType`, never throw.
-- Add a small validator test file too (`AbstractValidator.Validate(...)`
-  directly, no DI needed) covering each rule's pass/fail case.
+- Test the happy path plus any Domain-exception path the handler can
+  still hit (e.g. an invalid rename) — a handler unit test calls
+  `Handle(...)` directly, bypassing the validator, so it exercises paths
+  production traffic never reaches. Existence/uniqueness failures are no
+  longer handler-level concerns — test those on the validator instead.
+- Add a validator test file too, using `await validator.ValidateAsync(command)`
+  — **never the synchronous `Validate(...)`** if the validator has any
+  `MustAsync` rule; FluentValidation throws
+  `AsyncValidatorInvokedSynchronouslyException` even for a test that only
+  exercises an unrelated sync rule. Construct the validator with
+  NSubstitute repository fakes, stubbing the happy path as the default
+  (`repository.NameExistsAsync(...).Returns(false)`,
+  `repository.GetByIdAsync(...).Returns(someEntity)`) so pure shape-rule
+  tests aren't tripped up by the async rule, then add dedicated tests for
+  each `MustAsync` rule asserting `result.Errors` contains the expected
+  `ErrorCode`.
 
 ### 5. Infrastructure adapter
 
@@ -251,16 +277,22 @@ public sealed record CreateWidgetCommand(string Name) : ICommand<WidgetResponse>
 ```csharp
 // Application/Widgets/CreateWidget/CreateWidgetCommandValidator.cs
 using FluentValidation;
+using {Service}.Application.Abstractions;
 using {Service}.Domain.Entities;
 
 namespace {Service}.Application.Widgets.CreateWidget;
 
-// Cross-aggregate rules (uniqueness/existence) need the repository, so they stay in the handler below, not here.
 public sealed class CreateWidgetCommandValidator : AbstractValidator<CreateWidgetCommand>
 {
-    public CreateWidgetCommandValidator()
+    public CreateWidgetCommandValidator(IWidgetRepository repository)
     {
         RuleFor(command => command.Name).NotEmpty().MaximumLength(Widget.NameMaxLength);
+
+        // Delete this rule if the feature has no uniqueness rule.
+        RuleFor(command => command.Name)
+            .MustAsync(async (name, ct) => !await repository.NameExistsAsync(name, excludeId: null, ct))
+            .WithErrorCode("Widget.DuplicateName")
+            .WithMessage(command => $"A widget named '{command.Name}' already exists.");
     }
 }
 ```
@@ -320,13 +352,6 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
     {
         var widget = command.ToModel();
 
-        // Delete this block if the feature has no uniqueness rule.
-        if (await _repository.NameExistsAsync(widget.Name, excludeId: null, cancellationToken))
-        {
-            return Result.Failure<WidgetResponse>(
-                Error.Conflict("Widget.DuplicateName", $"A widget named '{widget.Name}' already exists."));
-        }
-
         _repository.Add(widget);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -354,16 +379,30 @@ public sealed record UpdateWidgetCommand(Guid WidgetId, string Name) : ICommand<
 ```csharp
 // Application/Widgets/UpdateWidget/UpdateWidgetCommandValidator.cs
 using FluentValidation;
+using {Service}.Application.Abstractions;
 using {Service}.Domain.Entities;
 
 namespace {Service}.Application.Widgets.UpdateWidget;
 
 public sealed class UpdateWidgetCommandValidator : AbstractValidator<UpdateWidgetCommand>
 {
-    public UpdateWidgetCommandValidator()
+    public UpdateWidgetCommandValidator(IWidgetRepository repository)
     {
         RuleFor(command => command.WidgetId).NotEmpty();
+
+        RuleFor(command => command.WidgetId)
+            .MustAsync(async (id, ct) => await repository.GetByIdAsync(id, ct) is not null)
+            .WithErrorCode("Widget.NotFound")
+            .WithMessage(command => $"Widget '{command.WidgetId}' was not found.");
+
         RuleFor(command => command.Name).NotEmpty().MaximumLength(Widget.NameMaxLength);
+
+        // Delete this rule if the feature has no uniqueness rule.
+        RuleFor(command => command)
+            .MustAsync(async (command, ct) => !await repository.NameExistsAsync(command.Name, command.WidgetId, ct))
+            .WithErrorCode("Widget.DuplicateName")
+            .WithMessage(command => $"A widget named '{command.Name}' already exists.")
+            .OverridePropertyName(nameof(UpdateWidgetCommand.Name));
     }
 }
 // WidgetId is still validated even though it's route-sourced, not
@@ -405,19 +444,8 @@ public sealed class UpdateWidgetCommandHandler : ICommandHandler<UpdateWidgetCom
 
     public async Task<Result<WidgetResponse>> Handle(UpdateWidgetCommand command, CancellationToken cancellationToken)
     {
-        var widget = await _repository.GetByIdAsync(command.WidgetId, cancellationToken);
-        if (widget is null)
-        {
-            return Result.Failure<WidgetResponse>(
-                Error.NotFound("Widget.NotFound", $"Widget '{command.WidgetId}' was not found."));
-        }
-
-        // Delete this block if the feature has no uniqueness rule.
-        if (await _repository.NameExistsAsync(command.Name, excludeId: widget.Id, cancellationToken))
-        {
-            return Result.Failure<WidgetResponse>(
-                Error.Conflict("Widget.DuplicateName", $"A widget named '{command.Name}' already exists."));
-        }
+        // Existence already guaranteed by UpdateWidgetCommandValidator.
+        var widget = (await _repository.GetByIdAsync(command.WidgetId, cancellationToken))!;
 
         command.ApplyTo(widget);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
@@ -609,7 +637,6 @@ public class CreateWidgetCommandHandlerTests
     public async Task Handle_WithValidCommand_PersistsAndReturnsTheValue()
     {
         var repository = Substitute.For<IWidgetRepository>();
-        repository.NameExistsAsync("Example", null, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new CreateWidgetCommandHandler(repository, unitOfWork);
 
@@ -622,20 +649,6 @@ public class CreateWidgetCommandHandlerTests
         // (see AuditableEntitySaveChangesInterceptorTests for that, docs/adr/0008).
         repository.Received(1).Add(Arg.Is<Widget>(w => w.Id == result.Value.Id));
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_WithDuplicateName_ReturnsConflict()
-    {
-        var repository = Substitute.For<IWidgetRepository>();
-        repository.NameExistsAsync("example", null, Arg.Any<CancellationToken>()).Returns(true);
-        var handler = new CreateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>());
-
-        var result = await handler.Handle(
-            new CreateWidgetCommand("example"), CancellationToken.None); // case-insensitive match
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.Conflict);
     }
 
     [Fact]
@@ -655,24 +668,44 @@ public class CreateWidgetCommandHandlerTests
 
 ```csharp
 // Tests/Widgets/CreateWidget/CreateWidgetCommandValidatorTests.cs
+using {Service}.Application.Abstractions;
 using {Service}.Application.Widgets.CreateWidget;
 
 namespace {Service}.Tests.Widgets.CreateWidget;
 
 public class CreateWidgetCommandValidatorTests
 {
-    private readonly CreateWidgetCommandValidator _validator = new();
+    private readonly IWidgetRepository _repository = Substitute.For<IWidgetRepository>();
+    private readonly CreateWidgetCommandValidator _validator;
 
-    [Fact]
-    public void Validate_WithValidCommand_Passes()
+    public CreateWidgetCommandValidatorTests()
     {
-        _validator.Validate(new CreateWidgetCommand("Example")).IsValid.Should().BeTrue();
+        _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _validator = new CreateWidgetCommandValidator(_repository);
     }
 
     [Fact]
-    public void Validate_WithEmptyName_Fails()
+    public async Task Validate_WithValidCommand_Passes()
     {
-        _validator.Validate(new CreateWidgetCommand("")).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(new CreateWidgetCommand("Example"))).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithEmptyName_Fails()
+    {
+        (await _validator.ValidateAsync(new CreateWidgetCommand(""))).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Validate_WithDuplicateName_FailsWithDuplicateNameErrorCode()
+    {
+        _repository.NameExistsAsync("Example", null, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _validator.ValidateAsync(new CreateWidgetCommand("Example"));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Widget.DuplicateName");
     }
 }
 ```
@@ -694,7 +727,6 @@ public class UpdateWidgetCommandHandlerTests
         var widget = new Widget(Guid.NewGuid(), "Old Name");
         var repository = Substitute.For<IWidgetRepository>();
         repository.GetByIdAsync(widget.Id, Arg.Any<CancellationToken>()).Returns(widget);
-        repository.NameExistsAsync("New Name", widget.Id, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new UpdateWidgetCommandHandler(repository, unitOfWork);
 
@@ -704,18 +736,68 @@ public class UpdateWidgetCommandHandlerTests
         result.Value.Name.Should().Be("New Name");
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
+}
+// Existence/uniqueness failures (Widget.NotFound/Widget.DuplicateName)
+// are no longer handler-level outcomes - they're covered by
+// UpdateWidgetCommandValidatorTests below instead.
+```
+
+```csharp
+// Tests/Widgets/UpdateWidget/UpdateWidgetCommandValidatorTests.cs
+using {Service}.Application.Abstractions;
+using {Service}.Application.Widgets.UpdateWidget;
+using {Service}.Domain.Entities;
+
+namespace {Service}.Tests.Widgets.UpdateWidget;
+
+public class UpdateWidgetCommandValidatorTests
+{
+    private readonly IWidgetRepository _repository = Substitute.For<IWidgetRepository>();
+    private readonly UpdateWidgetCommandValidator _validator;
+    private readonly Guid _widgetId = Guid.NewGuid();
+
+    public UpdateWidgetCommandValidatorTests()
+    {
+        var widget = new Widget(_widgetId, "Old Name");
+        _repository.GetByIdAsync(_widgetId, Arg.Any<CancellationToken>()).Returns(widget);
+        _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _validator = new UpdateWidgetCommandValidator(_repository);
+    }
 
     [Fact]
-    public async Task Handle_WithUnknownWidgetId_ReturnsNotFound()
+    public async Task Validate_WithValidCommand_Passes()
     {
-        var repository = Substitute.For<IWidgetRepository>();
-        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Widget?)null);
-        var handler = new UpdateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>());
+        (await _validator.ValidateAsync(new UpdateWidgetCommand(_widgetId, "New Name"))).IsValid.Should().BeTrue();
+    }
 
-        var result = await handler.Handle(new UpdateWidgetCommand(Guid.NewGuid(), "New Name"), CancellationToken.None);
+    [Fact]
+    public async Task Validate_WithEmptyName_Fails()
+    {
+        (await _validator.ValidateAsync(new UpdateWidgetCommand(_widgetId, ""))).IsValid.Should().BeFalse();
+    }
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.NotFound);
+    [Fact]
+    public async Task Validate_WithUnknownWidgetId_FailsWithNotFoundErrorCode()
+    {
+        var unknownId = Guid.NewGuid();
+        _repository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Widget?)null);
+
+        var result = await _validator.ValidateAsync(new UpdateWidgetCommand(unknownId, "New Name"));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Widget.NotFound");
+    }
+
+    [Fact]
+    public async Task Validate_RenamingToAnotherWidgetsName_FailsWithDuplicateNameErrorCode()
+    {
+        _repository.NameExistsAsync("New Name", _widgetId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _validator.ValidateAsync(new UpdateWidgetCommand(_widgetId, "New Name"));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Widget.DuplicateName");
     }
 }
 ```

@@ -42,7 +42,7 @@ Api/Infrastructure and are exempt from the gate — see `../docs/QUALITY.md`.
 
 ## Known gaps
 
-- `ServicesService` has two real verticals (Tags `/api/v1/tags`,
-  ServiceOfferings `/api/v1/service-offerings`) — the
+- `ServicesService` has three real verticals (Tags `/api/v1/tags`,
+  Categories `/api/v1/categories`, Services `/api/v1/services`) — the
   Appointments/Clients verticals mentioned in
   `apps/admin-frontend/docs/STATUS.md` are still unbuilt.

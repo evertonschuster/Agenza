@@ -18,12 +18,6 @@ public sealed class CreateTagCommandHandler : ICommandHandler<CreateTagCommand, 
     {
         var tag = command.ToModel();
 
-        if (await _tagRepository.NameExistsAsync(tag.Name, excludeTagId: null, cancellationToken))
-        {
-            return Result.Failure<TagResponse>(
-                Error.Conflict("Tag.DuplicateName", $"Já existe uma etiqueta chamada '{tag.Name}'."));
-        }
-
         _tagRepository.Add(tag);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 

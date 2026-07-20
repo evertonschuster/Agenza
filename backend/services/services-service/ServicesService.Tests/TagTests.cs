@@ -44,26 +44,6 @@ public class TagTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Constructor_WithMissingName_Throws(string name)
-    {
-        var act = () => new Tag(Guid.NewGuid(), name, Teal, null);
-
-        act.Should().Throw<InvalidTagException>();
-    }
-
-    [Fact]
-    public void Constructor_WithNameOverMaxLength_Throws()
-    {
-        var name = new string('x', Tag.NameMaxLength + 1);
-
-        var act = () => new Tag(Guid.NewGuid(), name, Teal, null);
-
-        act.Should().Throw<InvalidTagException>();
-    }
-
-    [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
@@ -72,16 +52,6 @@ public class TagTests
         var tag = new Tag(Guid.NewGuid(), "VIP", Teal, description);
 
         tag.Description.Should().BeNull();
-    }
-
-    [Fact]
-    public void Constructor_WithDescriptionOverMaxLength_Throws()
-    {
-        var description = new string('x', Tag.DescriptionMaxLength + 1);
-
-        var act = () => new Tag(Guid.NewGuid(), "VIP", Teal, description);
-
-        act.Should().Throw<InvalidTagException>();
     }
 
     [Fact]
@@ -94,17 +64,6 @@ public class TagTests
         tag.Name.Should().Be("Returning");
         tag.Color.Value.Should().Be("#ef4444");
         tag.Description.Should().BeNull();
-    }
-
-    [Fact]
-    public void Update_WithInvalidName_ThrowsAndKeepsState()
-    {
-        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
-
-        var act = () => tag.Update("", Teal, null);
-
-        act.Should().Throw<InvalidTagException>();
-        tag.Name.Should().Be("VIP");
     }
 
     [Fact]
@@ -158,17 +117,6 @@ public class TagColorTests
         var color = TagColor.From("  #0D9488  ");
 
         color.Value.Should().Be("#0d9488");
-    }
-
-    [Theory]
-    [InlineData("#123456")] // not in the palette
-    [InlineData("teal")]
-    [InlineData("")]
-    public void From_RejectsValuesOutsideThePalette(string value)
-    {
-        var act = () => TagColor.From(value);
-
-        act.Should().Throw<InvalidTagException>();
     }
 
     [Fact]

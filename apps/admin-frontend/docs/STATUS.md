@@ -81,18 +81,34 @@ what's blocked, and what order to build things in.
 
 ### Services
 
-| Piece                                    | Status | Notes                        |
-| ---------------------------------------- | ------ | ---------------------------- |
-| `Service` entity                         | `stub` | Waiting on API spec          |
-| `ServiceRepository` interface            | `stub` |                              |
-| Use cases (List, Create, Update, Delete) | `stub` |                              |
-| `ApiServiceRepository`                   | `stub` |                              |
-| `serviceMapper`                          | `stub` |                              |
-| `useServices` hook                       | `stub` |                              |
-| `ServicesPage`                           | `stub` | Renders "under construction" |
+| Piece                                         | Status    | Notes                                                                                         |
+| --------------------------------------------- | --------- | --------------------------------------------------------------------------------------------- |
+| `Service` entity                              | `done`    | Duration range + discount-cap invariants validated in `create()`                              |
+| `ServiceRepository` interface                 | `done`    |                                                                                               |
+| Use cases (List, Create, Update, Delete)      | `done`    |                                                                                               |
+| `ApiServiceRepository` + `serviceMapper`      | `done`    |                                                                                               |
+| `useServices` hook                            | `done`    |                                                                                               |
+| `ServicesPage` + `ServiceForm` + nav entry    | `done`    | Table list, dialog create/edit form (category `Select`, tag toggle grid), delete with confirm |
+| Backend (services-service `/api/v1/services`) | `blocked` | Contract confirmed in docs/API.md; backend being built in parallel                            |
 
-**Blocked on:** API spec from project owner, `HttpClient` implementation.
-**Dependency:** None — can be built first.
+**Dependency:** none structurally — depends on Categories and Tags for the
+create/edit form's pickers, both already built.
+
+---
+
+### Categories
+
+| Piece                                           | Status    | Notes                                                              |
+| ----------------------------------------------- | --------- | ------------------------------------------------------------------ |
+| `Category` entity                               | `done`    |                                                                    |
+| `CategoryRepository` interface                  | `done`    |                                                                    |
+| Use cases (List, Create, Update, Delete)        | `done`    |                                                                    |
+| `ApiCategoryRepository` + `categoryMapper`      | `done`    |                                                                    |
+| `useCategories` hook                            | `done`    |                                                                    |
+| `CategoriesPage` + nav entry                    | `done`    | Table list, dialog create/edit form, delete with confirm           |
+| Backend (services-service `/api/v1/categories`) | `blocked` | Contract confirmed in docs/API.md; backend being built in parallel |
+
+**Dependency:** none. Referenced by Services (optional `categoryId`).
 
 ---
 
@@ -167,13 +183,15 @@ what's blocked, and what order to build things in.
 ## Recommended build order
 
 ```
-1. HttpClient (unblocks all REST features)
-2. Services    (no dependencies, simplest CRUD — good first REST vertical)
-3. Clients     (simple CRUD)
-4. Appointments (depends on Services for create form)
-5. Inbox       (depends on Clients)
-6. Dashboard   (depends on Appointments + Inbox for overview data)
-7. Settings    (independent, can be done any time after HttpClient)
+1. HttpClient (unblocks all REST features)          [done]
+2. Tags        (no dependencies, first REST vertical) [done]
+3. Categories  (no dependencies, simplest CRUD)      [done]
+4. Services    (depends on Categories + Tags for its form pickers) [done]
+5. Clients     (simple CRUD)
+6. Appointments (depends on Services for create form)
+7. Inbox       (depends on Clients)
+8. Dashboard   (depends on Appointments + Inbox for overview data)
+9. Settings    (independent, can be done any time after HttpClient)
 ```
 
 ---
@@ -192,5 +210,6 @@ what's blocked, and what order to build things in.
 | Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager)  | 14                                     | 73                                |
 | Tags vertical + UI system (shadcn/ui migration, dark mode, mobile-responsive `AdminLayout`) | not logged incrementally               | 116 (verified via `npm run test`) |
 | UI reset to stock shadcn theme + Tags list/form → `Table`/`Dialog`                          | 0 (existing tests updated, none added) | 116 (verified via `npm run test`) |
+| Categories + Services verticals (entities, use cases, repos, mappers, hooks, pages)         | 75                                     | 191 (verified via `npm run test`) |
 
 Update the test count row whenever a feature vertical is completed.

@@ -25,4 +25,7 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
             t => t.Name.ToLower() == normalized && (excludeTagId == null || t.Id != excludeTagId),
             cancellationToken);
     }
+
+    public Task<IReadOnlyList<Tag>> GetByIdsAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken) =>
+        ListAsync(t => tagIds.Contains(t.Id), order: null, cancellationToken);
 }

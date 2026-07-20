@@ -10,6 +10,7 @@ import { ClientsPage } from '../pages/ClientsPage/ClientsPage'
 import { InboxPage } from '../pages/InboxPage/InboxPage'
 import { SettingsPage } from '../pages/SettingsPage/SettingsPage'
 import { TagsPage } from '../pages/TagsPage/TagsPage'
+import { CategoriesPage } from '../pages/CategoriesPage/CategoriesPage'
 
 export const router = createBrowserRouter([
   {
@@ -32,6 +33,7 @@ export const router = createBrowserRouter([
           { path: 'dashboard', element: <DashboardPage /> },
           { path: 'appointments', element: <AppointmentsPage /> },
           { path: 'services', element: <ServicesPage /> },
+          { path: 'categories', element: <CategoriesPage /> },
           { path: 'clients', element: <ClientsPage /> },
           { path: 'inbox', element: <InboxPage /> },
           { path: 'tags', element: <TagsPage /> },

@@ -1,52 +1,72 @@
+using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.CreateTag;
 
 namespace ServicesService.Tests.Tags.CreateTag;
 
 public class CreateTagCommandValidatorTests
 {
-    private readonly CreateTagCommandValidator _validator = new();
+    private readonly ITagRepository _tagRepository = Substitute.For<ITagRepository>();
+    private readonly CreateTagCommandValidator _validator;
+
+    public CreateTagCommandValidatorTests()
+    {
+        _tagRepository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _validator = new CreateTagCommandValidator(_tagRepository);
+    }
 
     [Fact]
-    public void Validate_WithValidCommand_Passes()
+    public async Task Validate_WithValidCommand_Passes()
     {
-        var result = _validator.Validate(new CreateTagCommand("VIP", "#0d9488", "Note"));
+        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", "Note"));
 
         result.IsValid.Should().BeTrue();
     }
 
     [Fact]
-    public void Validate_WithEmptyName_Fails()
+    public async Task Validate_WithEmptyName_Fails()
     {
-        var result = _validator.Validate(new CreateTagCommand("", "#0d9488", null));
+        var result = await _validator.ValidateAsync(new CreateTagCommand("", "#0d9488", null));
 
         result.IsValid.Should().BeFalse();
     }
 
     [Fact]
-    public void Validate_WithNameOverMaxLength_Fails()
+    public async Task Validate_WithNameOverMaxLength_Fails()
     {
         var name = new string('x', 41);
 
-        var result = _validator.Validate(new CreateTagCommand(name, "#0d9488", null));
+        var result = await _validator.ValidateAsync(new CreateTagCommand(name, "#0d9488", null));
 
         result.IsValid.Should().BeFalse();
     }
 
     [Fact]
-    public void Validate_WithColorOutsidePalette_Fails()
+    public async Task Validate_WithColorOutsidePalette_Fails()
     {
-        var result = _validator.Validate(new CreateTagCommand("VIP", "#123456", null));
+        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#123456", null));
 
         result.IsValid.Should().BeFalse();
     }
 
     [Fact]
-    public void Validate_WithDescriptionOverMaxLength_Fails()
+    public async Task Validate_WithDescriptionOverMaxLength_Fails()
     {
         var description = new string('x', 201);
 
-        var result = _validator.Validate(new CreateTagCommand("VIP", "#0d9488", description));
+        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", description));
 
         result.IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Validate_WithDuplicateName_FailsWithDuplicateNameErrorCode()
+    {
+        _tagRepository.NameExistsAsync("VIP", null, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", null));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Tag.DuplicateName");
     }
 }

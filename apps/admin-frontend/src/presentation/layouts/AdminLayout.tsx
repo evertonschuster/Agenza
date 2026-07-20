@@ -6,6 +6,7 @@ import {
   ChevronsRight,
   Inbox as InboxIcon,
   LayoutDashboard,
+  LayoutGrid,
   LogOut,
   type LucideIcon,
   Menu,
@@ -29,6 +30,7 @@ const NAV_ITEMS: NavItem[] = [
   { label: 'Painel', to: '/dashboard', icon: LayoutDashboard },
   { label: 'Agendamentos', to: '/appointments', icon: CalendarDays },
   { label: 'Serviços', to: '/services', icon: Sparkles },
+  { label: 'Categorias', to: '/categories', icon: LayoutGrid },
   { label: 'Clientes', to: '/clients', icon: Users },
   { label: 'Caixa de entrada', to: '/inbox', icon: InboxIcon },
   { label: 'Etiquetas', to: '/tags', icon: TagIcon },
@@ -112,6 +114,7 @@ function SidebarFooter({ isCollapsed, businessName, onLogout }: SidebarFooterPro
         <ThemeToggle />
         <Button
           variant="ghost"
+          aria-label="Sair"
           className={['flex-1 justify-start', isCollapsed ? 'md:flex-none' : ''].join(' ')}
           onClick={onLogout}
         >

@@ -71,17 +71,45 @@ How an appointment was created:
 
 A service the business offers that clients can book.
 
-Key fields:
+Key fields (confirmed, docs/API.md):
 
 - `id`
-- `name` — e.g. "60-minute Deep Tissue Massage"
-- `duration` — in minutes (integer)
-- `price` — monetary amount (confirm currency handling with API spec)
+- `code` — server-assigned integer, immutable, shown to staff as a
+  short human-friendly identifier (never editable, never sent on create)
+- `name` — e.g. "Massagem relaxante"
 - `description` — optional, shown to clients by the AI
-- `isActive` — whether the AI should offer this service to clients
+- `durationMinutes` — the default booked duration, in minutes
+- `minDurationMinutes` / `maxDurationMinutes` — the bookable duration
+  range around the default (`1 <= min <= duration <= max <= 1440`)
+- `price` — monetary amount (currency handling still to be confirmed
+  with a future API spec revision; treated as a plain number for now)
+- `maxDiscountPercentage` — cap on any discount staff can apply at
+  booking time (`0–100`)
+- `categoryId` / `categoryName` — optional Category this service
+  belongs to (`null` when uncategorized)
+- `tags` — `TagSummary[]` (`id`/`name`/`color`), a read-only slice of
+  the Tag catalog attached to this service; managing which tags exist
+  is the Tags vertical's job, this is just the attachment
 
-Services are tenant-scoped. The AI references this list when answering
-client questions about what's available.
+Services are **tenant-scoped**. The AI references this list when
+answering client questions about what's available.
+
+---
+
+## Category
+
+A tenant-scoped grouping the business uses to organize its Services
+catalog — e.g. "Massagens", "Estética", "Cortes". v1 manages the
+category _catalog_ only; a Service optionally references one Category
+by id.
+
+Key fields (confirmed, docs/API.md):
+
+- `id`
+- `name` — required, trimmed, non-empty
+
+Categories are **tenant-scoped**: two businesses can both have a
+"Massagens" category; they are unrelated records.
 
 ---
 

@@ -67,10 +67,17 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
 ### Rich domain model — no anemic entities
 
 - Entities validate their invariants in constructors/factory methods and
-  **throw** domain exceptions on violation (see `Tenant`: name required,
-  `Tag`: name/color/description rules). This is deliberate even though
-  the rest of the stack uses the Result pattern — see "Result pattern"
-  below for why Domain is the one place that still throws.
+  **throw** domain exceptions on violation by default (see `Tenant` in
+  identity-service: name required) — this is deliberate even though the
+  rest of the stack uses the Result pattern, see "Result pattern" below
+  for why Domain is normally the one place that still throws.
+  **Exception:** `services-service`'s `Tag`/`Category`/`Service` are
+  plain, always-valid-by-construction data holders instead — every rule
+  they used to enforce themselves now lives entirely in their
+  Create/Update FluentValidation validators, and their constructors/
+  `Update` methods never throw (docs/adr/0011). A brand-new service
+  should still default to the throwing pattern above; only deviate once
+  a service's Domain rules are fully duplicated in mature validators.
 - No public setters. `private set` + behavior methods that keep the
   entity valid. A `private` parameterless constructor exists only for EF.
 - New value concepts with rules (email, time range, money) become value
@@ -100,7 +107,7 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   `BusinessException` to a 400 Problem Details response.
 - A tenant-owned aggregate root inherits `TenantOwnedEntity`
   (`{Service}.Domain/Common/TenantOwnedEntity.cs` — `BaseEntity` +
-  `ITenantOwned` combined, see `Tag`/`ServiceOffering`) instead of
+  `ITenantOwned` combined, see `Tag`/`Service`) instead of
   `BaseEntity` directly, and needs no `ITenantOwned`/`AssignTenant`
   boilerplate of its own. Its constructor never takes a `tenantId`
   parameter at all — `TenantId` starts `Guid.Empty` and only
@@ -198,13 +205,18 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
 ### Result pattern — where exceptions still live and where they don't
 
 - **Domain** (entity constructors/methods, value object factories):
-  still throws — always a `BusinessException` subtype (`Code` +
-  `Message`), never a raw `Exception`/`ArgumentException`. Domain has
-  zero project references, so it cannot depend on `Admin.SharedKernel`'s
-  `Result` type — and by the time a handler constructs a domain object,
-  FluentValidation has already checked shape, so hitting a domain
-  exception in normal operation means a validator/domain mismatch bug,
-  not a real user-facing outcome.
+  still throws by default — always a `BusinessException` subtype
+  (`Code` + `Message`), never a raw `Exception`/`ArgumentException`.
+  Domain has zero project references, so it cannot depend on
+  `Admin.SharedKernel`'s `Result` type — and by the time a handler
+  constructs a domain object, FluentValidation has already checked
+  shape, so hitting a domain exception in normal operation means a
+  validator/domain mismatch bug, not a real user-facing outcome.
+  `identity-service`'s `Tenant` is the live example. **Exception:**
+  `services-service`'s `Tag`/`Category`/`Service` don't throw at all —
+  every invariant they used to check is now enforced entirely by
+  FluentValidation before construction, so Domain has nothing left to
+  guard (docs/adr/0011). `TagColor.From` likewise no longer throws.
 - **Application handlers do NOT catch it.** Let a `BusinessException`
   propagate out of `Handle(...)` uncaught — no per-handler try/catch
   (docs/adr/0006). Cross-aggregate rules that need a repository
@@ -225,11 +237,47 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
 
 - One `<Operation>CommandValidator : AbstractValidator<TCommand>` per
   command that takes user input, checking cheap shape rules (required,
-  length, enum/palette membership) — NOT cross-aggregate rules (those
-  need the repository, so they belong in the handler).
+  length, enum/palette membership) **and** cross-aggregate rules that
+  need a repository round-trip (uniqueness, existence) — see
+  docs/adr/0010. The validator's constructor takes the relevant
+  repository interface(s) (e.g. `ICategoryRepository`) and uses async
+  `MustAsync` rules for those checks, e.g.:
+  ```csharp
+  RuleFor(c => c.Name)
+      .MustAsync(async (name, ct) => !await categoryRepository.NameExistsAsync(name, excludeCategoryId: null, ct))
+      .WithErrorCode("Category.DuplicateName")
+      .WithMessage(c => $"Já existe uma categoria chamada '{c.Name}'.");
+  ```
+  Handlers assume validated input and focus purely on orchestration
+  (fetch what's needed → construct/apply → persist → return) — no more
+  inline `if (...) return Result.Failure(...)` existence/uniqueness
+  checks. An Update handler that needs the entity re-fetches it by id
+  and asserts non-null with `!`, with a one-line comment noting
+  existence is already guaranteed by the validator (see `TagsController`'s
+  vertical, or any of `CreateTag`/`UpdateTag`/`CreateCategory`/
+  `UpdateCategory`/`CreateService`/`UpdateService` for the pattern).
+- **Accepted trade-off (docs/adr/0010):** the dispatcher's `ValidateAsync`
+  collapses *every* FluentValidation failure — shape or cross-aggregate —
+  into a single generic `Error.Validation("Validation.Failed", ...)`
+  (400). It does not read FluentValidation's `ErrorCode`/`Severity`, so
+  a duplicate-name or not-found check that used to return a distinct
+  409/404 from the handler now returns a generic 400 from validation.
+  Each moved rule still sets `.WithErrorCode("Entity.SpecificCode")`
+  anyway — cheap, future-proofs a later Dispatcher change, and makes
+  validator unit tests able to assert on the specific rule that failed.
 - Runs automatically: the dispatcher resolves `IValidator<TCommand>` (if
   one is registered) and validates before calling the handler. A
   validation failure never reaches the handler.
+- **Any validator with an async `MustAsync` rule can no longer be tested
+  with the synchronous `Validate(...)`** — FluentValidation throws
+  `AsyncValidatorInvokedSynchronouslyException`, even for a test that
+  only exercises an unrelated sync rule. Use
+  `await validator.ValidateAsync(command)` in every test for such a
+  validator, and construct the validator with NSubstitute repository
+  fakes stubbing the happy path as the default setup (e.g.
+  `repository.NameExistsAsync(...).Returns(false)`,
+  `repository.GetByIdAsync(...).Returns(someEntity)`) so shape-only
+  tests aren't tripped up by an unrelated async rule.
 
 ### UnitOfWork
 

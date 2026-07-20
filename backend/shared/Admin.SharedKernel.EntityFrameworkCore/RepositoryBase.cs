@@ -45,6 +45,23 @@ public abstract class RepositoryBase<TEntity>
         return await query.ToListAsync(cancellationToken);
     }
 
+    protected async Task<(IReadOnlyList<TEntity> Items, int TotalCount)> ListPagedAsync(
+        Func<IQueryable<TEntity>, IQueryable<TEntity>>? order,
+        int page,
+        int pageSize,
+        CancellationToken cancellationToken)
+    {
+        IQueryable<TEntity> query = Set;
+        if (order is not null)
+        {
+            query = order(query);
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        return (items, totalCount);
+    }
+
     protected Task<bool> AnyAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken) =>
         Set.AnyAsync(predicate, cancellationToken);
 

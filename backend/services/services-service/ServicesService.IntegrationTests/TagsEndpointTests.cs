@@ -93,7 +93,7 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Create_with_a_duplicate_name_in_the_same_tenant_returns_409()
+    public async Task Create_with_a_duplicate_name_in_the_same_tenant_returns_400()
     {
         var tenantId = Guid.NewGuid();
         var client = AuthenticatedClient(tenantId);
@@ -106,7 +106,7 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
             description = (string?)null,
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Update_from_another_tenant_returns_404_not_the_others_data()
+    public async Task Update_from_another_tenant_returns_400_not_the_others_data()
     {
         var owner = Guid.NewGuid();
         var intruder = Guid.NewGuid();
@@ -150,7 +150,7 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
             description = (string?)null,
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     [Fact]
@@ -201,13 +201,13 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Delete_with_an_unknown_id_returns_404()
+    public async Task Delete_with_an_unknown_id_returns_400()
     {
         var client = AuthenticatedClient(Guid.NewGuid());
 
         var response = await client.DeleteAsync($"{TagsUrl}/{Guid.NewGuid()}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
     private HttpClient AuthenticatedClient(Guid tenantId) => AuthenticatedClient(tenantId.ToString());

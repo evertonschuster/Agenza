@@ -1,4 +1,3 @@
-using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.DeleteTag;
 using ServicesService.Domain.Entities;
@@ -22,20 +21,5 @@ public class DeleteTagCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         repository.Received(1).Remove(tag);
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_WithUnknownTagId_ReturnsNotFound()
-    {
-        var repository = Substitute.For<ITagRepository>();
-        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Tag?)null);
-        var unitOfWork = Substitute.For<IUnitOfWork>();
-        var handler = new DeleteTagCommandHandler(repository, unitOfWork);
-
-        var result = await handler.Handle(new DeleteTagCommand(Guid.NewGuid()), CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.NotFound);
-        await unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 }

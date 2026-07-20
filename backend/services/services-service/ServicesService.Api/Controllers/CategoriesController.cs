@@ -1,0 +1,50 @@
+using Admin.SharedKernel;
+using Asp.Versioning;
+using Microsoft.AspNetCore.Mvc;
+using ServicesService.Application.Categories.CreateCategory;
+using ServicesService.Application.Categories.DeleteCategory;
+using ServicesService.Application.Categories.ListCategories;
+using ServicesService.Application.Categories.UpdateCategory;
+
+namespace ServicesService.Api.Controllers;
+
+[ApiController]
+[ApiVersion("1.0")]
+[Route("api/v{version:apiVersion}/categories")]
+public class CategoriesController : ControllerBase
+{
+    private readonly IDispatcher _dispatcher;
+
+    public CategoriesController(IDispatcher dispatcher)
+    {
+        _dispatcher = dispatcher;
+    }
+
+    [HttpGet]
+    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Query(new ListCategoriesQuery(), cancellationToken);
+        return result.ToActionResult(this, categories => Ok(categories));
+    }
+
+    [HttpPost]
+    public async Task<IActionResult> Create(CreateCategoryCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Send(command, cancellationToken);
+        return result.ToActionResult(this, category => Created($"/api/v1/categories/{category.Id}", category));
+    }
+
+    [HttpPut("{id:guid}")]
+    public async Task<IActionResult> Update(Guid id, UpdateCategoryCommand command, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Send(command with { CategoryId = id }, cancellationToken);
+        return result.ToActionResult(this, category => Ok(category));
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Send(new DeleteCategoryCommand(id), cancellationToken);
+        return result.ToActionResult(this, NoContent);
+    }
+}

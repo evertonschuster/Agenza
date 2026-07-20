@@ -149,9 +149,121 @@ Fixed color palette (the only accepted `color` values):
 #ef4444 (red)    #f59e0b (amber)  #22c55e (green)  #64748b (slate)
 ```
 
+### Categories
+
+Served by **services-service** (`VITE_API_BASE_URL`). Tenant scope comes
+from the `X-Tenant-Id` header, verified against the JWT's `tenant_id`
+claim. Routes are versioned (`Asp.Versioning.Mvc`, docs/adr/0005) —
+omitting the segment falls back to v1, but the frontend always sends it
+explicitly.
+
+| Method   | Path                      | Success                       |
+| -------- | ------------------------- | ----------------------------- |
+| `GET`    | `/api/v1/categories`      | `200` — `CategoryDto[]`       |
+| `POST`   | `/api/v1/categories`      | `201` — created `CategoryDto` |
+| `PUT`    | `/api/v1/categories/{id}` | `200` — updated `CategoryDto` |
+| `DELETE` | `/api/v1/categories/{id}` | `204` — no body               |
+
+`CategoryDto`:
+
+```json
+{
+  "id": "3f2b6a10-9c3e-4a1e-8b0a-2a1c3d4e5f60",
+  "name": "Massagens"
+}
+```
+
+Request body for `POST`/`PUT` is the same shape minus `id`: `{ "name": "Massagens" }`.
+
+Validation rules (server-enforced, mirror them client-side):
+
+- `name`: required, trimmed, non-empty → `400`
+- Unknown `{id}` within the tenant → `404`
+
 ### Services
 
-> Spec not yet received. Do not implement until provided by project owner.
+Served by **services-service** (`VITE_API_BASE_URL`). Tenant scope comes
+from the `X-Tenant-Id` header, verified against the JWT's `tenant_id`
+claim. Routes are versioned (`Asp.Versioning.Mvc`, docs/adr/0005) —
+omitting the segment falls back to v1, but the frontend always sends it
+explicitly.
+
+| Method   | Path                    | Success                           |
+| -------- | ----------------------- | --------------------------------- |
+| `GET`    | `/api/v1/services`      | `200` — `PagedResult<ServiceDto>` |
+| `POST`   | `/api/v1/services`      | `201` — created `ServiceDto`      |
+| `PUT`    | `/api/v1/services/{id}` | `200` — updated `ServiceDto`      |
+| `DELETE` | `/api/v1/services/{id}` | `204` — no body                   |
+
+`GET` accepts `page` (1-based, default `1`) and `pageSize` (default `20`,
+max `100`) query params, e.g. `GET /api/v1/services?page=2&pageSize=20`.
+Response envelope (`PagedResult<ServiceDto>`):
+
+```json
+{
+  "items": [/* ServiceDto[] */],
+  "totalCount": 45,
+  "page": 2,
+  "pageSize": 20
+}
+```
+
+`TagSummaryDto` (embedded on a `ServiceDto`, a slice of the full Tag):
+
+```json
+{ "id": "0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e", "name": "VIP", "color": "#0d9488" }
+```
+
+`ServiceDto`:
+
+```json
+{
+  "id": "7a1b2c3d-4e5f-4061-9a2b-3c4d5e6f7081",
+  "code": 1001,
+  "name": "Massagem relaxante",
+  "description": "Uma massagem relaxante de corpo inteiro",
+  "durationMinutes": 60,
+  "minDurationMinutes": 30,
+  "maxDurationMinutes": 90,
+  "price": 150,
+  "maxDiscountPercentage": 10,
+  "categoryId": "3f2b6a10-9c3e-4a1e-8b0a-2a1c3d4e5f60",
+  "categoryName": "Massagens",
+  "tags": [{ "id": "0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e", "name": "VIP", "color": "#0d9488" }]
+}
+```
+
+`description`, `categoryId`, and `categoryName` are `null` when unset.
+`code` is server-assigned and immutable — never sent in a request body.
+
+Request body for `POST`/`PUT` (`PUT` omits `code`, which never changes):
+
+```json
+{
+  "name": "Massagem relaxante",
+  "description": "Uma massagem relaxante de corpo inteiro",
+  "durationMinutes": 60,
+  "minDurationMinutes": 30,
+  "maxDurationMinutes": 90,
+  "price": 150,
+  "maxDiscountPercentage": 10,
+  "categoryId": "3f2b6a10-9c3e-4a1e-8b0a-2a1c3d4e5f60",
+  "tagIds": ["0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e"]
+}
+```
+
+`description` and `categoryId` are optional (`string | null`); `tagIds`
+is optional (defaults to an empty list server-side if omitted).
+
+Validation rules (server-enforced, mirror them client-side):
+
+- `name`: required, trimmed, non-empty → `400`
+- `1 <= minDurationMinutes <= durationMinutes <= maxDurationMinutes <= 1440` → `400`
+- `0 <= maxDiscountPercentage <= 100` → `400`
+- `price >= 0` → `400`
+- `categoryId`, if set, must reference a Category owned by the same tenant → `400`
+- `tagIds`, if set, must each reference a Tag owned by the same tenant → `400`
+- Unknown `{id}` within the tenant → `404`
 
 ### Appointments
 

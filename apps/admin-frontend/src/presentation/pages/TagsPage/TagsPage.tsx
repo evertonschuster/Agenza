@@ -143,7 +143,7 @@ export function TagsPage(): JSX.Element {
         )}
 
         {status === 'success' && tags.length > 0 && (
-          <div className="rounded-lg border">
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>

@@ -1,0 +1,195 @@
+import { describe, it, expect, vi } from 'vitest'
+import { renderHook, waitFor, act, type RenderHookResult } from '@testing-library/react'
+import { useServices, type UseServicesResult } from './useServices'
+import { AppContainerContext } from '../providers/AppContainerContext'
+import type { AppContainer } from '../../composition/container'
+import { Service } from '../../domain/entities/Service'
+import { Tenant } from '../../domain/value-objects/Tenant'
+import { User } from '../../domain/entities/User'
+import type { TenantContext } from '../../application/context/TenantContext'
+import type { CreateServiceInput } from '../../application/repositories/ServiceRepository'
+
+const serviceFixture = Service.create({
+  id: 'service-1',
+  code: 1001,
+  name: 'Massagem relaxante',
+  durationMinutes: 60,
+  minDurationMinutes: 30,
+  maxDurationMinutes: 90,
+  price: 150,
+  maxDiscountPercentage: 10,
+  tags: [],
+})
+
+const createInput: CreateServiceInput = {
+  name: 'Massagem relaxante',
+  durationMinutes: 60,
+  minDurationMinutes: 30,
+  maxDurationMinutes: 90,
+  price: 150,
+  maxDiscountPercentage: 10,
+}
+
+const pagedFixture = { services: [serviceFixture], totalCount: 1, page: 1, pageSize: 20 }
+
+interface FakeUseCases {
+  listServices: { execute: () => Promise<typeof pagedFixture> }
+  createService: { execute: () => Promise<Service> }
+  updateService: { execute: () => Promise<Service> }
+  deleteService: { execute: () => Promise<void> }
+}
+
+function createFakeContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
+  return {
+    useCases: {
+      listServices: { execute: vi.fn(() => Promise.resolve(pagedFixture)) },
+      createService: { execute: vi.fn(() => Promise.resolve(serviceFixture)) },
+      updateService: { execute: vi.fn(() => Promise.resolve(serviceFixture)) },
+      deleteService: { execute: vi.fn(() => Promise.resolve()) },
+      ...overrides,
+    },
+  } as unknown as AppContainer
+}
+
+function buildTenantContext(): TenantContext {
+  const tenant = Tenant.create('tenant-123')
+  return { tenant, user: User.create({ id: 'user-1', tenant }) }
+}
+
+function renderUseServices(
+  container: AppContainer,
+  tenantContext: TenantContext | null,
+): RenderHookResult<UseServicesResult, undefined> {
+  return renderHook<UseServicesResult, undefined>(() => useServices(tenantContext), {
+    wrapper: ({ children }) => (
+      <AppContainerContext.Provider value={container}>{children}</AppContainerContext.Provider>
+    ),
+  })
+}
+
+describe('useServices', () => {
+  it('loads services for the given tenant context', async () => {
+    const { result } = renderUseServices(createFakeContainer(), buildTenantContext())
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    expect(result.current.services).toEqual([serviceFixture])
+  })
+
+  it('returns an empty list without calling the use case when tenantContext is null', async () => {
+    const listServicesSpy = vi.fn(() => Promise.resolve(pagedFixture))
+    const { result } = renderUseServices(
+      createFakeContainer({ listServices: { execute: listServicesSpy } }),
+      null,
+    )
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    expect(result.current.services).toEqual([])
+    expect(listServicesSpy).not.toHaveBeenCalled()
+  })
+
+  it('creates a service then refetches the list', async () => {
+    const listServicesSpy = vi.fn(() => Promise.resolve(pagedFixture))
+    const createServiceSpy = vi.fn(() => Promise.resolve(serviceFixture))
+    const tenantContext = buildTenantContext()
+    const { result } = renderUseServices(
+      createFakeContainer({
+        listServices: { execute: listServicesSpy },
+        createService: { execute: createServiceSpy },
+      }),
+      tenantContext,
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+    listServicesSpy.mockClear()
+
+    await act(async () => {
+      await result.current.createService(createInput)
+    })
+
+    expect(createServiceSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, createInput)
+    expect(listServicesSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('deletes a service then refetches the list', async () => {
+    const listServicesSpy = vi.fn(() => Promise.resolve(pagedFixture))
+    const deleteServiceSpy = vi.fn(() => Promise.resolve())
+    const tenantContext = buildTenantContext()
+    const { result } = renderUseServices(
+      createFakeContainer({
+        listServices: { execute: listServicesSpy },
+        deleteService: { execute: deleteServiceSpy },
+      }),
+      tenantContext,
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+    listServicesSpy.mockClear()
+
+    await act(async () => {
+      await result.current.deleteService('service-1')
+    })
+
+    expect(deleteServiceSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'service-1')
+    expect(listServicesSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('rejects mutations when tenantContext is null', async () => {
+    const { result } = renderUseServices(createFakeContainer(), null)
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    await expect(result.current.createService(createInput)).rejects.toThrow()
+  })
+
+  it('exposes the paged metadata from the use case result', async () => {
+    const { result } = renderUseServices(
+      createFakeContainer({
+        listServices: {
+          execute: vi.fn(() =>
+            Promise.resolve({ services: [serviceFixture], totalCount: 42, page: 1, pageSize: 20 }),
+          ),
+        },
+      }),
+      buildTenantContext(),
+    )
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    expect(result.current.totalCount).toBe(42)
+    expect(result.current.page).toBe(1)
+    expect(result.current.pageSize).toBe(20)
+  })
+
+  it('refetches with the new page when setPage is called', async () => {
+    const listServicesSpy = vi.fn(() => Promise.resolve(pagedFixture))
+    const tenantContext = buildTenantContext()
+    const { result } = renderUseServices(
+      createFakeContainer({ listServices: { execute: listServicesSpy } }),
+      tenantContext,
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+    listServicesSpy.mockClear()
+
+    act(() => {
+      result.current.setPage(2)
+    })
+
+    await waitFor(() => {
+      expect(result.current.page).toBe(2)
+    })
+    expect(listServicesSpy).toHaveBeenCalledWith(tenantContext, { page: 2, pageSize: 20 })
+  })
+})
