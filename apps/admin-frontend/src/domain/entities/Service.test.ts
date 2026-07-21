@@ -65,6 +65,18 @@ describe('Service', () => {
     expect(() => Service.create(validInput({ name: 'x'.repeat(81) }))).toThrow(InvalidServiceError)
   })
 
+  it('throws when the description is over 500 characters', () => {
+    expect(() => Service.create(validInput({ description: 'x'.repeat(501) }))).toThrow(
+      InvalidServiceError,
+    )
+  })
+
+  it('allows a description of exactly 500 characters', () => {
+    const service = Service.create(validInput({ description: 'x'.repeat(500) }))
+
+    expect(service.description).toHaveLength(500)
+  })
+
   it('throws when minDurationMinutes is less than 1', () => {
     expect(() =>
       Service.create(validInput({ minDurationMinutes: 0, durationMinutes: 30 })),

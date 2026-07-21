@@ -21,9 +21,9 @@ public class TagsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] ListTagsQuery query, CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.Query(new ListTagsQuery(), cancellationToken);
+        var result = await _dispatcher.Query(query, cancellationToken);
         return result.ToActionResult(this, tags => Ok(tags));
     }
 

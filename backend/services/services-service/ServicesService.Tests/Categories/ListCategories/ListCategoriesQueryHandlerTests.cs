@@ -10,7 +10,7 @@ public class ListCategoriesQueryHandlerTests
     public async Task Handle_ReturnsCategoriesFromTheRepository()
     {
         var repository = Substitute.For<ICategoryRepository>();
-        repository.ListAsync(Arg.Any<CancellationToken>())
+        repository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new[] { new Category(Guid.NewGuid(), "Hair") });
         var handler = new ListCategoriesQueryHandler(repository);
 
@@ -24,12 +24,26 @@ public class ListCategoriesQueryHandlerTests
     public async Task Handle_WithNoCategories_ReturnsEmptyList()
     {
         var repository = Substitute.For<ICategoryRepository>();
-        repository.ListAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<Category>());
+        repository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Array.Empty<Category>());
         var handler = new ListCategoriesQueryHandler(repository);
 
         var result = await handler.Handle(new ListCategoriesQuery(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_PassesTheSearchTermToTheRepository()
+    {
+        var repository = Substitute.For<ICategoryRepository>();
+        repository.ListAsync("Hair", Arg.Any<CancellationToken>())
+            .Returns(new[] { new Category(Guid.NewGuid(), "Hair") });
+        var handler = new ListCategoriesQueryHandler(repository);
+
+        var result = await handler.Handle(new ListCategoriesQuery(Search: "Hair"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle().Which.Name.Should().Be("Hair");
     }
 }

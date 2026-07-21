@@ -20,7 +20,7 @@ describe('ListCategories', () => {
 
     const result = await new ListCategories(categoryRepository).execute(tenantContext)
 
-    expect(listAllSpy).toHaveBeenCalledExactlyOnceWith(tenantContext)
+    expect(listAllSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, undefined)
     expect(result).toEqual([category])
   })
 })

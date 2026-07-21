@@ -150,6 +150,71 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task Delete_a_category_referenced_by_a_service_is_blocked_with_the_affected_count()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var categoryId = await CreateCategoryAsync(client, "In Use");
+        await client.PostAsJsonAsync("/api/v1/services", NewServiceBody("Haircut", categoryId));
+
+        var response = await client.DeleteAsync($"{CategoriesUrl}/{categoryId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("title").GetString().Should().Contain("1 serviço(s)");
+
+        var stillListed = await (await client.GetAsync(CategoriesUrl)).Content.ReadFromJsonAsync<JsonElement[]>();
+        stillListed.Should().Contain(c => c.GetProperty("id").GetGuid() == categoryId);
+    }
+
+    [Fact]
+    public async Task List_with_a_search_term_only_returns_matching_categories()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        await CreateCategoryAsync(client, "Massagens");
+        await CreateCategoryAsync(client, "Estética");
+
+        var response = await client.GetAsync($"{CategoriesUrl}?search=massa");
+
+        var categories = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+        categories.Should().ContainSingle(c => c.GetProperty("name").GetString() == "Massagens");
+    }
+
+    [Theory]
+    [MemberData(nameof(MaliciousPayloads.Values), MemberType = typeof(MaliciousPayloads))]
+    public async Task Create_with_a_malicious_payload_round_trips_it_as_inert_data(string payload)
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+
+        var createResponse = await client.PostAsJsonAsync(CategoriesUrl, new { name = payload });
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        created.GetProperty("name").GetString().Should().Be(payload);
+
+        var categories = await (await client.GetAsync(CategoriesUrl)).Content.ReadFromJsonAsync<JsonElement[]>();
+        categories.Should().Contain(c => c.GetProperty("name").GetString() == payload);
+    }
+
+    private static async Task<Guid> CreateCategoryAsync(HttpClient client, string name)
+    {
+        var response = await client.PostAsJsonAsync(CategoriesUrl, new { name });
+        return (await response.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+    }
+
+    private static object NewServiceBody(string name, Guid? categoryId) => new
+    {
+        name,
+        description = (string?)null,
+        durationMinutes = 30,
+        minDurationMinutes = 15,
+        maxDurationMinutes = 60,
+        price = 10.00m,
+        maxDiscountPercentage = 10m,
+        categoryId,
+        tagIds = (Guid[]?)null,
+    };
+
     private HttpClient AuthenticatedClient(Guid tenantId) => AuthenticatedClient(tenantId.ToString());
 
     private HttpClient AuthenticatedClient(string tokenValue)

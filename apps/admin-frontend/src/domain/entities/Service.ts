@@ -110,6 +110,9 @@ export class Service {
     }
 
     const description = input.description?.trim()
+    if (description !== undefined && description.length > 500) {
+      throw new InvalidServiceError('A descrição do serviço deve ter no máximo 500 caracteres')
+    }
 
     return new Service(
       input.id,

@@ -4,7 +4,7 @@ namespace ServicesService.Application.Abstractions;
 
 public interface ITagRepository
 {
-    Task<IReadOnlyList<Tag>> ListAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<Tag>> ListAsync(string? search, CancellationToken cancellationToken);
 
     Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken);
 

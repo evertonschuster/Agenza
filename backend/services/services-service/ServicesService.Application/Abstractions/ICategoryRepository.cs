@@ -4,7 +4,7 @@ namespace ServicesService.Application.Abstractions;
 
 public interface ICategoryRepository
 {
-    Task<IReadOnlyList<Category>> ListAsync(CancellationToken cancellationToken);
+    Task<IReadOnlyList<Category>> ListAsync(string? search, CancellationToken cancellationToken);
 
     Task<Category?> GetByIdAsync(Guid categoryId, CancellationToken cancellationToken);
 

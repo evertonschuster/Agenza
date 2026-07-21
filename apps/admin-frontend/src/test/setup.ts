@@ -16,6 +16,17 @@ window.matchMedia = vi.fn().mockImplementation((query: string) => ({
   dispatchEvent: vi.fn(),
 })) as typeof window.matchMedia
 
+// jsdom doesn't implement these either - Radix Select calls them while
+// opening/closing its popup, needed for tests that click through it. The
+// DOM lib types claim these always exist, which is only true in a real
+// browser, not jsdom - disabling the rules built on that assumption below.
+/* eslint-disable @typescript-eslint/no-unnecessary-condition, @typescript-eslint/unbound-method, @typescript-eslint/no-empty-function */
+Element.prototype.hasPointerCapture ??= () => false
+Element.prototype.setPointerCapture ??= () => {}
+Element.prototype.releasePointerCapture ??= () => {}
+Element.prototype.scrollIntoView ??= () => {}
+/* eslint-enable @typescript-eslint/no-unnecessary-condition, @typescript-eslint/unbound-method, @typescript-eslint/no-empty-function */
+
 // Ensures each test starts with a clean DOM, preventing leakage between
 // component tests (a common source of flaky, order-dependent test suites).
 afterEach(() => {

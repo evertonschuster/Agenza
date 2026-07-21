@@ -66,6 +66,44 @@ describe('ApiServiceRepository', () => {
     expect(result.pageSize).toBe(5)
   })
 
+  it('sends search, categoryId, and tagId as query params when provided', async () => {
+    let capturedUrl: URL | undefined
+    server.use(
+      http.get(`${baseUrl}/api/v1/services`, ({ request }) => {
+        capturedUrl = new URL(request.url)
+        return HttpResponse.json({ items: [serviceFixture], totalCount: 1, page: 1, pageSize: 20 })
+      }),
+    )
+    const repository = buildRepository()
+
+    await repository.listAll(buildTenantContext(), {
+      search: 'corte',
+      categoryId: 'category-1',
+      tagId: 'tag-1',
+    })
+
+    expect(capturedUrl?.searchParams.get('search')).toBe('corte')
+    expect(capturedUrl?.searchParams.get('categoryId')).toBe('category-1')
+    expect(capturedUrl?.searchParams.get('tagId')).toBe('tag-1')
+  })
+
+  it('omits search, categoryId, and tagId query params when not provided', async () => {
+    let capturedUrl: URL | undefined
+    server.use(
+      http.get(`${baseUrl}/api/v1/services`, ({ request }) => {
+        capturedUrl = new URL(request.url)
+        return HttpResponse.json({ items: [serviceFixture], totalCount: 1, page: 1, pageSize: 20 })
+      }),
+    )
+    const repository = buildRepository()
+
+    await repository.listAll(buildTenantContext())
+
+    expect(capturedUrl?.searchParams.has('search')).toBe(false)
+    expect(capturedUrl?.searchParams.has('categoryId')).toBe(false)
+    expect(capturedUrl?.searchParams.has('tagId')).toBe(false)
+  })
+
   it('creates a service and returns the mapped result', async () => {
     server.use(
       http.post(`${baseUrl}/api/v1/services`, async ({ request }) => {

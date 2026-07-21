@@ -21,9 +21,9 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<IActionResult> List(CancellationToken cancellationToken)
+    public async Task<IActionResult> List([FromQuery] ListCategoriesQuery query, CancellationToken cancellationToken)
     {
-        var result = await _dispatcher.Query(new ListCategoriesQuery(), cancellationToken);
+        var result = await _dispatcher.Query(query, cancellationToken);
         return result.ToActionResult(this, categories => Ok(categories));
     }
 

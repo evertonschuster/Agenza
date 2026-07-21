@@ -247,6 +247,78 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
         envelope.GetProperty("pageSize").GetInt32().Should().Be(2);
     }
 
+    [Fact]
+    public async Task List_with_a_search_term_only_returns_matching_services()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Corte de cabelo"));
+        await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Manicure"));
+
+        var response = await client.GetAsync($"{ServicesUrl}?search=corte");
+        var items = await ReadItemsAsync(response);
+
+        items.Should().ContainSingle(s => s.GetProperty("name").GetString() == "Corte de cabelo");
+    }
+
+    [Fact]
+    public async Task List_filtered_by_categoryId_only_returns_services_in_that_category()
+    {
+        var tenantId = Guid.NewGuid();
+        var client = AuthenticatedClient(tenantId);
+        var categoryResponse = await client.PostAsJsonAsync(CategoriesUrl, new { name = "Cabelo" });
+        var categoryId = (await categoryResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Corte", categoryId: categoryId));
+        await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Manicure"));
+
+        var response = await client.GetAsync($"{ServicesUrl}?categoryId={categoryId}");
+        var items = await ReadItemsAsync(response);
+
+        items.Should().ContainSingle(s => s.GetProperty("name").GetString() == "Corte");
+    }
+
+    [Fact]
+    public async Task List_filtered_by_tagId_only_returns_services_with_that_tag()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var tagResponse = await client.PostAsJsonAsync(TagsUrl, new { name = "VIP", color = "#0d9488", description = (string?)null });
+        var tagId = (await tagResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Tagged", tagIds: [tagId]));
+        await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Untagged"));
+
+        var response = await client.GetAsync($"{ServicesUrl}?tagId={tagId}");
+        var items = await ReadItemsAsync(response);
+
+        items.Should().ContainSingle(s => s.GetProperty("name").GetString() == "Tagged");
+    }
+
+    [Theory]
+    [MemberData(nameof(MaliciousPayloads.Values), MemberType = typeof(MaliciousPayloads))]
+    public async Task Create_with_a_malicious_payload_round_trips_it_as_inert_data(string payload)
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+
+        var createResponse = await client.PostAsJsonAsync(ServicesUrl, new
+        {
+            name = payload,
+            description = payload,
+            durationMinutes = 30,
+            minDurationMinutes = 15,
+            maxDurationMinutes = 60,
+            price = 10.00m,
+            maxDiscountPercentage = 10m,
+            categoryId = (Guid?)null,
+            tagIds = (Guid[]?)null,
+        });
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        created.GetProperty("name").GetString().Should().Be(payload);
+        created.GetProperty("description").GetString().Should().Be(payload);
+
+        var items = await ReadItemsAsync(await client.GetAsync(ServicesUrl));
+        items.Should().Contain(s => s.GetProperty("name").GetString() == payload);
+    }
+
     private static async Task<JsonElement[]> ReadItemsAsync(HttpResponseMessage response)
     {
         var envelope = await response.Content.ReadFromJsonAsync<JsonElement>();

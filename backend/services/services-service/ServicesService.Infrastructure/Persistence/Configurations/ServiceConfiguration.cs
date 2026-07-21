@@ -21,6 +21,7 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.Price).IsRequired().HasPrecision(10, 2);
         builder.Property(s => s.MaxDiscountPercentage).IsRequired().HasPrecision(5, 2);
         builder.Property(s => s.CategoryId);
+        builder.HasOne<Category>().WithMany().HasForeignKey(s => s.CategoryId).OnDelete(DeleteBehavior.SetNull);
 
         // Exact-match backstop; case-insensitive uniqueness is enforced in IServiceRepository.NameExistsAsync before any write.
         // Filtered to non-deleted rows so a soft-deleted service doesn't block reusing its name.

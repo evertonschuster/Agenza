@@ -3,6 +3,9 @@ import { TextField } from '../../components/TextField'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusMessage } from '../../components/StatusMessage'
+import { useFormValidation } from '../../hooks/useFormValidation'
+import { Category } from '../../../domain/entities/Category'
+import { InvalidCategoryError } from '../../../domain/errors/InvalidCategoryError'
 
 export interface CategoryFormValues {
   name: string
@@ -17,6 +20,15 @@ interface CategoryFormProps {
   onSubmit: (values: CategoryFormValues) => Promise<void>
 }
 
+function validate(values: CategoryFormValues): string | null {
+  try {
+    Category.create({ id: 'validation', name: values.name })
+    return null
+  } catch (caughtError) {
+    return caughtError instanceof InvalidCategoryError ? caughtError.message : null
+  }
+}
+
 export function CategoryForm({
   initialValues,
   submitLabel,
@@ -26,14 +38,27 @@ export function CategoryForm({
   onSubmit,
 }: CategoryFormProps): JSX.Element {
   const [name, setName] = useState(initialValues.name)
+  const {
+    markTouched,
+    displayedError: displayedValidationErrorFor,
+    validateForSubmit,
+  } = useFormValidation(validate)
+
+  const values: CategoryFormValues = { name }
+  const displayedValidationError = displayedValidationErrorFor(values)
 
   function handleSubmit(event: SubmitEvent): void {
     event.preventDefault()
-    void onSubmit({ name })
+    if (validateForSubmit(values) !== null) {
+      return
+    }
+    void onSubmit(values)
   }
 
+  const displayedError = displayedValidationError ?? error
+
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} onBlur={markTouched} className="space-y-4">
       <TextField
         id="category-name"
         label="Nome"
@@ -46,10 +71,10 @@ export function CategoryForm({
         }}
       />
 
-      {error !== null && <StatusMessage tone="error">{error}</StatusMessage>}
+      {displayedError !== null && <StatusMessage tone="error">{displayedError}</StatusMessage>}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={isSubmitting || name.trim().length === 0}>
+        <Button type="submit" disabled={isSubmitting || displayedValidationError !== null}>
           {isSubmitting ? (
             <>
               <Spinner />

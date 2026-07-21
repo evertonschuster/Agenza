@@ -11,7 +11,7 @@ public class ListServicesQueryHandlerTests
     {
         serviceRepository = Substitute.For<IServiceRepository>();
         categoryRepository = Substitute.For<ICategoryRepository>();
-        categoryRepository.ListAsync(Arg.Any<CancellationToken>()).Returns(new List<Category>());
+        categoryRepository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(new List<Category>());
         return new ListServicesQueryHandler(serviceRepository, categoryRepository);
     }
 
@@ -20,7 +20,8 @@ public class ListServicesQueryHandlerTests
     {
         var handler = CreateHandler(out var serviceRepository, out _);
         var service = new Service(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1);
-        serviceRepository.ListAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        serviceRepository.ListAsync(
+            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service> { service }, 1));
 
         var result = await handler.Handle(new ListServicesQuery(), CancellationToken.None);
@@ -34,7 +35,8 @@ public class ListServicesQueryHandlerTests
     public async Task Handle_WithNoServices_ReturnsEmptyList()
     {
         var handler = CreateHandler(out var serviceRepository, out _);
-        serviceRepository.ListAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        serviceRepository.ListAsync(
+            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service>(), 0));
 
         var result = await handler.Handle(new ListServicesQuery(), CancellationToken.None);
@@ -50,9 +52,10 @@ public class ListServicesQueryHandlerTests
         var handler = CreateHandler(out var serviceRepository, out var categoryRepository);
         var category = new Category(Guid.NewGuid(), "Hair");
         var service = new Service(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, 1);
-        serviceRepository.ListAsync(Arg.Any<int>(), Arg.Any<int>(), Arg.Any<CancellationToken>())
+        serviceRepository.ListAsync(
+            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service> { service }, 1));
-        categoryRepository.ListAsync(Arg.Any<CancellationToken>()).Returns(new[] { category });
+        categoryRepository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(new[] { category });
 
         var result = await handler.Handle(new ListServicesQuery(), CancellationToken.None);
 
@@ -68,7 +71,8 @@ public class ListServicesQueryHandlerTests
             new(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1),
             new(Guid.NewGuid(), "Manicure", null, 30, 15, 60, 45.50m, 10m, null, 2),
         };
-        serviceRepository.ListAsync(1, 2, Arg.Any<CancellationToken>()).Returns((services, 3));
+        serviceRepository.ListAsync(1, 2, Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns((services, 3));
 
         var result = await handler.Handle(new ListServicesQuery(1, 2), CancellationToken.None);
 
@@ -77,5 +81,22 @@ public class ListServicesQueryHandlerTests
         result.Value.TotalCount.Should().Be(3);
         result.Value.Page.Should().Be(1);
         result.Value.PageSize.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Handle_PassesSearchAndFilterIdsToTheRepository()
+    {
+        var handler = CreateHandler(out var serviceRepository, out _);
+        var categoryId = Guid.NewGuid();
+        var tagId = Guid.NewGuid();
+        serviceRepository.ListAsync(1, 20, "cut", categoryId, tagId, Arg.Any<CancellationToken>())
+            .Returns((new List<Service>(), 0));
+
+        var result = await handler.Handle(
+            new ListServicesQuery(Search: "cut", CategoryId: categoryId, TagId: tagId),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        await serviceRepository.Received(1).ListAsync(1, 20, "cut", categoryId, tagId, Arg.Any<CancellationToken>());
     }
 }

@@ -210,6 +210,74 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
 
+    [Fact]
+    public async Task Delete_a_tag_referenced_by_a_service_is_blocked_with_the_affected_count()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var createTagResponse = await client.PostAsJsonAsync(TagsUrl, new
+        {
+            name = "In Use",
+            color = "#0d9488",
+            description = (string?)null,
+        });
+        var tagId = (await createTagResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        await client.PostAsJsonAsync("/api/v1/services", new
+        {
+            name = "Haircut",
+            description = (string?)null,
+            durationMinutes = 30,
+            minDurationMinutes = 15,
+            maxDurationMinutes = 60,
+            price = 10.00m,
+            maxDiscountPercentage = 10m,
+            categoryId = (Guid?)null,
+            tagIds = new[] { tagId },
+        });
+
+        var response = await client.DeleteAsync($"{TagsUrl}/{tagId}");
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("title").GetString().Should().Contain("1 serviço(s)");
+
+        var stillListed = await (await client.GetAsync(TagsUrl)).Content.ReadFromJsonAsync<JsonElement[]>();
+        stillListed.Should().Contain(t => t.GetProperty("id").GetGuid() == tagId);
+    }
+
+    [Fact]
+    public async Task List_with_a_search_term_only_returns_matching_tags()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        await client.PostAsJsonAsync(TagsUrl, new { name = "VIP", color = "#0d9488", description = (string?)null });
+        await client.PostAsJsonAsync(TagsUrl, new { name = "Novo cliente", color = "#ef4444", description = (string?)null });
+
+        var response = await client.GetAsync($"{TagsUrl}?search=vip");
+
+        var tags = await response.Content.ReadFromJsonAsync<JsonElement[]>();
+        tags.Should().ContainSingle(t => t.GetProperty("name").GetString() == "VIP");
+    }
+
+    [Theory]
+    [MemberData(nameof(MaliciousPayloads.Values), MemberType = typeof(MaliciousPayloads))]
+    public async Task Create_with_a_malicious_payload_round_trips_it_as_inert_data(string payload)
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+
+        var createResponse = await client.PostAsJsonAsync(TagsUrl, new
+        {
+            name = payload,
+            color = "#0d9488",
+            description = (string?)null,
+        });
+
+        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+        var created = await createResponse.Content.ReadFromJsonAsync<JsonElement>();
+        created.GetProperty("name").GetString().Should().Be(payload);
+
+        var tags = await (await client.GetAsync(TagsUrl)).Content.ReadFromJsonAsync<JsonElement[]>();
+        tags.Should().Contain(t => t.GetProperty("name").GetString() == payload);
+    }
+
     private HttpClient AuthenticatedClient(Guid tenantId) => AuthenticatedClient(tenantId.ToString());
 
     private HttpClient AuthenticatedClient(string tokenValue)

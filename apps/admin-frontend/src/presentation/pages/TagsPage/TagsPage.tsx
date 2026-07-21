@@ -1,10 +1,12 @@
 import { useState, type JSX } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTags } from '../../hooks/useTags'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { TAG_COLOR_PALETTE, type Tag, type TagColor } from '../../../domain/entities/Tag'
 import { TagForm, type TagFormValues } from './TagForm'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -53,7 +55,12 @@ function messageFrom(error: unknown, fallback: string): string {
 
 export function TagsPage(): JSX.Element {
   const { tenantContext } = useAuth()
-  const { tags, status, error, createTag, updateTag, deleteTag } = useTags(tenantContext)
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebouncedValue(searchInput, 300)
+  const { tags, status, error, createTag, updateTag, deleteTag } = useTags(
+    tenantContext,
+    debouncedSearch,
+  )
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
@@ -128,6 +135,18 @@ export function TagsPage(): JSX.Element {
         action={<Button onClick={openCreateForm}>Nova etiqueta</Button>}
       />
 
+      <div className="mt-4 max-w-sm">
+        <Input
+          type="search"
+          aria-label="Buscar etiqueta por nome"
+          placeholder="Buscar por nome…"
+          value={searchInput}
+          onChange={event => {
+            setSearchInput(event.target.value)
+          }}
+        />
+      </div>
+
       <div className="mt-6">
         {status === 'loading' && <StatusMessage>Carregando etiquetas…</StatusMessage>}
 
@@ -139,7 +158,11 @@ export function TagsPage(): JSX.Element {
         )}
 
         {status === 'success' && tags.length === 0 && (
-          <StatusMessage>Nenhuma etiqueta ainda. Crie uma para começar.</StatusMessage>
+          <StatusMessage>
+            {debouncedSearch.trim() === ''
+              ? 'Nenhuma etiqueta ainda. Crie uma para começar.'
+              : 'Nenhuma etiqueta encontrada para essa busca.'}
+          </StatusMessage>
         )}
 
         {status === 'success' && tags.length > 0 && (

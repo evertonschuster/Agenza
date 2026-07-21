@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using ServicesService.Infrastructure.Persistence;
@@ -11,9 +12,11 @@ using ServicesService.Infrastructure.Persistence;
 namespace ServicesService.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ServicesDataContext))]
-    partial class ServicesDataContextModelSnapshot : ModelSnapshot
+    [Migration("20260720235529_AddCategoryForeignKeyToService")]
+    partial class AddCategoryForeignKeyToService
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

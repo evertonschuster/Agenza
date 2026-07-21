@@ -24,15 +24,15 @@ export interface UseTagsResult {
  * it resolves, then the changed tenantContext identity re-triggers the
  * fetch automatically (see useAsync: execute's identity follows listTags').
  */
-export function useTags(tenantContext: TenantContext | null): UseTagsResult {
+export function useTags(tenantContext: TenantContext | null, search = ''): UseTagsResult {
   const { useCases } = useAppContainer()
 
   const listTags = useCallback(async (): Promise<Tag[]> => {
     if (tenantContext === null) {
       return []
     }
-    return useCases.listTags.execute(tenantContext)
-  }, [tenantContext, useCases])
+    return useCases.listTags.execute(tenantContext, { search })
+  }, [tenantContext, useCases, search])
 
   const { data, status, error, execute } = useAsync(listTags)
 

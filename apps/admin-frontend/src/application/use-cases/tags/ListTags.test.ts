@@ -20,7 +20,7 @@ describe('ListTags', () => {
 
     const result = await new ListTags(tagRepository).execute(tenantContext)
 
-    expect(listAllSpy).toHaveBeenCalledExactlyOnceWith(tenantContext)
+    expect(listAllSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, undefined)
     expect(result).toEqual([tag])
   })
 })

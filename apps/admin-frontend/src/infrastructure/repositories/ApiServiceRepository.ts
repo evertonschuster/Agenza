@@ -37,8 +37,17 @@ export class ApiServiceRepository implements ServiceRepository {
     _tenantContext: TenantContext,
     options: ListAllServicesOptions = {},
   ): Promise<PagedServices> {
-    const { page = DEFAULT_PAGE, pageSize = DEFAULT_PAGE_SIZE } = options
+    const { page = DEFAULT_PAGE, pageSize = DEFAULT_PAGE_SIZE, search, categoryId, tagId } = options
     const query = new URLSearchParams({ page: String(page), pageSize: String(pageSize) })
+    if (search !== undefined && search.trim() !== '') {
+      query.set('search', search.trim())
+    }
+    if (categoryId !== undefined) {
+      query.set('categoryId', categoryId)
+    }
+    if (tagId !== undefined) {
+      query.set('tagId', tagId)
+    }
     const envelope = await this.httpClient.get<PagedServiceDto>(
       `${SERVICES_URL}?${query.toString()}`,
     )

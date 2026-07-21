@@ -121,4 +121,21 @@ describe('AdminLayout', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
   })
+
+  it('applies the dark class to the document when the real sidebar theme toggle is clicked', async () => {
+    renderLayout(buildContainer(buildTenantContext()))
+
+    expect(document.documentElement).not.toHaveClass('dark')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mudar para modo escuro' }))
+
+    expect(document.documentElement).toHaveClass('dark')
+    expect(localStorage.getItem('admin-theme')).toBe('dark')
+    expect(screen.getByRole('button', { name: 'Mudar para modo claro' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mudar para modo claro' }))
+
+    expect(document.documentElement).not.toHaveClass('dark')
+    expect(localStorage.getItem('admin-theme')).toBe('light')
+  })
 })

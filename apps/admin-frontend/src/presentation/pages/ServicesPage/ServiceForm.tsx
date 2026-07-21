@@ -12,6 +12,7 @@ import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusMessage } from '../../components/StatusMessage'
 import { Label } from '@/components/ui/label'
+import { useFormValidation } from '../../hooks/useFormValidation'
 import {
   Select,
   SelectContent,
@@ -58,6 +59,10 @@ const NO_CATEGORY_VALUE = '__none__'
 function validate(values: ServiceFormValues): string | null {
   if (values.name.trim().length === 0) {
     return 'Informe o nome do serviço.'
+  }
+
+  if (values.description.trim().length > 500) {
+    return 'A descrição não pode exceder 500 caracteres.'
   }
 
   const duration = Number(values.durationMinutes)
@@ -125,11 +130,11 @@ export function ServiceForm({
   )
   const [categoryId, setCategoryId] = useState(initialValues.categoryId)
   const [tagIds, setTagIds] = useState<string[]>(initialValues.tagIds)
-  // Errors stay hidden until the user has actually interacted with the form
-  // (blurred a field or attempted a submit) - otherwise a fresh "new service"
-  // form would show "duração mínima inválida" before anyone has typed
-  // anything, since the blank duration fields default to 0.
-  const [touched, setTouched] = useState(false)
+  const {
+    markTouched,
+    displayedError: displayedValidationErrorFor,
+    validateForSubmit,
+  } = useFormValidation(validate)
   const [isCreatingCategory, setIsCreatingCategory] = useState(false)
   const [categoryCreateError, setCategoryCreateError] = useState<string | null>(null)
   const [isCreatingTag, setIsCreatingTag] = useState(false)
@@ -192,13 +197,11 @@ export function ServiceForm({
     categoryId,
     tagIds,
   }
-  const validationError = validate(values)
-  const displayedValidationError = touched ? validationError : null
+  const displayedValidationError = displayedValidationErrorFor(values)
 
   function handleSubmit(event: SubmitEvent): void {
     event.preventDefault()
-    setTouched(true)
-    if (validationError !== null) {
+    if (validateForSubmit(values) !== null) {
       return
     }
     void onSubmit(values)
@@ -207,13 +210,7 @@ export function ServiceForm({
   const displayedError = displayedValidationError ?? error
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      onBlur={() => {
-        setTouched(true)
-      }}
-      className="space-y-4"
-    >
+    <form onSubmit={handleSubmit} onBlur={markTouched} className="space-y-4">
       {code !== null && (
         <div className="space-y-1.5">
           <span className="block text-sm font-medium text-foreground">Código</span>
@@ -238,6 +235,8 @@ export function ServiceForm({
         label="Descrição"
         hint="(opcional)"
         rows={2}
+        maxLength={500}
+        showCount
         value={description}
         onChange={event => {
           setDescription(event.target.value)
@@ -398,7 +397,7 @@ export function ServiceForm({
       {displayedError !== null && <StatusMessage tone="error">{displayedError}</StatusMessage>}
 
       <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={isSubmitting || (touched && validationError !== null)}>
+        <Button type="submit" disabled={isSubmitting || displayedValidationError !== null}>
           {isSubmitting ? (
             <>
               <Spinner />

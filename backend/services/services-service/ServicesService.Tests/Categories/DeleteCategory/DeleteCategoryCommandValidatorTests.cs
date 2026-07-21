@@ -7,6 +7,7 @@ namespace ServicesService.Tests.Categories.DeleteCategory;
 public class DeleteCategoryCommandValidatorTests
 {
     private readonly ICategoryRepository _categoryRepository = Substitute.For<ICategoryRepository>();
+    private readonly IServiceRepository _serviceRepository = Substitute.For<IServiceRepository>();
     private readonly DeleteCategoryCommandValidator _validator;
     private readonly Guid _categoryId = Guid.NewGuid();
 
@@ -14,7 +15,8 @@ public class DeleteCategoryCommandValidatorTests
     {
         var category = new Category(_categoryId, "Hair");
         _categoryRepository.GetByIdAsync(_categoryId, Arg.Any<CancellationToken>()).Returns(category);
-        _validator = new DeleteCategoryCommandValidator(_categoryRepository);
+        _serviceRepository.CountByCategoryIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(0);
+        _validator = new DeleteCategoryCommandValidator(_categoryRepository, _serviceRepository);
     }
 
     [Fact]
@@ -35,5 +37,17 @@ public class DeleteCategoryCommandValidatorTests
 
         result.IsValid.Should().BeFalse();
         result.Errors.Should().ContainSingle(e => e.ErrorCode == "Category.NotFound");
+    }
+
+    [Fact]
+    public async Task Validate_WithCategoryInUse_FailsWithInUseErrorCodeAndCount()
+    {
+        _serviceRepository.CountByCategoryIdAsync(_categoryId, Arg.Any<CancellationToken>()).Returns(3);
+
+        var result = await _validator.ValidateAsync(new DeleteCategoryCommand(_categoryId));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e =>
+            e.ErrorCode == "Category.InUse" && e.ErrorMessage.Contains("3 serviço(s)"));
     }
 }

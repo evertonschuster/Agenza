@@ -13,7 +13,7 @@ public class ListTagsQueryHandlerTests
     public async Task Handle_ReturnsTagsFromTheRepository()
     {
         var repository = Substitute.For<ITagRepository>();
-        repository.ListAsync(Arg.Any<CancellationToken>())
+        repository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
             .Returns(new[] { new Tag(Guid.NewGuid(), "VIP", Teal, null) });
         var handler = new ListTagsQueryHandler(repository);
 
@@ -27,12 +27,26 @@ public class ListTagsQueryHandlerTests
     public async Task Handle_WithNoTags_ReturnsEmptyList()
     {
         var repository = Substitute.For<ITagRepository>();
-        repository.ListAsync(Arg.Any<CancellationToken>()).Returns(Array.Empty<Tag>());
+        repository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(Array.Empty<Tag>());
         var handler = new ListTagsQueryHandler(repository);
 
         var result = await handler.Handle(new ListTagsQuery(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_PassesTheSearchTermToTheRepository()
+    {
+        var repository = Substitute.For<ITagRepository>();
+        repository.ListAsync("VIP", Arg.Any<CancellationToken>())
+            .Returns(new[] { new Tag(Guid.NewGuid(), "VIP", Teal, null) });
+        var handler = new ListTagsQueryHandler(repository);
+
+        var result = await handler.Handle(new ListTagsQuery(Search: "VIP"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().ContainSingle().Which.Name.Should().Be("VIP");
     }
 }

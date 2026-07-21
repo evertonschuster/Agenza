@@ -1,4 +1,5 @@
 using Admin.SharedKernel.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
 using ServicesService.Infrastructure.Persistence;
@@ -12,8 +13,13 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
     {
     }
 
-    public Task<IReadOnlyList<Tag>> ListAsync(CancellationToken cancellationToken) =>
-        ListAsync(query => query.OrderBy(t => t.Name), cancellationToken);
+    public Task<IReadOnlyList<Tag>> ListAsync(string? search, CancellationToken cancellationToken) =>
+        ListAsync(
+            query => (string.IsNullOrWhiteSpace(search)
+                ? query
+                : query.Where(t => EF.Functions.ILike(t.Name, $"%{search.Trim()}%")))
+                .OrderBy(t => t.Name),
+            cancellationToken);
 
     public Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken) =>
         FindAsync(t => t.Id == tagId, cancellationToken);

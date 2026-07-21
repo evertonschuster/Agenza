@@ -1,8 +1,9 @@
-import { useState, type JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useServices } from '../../hooks/useServices'
 import { useCategories } from '../../hooks/useCategories'
 import { useTags } from '../../hooks/useTags'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import type { Service } from '../../../domain/entities/Service'
 import type {
   CreateServiceInput,
@@ -11,6 +12,14 @@ import type {
 import { ServiceForm, type ServiceFormValues } from './ServiceForm'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -31,6 +40,9 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { StatusMessage } from '../../components/StatusMessage'
+
+const ALL_CATEGORIES_VALUE = '__all_categories__'
+const ALL_TAGS_VALUE = '__all_tags__'
 
 const EMPTY_FORM_VALUES: ServiceFormValues = {
   name: '',
@@ -94,6 +106,10 @@ function messageFrom(error: unknown, fallback: string): string {
 
 export function ServicesPage(): JSX.Element {
   const { tenantContext } = useAuth()
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebouncedValue(searchInput, 300)
+  const [categoryFilter, setCategoryFilter] = useState('')
+  const [tagFilter, setTagFilter] = useState('')
   const {
     services,
     status,
@@ -105,10 +121,21 @@ export function ServicesPage(): JSX.Element {
     createService,
     updateService,
     deleteService,
-  } = useServices(tenantContext)
+  } = useServices(tenantContext, {
+    search: debouncedSearch,
+    ...(categoryFilter !== '' ? { categoryId: categoryFilter } : {}),
+    ...(tagFilter !== '' ? { tagId: tagFilter } : {}),
+  })
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
   const { categories, createCategory } = useCategories(tenantContext)
   const { tags, createTag } = useTags(tenantContext)
+
+  useEffect(() => {
+    setPage(1)
+    // Only re-run when a filter narrows the result set - setPage/page
+    // themselves aren't inputs to this reset, they're what it resets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [debouncedSearch, categoryFilter, tagFilter])
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
@@ -183,6 +210,55 @@ export function ServicesPage(): JSX.Element {
         action={<Button onClick={openCreateForm}>Novo serviço</Button>}
       />
 
+      <div className="mt-4 flex flex-wrap gap-2">
+        <Input
+          type="search"
+          aria-label="Buscar serviço por nome"
+          placeholder="Buscar por nome…"
+          className="max-w-sm"
+          value={searchInput}
+          onChange={event => {
+            setSearchInput(event.target.value)
+          }}
+        />
+        <Select
+          value={categoryFilter === '' ? ALL_CATEGORIES_VALUE : categoryFilter}
+          onValueChange={value => {
+            setCategoryFilter(value === ALL_CATEGORIES_VALUE ? '' : value)
+          }}
+        >
+          <SelectTrigger aria-label="Filtrar por categoria" className="w-48">
+            <SelectValue placeholder="Todas as categorias" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_CATEGORIES_VALUE}>Todas as categorias</SelectItem>
+            {categories.map(category => (
+              <SelectItem key={category.id} value={category.id}>
+                {category.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select
+          value={tagFilter === '' ? ALL_TAGS_VALUE : tagFilter}
+          onValueChange={value => {
+            setTagFilter(value === ALL_TAGS_VALUE ? '' : value)
+          }}
+        >
+          <SelectTrigger aria-label="Filtrar por etiqueta" className="w-48">
+            <SelectValue placeholder="Todas as etiquetas" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value={ALL_TAGS_VALUE}>Todas as etiquetas</SelectItem>
+            {tags.map(tag => (
+              <SelectItem key={tag.id} value={tag.id}>
+                {tag.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       <div className="mt-6">
         {status === 'loading' && <StatusMessage>Carregando serviços…</StatusMessage>}
 
@@ -194,7 +270,11 @@ export function ServicesPage(): JSX.Element {
         )}
 
         {status === 'success' && services.length === 0 && (
-          <StatusMessage>Nenhum serviço ainda. Crie um para começar.</StatusMessage>
+          <StatusMessage>
+            {debouncedSearch.trim() === '' && categoryFilter === '' && tagFilter === ''
+              ? 'Nenhum serviço ainda. Crie um para começar.'
+              : 'Nenhum serviço encontrado para esses filtros.'}
+          </StatusMessage>
         )}
 
         {status === 'success' && services.length > 0 && (

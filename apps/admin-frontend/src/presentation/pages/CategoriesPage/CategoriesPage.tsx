@@ -1,10 +1,12 @@
 import { useState, type JSX } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useCategories } from '../../hooks/useCategories'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import type { Category } from '../../../domain/entities/Category'
 import { CategoryForm, type CategoryFormValues } from './CategoryForm'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -44,8 +46,10 @@ function messageFrom(error: unknown, fallback: string): string {
 
 export function CategoriesPage(): JSX.Element {
   const { tenantContext } = useAuth()
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebouncedValue(searchInput, 300)
   const { categories, status, error, createCategory, updateCategory, deleteCategory } =
-    useCategories(tenantContext)
+    useCategories(tenantContext, debouncedSearch)
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
@@ -120,6 +124,18 @@ export function CategoriesPage(): JSX.Element {
         action={<Button onClick={openCreateForm}>Nova categoria</Button>}
       />
 
+      <div className="mt-4 max-w-sm">
+        <Input
+          type="search"
+          aria-label="Buscar categoria por nome"
+          placeholder="Buscar por nome…"
+          value={searchInput}
+          onChange={event => {
+            setSearchInput(event.target.value)
+          }}
+        />
+      </div>
+
       <div className="mt-6">
         {status === 'loading' && <StatusMessage>Carregando categorias…</StatusMessage>}
 
@@ -131,7 +147,11 @@ export function CategoriesPage(): JSX.Element {
         )}
 
         {status === 'success' && categories.length === 0 && (
-          <StatusMessage>Nenhuma categoria ainda. Crie uma para começar.</StatusMessage>
+          <StatusMessage>
+            {debouncedSearch.trim() === ''
+              ? 'Nenhuma categoria ainda. Crie uma para começar.'
+              : 'Nenhuma categoria encontrada para essa busca.'}
+          </StatusMessage>
         )}
 
         {status === 'success' && categories.length > 0 && (

@@ -16,7 +16,7 @@ public sealed class ListCategoriesQueryHandler : IQueryHandler<ListCategoriesQue
         ListCategoriesQuery query,
         CancellationToken cancellationToken)
     {
-        var categories = await _categoryRepository.ListAsync(cancellationToken);
+        var categories = await _categoryRepository.ListAsync(query.Search, cancellationToken);
         IReadOnlyList<CategoryResponse> response = categories.Select(CategoryResponse.FromCategory).ToList();
 
         return Result.Success(response);

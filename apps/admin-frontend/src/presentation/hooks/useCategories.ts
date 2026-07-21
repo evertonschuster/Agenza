@@ -27,15 +27,18 @@ export interface UseCategoriesResult {
  * it resolves, then the changed tenantContext identity re-triggers the
  * fetch automatically (see useAsync: execute's identity follows listCategories).
  */
-export function useCategories(tenantContext: TenantContext | null): UseCategoriesResult {
+export function useCategories(
+  tenantContext: TenantContext | null,
+  search = '',
+): UseCategoriesResult {
   const { useCases } = useAppContainer()
 
   const listCategories = useCallback(async (): Promise<Category[]> => {
     if (tenantContext === null) {
       return []
     }
-    return useCases.listCategories.execute(tenantContext)
-  }, [tenantContext, useCases])
+    return useCases.listCategories.execute(tenantContext, { search })
+  }, [tenantContext, useCases, search])
 
   const { data, status, error, execute } = useAsync(listCategories)
 

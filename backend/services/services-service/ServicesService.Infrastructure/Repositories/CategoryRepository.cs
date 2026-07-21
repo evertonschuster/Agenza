@@ -1,4 +1,5 @@
 using Admin.SharedKernel.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
 using ServicesService.Infrastructure.Persistence;
@@ -12,8 +13,13 @@ public class CategoryRepository : RepositoryBase<Category>, ICategoryRepository
     {
     }
 
-    public Task<IReadOnlyList<Category>> ListAsync(CancellationToken cancellationToken) =>
-        ListAsync(query => query.OrderBy(c => c.Name), cancellationToken);
+    public Task<IReadOnlyList<Category>> ListAsync(string? search, CancellationToken cancellationToken) =>
+        ListAsync(
+            query => (string.IsNullOrWhiteSpace(search)
+                ? query
+                : query.Where(c => EF.Functions.ILike(c.Name, $"%{search.Trim()}%")))
+                .OrderBy(c => c.Name),
+            cancellationToken);
 
     public Task<Category?> GetByIdAsync(Guid categoryId, CancellationToken cancellationToken) =>
         FindAsync(c => c.Id == categoryId, cancellationToken);

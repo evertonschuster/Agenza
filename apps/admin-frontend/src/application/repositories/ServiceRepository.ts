@@ -28,6 +28,9 @@ export interface UpdateServiceInput {
 export interface ListAllServicesOptions {
   page?: number
   pageSize?: number
+  search?: string
+  categoryId?: string
+  tagId?: string
 }
 
 /** The paginated shape `ServiceRepository.listAll` resolves to (docs/API.md `PagedResult<ServiceDto>`). */

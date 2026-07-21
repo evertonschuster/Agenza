@@ -40,16 +40,32 @@ export interface UseServicesResult {
  * it resolves, then the changed tenantContext identity re-triggers the
  * fetch automatically (see useAsync: execute's identity follows listServices).
  */
-export function useServices(tenantContext: TenantContext | null): UseServicesResult {
+export interface UseServicesFilters {
+  search?: string
+  categoryId?: string
+  tagId?: string
+}
+
+export function useServices(
+  tenantContext: TenantContext | null,
+  filters: UseServicesFilters = {},
+): UseServicesResult {
   const { useCases } = useAppContainer()
   const [page, setPage] = useState(1)
+  const { search, categoryId, tagId } = filters
 
   const listServices = useCallback(async (): Promise<PagedServices> => {
     if (tenantContext === null) {
       return EMPTY_PAGE
     }
-    return useCases.listServices.execute(tenantContext, { page, pageSize: DEFAULT_PAGE_SIZE })
-  }, [tenantContext, useCases, page])
+    return useCases.listServices.execute(tenantContext, {
+      page,
+      pageSize: DEFAULT_PAGE_SIZE,
+      ...(search !== undefined ? { search } : {}),
+      ...(categoryId !== undefined ? { categoryId } : {}),
+      ...(tagId !== undefined ? { tagId } : {}),
+    })
+  }, [tenantContext, useCases, page, search, categoryId, tagId])
 
   const { data, status, error, execute } = useAsync(listServices)
 

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, within } from '@testing-library/react'
+import { render, screen, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { ServicesPage } from './ServicesPage'
 import { AppContainerContext } from '../../providers/AppContainerContext'
@@ -9,6 +9,7 @@ import { Category } from '../../../domain/entities/Category'
 import { Tag, TAG_COLOR_PALETTE } from '../../../domain/entities/Tag'
 import { Tenant } from '../../../domain/value-objects/Tenant'
 import { User } from '../../../domain/entities/User'
+import { MALICIOUS_PAYLOADS } from '../../../test/fixtures/maliciousPayloads'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
@@ -386,7 +387,13 @@ describe('ServicesPage', () => {
       await userEvent.click(screen.getByRole('button', { name: 'Próxima' }))
 
       await vi.waitFor(() => {
-        expect(listServicesSpy).toHaveBeenCalledWith(tenantContext, { page: 2, pageSize: 20 })
+        expect(listServicesSpy).toHaveBeenCalledWith(tenantContext, {
+          page: 2,
+          pageSize: 20,
+          search: '',
+          categoryId: undefined,
+          tagId: undefined,
+        })
       })
     })
 
@@ -409,6 +416,117 @@ describe('ServicesPage', () => {
 
       expect(screen.getByText('Página 1 de 1')).toBeInTheDocument()
       expect(screen.getByRole('button', { name: 'Próxima' })).toBeDisabled()
+    })
+  })
+
+  describe('search and filters', () => {
+    it('refetches with the debounced search term after the user stops typing', async () => {
+      const listServicesSpy = vi.fn(() =>
+        Promise.resolve({ services: [massagemService], totalCount: 1, page: 1, pageSize: 20 }),
+      )
+      renderServicesPage(buildContainer({ listServices: { execute: listServicesSpy } }))
+      await screen.findByText('Massagem relaxante')
+      listServicesSpy.mockClear()
+
+      vi.useFakeTimers()
+      try {
+        fireEvent.change(screen.getByLabelText('Buscar serviço por nome'), {
+          target: { value: 'massa' },
+        })
+        expect(listServicesSpy).not.toHaveBeenCalled()
+
+        await act(async () => {
+          await vi.advanceTimersByTimeAsync(300)
+        })
+
+        expect(listServicesSpy).toHaveBeenCalledWith(tenantContext, {
+          page: 1,
+          pageSize: 20,
+          search: 'massa',
+          categoryId: undefined,
+          tagId: undefined,
+        })
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('refetches filtered by categoryId when a category is selected', async () => {
+      const listServicesSpy = vi.fn(() =>
+        Promise.resolve({ services: [massagemService], totalCount: 1, page: 1, pageSize: 20 }),
+      )
+      renderServicesPage(buildContainer({ listServices: { execute: listServicesSpy } }))
+      await screen.findByText('Massagem relaxante')
+      listServicesSpy.mockClear()
+
+      await userEvent.click(screen.getByRole('combobox', { name: 'Filtrar por categoria' }))
+      await userEvent.click(screen.getByRole('option', { name: 'Massagens' }))
+
+      await vi.waitFor(() => {
+        expect(listServicesSpy).toHaveBeenCalledWith(tenantContext, {
+          page: 1,
+          pageSize: 20,
+          search: '',
+          categoryId: 'category-1',
+          tagId: undefined,
+        })
+      })
+    })
+
+    it('refetches filtered by tagId when a tag is selected', async () => {
+      const listServicesSpy = vi.fn(() =>
+        Promise.resolve({ services: [massagemService], totalCount: 1, page: 1, pageSize: 20 }),
+      )
+      renderServicesPage(buildContainer({ listServices: { execute: listServicesSpy } }))
+      await screen.findByText('Massagem relaxante')
+      listServicesSpy.mockClear()
+
+      await userEvent.click(screen.getByRole('combobox', { name: 'Filtrar por etiqueta' }))
+      await userEvent.click(screen.getByRole('option', { name: 'VIP' }))
+
+      await vi.waitFor(() => {
+        expect(listServicesSpy).toHaveBeenCalledWith(tenantContext, {
+          page: 1,
+          pageSize: 20,
+          search: '',
+          categoryId: undefined,
+          tagId: 'tag-1',
+        })
+      })
+    })
+  })
+
+  describe('security', () => {
+    it.each(MALICIOUS_PAYLOADS)('renders "%s" as inert text, not markup', async payload => {
+      const maliciousService = Service.create({
+        id: 'malicious-1',
+        code: 1002,
+        name: payload,
+        durationMinutes: 30,
+        minDurationMinutes: 15,
+        maxDurationMinutes: 60,
+        price: 10,
+        maxDiscountPercentage: 0,
+        tags: [],
+      })
+      renderServicesPage(
+        buildContainer({
+          listServices: {
+            execute: vi.fn(() =>
+              Promise.resolve({
+                services: [maliciousService],
+                totalCount: 1,
+                page: 1,
+                pageSize: 20,
+              }),
+            ),
+          },
+        }),
+      )
+
+      expect(await screen.findByText(payload)).toBeInTheDocument()
+      expect(document.querySelector('script')).not.toBeInTheDocument()
+      expect(document.querySelector('img[onerror]')).not.toBeInTheDocument()
     })
   })
 })

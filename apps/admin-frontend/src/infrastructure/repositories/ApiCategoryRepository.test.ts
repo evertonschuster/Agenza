@@ -35,6 +35,30 @@ describe('ApiCategoryRepository', () => {
     expect(categories[0]?.name).toBe(categoryFixture.name)
   })
 
+  it('sends the search term as a query parameter', async () => {
+    server.use(
+      http.get(`${baseUrl}/api/v1/categories`, ({ request }) => {
+        expect(new URL(request.url).searchParams.get('search')).toBe('massa')
+        return HttpResponse.json([categoryFixture])
+      }),
+    )
+    const repository = buildRepository()
+
+    await repository.listAll(buildTenantContext(), { search: 'massa' })
+  })
+
+  it('omits the search query parameter when the search term is blank', async () => {
+    server.use(
+      http.get(`${baseUrl}/api/v1/categories`, ({ request }) => {
+        expect(new URL(request.url).searchParams.has('search')).toBe(false)
+        return HttpResponse.json([categoryFixture])
+      }),
+    )
+    const repository = buildRepository()
+
+    await repository.listAll(buildTenantContext(), { search: '   ' })
+  })
+
   it('creates a category and returns the mapped result', async () => {
     server.use(
       http.post(`${baseUrl}/api/v1/categories`, async ({ request }) => {

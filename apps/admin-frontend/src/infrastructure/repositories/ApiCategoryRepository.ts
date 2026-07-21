@@ -2,6 +2,7 @@ import type { Category } from '../../domain/entities/Category'
 import type {
   CategoryRepository,
   CreateCategoryInput,
+  ListAllCategoriesOptions,
   UpdateCategoryInput,
 } from '../../application/repositories/CategoryRepository'
 import type { HttpClient } from '../../application/ports/HttpClient'
@@ -24,8 +25,16 @@ export class ApiCategoryRepository implements CategoryRepository {
     this.httpClient = httpClient
   }
 
-  async listAll(_tenantContext: TenantContext): Promise<Category[]> {
-    const dtos = await this.httpClient.get<CategoryDto[]>(CATEGORIES_URL)
+  async listAll(
+    _tenantContext: TenantContext,
+    options: ListAllCategoriesOptions = {},
+  ): Promise<Category[]> {
+    const query = new URLSearchParams()
+    if (options.search !== undefined && options.search.trim() !== '') {
+      query.set('search', options.search.trim())
+    }
+    const suffix = query.toString() === '' ? '' : `?${query.toString()}`
+    const dtos = await this.httpClient.get<CategoryDto[]>(`${CATEGORIES_URL}${suffix}`)
     return dtos.map(mapCategoryDtoToDomain)
   }
 

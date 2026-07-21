@@ -120,6 +120,12 @@ explicitly.
 | `PUT`    | `/api/v1/tags/{id}` | `200` — updated `TagDto`                    |
 | `DELETE` | `/api/v1/tags/{id}` | `204` — no body                             |
 
+`GET` accepts an optional `search` query param (case-insensitive name
+match), e.g. `GET /api/v1/tags?search=vip`.
+
+`DELETE` fails with `400` (`Tag.InUse`) if the tag is still referenced by
+one or more Services.
+
 `TagDto`:
 
 ```json
@@ -164,6 +170,12 @@ explicitly.
 | `PUT`    | `/api/v1/categories/{id}` | `200` — updated `CategoryDto` |
 | `DELETE` | `/api/v1/categories/{id}` | `204` — no body               |
 
+`GET` accepts an optional `search` query param (case-insensitive name
+match), e.g. `GET /api/v1/categories?search=massa`.
+
+`DELETE` fails with `400` (`Category.InUse`) if the category is still
+referenced by one or more Services.
+
 `CategoryDto`:
 
 ```json
@@ -197,6 +209,9 @@ explicitly.
 
 `GET` accepts `page` (1-based, default `1`) and `pageSize` (default `20`,
 max `100`) query params, e.g. `GET /api/v1/services?page=2&pageSize=20`.
+It also accepts optional `search` (case-insensitive name match),
+`categoryId`, and `tagId` filters, e.g.
+`GET /api/v1/services?search=corte&categoryId={id}&tagId={id}`.
 Response envelope (`PagedResult<ServiceDto>`):
 
 ```json
