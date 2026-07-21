@@ -9,7 +9,14 @@ import type {
   CreateServiceInput,
   UpdateServiceInput,
 } from '../../../application/repositories/ServiceRepository'
-import { ServiceForm, type ServiceFormInput, type ServiceFormValues } from './ServiceForm'
+import { ServiceForm } from './ServiceForm'
+import {
+  type ServiceFormInput,
+  type ServiceFormValues,
+  type ServiceFormField,
+} from './ServiceForm.schema'
+import { mapApiErrorToForm, type ServerFormError } from '../../forms/serverFormError'
+import { serviceFieldMap, serviceCodeFieldMap } from '../../forms/fieldMaps'
 import type { CreatableSelectStatus } from '../../components/CreatableSingleSelect'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -159,7 +166,7 @@ export function ServicesPage(): JSX.Element {
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<ServerFormError<ServiceFormField> | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -168,13 +175,13 @@ export function ServicesPage(): JSX.Element {
   function openCreateForm(): void {
     setFormTarget('new')
     setDisplayTarget('new')
-    setFormError(null)
+    setServerError(null)
   }
 
   function openEditForm(service: Service): void {
     setFormTarget(service)
     setDisplayTarget(service)
-    setFormError(null)
+    setServerError(null)
   }
 
   function closeForm(): void {
@@ -182,12 +189,12 @@ export function ServicesPage(): JSX.Element {
     // after `open` flips to false, and clearing displayTarget here would
     // blank the title/form during that animation instead of after it.
     setFormTarget(null)
-    setFormError(null)
+    setServerError(null)
   }
 
   async function handleSubmit(values: ServiceFormValues): Promise<void> {
     setIsSubmitting(true)
-    setFormError(null)
+    setServerError(null)
     try {
       if (formTarget === 'new') {
         await createService(toServiceInput(values))
@@ -196,7 +203,14 @@ export function ServicesPage(): JSX.Element {
       }
       closeForm()
     } catch (caughtError) {
-      setFormError(messageFrom(caughtError, 'Não foi possível salvar o serviço.'))
+      setServerError(
+        mapApiErrorToForm(
+          caughtError,
+          serviceFieldMap,
+          serviceCodeFieldMap,
+          'Não foi possível salvar o serviço.',
+        ),
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -456,7 +470,7 @@ export function ServicesPage(): JSX.Element {
               onRetryTags={() => void refetchTags()}
               submitLabel={displayTarget === 'new' ? 'Criar serviço' : 'Salvar alterações'}
               isSubmitting={isSubmitting}
-              error={formError}
+              serverError={serverError}
               onCancel={closeForm}
               onSubmit={handleSubmit}
               onCreateCategory={createCategory}

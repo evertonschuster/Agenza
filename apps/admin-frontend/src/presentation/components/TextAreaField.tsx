@@ -8,14 +8,26 @@ interface TextAreaFieldProps extends ComponentProps<typeof Textarea> {
   hint?: string
   showCount?: boolean
   error?: string | undefined
+  /**
+   * Current character count for the counter. Required for an accurate
+   * counter when the field is used uncontrolled via react-hook-form's
+   * `{...register(...)}` - that spread never includes `value` (RHF is
+   * ref-based for uncontrolled fields), so deriving the count from a
+   * `value` prop would always read 0. Compute it with RHF's `useWatch`
+   * for just this field name so only its own changes re-render the
+   * counter, not the whole form. Falls back to `value`'s length (or 0)
+   * when omitted, which still works for a genuinely controlled textarea.
+   */
+  currentLength?: number
 }
 
 export const TextAreaField = forwardRef<HTMLTextAreaElement, TextAreaFieldProps>(
   function TextAreaField(
-    { id, label, hint, showCount = false, maxLength, value, error, ...rest },
+    { id, label, hint, showCount = false, maxLength, value, error, currentLength, ...rest },
     ref,
   ) {
     const errorId = `${id}-error`
+    const count = currentLength ?? String(value ?? '').length
 
     return (
       <div className="space-y-1.5">
@@ -28,7 +40,7 @@ export const TextAreaField = forwardRef<HTMLTextAreaElement, TextAreaFieldProps>
           </Label>
           {showCount && maxLength !== undefined && (
             <span className="text-xs text-muted-foreground">
-              {String(value ?? '').length}/{maxLength}
+              {count}/{maxLength}
             </span>
           )}
         </div>

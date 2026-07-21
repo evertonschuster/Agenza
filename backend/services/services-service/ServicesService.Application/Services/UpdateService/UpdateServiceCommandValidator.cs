@@ -49,5 +49,9 @@ public sealed class UpdateServiceCommandValidator : AbstractValidator<UpdateServ
             .WithMessage("O desconto máximo do serviço deve ser entre 0 e 100.")
             .PrecisionScale(5, 2, ignoreTrailingZeros: true)
             .WithMessage("O desconto máximo deve ter no máximo 3 dígitos inteiros e 2 casas decimais.");
+
+        RuleFor(command => command.TagIds)
+            .Must(tagIds => tagIds is null || tagIds.Distinct().Count() == tagIds.Count)
+            .WithMessage("A lista de etiquetas não pode conter ids duplicados.");
     }
 }

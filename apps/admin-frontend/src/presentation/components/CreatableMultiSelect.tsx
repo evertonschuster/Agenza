@@ -1,7 +1,14 @@
 import { useId, useState, type JSX, type ReactNode } from 'react'
 import { ChevronDownIcon, Plus, X } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Input } from '@/components/ui/input'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusMessage } from './StatusMessage'
@@ -33,6 +40,15 @@ interface CreatableMultiSelectProps<T> {
   onRetry?: (() => void) | undefined
 }
 
+/**
+ * Built on shadcn/ui's Command (cmdk) instead of a hand-rolled listbox -
+ * cmdk supplies full ARIA-combobox keyboard behavior (ArrowUp/Down, Home,
+ * End, Enter, active-descendant tracking) and ties it into aria-expanded/
+ * aria-controls automatically, which a hand-rolled version would have to
+ * reimplement from scratch with more code and more room for gaps. Unlike
+ * the single-select, choosing an item here keeps the popover open so
+ * several can be toggled in one visit.
+ */
 export function CreatableMultiSelect<T>({
   id,
   label,
@@ -51,27 +67,18 @@ export function CreatableMultiSelect<T>({
   error,
   onRetry,
 }: CreatableMultiSelectProps<T>): JSX.Element {
-  const listId = useId()
+  const contentId = useId()
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'list' | 'create'>('list')
-  const [query, setQuery] = useState('')
 
   const selectedItems = values
     .map(key => items.find(item => getKey(item) === key))
     .filter((item): item is T => item !== undefined)
-  const filtered = items.filter(item =>
-    getLabel(item).toLowerCase().includes(query.trim().toLowerCase()),
-  )
-
-  function reset(): void {
-    setMode('list')
-    setQuery('')
-  }
 
   function handleOpenChange(nextOpen: boolean): void {
     setOpen(nextOpen)
     if (!nextOpen) {
-      reset()
+      setMode('list')
     }
   }
 
@@ -87,21 +94,22 @@ export function CreatableMultiSelect<T>({
     const key = getKey(item)
     onChange(values.includes(key) ? values : [...values, key])
     setOpen(false)
-    reset()
+    setMode('list')
   }
 
   return (
     <div className="space-y-2">
       <Popover open={open} onOpenChange={handleOpenChange}>
         <PopoverTrigger asChild>
-          <button
+          <Button
             type="button"
+            variant="outline"
             id={id}
             role="combobox"
             aria-expanded={open}
-            aria-controls={listId}
+            aria-controls={contentId}
             aria-label={label}
-            className="flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+            className="h-8 w-full justify-between px-2.5 font-normal"
           >
             <span className={cn(selectedItems.length === 0 && 'text-muted-foreground')}>
               {selectedItems.length === 0
@@ -109,11 +117,11 @@ export function CreatableMultiSelect<T>({
                 : `${String(selectedItems.length)} selecionada(s)`}
             </span>
             <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-          </button>
+          </Button>
         </PopoverTrigger>
-        <PopoverContent align="start" className="w-72 p-2">
+        <PopoverContent id={contentId} align="start" className="w-72 p-0">
           {mode === 'create' ? (
-            <>
+            <div className="p-3">
               <p className="mb-3 text-sm font-medium text-foreground">{createActionLabel}</p>
               {renderCreateForm({
                 close: () => {
@@ -121,27 +129,18 @@ export function CreatableMultiSelect<T>({
                 },
                 onCreated: handleCreated,
               })}
-            </>
+            </div>
           ) : (
-            <div className="space-y-2">
-              <Input
-                autoFocus
-                type="text"
-                placeholder={searchPlaceholder}
-                aria-label={searchPlaceholder}
-                value={query}
-                onChange={event => {
-                  setQuery(event.target.value)
-                }}
-              />
+            <Command label={searchPlaceholder}>
+              <CommandInput autoFocus placeholder={searchPlaceholder} />
               {status === 'loading' && (
-                <div className="flex items-center gap-2 px-1 py-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                   <Spinner />
                   Carregando…
                 </div>
               )}
               {status === 'error' && (
-                <div className="space-y-2 px-1 py-2">
+                <div className="space-y-2 p-3">
                   <StatusMessage tone="error">{error}</StatusMessage>
                   {onRetry !== undefined && (
                     <Button type="button" variant="outline" size="sm" onClick={onRetry}>
@@ -151,58 +150,52 @@ export function CreatableMultiSelect<T>({
                 </div>
               )}
               {status === 'success' && (
-                <div
-                  id={listId}
-                  role="listbox"
-                  aria-multiselectable
-                  className="max-h-56 space-y-0.5 overflow-y-auto"
-                >
-                  {filtered.length === 0 && (
-                    <p className="px-2 py-1.5 text-sm text-muted-foreground">{emptyText}</p>
-                  )}
-                  {filtered.map(item => {
-                    const key = getKey(item)
-                    const isSelected = values.includes(key)
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        role="option"
-                        aria-selected={isSelected}
-                        onClick={() => {
-                          toggle(key)
-                        }}
-                        className={cn(
-                          'flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground',
-                          isSelected && 'bg-accent text-accent-foreground',
-                        )}
-                      >
-                        {getColor !== undefined && (
-                          <span
-                            className="size-2 shrink-0 rounded-full"
-                            style={{ backgroundColor: getColor(item) }}
-                            aria-hidden="true"
-                          />
-                        )}
-                        {getLabel(item)}
-                      </button>
-                    )
-                  })}
-                </div>
+                <>
+                  <CommandList aria-multiselectable="true">
+                    <CommandEmpty>{emptyText}</CommandEmpty>
+                    <CommandGroup>
+                      {items.map(item => {
+                        const key = getKey(item)
+                        const isSelected = values.includes(key)
+                        return (
+                          <CommandItem
+                            key={key}
+                            value={getLabel(item)}
+                            data-checked={isSelected}
+                            onSelect={() => {
+                              toggle(key)
+                            }}
+                          >
+                            {getColor !== undefined && (
+                              <span
+                                className="size-2 shrink-0 rounded-full"
+                                style={{ backgroundColor: getColor(item) }}
+                                aria-hidden="true"
+                              />
+                            )}
+                            {getLabel(item)}
+                          </CommandItem>
+                        )
+                      })}
+                    </CommandGroup>
+                  </CommandList>
+                  <div className="border-t border-border p-1">
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto w-full justify-start gap-1 px-2 py-1.5 text-primary hover:text-primary"
+                      onClick={() => {
+                        setMode('create')
+                      }}
+                    >
+                      <Plus className="size-3.5" />
+                      {createActionLabel}
+                    </Button>
+                  </div>
+                </>
               )}
-              <Button
-                type="button"
-                variant="ghost"
-                size="sm"
-                className="h-auto w-full justify-start gap-1 px-2 py-1.5 text-primary hover:text-primary"
-                onClick={() => {
-                  setMode('create')
-                }}
-              >
-                <Plus className="size-3.5" />
-                {createActionLabel}
-              </Button>
-            </div>
+            </Command>
           )}
         </PopoverContent>
       </Popover>

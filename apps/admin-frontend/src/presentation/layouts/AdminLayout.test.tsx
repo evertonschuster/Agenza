@@ -53,7 +53,7 @@ describe('AdminLayout', () => {
     localStorage.clear()
   })
 
-  it('renders every navigation item and the child route content', () => {
+  it('renders every navigation item and the child route content', async () => {
     renderLayout(buildContainer(buildTenantContext()))
 
     for (const label of [
@@ -68,6 +68,10 @@ describe('AdminLayout', () => {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
     expect(screen.getByText('Dashboard content')).toBeInTheDocument()
+    // useAuth()'s session load resolves after this test's own assertions -
+    // wait for it to settle so its state update is captured inside act()
+    // instead of warning after the test body has already returned.
+    await screen.findByText('Bella Studio')
   })
 
   it("shows the authenticated user's business name in the sidebar", async () => {

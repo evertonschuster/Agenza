@@ -1,10 +1,9 @@
 import { Category } from '../../domain/entities/Category'
+import type { components } from '../generated/services-api'
 
-/** The CategoryDto shape confirmed in docs/API.md. */
-export interface CategoryDto {
-  id: string
-  name: string
-}
+/** The CategoryDto shape - generated from the live OpenAPI contract, not
+ * hand-maintained (see src/infrastructure/generated/services-api.d.ts). */
+export type CategoryDto = components['schemas']['CategoryResponse']
 
 export function mapCategoryDtoToDomain(dto: CategoryDto): Category {
   return Category.create({ id: dto.id, name: dto.name })

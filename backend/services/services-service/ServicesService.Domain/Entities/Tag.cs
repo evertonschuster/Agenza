@@ -31,9 +31,15 @@ public class Tag : TenantOwnedEntity
 
     public void Update(string name, TagColor color, string? description)
     {
-        Name = ValidateName(name);
+        // Validate every new value before assigning anything, so a later
+        // validation failure (e.g. an over-length description) can never
+        // leave the entity with some fields already overwritten.
+        var validatedName = ValidateName(name);
+        var validatedDescription = ValidateDescription(description);
+
+        Name = validatedName;
         Color = color;
-        Description = ValidateDescription(description);
+        Description = validatedDescription;
     }
 
     private static string ValidateName(string name)

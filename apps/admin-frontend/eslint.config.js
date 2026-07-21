@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint'
 import eslintConfigPrettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage'] },
+  { ignores: ['dist', 'coverage', 'src/infrastructure/generated'] },
   {
     extends: [
       js.configs.recommended,
@@ -91,6 +91,18 @@ export default tseslint.config(
           ],
         },
       ],
+    },
+  },
+  {
+    // shadcn/ui generates these files verbatim via its CLI and they're kept
+    // exactly as generated (see feedback_shadcn_minimal_customization) -
+    // explicit-function-return-type isn't part of shadcn's own style and
+    // hand-editing dozens of generated components just to satisfy it would
+    // be pure churn with no correctness benefit. Every other rule (type
+    // safety, hooks, architectural boundaries) still applies here.
+    files: ['src/components/ui/**/*.{ts,tsx}', 'src/lib/utils.ts'],
+    rules: {
+      '@typescript-eslint/explicit-function-return-type': 'off',
     },
   },
 )

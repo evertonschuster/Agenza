@@ -10,6 +10,7 @@ import { Tag, TAG_COLOR_PALETTE } from '../../../domain/entities/Tag'
 import { Tenant } from '../../../domain/value-objects/Tenant'
 import { User } from '../../../domain/entities/User'
 import { MALICIOUS_PAYLOADS } from '../../../test/fixtures/maliciousPayloads'
+import { ApiError } from '../../../infrastructure/http/ApiError'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
@@ -359,6 +360,60 @@ describe('ServicesPage', () => {
         expect(within(dialog).getByText('Promoção')).toBeInTheDocument()
       })
       expect(screen.getByRole('dialog')).toBeInTheDocument()
+    })
+  })
+
+  describe('structured server errors', () => {
+    async function fillValidServiceForm(): Promise<void> {
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      await userEvent.type(screen.getByLabelText(/^nome$/i), 'Corte de cabelo')
+      await userEvent.type(screen.getByLabelText(/duração mínima/i), '15')
+      await userEvent.type(screen.getByLabelText(/^duração \(min\)$/i), '30')
+      await userEvent.type(screen.getByLabelText(/duração máxima/i), '45')
+      await userEvent.type(screen.getByLabelText(/preço/i), '80')
+      await userEvent.type(screen.getByLabelText(/desconto máximo/i), '5')
+      const submitButton = screen.getByRole('button', { name: /criar serviço/i })
+      await vi.waitFor(() => {
+        expect(submitButton).toBeEnabled()
+      })
+      await userEvent.click(submitButton)
+    }
+
+    it('maps a validation field error from the API onto the Nome field and focuses it', async () => {
+      const validationError = new ApiError(400, 'Ocorreram erros de validação.', {
+        status: 400,
+        code: 'Service.ValidationFailed',
+        errors: { Name: [{ code: 'Service.NameRequired', message: 'O nome é obrigatório.' }] },
+      })
+      renderServicesPage(
+        buildContainer({
+          createService: { execute: vi.fn(() => Promise.reject(validationError)) },
+        }),
+      )
+      await screen.findByText('Massagem relaxante')
+
+      await fillValidServiceForm()
+
+      const fieldError = await screen.findByText('O nome é obrigatório.')
+      expect(fieldError).toHaveAttribute('role', 'alert')
+      expect(screen.getByLabelText(/^nome$/i)).toHaveFocus()
+    })
+
+    it('maps a duplicate-name conflict code from the API onto the Nome field', async () => {
+      const conflictError = new ApiError(409, 'Já existe um serviço com esse nome.', {
+        status: 409,
+        code: 'Service.DuplicateName',
+      })
+      renderServicesPage(
+        buildContainer({ createService: { execute: vi.fn(() => Promise.reject(conflictError)) } }),
+      )
+      await screen.findByText('Massagem relaxante')
+
+      await fillValidServiceForm()
+
+      const fieldError = await screen.findByText('Já existe um serviço com esse nome.')
+      expect(fieldError).toHaveAttribute('role', 'alert')
+      expect(screen.getByLabelText(/^nome$/i)).toHaveFocus()
     })
   })
 

@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Categories.UpdateCategory;
 using ServicesService.Domain.Entities;
@@ -9,13 +10,15 @@ public class UpdateCategoryCommandHandlerTests
 {
     private readonly ICategoryRepository _repository = Substitute.For<ICategoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly ILogger<UpdateCategoryCommandHandler> _logger =
+        Substitute.For<ILogger<UpdateCategoryCommandHandler>>();
     private readonly UpdateCategoryCommandHandler _handler;
 
     public UpdateCategoryCommandHandlerTests()
     {
         _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(false);
-        _handler = new UpdateCategoryCommandHandler(_repository, _unitOfWork);
+        _handler = new UpdateCategoryCommandHandler(_repository, _unitOfWork, _logger);
     }
 
     [Fact]
@@ -78,11 +81,29 @@ public class UpdateCategoryCommandHandlerTests
         var category = new Category(Guid.NewGuid(), "Hair");
         _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(new InvalidOperationException()));
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "IX_Categories_TenantId_NameNormalized"));
 
         var result = await _handler.Handle(new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Category.DuplicateName");
+    }
+
+    [Fact]
+    public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
+    {
+        var category = new Category(Guid.NewGuid(), "Hair");
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "some_other_unique_constraint"));
+
+        var result = await _handler.Handle(new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Category.DuplicateConflict");
     }
 }

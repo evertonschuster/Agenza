@@ -3,7 +3,13 @@ import { useAuth } from '../../hooks/useAuth'
 import { useCategories } from '../../hooks/useCategories'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import type { Category } from '../../../domain/entities/Category'
-import { CategoryForm, type CategoryFormValues } from '../../forms/CategoryForm'
+import {
+  CategoryForm,
+  type CategoryFormValues,
+  type CategoryFormField,
+} from '../../forms/CategoryForm'
+import { mapApiErrorToForm, type ServerFormError } from '../../forms/serverFormError'
+import { categoryFieldMap, categoryCodeFieldMap } from '../../forms/fieldMaps'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -53,7 +59,7 @@ export function CategoriesPage(): JSX.Element {
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<ServerFormError<CategoryFormField> | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Category | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -62,13 +68,13 @@ export function CategoriesPage(): JSX.Element {
   function openCreateForm(): void {
     setFormTarget('new')
     setDisplayTarget('new')
-    setFormError(null)
+    setServerError(null)
   }
 
   function openEditForm(category: Category): void {
     setFormTarget(category)
     setDisplayTarget(category)
-    setFormError(null)
+    setServerError(null)
   }
 
   function closeForm(): void {
@@ -76,12 +82,12 @@ export function CategoriesPage(): JSX.Element {
     // after `open` flips to false, and clearing displayTarget here would
     // blank the title/form during that animation instead of after it.
     setFormTarget(null)
-    setFormError(null)
+    setServerError(null)
   }
 
   async function handleSubmit(values: CategoryFormValues): Promise<void> {
     setIsSubmitting(true)
-    setFormError(null)
+    setServerError(null)
     try {
       if (formTarget === 'new') {
         await createCategory(toCategoryInput(values))
@@ -90,7 +96,14 @@ export function CategoriesPage(): JSX.Element {
       }
       closeForm()
     } catch (caughtError) {
-      setFormError(messageFrom(caughtError, 'Não foi possível salvar a categoria.'))
+      setServerError(
+        mapApiErrorToForm(
+          caughtError,
+          categoryFieldMap,
+          categoryCodeFieldMap,
+          'Não foi possível salvar a categoria.',
+        ),
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -236,7 +249,7 @@ export function CategoriesPage(): JSX.Element {
               }
               submitLabel={displayTarget === 'new' ? 'Criar categoria' : 'Salvar alterações'}
               isSubmitting={isSubmitting}
-              error={formError}
+              serverError={serverError}
               onCancel={closeForm}
               onSubmit={handleSubmit}
             />

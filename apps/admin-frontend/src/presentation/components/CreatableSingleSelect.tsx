@@ -1,7 +1,14 @@
 import { useId, useState, type JSX, type ReactNode } from 'react'
 import { ChevronDownIcon, Plus } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
-import { Input } from '@/components/ui/input'
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusMessage } from './StatusMessage'
@@ -32,6 +39,13 @@ interface CreatableSingleSelectProps<T> {
   onRetry?: (() => void) | undefined
 }
 
+/**
+ * Built on shadcn/ui's Command (cmdk) instead of a hand-rolled listbox -
+ * cmdk supplies full ARIA-combobox keyboard behavior (ArrowUp/Down, Home,
+ * End, Enter, active-descendant tracking) and ties it into aria-expanded/
+ * aria-controls automatically, which a hand-rolled version would have to
+ * reimplement from scratch with more code and more room for gaps.
+ */
 export function CreatableSingleSelect<T>({
   id,
   label,
@@ -49,56 +63,52 @@ export function CreatableSingleSelect<T>({
   error,
   onRetry,
 }: CreatableSingleSelectProps<T>): JSX.Element {
-  const listId = useId()
+  const contentId = useId()
   const [open, setOpen] = useState(false)
   const [mode, setMode] = useState<'list' | 'create'>('list')
-  const [query, setQuery] = useState('')
 
   const selectedItem = items.find(item => getKey(item) === value)
   const triggerLabel = selectedItem !== undefined ? getLabel(selectedItem) : null
-  const filtered = items.filter(item =>
-    getLabel(item).toLowerCase().includes(query.trim().toLowerCase()),
-  )
-
-  function reset(): void {
-    setMode('list')
-    setQuery('')
-  }
 
   function handleOpenChange(nextOpen: boolean): void {
     setOpen(nextOpen)
     if (!nextOpen) {
-      reset()
+      setMode('list')
     }
   }
 
-  function handleCreated(item: T): void {
-    onChange(getKey(item))
+  function select(key: string | null): void {
+    onChange(key)
     setOpen(false)
-    reset()
+    setMode('list')
+  }
+
+  function handleCreated(item: T): void {
+    select(getKey(item))
   }
 
   return (
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
-        <button
+        <Button
           type="button"
+          variant="outline"
           id={id}
           role="combobox"
           aria-expanded={open}
-          aria-controls={listId}
+          aria-controls={contentId}
           aria-label={label}
-          className="flex h-8 w-full items-center justify-between gap-1.5 rounded-lg border border-input bg-transparent px-2.5 py-1 text-sm outline-none focus-visible:border-ring focus-visible:ring-3 focus-visible:ring-ring/50 dark:bg-input/30"
+          className="h-8 w-full justify-between px-2.5 font-normal"
         >
-          <span className={cn(triggerLabel === null && 'text-muted-foreground')}>
+          <span className={cn('truncate', triggerLabel === null && 'text-muted-foreground')}>
             {triggerLabel ?? nullLabel}
           </span>
           <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-        </button>
+        </Button>
       </PopoverTrigger>
-      <PopoverContent align="start" className="w-72 p-2">
+      <PopoverContent id={contentId} align="start" className="w-72 p-0">
         {mode === 'create' ? (
-          <>
+          <div className="p-3">
             <p className="mb-3 text-sm font-medium text-foreground">{createActionLabel}</p>
             {renderCreateForm({
               close: () => {
@@ -106,27 +116,18 @@ export function CreatableSingleSelect<T>({
               },
               onCreated: handleCreated,
             })}
-          </>
+          </div>
         ) : (
-          <div className="space-y-2">
-            <Input
-              autoFocus
-              type="text"
-              placeholder={searchPlaceholder}
-              aria-label={searchPlaceholder}
-              value={query}
-              onChange={event => {
-                setQuery(event.target.value)
-              }}
-            />
+          <Command label={searchPlaceholder}>
+            <CommandInput autoFocus placeholder={searchPlaceholder} />
             {status === 'loading' && (
-              <div className="flex items-center gap-2 px-1 py-2 text-sm text-muted-foreground">
+              <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                 <Spinner />
                 Carregando…
               </div>
             )}
             {status === 'error' && (
-              <div className="space-y-2 px-1 py-2">
+              <div className="space-y-2 p-3">
                 <StatusMessage tone="error">{error}</StatusMessage>
                 {onRetry !== undefined && (
                   <Button type="button" variant="outline" size="sm" onClick={onRetry}>
@@ -136,61 +137,53 @@ export function CreatableSingleSelect<T>({
               </div>
             )}
             {status === 'success' && (
-              <div id={listId} role="listbox" className="max-h-56 space-y-0.5 overflow-y-auto">
-                <button
-                  type="button"
-                  role="option"
-                  aria-selected={value === null}
-                  onClick={() => {
-                    onChange(null)
-                    setOpen(false)
-                  }}
-                  className={cn(
-                    'flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground',
-                    value === null && 'bg-accent text-accent-foreground',
-                  )}
-                >
-                  {nullLabel}
-                </button>
-                {filtered.length === 0 && (
-                  <p className="px-2 py-1.5 text-sm text-muted-foreground">{emptyText}</p>
-                )}
-                {filtered.map(item => {
-                  const key = getKey(item)
-                  return (
-                    <button
-                      key={key}
-                      type="button"
-                      role="option"
-                      aria-selected={value === key}
-                      onClick={() => {
-                        onChange(key)
-                        setOpen(false)
+              <>
+                <CommandList>
+                  <CommandEmpty>{emptyText}</CommandEmpty>
+                  <CommandGroup>
+                    <CommandItem
+                      value={nullLabel}
+                      data-checked={value === null}
+                      onSelect={() => {
+                        select(null)
                       }}
-                      className={cn(
-                        'flex w-full items-center rounded-md px-2 py-1.5 text-left text-sm hover:bg-accent hover:text-accent-foreground',
-                        value === key && 'bg-accent text-accent-foreground',
-                      )}
                     >
-                      {getLabel(item)}
-                    </button>
-                  )
-                })}
-              </div>
+                      {nullLabel}
+                    </CommandItem>
+                    {items.map(item => {
+                      const key = getKey(item)
+                      return (
+                        <CommandItem
+                          key={key}
+                          value={getLabel(item)}
+                          data-checked={value === key}
+                          onSelect={() => {
+                            select(key)
+                          }}
+                        >
+                          {getLabel(item)}
+                        </CommandItem>
+                      )
+                    })}
+                  </CommandGroup>
+                </CommandList>
+                <div className="border-t border-border p-1">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto w-full justify-start gap-1 px-2 py-1.5 text-primary hover:text-primary"
+                    onClick={() => {
+                      setMode('create')
+                    }}
+                  >
+                    <Plus className="size-3.5" />
+                    {createActionLabel}
+                  </Button>
+                </div>
+              </>
             )}
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="h-auto w-full justify-start gap-1 px-2 py-1.5 text-primary hover:text-primary"
-              onClick={() => {
-                setMode('create')
-              }}
-            >
-              <Plus className="size-3.5" />
-              {createActionLabel}
-            </Button>
-          </div>
+          </Command>
         )}
       </PopoverContent>
     </Popover>

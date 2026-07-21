@@ -116,6 +116,58 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
+    public async Task Create_with_another_tenants_category_returns_404_not_a_cross_tenant_attachment()
+    {
+        var ownerClient = AuthenticatedClient(Guid.NewGuid());
+        var otherTenantCategoryResponse = await ownerClient.PostAsJsonAsync(CategoriesUrl, new { name = "Other Tenant's Category" });
+        var otherTenantCategoryId =
+            (await otherTenantCategoryResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        // docs/adr/0013: no composite FK exists - isolation for this relationship
+        // is an application-layer guarantee (the tenant query filter makes the
+        // other tenant's Category invisible), proven end-to-end here.
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var response = await client.PostAsJsonAsync(
+            ServicesUrl, NewServiceBody("Cross-tenant Attempt", categoryId: otherTenantCategoryId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Create_with_another_tenants_tag_returns_404_not_a_cross_tenant_attachment()
+    {
+        var ownerClient = AuthenticatedClient(Guid.NewGuid());
+        var otherTenantTagResponse = await ownerClient.PostAsJsonAsync(
+            TagsUrl, new { name = "Other Tenant's Tag", color = "#0d9488", description = (string?)null });
+        var otherTenantTagId =
+            (await otherTenantTagResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var response = await client.PostAsJsonAsync(
+            ServicesUrl, NewServiceBody("Cross-tenant Attempt", tagIds: [otherTenantTagId]));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
+    public async Task Update_with_another_tenants_category_returns_404_not_a_cross_tenant_attachment()
+    {
+        var ownerClient = AuthenticatedClient(Guid.NewGuid());
+        var otherTenantCategoryResponse = await ownerClient.PostAsJsonAsync(CategoriesUrl, new { name = "Other Tenant's Category" });
+        var otherTenantCategoryId =
+            (await otherTenantCategoryResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var createResponse = await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Haircut"));
+        var serviceId = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        var response = await client.PutAsJsonAsync(
+            $"{ServicesUrl}/{serviceId}", NewServiceBody("Haircut", categoryId: otherTenantCategoryId));
+
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+    }
+
+    [Fact]
     public async Task Create_with_tags_returns_them_in_the_response()
     {
         var tenantId = Guid.NewGuid();
@@ -140,6 +192,31 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
         var response = await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("duplicate")); // case-insensitive match
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("code").GetString().Should().Be("Service.DuplicateName");
+    }
+
+    [Fact]
+    public async Task Create_with_leading_and_trailing_whitespace_matches_an_existing_trimmed_name()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Haircut"));
+
+        var response = await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("  Haircut  "));
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Update_keeping_its_own_name_unchanged_does_not_conflict_with_itself()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var createResponse = await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Haircut"));
+        var serviceId = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        var response = await client.PutAsJsonAsync($"{ServicesUrl}/{serviceId}", NewServiceBody("Haircut"));
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -194,6 +271,8 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
         var response = await intruderClient.PutAsJsonAsync($"{ServicesUrl}/{serviceId}", NewServiceBody("Hijacked"));
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("code").GetString().Should().Be("Service.NotFound");
     }
 
     [Fact]

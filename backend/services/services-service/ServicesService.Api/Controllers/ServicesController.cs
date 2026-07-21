@@ -1,6 +1,7 @@
 using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using ServicesService.Application.Services;
 using ServicesService.Application.Services.CreateService;
 using ServicesService.Application.Services.DeleteService;
 using ServicesService.Application.Services.ListServices;
@@ -21,6 +22,7 @@ public class ServicesController : ControllerBase
     }
 
     [HttpGet]
+    [ProducesResponseType<PagedResult<ServiceResponse>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] ListServicesQuery query, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Query(query, cancellationToken);
@@ -28,6 +30,7 @@ public class ServicesController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType<ServiceResponse>(StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(CreateServiceCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command, cancellationToken);
@@ -35,6 +38,7 @@ public class ServicesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [ProducesResponseType<ServiceResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Update(Guid id, UpdateServiceCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command with { ServiceId = id }, cancellationToken);
@@ -42,6 +46,7 @@ public class ServicesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(new DeleteServiceCommand(id), cancellationToken);

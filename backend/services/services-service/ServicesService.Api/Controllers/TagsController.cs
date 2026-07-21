@@ -1,6 +1,7 @@
 using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.CreateTag;
 using ServicesService.Application.Tags.DeleteTag;
 using ServicesService.Application.Tags.ListTags;
@@ -21,6 +22,7 @@ public class TagsController : ControllerBase
     }
 
     [HttpGet]
+    [ProducesResponseType<IReadOnlyList<TagResponse>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] ListTagsQuery query, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Query(query, cancellationToken);
@@ -28,6 +30,7 @@ public class TagsController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType<TagResponse>(StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(CreateTagCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command, cancellationToken);
@@ -35,6 +38,7 @@ public class TagsController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [ProducesResponseType<TagResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Update(Guid id, UpdateTagCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command with { TagId = id }, cancellationToken);
@@ -42,6 +46,7 @@ public class TagsController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(new DeleteTagCommand(id), cancellationToken);

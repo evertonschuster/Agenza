@@ -114,7 +114,56 @@ describe('useServices', () => {
     })
 
     expect(createServiceSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, createInput)
-    expect(listServicesSpy).toHaveBeenCalledTimes(1)
+    // The refetch fires in the background (not awaited by createService
+    // itself) - wait for it rather than asserting immediately.
+    await waitFor(() => {
+      expect(listServicesSpy).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('keeps the created service visible even if the background refetch fails', async () => {
+    const newService = Service.create({
+      id: 'service-2',
+      code: 1002,
+      name: 'Novo serviço',
+      durationMinutes: 45,
+      minDurationMinutes: 30,
+      maxDurationMinutes: 60,
+      price: 90,
+      maxDiscountPercentage: 5,
+      tags: [],
+    })
+    const listServicesSpy = vi
+      .fn<() => Promise<typeof pagedFixture>>()
+      .mockResolvedValueOnce(pagedFixture)
+      .mockRejectedValueOnce(new Error('network down'))
+    const createServiceSpy = vi.fn(() => Promise.resolve(newService))
+    const tenantContext = buildTenantContext()
+    const { result } = renderUseServices(
+      createFakeContainer({
+        listServices: { execute: listServicesSpy },
+        createService: { execute: createServiceSpy },
+      }),
+      tenantContext,
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    await act(async () => {
+      await expect(result.current.createService(createInput)).resolves.toEqual(newService)
+    })
+
+    // The optimistic insert survives the refetch failure below.
+    expect(result.current.services).toEqual([serviceFixture, newService])
+    expect(result.current.totalCount).toBe(2)
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error')
+    })
+    // Still there after the failed refetch settles - not cleared, not
+    // reported as a failed creation.
+    expect(result.current.services).toEqual([serviceFixture, newService])
   })
 
   it('deletes a service then refetches the list', async () => {

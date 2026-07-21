@@ -94,7 +94,84 @@ describe('useCategories', () => {
     expect(createCategorySpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
       name: 'Massagens',
     })
-    expect(listCategoriesSpy).toHaveBeenCalledTimes(1)
+    // The refetch fires in the background (not awaited by createCategory
+    // itself) - wait for it rather than asserting immediately.
+    await waitFor(() => {
+      expect(listCategoriesSpy).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('resolves as soon as the POST succeeds, without waiting for the background refetch', async () => {
+    let resolveRefetch: (() => void) | undefined
+    const listCategoriesSpy = vi
+      .fn<() => Promise<Category[]>>()
+      .mockResolvedValueOnce([categoryFixture])
+      .mockImplementationOnce(
+        () =>
+          new Promise<Category[]>(resolve => {
+            resolveRefetch = () => {
+              resolve([categoryFixture])
+            }
+          }),
+      )
+    const tenantContext = buildTenantContext()
+    const { result } = renderUseCategories(
+      createFakeContainer({ listCategories: { execute: listCategoriesSpy } }),
+      tenantContext,
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    // createCategory resolves even though the refetch it triggers never
+    // settles during this act() block - proving success doesn't depend on
+    // the background refetch completing.
+    await act(async () => {
+      await result.current.createCategory({ name: 'Nova categoria' })
+    })
+
+    expect(result.current.categories).toContainEqual(categoryFixture)
+
+    await act(async () => {
+      resolveRefetch?.()
+      await Promise.resolve()
+    })
+  })
+
+  it('keeps the created category visible even if the background refetch fails', async () => {
+    const newCategory = Category.create({ id: 'category-2', name: 'Nova categoria' })
+    const listCategoriesSpy = vi
+      .fn<() => Promise<Category[]>>()
+      .mockResolvedValueOnce([categoryFixture])
+      .mockRejectedValueOnce(new Error('network down'))
+    const createCategorySpy = vi.fn(() => Promise.resolve(newCategory))
+    const tenantContext = buildTenantContext()
+    const { result } = renderUseCategories(
+      createFakeContainer({
+        listCategories: { execute: listCategoriesSpy },
+        createCategory: { execute: createCategorySpy },
+      }),
+      tenantContext,
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    await act(async () => {
+      await expect(result.current.createCategory({ name: 'Nova categoria' })).resolves.toEqual(
+        newCategory,
+      )
+    })
+
+    // The optimistic insert survives the refetch failure below.
+    expect(result.current.categories).toEqual([categoryFixture, newCategory])
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error')
+    })
+    // Still there after the failed refetch settles - not cleared, not
+    // reported as a failed creation.
+    expect(result.current.categories).toEqual([categoryFixture, newCategory])
   })
 
   it('deletes a category then refetches the list', async () => {

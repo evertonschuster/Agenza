@@ -8,6 +8,7 @@ import { Category } from '../../../domain/entities/Category'
 import { Tenant } from '../../../domain/value-objects/Tenant'
 import { User } from '../../../domain/entities/User'
 import { MALICIOUS_PAYLOADS } from '../../../test/fixtures/maliciousPayloads'
+import { ApiError } from '../../../infrastructure/http/ApiError'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
@@ -98,7 +99,8 @@ describe('CategoriesPage', () => {
   it('closes the form normally when creation succeeds even if the follow-up refetch fails', async () => {
     // The mutation itself succeeded - a failed background refresh afterward
     // must not be reported to the user as "creation failed".
-    const createCategorySpy = vi.fn(() => Promise.resolve(massagensCategory))
+    const esteticaCategory = Category.create({ id: 'category-2', name: 'Estética' })
+    const createCategorySpy = vi.fn(() => Promise.resolve(esteticaCategory))
     const listCategoriesSpy = vi
       .fn()
       .mockResolvedValueOnce([massagensCategory])
@@ -119,9 +121,11 @@ describe('CategoriesPage', () => {
     await vi.waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
-    // The stale (last known-good) list stays visible instead of being
-    // replaced by a blocking error.
+    // The newly created category is visible immediately (optimistic insert),
+    // alongside the last known-good list, instead of being lost when the
+    // background refresh below fails.
     expect(screen.getByText('Massagens')).toBeInTheDocument()
+    expect(screen.getByText('Estética')).toBeInTheDocument()
     expect(
       await screen.findByText(/não foi possível atualizar a lista de categorias/i),
     ).toBeInTheDocument()
@@ -178,6 +182,53 @@ describe('CategoriesPage', () => {
 
     expect(await screen.findByText('Category name is already in use.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /criar categoria/i })).toBeInTheDocument()
+  })
+
+  describe('structured server errors', () => {
+    it('maps a validation field error from the API onto the Nome field and focuses it', async () => {
+      const validationError = new ApiError(400, 'Ocorreram erros de validação.', {
+        status: 400,
+        code: 'Category.ValidationFailed',
+        errors: { Name: [{ code: 'Category.NameRequired', message: 'O nome é obrigatório.' }] },
+      })
+      renderCategoriesPage(
+        buildContainer({
+          createCategory: { execute: vi.fn(() => Promise.reject(validationError)) },
+        }),
+      )
+      await screen.findByText('Massagens')
+
+      await userEvent.click(screen.getByRole('button', { name: /nova categoria/i }))
+      await userEvent.type(screen.getByLabelText('Nome'), 'Qualquer')
+      await userEvent.click(screen.getByRole('button', { name: /criar categoria/i }))
+
+      const fieldError = await screen.findByText('O nome é obrigatório.')
+      expect(fieldError).toHaveAttribute('role', 'alert')
+      expect(screen.getByLabelText('Nome')).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByLabelText('Nome')).toHaveFocus()
+      // A validation ProblemDetails fully mapped to a field has no unmapped
+      // remainder - it must not also duplicate as a global banner message.
+      expect(screen.queryByText('Ocorreram erros de validação.')).not.toBeInTheDocument()
+    })
+
+    it('maps a duplicate-name conflict code from the API onto the Nome field', async () => {
+      const conflictError = new ApiError(409, 'Já existe uma categoria com esse nome.', {
+        status: 409,
+        code: 'Category.DuplicateName',
+      })
+      renderCategoriesPage(
+        buildContainer({ createCategory: { execute: vi.fn(() => Promise.reject(conflictError)) } }),
+      )
+      await screen.findByText('Massagens')
+
+      await userEvent.click(screen.getByRole('button', { name: /nova categoria/i }))
+      await userEvent.type(screen.getByLabelText('Nome'), 'Massagens')
+      await userEvent.click(screen.getByRole('button', { name: /criar categoria/i }))
+
+      const fieldError = await screen.findByText('Já existe uma categoria com esse nome.')
+      expect(fieldError).toHaveAttribute('role', 'alert')
+      expect(screen.getByLabelText('Nome')).toHaveFocus()
+    })
   })
 
   it('edits a category through the inline form', async () => {

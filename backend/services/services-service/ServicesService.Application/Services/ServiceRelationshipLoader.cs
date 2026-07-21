@@ -7,7 +7,7 @@ namespace ServicesService.Application.Services;
 // Loads and validates a Service's Category/Tags exactly once per request,
 // returning the same instances CreateService/UpdateService then persist and
 // read the response from - avoids the duplicate existence-check-then-refetch
-// queries the validator/handler split used to produce (docs/adr/0013).
+// queries the validator/handler split used to produce (docs/adr/0012).
 public sealed class ServiceRelationshipLoader
 {
     private readonly ICategoryRepository _categoryRepository;
@@ -39,7 +39,12 @@ public sealed class ServiceRelationshipLoader
         if (tagIds is { Count: > 0 })
         {
             tags = await _tagRepository.GetByIdsAsync(tagIds, cancellationToken);
-            if (tags.Count != tagIds.Count)
+
+            // GetByIdsAsync returns one row per distinct matching id, so a
+            // repeated id in tagIds must not be compared against the raw list
+            // count - that would misreport a fully-valid tag list as Tag.NotFound.
+            var distinctTagIdCount = tagIds.Distinct().Count();
+            if (tags.Count != distinctTagIdCount)
             {
                 return Result.Failure<ServiceRelationships>(
                     Error.NotFound("Tag.NotFound", "Uma ou mais etiquetas informadas não foram encontradas."));

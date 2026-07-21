@@ -67,7 +67,9 @@ export function useServices(
     })
   }, [tenantContext, useCases, page, search, categoryId, tagId])
 
-  const { data, status, error, execute } = useAsync(listServices)
+  const { data, status, error, execute, mutate } = useAsync(listServices, {
+    resetKey: tenantContext?.tenant.id,
+  })
 
   const createService = useCallback(
     async (input: CreateServiceInput): Promise<Service> => {
@@ -75,10 +77,24 @@ export function useServices(
         throw new Error('Não é possível criar um serviço sem um contexto de tenant autenticado')
       }
       const service = await useCases.createService.execute(tenantContext, input)
-      await execute()
+      // Insert immediately so the new service shows up as soon as the POST
+      // succeeds - the mutation's success never depends on the background
+      // refetch below. If that refetch fails, this optimistic entry is
+      // what keeps the service visible (see useAsync's own status/error,
+      // surfaced separately by the page).
+      mutate(current =>
+        current === null
+          ? current
+          : {
+              ...current,
+              services: [...current.services, service],
+              totalCount: current.totalCount + 1,
+            },
+      )
+      void execute()
       return service
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, useCases, execute, mutate],
   )
 
   const updateService = useCallback(
@@ -102,7 +118,7 @@ export function useServices(
       const refreshed = await execute()
       // Deleting the last item on a page past the first leaves the user
       // stranded on a now-empty page - step back to the last page that
-      // still has data instead (docs/adr/0013's frontend counterpart).
+      // still has data instead (docs/adr/0012's frontend counterpart).
       if (refreshed?.services.length === 0 && page > 1) {
         setPage(page - 1)
       }

@@ -171,6 +171,38 @@ public class ServiceTests
     }
 
     [Fact]
+    public void Update_WhenValidationFailsOnALaterField_LeavesEveryFieldUnchanged()
+    {
+        var categoryId = Guid.NewGuid();
+        var service = CreateValidService(categoryId);
+        var originalCategoryId = service.CategoryId;
+        var originalName = service.Name;
+        var originalDescription = service.Description;
+        var originalDuration = service.DurationMinutes;
+        var originalMinDuration = service.MinDurationMinutes;
+        var originalMaxDuration = service.MaxDurationMinutes;
+        var originalPrice = service.Price;
+        var originalMaxDiscountPercentage = service.MaxDiscountPercentage;
+
+        // MaxDiscountPercentage is the last field validated by Update - if the
+        // entity were mutated field-by-field instead of atomically, every
+        // field validated before it (name, description, duration, price)
+        // would already be overwritten by the time this throws.
+        var act = () => service.Update(
+            "Deep Tissue Massage", null, 90, 60, 120, 90.00m, 150m, Guid.NewGuid());
+
+        act.Should().Throw<InvalidServiceException>();
+        service.CategoryId.Should().Be(originalCategoryId);
+        service.Name.Should().Be(originalName);
+        service.Description.Should().Be(originalDescription);
+        service.DurationMinutes.Should().Be(originalDuration);
+        service.MinDurationMinutes.Should().Be(originalMinDuration);
+        service.MaxDurationMinutes.Should().Be(originalMaxDuration);
+        service.Price.Should().Be(originalPrice);
+        service.MaxDiscountPercentage.Should().Be(originalMaxDiscountPercentage);
+    }
+
+    [Fact]
     public void SetTags_ReplacesTheTagCollection()
     {
         var service = CreateValidService();

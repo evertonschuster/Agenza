@@ -25,6 +25,16 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                 schema: "services",
                 table: "Categories");
 
+            // Fail loudly instead of letting Postgres truncate/reject rows
+            // silently: a Service.Name longer than the new 80-char limit
+            // must be sanitized by a human before this migration can run.
+            migrationBuilder.Sql(
+                "DO $$ BEGIN " +
+                "IF EXISTS (SELECT 1 FROM \"services\".\"Services\" WHERE length(\"Name\") > 80) THEN " +
+                "RAISE EXCEPTION 'Cannot shrink Services.Name to 80 characters: one or more existing rows exceed the new limit. Sanitize the data before re-running this migration.'; " +
+                "END IF; " +
+                "END $$;");
+
             migrationBuilder.AlterColumn<string>(
                 name: "Name",
                 schema: "services",
@@ -35,6 +45,14 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                 oldClrType: typeof(string),
                 oldType: "character varying(100)",
                 oldMaxLength: 100);
+
+            // Same guard for Category.Name shrinking to 60 characters.
+            migrationBuilder.Sql(
+                "DO $$ BEGIN " +
+                "IF EXISTS (SELECT 1 FROM \"services\".\"Categories\" WHERE length(\"Name\") > 60) THEN " +
+                "RAISE EXCEPTION 'Cannot shrink Categories.Name to 60 characters: one or more existing rows exceed the new limit. Sanitize the data before re-running this migration.'; " +
+                "END IF; " +
+                "END $$;");
 
             migrationBuilder.AlterColumn<string>(
                 name: "Name",

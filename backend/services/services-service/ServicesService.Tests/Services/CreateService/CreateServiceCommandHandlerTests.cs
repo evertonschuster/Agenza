@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services;
 using ServicesService.Application.Services.CreateService;
@@ -14,6 +15,8 @@ public class CreateServiceCommandHandlerTests
     private readonly ITagRepository _tagRepository = Substitute.For<ITagRepository>();
     private readonly IServiceCodeGenerator _serviceCodeGenerator = Substitute.For<IServiceCodeGenerator>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly ILogger<CreateServiceCommandHandler> _logger =
+        Substitute.For<ILogger<CreateServiceCommandHandler>>();
     private readonly CreateServiceCommandHandler _handler;
 
     public CreateServiceCommandHandlerTests()
@@ -22,7 +25,8 @@ public class CreateServiceCommandHandlerTests
             .Returns(false);
         _serviceCodeGenerator.GetNextCodeAsync(Arg.Any<CancellationToken>()).Returns(1);
         var loader = new ServiceRelationshipLoader(_categoryRepository, _tagRepository);
-        _handler = new CreateServiceCommandHandler(_serviceRepository, loader, _serviceCodeGenerator, _unitOfWork);
+        _handler = new CreateServiceCommandHandler(
+            _serviceRepository, loader, _serviceCodeGenerator, _unitOfWork, _logger);
     }
 
     [Fact]
@@ -130,7 +134,8 @@ public class CreateServiceCommandHandlerTests
     public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(new InvalidOperationException()));
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "IX_Services_TenantId_NameNormalized"));
 
         var result = await _handler.Handle(
             new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
@@ -138,5 +143,38 @@ public class CreateServiceCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Service.DuplicateName");
+    }
+
+    [Fact]
+    public async Task Handle_WithConcurrentDuplicateCodeAtSaveTime_ReturnsDuplicateCodeConflict()
+    {
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "IX_Services_TenantId_Code"));
+
+        var result = await _handler.Handle(
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Service.DuplicateCode");
+    }
+
+    [Fact]
+    public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
+    {
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "some_other_unique_constraint"));
+
+        var result = await _handler.Handle(
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Service.DuplicateConflict");
     }
 }

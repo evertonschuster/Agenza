@@ -1,7 +1,6 @@
-import type { JSX } from 'react'
-import { useForm, Controller } from 'react-hook-form'
+import { useEffect, type JSX } from 'react'
+import { useForm, useWatch, Controller } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { z } from 'zod'
 import type { Category } from '../../../domain/entities/Category'
 import { TAG_COLOR_PALETTE, type Tag } from '../../../domain/entities/Tag'
 import type { CreateCategoryInput } from '../../../application/repositories/CategoryRepository'
@@ -13,12 +12,31 @@ import {
   type CreatableSelectStatus,
 } from '../../components/CreatableSingleSelect'
 import { CreatableMultiSelect } from '../../components/CreatableMultiSelect'
-import { CategoryForm, type CategoryFormValues } from '../../forms/CategoryForm'
-import { TagForm, type TagFormValues } from '../../forms/TagForm'
+import {
+  CategoryForm,
+  type CategoryFormValues,
+  type CategoryFormField,
+} from '../../forms/CategoryForm'
+import { TagForm, type TagFormValues, type TagFormField } from '../../forms/TagForm'
+import type { ServerFormError } from '../../forms/serverFormError'
+import {
+  categoryFieldMap,
+  categoryCodeFieldMap,
+  tagFieldMap,
+  tagCodeFieldMap,
+} from '../../forms/fieldMaps'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusMessage } from '../../components/StatusMessage'
 import { useCreateInline } from '../../hooks/useCreateInline'
+import {
+  serviceFormSchema,
+  SERVICE_NAME_MAX_LENGTH,
+  SERVICE_DESCRIPTION_MAX_LENGTH,
+  type ServiceFormInput,
+  type ServiceFormValues,
+  type ServiceFormField,
+} from './ServiceForm.schema'
 
 const EMPTY_CATEGORY_FORM_VALUES: CategoryFormValues = { name: '' }
 const EMPTY_TAG_FORM_VALUES: TagFormValues = {
@@ -40,102 +58,6 @@ function toTagInput(values: TagFormValues): CreateTagInput {
   }
 }
 
-const NAME_MAX_LENGTH = 80
-const DESCRIPTION_MAX_LENGTH = 500
-const MAX_ALLOWED_DURATION_MINUTES = 1440
-
-function numberField(message: string) {
-  return z
-    .string()
-    .refine(value => value.trim() !== '' && Number.isFinite(Number(value)), message)
-    .transform(value => Number(value))
-}
-
-const serviceFormSchema = z
-  .object({
-    name: z
-      .string()
-      .trim()
-      .min(1, 'Informe o nome do serviço.')
-      .max(
-        NAME_MAX_LENGTH,
-        `O nome do serviço deve ter no máximo ${String(NAME_MAX_LENGTH)} caracteres.`,
-      ),
-    description: z
-      .string()
-      .trim()
-      .max(
-        DESCRIPTION_MAX_LENGTH,
-        `A descrição não pode exceder ${String(DESCRIPTION_MAX_LENGTH)} caracteres.`,
-      ),
-    durationMinutes: numberField('Informe durações válidas em minutos.'),
-    minDurationMinutes: numberField('Informe durações válidas em minutos.'),
-    maxDurationMinutes: numberField('Informe durações válidas em minutos.'),
-    price: numberField('Informe um preço válido.'),
-    maxDiscountPercentage: numberField('Informe um desconto válido.'),
-    categoryId: z.string().nullable(),
-    tagIds: z.array(z.string()),
-  })
-  .superRefine((values, ctx) => {
-    // A sibling field that fails its own numberField refine is passed through
-    // here as its original raw string (zod still runs superRefine even when
-    // another field in the same object failed) - comparing against it with
-    // `<`/`>` would coerce it (e.g. '' becomes 0) and produce a spurious
-    // cross-field error. Only compare fields that actually parsed as numbers.
-    const isNumber = (value: unknown): value is number =>
-      typeof value === 'number' && Number.isFinite(value)
-    const min = values.minDurationMinutes
-    const duration = values.durationMinutes
-    const max = values.maxDurationMinutes
-    const price = values.price
-    const discount = values.maxDiscountPercentage
-
-    if (isNumber(min) && min < 1) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['minDurationMinutes'],
-        message: 'A duração mínima deve ser de pelo menos 1 minuto.',
-      })
-    }
-
-    if (isNumber(min) && isNumber(duration) && min > duration) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['minDurationMinutes'],
-        message: 'A duração mínima não pode ser maior que a duração padrão.',
-      })
-    } else if (isNumber(duration) && isNumber(max) && duration > max) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['maxDurationMinutes'],
-        message: 'A duração padrão não pode ser maior que a duração máxima.',
-      })
-    }
-
-    if (isNumber(max) && max > MAX_ALLOWED_DURATION_MINUTES) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['maxDurationMinutes'],
-        message: `A duração máxima não pode exceder ${String(MAX_ALLOWED_DURATION_MINUTES)} minutos (24 horas).`,
-      })
-    }
-
-    if (isNumber(price) && price < 0) {
-      ctx.addIssue({ code: 'custom', path: ['price'], message: 'O preço não pode ser negativo.' })
-    }
-
-    if (isNumber(discount) && (discount < 0 || discount > 100)) {
-      ctx.addIssue({
-        code: 'custom',
-        path: ['maxDiscountPercentage'],
-        message: 'O desconto máximo deve estar entre 0 e 100%.',
-      })
-    }
-  })
-
-export type ServiceFormInput = z.input<typeof serviceFormSchema>
-export type ServiceFormValues = z.output<typeof serviceFormSchema>
-
 interface ServiceFormProps {
   code: number | null
   initialValues: ServiceFormInput
@@ -149,7 +71,7 @@ interface ServiceFormProps {
   onRetryTags: () => void
   submitLabel: string
   isSubmitting: boolean
-  error: string | null
+  serverError: ServerFormError<ServiceFormField> | null
   onCancel: () => void
   onSubmit: (values: ServiceFormValues) => Promise<void>
   onCreateCategory: (input: CreateCategoryInput) => Promise<Category>
@@ -169,7 +91,7 @@ export function ServiceForm({
   onRetryTags,
   submitLabel,
   isSubmitting,
-  error,
+  serverError,
   onCancel,
   onSubmit,
   onCreateCategory,
@@ -179,6 +101,8 @@ export function ServiceForm({
     register,
     control,
     handleSubmit,
+    setError,
+    setFocus,
     formState: { errors },
   } = useForm<ServiceFormInput, unknown, ServiceFormValues>({
     resolver: zodResolver(serviceFormSchema),
@@ -187,9 +111,32 @@ export function ServiceForm({
     reValidateMode: 'onChange',
   })
   const hasErrors = Object.keys(errors).length > 0
+  const descriptionValue = useWatch({ control, name: 'description' })
 
-  const createCategory = useCreateInline<Category, CreateCategoryInput>(onCreateCategory)
-  const createTag = useCreateInline<Tag, CreateTagInput>(onCreateTag)
+  useEffect(() => {
+    if (serverError === null) {
+      return
+    }
+    for (const [field, message] of Object.entries(serverError.fieldErrors)) {
+      setError(field as ServiceFormField, { type: 'server', message })
+    }
+    if (serverError.firstField !== null) {
+      setFocus(serverError.firstField)
+    }
+  }, [serverError, setError, setFocus])
+
+  const createCategory = useCreateInline<Category, CreateCategoryInput, CategoryFormField>(
+    onCreateCategory,
+    categoryFieldMap,
+    categoryCodeFieldMap,
+    'Não foi possível criar a categoria.',
+  )
+  const createTag = useCreateInline<Tag, CreateTagInput, TagFormField>(
+    onCreateTag,
+    tagFieldMap,
+    tagCodeFieldMap,
+    'Não foi possível criar a etiqueta.',
+  )
 
   return (
     <form onSubmit={e => void handleSubmit(onSubmit)(e)} noValidate className="space-y-4">
@@ -208,7 +155,7 @@ export function ServiceForm({
         id="service-name"
         label="Nome"
         type="text"
-        maxLength={NAME_MAX_LENGTH}
+        maxLength={SERVICE_NAME_MAX_LENGTH}
         error={errors.name?.message}
         {...register('name')}
       />
@@ -218,8 +165,9 @@ export function ServiceForm({
         label="Descrição"
         hint="(opcional)"
         rows={2}
-        maxLength={DESCRIPTION_MAX_LENGTH}
+        maxLength={SERVICE_DESCRIPTION_MAX_LENGTH}
         showCount
+        currentLength={descriptionValue.length}
         error={errors.description?.message}
         {...register('description')}
       />
@@ -295,7 +243,7 @@ export function ServiceForm({
                     initialValues={EMPTY_CATEGORY_FORM_VALUES}
                     submitLabel="Criar categoria"
                     isSubmitting={createCategory.isCreating}
-                    error={createCategory.error}
+                    serverError={createCategory.serverError}
                     onCancel={() => {
                       createCategory.reset()
                       close()
@@ -336,7 +284,7 @@ export function ServiceForm({
                   initialValues={EMPTY_TAG_FORM_VALUES}
                   submitLabel="Criar etiqueta"
                   isSubmitting={createTag.isCreating}
-                  error={createTag.error}
+                  serverError={createTag.serverError}
                   onCancel={() => {
                     createTag.reset()
                     close()
@@ -347,9 +295,16 @@ export function ServiceForm({
             />
           )}
         />
+        {errors.tagIds?.message !== undefined && (
+          <p role="alert" className="mt-1 text-sm text-destructive">
+            {errors.tagIds.message}
+          </p>
+        )}
       </div>
 
-      {error !== null && <StatusMessage tone="error">{error}</StatusMessage>}
+      {serverError?.globalMessage != null && (
+        <StatusMessage tone="error">{serverError.globalMessage}</StatusMessage>
+      )}
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={isSubmitting || hasErrors}>

@@ -95,7 +95,47 @@ describe('useTags', () => {
       name: 'VIP',
       color: '#0d9488',
     })
-    expect(listTagsSpy).toHaveBeenCalledTimes(1)
+    // The refetch fires in the background (not awaited by createTag
+    // itself) - wait for it rather than asserting immediately.
+    await waitFor(() => {
+      expect(listTagsSpy).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it('keeps the created tag visible even if the background refetch fails', async () => {
+    const newTag = Tag.create({ id: 'tag-2', name: 'Returning', color: '#ef4444' })
+    const listTagsSpy = vi
+      .fn<() => Promise<Tag[]>>()
+      .mockResolvedValueOnce([tagFixture])
+      .mockRejectedValueOnce(new Error('network down'))
+    const createTagSpy = vi.fn(() => Promise.resolve(newTag))
+    const tenantContext = buildTenantContext()
+    const { result } = renderUseTags(
+      createFakeContainer({
+        listTags: { execute: listTagsSpy },
+        createTag: { execute: createTagSpy },
+      }),
+      tenantContext,
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    await act(async () => {
+      await expect(
+        result.current.createTag({ name: 'Returning', color: '#ef4444' }),
+      ).resolves.toEqual(newTag)
+    })
+
+    // The optimistic insert survives the refetch failure below.
+    expect(result.current.tags).toEqual([tagFixture, newTag])
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('error')
+    })
+    // Still there after the failed refetch settles - not cleared, not
+    // reported as a failed creation, so it keeps showing as a chip.
+    expect(result.current.tags).toEqual([tagFixture, newTag])
   })
 
   it('deletes a tag then refetches the list', async () => {

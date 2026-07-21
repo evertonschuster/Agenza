@@ -107,6 +107,46 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
         });
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("code").GetString().Should().Be("Tag.DuplicateName");
+    }
+
+    [Fact]
+    public async Task Create_with_leading_and_trailing_whitespace_matches_an_existing_trimmed_name()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        await client.PostAsJsonAsync(TagsUrl, new { name = "VIP", color = "#0d9488", description = (string?)null });
+
+        var response = await client.PostAsJsonAsync(TagsUrl, new
+        {
+            name = "  VIP  ",
+            color = "#ef4444",
+            description = (string?)null,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Update_keeping_its_own_name_unchanged_does_not_conflict_with_itself()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var createResponse = await client.PostAsJsonAsync(TagsUrl, new
+        {
+            name = "VIP",
+            color = "#0d9488",
+            description = (string?)null,
+        });
+        var tagId = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+
+        var response = await client.PutAsJsonAsync($"{TagsUrl}/{tagId}", new
+        {
+            name = "VIP",
+            color = "#ef4444",
+            description = (string?)null,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -151,8 +191,10 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
         });
 
         // The tenant query filter hides another tenant's row entirely - it
-        // reads as "doesn't exist", not a 400 shape error (docs/adr/0013).
+        // reads as "doesn't exist", not a 400 shape error (docs/adr/0012).
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("code").GetString().Should().Be("Tag.NotFound");
     }
 
     [Fact]
@@ -259,7 +301,7 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
         var tagId = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
         await client.DeleteAsync($"{TagsUrl}/{tagId}");
 
-        // The unique index is filtered to non-deleted rows (docs/adr/0013) -
+        // The unique index is filtered to non-deleted rows (docs/adr/0012) -
         // a soft-deleted tag's name is free to reuse.
         var recreateResponse = await client.PostAsJsonAsync(TagsUrl, new
         {

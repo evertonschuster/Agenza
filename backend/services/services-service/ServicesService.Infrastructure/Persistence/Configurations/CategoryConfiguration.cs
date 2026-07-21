@@ -14,7 +14,7 @@ public class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(c => c.TenantId).IsRequired();
         builder.Property(c => c.Name).IsRequired().HasMaxLength(Category.NameMaxLength);
 
-        // Case-insensitive uniqueness enforced by the database itself (docs/adr/0013),
+        // Case-insensitive uniqueness enforced by the database itself (docs/adr/0012),
         // not just the application-level NameExistsAsync pre-check: a generated,
         // always-lowercase shadow column backs the unique index so two concurrent
         // requests can't both persist "Massagem"/"massagem". Filtered to non-deleted

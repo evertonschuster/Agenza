@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.UpdateTag;
 using ServicesService.Domain.Entities;
@@ -10,13 +11,15 @@ public class UpdateTagCommandHandlerTests
 {
     private readonly ITagRepository _repository = Substitute.For<ITagRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly ILogger<UpdateTagCommandHandler> _logger =
+        Substitute.For<ILogger<UpdateTagCommandHandler>>();
     private readonly UpdateTagCommandHandler _handler;
 
     public UpdateTagCommandHandlerTests()
     {
         _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(false);
-        _handler = new UpdateTagCommandHandler(_repository, _unitOfWork);
+        _handler = new UpdateTagCommandHandler(_repository, _unitOfWork, _logger);
     }
 
     [Fact]
@@ -74,5 +77,39 @@ public class UpdateTagCommandHandlerTests
         await _handler.Handle(new UpdateTagCommand(tag.Id, "Returning", "#0d9488", null), CancellationToken.None);
 
         await _repository.Received(1).GetByIdAsync(tag.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
+    {
+        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        _repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "IX_Tags_TenantId_NameNormalized"));
+
+        var result = await _handler.Handle(
+            new UpdateTagCommand(tag.Id, "Returning", "#0d9488", null), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Tag.DuplicateName");
+    }
+
+    [Fact]
+    public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
+    {
+        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        _repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "some_other_unique_constraint"));
+
+        var result = await _handler.Handle(
+            new UpdateTagCommand(tag.Id, "Returning", "#0d9488", null), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Tag.DuplicateConflict");
     }
 }

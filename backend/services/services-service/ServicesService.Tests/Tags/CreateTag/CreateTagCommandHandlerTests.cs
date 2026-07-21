@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.CreateTag;
 using ServicesService.Domain.Entities;
@@ -9,13 +10,15 @@ public class CreateTagCommandHandlerTests
 {
     private readonly ITagRepository _repository = Substitute.For<ITagRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly ILogger<CreateTagCommandHandler> _logger =
+        Substitute.For<ILogger<CreateTagCommandHandler>>();
     private readonly CreateTagCommandHandler _handler;
 
     public CreateTagCommandHandlerTests()
     {
         _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(false);
-        _handler = new CreateTagCommandHandler(_repository, _unitOfWork);
+        _handler = new CreateTagCommandHandler(_repository, _unitOfWork, _logger);
     }
 
     [Fact]
@@ -52,11 +55,27 @@ public class CreateTagCommandHandlerTests
     public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(new InvalidOperationException()));
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "IX_Tags_TenantId_NameNormalized"));
 
         var result = await _handler.Handle(new CreateTagCommand("VIP", "#0d9488", null), CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Tag.DuplicateName");
+    }
+
+    [Fact]
+    public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
+    {
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
+                new InvalidOperationException(), "some_other_unique_constraint"));
+
+        var result = await _handler.Handle(new CreateTagCommand("VIP", "#0d9488", null), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Tag.DuplicateConflict");
     }
 }

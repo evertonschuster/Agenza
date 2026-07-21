@@ -90,7 +90,7 @@ public sealed class Dispatcher : IDispatcher
         }
 
         // Grouped by field instead of collapsed into one joined string, so the
-        // Api can return a structured, per-field response (docs/adr/0013) - each
+        // Api can return a structured, per-field response (docs/adr/0012) - each
         // failure's own WithErrorCode is preserved instead of discarded.
         var fieldErrors = result.Errors
             .GroupBy(failure => failure.PropertyName)

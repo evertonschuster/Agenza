@@ -40,7 +40,9 @@ export function useCategories(
     return useCases.listCategories.execute(tenantContext, { search })
   }, [tenantContext, useCases, search])
 
-  const { data, status, error, execute } = useAsync(listCategories)
+  const { data, status, error, execute, mutate } = useAsync(listCategories, {
+    resetKey: tenantContext?.tenant.id,
+  })
 
   const createCategory = useCallback(
     async (input: CreateCategoryInput): Promise<Category> => {
@@ -48,10 +50,16 @@ export function useCategories(
         throw new Error('Não é possível criar uma categoria sem um contexto de tenant autenticado')
       }
       const category = await useCases.createCategory.execute(tenantContext, input)
-      await execute()
+      // Insert immediately so the new category is selectable and shows up
+      // as soon as the POST succeeds - the mutation's success never
+      // depends on the background refetch below. If that refetch fails,
+      // this optimistic entry is what keeps the category visible (see
+      // useAsync's own status/error, surfaced separately by the page).
+      mutate(current => [...(current ?? []), category])
+      void execute()
       return category
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, useCases, execute, mutate],
   )
 
   const updateCategory = useCallback(

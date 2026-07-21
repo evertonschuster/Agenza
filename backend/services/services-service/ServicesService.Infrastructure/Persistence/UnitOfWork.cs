@@ -21,16 +21,25 @@ public class UnitOfWork : IUnitOfWork
         {
             return await _dbContext.SaveChangesAsync(cancellationToken);
         }
-        catch (DbUpdateException exception) when (IsUniqueViolation(exception))
+        catch (DbUpdateException exception) when (IsUniqueViolation(exception, out var constraintName))
         {
-            throw new DuplicateEntityException(exception);
+            throw new DuplicateEntityException(exception, constraintName);
         }
     }
 
     // A race between two concurrent requests that both passed NameExistsAsync
     // before either committed surfaces here as a Postgres unique_violation -
     // the database is the final authority on case-insensitive uniqueness
-    // (docs/adr/0013), not the earlier application-level check alone.
-    private static bool IsUniqueViolation(DbUpdateException exception) =>
-        exception.InnerException is PostgresException { SqlState: UniqueViolationSqlState };
+    // (docs/adr/0012), not the earlier application-level check alone.
+    private static bool IsUniqueViolation(DbUpdateException exception, out string? constraintName)
+    {
+        if (exception.InnerException is PostgresException { SqlState: UniqueViolationSqlState } postgresException)
+        {
+            constraintName = postgresException.ConstraintName;
+            return true;
+        }
+
+        constraintName = null;
+        return false;
+    }
 }

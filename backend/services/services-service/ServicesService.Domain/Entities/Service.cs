@@ -64,13 +64,24 @@ public class Service : TenantOwnedEntity
         decimal maxDiscountPercentage,
         Guid? categoryId)
     {
-        CategoryId = categoryId;
-        Name = ValidateName(name);
-        Description = ValidateDescription(description);
-        (MinDurationMinutes, DurationMinutes, MaxDurationMinutes) =
+        // Every new value is validated before anything is assigned, so a
+        // later validation failure (e.g. an invalid discount) can never leave
+        // the entity with some fields already overwritten and others not.
+        var validatedName = ValidateName(name);
+        var validatedDescription = ValidateDescription(description);
+        var (validatedMin, validatedDuration, validatedMax) =
             ValidateDuration(minDurationMinutes, durationMinutes, maxDurationMinutes);
-        Price = ValidatePrice(price);
-        MaxDiscountPercentage = ValidateMaxDiscountPercentage(maxDiscountPercentage);
+        var validatedPrice = ValidatePrice(price);
+        var validatedMaxDiscountPercentage = ValidateMaxDiscountPercentage(maxDiscountPercentage);
+
+        CategoryId = categoryId;
+        Name = validatedName;
+        Description = validatedDescription;
+        MinDurationMinutes = validatedMin;
+        DurationMinutes = validatedDuration;
+        MaxDurationMinutes = validatedMax;
+        Price = validatedPrice;
+        MaxDiscountPercentage = validatedMaxDiscountPercentage;
     }
 
     public void SetTags(IEnumerable<Tag> tags)

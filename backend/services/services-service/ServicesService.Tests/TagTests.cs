@@ -101,6 +101,26 @@ public class TagTests
     }
 
     [Fact]
+    public void Update_WhenValidationFailsOnALaterField_LeavesEveryFieldUnchanged()
+    {
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, "old");
+        var originalName = tag.Name;
+        var originalColor = tag.Color;
+        var originalDescription = tag.Description;
+        var newColor = TagColor.From("#ef4444");
+
+        // Description is the last field validated by Update - if the entity
+        // were mutated field-by-field instead of atomically, Name and Color
+        // would already be overwritten by the time this throws.
+        var act = () => tag.Update("Returning", newColor, new string('x', Tag.DescriptionMaxLength + 1));
+
+        act.Should().Throw<InvalidTagException>();
+        tag.Name.Should().Be(originalName);
+        tag.Color.Should().Be(originalColor);
+        tag.Description.Should().Be(originalDescription);
+    }
+
+    [Fact]
     public void MarkCreated_SetsCreatedAtAndCreatedBy()
     {
         var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);

@@ -75,6 +75,30 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
         var response = await client.PostAsJsonAsync(CategoriesUrl, new { name = "duplicate" }); // case-insensitive match
 
         response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("code").GetString().Should().Be("Category.DuplicateName");
+    }
+
+    [Fact]
+    public async Task Create_with_leading_and_trailing_whitespace_matches_an_existing_trimmed_name()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        await client.PostAsJsonAsync(CategoriesUrl, new { name = "Hair" });
+
+        var response = await client.PostAsJsonAsync(CategoriesUrl, new { name = "  Hair  " });
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Update_keeping_its_own_name_unchanged_does_not_conflict_with_itself()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var categoryId = await CreateCategoryAsync(client, "Hair");
+
+        var response = await client.PutAsJsonAsync($"{CategoriesUrl}/{categoryId}", new { name = "Hair" });
+
+        response.StatusCode.Should().Be(HttpStatusCode.OK);
     }
 
     [Fact]
@@ -108,6 +132,8 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
         var response = await intruderClient.PutAsJsonAsync($"{CategoriesUrl}/{categoryId}", new { name = "Hijacked" });
 
         response.StatusCode.Should().Be(HttpStatusCode.NotFound);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("code").GetString().Should().Be("Category.NotFound");
     }
 
     [Fact]

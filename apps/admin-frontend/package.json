@@ -17,12 +17,15 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "generate:api-types": "openapi-typescript http://localhost:5080/openapi/v1.json -o src/infrastructure/generated/services-api.d.ts",
+    "generate:api-types:check": "node scripts/checkGeneratedApiTypes.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^5.4.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "lucide-react": "^1.24.0",
     "oidc-client-ts": "^3.5.0",
     "radix-ui": "^1.6.2",
@@ -53,6 +56,7 @@
     "globals": "^17.7.0",
     "jsdom": "^29.1.1",
     "msw": "^2.14.6",
+    "openapi-typescript": "^7.13.0",
     "prettier": "^3.9.1",
     "shadcn": "^4.13.0",
     "tailwindcss": "^4.3.2",

@@ -11,7 +11,7 @@ public enum ErrorType
 
 // One FluentValidation failure, kept intact instead of collapsed into a
 // joined string - lets the Api return a structured, per-field response
-// (docs/adr/0013) instead of one opaque message.
+// (docs/adr/0012) instead of one opaque message.
 public readonly record struct FieldError(string Code, string Message);
 
 public readonly record struct Error(

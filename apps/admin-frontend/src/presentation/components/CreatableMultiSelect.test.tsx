@@ -82,6 +82,50 @@ describe('CreatableMultiSelect', () => {
     expect(screen.getByText('Nenhuma selecionada.')).toBeInTheDocument()
   })
 
+  it('exposes aria-expanded/aria-controls on the trigger', async () => {
+    render(<Harness />)
+    const trigger = screen.getByRole('combobox', { name: 'Etiquetas' })
+
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(trigger).toHaveAttribute('aria-controls')
+
+    await userEvent.click(trigger)
+
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('toggles the active option on with ArrowDown/Enter, without closing', async () => {
+    render(<Harness />)
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Etiquetas' }))
+    // The first item is already the active one on open (cmdk's default),
+    // so ArrowDown moves to the second - "Novo cliente".
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('option', { name: /novo cliente/i })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    await userEvent.keyboard('{Enter}')
+
+    expect(screen.getByRole('combobox', { name: 'Etiquetas' })).toHaveTextContent(
+      '1 selecionada(s)',
+    )
+    // Still open - Enter toggles, it doesn't close a multi-select.
+    expect(screen.getByRole('option', { name: /novo cliente/i })).toBeInTheDocument()
+  })
+
+  it('closes on Escape', async () => {
+    render(<Harness />)
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Etiquetas' }))
+    expect(screen.getByRole('option', { name: /vip/i })).toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByRole('option', { name: /vip/i })).not.toBeInTheDocument()
+  })
+
   it('filters the list by the search term', async () => {
     render(<Harness />)
 

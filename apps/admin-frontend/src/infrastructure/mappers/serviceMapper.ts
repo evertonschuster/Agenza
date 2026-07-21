@@ -1,26 +1,34 @@
-import { Service, type TagSummary } from '../../domain/entities/Service'
+import { Service } from '../../domain/entities/Service'
+import type { components } from '../generated/services-api'
 
-/** The TagSummaryDto shape embedded on a ServiceDto (docs/API.md). */
-export type TagSummaryDto = TagSummary
+/** The TagSummaryDto shape embedded on a ServiceDto - generated from the
+ * live OpenAPI contract (see src/infrastructure/generated/services-api.d.ts). */
+export type TagSummaryDto = components['schemas']['TagSummary']
 
-/** The ServiceDto shape confirmed in docs/API.md. */
-export interface ServiceDto {
-  id: string
-  code: number
-  name: string
-  description: string | null
-  durationMinutes: number
-  minDurationMinutes: number
-  maxDurationMinutes: number
-  price: number
-  maxDiscountPercentage: number
-  categoryId: string | null
-  categoryName: string | null
-  tags: TagSummaryDto[]
-}
+type NumericServiceFields =
+  | 'code'
+  | 'durationMinutes'
+  | 'minDurationMinutes'
+  | 'maxDurationMinutes'
+  | 'price'
+  | 'maxDiscountPercentage'
 
-/** The GET /api/v1/services envelope shape (docs/API.md `PagedResult<ServiceDto>`). */
-export interface PagedServiceDto {
+/**
+ * The generated ServiceResponse types every numeric field as `number | string`
+ * - a known quirk of the built-in ASP.NET Core OpenAPI generator's schema
+ * for value types, not an actual API behavior difference (the API only ever
+ * sends real JSON numbers). Narrowed back to `number` here so callers don't
+ * have to guard against a union that never occurs in practice.
+ */
+export type ServiceDto = Omit<components['schemas']['ServiceResponse'], NumericServiceFields> &
+  Record<NumericServiceFields, number>
+
+/** The GET /api/v1/services envelope shape - generated from the live
+ * OpenAPI contract, with the same numeric narrowing as ServiceDto. */
+export type PagedServiceDto = Omit<
+  components['schemas']['PagedResultOfServiceResponse'],
+  'items' | 'totalCount' | 'page' | 'pageSize'
+> & {
   items: ServiceDto[]
   totalCount: number
   page: number

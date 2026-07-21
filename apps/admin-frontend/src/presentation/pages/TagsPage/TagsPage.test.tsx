@@ -8,6 +8,7 @@ import { Tag } from '../../../domain/entities/Tag'
 import { Tenant } from '../../../domain/value-objects/Tenant'
 import { User } from '../../../domain/entities/User'
 import { MALICIOUS_PAYLOADS } from '../../../test/fixtures/maliciousPayloads'
+import { ApiError } from '../../../infrastructure/http/ApiError'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
@@ -151,6 +152,54 @@ describe('TagsPage', () => {
 
     expect(await screen.findByText('Tag name is already in use.')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /criar etiqueta/i })).toBeInTheDocument()
+  })
+
+  describe('structured server errors', () => {
+    it('maps validation field errors from the API onto the Nome and Descrição fields', async () => {
+      const validationError = new ApiError(400, 'Ocorreram erros de validação.', {
+        status: 400,
+        code: 'Tag.ValidationFailed',
+        errors: {
+          Name: [{ code: 'Tag.NameRequired', message: 'O nome é obrigatório.' }],
+          Description: [{ code: 'Tag.DescriptionTooLong', message: 'A descrição é muito longa.' }],
+        },
+      })
+      renderTagsPage(
+        buildContainer({ createTag: { execute: vi.fn(() => Promise.reject(validationError)) } }),
+      )
+      await screen.findByText('VIP')
+
+      await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+      await userEvent.type(screen.getByLabelText('Nome'), 'Qualquer')
+      await userEvent.click(screen.getByRole('button', { name: /criar etiqueta/i }))
+
+      const nameError = await screen.findByText('O nome é obrigatório.')
+      expect(nameError).toHaveAttribute('role', 'alert')
+      const descriptionError = screen.getByText('A descrição é muito longa.')
+      expect(descriptionError).toHaveAttribute('role', 'alert')
+      // Name is listed first in the backend's `errors` map, so it - not
+      // Description - receives focus as the "first" mapped field.
+      expect(screen.getByLabelText('Nome')).toHaveFocus()
+    })
+
+    it('maps a duplicate-name conflict code from the API onto the Nome field', async () => {
+      const conflictError = new ApiError(409, 'Já existe uma etiqueta com esse nome.', {
+        status: 409,
+        code: 'Tag.DuplicateName',
+      })
+      renderTagsPage(
+        buildContainer({ createTag: { execute: vi.fn(() => Promise.reject(conflictError)) } }),
+      )
+      await screen.findByText('VIP')
+
+      await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
+      await userEvent.type(screen.getByLabelText('Nome'), 'VIP')
+      await userEvent.click(screen.getByRole('button', { name: /criar etiqueta/i }))
+
+      const fieldError = await screen.findByText('Já existe uma etiqueta com esse nome.')
+      expect(fieldError).toHaveAttribute('role', 'alert')
+      expect(screen.getByLabelText('Nome')).toHaveFocus()
+    })
   })
 
   it('edits a tag through the inline form', async () => {

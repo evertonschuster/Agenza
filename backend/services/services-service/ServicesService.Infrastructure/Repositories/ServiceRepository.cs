@@ -36,9 +36,10 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
 
     public Task<bool> NameExistsAsync(string name, Guid? excludeServiceId, CancellationToken cancellationToken)
     {
-        var normalized = name.Trim().ToLower();
+        var normalized = name.Trim().ToLowerInvariant();
         return AnyAsync(
-            s => s.Name.ToLower() == normalized && (excludeServiceId == null || s.Id != excludeServiceId),
+            s => EF.Property<string>(s, "NameNormalized") == normalized
+                && (excludeServiceId == null || s.Id != excludeServiceId),
             cancellationToken);
     }
 

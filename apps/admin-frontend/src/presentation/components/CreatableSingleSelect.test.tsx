@@ -132,6 +132,78 @@ describe('CreatableSingleSelect', () => {
     expect(onRetry).toHaveBeenCalledOnce()
   })
 
+  it('exposes aria-expanded/aria-controls on the trigger and opens on click', async () => {
+    render(<Harness />)
+    const trigger = screen.getByRole('combobox', { name: 'Categoria' })
+
+    expect(trigger).toHaveAttribute('aria-expanded', 'false')
+    expect(trigger).toHaveAttribute('aria-controls')
+
+    await userEvent.click(trigger)
+
+    expect(trigger).toHaveAttribute('aria-expanded', 'true')
+  })
+
+  it('navigates and selects options with ArrowDown/ArrowUp and Enter', async () => {
+    render(<Harness />)
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }))
+    const searchInput = screen.getByPlaceholderText('Buscar categoria…')
+
+    // ArrowDown moves the active option forward through the list.
+    await userEvent.keyboard('{ArrowDown}')
+    await userEvent.keyboard('{ArrowDown}')
+    expect(screen.getByRole('option', { name: 'Estética' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    // ArrowUp moves it back.
+    await userEvent.keyboard('{ArrowUp}')
+    expect(screen.getByRole('option', { name: 'Massagens' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    expect(searchInput).toHaveAttribute(
+      'aria-activedescendant',
+      screen.getByRole('option', { name: 'Massagens' }).id,
+    )
+
+    await userEvent.keyboard('{Enter}')
+
+    expect(screen.getByRole('combobox', { name: 'Categoria' })).toHaveTextContent('Massagens')
+  })
+
+  it('jumps to the first/last option with Home/End', async () => {
+    render(<Harness />)
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }))
+
+    await userEvent.keyboard('{End}')
+    expect(screen.getByRole('option', { name: 'Estética' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+
+    await userEvent.keyboard('{Home}')
+    expect(screen.getByRole('option', { name: 'Sem categoria' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    )
+  })
+
+  it('closes on Escape', async () => {
+    render(<Harness />)
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }))
+    expect(screen.getByRole('option', { name: 'Massagens' })).toBeInTheDocument()
+
+    await userEvent.keyboard('{Escape}')
+
+    expect(screen.queryByRole('option', { name: 'Massagens' })).not.toBeInTheDocument()
+  })
+
   it('switches to the create form, creates an item, and selects it', async () => {
     // Mirrors real usage: the parent's item list gains the new entry (via a
     // refetch) at the same time selection happens.

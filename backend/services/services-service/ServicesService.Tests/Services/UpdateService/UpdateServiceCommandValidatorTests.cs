@@ -73,4 +73,32 @@ public class UpdateServiceCommandValidatorTests
     {
         (await _validator.ValidateAsync(ValidCommand() with { MaxDiscountPercentage = 12.345m })).IsValid.Should().BeFalse();
     }
+
+    [Fact]
+    public async Task Validate_WithNoTagIds_Passes()
+    {
+        (await _validator.ValidateAsync(ValidCommand() with { TagIds = null })).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithEmptyTagIds_Passes()
+    {
+        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [] })).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithMultipleDistinctTagIds_Passes()
+    {
+        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [Guid.NewGuid(), Guid.NewGuid()] }))
+            .IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithDuplicateTagIds_Fails()
+    {
+        var duplicateId = Guid.NewGuid();
+
+        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [duplicateId, duplicateId] }))
+            .IsValid.Should().BeFalse();
+    }
 }

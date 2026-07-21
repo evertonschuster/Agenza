@@ -78,11 +78,14 @@ workspace gains a lint-staged config.
 - `apps/admin-frontend/graphify-out/` is stale (generated before the restructure) —
   regenerate rather than trust it.
 - `ServicesService.Api`/`IdentityService.Api` each run EF Core migrations from
-  an `IHostedService` (`DatabaseMigrator`) on startup. This is fine for local
-  dev (`dotnet run`/Aspire) and for the current single-container
+  an `IHostedService` (`DatabaseMigrator`/`DatabaseSeeder`) on startup, guarded
+  by a `Migrations:RunOnStartup` config flag (defaults to `true`). This is fine
+  for local dev (`dotnet run`/Aspire) and for the current single-container
   `docker-compose` setup — there's no evidence yet of a multi-replica
   production deployment (no k8s manifests, no CD pipeline in this repo as of
-  2026-07). If/when one is introduced, revisit this: N replicas starting
-  concurrently would race to apply the same migration. Prefer a dedicated
-  migration job/step in that deployment pipeline over adding ad hoc locking
-  here, since the right mechanism depends on the orchestrator chosen.
+  2026-07). If/when one is introduced, set `Migrations:RunOnStartup=false` for
+  that environment and run migrations as a dedicated job/step in the
+  deployment pipeline instead — N replicas starting concurrently with the flag
+  left on would race to apply the same migration. Prefer that dedicated step
+  over adding ad hoc locking here, since the right mechanism depends on the
+  orchestrator chosen.

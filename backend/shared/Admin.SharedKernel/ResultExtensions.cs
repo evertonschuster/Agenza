@@ -35,23 +35,30 @@ public static class ResultExtensions
 
     private static IActionResult ToProblemResult(Error error, ControllerBase controller)
     {
-        if (error.Type != ErrorType.Validation || error.FieldErrors is null)
+        if (error.Type == ErrorType.Validation && error.FieldErrors is not null)
         {
-            return controller.Problem(title: error.Message, statusCode: error.Type.ToHttpStatusCode());
+            // Field/code/message preserved per-error instead of one joined string
+            // (docs/adr/0012) - the front-end maps errors to fields without parsing
+            // free text out of a single title.
+            var validationProblem = new ProblemDetails
+            {
+                Type = ValidationProblemType,
+                Title = "Ocorreram erros de validação.",
+                Status = StatusCodes.Status400BadRequest,
+            };
+            validationProblem.Extensions["code"] = error.Code;
+            validationProblem.Extensions["errors"] = error.FieldErrors;
+
+            return new ObjectResult(validationProblem) { StatusCode = validationProblem.Status };
         }
 
-        // Field/code/message preserved per-error instead of one joined string
-        // (docs/adr/0013) - the front-end maps errors to fields without parsing
-        // free text out of a single title.
-        var problemDetails = new ProblemDetails
-        {
-            Type = ValidationProblemType,
-            Title = "Ocorreram erros de validação.",
-            Status = StatusCodes.Status400BadRequest,
-        };
-        problemDetails.Extensions["code"] = error.Code;
-        problemDetails.Extensions["errors"] = error.FieldErrors;
+        var result = (ObjectResult)controller.Problem(title: error.Message, statusCode: error.Type.ToHttpStatusCode());
 
-        return new ObjectResult(problemDetails) { StatusCode = problemDetails.Status };
+        // Every error carries a machine-readable code, not just validation
+        // errors with FieldErrors - Conflict/NotFound/Forbidden callers can
+        // branch on `code` instead of parsing the free-text title.
+        ((ProblemDetails)result.Value!).Extensions["code"] = error.Code;
+
+        return result;
     }
 }

@@ -1,6 +1,7 @@
 using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
+using ServicesService.Application.Categories;
 using ServicesService.Application.Categories.CreateCategory;
 using ServicesService.Application.Categories.DeleteCategory;
 using ServicesService.Application.Categories.ListCategories;
@@ -21,6 +22,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpGet]
+    [ProducesResponseType<IReadOnlyList<CategoryResponse>>(StatusCodes.Status200OK)]
     public async Task<IActionResult> List([FromQuery] ListCategoriesQuery query, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Query(query, cancellationToken);
@@ -28,6 +30,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType<CategoryResponse>(StatusCodes.Status201Created)]
     public async Task<IActionResult> Create(CreateCategoryCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command, cancellationToken);
@@ -35,6 +38,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [ProducesResponseType<CategoryResponse>(StatusCodes.Status200OK)]
     public async Task<IActionResult> Update(Guid id, UpdateCategoryCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command with { CategoryId = id }, cancellationToken);
@@ -42,6 +46,7 @@ public class CategoriesController : ControllerBase
     }
 
     [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(new DeleteCategoryCommand(id), cancellationToken);

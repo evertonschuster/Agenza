@@ -23,7 +23,7 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.CategoryId);
         builder.HasOne<Category>().WithMany().HasForeignKey(s => s.CategoryId).OnDelete(DeleteBehavior.SetNull);
 
-        // Case-insensitive uniqueness enforced by the database itself (docs/adr/0013),
+        // Case-insensitive uniqueness enforced by the database itself (docs/adr/0012),
         // not just the application-level NameExistsAsync pre-check: a generated,
         // always-lowercase shadow column backs the unique index so two concurrent
         // requests can't both persist "Corte"/"corte". Filtered to non-deleted rows so

@@ -65,14 +65,33 @@ This means:
 ## Error shape
 
 **Confirmed** (services-service, ASP.NET Core): errors are RFC 7807
-Problem Details:
+Problem Details, always carrying a machine-readable `code`
+(docs/adr/0012) — a plain conflict/not-found/forbidden/business error:
 
 ```json
 {
   "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-  "title": "Tag name is already in use.",
+  "title": "Já existe uma etiqueta chamada 'VIP'.",
   "status": 409,
-  "detail": "A tag named 'VIP' already exists."
+  "code": "Tag.DuplicateName"
+}
+```
+
+A validation error (400) additionally carries a per-field `errors` map,
+keyed by the backend's PascalCase property name, each entry an array of
+`{code, message}`:
+
+```json
+{
+  "type": "https://agenza/errors/validation",
+  "title": "Ocorreram erros de validação.",
+  "status": 400,
+  "code": "Validation.Failed",
+  "errors": {
+    "Name": [
+      { "code": "Service.NameTooLong", "message": "O nome deve possuir no máximo 80 caracteres." }
+    ]
+  }
 }
 ```
 
@@ -85,9 +104,18 @@ HTTP status codes:
 - `409` — conflict (e.g. duplicate)
 - `500` — server error
 
-The `ApiError` class in `AuthenticatedHttpClient` carries
-`status: number` and `message: string` — populate `message` from
-`title` (fall back to `detail`, then to the raw body).
+`src/infrastructure/http/ProblemDetails.ts` defines the typed contract
+(`ProblemDetails`, `FieldError`) and `parseProblemDetails`, a safe runtime
+parser (no `any`, no sniffing error kind from message text). The
+`ApiError` class in `AuthenticatedHttpClient` carries `status: number`,
+`message: string` (populated from `title`, falling back to `detail`, then
+the raw body), and `details: ProblemDetails | undefined` for callers that
+need `code`/`errors`. `src/presentation/forms/serverFormError.ts`'s
+`mapApiErrorToForm` turns a caught `ApiError` into field-level messages a
+form applies via react-hook-form's `setError` — each form
+(`ServiceForm`/`CategoryForm`/`TagForm`) exports its own backend-property
+→ field-name map (e.g. `DurationMinutes` → `durationMinutes`) and a
+conflict-`code` → field map (e.g. `Service.DuplicateName` → `name`).
 
 ---
 

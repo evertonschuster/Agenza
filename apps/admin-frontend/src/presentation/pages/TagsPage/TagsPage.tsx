@@ -3,7 +3,9 @@ import { useAuth } from '../../hooks/useAuth'
 import { useTags } from '../../hooks/useTags'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { TAG_COLOR_PALETTE, type Tag, type TagColor } from '../../../domain/entities/Tag'
-import { TagForm, type TagFormValues } from '../../forms/TagForm'
+import { TagForm, type TagFormValues, type TagFormField } from '../../forms/TagForm'
+import { mapApiErrorToForm, type ServerFormError } from '../../forms/serverFormError'
+import { tagFieldMap, tagCodeFieldMap } from '../../forms/fieldMaps'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -64,7 +66,7 @@ export function TagsPage(): JSX.Element {
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<ServerFormError<TagFormField> | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -73,13 +75,13 @@ export function TagsPage(): JSX.Element {
   function openCreateForm(): void {
     setFormTarget('new')
     setDisplayTarget('new')
-    setFormError(null)
+    setServerError(null)
   }
 
   function openEditForm(tag: Tag): void {
     setFormTarget(tag)
     setDisplayTarget(tag)
-    setFormError(null)
+    setServerError(null)
   }
 
   function closeForm(): void {
@@ -87,12 +89,12 @@ export function TagsPage(): JSX.Element {
     // after `open` flips to false, and clearing displayTarget here would
     // blank the title/form during that animation instead of after it.
     setFormTarget(null)
-    setFormError(null)
+    setServerError(null)
   }
 
   async function handleSubmit(values: TagFormValues): Promise<void> {
     setIsSubmitting(true)
-    setFormError(null)
+    setServerError(null)
     try {
       if (formTarget === 'new') {
         await createTag(toTagInput(values))
@@ -101,7 +103,14 @@ export function TagsPage(): JSX.Element {
       }
       closeForm()
     } catch (caughtError) {
-      setFormError(messageFrom(caughtError, 'Não foi possível salvar a etiqueta.'))
+      setServerError(
+        mapApiErrorToForm(
+          caughtError,
+          tagFieldMap,
+          tagCodeFieldMap,
+          'Não foi possível salvar a etiqueta.',
+        ),
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -258,7 +267,7 @@ export function TagsPage(): JSX.Element {
               }
               submitLabel={displayTarget === 'new' ? 'Criar etiqueta' : 'Salvar alterações'}
               isSubmitting={isSubmitting}
-              error={formError}
+              serverError={serverError}
               onCancel={closeForm}
               onSubmit={handleSubmit}
             />

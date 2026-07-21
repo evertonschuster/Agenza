@@ -26,9 +26,10 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
 
     public Task<bool> NameExistsAsync(string name, Guid? excludeTagId, CancellationToken cancellationToken)
     {
-        var normalized = name.Trim().ToLower();
+        var normalized = name.Trim().ToLowerInvariant();
         return AnyAsync(
-            t => t.Name.ToLower() == normalized && (excludeTagId == null || t.Id != excludeTagId),
+            t => EF.Property<string>(t, "NameNormalized") == normalized
+                && (excludeTagId == null || t.Id != excludeTagId),
             cancellationToken);
     }
 

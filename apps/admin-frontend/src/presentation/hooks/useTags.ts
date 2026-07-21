@@ -34,7 +34,9 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
     return useCases.listTags.execute(tenantContext, { search })
   }, [tenantContext, useCases, search])
 
-  const { data, status, error, execute } = useAsync(listTags)
+  const { data, status, error, execute, mutate } = useAsync(listTags, {
+    resetKey: tenantContext?.tenant.id,
+  })
 
   const createTag = useCallback(
     async (input: CreateTagInput): Promise<Tag> => {
@@ -42,10 +44,16 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
         throw new Error('Não é possível criar uma etiqueta sem um contexto de tenant autenticado')
       }
       const tag = await useCases.createTag.execute(tenantContext, input)
-      await execute()
+      // Insert immediately so the new tag is selectable and shows up as
+      // soon as the POST succeeds - the mutation's success never depends
+      // on the background refetch below. If that refetch fails, this
+      // optimistic entry is what keeps the tag visible as a chip (see
+      // useAsync's own status/error, surfaced separately by the page).
+      mutate(current => [...(current ?? []), tag])
+      void execute()
       return tag
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, useCases, execute, mutate],
   )
 
   const updateTag = useCallback(

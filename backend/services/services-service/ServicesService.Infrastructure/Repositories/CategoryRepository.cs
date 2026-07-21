@@ -29,9 +29,10 @@ public class CategoryRepository : RepositoryBase<Category>, ICategoryRepository
 
     public Task<bool> NameExistsAsync(string name, Guid? excludeCategoryId, CancellationToken cancellationToken)
     {
-        var normalized = name.Trim().ToLower();
+        var normalized = name.Trim().ToLowerInvariant();
         return AnyAsync(
-            c => c.Name.ToLower() == normalized && (excludeCategoryId == null || c.Id != excludeCategoryId),
+            c => EF.Property<string>(c, "NameNormalized") == normalized
+                && (excludeCategoryId == null || c.Id != excludeCategoryId),
             cancellationToken);
     }
 }
