@@ -1,6 +1,8 @@
 # ADR 0006 — Tenant header validation, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions, automatic tenant scoping
 
-Status: accepted (2026-07)
+Status: accepted (2026-07); BusinessException hierarchy / per-service
+BusinessExceptionHandler convention superseded by docs/adr/0014 (Domain
+returns DomainResult, no exception-based flow for expected outcomes)
 
 ## Context
 

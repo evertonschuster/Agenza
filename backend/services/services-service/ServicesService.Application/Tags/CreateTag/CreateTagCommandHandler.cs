@@ -6,8 +6,6 @@ namespace ServicesService.Application.Tags.CreateTag;
 
 public sealed class CreateTagCommandHandler : ICommandHandler<CreateTagCommand, TagResponse>
 {
-    private const string NameConstraint = "IX_Tags_TenantId_NameNormalized";
-
     private readonly ITagRepository _tagRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CreateTagCommandHandler> _logger;
@@ -30,34 +28,21 @@ public sealed class CreateTagCommandHandler : ICommandHandler<CreateTagCommand, 
                 Error.Conflict("Tag.DuplicateName", $"Já existe uma etiqueta chamada '{command.Name}'."));
         }
 
-        var tag = command.ToModel();
+        var tagResult = command.ToModel();
+        if (tagResult.IsFailure)
+        {
+            return Result.Failure<TagResponse>(tagResult.Error.ToApplicationError());
+        }
+
+        var tag = tagResult.Value;
         _tagRepository.Add(tag);
 
-        try
+        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (saveResult.IsFailure)
         {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-        catch (DuplicateEntityException ex)
-        {
-            return Result.Failure<TagResponse>(MapDuplicateError(ex, command.Name));
+            return Result.Failure<TagResponse>(TagPersistenceErrorMapper.Map(saveResult.Error, command.Name, _logger));
         }
 
         return TagResponse.FromTag(tag);
-    }
-
-    private Error MapDuplicateError(DuplicateEntityException exception, string name)
-    {
-        if (exception.ConstraintName == NameConstraint)
-        {
-            return Error.Conflict("Tag.DuplicateName", $"Já existe uma etiqueta chamada '{name}'.");
-        }
-
-        _logger.LogError(
-            exception,
-            "Unrecognized unique constraint {ConstraintName} violated while creating a Tag",
-            exception.ConstraintName);
-        return Error.Conflict(
-            "Tag.DuplicateConflict",
-            "Não foi possível salvar a etiqueta devido a um conflito de dados.");
     }
 }

@@ -1,6 +1,5 @@
 using Admin.SharedKernel;
 using Asp.Versioning;
-using IdentityService.Api.ExceptionHandling;
 using IdentityService.Api.Seed;
 using IdentityService.Application;
 using IdentityService.Infrastructure;
@@ -16,7 +15,6 @@ builder.Services.AddControllers();
 builder.Services.AddRazorPages();
 builder.Services.AddOpenApi();
 
-builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
 

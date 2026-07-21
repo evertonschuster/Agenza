@@ -33,7 +33,7 @@ public class ServiceRelationshipLoaderTests
     [Fact]
     public async Task LoadAsync_WithKnownCategory_ReturnsIt()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
         var result = await _loader.LoadAsync(category.Id, tagIds: null, CancellationToken.None);
@@ -58,7 +58,7 @@ public class ServiceRelationshipLoaderTests
     [Fact]
     public async Task LoadAsync_WithKnownTags_ReturnsThem()
     {
-        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });
 
@@ -95,8 +95,8 @@ public class ServiceRelationshipLoaderTests
     [Fact]
     public async Task LoadAsync_WithMultipleDistinctKnownTags_ReturnsAllOfThem()
     {
-        var first = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
-        var second = new Tag(Guid.NewGuid(), "Returning", TagColor.From("#ef4444"), null);
+        var first = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
+        var second = Tag.Create(Guid.NewGuid(), "Returning", TagColor.Create("#ef4444").Value, null).Value;
         _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { first, second });
 
@@ -109,7 +109,7 @@ public class ServiceRelationshipLoaderTests
     [Fact]
     public async Task LoadAsync_WithADuplicatedKnownTagId_SucceedsInsteadOfMisreportingNotFound()
     {
-        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         // GetByIdsAsync returns one row per distinct id even when the caller
         // passes the same id twice - the loader must compare against the
         // distinct count, not the raw list length.
@@ -125,7 +125,7 @@ public class ServiceRelationshipLoaderTests
     [Fact]
     public async Task LoadAsync_WithADuplicatedIdAndAnUnknownId_StillReturnsTagNotFound()
     {
-        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         var unknownId = Guid.NewGuid();
         _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });

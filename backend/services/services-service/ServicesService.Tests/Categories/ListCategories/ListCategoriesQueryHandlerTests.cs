@@ -11,7 +11,7 @@ public class ListCategoriesQueryHandlerTests
     {
         var repository = Substitute.For<ICategoryRepository>();
         repository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>())
-            .Returns(new[] { new Category(Guid.NewGuid(), "Hair") });
+            .Returns(new[] { Category.Create(Guid.NewGuid(), "Hair").Value });
         var handler = new ListCategoriesQueryHandler(repository);
 
         var result = await handler.Handle(new ListCategoriesQuery(), CancellationToken.None);
@@ -38,7 +38,7 @@ public class ListCategoriesQueryHandlerTests
     {
         var repository = Substitute.For<ICategoryRepository>();
         repository.ListAsync("Hair", Arg.Any<CancellationToken>())
-            .Returns(new[] { new Category(Guid.NewGuid(), "Hair") });
+            .Returns(new[] { Category.Create(Guid.NewGuid(), "Hair").Value });
         var handler = new ListCategoriesQueryHandler(repository);
 
         var result = await handler.Handle(new ListCategoriesQuery(Search: "Hair"), CancellationToken.None);

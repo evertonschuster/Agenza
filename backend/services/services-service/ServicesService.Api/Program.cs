@@ -3,7 +3,6 @@ using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using ServicesService.Api.ExceptionHandling;
 using ServicesService.Api.Setup;
 using ServicesService.Application;
 using ServicesService.Infrastructure;
@@ -20,10 +19,6 @@ builder.Services.AddControllers(options =>
 });
 builder.Services.AddOpenApi();
 
-// Handlers run in registration order until one returns true -
-// BusinessExceptionHandler first, GenericExceptionHandler as the
-// logging catch-all for everything else.
-builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
 

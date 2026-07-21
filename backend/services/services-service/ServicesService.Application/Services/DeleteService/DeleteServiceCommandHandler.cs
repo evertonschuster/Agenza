@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Services.DeleteService;
@@ -7,11 +8,16 @@ public sealed class DeleteServiceCommandHandler : ICommandHandler<DeleteServiceC
 {
     private readonly IServiceRepository _serviceRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<DeleteServiceCommandHandler> _logger;
 
-    public DeleteServiceCommandHandler(IServiceRepository serviceRepository, IUnitOfWork unitOfWork)
+    public DeleteServiceCommandHandler(
+        IServiceRepository serviceRepository,
+        IUnitOfWork unitOfWork,
+        ILogger<DeleteServiceCommandHandler> logger)
     {
         _serviceRepository = serviceRepository;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<Result> Handle(DeleteServiceCommand command, CancellationToken cancellationToken)
@@ -24,7 +30,12 @@ public sealed class DeleteServiceCommandHandler : ICommandHandler<DeleteServiceC
         }
 
         _serviceRepository.Remove(service);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            return Result.Failure(ServicePersistenceErrorMapper.Map(saveResult.Error, service.Name, _logger));
+        }
 
         return Result.Success();
     }

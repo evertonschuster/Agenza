@@ -6,8 +6,6 @@ namespace ServicesService.Application.Categories.CreateCategory;
 
 public sealed class CreateCategoryCommandHandler : ICommandHandler<CreateCategoryCommand, CategoryResponse>
 {
-    private const string NameConstraint = "IX_Categories_TenantId_NameNormalized";
-
     private readonly ICategoryRepository _categoryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<CreateCategoryCommandHandler> _logger;
@@ -30,34 +28,22 @@ public sealed class CreateCategoryCommandHandler : ICommandHandler<CreateCategor
                 Error.Conflict("Category.DuplicateName", $"Já existe uma categoria chamada '{command.Name}'."));
         }
 
-        var category = command.ToModel();
+        var categoryResult = command.ToModel();
+        if (categoryResult.IsFailure)
+        {
+            return Result.Failure<CategoryResponse>(categoryResult.Error.ToApplicationError());
+        }
+
+        var category = categoryResult.Value;
         _categoryRepository.Add(category);
 
-        try
+        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (saveResult.IsFailure)
         {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
-        }
-        catch (DuplicateEntityException ex)
-        {
-            return Result.Failure<CategoryResponse>(MapDuplicateError(ex, command.Name));
+            return Result.Failure<CategoryResponse>(
+                CategoryPersistenceErrorMapper.Map(saveResult.Error, command.Name, _logger));
         }
 
         return CategoryResponse.FromCategory(category);
-    }
-
-    private Error MapDuplicateError(DuplicateEntityException exception, string name)
-    {
-        if (exception.ConstraintName == NameConstraint)
-        {
-            return Error.Conflict("Category.DuplicateName", $"Já existe uma categoria chamada '{name}'.");
-        }
-
-        _logger.LogError(
-            exception,
-            "Unrecognized unique constraint {ConstraintName} violated while creating a Category",
-            exception.ConstraintName);
-        return Error.Conflict(
-            "Category.DuplicateConflict",
-            "Não foi possível salvar a categoria devido a um conflito de dados.");
     }
 }

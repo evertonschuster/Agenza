@@ -6,8 +6,6 @@ namespace ServicesService.Application.Categories.UpdateCategory;
 
 public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategoryCommand, CategoryResponse>
 {
-    private const string NameConstraint = "IX_Categories_TenantId_NameNormalized";
-
     private readonly ICategoryRepository _categoryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UpdateCategoryCommandHandler> _logger;
@@ -37,33 +35,19 @@ public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategor
                 Error.Conflict("Category.DuplicateName", $"Já existe uma categoria chamada '{command.Name}'."));
         }
 
-        command.ApplyTo(category);
-
-        try
+        var applyResult = command.ApplyTo(category);
+        if (applyResult.IsFailure)
         {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return Result.Failure<CategoryResponse>(applyResult.Error.ToApplicationError());
         }
-        catch (DuplicateEntityException ex)
+
+        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (saveResult.IsFailure)
         {
-            return Result.Failure<CategoryResponse>(MapDuplicateError(ex, command.Name));
+            return Result.Failure<CategoryResponse>(
+                CategoryPersistenceErrorMapper.Map(saveResult.Error, command.Name, _logger));
         }
 
         return CategoryResponse.FromCategory(category);
-    }
-
-    private Error MapDuplicateError(DuplicateEntityException exception, string name)
-    {
-        if (exception.ConstraintName == NameConstraint)
-        {
-            return Error.Conflict("Category.DuplicateName", $"Já existe uma categoria chamada '{name}'.");
-        }
-
-        _logger.LogError(
-            exception,
-            "Unrecognized unique constraint {ConstraintName} violated while updating a Category",
-            exception.ConstraintName);
-        return Error.Conflict(
-            "Category.DuplicateConflict",
-            "Não foi possível salvar a categoria devido a um conflito de dados.");
     }
 }

@@ -1,5 +1,4 @@
 using IdentityService.Domain.Common;
-using IdentityService.Domain.Exceptions;
 
 namespace IdentityService.Domain.Entities;
 
@@ -12,14 +11,20 @@ public class Tenant : BaseEntity
         Name = string.Empty;
     }
 
-    public Tenant(Guid id, string name)
+    private Tenant(Guid id, string name)
         : base(id)
+    {
+        Name = name;
+    }
+
+    public static DomainResult<Tenant> Create(Guid id, string name)
     {
         if (string.IsNullOrWhiteSpace(name))
         {
-            throw new InvalidTenantException("O nome do tenant é obrigatório.");
+            return DomainResult.Failure<Tenant>(
+                new DomainError("Tenant.Invalid", "O nome do tenant é obrigatório."));
         }
 
-        Name = name;
+        return DomainResult.Success(new Tenant(id, name));
     }
 }

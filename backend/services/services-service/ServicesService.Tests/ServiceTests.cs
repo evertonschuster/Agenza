@@ -1,5 +1,4 @@
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.Exceptions;
 using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests;
@@ -7,16 +6,18 @@ namespace ServicesService.Tests;
 public class ServiceTests
 {
     private static Service CreateValidService(Guid? categoryId = null) =>
-        new(Guid.NewGuid(), "Haircut", "A classic cut", 30, 15, 60, 45.50m, 10m, categoryId, 1);
+        Service.Create(Guid.NewGuid(), "Haircut", "A classic cut", 30, 15, 60, 45.50m, 10m, categoryId, 1).Value;
 
     [Fact]
-    public void Constructor_WithValidValues_TrimsAndSets()
+    public void Create_WithValidValues_TrimsAndSets()
     {
         var id = Guid.NewGuid();
         var categoryId = Guid.NewGuid();
 
-        var service = new Service(id, "  Haircut  ", "  A classic cut  ", 30, 15, 60, 45.50m, 10m, categoryId, 7);
+        var result = Service.Create(id, "  Haircut  ", "  A classic cut  ", 30, 15, 60, 45.50m, 10m, categoryId, 7);
 
+        result.IsSuccess.Should().BeTrue();
+        var service = result.Value;
         service.Id.Should().Be(id);
         service.TenantId.Should().Be(Guid.Empty);
         service.Code.Should().Be(7);
@@ -32,7 +33,7 @@ public class ServiceTests
     }
 
     [Fact]
-    public void Constructor_WithNoCategory_LeavesCategoryIdNull()
+    public void Create_WithNoCategory_LeavesCategoryIdNull()
     {
         var service = CreateValidService();
 
@@ -57,18 +58,19 @@ public class ServiceTests
 
         var act = () => service.AssignTenant(Guid.Empty);
 
-        act.Should().Throw<InvalidTenantException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WithBlankDescription_StoresNull(string? description)
+    public void Create_WithBlankDescription_StoresNull(string? description)
     {
-        var service = new Service(Guid.NewGuid(), "Haircut", description, 30, 15, 60, 45.50m, 10m, null, 1);
+        var result = Service.Create(Guid.NewGuid(), "Haircut", description, 30, 15, 60, 45.50m, 10m, null, 1);
 
-        service.Description.Should().BeNull();
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Description.Should().BeNull();
     }
 
     [Fact]
@@ -77,8 +79,9 @@ public class ServiceTests
         var service = CreateValidService();
         var categoryId = Guid.NewGuid();
 
-        service.Update("  Deep Tissue Massage  ", null, 90, 60, 120, 90.00m, 25m, categoryId);
+        var result = service.Update("  Deep Tissue Massage  ", null, 90, 60, 120, 90.00m, 25m, categoryId);
 
+        result.IsSuccess.Should().BeTrue();
         service.Name.Should().Be("Deep Tissue Massage");
         service.Description.Should().BeNull();
         service.DurationMinutes.Should().Be(90);
@@ -91,83 +94,92 @@ public class ServiceTests
     }
 
     [Fact]
-    public void Constructor_WithEmptyName_Throws()
+    public void Create_WithEmptyName_ReturnsFailure()
     {
-        var act = () => new Service(Guid.NewGuid(), "   ", null, 30, 15, 60, 45.50m, 10m, null, 1);
+        var result = Service.Create(Guid.NewGuid(), "   ", null, 30, 15, 60, 45.50m, 10m, null, 1);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Fact]
-    public void Constructor_WithNameOverMaxLength_Throws()
+    public void Create_WithNameOverMaxLength_ReturnsFailure()
     {
-        var act = () => new Service(
+        var result = Service.Create(
             Guid.NewGuid(), new string('x', Service.NameMaxLength + 1), null, 30, 15, 60, 45.50m, 10m, null, 1);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Fact]
-    public void Constructor_WithDescriptionOverMaxLength_Throws()
+    public void Create_WithDescriptionOverMaxLength_ReturnsFailure()
     {
-        var act = () => new Service(
+        var result = Service.Create(
             Guid.NewGuid(), "Haircut", new string('x', Service.DescriptionMaxLength + 1), 30, 15, 60, 45.50m, 10m, null, 1);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Fact]
-    public void Constructor_WithMinDurationGreaterThanMaxDuration_Throws()
+    public void Create_WithMinDurationGreaterThanMaxDuration_ReturnsFailure()
     {
-        var act = () => new Service(Guid.NewGuid(), "Haircut", null, 30, 61, 60, 45.50m, 10m, null, 1);
+        var result = Service.Create(Guid.NewGuid(), "Haircut", null, 30, 61, 60, 45.50m, 10m, null, 1);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Fact]
-    public void Constructor_WithDurationOutsideMinMaxRange_Throws()
+    public void Create_WithDurationOutsideMinMaxRange_ReturnsFailure()
     {
-        var act = () => new Service(Guid.NewGuid(), "Haircut", null, 5, 15, 60, 45.50m, 10m, null, 1);
+        var result = Service.Create(Guid.NewGuid(), "Haircut", null, 5, 15, 60, 45.50m, 10m, null, 1);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Fact]
-    public void Constructor_WithMaxDurationOverAllowedLimit_Throws()
+    public void Create_WithMaxDurationOverAllowedLimit_ReturnsFailure()
     {
-        var act = () => new Service(
+        var result = Service.Create(
             Guid.NewGuid(), "Haircut", null, 30, 15, Service.MaxAllowedDurationMinutes + 1, 45.50m, 10m, null, 1);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Fact]
-    public void Constructor_WithNegativePrice_Throws()
+    public void Create_WithNegativePrice_ReturnsFailure()
     {
-        var act = () => new Service(Guid.NewGuid(), "Haircut", null, 30, 15, 60, -0.01m, 10m, null, 1);
+        var result = Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, -0.01m, 10m, null, 1);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Theory]
     [InlineData(-0.01)]
     [InlineData(100.01)]
-    public void Constructor_WithMaxDiscountPercentageOutsideRange_Throws(double maxDiscountPercentage)
+    public void Create_WithMaxDiscountPercentageOutsideRange_ReturnsFailure(double maxDiscountPercentage)
     {
-        var act = () => new Service(
+        var result = Service.Create(
             Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, (decimal)maxDiscountPercentage, null, 1);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Fact]
-    public void Update_WithInvalidValues_Throws()
+    public void Update_WithInvalidValues_ReturnsFailure()
     {
         var service = CreateValidService();
 
-        var act = () => service.Update("Haircut", null, 30, 61, 60, 45.50m, 10m, null);
+        var result = service.Update("Haircut", null, 30, 61, 60, 45.50m, 10m, null);
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
     }
 
     [Fact]
@@ -187,11 +199,11 @@ public class ServiceTests
         // MaxDiscountPercentage is the last field validated by Update - if the
         // entity were mutated field-by-field instead of atomically, every
         // field validated before it (name, description, duration, price)
-        // would already be overwritten by the time this throws.
-        var act = () => service.Update(
+        // would already be overwritten by the time this fails.
+        var result = service.Update(
             "Deep Tissue Massage", null, 90, 60, 120, 90.00m, 150m, Guid.NewGuid());
 
-        act.Should().Throw<InvalidServiceException>();
+        result.IsFailure.Should().BeTrue();
         service.CategoryId.Should().Be(originalCategoryId);
         service.Name.Should().Be(originalName);
         service.Description.Should().Be(originalDescription);
@@ -206,7 +218,7 @@ public class ServiceTests
     public void SetTags_ReplacesTheTagCollection()
     {
         var service = CreateValidService();
-        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
 
         service.SetTags([tag]);
 
@@ -217,8 +229,8 @@ public class ServiceTests
     public void SetTags_CalledAgain_ReplacesThePreviousTags()
     {
         var service = CreateValidService();
-        var firstTag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
-        var secondTag = new Tag(Guid.NewGuid(), "Returning", TagColor.From("#ef4444"), null);
+        var firstTag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
+        var secondTag = Tag.Create(Guid.NewGuid(), "Returning", TagColor.Create("#ef4444").Value, null).Value;
         service.SetTags([firstTag]);
 
         service.SetTags([secondTag]);

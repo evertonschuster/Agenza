@@ -23,11 +23,12 @@ public class UpdateServiceCommandHandlerTests
         _serviceRepository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(false);
         var loader = new ServiceRelationshipLoader(_categoryRepository, _tagRepository);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
         _handler = new UpdateServiceCommandHandler(_serviceRepository, loader, _unitOfWork, _logger);
     }
 
     private static Service ValidService() =>
-        new(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1);
+        Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1).Value;
 
     [Fact]
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
@@ -52,8 +53,8 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_WithValidCategoryAndTags_SetsThemOnTheService()
     {
         var service = ValidService();
-        var category = new Category(Guid.NewGuid(), "Hair");
-        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
@@ -74,7 +75,7 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_WithEmptyTagIds_ClearsExistingTags()
     {
         var service = ValidService();
-        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         service.SetTags([tag]);
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
@@ -93,7 +94,7 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_WithNullTagIds_LeavesExistingTagsUntouched()
     {
         var service = ValidService();
-        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         service.SetTags([tag]);
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
 
@@ -174,8 +175,8 @@ public class UpdateServiceCommandHandlerTests
         var service = ValidService();
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
-                new InvalidOperationException(), "IX_Services_TenantId_NameNormalized"));
+            .Returns(PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_NameNormalized")));
 
         var result = await _handler.Handle(
             new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
@@ -192,8 +193,8 @@ public class UpdateServiceCommandHandlerTests
         var service = ValidService();
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
-                new InvalidOperationException(), "IX_Services_TenantId_Code"));
+            .Returns(PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_Code")));
 
         var result = await _handler.Handle(
             new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
@@ -210,8 +211,8 @@ public class UpdateServiceCommandHandlerTests
         var service = ValidService();
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
-                new InvalidOperationException(), "some_other_unique_constraint"));
+            .Returns(PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));
 
         var result = await _handler.Handle(
             new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),

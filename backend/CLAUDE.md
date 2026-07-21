@@ -29,6 +29,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0007-...md`                       | Controllers bind commands directly (no per-endpoint body record), Command→Domain mapping extension methods |
 | `../docs/adr/0008-...md`                       | Automatic tenant assignment on save (AssignTenant + interceptor) |
 | `../docs/adr/0009-...md`                       | TenantOwnedEntity base class (BaseEntity + ITenantOwned combined) |
+| `../docs/adr/0014-...md`                       | Result pattern end-to-end — Domain/persistence no longer throw for expected outcomes |
 
 ## Critical constraints (non-negotiable)
 
@@ -66,18 +67,23 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
 
 ### Rich domain model — no anemic entities
 
-- Entities validate their invariants in constructors/factory methods and
-  **throw** domain exceptions on violation by default — see `Tenant` in
-  identity-service (name required) and `Tag`/`Category`/`Service`/
-  `TagColor` in services-service (name/description length, duration
-  range/ordering, price, discount range, palette membership) — this is
-  deliberate even though the rest of the stack uses the Result pattern,
-  see "Result pattern" below for why Domain is normally the one place
-  that still throws. This is defense-in-depth on top of FluentValidation,
-  not a replacement for it (docs/adr/0012, reverting docs/adr/0011): a
-  handler that reaches Domain with invalid data means a validator/domain
-  mismatch bug, and that bug should surface immediately as an exception
-  during development, not slip through silently.
+- Entities validate their invariants in a `private` constructor plus a
+  `public static DomainResult<T> Create(...)` factory, and return
+  `DomainResult`/`DomainResult<T>` on violation instead of throwing — see
+  `Tenant` in identity-service (name required) and `Tag`/`Category`/
+  `Service`/`TagColor` in services-service (name/description length,
+  duration range/ordering, price, discount range, palette membership),
+  and `DomainResult`/`DomainError` (`{Service}.Domain/Common/`) — this is
+  still defense-in-depth on top of FluentValidation, not a replacement
+  for it (docs/adr/0012, docs/adr/0014): a handler that reaches Domain
+  with invalid data means a validator/domain mismatch bug, but per the
+  repo-wide no-exceptions-for-expected-outcomes directive (docs/adr/0014)
+  that bug now surfaces as a `DomainResult.Failure` mapped to
+  `Error.Validation` (400), not a thrown exception. `Update` methods
+  return plain `DomainResult` (no value to return); both `Create` and
+  `Update` validate every new value into a local before assigning/
+  returning, so a later validation failure can never leave the entity
+  partially mutated.
 - No public setters. `private set` + behavior methods that keep the
   entity valid. A `private` parameterless constructor exists only for EF.
 - New value concepts with rules (email, time range, money) become value
@@ -100,21 +106,28 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   docs/adr/0006).
 - New entity ids come from `Guid.CreateVersion7()` directly (UUID v7),
   not `Guid.NewGuid()`.
-- Domain exceptions inherit that service's `BusinessException`
-  (`{Service}.Domain/Exceptions/BusinessException.cs` — `Code` +
-  `Message`), not a raw `Exception`/`ArgumentException`. The Api's global
-  `BusinessExceptionHandler` (see "Result pattern" below) maps any
-  `BusinessException` to a 400 Problem Details response.
+- A domain `DomainError` (`Code` + `Message`) maps to
+  `Admin.SharedKernel.Error` via an explicit, tested per-service
+  `DomainErrorMapper.ToApplicationError()` extension
+  (`{Service}.Application/Abstractions/DomainErrorMapper.cs`) — always
+  `Error.Validation(code, message)` (400), never a raw
+  `Exception`/`ArgumentException` or an HTTP type leaking into Domain.
+  `Code` values are the same stable strings the old `BusinessException`
+  subtypes used (`"Tag.Invalid"`, `"Service.Invalid"`, etc.).
 - A tenant-owned aggregate root inherits `TenantOwnedEntity`
   (`{Service}.Domain/Common/TenantOwnedEntity.cs` — `BaseEntity` +
   `ITenantOwned` combined, see `Tag`/`Service`) instead of
   `BaseEntity` directly, and needs no `ITenantOwned`/`AssignTenant`
   boilerplate of its own. Its constructor never takes a `tenantId`
   parameter at all — `TenantId` starts `Guid.Empty` and only
-  `AssignTenant(Guid tenantId)` (inherited, not overridden) can set it,
-  throwing the shared `InvalidTenantException` on empty (docs/adr/0009)
-  — a missing tenant is a scoping bug, not an entity-specific invariant,
-  so every entity's 400 response uses the same `Code`.
+  `AssignTenant(Guid tenantId)` (inherited, not overridden) can set it.
+  Unlike entity validation, `AssignTenant` still **throws** a plain
+  `InvalidOperationException` on an empty guid (not a `DomainResult`) —
+  `TenantHeaderFilter` already rejects any request with a missing/
+  mismatched tenant header with 403 before any handler/interceptor runs,
+  so this can only happen via an internal bug, never directly from a
+  request (docs/adr/0014); it is not a business outcome, so it is exempt
+  from the no-exceptions-for-expected-outcomes rule below.
   `AuditableEntitySaveChangesInterceptor` calls `AssignTenant`
   automatically for a newly added entity whose `TenantId` is still
   `Guid.Empty` — mirrors `MarkCreated` exactly, just for a
@@ -202,37 +215,50 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   (`AddXApplication()`) scans its own assembly for handlers and
   FluentValidation validators. A new slice just needs its files created.
 
-### Result pattern — where exceptions still live and where they don't
+### Result pattern — exceptions are not conventional control flow (docs/adr/0014)
+
+No layer uses exceptions for an *expected* outcome — input validation,
+domain invariants, not-found, conflict/duplicate, in-use, tenant
+authorization. Every layer's failure signature is explicit in its return
+type. Exceptions are reserved for genuinely unexpected/unrecoverable
+failures: missing startup configuration, framework/programmer-error
+guards, an unrecognized database error, transactional rollback cleanup.
 
 - **Domain** (entity constructors/methods, value object factories):
-  still throws by default — always a `BusinessException` subtype
-  (`Code` + `Message`), never a raw `Exception`/`ArgumentException`.
-  Domain has zero project references, so it cannot depend on
-  `Admin.SharedKernel`'s `Result` type — and by the time a handler
-  constructs a domain object, FluentValidation has already checked
-  shape, so hitting a domain exception in normal operation means a
-  validator/domain mismatch bug, not a real user-facing outcome.
-  `identity-service`'s `Tenant` and services-service's `Tag`/`Category`/
-  `Service`/`TagColor` all follow this (docs/adr/0012).
-- **Application handlers do NOT catch it.** Let a `BusinessException`
-  propagate out of `Handle(...)` uncaught — no per-handler try/catch
-  (docs/adr/0006). Cross-aggregate rules that need a repository
-  round-trip (uniqueness, existence, in-use) live in the handler itself
-  and return `Result.Failure` directly, no exception involved at any
-  point (docs/adr/0012); role/scope checks return `Forbid()`. Exceptions
-  are reserved for genuine Domain-invariant violations only. The one
-  exception-based case a handler *does* catch: `IUnitOfWork.SaveChangesAsync`
-  throwing `DuplicateEntityException` when a database unique-constraint
-  race loses to a concurrent request — caught and converted to
-  `Error.Conflict`, same as the pre-emptive `NameExistsAsync` check.
-- **The Api's global `BusinessExceptionHandler`** (`IExceptionHandler`,
+  returns `DomainResult`/`DomainResult<T>` (`{Service}.Domain/Common/`,
+  one pair per service — Domain has zero project references, so it can't
+  depend on `Admin.SharedKernel`'s `Result`), never throws for a
+  validation failure. `identity-service`'s `Tenant` and services-service's
+  `Tag`/`Category`/`Service`/`TagColor` all follow this. See "Rich domain
+  model" above for the `Create`/`Update` shape.
+- **Application handlers have no `try/catch` for business flow.** A
+  handler calls `Entity.Create(...)`/`.Update(...)`, checks
+  `domainResult.IsFailure`, and maps the failure via
+  `DomainErrorMapper.ToApplicationError()` — no exception ever
+  propagates out of `Handle(...)` for an expected outcome. Cross-aggregate
+  rules that need a repository round-trip (uniqueness, existence, in-use)
+  live in the handler itself and return `Result.Failure` directly
+  (docs/adr/0012); role/scope checks return `Forbid()`.
+  `IUnitOfWork.SaveChangesAsync` (services-service) returns
+  `PersistenceResult<int>` instead of throwing when a database
+  unique-constraint race loses to a concurrent request — the handler
+  checks `saveResult.IsFailure` and maps it via a per-entity
+  `{Entity}PersistenceErrorMapper` (feature root, e.g.
+  `Tags/TagPersistenceErrorMapper.cs`) to `Error.Conflict`, same outcome
+  as the pre-emptive `NameExistsAsync` check. Delete handlers check this
+  result too, even though nothing used to be caught there — discarding it
+  would silently swallow a real conflict and report success.
+  `identity-service`'s `IUnitOfWork.ExecuteInTransactionAsync` is already
+  `Result`-aware; its `try/catch` exists only for transactional rollback
+  on a genuinely unexpected failure, not to convert a business outcome —
+  see "UnitOfWork" below.
+- **`Admin.SharedKernel.GenericExceptionHandler`** (`IExceptionHandler`,
   registered via `AddExceptionHandler<T>()` + `app.UseExceptionHandler()`
-  in `Program.cs`) is the *one* place that turns a `BusinessException`
-  into an HTTP response (400 Problem Details, `Title` = `Code`, `Detail`
-  = `Message`). `Admin.SharedKernel.GenericExceptionHandler`, registered
-  right after it, catches everything else: logs at Error level via
-  `ILogger`, returns a generic 500 Problem Details with no exception
-  details in the body.
+  in each `Program.cs`) is the *only* global exception handler in either
+  service — it logs at Error level via `ILogger` and returns a generic
+  500 Problem Details with no exception details in the body. There is no
+  `BusinessExceptionHandler` anymore: nothing throws a business exception
+  for it to catch.
 
 ### FluentValidation
 
@@ -277,10 +303,14 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   not shared, because different services genuinely need different
   shapes (see docs/adr/0005). Match the shape to what the service's
   writes actually need:
-  - Only ever writing through one `DbContext`? A plain
-    `SaveChangesAsync(CancellationToken)` is enough (services-service).
-    Repositories only stage changes (`Add`/`Remove`, no internal
-    commit) — the handler commits explicitly.
+  - Only ever writing through one `DbContext`? A
+    `Task<PersistenceResult<int>> SaveChangesAsync(CancellationToken)` is
+    enough (services-service) — `PersistenceResult`/`PersistenceError`
+    (`Application/Abstractions/`) let Infrastructure report a recognized
+    unique-constraint violation without throwing or referencing Npgsql
+    from Application (docs/adr/0014). Repositories only stage changes
+    (`Add`/`Remove`, no internal commit) — the handler commits explicitly
+    and checks the returned result.
   - Writing through more than one abstraction that each commit on their
     own (e.g. an EF repository AND `UserManager`)? Wrap both in an
     explicit transaction: `ExecuteInTransactionAsync<TResult>(Func<...,

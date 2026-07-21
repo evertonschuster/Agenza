@@ -18,6 +18,7 @@ public class CreateTagCommandHandlerTests
     {
         _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(false);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
         _handler = new CreateTagCommandHandler(_repository, _unitOfWork, _logger);
     }
 
@@ -55,8 +56,8 @@ public class CreateTagCommandHandlerTests
     public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
-                new InvalidOperationException(), "IX_Tags_TenantId_NameNormalized"));
+            .Returns(PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Tags_TenantId_NameNormalized")));
 
         var result = await _handler.Handle(new CreateTagCommand("VIP", "#0d9488", null), CancellationToken.None);
 
@@ -69,8 +70,8 @@ public class CreateTagCommandHandlerTests
     public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
-                new InvalidOperationException(), "some_other_unique_constraint"));
+            .Returns(PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));
 
         var result = await _handler.Handle(new CreateTagCommand("VIP", "#0d9488", null), CancellationToken.None);
 

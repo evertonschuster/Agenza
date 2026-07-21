@@ -48,8 +48,20 @@ public class AuthorizationController : Controller
                 });
         }
 
-        var user = await _userManager.GetUserAsync(result.Principal)
-            ?? throw new InvalidOperationException("The user details cannot be retrieved.");
+        // The cookie authenticated, but the user it points at may no longer exist
+        // (deleted/locked after the cookie was issued) - an expected, if rare,
+        // runtime condition, not a framework-impossible state, so it becomes a
+        // protocol-level "please sign in again" response instead of a 500.
+        var user = await _userManager.GetUserAsync(result.Principal);
+        if (user is null)
+        {
+            return Forbid(
+                authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+                properties: new AuthenticationProperties(new Dictionary<string, string?>
+                {
+                    [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.LoginRequired,
+                }));
+        }
 
         var principal = await CreateSignedInPrincipalAsync(user, request.GetScopes());
 
@@ -66,10 +78,14 @@ public class AuthorizationController : Controller
         if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
         {
             var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
-            var user = await _userManager.GetUserAsync(result.Principal!)
-                ?? throw new InvalidOperationException("The user details cannot be retrieved.");
+            var user = await _userManager.GetUserAsync(result.Principal!);
 
-            if (!await _signInManager.CanSignInAsync(user))
+            // A vanished user (deleted/locked since the token was issued) and a
+            // user that can no longer sign in are both "the grant is no longer
+            // valid" from the client's perspective - RFC 6749's invalid_grant
+            // covers both, so they share one response instead of the first one
+            // being a 500.
+            if (user is null || !await _signInManager.CanSignInAsync(user))
             {
                 return Forbid(
                     authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
@@ -107,7 +123,15 @@ public class AuthorizationController : Controller
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
-        throw new NotImplementedException("The specified grant type is not supported.");
+        // grant_type is client-controlled protocol input, not framework-impossible
+        // state - an unsupported value is expected client error traffic and gets
+        // the literal RFC 6749 error code instead of a 500.
+        return Forbid(
+            authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+            properties: new AuthenticationProperties(new Dictionary<string, string?>
+            {
+                [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.UnsupportedGrantType,
+            }));
     }
 
     private async Task<ClaimsPrincipal> CreateSignedInPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes)

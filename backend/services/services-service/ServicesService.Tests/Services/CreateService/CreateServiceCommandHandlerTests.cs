@@ -25,6 +25,7 @@ public class CreateServiceCommandHandlerTests
             .Returns(false);
         _serviceCodeGenerator.GetNextCodeAsync(Arg.Any<CancellationToken>()).Returns(1);
         var loader = new ServiceRelationshipLoader(_categoryRepository, _tagRepository);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
         _handler = new CreateServiceCommandHandler(
             _serviceRepository, loader, _serviceCodeGenerator, _unitOfWork, _logger);
     }
@@ -53,8 +54,8 @@ public class CreateServiceCommandHandlerTests
     [Fact]
     public async Task Handle_WithValidCategoryAndTags_SetsThemOnTheService()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
-        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });
@@ -120,7 +121,7 @@ public class CreateServiceCommandHandlerTests
     [Fact]
     public async Task Handle_WithValidCategory_LoadsItExactlyOnce()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
         await _handler.Handle(
@@ -134,8 +135,8 @@ public class CreateServiceCommandHandlerTests
     public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
-                new InvalidOperationException(), "IX_Services_TenantId_NameNormalized"));
+            .Returns(PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_NameNormalized")));
 
         var result = await _handler.Handle(
             new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
@@ -150,8 +151,8 @@ public class CreateServiceCommandHandlerTests
     public async Task Handle_WithConcurrentDuplicateCodeAtSaveTime_ReturnsDuplicateCodeConflict()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
-                new InvalidOperationException(), "IX_Services_TenantId_Code"));
+            .Returns(PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_Code")));
 
         var result = await _handler.Handle(
             new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
@@ -166,8 +167,8 @@ public class CreateServiceCommandHandlerTests
     public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns<Task<int>>(_ => throw new DuplicateEntityException(
-                new InvalidOperationException(), "some_other_unique_constraint"));
+            .Returns(PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));
 
         var result = await _handler.Handle(
             new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),

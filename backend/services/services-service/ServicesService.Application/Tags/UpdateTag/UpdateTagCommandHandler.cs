@@ -6,8 +6,6 @@ namespace ServicesService.Application.Tags.UpdateTag;
 
 public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, TagResponse>
 {
-    private const string NameConstraint = "IX_Tags_TenantId_NameNormalized";
-
     private readonly ITagRepository _tagRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<UpdateTagCommandHandler> _logger;
@@ -37,33 +35,18 @@ public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, 
                 Error.Conflict("Tag.DuplicateName", $"Já existe uma etiqueta chamada '{command.Name}'."));
         }
 
-        command.ApplyTo(tag);
-
-        try
+        var applyResult = command.ApplyTo(tag);
+        if (applyResult.IsFailure)
         {
-            await _unitOfWork.SaveChangesAsync(cancellationToken);
+            return Result.Failure<TagResponse>(applyResult.Error.ToApplicationError());
         }
-        catch (DuplicateEntityException ex)
+
+        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (saveResult.IsFailure)
         {
-            return Result.Failure<TagResponse>(MapDuplicateError(ex, command.Name));
+            return Result.Failure<TagResponse>(TagPersistenceErrorMapper.Map(saveResult.Error, command.Name, _logger));
         }
 
         return TagResponse.FromTag(tag);
-    }
-
-    private Error MapDuplicateError(DuplicateEntityException exception, string name)
-    {
-        if (exception.ConstraintName == NameConstraint)
-        {
-            return Error.Conflict("Tag.DuplicateName", $"Já existe uma etiqueta chamada '{name}'.");
-        }
-
-        _logger.LogError(
-            exception,
-            "Unrecognized unique constraint {ConstraintName} violated while updating a Tag",
-            exception.ConstraintName);
-        return Error.Conflict(
-            "Tag.DuplicateConflict",
-            "Não foi possível salvar a etiqueta devido a um conflito de dados.");
     }
 }

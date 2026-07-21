@@ -1,10 +1,11 @@
+using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Services.UpdateService;
 
 public static class UpdateServiceCommandExtensions
 {
-    public static void ApplyTo(this UpdateServiceCommand command, Service service) =>
+    public static DomainResult ApplyTo(this UpdateServiceCommand command, Service service) =>
         service.Update(
             command.Name,
             command.Description,

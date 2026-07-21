@@ -1,5 +1,4 @@
 using ServicesService.Domain.Common;
-using ServicesService.Domain.Exceptions;
 
 namespace ServicesService.Domain.Entities;
 
@@ -31,7 +30,7 @@ public class Service : TenantOwnedEntity
         Name = string.Empty;
     }
 
-    public Service(
+    private Service(
         Guid id,
         string name,
         string? description,
@@ -46,15 +45,73 @@ public class Service : TenantOwnedEntity
     {
         Code = code;
         CategoryId = categoryId;
-        Name = ValidateName(name);
-        Description = ValidateDescription(description);
-        (MinDurationMinutes, DurationMinutes, MaxDurationMinutes) =
-            ValidateDuration(minDurationMinutes, durationMinutes, maxDurationMinutes);
-        Price = ValidatePrice(price);
-        MaxDiscountPercentage = ValidateMaxDiscountPercentage(maxDiscountPercentage);
+        Name = name;
+        Description = description;
+        MinDurationMinutes = minDurationMinutes;
+        DurationMinutes = durationMinutes;
+        MaxDurationMinutes = maxDurationMinutes;
+        Price = price;
+        MaxDiscountPercentage = maxDiscountPercentage;
     }
 
-    public void Update(
+    public static DomainResult<Service> Create(
+        Guid id,
+        string name,
+        string? description,
+        int durationMinutes,
+        int minDurationMinutes,
+        int maxDurationMinutes,
+        decimal price,
+        decimal maxDiscountPercentage,
+        Guid? categoryId,
+        int code)
+    {
+        var nameResult = ValidateName(name);
+        if (nameResult.IsFailure)
+        {
+            return DomainResult.Failure<Service>(nameResult.Error);
+        }
+
+        var descriptionResult = ValidateDescription(description);
+        if (descriptionResult.IsFailure)
+        {
+            return DomainResult.Failure<Service>(descriptionResult.Error);
+        }
+
+        var durationResult = ValidateDuration(minDurationMinutes, durationMinutes, maxDurationMinutes);
+        if (durationResult.IsFailure)
+        {
+            return DomainResult.Failure<Service>(durationResult.Error);
+        }
+
+        var priceResult = ValidatePrice(price);
+        if (priceResult.IsFailure)
+        {
+            return DomainResult.Failure<Service>(priceResult.Error);
+        }
+
+        var maxDiscountResult = ValidateMaxDiscountPercentage(maxDiscountPercentage);
+        if (maxDiscountResult.IsFailure)
+        {
+            return DomainResult.Failure<Service>(maxDiscountResult.Error);
+        }
+
+        var (validatedMin, validatedDuration, validatedMax) = durationResult.Value;
+
+        return DomainResult.Success(new Service(
+            id,
+            nameResult.Value,
+            descriptionResult.Value,
+            validatedDuration,
+            validatedMin,
+            validatedMax,
+            priceResult.Value,
+            maxDiscountResult.Value,
+            categoryId,
+            code));
+    }
+
+    public DomainResult Update(
         string name,
         string? description,
         int durationMinutes,
@@ -67,21 +124,48 @@ public class Service : TenantOwnedEntity
         // Every new value is validated before anything is assigned, so a
         // later validation failure (e.g. an invalid discount) can never leave
         // the entity with some fields already overwritten and others not.
-        var validatedName = ValidateName(name);
-        var validatedDescription = ValidateDescription(description);
-        var (validatedMin, validatedDuration, validatedMax) =
-            ValidateDuration(minDurationMinutes, durationMinutes, maxDurationMinutes);
-        var validatedPrice = ValidatePrice(price);
-        var validatedMaxDiscountPercentage = ValidateMaxDiscountPercentage(maxDiscountPercentage);
+        var nameResult = ValidateName(name);
+        if (nameResult.IsFailure)
+        {
+            return DomainResult.Failure(nameResult.Error);
+        }
+
+        var descriptionResult = ValidateDescription(description);
+        if (descriptionResult.IsFailure)
+        {
+            return DomainResult.Failure(descriptionResult.Error);
+        }
+
+        var durationResult = ValidateDuration(minDurationMinutes, durationMinutes, maxDurationMinutes);
+        if (durationResult.IsFailure)
+        {
+            return DomainResult.Failure(durationResult.Error);
+        }
+
+        var priceResult = ValidatePrice(price);
+        if (priceResult.IsFailure)
+        {
+            return DomainResult.Failure(priceResult.Error);
+        }
+
+        var maxDiscountResult = ValidateMaxDiscountPercentage(maxDiscountPercentage);
+        if (maxDiscountResult.IsFailure)
+        {
+            return DomainResult.Failure(maxDiscountResult.Error);
+        }
+
+        var (validatedMin, validatedDuration, validatedMax) = durationResult.Value;
 
         CategoryId = categoryId;
-        Name = validatedName;
-        Description = validatedDescription;
+        Name = nameResult.Value;
+        Description = descriptionResult.Value;
         MinDurationMinutes = validatedMin;
         DurationMinutes = validatedDuration;
         MaxDurationMinutes = validatedMax;
-        Price = validatedPrice;
-        MaxDiscountPercentage = validatedMaxDiscountPercentage;
+        Price = priceResult.Value;
+        MaxDiscountPercentage = maxDiscountResult.Value;
+
+        return DomainResult.Success();
     }
 
     public void SetTags(IEnumerable<Tag> tags)
@@ -90,83 +174,91 @@ public class Service : TenantOwnedEntity
         _tags.AddRange(tags);
     }
 
-    private static string ValidateName(string name)
+    private static DomainResult<string> ValidateName(string name)
     {
         var trimmed = name?.Trim() ?? string.Empty;
 
         if (trimmed.Length is 0 or > NameMaxLength)
         {
-            throw new InvalidServiceException(
-                $"O nome do serviço é obrigatório e deve ter no máximo {NameMaxLength} caracteres.");
+            return DomainResult.Failure<string>(new DomainError(
+                "Service.Invalid",
+                $"O nome do serviço é obrigatório e deve ter no máximo {NameMaxLength} caracteres."));
         }
 
-        return trimmed;
+        return DomainResult.Success(trimmed);
     }
 
-    private static string? ValidateDescription(string? description)
+    private static DomainResult<string?> ValidateDescription(string? description)
     {
         var trimmed = description?.Trim();
 
         if (string.IsNullOrEmpty(trimmed))
         {
-            return null;
+            return DomainResult.Success<string?>(null);
         }
 
         if (trimmed.Length > DescriptionMaxLength)
         {
-            throw new InvalidServiceException(
-                $"A descrição do serviço deve ter no máximo {DescriptionMaxLength} caracteres.");
+            return DomainResult.Failure<string?>(new DomainError(
+                "Service.Invalid",
+                $"A descrição do serviço deve ter no máximo {DescriptionMaxLength} caracteres."));
         }
 
-        return trimmed;
+        return DomainResult.Success<string?>(trimmed);
     }
 
-    private static (int Min, int Duration, int Max) ValidateDuration(int min, int duration, int max)
+    private static DomainResult<(int Min, int Duration, int Max)> ValidateDuration(int min, int duration, int max)
     {
         if (min < MinAllowedDurationMinutes)
         {
-            throw new InvalidServiceException(
-                $"A duração mínima do serviço deve ser de pelo menos {MinAllowedDurationMinutes} minuto.");
+            return DomainResult.Failure<(int Min, int Duration, int Max)>(new DomainError(
+                "Service.Invalid",
+                $"A duração mínima do serviço deve ser de pelo menos {MinAllowedDurationMinutes} minuto."));
         }
 
         if (max > MaxAllowedDurationMinutes)
         {
-            throw new InvalidServiceException(
-                $"A duração máxima do serviço não pode ultrapassar {MaxAllowedDurationMinutes} minutos.");
+            return DomainResult.Failure<(int Min, int Duration, int Max)>(new DomainError(
+                "Service.Invalid",
+                $"A duração máxima do serviço não pode ultrapassar {MaxAllowedDurationMinutes} minutos."));
         }
 
         if (min > max)
         {
-            throw new InvalidServiceException(
-                "A duração mínima do serviço não pode ser maior que a duração máxima.");
+            return DomainResult.Failure<(int Min, int Duration, int Max)>(new DomainError(
+                "Service.Invalid",
+                "A duração mínima do serviço não pode ser maior que a duração máxima."));
         }
 
         if (duration < min || duration > max)
         {
-            throw new InvalidServiceException(
-                "A duração do serviço deve estar entre a duração mínima e a duração máxima.");
+            return DomainResult.Failure<(int Min, int Duration, int Max)>(new DomainError(
+                "Service.Invalid",
+                "A duração do serviço deve estar entre a duração mínima e a duração máxima."));
         }
 
-        return (min, duration, max);
+        return DomainResult.Success<(int Min, int Duration, int Max)>((min, duration, max));
     }
 
-    private static decimal ValidatePrice(decimal price)
+    private static DomainResult<decimal> ValidatePrice(decimal price)
     {
         if (price < 0)
         {
-            throw new InvalidServiceException("O preço do serviço não pode ser negativo.");
+            return DomainResult.Failure<decimal>(
+                new DomainError("Service.Invalid", "O preço do serviço não pode ser negativo."));
         }
 
-        return price;
+        return DomainResult.Success(price);
     }
 
-    private static decimal ValidateMaxDiscountPercentage(decimal maxDiscountPercentage)
+    private static DomainResult<decimal> ValidateMaxDiscountPercentage(decimal maxDiscountPercentage)
     {
         if (maxDiscountPercentage < 0 || maxDiscountPercentage > 100)
         {
-            throw new InvalidServiceException("O desconto máximo do serviço deve ser entre 0 e 100.");
+            return DomainResult.Failure<decimal>(
+                new DomainError("Service.Invalid", "O desconto máximo do serviço deve ser entre 0 e 100."));
         }
 
-        return maxDiscountPercentage;
+        return DomainResult.Success(maxDiscountPercentage);
     }
 }

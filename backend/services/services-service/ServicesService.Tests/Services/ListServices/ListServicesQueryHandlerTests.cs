@@ -20,7 +20,7 @@ public class ListServicesQueryHandlerTests
     public async Task Handle_ReturnsServicesFromTheRepository()
     {
         var handler = CreateHandler(out var serviceRepository, out _);
-        var service = new Service(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1);
+        var service = Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1).Value;
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service> { service }, 1));
@@ -53,8 +53,8 @@ public class ListServicesQueryHandlerTests
     public async Task Handle_WithACategorizedService_ResolvesTheCategoryName()
     {
         var handler = CreateHandler(out var serviceRepository, out var categoryRepository);
-        var category = new Category(Guid.NewGuid(), "Hair");
-        var service = new Service(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, 1);
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
+        var service = Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, 1).Value;
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service> { service }, 1));
@@ -70,12 +70,12 @@ public class ListServicesQueryHandlerTests
     public async Task Handle_OnlyQueriesTheDistinctCategoriesReferencedByThisPage_NotTheWholeCatalog()
     {
         var handler = CreateHandler(out var serviceRepository, out var categoryRepository);
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         var services = new List<Service>
         {
-            new(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, 1),
-            new(Guid.NewGuid(), "Trim", null, 30, 15, 60, 45.50m, 10m, category.Id, 2),
-            new(Guid.NewGuid(), "Manicure", null, 30, 15, 60, 45.50m, 10m, null, 3),
+            Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, 1).Value,
+            Service.Create(Guid.NewGuid(), "Trim", null, 30, 15, 60, 45.50m, 10m, category.Id, 2).Value,
+            Service.Create(Guid.NewGuid(), "Manicure", null, 30, 15, 60, 45.50m, 10m, null, 3).Value,
         };
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
@@ -98,8 +98,8 @@ public class ListServicesQueryHandlerTests
         var handler = CreateHandler(out var serviceRepository, out _);
         var services = new List<Service>
         {
-            new(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1),
-            new(Guid.NewGuid(), "Manicure", null, 30, 15, 60, 45.50m, 10m, null, 2),
+            Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1).Value,
+            Service.Create(Guid.NewGuid(), "Manicure", null, 30, 15, 60, 45.50m, 10m, null, 2).Value,
         };
         serviceRepository.ListAsync(1, 2, Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((services, 3));

@@ -1,3 +1,4 @@
+using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Services.CreateService;
@@ -6,9 +7,9 @@ public static class CreateServiceCommandExtensions
 {
     // TenantId is intentionally Guid.Empty - AuditableEntitySaveChangesInterceptor
     // assigns it on save (docs/adr/0008).
-    public static Service ToModel(this CreateServiceCommand command, int code, IReadOnlyCollection<Tag> tags)
+    public static DomainResult<Service> ToModel(this CreateServiceCommand command, int code, IReadOnlyCollection<Tag> tags)
     {
-        var service = new Service(
+        var serviceResult = Service.Create(
             Guid.CreateVersion7(),
             command.Name,
             command.Description,
@@ -19,7 +20,14 @@ public static class CreateServiceCommandExtensions
             command.MaxDiscountPercentage,
             command.CategoryId,
             code);
-        service.SetTags(tags);
-        return service;
+
+        if (serviceResult.IsFailure)
+        {
+            return serviceResult;
+        }
+
+        serviceResult.Value.SetTags(tags);
+
+        return serviceResult;
     }
 }

@@ -1,35 +1,36 @@
 using IdentityService.Domain.Entities;
-using IdentityService.Domain.Exceptions;
 
 namespace IdentityService.Tests;
 
 public class TenantTests
 {
     [Fact]
-    public void Constructor_WithValidName_SetsIdAndName()
+    public void Create_WithValidName_ReturnsSuccessWithIdAndName()
     {
         var id = Guid.NewGuid();
 
-        var tenant = new Tenant(id, "Bella Studio");
+        var result = Tenant.Create(id, "Bella Studio");
 
-        tenant.Id.Should().Be(id);
-        tenant.Name.Should().Be("Bella Studio");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(id);
+        result.Value.Name.Should().Be("Bella Studio");
     }
 
     [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public void Constructor_WithMissingName_Throws(string name)
+    public void Create_WithMissingName_ReturnsFailure(string name)
     {
-        var act = () => new Tenant(Guid.NewGuid(), name);
+        var result = Tenant.Create(Guid.NewGuid(), name);
 
-        act.Should().Throw<InvalidTenantException>().Which.Code.Should().Be("Tenant.Invalid");
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Tenant.Invalid");
     }
 
     [Fact]
     public void MarkCreated_SetsCreatedAtAndCreatedBy()
     {
-        var tenant = new Tenant(Guid.NewGuid(), "Bella Studio");
+        var tenant = Tenant.Create(Guid.NewGuid(), "Bella Studio").Value;
         var actorId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
@@ -42,7 +43,7 @@ public class TenantTests
     [Fact]
     public void MarkUpdated_SetsUpdatedAtAndUpdatedBy()
     {
-        var tenant = new Tenant(Guid.NewGuid(), "Bella Studio");
+        var tenant = Tenant.Create(Guid.NewGuid(), "Bella Studio").Value;
         var actorId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
@@ -55,7 +56,7 @@ public class TenantTests
     [Fact]
     public void MarkDeleted_SetsDeletedAtAndDeletedByAndIsDeleted()
     {
-        var tenant = new Tenant(Guid.NewGuid(), "Bella Studio");
+        var tenant = Tenant.Create(Guid.NewGuid(), "Bella Studio").Value;
         var actorId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 

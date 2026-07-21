@@ -1,6 +1,9 @@
 # ADR 0012 — Cross-aggregate checks move back to handlers; Domain throws again
 
-Status: accepted (2026-07); supersedes docs/adr/0010 and docs/adr/0011
+Status: accepted (2026-07); supersedes docs/adr/0010 and docs/adr/0011;
+Domain-throws-again / DuplicateEntityException convention superseded by
+docs/adr/0014 (Domain returns DomainResult, persistence conflicts return
+PersistenceResult)
 
 ## Context
 

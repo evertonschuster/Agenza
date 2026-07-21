@@ -1,5 +1,4 @@
 using ServicesService.Domain.Common;
-using ServicesService.Domain.Exceptions;
 
 namespace ServicesService.Domain.Entities;
 
@@ -16,27 +15,49 @@ public class Category : TenantOwnedEntity
         Name = string.Empty;
     }
 
-    public Category(Guid id, string name)
+    private Category(Guid id, string name)
         : base(id)
     {
-        Name = ValidateName(name);
+        Name = name;
     }
 
-    public void Update(string name)
+    public static DomainResult<Category> Create(Guid id, string name)
     {
-        Name = ValidateName(name);
+        var nameResult = ValidateName(name);
+
+        if (nameResult.IsFailure)
+        {
+            return DomainResult.Failure<Category>(nameResult.Error);
+        }
+
+        return DomainResult.Success(new Category(id, nameResult.Value));
     }
 
-    private static string ValidateName(string name)
+    public DomainResult Update(string name)
+    {
+        var nameResult = ValidateName(name);
+
+        if (nameResult.IsFailure)
+        {
+            return DomainResult.Failure(nameResult.Error);
+        }
+
+        Name = nameResult.Value;
+
+        return DomainResult.Success();
+    }
+
+    private static DomainResult<string> ValidateName(string name)
     {
         var trimmed = name?.Trim() ?? string.Empty;
 
         if (trimmed.Length is 0 or > NameMaxLength)
         {
-            throw new InvalidCategoryException(
-                $"O nome da categoria é obrigatório e deve ter no máximo {NameMaxLength} caracteres.");
+            return DomainResult.Failure<string>(new DomainError(
+                "Category.Invalid",
+                $"O nome da categoria é obrigatório e deve ter no máximo {NameMaxLength} caracteres."));
         }
 
-        return trimmed;
+        return DomainResult.Success(trimmed);
     }
 }

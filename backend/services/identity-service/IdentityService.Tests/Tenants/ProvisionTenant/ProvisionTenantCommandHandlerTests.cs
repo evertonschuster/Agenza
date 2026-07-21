@@ -3,7 +3,6 @@ using IdentityService.Application.Abstractions;
 using IdentityService.Application.Tenants;
 using IdentityService.Application.Tenants.ProvisionTenant;
 using IdentityService.Domain.Entities;
-using IdentityService.Domain.Exceptions;
 
 namespace IdentityService.Tests.Tenants.ProvisionTenant;
 
@@ -74,19 +73,22 @@ public class ProvisionTenantCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithBlankTenantName_Throws()
+    public async Task Handle_WithBlankTenantName_ReturnsFailure()
     {
         // Only reachable if a caller bypasses ProvisionTenantCommandValidator.
+        var tenantRepository = Substitute.For<ITenantRepository>();
         var handler = new ProvisionTenantCommandHandler(
-            Substitute.For<ITenantRepository>(),
+            tenantRepository,
             Substitute.For<IUserAccountService>(),
             CreatePassthroughUnitOfWork());
 
-        var act = () => handler.Handle(
+        var result = await handler.Handle(
             new ProvisionTenantCommand("", "owner@demo.local", "Passw0rd!"),
             CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidTenantException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Tenant.Invalid");
+        await tenantRepository.DidNotReceive().AddAsync(Arg.Any<Tenant>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

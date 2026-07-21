@@ -15,15 +15,17 @@ public class UnitOfWork : IUnitOfWork
         _dbContext = dbContext;
     }
 
-    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+    public async Task<PersistenceResult<int>> SaveChangesAsync(CancellationToken cancellationToken)
     {
         try
         {
-            return await _dbContext.SaveChangesAsync(cancellationToken);
+            var affectedRows = await _dbContext.SaveChangesAsync(cancellationToken);
+            return PersistenceResult.Success(affectedRows);
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception, out var constraintName))
         {
-            throw new DuplicateEntityException(exception, constraintName);
+            return PersistenceResult.Failure<int>(
+                new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, constraintName));
         }
     }
 

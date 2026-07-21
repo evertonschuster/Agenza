@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Categories.DeleteCategory;
@@ -8,15 +9,18 @@ public sealed class DeleteCategoryCommandHandler : ICommandHandler<DeleteCategor
     private readonly ICategoryRepository _categoryRepository;
     private readonly IServiceRepository _serviceRepository;
     private readonly IUnitOfWork _unitOfWork;
+    private readonly ILogger<DeleteCategoryCommandHandler> _logger;
 
     public DeleteCategoryCommandHandler(
         ICategoryRepository categoryRepository,
         IServiceRepository serviceRepository,
-        IUnitOfWork unitOfWork)
+        IUnitOfWork unitOfWork,
+        ILogger<DeleteCategoryCommandHandler> logger)
     {
         _categoryRepository = categoryRepository;
         _serviceRepository = serviceRepository;
         _unitOfWork = unitOfWork;
+        _logger = logger;
     }
 
     public async Task<Result> Handle(DeleteCategoryCommand command, CancellationToken cancellationToken)
@@ -38,7 +42,12 @@ public sealed class DeleteCategoryCommandHandler : ICommandHandler<DeleteCategor
         }
 
         _categoryRepository.Remove(category);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        if (saveResult.IsFailure)
+        {
+            return Result.Failure(CategoryPersistenceErrorMapper.Map(saveResult.Error, category.Name, _logger));
+        }
 
         return Result.Success();
     }

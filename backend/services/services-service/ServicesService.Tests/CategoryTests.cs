@@ -1,26 +1,26 @@
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.Exceptions;
 
 namespace ServicesService.Tests;
 
 public class CategoryTests
 {
     [Fact]
-    public void Constructor_WithValidValues_TrimsAndSets()
+    public void Create_WithValidValues_TrimsAndSets()
     {
         var id = Guid.NewGuid();
 
-        var category = new Category(id, "  Hair  ");
+        var result = Category.Create(id, "  Hair  ");
 
-        category.Id.Should().Be(id);
-        category.TenantId.Should().Be(Guid.Empty);
-        category.Name.Should().Be("Hair");
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Id.Should().Be(id);
+        result.Value.TenantId.Should().Be(Guid.Empty);
+        result.Value.Name.Should().Be("Hair");
     }
 
     [Fact]
     public void AssignTenant_WithValidTenant_SetsTenantId()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         var tenantId = Guid.NewGuid();
 
         category.AssignTenant(tenantId);
@@ -31,53 +31,58 @@ public class CategoryTests
     [Fact]
     public void AssignTenant_WithEmptyTenant_Throws()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
 
         var act = () => category.AssignTenant(Guid.Empty);
 
-        act.Should().Throw<InvalidTenantException>();
+        act.Should().Throw<InvalidOperationException>();
     }
 
     [Fact]
     public void Update_WithValidValues_ReplacesName()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
 
-        category.Update("  Nails  ");
+        var result = category.Update("  Nails  ");
 
+        result.IsSuccess.Should().BeTrue();
         category.Name.Should().Be("Nails");
     }
 
     [Fact]
-    public void Constructor_WithEmptyName_Throws()
+    public void Create_WithEmptyName_ReturnsFailure()
     {
-        var act = () => new Category(Guid.NewGuid(), "   ");
+        var result = Category.Create(Guid.NewGuid(), "   ");
 
-        act.Should().Throw<InvalidCategoryException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Category.Invalid");
     }
 
     [Fact]
-    public void Constructor_WithNameOverMaxLength_Throws()
+    public void Create_WithNameOverMaxLength_ReturnsFailure()
     {
-        var act = () => new Category(Guid.NewGuid(), new string('x', Category.NameMaxLength + 1));
+        var result = Category.Create(Guid.NewGuid(), new string('x', Category.NameMaxLength + 1));
 
-        act.Should().Throw<InvalidCategoryException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Category.Invalid");
     }
 
     [Fact]
-    public void Update_WithEmptyName_Throws()
+    public void Update_WithEmptyName_ReturnsFailureWithoutMutating()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
 
-        var act = () => category.Update("   ");
+        var result = category.Update("   ");
 
-        act.Should().Throw<InvalidCategoryException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Category.Invalid");
+        category.Name.Should().Be("Hair");
     }
 
     [Fact]
     public void MarkCreated_SetsCreatedAtAndCreatedBy()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         var actorId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
@@ -90,7 +95,7 @@ public class CategoryTests
     [Fact]
     public void MarkDeleted_SetsDeletedAtAndDeletedByAndIsDeleted()
     {
-        var category = new Category(Guid.NewGuid(), "Hair");
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         var actorId = Guid.NewGuid();
         var now = DateTimeOffset.UtcNow;
 
