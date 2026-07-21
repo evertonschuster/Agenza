@@ -10,6 +10,9 @@
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "typescript": "~7.0.2"
+  },
   "scripts": {
     "dev:frontend": "npm run dev --workspace=apps/admin-frontend",
     "build:frontend": "npm run build --workspace=apps/admin-frontend",
@@ -19,6 +22,6 @@
   },
   "devDependencies": {
     "husky": "^9.1.7",
-    "lint-staged": "^17.0.8"
+    "lint-staged": "^17.1.0"
   }
 }
