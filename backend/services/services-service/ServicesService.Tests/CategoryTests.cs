@@ -49,6 +49,32 @@ public class CategoryTests
     }
 
     [Fact]
+    public void Constructor_WithEmptyName_Throws()
+    {
+        var act = () => new Category(Guid.NewGuid(), "   ");
+
+        act.Should().Throw<InvalidCategoryException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNameOverMaxLength_Throws()
+    {
+        var act = () => new Category(Guid.NewGuid(), new string('x', Category.NameMaxLength + 1));
+
+        act.Should().Throw<InvalidCategoryException>();
+    }
+
+    [Fact]
+    public void Update_WithEmptyName_Throws()
+    {
+        var category = new Category(Guid.NewGuid(), "Hair");
+
+        var act = () => category.Update("   ");
+
+        act.Should().Throw<InvalidCategoryException>();
+    }
+
+    [Fact]
     public void MarkCreated_SetsCreatedAtAndCreatedBy()
     {
         var category = new Category(Guid.NewGuid(), "Hair");

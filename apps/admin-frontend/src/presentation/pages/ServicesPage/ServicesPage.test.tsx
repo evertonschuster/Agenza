@@ -152,7 +152,14 @@ describe('ServicesPage', () => {
     await userEvent.type(screen.getByLabelText(/duração máxima/i), '45')
     await userEvent.type(screen.getByLabelText(/preço/i), '80')
     await userEvent.type(screen.getByLabelText(/desconto máximo/i), '5')
-    await userEvent.click(screen.getByRole('button', { name: /criar serviço/i }))
+    const submitButton = screen.getByRole('button', { name: /criar serviço/i })
+    // The last field's blur kicks off one more async validation pass
+    // (mode: 'onTouched') - wait for it to resolve and re-enable the button
+    // before clicking, instead of racing it.
+    await vi.waitFor(() => {
+      expect(submitButton).toBeEnabled()
+    })
+    await userEvent.click(submitButton)
 
     expect(createServiceSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
       name: 'Corte de cabelo',
@@ -186,7 +193,11 @@ describe('ServicesPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /criar serviço/i }))
 
     expect(
-      await screen.findByText(/a duração mínima não pode ser maior que a duração padrão/i),
+      await screen.findByText(
+        /a duração mínima não pode ser maior que a duração padrão/i,
+        {},
+        { timeout: 3000 },
+      ),
     ).toBeInTheDocument()
     expect(createServiceSpy).not.toHaveBeenCalled()
   })
@@ -206,11 +217,20 @@ describe('ServicesPage', () => {
     await userEvent.type(maxField, '15')
     await userEvent.type(screen.getByLabelText(/preço/i), '80')
     await userEvent.type(screen.getByLabelText(/desconto máximo/i), '5')
+    const submitButton = screen.getByRole('button', { name: /criar serviço/i })
+    // A submit attempt always runs full validation regardless of mode, and
+    // (once attempted) marks every field for onChange revalidation from then
+    // on - the reliable way to first surface the cross-field error here.
+    await userEvent.click(submitButton)
 
     expect(
-      await screen.findByText(/a duração mínima não pode ser maior que a duração padrão/i),
+      await screen.findByText(
+        /a duração mínima não pode ser maior que a duração padrão/i,
+        {},
+        { timeout: 3000 },
+      ),
     ).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /criar serviço/i })).toBeDisabled()
+    expect(createServiceSpy).not.toHaveBeenCalled()
 
     await userEvent.clear(minField)
     await userEvent.type(minField, '15')
@@ -219,13 +239,22 @@ describe('ServicesPage', () => {
     await userEvent.clear(maxField)
     await userEvent.type(maxField, '60')
 
-    expect(
-      screen.queryByText(/a duração mínima não pode ser maior que a duração padrão/i),
-    ).not.toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /criar serviço/i })).toBeEnabled()
+    await vi.waitFor(
+      () => {
+        expect(
+          screen.queryByText(/a duração mínima não pode ser maior que a duração padrão/i),
+        ).not.toBeInTheDocument()
+      },
+      { timeout: 3000 },
+    )
+    await vi.waitFor(() => {
+      expect(submitButton).toBeEnabled()
+    })
 
-    await userEvent.click(screen.getByRole('button', { name: /criar serviço/i }))
-    expect(createServiceSpy).toHaveBeenCalledTimes(1)
+    await userEvent.click(submitButton)
+    await vi.waitFor(() => {
+      expect(createServiceSpy).toHaveBeenCalledTimes(1)
+    })
   })
 
   it('toggles a tag on and includes it when creating a service', async () => {
@@ -234,6 +263,7 @@ describe('ServicesPage', () => {
     await screen.findByText('Massagem relaxante')
 
     await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+    const dialog = screen.getByRole('dialog')
     await userEvent.type(screen.getByLabelText(/^nome$/i), 'Corte de cabelo')
     await userEvent.type(screen.getByLabelText(/duração mínima/i), '15')
     await userEvent.type(screen.getByLabelText(/^duração \(min\)$/i), '30')
@@ -241,9 +271,14 @@ describe('ServicesPage', () => {
     await userEvent.type(screen.getByLabelText(/preço/i), '80')
     await userEvent.type(screen.getByLabelText(/desconto máximo/i), '5')
 
-    const dialog = screen.getByRole('dialog')
-    await userEvent.click(within(dialog).getByRole('button', { name: /vip/i }))
-    await userEvent.click(screen.getByRole('button', { name: /criar serviço/i }))
+    await userEvent.click(within(dialog).getByRole('combobox', { name: 'Etiquetas' }))
+    await userEvent.click(screen.getByRole('option', { name: /vip/i }))
+
+    const submitButton = screen.getByRole('button', { name: /criar serviço/i })
+    await vi.waitFor(() => {
+      expect(submitButton).toBeEnabled()
+    })
+    await userEvent.click(submitButton)
 
     expect(createServiceSpy).toHaveBeenCalledExactlyOnceWith(
       tenantContext,
@@ -271,7 +306,8 @@ describe('ServicesPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
       const dialog = screen.getByRole('dialog')
-      await userEvent.click(within(dialog).getByRole('button', { name: /nova categoria/i }))
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Categoria' }))
+      await userEvent.click(screen.getByRole('button', { name: /nova categoria/i }))
       const categoryPopover = getPopoverContent('Nova categoria')
       await userEvent.type(
         within(categoryPopover).getByRole('textbox', { name: /^nome$/i }),
@@ -283,7 +319,9 @@ describe('ServicesPage', () => {
 
       expect(createCategorySpy).toHaveBeenCalledExactlyOnceWith(tenantContext, { name: 'Cabelo' })
       await vi.waitFor(() => {
-        expect(within(dialog).getByRole('combobox')).toHaveTextContent('Cabelo')
+        expect(within(dialog).getByRole('combobox', { name: 'Categoria' })).toHaveTextContent(
+          'Cabelo',
+        )
       })
       expect(screen.getByRole('dialog')).toBeInTheDocument()
     })
@@ -307,7 +345,8 @@ describe('ServicesPage', () => {
 
       await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
       const dialog = screen.getByRole('dialog')
-      await userEvent.click(within(dialog).getByRole('button', { name: /nova etiqueta/i }))
+      await userEvent.click(within(dialog).getByRole('combobox', { name: 'Etiquetas' }))
+      await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
       const tagPopover = getPopoverContent('Nova etiqueta')
       await userEvent.type(within(tagPopover).getByRole('textbox', { name: /^nome$/i }), 'Promoção')
       await userEvent.click(within(tagPopover).getByRole('button', { name: /criar etiqueta/i }))
@@ -317,10 +356,7 @@ describe('ServicesPage', () => {
         color: TAG_COLOR_PALETTE[0],
       })
       await vi.waitFor(() => {
-        expect(within(dialog).getByRole('button', { name: /promoção/i })).toHaveAttribute(
-          'aria-pressed',
-          'true',
-        )
+        expect(within(dialog).getByText('Promoção')).toBeInTheDocument()
       })
       expect(screen.getByRole('dialog')).toBeInTheDocument()
     })

@@ -24,6 +24,9 @@ public class CategoryRepository : RepositoryBase<Category>, ICategoryRepository
     public Task<Category?> GetByIdAsync(Guid categoryId, CancellationToken cancellationToken) =>
         FindAsync(c => c.Id == categoryId, cancellationToken);
 
+    public Task<IReadOnlyList<Category>> GetByIdsAsync(IReadOnlyCollection<Guid> categoryIds, CancellationToken cancellationToken) =>
+        ListAsync(c => categoryIds.Contains(c.Id), order: null, cancellationToken);
+
     public Task<bool> NameExistsAsync(string name, Guid? excludeCategoryId, CancellationToken cancellationToken)
     {
         var normalized = name.Trim().ToLower();

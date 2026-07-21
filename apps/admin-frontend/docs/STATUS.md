@@ -81,15 +81,15 @@ what's blocked, and what order to build things in.
 
 ### Services
 
-| Piece                                         | Status    | Notes                                                                                         |
-| --------------------------------------------- | --------- | --------------------------------------------------------------------------------------------- |
-| `Service` entity                              | `done`    | Duration range + discount-cap invariants validated in `create()`                              |
-| `ServiceRepository` interface                 | `done`    |                                                                                               |
-| Use cases (List, Create, Update, Delete)      | `done`    |                                                                                               |
-| `ApiServiceRepository` + `serviceMapper`      | `done`    |                                                                                               |
-| `useServices` hook                            | `done`    |                                                                                               |
-| `ServicesPage` + `ServiceForm` + nav entry    | `done`    | Table list, dialog create/edit form (category `Select`, tag toggle grid), delete with confirm |
-| Backend (services-service `/api/v1/services`) | `blocked` | Contract confirmed in docs/API.md; backend being built in parallel                            |
+| Piece                                         | Status | Notes                                                                                         |
+| --------------------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| `Service` entity                              | `done` | Duration range + discount-cap invariants validated in `create()`                              |
+| `ServiceRepository` interface                 | `done` |                                                                                               |
+| Use cases (List, Create, Update, Delete)      | `done` |                                                                                               |
+| `ApiServiceRepository` + `serviceMapper`      | `done` |                                                                                               |
+| `useServices` hook                            | `done` |                                                                                               |
+| `ServicesPage` + `ServiceForm` + nav entry    | `done` | Table list, dialog create/edit form (category `Select`, tag toggle grid), delete with confirm |
+| Backend (services-service `/api/v1/services`) | `done` | Search/filter/pagination added; see docs/adr/0012 for the latest validation/handler shape     |
 
 **Dependency:** none structurally — depends on Categories and Tags for the
 create/edit form's pickers, both already built.
@@ -98,15 +98,15 @@ create/edit form's pickers, both already built.
 
 ### Categories
 
-| Piece                                           | Status    | Notes                                                              |
-| ----------------------------------------------- | --------- | ------------------------------------------------------------------ |
-| `Category` entity                               | `done`    |                                                                    |
-| `CategoryRepository` interface                  | `done`    |                                                                    |
-| Use cases (List, Create, Update, Delete)        | `done`    |                                                                    |
-| `ApiCategoryRepository` + `categoryMapper`      | `done`    |                                                                    |
-| `useCategories` hook                            | `done`    |                                                                    |
-| `CategoriesPage` + nav entry                    | `done`    | Table list, dialog create/edit form, delete with confirm           |
-| Backend (services-service `/api/v1/categories`) | `blocked` | Contract confirmed in docs/API.md; backend being built in parallel |
+| Piece                                           | Status | Notes                                                                          |
+| ----------------------------------------------- | ------ | ------------------------------------------------------------------------------ |
+| `Category` entity                               | `done` |                                                                                |
+| `CategoryRepository` interface                  | `done` |                                                                                |
+| Use cases (List, Create, Update, Delete)        | `done` |                                                                                |
+| `ApiCategoryRepository` + `categoryMapper`      | `done` |                                                                                |
+| `useCategories` hook                            | `done` |                                                                                |
+| `CategoriesPage` + nav entry                    | `done` | Table list, dialog create/edit form, delete with confirm                       |
+| Backend (services-service `/api/v1/categories`) | `done` | Search/filter added; see docs/adr/0012 for the latest validation/handler shape |
 
 **Dependency:** none. Referenced by Services (optional `categoryId`).
 

@@ -73,5 +73,15 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
     [tenantContext, useCases, execute],
   )
 
-  return { tags: data ?? [], status, error, refetch: execute, createTag, updateTag, deleteTag }
+  return {
+    tags: data ?? [],
+    status,
+    error,
+    refetch: async () => {
+      await execute()
+    },
+    createTag,
+    updateTag,
+    deleteTag,
+  }
 }

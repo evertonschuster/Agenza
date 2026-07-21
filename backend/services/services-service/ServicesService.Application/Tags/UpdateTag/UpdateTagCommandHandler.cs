@@ -16,12 +16,30 @@ public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, 
 
     public async Task<Result<TagResponse>> Handle(UpdateTagCommand command, CancellationToken cancellationToken)
     {
-        // Existence already guaranteed by UpdateTagCommandValidator.
-        var tag = (await _tagRepository.GetByIdAsync(command.TagId, cancellationToken))!;
+        var tag = await _tagRepository.GetByIdAsync(command.TagId, cancellationToken);
+        if (tag is null)
+        {
+            return Result.Failure<TagResponse>(
+                Error.NotFound("Tag.NotFound", $"Etiqueta '{command.TagId}' não foi encontrada."));
+        }
+
+        if (await _tagRepository.NameExistsAsync(command.Name, command.TagId, cancellationToken))
+        {
+            return Result.Failure<TagResponse>(
+                Error.Conflict("Tag.DuplicateName", $"Já existe uma etiqueta chamada '{command.Name}'."));
+        }
 
         command.ApplyTo(tag);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DuplicateEntityException)
+        {
+            return Result.Failure<TagResponse>(
+                Error.Conflict("Tag.DuplicateName", $"Já existe uma etiqueta chamada '{command.Name}'."));
+        }
 
         return TagResponse.FromTag(tag);
     }

@@ -16,10 +16,24 @@ public sealed class CreateCategoryCommandHandler : ICommandHandler<CreateCategor
 
     public async Task<Result<CategoryResponse>> Handle(CreateCategoryCommand command, CancellationToken cancellationToken)
     {
-        var category = command.ToModel();
+        if (await _categoryRepository.NameExistsAsync(command.Name, excludeCategoryId: null, cancellationToken))
+        {
+            return Result.Failure<CategoryResponse>(
+                Error.Conflict("Category.DuplicateName", $"Já existe uma categoria chamada '{command.Name}'."));
+        }
 
+        var category = command.ToModel();
         _categoryRepository.Add(category);
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DuplicateEntityException)
+        {
+            return Result.Failure<CategoryResponse>(
+                Error.Conflict("Category.DuplicateName", $"Já existe uma categoria chamada '{command.Name}'."));
+        }
 
         return CategoryResponse.FromCategory(category);
     }

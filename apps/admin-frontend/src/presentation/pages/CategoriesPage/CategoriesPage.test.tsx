@@ -95,6 +95,38 @@ describe('CategoriesPage', () => {
     expect(screen.queryByRole('button', { name: /criar categoria/i })).not.toBeInTheDocument()
   })
 
+  it('closes the form normally when creation succeeds even if the follow-up refetch fails', async () => {
+    // The mutation itself succeeded - a failed background refresh afterward
+    // must not be reported to the user as "creation failed".
+    const createCategorySpy = vi.fn(() => Promise.resolve(massagensCategory))
+    const listCategoriesSpy = vi
+      .fn()
+      .mockResolvedValueOnce([massagensCategory])
+      .mockRejectedValueOnce(new Error('network down'))
+    renderCategoriesPage(
+      buildContainer({
+        createCategory: { execute: createCategorySpy },
+        listCategories: { execute: listCategoriesSpy },
+      }),
+    )
+    await screen.findByText('Massagens')
+
+    await userEvent.click(screen.getByRole('button', { name: /nova categoria/i }))
+    await userEvent.type(screen.getByLabelText('Nome'), 'Estética')
+    await userEvent.click(screen.getByRole('button', { name: /criar categoria/i }))
+
+    // The dialog closes as normal - the create call itself succeeded.
+    await vi.waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+    // The stale (last known-good) list stays visible instead of being
+    // replaced by a blocking error.
+    expect(screen.getByText('Massagens')).toBeInTheDocument()
+    expect(
+      await screen.findByText(/não foi possível atualizar a lista de categorias/i),
+    ).toBeInTheDocument()
+  })
+
   it('shows a validation error and does not submit when the name is blank', async () => {
     const createCategorySpy = vi.fn(() => Promise.resolve(massagensCategory))
     renderCategoriesPage(buildContainer({ createCategory: { execute: createCategorySpy } }))

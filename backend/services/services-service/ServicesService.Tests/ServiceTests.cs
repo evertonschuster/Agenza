@@ -91,6 +91,86 @@ public class ServiceTests
     }
 
     [Fact]
+    public void Constructor_WithEmptyName_Throws()
+    {
+        var act = () => new Service(Guid.NewGuid(), "   ", null, 30, 15, 60, 45.50m, 10m, null, 1);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNameOverMaxLength_Throws()
+    {
+        var act = () => new Service(
+            Guid.NewGuid(), new string('x', Service.NameMaxLength + 1), null, 30, 15, 60, 45.50m, 10m, null, 1);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Fact]
+    public void Constructor_WithDescriptionOverMaxLength_Throws()
+    {
+        var act = () => new Service(
+            Guid.NewGuid(), "Haircut", new string('x', Service.DescriptionMaxLength + 1), 30, 15, 60, 45.50m, 10m, null, 1);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Fact]
+    public void Constructor_WithMinDurationGreaterThanMaxDuration_Throws()
+    {
+        var act = () => new Service(Guid.NewGuid(), "Haircut", null, 30, 61, 60, 45.50m, 10m, null, 1);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Fact]
+    public void Constructor_WithDurationOutsideMinMaxRange_Throws()
+    {
+        var act = () => new Service(Guid.NewGuid(), "Haircut", null, 5, 15, 60, 45.50m, 10m, null, 1);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Fact]
+    public void Constructor_WithMaxDurationOverAllowedLimit_Throws()
+    {
+        var act = () => new Service(
+            Guid.NewGuid(), "Haircut", null, 30, 15, Service.MaxAllowedDurationMinutes + 1, 45.50m, 10m, null, 1);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNegativePrice_Throws()
+    {
+        var act = () => new Service(Guid.NewGuid(), "Haircut", null, 30, 15, 60, -0.01m, 10m, null, 1);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Theory]
+    [InlineData(-0.01)]
+    [InlineData(100.01)]
+    public void Constructor_WithMaxDiscountPercentageOutsideRange_Throws(double maxDiscountPercentage)
+    {
+        var act = () => new Service(
+            Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, (decimal)maxDiscountPercentage, null, 1);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Fact]
+    public void Update_WithInvalidValues_Throws()
+    {
+        var service = CreateValidService();
+
+        var act = () => service.Update("Haircut", null, 30, 61, 60, 45.50m, 10m, null);
+
+        act.Should().Throw<InvalidServiceException>();
+    }
+
+    [Fact]
     public void SetTags_ReplacesTheTagCollection()
     {
         var service = CreateValidService();

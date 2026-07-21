@@ -6,7 +6,7 @@ interface UseAsyncResult<T> {
   status: AsyncStatus
   data: T | null
   error: unknown
-  execute: () => Promise<void>
+  execute: () => Promise<T | undefined>
 }
 
 interface UseAsyncOptions {
@@ -22,7 +22,11 @@ interface UseAsyncOptions {
  * consistent rather than being reinvented per screen.
  *
  * Guards against setting state after the component unmounts (e.g. if
- * the async call resolves after navigating away).
+ * the async call resolves after navigating away), and against an older
+ * in-flight call resolving after a newer one (e.g. a fast filter change,
+ * page change, or tenant switch firing a second execute() before the
+ * first's request lands) - only the most recently started call's result
+ * is ever applied.
  */
 export function useAsync<T>(
   asyncFn: () => Promise<T>,
@@ -33,6 +37,7 @@ export function useAsync<T>(
   const [data, setData] = useState<T | null>(null)
   const [error, setError] = useState<unknown>(null)
   const isMountedRef = useRef(true)
+  const latestRequestIdRef = useRef(0)
 
   useEffect(() => {
     isMountedRef.current = true
@@ -41,22 +46,25 @@ export function useAsync<T>(
     }
   }, [])
 
-  const execute = useCallback(async (): Promise<void> => {
+  const execute = useCallback(async (): Promise<T | undefined> => {
+    const requestId = ++latestRequestIdRef.current
     setStatus('loading')
     setError(null)
 
     try {
       const result = await asyncFn()
 
-      if (isMountedRef.current) {
+      if (isMountedRef.current && requestId === latestRequestIdRef.current) {
         setData(result)
         setStatus('success')
       }
+      return result
     } catch (caughtError) {
-      if (isMountedRef.current) {
+      if (isMountedRef.current && requestId === latestRequestIdRef.current) {
         setError(caughtError)
         setStatus('error')
       }
+      return undefined
     }
   }, [asyncFn])
 

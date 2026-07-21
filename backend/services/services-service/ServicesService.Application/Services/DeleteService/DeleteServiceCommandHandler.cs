@@ -16,8 +16,12 @@ public sealed class DeleteServiceCommandHandler : ICommandHandler<DeleteServiceC
 
     public async Task<Result> Handle(DeleteServiceCommand command, CancellationToken cancellationToken)
     {
-        // Existence already guaranteed by DeleteServiceCommandValidator.
-        var service = (await _serviceRepository.GetByIdAsync(command.ServiceId, cancellationToken))!;
+        var service = await _serviceRepository.GetByIdAsync(command.ServiceId, cancellationToken);
+        if (service is null)
+        {
+            return Result.Failure(
+                Error.NotFound("Service.NotFound", $"Serviço '{command.ServiceId}' não foi encontrado."));
+        }
 
         _serviceRepository.Remove(service);
         await _unitOfWork.SaveChangesAsync(cancellationToken);

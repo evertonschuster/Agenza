@@ -17,7 +17,24 @@ public class DispatcherTests
     {
         public PingValidator()
         {
-            RuleFor(p => p.Message).NotEmpty();
+            RuleFor(p => p.Message).NotEmpty().WithErrorCode("Ping.MessageRequired");
+        }
+    }
+
+    private sealed record Register(string Name, string Email) : ICommand;
+
+    private sealed class RegisterHandler : ICommandHandler<Register>
+    {
+        public Task<Result> Handle(Register command, CancellationToken cancellationToken) =>
+            Task.FromResult(Result.Success());
+    }
+
+    private sealed class RegisterValidator : AbstractValidator<Register>
+    {
+        public RegisterValidator()
+        {
+            RuleFor(r => r.Name).NotEmpty().WithErrorCode("Register.NameRequired");
+            RuleFor(r => r.Email).NotEmpty().WithErrorCode("Register.EmailRequired");
         }
     }
 
@@ -100,5 +117,24 @@ public class DispatcherTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("pong: hi");
+    }
+
+    [Fact]
+    public async Task Send_WithAFailingValidator_GroupsFieldErrorsByPropertyName()
+    {
+        var dispatcher = BuildDispatcher(services =>
+        {
+            services.AddScoped<ICommandHandler<Register>, RegisterHandler>();
+            services.AddScoped<IValidator<Register>, RegisterValidator>();
+        });
+
+        var result = await dispatcher.Send(new Register("", ""));
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.FieldErrors.Should().NotBeNull();
+        result.Error.FieldErrors!.Should().ContainKey(nameof(Register.Name))
+            .WhoseValue.Should().ContainSingle(e => e.Code == "Register.NameRequired");
+        result.Error.FieldErrors!.Should().ContainKey(nameof(Register.Email))
+            .WhoseValue.Should().ContainSingle(e => e.Code == "Register.EmailRequired");
     }
 }

@@ -9,8 +9,10 @@
 - **Clean Architecture per app/service**: each app and each backend microservice
   keeps its own Domain → Application → Infrastructure/Presentation layering, with
   dependencies only pointing inward. Don't reach across services' internals —
-  cross-service contracts go through HTTP APIs or `packages/shared-types`, never
-  shared database access.
+  cross-service contracts go through HTTP APIs, never shared database access.
+  (`packages/shared-types` was removed as unused while `admin-frontend` is the
+  only Node app — recreate it if/when a second app needs shared TS DTOs, see
+  docs/VISION.md.)
 - **No shared mutable state across stacks.** The frontend, .NET services, and
   Python services communicate over HTTP (and later, events) — not shared files,
   shared DB writes from multiple services, or in-process calls.

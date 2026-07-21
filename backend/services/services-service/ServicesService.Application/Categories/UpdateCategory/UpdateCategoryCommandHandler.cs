@@ -16,12 +16,30 @@ public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategor
 
     public async Task<Result<CategoryResponse>> Handle(UpdateCategoryCommand command, CancellationToken cancellationToken)
     {
-        // Existence already guaranteed by UpdateCategoryCommandValidator.
-        var category = (await _categoryRepository.GetByIdAsync(command.CategoryId, cancellationToken))!;
+        var category = await _categoryRepository.GetByIdAsync(command.CategoryId, cancellationToken);
+        if (category is null)
+        {
+            return Result.Failure<CategoryResponse>(
+                Error.NotFound("Category.NotFound", $"Categoria '{command.CategoryId}' não foi encontrada."));
+        }
+
+        if (await _categoryRepository.NameExistsAsync(command.Name, command.CategoryId, cancellationToken))
+        {
+            return Result.Failure<CategoryResponse>(
+                Error.Conflict("Category.DuplicateName", $"Já existe uma categoria chamada '{command.Name}'."));
+        }
 
         command.ApplyTo(category);
 
-        await _unitOfWork.SaveChangesAsync(cancellationToken);
+        try
+        {
+            await _unitOfWork.SaveChangesAsync(cancellationToken);
+        }
+        catch (DuplicateEntityException)
+        {
+            return Result.Failure<CategoryResponse>(
+                Error.Conflict("Category.DuplicateName", $"Já existe uma categoria chamada '{command.Name}'."));
+        }
 
         return CategoryResponse.FromCategory(category);
     }

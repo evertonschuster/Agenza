@@ -85,7 +85,9 @@ export function useCategories(
     categories: data ?? [],
     status,
     error,
-    refetch: execute,
+    refetch: async () => {
+      await execute()
+    },
     createCategory,
     updateCategory,
     deleteCategory,

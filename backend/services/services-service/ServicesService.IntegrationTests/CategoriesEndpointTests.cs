@@ -66,7 +66,7 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Create_with_a_duplicate_name_in_the_same_tenant_returns_400()
+    public async Task Create_with_a_duplicate_name_in_the_same_tenant_returns_409()
     {
         var tenantId = Guid.NewGuid();
         var client = AuthenticatedClient(tenantId);
@@ -74,7 +74,7 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
 
         var response = await client.PostAsJsonAsync(CategoriesUrl, new { name = "duplicate" }); // case-insensitive match
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -96,7 +96,7 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Update_from_another_tenant_returns_400_not_the_others_data()
+    public async Task Update_from_another_tenant_returns_404_not_the_others_data()
     {
         var owner = Guid.NewGuid();
         var intruder = Guid.NewGuid();
@@ -107,7 +107,7 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
         var intruderClient = AuthenticatedClient(intruder);
         var response = await intruderClient.PutAsJsonAsync($"{CategoriesUrl}/{categoryId}", new { name = "Hijacked" });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -141,13 +141,13 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Delete_with_an_unknown_id_returns_400()
+    public async Task Delete_with_an_unknown_id_returns_404()
     {
         var client = AuthenticatedClient(Guid.NewGuid());
 
         var response = await client.DeleteAsync($"{CategoriesUrl}/{Guid.NewGuid()}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -159,7 +159,7 @@ public class CategoriesEndpointTests : IClassFixture<ServicesApiFactory>
 
         var response = await client.DeleteAsync($"{CategoriesUrl}/{categoryId}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
         problem.GetProperty("title").GetString().Should().Contain("1 serviço(s)");
 

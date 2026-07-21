@@ -1,19 +1,10 @@
-using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.CreateTag;
 
 namespace ServicesService.Tests.Tags.CreateTag;
 
 public class CreateTagCommandValidatorTests
 {
-    private readonly ITagRepository _tagRepository = Substitute.For<ITagRepository>();
-    private readonly CreateTagCommandValidator _validator;
-
-    public CreateTagCommandValidatorTests()
-    {
-        _tagRepository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        _validator = new CreateTagCommandValidator(_tagRepository);
-    }
+    private readonly CreateTagCommandValidator _validator = new();
 
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
@@ -57,16 +48,5 @@ public class CreateTagCommandValidatorTests
         var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", description));
 
         result.IsValid.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Validate_WithDuplicateName_FailsWithDuplicateNameErrorCode()
-    {
-        _tagRepository.NameExistsAsync("VIP", null, Arg.Any<CancellationToken>()).Returns(true);
-
-        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", null));
-
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Tag.DuplicateName");
     }
 }

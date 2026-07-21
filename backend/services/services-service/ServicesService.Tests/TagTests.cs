@@ -67,6 +67,40 @@ public class TagTests
     }
 
     [Fact]
+    public void Constructor_WithEmptyName_Throws()
+    {
+        var act = () => new Tag(Guid.NewGuid(), "   ", Teal, null);
+
+        act.Should().Throw<InvalidTagException>();
+    }
+
+    [Fact]
+    public void Constructor_WithNameOverMaxLength_Throws()
+    {
+        var act = () => new Tag(Guid.NewGuid(), new string('x', Tag.NameMaxLength + 1), Teal, null);
+
+        act.Should().Throw<InvalidTagException>();
+    }
+
+    [Fact]
+    public void Constructor_WithDescriptionOverMaxLength_Throws()
+    {
+        var act = () => new Tag(Guid.NewGuid(), "VIP", Teal, new string('x', Tag.DescriptionMaxLength + 1));
+
+        act.Should().Throw<InvalidTagException>();
+    }
+
+    [Fact]
+    public void Update_WithEmptyName_Throws()
+    {
+        var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
+
+        var act = () => tag.Update("   ", Teal, null);
+
+        act.Should().Throw<InvalidTagException>();
+    }
+
+    [Fact]
     public void MarkCreated_SetsCreatedAtAndCreatedBy()
     {
         var tag = new Tag(Guid.NewGuid(), "VIP", Teal, null);
@@ -124,5 +158,13 @@ public class TagColorTests
     {
         TagColor.Palette.Should().HaveCount(8);
         TagColor.Palette.Distinct().Should().HaveCount(8);
+    }
+
+    [Fact]
+    public void From_WithColorOutsidePalette_Throws()
+    {
+        var act = () => TagColor.From("#123456");
+
+        act.Should().Throw<InvalidTagException>();
     }
 }

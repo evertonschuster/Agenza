@@ -93,7 +93,7 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Create_with_a_duplicate_name_in_the_same_tenant_returns_400()
+    public async Task Create_with_a_duplicate_name_in_the_same_tenant_returns_409()
     {
         var tenantId = Guid.NewGuid();
         var client = AuthenticatedClient(tenantId);
@@ -106,7 +106,7 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
             description = (string?)null,
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
     }
 
     [Fact]
@@ -129,7 +129,7 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Update_from_another_tenant_returns_400_not_the_others_data()
+    public async Task Update_from_another_tenant_returns_404_not_the_others_data()
     {
         var owner = Guid.NewGuid();
         var intruder = Guid.NewGuid();
@@ -150,7 +150,9 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
             description = (string?)null,
         });
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        // The tenant query filter hides another tenant's row entirely - it
+        // reads as "doesn't exist", not a 400 shape error (docs/adr/0013).
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -201,13 +203,13 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Delete_with_an_unknown_id_returns_400()
+    public async Task Delete_with_an_unknown_id_returns_404()
     {
         var client = AuthenticatedClient(Guid.NewGuid());
 
         var response = await client.DeleteAsync($"{TagsUrl}/{Guid.NewGuid()}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -236,12 +238,57 @@ public class TagsEndpointTests : IClassFixture<ServicesApiFactory>
 
         var response = await client.DeleteAsync($"{TagsUrl}/{tagId}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
         var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
         problem.GetProperty("title").GetString().Should().Contain("1 serviço(s)");
 
         var stillListed = await (await client.GetAsync(TagsUrl)).Content.ReadFromJsonAsync<JsonElement[]>();
         stillListed.Should().Contain(t => t.GetProperty("id").GetGuid() == tagId);
+    }
+
+    [Fact]
+    public async Task Create_after_deleting_a_tag_with_the_same_name_reuses_it()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+        var createResponse = await client.PostAsJsonAsync(TagsUrl, new
+        {
+            name = "Reusable",
+            color = "#0d9488",
+            description = (string?)null,
+        });
+        var tagId = (await createResponse.Content.ReadFromJsonAsync<JsonElement>()).GetProperty("id").GetGuid();
+        await client.DeleteAsync($"{TagsUrl}/{tagId}");
+
+        // The unique index is filtered to non-deleted rows (docs/adr/0013) -
+        // a soft-deleted tag's name is free to reuse.
+        var recreateResponse = await client.PostAsJsonAsync(TagsUrl, new
+        {
+            name = "Reusable",
+            color = "#ef4444",
+            description = (string?)null,
+        });
+
+        recreateResponse.StatusCode.Should().Be(HttpStatusCode.Created);
+    }
+
+    [Fact]
+    public async Task Create_with_multiple_invalid_fields_returns_a_structured_error_per_field()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+
+        var response = await client.PostAsJsonAsync(TagsUrl, new
+        {
+            name = "",
+            color = "#123456",
+            description = (string?)null,
+        });
+
+        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        var problem = await response.Content.ReadFromJsonAsync<JsonElement>();
+        problem.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        var errors = problem.GetProperty("errors");
+        errors.GetProperty("Name").EnumerateArray().Should().NotBeEmpty();
+        errors.GetProperty("Color").EnumerateArray().Should().NotBeEmpty();
     }
 
     [Fact]

@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useCategories } from '../../hooks/useCategories'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import type { Category } from '../../../domain/entities/Category'
-import { CategoryForm, type CategoryFormValues } from './CategoryForm'
+import { CategoryForm, type CategoryFormValues } from '../../forms/CategoryForm'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,7 +48,7 @@ export function CategoriesPage(): JSX.Element {
   const { tenantContext } = useAuth()
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebouncedValue(searchInput, 300)
-  const { categories, status, error, createCategory, updateCategory, deleteCategory } =
+  const { categories, status, error, refetch, createCategory, updateCategory, deleteCategory } =
     useCategories(tenantContext, debouncedSearch)
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
@@ -137,12 +137,29 @@ export function CategoriesPage(): JSX.Element {
       </div>
 
       <div className="mt-6">
-        {status === 'loading' && <StatusMessage>Carregando categorias…</StatusMessage>}
+        {status === 'loading' && categories.length === 0 && (
+          <StatusMessage>Carregando categorias…</StatusMessage>
+        )}
 
-        {status === 'error' && (
+        {status === 'error' && categories.length === 0 && (
           <StatusMessage tone="error">
             Não foi possível carregar as categorias
             {error instanceof Error ? `: ${error.message}` : '.'}
+          </StatusMessage>
+        )}
+
+        {/* A refresh that fails after categories were already loaded (e.g.
+            right after a successful create/update/delete) keeps showing the
+            last known-good list instead of a blocking error - the mutation
+            itself already succeeded, only the sync afterward failed. */}
+        {status === 'error' && categories.length > 0 && (
+          <StatusMessage tone="error">
+            Não foi possível atualizar a lista de categorias
+            {error instanceof Error ? `: ${error.message}` : '.'} Mostrando os últimos dados
+            carregados.{' '}
+            <button type="button" onClick={() => void refetch()} className="underline">
+              Tentar novamente
+            </button>
           </StatusMessage>
         )}
 
@@ -154,7 +171,7 @@ export function CategoriesPage(): JSX.Element {
           </StatusMessage>
         )}
 
-        {status === 'success' && categories.length > 0 && (
+        {categories.length > 0 && (
           <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>

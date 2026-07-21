@@ -1,9 +1,13 @@
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Infrastructure.Persistence;
 
 public class UnitOfWork : IUnitOfWork
 {
+    private const string UniqueViolationSqlState = "23505";
+
     private readonly ServicesDataContext _dbContext;
 
     public UnitOfWork(ServicesDataContext dbContext)
@@ -11,6 +15,22 @@ public class UnitOfWork : IUnitOfWork
         _dbContext = dbContext;
     }
 
-    public Task<int> SaveChangesAsync(CancellationToken cancellationToken) =>
-        _dbContext.SaveChangesAsync(cancellationToken);
+    public async Task<int> SaveChangesAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            return await _dbContext.SaveChangesAsync(cancellationToken);
+        }
+        catch (DbUpdateException exception) when (IsUniqueViolation(exception))
+        {
+            throw new DuplicateEntityException(exception);
+        }
+    }
+
+    // A race between two concurrent requests that both passed NameExistsAsync
+    // before either committed surfaces here as a Postgres unique_violation -
+    // the database is the final authority on case-insensitive uniqueness
+    // (docs/adr/0013), not the earlier application-level check alone.
+    private static bool IsUniqueViolation(DbUpdateException exception) =>
+        exception.InnerException is PostgresException { SqlState: UniqueViolationSqlState };
 }

@@ -1,19 +1,10 @@
-using ServicesService.Application.Abstractions;
 using ServicesService.Application.Categories.CreateCategory;
 
 namespace ServicesService.Tests.Categories.CreateCategory;
 
 public class CreateCategoryCommandValidatorTests
 {
-    private readonly ICategoryRepository _categoryRepository = Substitute.For<ICategoryRepository>();
-    private readonly CreateCategoryCommandValidator _validator;
-
-    public CreateCategoryCommandValidatorTests()
-    {
-        _categoryRepository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
-            .Returns(false);
-        _validator = new CreateCategoryCommandValidator(_categoryRepository);
-    }
+    private readonly CreateCategoryCommandValidator _validator = new();
 
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
@@ -34,7 +25,7 @@ public class CreateCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_WithNameOverMaxLength_Fails()
     {
-        var name = new string('x', 101);
+        var name = new string('x', 61);
 
         var result = await _validator.ValidateAsync(new CreateCategoryCommand(name));
 
@@ -42,13 +33,12 @@ public class CreateCategoryCommandValidatorTests
     }
 
     [Fact]
-    public async Task Validate_WithDuplicateName_FailsWithDuplicateNameErrorCode()
+    public async Task Validate_DoesNotDependOnARepository()
     {
-        _categoryRepository.NameExistsAsync("Hair", null, Arg.Any<CancellationToken>()).Returns(true);
-
+        // No repository is constructor-injected (docs/adr/0013): existence and
+        // duplicate-name checks are the handler's job now, not the validator's.
         var result = await _validator.ValidateAsync(new CreateCategoryCommand("Hair"));
 
-        result.IsValid.Should().BeFalse();
-        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Category.DuplicateName");
+        result.IsValid.Should().BeTrue();
     }
 }

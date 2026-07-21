@@ -24,8 +24,8 @@ Rules that keep the boundaries real:
 - Cross-service calls: HTTP + M2M JWT (later: events). Never shared
   tables or in-process references across services.
 - Shared code is limited to security-critical cross-cutting
-  infrastructure (`backend/shared/Admin.Identity.Client`) and contract
-  types (`packages/shared-types`) — never business logic.
+  infrastructure (`backend/shared/Admin.Identity.Client`) — never business
+  logic.
 
 ## Consequences
 

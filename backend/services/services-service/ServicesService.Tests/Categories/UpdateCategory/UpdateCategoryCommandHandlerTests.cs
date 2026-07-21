@@ -7,20 +7,82 @@ namespace ServicesService.Tests.Categories.UpdateCategory;
 
 public class UpdateCategoryCommandHandlerTests
 {
+    private readonly ICategoryRepository _repository = Substitute.For<ICategoryRepository>();
+    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly UpdateCategoryCommandHandler _handler;
+
+    public UpdateCategoryCommandHandlerTests()
+    {
+        _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _handler = new UpdateCategoryCommandHandler(_repository, _unitOfWork);
+    }
+
     [Fact]
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
     {
         var category = new Category(Guid.NewGuid(), "Hair");
-        var repository = Substitute.For<ICategoryRepository>();
-        repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
-        var unitOfWork = Substitute.For<IUnitOfWork>();
-        var handler = new UpdateCategoryCommandHandler(repository, unitOfWork);
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
-        var result = await handler.Handle(
+        var result = await _handler.Handle(
             new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Name.Should().Be("Nails");
-        await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithUnknownCategoryId_ReturnsNotFound()
+    {
+        var unknownId = Guid.NewGuid();
+        _repository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Category?)null);
+
+        var result = await _handler.Handle(new UpdateCategoryCommand(unknownId, "Hair"), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.NotFound);
+        result.Error.Code.Should().Be("Category.NotFound");
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_RenamingToAnotherCategorysName_ReturnsConflict()
+    {
+        var category = new Category(Guid.NewGuid(), "Hair");
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _repository.NameExistsAsync("Nails", category.Id, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _handler.Handle(new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Category.DuplicateName");
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_LoadsTheCategoryExactlyOnce()
+    {
+        var category = new Category(Guid.NewGuid(), "Hair");
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+
+        await _handler.Handle(new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
+
+        await _repository.Received(1).GetByIdAsync(category.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
+    {
+        var category = new Category(Guid.NewGuid(), "Hair");
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns<Task<int>>(_ => throw new DuplicateEntityException(new InvalidOperationException()));
+
+        var result = await _handler.Handle(new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
     }
 }

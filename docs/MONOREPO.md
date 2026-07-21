@@ -14,12 +14,10 @@ admin/
 │   │                               ICommand/IQuery + handlers, IDispatcher, HTTP mapping
 │   └── services/
 │       ├── identity-service/   OIDC provider (OpenIddict), tenants, users, M2M tokens
-│       └── services-service/   the business's offerings — Tags and
-│                               ServiceOfferings are the first two verticals
+│       └── services-service/   the business's offerings — Tags,
+│                               Categories, and Services verticals
 ├── ai-services/
 │   └── assistant-service/  placeholder Python/FastAPI AI service
-├── packages/
-│   └── shared-types/       TS types/DTOs shared across Node workspaces
 ├── infra/
 │   └── docker-compose.yml  local multi-stack orchestration
 └── docs/                   monorepo-level docs only — app/service-specific docs live
@@ -79,3 +77,12 @@ workspace gains a lint-staged config.
 
 - `apps/admin-frontend/graphify-out/` is stale (generated before the restructure) —
   regenerate rather than trust it.
+- `ServicesService.Api`/`IdentityService.Api` each run EF Core migrations from
+  an `IHostedService` (`DatabaseMigrator`) on startup. This is fine for local
+  dev (`dotnet run`/Aspire) and for the current single-container
+  `docker-compose` setup — there's no evidence yet of a multi-replica
+  production deployment (no k8s manifests, no CD pipeline in this repo as of
+  2026-07). If/when one is introduced, revisit this: N replicas starting
+  concurrently would race to apply the same migration. Prefer a dedicated
+  migration job/step in that deployment pipeline over adding ad hoc locking
+  here, since the right mechanism depends on the orchestrator chosen.

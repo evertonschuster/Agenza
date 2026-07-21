@@ -1,6 +1,12 @@
 # ADR 0010 — Cross-aggregate checks move into FluentValidation validators
 
-Status: accepted (2026-07)
+Status: superseded by docs/adr/0012 (2026-07) — accepted (2026-07)
+
+> **2026-07 update:** reverted by docs/adr/0012. The accepted trade-off
+> below (losing distinct 404/409 status codes) was revisited and rejected;
+> cross-aggregate checks moved back to the six Create/Update/Delete
+> handlers. This document is kept for historical context only — do not
+> follow its "Decision" section for new code.
 
 ## Context
 

@@ -171,6 +171,46 @@ describe('useServices', () => {
     expect(result.current.pageSize).toBe(20)
   })
 
+  it('steps back a page after deleting the last item on a page past the first', async () => {
+    const tenantContext = buildTenantContext()
+    const listServicesSpy = vi
+      .fn()
+      // Initial load of page 1 (called by setPage(2) below via a fresh fetch)
+      .mockResolvedValueOnce({ services: [serviceFixture], totalCount: 21, page: 1, pageSize: 20 })
+      // After setPage(2): one item on page 2
+      .mockResolvedValueOnce({ services: [serviceFixture], totalCount: 21, page: 2, pageSize: 20 })
+      // After deleting it: page 2 is now empty
+      .mockResolvedValueOnce({ services: [], totalCount: 20, page: 2, pageSize: 20 })
+      // After stepping back to page 1: has data again
+      .mockResolvedValueOnce({ services: [serviceFixture], totalCount: 20, page: 1, pageSize: 20 })
+    const deleteServiceSpy = vi.fn(() => Promise.resolve())
+    const { result } = renderUseServices(
+      createFakeContainer({
+        listServices: { execute: listServicesSpy },
+        deleteService: { execute: deleteServiceSpy },
+      }),
+      tenantContext,
+    )
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    act(() => {
+      result.current.setPage(2)
+    })
+    await waitFor(() => {
+      expect(result.current.page).toBe(2)
+    })
+
+    await act(async () => {
+      await result.current.deleteService('service-1')
+    })
+
+    await waitFor(() => {
+      expect(result.current.page).toBe(1)
+    })
+  })
+
   it('refetches with the new page when setPage is called', async () => {
     const listServicesSpy = vi.fn(() => Promise.resolve(pagedFixture))
     const tenantContext = buildTenantContext()

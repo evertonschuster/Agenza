@@ -1,6 +1,12 @@
 # ADR 0011 — Tag/Category/Service become validated-by-the-validator, non-throwing domain entities
 
-Status: accepted (2026-07); extends docs/adr/0010
+Status: superseded by docs/adr/0012 (2026-07) — accepted (2026-07); extends docs/adr/0010
+
+> **2026-07 update:** reverted by docs/adr/0012. `Tag`, `Category`,
+> `Service`, and `TagColor.From` throw again on invalid construction,
+> restoring the defense-in-depth this ADR removed. This document is kept
+> for historical context only — do not follow its "Decision" section for
+> new code.
 
 ## Context
 

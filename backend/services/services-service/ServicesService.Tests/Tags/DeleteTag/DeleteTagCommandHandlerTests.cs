@@ -1,3 +1,4 @@
+using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.DeleteTag;
 using ServicesService.Domain.Entities;
@@ -7,19 +8,55 @@ namespace ServicesService.Tests.Tags.DeleteTag;
 
 public class DeleteTagCommandHandlerTests
 {
+    private readonly ITagRepository _tagRepository = Substitute.For<ITagRepository>();
+    private readonly IServiceRepository _serviceRepository = Substitute.For<IServiceRepository>();
+    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly DeleteTagCommandHandler _handler;
+
+    public DeleteTagCommandHandlerTests()
+    {
+        _serviceRepository.CountByTagIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns(0);
+        _handler = new DeleteTagCommandHandler(_tagRepository, _serviceRepository, _unitOfWork);
+    }
+
     [Fact]
-    public async Task Handle_WithExistingTag_RemovesItAndCommits()
+    public async Task Handle_WithExistingUnusedTag_RemovesItAndCommits()
     {
         var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
-        var repository = Substitute.For<ITagRepository>();
-        repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
-        var unitOfWork = Substitute.For<IUnitOfWork>();
-        var handler = new DeleteTagCommandHandler(repository, unitOfWork);
+        _tagRepository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
 
-        var result = await handler.Handle(new DeleteTagCommand(tag.Id), CancellationToken.None);
+        var result = await _handler.Handle(new DeleteTagCommand(tag.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        repository.Received(1).Remove(tag);
-        await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        _tagRepository.Received(1).Remove(tag);
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithUnknownTagId_ReturnsNotFound()
+    {
+        var unknownId = Guid.NewGuid();
+        _tagRepository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Tag?)null);
+
+        var result = await _handler.Handle(new DeleteTagCommand(unknownId), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.NotFound);
+        result.Error.Code.Should().Be("Tag.NotFound");
+    }
+
+    [Fact]
+    public async Task Handle_WithTagInUse_ReturnsConflictAndDoesNotRemove()
+    {
+        var tag = new Tag(Guid.NewGuid(), "VIP", TagColor.From("#0d9488"), null);
+        _tagRepository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _serviceRepository.CountByTagIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(2);
+
+        var result = await _handler.Handle(new DeleteTagCommand(tag.Id), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Tag.InUse");
+        _tagRepository.DidNotReceive().Remove(Arg.Any<Tag>());
     }
 }

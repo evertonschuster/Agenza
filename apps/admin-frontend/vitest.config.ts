@@ -41,7 +41,6 @@ export default defineConfig({
         'src/presentation/pages/ClientsPage/**',
         'src/presentation/pages/DashboardPage/**',
         'src/presentation/pages/InboxPage/**',
-        'src/presentation/pages/ServicesPage/**',
         'src/presentation/pages/SettingsPage/**',
       ],
     },

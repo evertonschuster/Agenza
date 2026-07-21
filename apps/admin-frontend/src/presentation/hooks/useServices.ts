@@ -99,9 +99,15 @@ export function useServices(
         throw new Error('Não é possível excluir um serviço sem um contexto de tenant autenticado')
       }
       await useCases.deleteService.execute(tenantContext, id)
-      await execute()
+      const refreshed = await execute()
+      // Deleting the last item on a page past the first leaves the user
+      // stranded on a now-empty page - step back to the last page that
+      // still has data instead (docs/adr/0013's frontend counterpart).
+      if (refreshed?.services.length === 0 && page > 1) {
+        setPage(page - 1)
+      }
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, useCases, execute, page],
   )
 
   return {
@@ -112,7 +118,9 @@ export function useServices(
     pageSize: data?.pageSize ?? DEFAULT_PAGE_SIZE,
     totalCount: data?.totalCount ?? 0,
     setPage,
-    refetch: execute,
+    refetch: async () => {
+      await execute()
+    },
     createService,
     updateService,
     deleteService,

@@ -70,4 +70,37 @@ public class ResultExtensionsTests
         var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
     }
+
+    [Fact]
+    public void ToActionResult_OnValidationFailureWithoutFieldErrors_ReturnsThePlainProblemDetails()
+    {
+        var controller = new TestController();
+        var error = Error.Validation("Validation.Failed", "bad input");
+
+        var actionResult = Result.Failure(error).ToActionResult(controller, () => controller.NoContent());
+
+        var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        objectResult.Value.Should().BeOfType<ProblemDetails>().Which.Title.Should().Be("bad input");
+    }
+
+    [Fact]
+    public void ToActionResult_OnValidationFailureWithFieldErrors_ReturnsAStructuredProblemDetails()
+    {
+        var controller = new TestController();
+        var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>>
+        {
+            ["name"] = [new FieldError("Service.NameTooLong", "O nome deve possuir no máximo 100 caracteres.")],
+        };
+        var error = Error.Validation("Validation.Failed", "bad input", fieldErrors);
+
+        var actionResult = Result.Failure(error).ToActionResult(controller, () => controller.NoContent());
+
+        var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
+        var problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
+        problemDetails.Title.Should().Be("Ocorreram erros de validação.");
+        problemDetails.Extensions["code"].Should().Be("Validation.Failed");
+        problemDetails.Extensions["errors"].Should().BeSameAs(fieldErrors);
+    }
 }

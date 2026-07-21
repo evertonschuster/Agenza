@@ -21,9 +21,13 @@ public class TagConfiguration : IEntityTypeConfiguration<Tag>
             .IsRequired()
             .HasMaxLength(7);
 
-        // Exact-match backstop; case-insensitive uniqueness is enforced in ITagRepository.NameExistsAsync before any write.
-        // Filtered to non-deleted rows so a soft-deleted tag doesn't block reusing its name.
-        builder.HasIndex(t => new { t.TenantId, t.Name })
+        // Case-insensitive uniqueness enforced by the database itself (docs/adr/0013),
+        // not just the application-level NameExistsAsync pre-check: a generated,
+        // always-lowercase shadow column backs the unique index so two concurrent
+        // requests can't both persist "VIP"/"vip". Filtered to non-deleted rows so a
+        // soft-deleted tag doesn't block reusing its name.
+        builder.Property<string>("NameNormalized").HasComputedColumnSql("lower(\"Name\")", stored: true);
+        builder.HasIndex("TenantId", "NameNormalized")
             .IsUnique()
             .HasFilter("\"DeletedAt\" IS NULL");
     }

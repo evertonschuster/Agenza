@@ -1,7 +1,11 @@
+using ServicesService.Domain.Exceptions;
+
 namespace ServicesService.Domain.ValueObjects;
 
 // Fixed 8-color palette (frontend docs/API.md) - not a free-form hex value.
-// Palette membership is validated in CreateTagCommandValidator/UpdateTagCommandValidator (docs/adr/0011) - From() trusts its input.
+// Palette membership is also checked in CreateTagCommandValidator/UpdateTagCommandValidator
+// (cheap, data-only shape rule) - this is defense-in-depth for a genuine domain invariant
+// (docs/adr/0011-revert in docs/adr/0012).
 public sealed record TagColor
 {
     public static readonly IReadOnlyList<string> Palette =
@@ -23,5 +27,16 @@ public sealed record TagColor
         Value = value;
     }
 
-    public static TagColor From(string value) => new(value.Trim().ToLowerInvariant());
+    public static TagColor From(string value)
+    {
+        var normalized = value?.Trim().ToLowerInvariant() ?? string.Empty;
+
+        if (!Palette.Contains(normalized))
+        {
+            throw new InvalidTagException(
+                $"A cor da etiqueta deve ser um dos valores da paleta: {string.Join(", ", Palette)}.");
+        }
+
+        return new TagColor(normalized);
+    }
 }

@@ -3,9 +3,10 @@
 ## What this project is
 
 A multi-tenant SaaS admin panel for small healthcare/wellness businesses.
-Built with Clean Architecture, TDD, and strict TypeScript. The Auth
-vertical slice is complete. Feature verticals (Services, Appointments,
-Clients, Inbox, Dashboard, Settings) are stubs awaiting implementation.
+Built with Clean Architecture, TDD, and strict TypeScript. The Auth, Tags,
+Categories, and Services verticals are complete end-to-end (frontend +
+backend). The remaining feature verticals (Appointments, Clients, Inbox,
+Dashboard, Settings) are stubs awaiting implementation.
 
 ---
 
@@ -126,4 +127,5 @@ Copy `.env.example` to `.env.local`. Never commit `.env.local`.
 - ✅ Tooling, Auth vertical, composition root, presentation shell
 - ✅ `HttpClient` (`AuthenticatedHttpClient`) — REST features are unblocked
 - ✅ shadcn/ui design system, dark mode, mobile-responsive `AdminLayout`
-- 🔲 Services → Clients → Appointments → Inbox → Dashboard → Settings
+- ✅ Tags, Categories, Services (frontend + backend, search/filtering, pagination)
+- 🔲 Clients → Appointments → Inbox → Dashboard → Settings

@@ -8,6 +8,8 @@ public interface ICategoryRepository
 
     Task<Category?> GetByIdAsync(Guid categoryId, CancellationToken cancellationToken);
 
+    Task<IReadOnlyList<Category>> GetByIdsAsync(IReadOnlyCollection<Guid> categoryIds, CancellationToken cancellationToken);
+
     // excludeCategoryId ignores the category being renamed, so updating a category without changing its name isn't a self-conflict.
     Task<bool> NameExistsAsync(string name, Guid? excludeCategoryId, CancellationToken cancellationToken);
 

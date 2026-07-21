@@ -58,8 +58,13 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(60)
+                        .HasColumnType("character varying(60)");
+
+                    b.Property<string>("NameNormalized")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("lower(\"Name\")", true);
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -76,7 +81,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("TenantId", "Name")
+                    b.HasIndex("TenantId", "NameNormalized")
                         .IsUnique()
                         .HasFilter("\"DeletedAt\" IS NULL");
 
@@ -126,8 +131,13 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.Property<string>("Name")
                         .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("character varying(100)");
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<string>("NameNormalized")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("lower(\"Name\")", true);
 
                     b.Property<decimal>("Price")
                         .HasPrecision(10, 2)
@@ -154,7 +164,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("\"DeletedAt\" IS NULL");
 
-                    b.HasIndex("TenantId", "Name")
+                    b.HasIndex("TenantId", "NameNormalized")
                         .IsUnique()
                         .HasFilter("\"DeletedAt\" IS NULL");
 
@@ -193,6 +203,11 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .HasMaxLength(40)
                         .HasColumnType("character varying(40)");
 
+                    b.Property<string>("NameNormalized")
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("text")
+                        .HasComputedColumnSql("lower(\"Name\")", true);
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
@@ -208,7 +223,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId");
 
-                    b.HasIndex("TenantId", "Name")
+                    b.HasIndex("TenantId", "NameNormalized")
                         .IsUnique()
                         .HasFilter("\"DeletedAt\" IS NULL");
 
@@ -249,10 +264,12 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ServicesService.Domain.Entities.Service", b =>
                 {
-                    b.HasOne("ServicesService.Domain.Entities.Category", null)
+                    b.HasOne("ServicesService.Domain.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("CategoryId")
                         .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Category");
                 });
 #pragma warning restore 612, 618
         }

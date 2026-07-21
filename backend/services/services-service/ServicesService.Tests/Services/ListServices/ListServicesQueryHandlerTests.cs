@@ -11,7 +11,8 @@ public class ListServicesQueryHandlerTests
     {
         serviceRepository = Substitute.For<IServiceRepository>();
         categoryRepository = Substitute.For<ICategoryRepository>();
-        categoryRepository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(new List<Category>());
+        categoryRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new List<Category>());
         return new ListServicesQueryHandler(serviceRepository, categoryRepository);
     }
 
@@ -32,9 +33,9 @@ public class ListServicesQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNoServices_ReturnsEmptyList()
+    public async Task Handle_WithNoServices_ReturnsEmptyListAndDoesNotQueryCategories()
     {
-        var handler = CreateHandler(out var serviceRepository, out _);
+        var handler = CreateHandler(out var serviceRepository, out var categoryRepository);
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service>(), 0));
@@ -44,6 +45,8 @@ public class ListServicesQueryHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Items.Should().BeEmpty();
         result.Value.TotalCount.Should().Be(0);
+        await categoryRepository.DidNotReceive()
+            .GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -55,11 +58,38 @@ public class ListServicesQueryHandlerTests
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service> { service }, 1));
-        categoryRepository.ListAsync(Arg.Any<string?>(), Arg.Any<CancellationToken>()).Returns(new[] { category });
+        categoryRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { category });
 
         var result = await handler.Handle(new ListServicesQuery(), CancellationToken.None);
 
         result.Value.Items.Should().ContainSingle().Which.CategoryName.Should().Be("Hair");
+    }
+
+    [Fact]
+    public async Task Handle_OnlyQueriesTheDistinctCategoriesReferencedByThisPage_NotTheWholeCatalog()
+    {
+        var handler = CreateHandler(out var serviceRepository, out var categoryRepository);
+        var category = new Category(Guid.NewGuid(), "Hair");
+        var services = new List<Service>
+        {
+            new(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, 1),
+            new(Guid.NewGuid(), "Trim", null, 30, 15, 60, 45.50m, 10m, category.Id, 2),
+            new(Guid.NewGuid(), "Manicure", null, 30, 15, 60, 45.50m, 10m, null, 3),
+        };
+        serviceRepository.ListAsync(
+            Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns((services, 3));
+        categoryRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns(new[] { category });
+
+        await handler.Handle(new ListServicesQuery(), CancellationToken.None);
+
+        // Exactly one call, with only the single distinct category id actually
+        // referenced by this page - not every category the tenant owns.
+        await categoryRepository.Received(1).GetByIdsAsync(
+            Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 1 && ids.Contains(category.Id)),
+            Arg.Any<CancellationToken>());
     }
 
     [Fact]

@@ -106,13 +106,13 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Create_with_an_unknown_category_returns_400()
+    public async Task Create_with_an_unknown_category_returns_404()
     {
         var client = AuthenticatedClient(Guid.NewGuid());
 
         var response = await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Uncategorized", categoryId: Guid.NewGuid()));
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -131,13 +131,34 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Create_with_a_duplicate_name_in_the_same_tenant_returns_400()
+    public async Task Create_with_a_duplicate_name_in_the_same_tenant_returns_409()
     {
         var tenantId = Guid.NewGuid();
         var client = AuthenticatedClient(tenantId);
         await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("Duplicate"));
 
         var response = await client.PostAsJsonAsync(ServicesUrl, NewServiceBody("duplicate")); // case-insensitive match
+
+        response.StatusCode.Should().Be(HttpStatusCode.Conflict);
+    }
+
+    [Fact]
+    public async Task Create_with_a_price_exceeding_two_decimal_places_returns_400()
+    {
+        var client = AuthenticatedClient(Guid.NewGuid());
+
+        var response = await client.PostAsJsonAsync(ServicesUrl, new
+        {
+            name = "Imprecise Price",
+            description = (string?)null,
+            durationMinutes = 30,
+            minDurationMinutes = 15,
+            maxDurationMinutes = 60,
+            price = 10.999m,
+            maxDiscountPercentage = 10m,
+            categoryId = (Guid?)null,
+            tagIds = (Guid[]?)null,
+        });
 
         response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
     }
@@ -161,7 +182,7 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Update_from_another_tenant_returns_400_not_the_others_data()
+    public async Task Update_from_another_tenant_returns_404_not_the_others_data()
     {
         var owner = Guid.NewGuid();
         var intruder = Guid.NewGuid();
@@ -172,7 +193,7 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
         var intruderClient = AuthenticatedClient(intruder);
         var response = await intruderClient.PutAsJsonAsync($"{ServicesUrl}/{serviceId}", NewServiceBody("Hijacked"));
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]
@@ -220,13 +241,13 @@ public class ServicesEndpointTests : IClassFixture<ServicesApiFactory>
     }
 
     [Fact]
-    public async Task Delete_with_an_unknown_id_returns_400()
+    public async Task Delete_with_an_unknown_id_returns_404()
     {
         var client = AuthenticatedClient(Guid.NewGuid());
 
         var response = await client.DeleteAsync($"{ServicesUrl}/{Guid.NewGuid()}");
 
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        response.StatusCode.Should().Be(HttpStatusCode.NotFound);
     }
 
     [Fact]

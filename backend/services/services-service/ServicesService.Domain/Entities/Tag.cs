@@ -1,10 +1,10 @@
 using ServicesService.Domain.Common;
+using ServicesService.Domain.Exceptions;
 using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Domain.Entities;
 
 // Name uniqueness per tenant is a cross-aggregate rule, enforced in the CreateTag/UpdateTag use cases via ITagRepository, not here.
-// All shape/invariant validation lives in CreateTagCommandValidator/UpdateTagCommandValidator (docs/adr/0011) - this entity trusts its inputs.
 public class Tag : TenantOwnedEntity
 {
     public const int NameMaxLength = 40;
@@ -24,21 +24,46 @@ public class Tag : TenantOwnedEntity
     public Tag(Guid id, string name, TagColor color, string? description)
         : base(id)
     {
-        Name = name.Trim();
+        Name = ValidateName(name);
         Color = color;
-        Description = NormalizeDescription(description);
+        Description = ValidateDescription(description);
     }
 
     public void Update(string name, TagColor color, string? description)
     {
-        Name = name.Trim();
+        Name = ValidateName(name);
         Color = color;
-        Description = NormalizeDescription(description);
+        Description = ValidateDescription(description);
     }
 
-    private static string? NormalizeDescription(string? description)
+    private static string ValidateName(string name)
+    {
+        var trimmed = name?.Trim() ?? string.Empty;
+
+        if (trimmed.Length is 0 or > NameMaxLength)
+        {
+            throw new InvalidTagException(
+                $"O nome da etiqueta é obrigatório e deve ter no máximo {NameMaxLength} caracteres.");
+        }
+
+        return trimmed;
+    }
+
+    private static string? ValidateDescription(string? description)
     {
         var trimmed = description?.Trim();
-        return string.IsNullOrEmpty(trimmed) ? null : trimmed;
+
+        if (string.IsNullOrEmpty(trimmed))
+        {
+            return null;
+        }
+
+        if (trimmed.Length > DescriptionMaxLength)
+        {
+            throw new InvalidTagException(
+                $"A descrição da etiqueta deve ter no máximo {DescriptionMaxLength} caracteres.");
+        }
+
+        return trimmed;
     }
 }

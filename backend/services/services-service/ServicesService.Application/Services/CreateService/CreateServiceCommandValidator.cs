@@ -1,37 +1,16 @@
 using FluentValidation;
-using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Services.CreateService;
 
 public sealed class CreateServiceCommandValidator : AbstractValidator<CreateServiceCommand>
 {
-    public CreateServiceCommandValidator(
-        IServiceRepository serviceRepository,
-        ICategoryRepository categoryRepository,
-        ITagRepository tagRepository)
+    public CreateServiceCommandValidator()
     {
         RuleFor(command => command.Name)
             .NotEmpty().WithMessage("O nome do serviço é obrigatório.")
             .MaximumLength(Service.NameMaxLength)
             .WithMessage($"O nome do serviço deve ter no máximo {Service.NameMaxLength} caracteres.");
-
-        RuleFor(command => command.Name)
-            .MustAsync(async (name, ct) => !await serviceRepository.NameExistsAsync(name, excludeServiceId: null, ct))
-            .WithErrorCode("Service.DuplicateName")
-            .WithMessage(command => $"Já existe um serviço chamado '{command.Name}'.");
-
-        RuleFor(command => command.CategoryId)
-            .MustAsync(async (id, ct) => await categoryRepository.GetByIdAsync(id!.Value, ct) is not null)
-            .When(command => command.CategoryId is not null)
-            .WithErrorCode("Category.NotFound")
-            .WithMessage(command => $"Categoria '{command.CategoryId}' não foi encontrada.");
-
-        RuleFor(command => command.TagIds)
-            .MustAsync(async (ids, ct) => (await tagRepository.GetByIdsAsync(ids!, ct)).Count == ids!.Count)
-            .When(command => command.TagIds is { Count: > 0 })
-            .WithErrorCode("Tag.NotFound")
-            .WithMessage("Uma ou mais etiquetas informadas não foram encontradas.");
 
         RuleFor(command => command.Description)
             .MaximumLength(Service.DescriptionMaxLength)
@@ -58,10 +37,14 @@ public sealed class CreateServiceCommandValidator : AbstractValidator<CreateServ
             .OverridePropertyName(nameof(CreateServiceCommand.DurationMinutes));
 
         RuleFor(command => command.Price)
-            .GreaterThanOrEqualTo(0).WithMessage("O preço do serviço não pode ser negativo.");
+            .GreaterThanOrEqualTo(0).WithMessage("O preço do serviço não pode ser negativo.")
+            .PrecisionScale(10, 2, ignoreTrailingZeros: true)
+            .WithMessage("O preço deve ter no máximo 8 dígitos inteiros e 2 casas decimais.");
 
         RuleFor(command => command.MaxDiscountPercentage)
             .InclusiveBetween(0, 100)
-            .WithMessage("O desconto máximo do serviço deve ser entre 0 e 100.");
+            .WithMessage("O desconto máximo do serviço deve ser entre 0 e 100.")
+            .PrecisionScale(5, 2, ignoreTrailingZeros: true)
+            .WithMessage("O desconto máximo deve ter no máximo 3 dígitos inteiros e 2 casas decimais.");
     }
 }

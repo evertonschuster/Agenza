@@ -23,9 +23,13 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.CategoryId);
         builder.HasOne<Category>().WithMany().HasForeignKey(s => s.CategoryId).OnDelete(DeleteBehavior.SetNull);
 
-        // Exact-match backstop; case-insensitive uniqueness is enforced in IServiceRepository.NameExistsAsync before any write.
-        // Filtered to non-deleted rows so a soft-deleted service doesn't block reusing its name.
-        builder.HasIndex(s => new { s.TenantId, s.Name })
+        // Case-insensitive uniqueness enforced by the database itself (docs/adr/0013),
+        // not just the application-level NameExistsAsync pre-check: a generated,
+        // always-lowercase shadow column backs the unique index so two concurrent
+        // requests can't both persist "Corte"/"corte". Filtered to non-deleted rows so
+        // a soft-deleted service doesn't block reusing its name.
+        builder.Property<string>("NameNormalized").HasComputedColumnSql("lower(\"Name\")", stored: true);
+        builder.HasIndex("TenantId", "NameNormalized")
             .IsUnique()
             .HasFilter("\"DeletedAt\" IS NULL");
 

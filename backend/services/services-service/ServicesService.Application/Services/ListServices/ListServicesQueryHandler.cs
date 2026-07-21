@@ -25,8 +25,20 @@ public sealed class ListServicesQueryHandler : IQueryHandler<ListServicesQuery, 
             query.CategoryId,
             query.TagId,
             cancellationToken);
-        var categories = await _categoryRepository.ListAsync(search: null, cancellationToken);
-        var categoryNamesById = categories.ToDictionary(category => category.Id, category => category.Name);
+
+        // Only the categories this page's services actually reference (at most
+        // pageSize distinct ids), not the tenant's entire Category catalog on
+        // every page (docs/adr/0013).
+        var categoryIds = services
+            .Select(service => service.CategoryId)
+            .Where(categoryId => categoryId is not null)
+            .Select(categoryId => categoryId!.Value)
+            .Distinct()
+            .ToList();
+        var categoryNamesById = categoryIds.Count == 0
+            ? new Dictionary<Guid, string>()
+            : (await _categoryRepository.GetByIdsAsync(categoryIds, cancellationToken))
+                .ToDictionary(category => category.Id, category => category.Name);
 
         var items = services
             .Select(service => ServiceResponse.FromService(

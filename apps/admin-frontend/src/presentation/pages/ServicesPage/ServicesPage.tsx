@@ -9,7 +9,8 @@ import type {
   CreateServiceInput,
   UpdateServiceInput,
 } from '../../../application/repositories/ServiceRepository'
-import { ServiceForm, type ServiceFormValues } from './ServiceForm'
+import { ServiceForm, type ServiceFormInput, type ServiceFormValues } from './ServiceForm'
+import type { CreatableSelectStatus } from '../../components/CreatableSingleSelect'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -44,7 +45,7 @@ import { StatusMessage } from '../../components/StatusMessage'
 const ALL_CATEGORIES_VALUE = '__all_categories__'
 const ALL_TAGS_VALUE = '__all_tags__'
 
-const EMPTY_FORM_VALUES: ServiceFormValues = {
+const EMPTY_FORM_VALUES: ServiceFormInput = {
   name: '',
   description: '',
   durationMinutes: '',
@@ -52,8 +53,14 @@ const EMPTY_FORM_VALUES: ServiceFormValues = {
   maxDurationMinutes: '',
   price: '',
   maxDiscountPercentage: '',
-  categoryId: '',
+  categoryId: null,
   tagIds: [],
+}
+
+function toAsyncSelectStatus(
+  status: 'idle' | 'loading' | 'success' | 'error',
+): CreatableSelectStatus {
+  return status === 'success' || status === 'error' ? status : 'loading'
 }
 
 type FormTarget = 'new' | Service
@@ -76,17 +83,17 @@ function toServiceInput(values: ServiceFormValues): CreateServiceInput | UpdateS
   return {
     name: values.name.trim(),
     description: description !== '' ? description : null,
-    durationMinutes: Number(values.durationMinutes),
-    minDurationMinutes: Number(values.minDurationMinutes),
-    maxDurationMinutes: Number(values.maxDurationMinutes),
-    price: Number(values.price),
-    maxDiscountPercentage: Number(values.maxDiscountPercentage),
-    categoryId: values.categoryId !== '' ? values.categoryId : null,
+    durationMinutes: values.durationMinutes,
+    minDurationMinutes: values.minDurationMinutes,
+    maxDurationMinutes: values.maxDurationMinutes,
+    price: values.price,
+    maxDiscountPercentage: values.maxDiscountPercentage,
+    categoryId: values.categoryId,
     tagIds: values.tagIds,
   }
 }
 
-function toFormValues(service: Service): ServiceFormValues {
+function toFormValues(service: Service): ServiceFormInput {
   return {
     name: service.name,
     description: service.description ?? '',
@@ -95,7 +102,7 @@ function toFormValues(service: Service): ServiceFormValues {
     maxDurationMinutes: String(service.maxDurationMinutes),
     price: String(service.price),
     maxDiscountPercentage: String(service.maxDiscountPercentage),
-    categoryId: service.categoryId ?? '',
+    categoryId: service.categoryId ?? null,
     tagIds: service.tags.map(tag => tag.id),
   }
 }
@@ -118,6 +125,7 @@ export function ServicesPage(): JSX.Element {
     pageSize,
     totalCount,
     setPage,
+    refetch,
     createService,
     updateService,
     deleteService,
@@ -127,8 +135,20 @@ export function ServicesPage(): JSX.Element {
     ...(tagFilter !== '' ? { tagId: tagFilter } : {}),
   })
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
-  const { categories, createCategory } = useCategories(tenantContext)
-  const { tags, createTag } = useTags(tenantContext)
+  const {
+    categories,
+    status: categoriesStatus,
+    error: categoriesError,
+    createCategory,
+    refetch: refetchCategories,
+  } = useCategories(tenantContext)
+  const {
+    tags,
+    status: tagsStatus,
+    error: tagsError,
+    createTag,
+    refetch: refetchTags,
+  } = useTags(tenantContext)
 
   useEffect(() => {
     setPage(1)
@@ -260,12 +280,30 @@ export function ServicesPage(): JSX.Element {
       </div>
 
       <div className="mt-6">
-        {status === 'loading' && <StatusMessage>Carregando serviços…</StatusMessage>}
+        {status === 'loading' && services.length === 0 && (
+          <StatusMessage>Carregando serviços…</StatusMessage>
+        )}
 
-        {status === 'error' && (
+        {status === 'error' && services.length === 0 && (
           <StatusMessage tone="error">
             Não foi possível carregar os serviços
             {error instanceof Error ? `: ${error.message}` : '.'}
+          </StatusMessage>
+        )}
+
+        {/* A refresh that fails after a service was already loaded (e.g. right
+            after a successful create/update/delete) keeps showing the last
+            known-good list instead of replacing it with a blocking error -
+            the mutation itself already succeeded, only the sync afterward
+            failed. */}
+        {status === 'error' && services.length > 0 && (
+          <StatusMessage tone="error">
+            Não foi possível atualizar a lista de serviços
+            {error instanceof Error ? `: ${error.message}` : '.'} Mostrando os últimos dados
+            carregados.{' '}
+            <button type="button" onClick={() => void refetch()} className="underline">
+              Tentar novamente
+            </button>
           </StatusMessage>
         )}
 
@@ -277,7 +315,7 @@ export function ServicesPage(): JSX.Element {
           </StatusMessage>
         )}
 
-        {status === 'success' && services.length > 0 && (
+        {services.length > 0 && (
           <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
@@ -360,7 +398,7 @@ export function ServicesPage(): JSX.Element {
           </div>
         )}
 
-        {status === 'success' && services.length > 0 && (
+        {services.length > 0 && (
           <div className="mt-4 flex items-center justify-between">
             <span className="text-sm text-muted-foreground">
               Página {page} de {totalPages}
@@ -409,7 +447,13 @@ export function ServicesPage(): JSX.Element {
                 displayTarget === 'new' ? EMPTY_FORM_VALUES : toFormValues(displayTarget)
               }
               categories={categories}
+              categoriesStatus={toAsyncSelectStatus(categoriesStatus)}
+              categoriesError={categoriesError instanceof Error ? categoriesError.message : null}
+              onRetryCategories={() => void refetchCategories()}
               tags={tags}
+              tagsStatus={toAsyncSelectStatus(tagsStatus)}
+              tagsError={tagsError instanceof Error ? tagsError.message : null}
+              onRetryTags={() => void refetchTags()}
               submitLabel={displayTarget === 'new' ? 'Criar serviço' : 'Salvar alterações'}
               isSubmitting={isSubmitting}
               error={formError}

@@ -3,7 +3,7 @@ import { useAuth } from '../../hooks/useAuth'
 import { useTags } from '../../hooks/useTags'
 import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { TAG_COLOR_PALETTE, type Tag, type TagColor } from '../../../domain/entities/Tag'
-import { TagForm, type TagFormValues } from './TagForm'
+import { TagForm, type TagFormValues } from '../../forms/TagForm'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,7 +57,7 @@ export function TagsPage(): JSX.Element {
   const { tenantContext } = useAuth()
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebouncedValue(searchInput, 300)
-  const { tags, status, error, createTag, updateTag, deleteTag } = useTags(
+  const { tags, status, error, refetch, createTag, updateTag, deleteTag } = useTags(
     tenantContext,
     debouncedSearch,
   )
@@ -148,12 +148,29 @@ export function TagsPage(): JSX.Element {
       </div>
 
       <div className="mt-6">
-        {status === 'loading' && <StatusMessage>Carregando etiquetas…</StatusMessage>}
+        {status === 'loading' && tags.length === 0 && (
+          <StatusMessage>Carregando etiquetas…</StatusMessage>
+        )}
 
-        {status === 'error' && (
+        {status === 'error' && tags.length === 0 && (
           <StatusMessage tone="error">
             Não foi possível carregar as etiquetas
             {error instanceof Error ? `: ${error.message}` : '.'}
+          </StatusMessage>
+        )}
+
+        {/* A refresh that fails after tags were already loaded (e.g. right
+            after a successful create/update/delete) keeps showing the last
+            known-good list instead of a blocking error - the mutation itself
+            already succeeded, only the sync afterward failed. */}
+        {status === 'error' && tags.length > 0 && (
+          <StatusMessage tone="error">
+            Não foi possível atualizar a lista de etiquetas
+            {error instanceof Error ? `: ${error.message}` : '.'} Mostrando os últimos dados
+            carregados.{' '}
+            <button type="button" onClick={() => void refetch()} className="underline">
+              Tentar novamente
+            </button>
           </StatusMessage>
         )}
 
@@ -165,7 +182,7 @@ export function TagsPage(): JSX.Element {
           </StatusMessage>
         )}
 
-        {status === 'success' && tags.length > 0 && (
+        {tags.length > 0 && (
           <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>

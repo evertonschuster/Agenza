@@ -65,12 +65,10 @@ just adapt the templates.
   of the stack uses Result — see docs/adr/0005 for why (zero project
   references; FluentValidation already checked shape by the time Domain
   runs) and docs/adr/0006 for the `BusinessException` shape. This is
-  still the right default for a new entity in a new service. (Once a
-  service's Domain rules end up fully duplicated in mature Create/Update
-  validators, dropping the Domain-side throw becomes a reasonable,
-  deliberate follow-up — see docs/adr/0011 for the one place this repo
-  has done that so far, `services-service`'s `Tag`/`Category`/`Service`.
-  Don't preemptively skip the throw here for a new entity.)
+  the repo-wide default for every entity, new or existing — see
+  docs/adr/0012, which reverted the one place this repo briefly dropped
+  it (`services-service`'s `Tag`/`Category`/`Service`, docs/adr/0011,
+  superseded). Don't skip the throw for a new entity.
 - No public setters. Add a `private` parameterless constructor ONLY if EF
   needs it, and keep it private.
 - State changes go through named behavior methods (`Rename`, `Cancel`,
@@ -112,19 +110,22 @@ Application/Tags/
   (`Admin.SharedKernel`) — never throws for an expected business outcome
   (validation failure, not-found, conflict, forbidden). Use
   `Error.Validation/.NotFound/.Conflict/.Forbidden(code, message)`.
-- Validator (commands with user input only): shape rules (required,
-  length, enum/palette membership) AND cross-aggregate rules needing a
-  repository round-trip (uniqueness, existence) — the latter as async
-  `MustAsync` rules, with the relevant repository interface(s)
-  constructor-injected into the validator (docs/adr/0010). Handlers
-  assume validated input and stay pure orchestration: fetch what's
-  needed → construct/apply → persist → return — no inline existence/
-  uniqueness `if` blocks. The dispatcher runs the validator automatically
-  before the handler; don't call it yourself. Note: the dispatcher
-  collapses every validator failure (shape or cross-aggregate) into a
-  generic 400 `Error.Validation`, ignoring `.WithErrorCode(...)` — set
-  it anyway, it's cheap and future-proofs a later Dispatcher change (see
-  docs/adr/0010's accepted trade-off).
+- Validator (commands with user input only): **shape rules only**
+  (required, length, format, numeric range/precision, enum/palette
+  membership, cross-field comparisons within the same command) — no
+  repository dependencies (docs/adr/0012, reverting docs/adr/0010).
+  Cross-aggregate rules needing a repository round-trip (existence,
+  uniqueness, in-use) live in the **handler** as plain
+  `if (...) return Result.Failure(Error.NotFound(...)/Conflict(...))`
+  checks before persisting — see `CreateCategoryCommandHandler` for the
+  simple case and `Application/Services/ServiceRelationshipLoader.cs` for
+  a multi-dependency one (loads Category/Tags once, reused for both
+  construction and the response). The dispatcher runs the validator
+  automatically before the handler; don't call it yourself. It groups
+  every FluentValidation failure by field into `Error.FieldErrors`
+  (structured per-field errors, docs/adr/0012) — still set
+  `.WithErrorCode("Entity.SpecificCode")` on shape rules, it's cheap and
+  the front-end maps on it.
 - Constructor-injected ports only — no EF, no HttpClient, no ASP.NET
   types in Application.
 - Multiple writes that must succeed together → wrap in

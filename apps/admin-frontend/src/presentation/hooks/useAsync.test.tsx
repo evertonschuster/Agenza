@@ -62,4 +62,45 @@ describe('useAsync', () => {
 
     expect(result.current.status).toBe('success')
   })
+
+  it('ignores an older execute() call that resolves after a newer one', async () => {
+    // Simulates a fast filter/page/tenant change: the first request is slow
+    // (e.g. "massa"), a second one fires before it resolves (e.g. "corte"),
+    // and the second one resolves first. The stale first response must not
+    // overwrite the newer one.
+    let resolveFirst: ((value: string) => void) | undefined
+    let resolveSecond: ((value: string) => void) | undefined
+    const asyncFn = vi
+      .fn<() => Promise<string>>()
+      .mockImplementationOnce(() => new Promise<string>(resolve => (resolveFirst = resolve)))
+      .mockImplementationOnce(() => new Promise<string>(resolve => (resolveSecond = resolve)))
+
+    const { result } = renderHook(() => useAsync(asyncFn, { immediate: false }))
+
+    let firstCall: Promise<string | undefined>
+    let secondCall: Promise<string | undefined>
+    act(() => {
+      firstCall = result.current.execute()
+    })
+    act(() => {
+      secondCall = result.current.execute()
+    })
+
+    // The newer request resolves first...
+    await act(async () => {
+      resolveSecond?.('newer')
+      await secondCall
+    })
+    expect(result.current.status).toBe('success')
+    expect(result.current.data).toBe('newer')
+
+    // ...then the stale older request resolves - it must be ignored, not
+    // overwrite the already-applied newer result.
+    await act(async () => {
+      resolveFirst?.('stale')
+      await firstCall
+    })
+    expect(result.current.status).toBe('success')
+    expect(result.current.data).toBe('newer')
+  })
 })
