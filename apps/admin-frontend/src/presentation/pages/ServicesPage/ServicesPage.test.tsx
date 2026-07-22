@@ -106,6 +106,19 @@ describe('ServicesPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument()
   })
 
+  it('pins the Ações column to the right edge so it stays reachable on narrow viewports', async () => {
+    renderServicesPage(buildContainer())
+    await screen.findByText('Massagem relaxante')
+
+    const actionsHeader = screen.getByRole('columnheader', { name: 'Ações' })
+    expect(actionsHeader.className).toMatch(/\bsticky\b/)
+    expect(actionsHeader.className).toMatch(/\bright-0\b/)
+    const editButton = screen.getByRole('button', { name: /editar/i })
+    const actionsCell = editButton.closest('td')
+    expect(actionsCell?.className).toMatch(/\bsticky\b/)
+    expect(actionsCell?.className).toMatch(/\bright-0\b/)
+  })
+
   it('shows an empty state when there are no services', async () => {
     renderServicesPage(
       buildContainer({
@@ -414,6 +427,137 @@ describe('ServicesPage', () => {
       const fieldError = await screen.findByText('Já existe um serviço com esse nome.')
       expect(fieldError).toHaveAttribute('role', 'alert')
       expect(screen.getByLabelText(/^nome$/i)).toHaveFocus()
+    })
+  })
+
+  describe('dialog close protection (unsaved changes)', () => {
+    it('closes immediately on Escape when the form was never touched', async () => {
+      renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      await screen.findByRole('dialog')
+      await userEvent.keyboard('{Escape}')
+
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+      expect(screen.queryByText(/descartar alterações/i)).not.toBeInTheDocument()
+    })
+
+    it('asks for confirmation instead of closing when Escape is pressed with unsaved changes', async () => {
+      renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      await userEvent.type(screen.getByLabelText(/^nome$/i), 'Rascunho não salvo')
+      await userEvent.keyboard('{Escape}')
+
+      const confirm = await screen.findByRole('alertdialog')
+      expect(within(confirm).getByText(/descartar alterações/i)).toBeInTheDocument()
+      // The underlying form dialog stays mounted (values intact) even
+      // though Radix marks it aria-hidden while the confirmation is the
+      // topmost layer - queried with {hidden: true} for that reason.
+      expect(screen.getByRole('dialog', { hidden: true })).toBeInTheDocument()
+    })
+
+    it('preserves the typed values when the discard confirmation is cancelled', async () => {
+      renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      await userEvent.type(screen.getByLabelText(/^nome$/i), 'Rascunho não salvo')
+      await userEvent.keyboard('{Escape}')
+      const confirm = await screen.findByRole('alertdialog')
+      await userEvent.click(within(confirm).getByRole('button', { name: /continuar editando/i }))
+
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      })
+      expect(screen.getByLabelText(/^nome$/i)).toHaveValue('Rascunho não salvo')
+    })
+
+    it('discards the draft and closes the dialog when confirmed', async () => {
+      renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      await userEvent.type(screen.getByLabelText(/^nome$/i), 'Rascunho não salvo')
+      await userEvent.keyboard('{Escape}')
+      const confirm = await screen.findByRole('alertdialog')
+      await userEvent.click(within(confirm).getByRole('button', { name: /^descartar$/i }))
+
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+        expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+      })
+
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      expect(screen.getByLabelText(/^nome$/i)).toHaveValue('')
+    })
+
+    it('also intercepts Cancel when the form has unsaved changes', async () => {
+      renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      await userEvent.type(screen.getByLabelText(/^nome$/i), 'Rascunho não salvo')
+      await userEvent.click(screen.getByRole('button', { name: /^cancelar$/i }))
+
+      const confirm = await screen.findByRole('alertdialog')
+      expect(within(confirm).getByText(/descartar alterações/i)).toBeInTheDocument()
+    })
+  })
+
+  describe('focus restoration on dialog close', () => {
+    it('returns focus to "Novo serviço" after closing the create dialog with Escape', async () => {
+      renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      const triggerButton = screen.getByRole('button', { name: /novo serviço/i })
+      await userEvent.click(triggerButton)
+      await screen.findByRole('dialog')
+      await userEvent.keyboard('{Escape}')
+
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+      expect(triggerButton).toHaveFocus()
+    })
+
+    it('returns focus to the row\'s "Editar" button after closing the edit dialog with Escape', async () => {
+      renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      const editButton = screen.getByRole('button', { name: /editar/i })
+      await userEvent.click(editButton)
+      await screen.findByRole('dialog')
+      await userEvent.keyboard('{Escape}')
+
+      await vi.waitFor(() => {
+        expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+      })
+      expect(editButton).toHaveFocus()
+    })
+  })
+
+  describe('client-side validation focus', () => {
+    it('focuses Nome and flags every empty required field after submitting an empty form', async () => {
+      renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      await userEvent.click(screen.getByRole('button', { name: /criar serviço/i }))
+
+      const nameField = screen.getByLabelText(/^nome$/i)
+      await screen.findByText(/informe o nome do serviço/i)
+      expect(nameField).toHaveFocus()
+      expect(nameField).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByLabelText(/duração mínima/i)).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByLabelText(/^duração \(min\)$/i)).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByLabelText(/duração máxima/i)).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByLabelText(/preço/i)).toHaveAttribute('aria-invalid', 'true')
+      expect(screen.getByLabelText(/desconto máximo/i)).toHaveAttribute('aria-invalid', 'true')
     })
   })
 

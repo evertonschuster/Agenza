@@ -8,16 +8,38 @@ import { z } from 'zod'
 const NAME_MAX_LENGTH = 80
 const DESCRIPTION_MAX_LENGTH = 500
 const MAX_ALLOWED_DURATION_MINUTES = 1440
+const PRICE_MAX_DECIMALS = 2
+const DISCOUNT_MAX_DECIMALS = 2
 
 // The inferred Zod chain type (ZodPipe<ZodString, ZodTransform<number, string>>
 // in v4) is impractical to spell out by hand and would need updating on every
 // zod upgrade - inference is more robust here than a hand-written annotation.
+//
+// Duration fields are `int` in the backend DTO (CreateServiceCommand) - a
+// fractional value like "30.5" would fail there, so it's rejected here too
+// instead of being silently truncated or bounced back as a server error.
+// A plain digit regex rejects scientific notation ("3e1") and Infinity/NaN
+// up front too.
 // eslint-disable-next-line @typescript-eslint/explicit-function-return-type
-function numberField(message: string) {
+function integerField(message: string) {
   return z
     .string()
-    .refine(value => value.trim() !== '' && Number.isFinite(Number(value)), message)
-    .transform(value => Number(value))
+    .refine(value => /^-?\d+$/.test(value.trim()), message)
+    .transform(value => Number(value.trim()))
+}
+
+// Price/discount are `decimal` with PrecisionScale(_, 2) in the backend
+// validator - mirrored here so a value the UI would round-trip incorrectly
+// (e.g. "10.123") never reaches the server. The sign is allowed through so
+// a negative amount still fails via the superRefine below with its own
+// domain-specific message, instead of this generic format message.
+// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
+function decimalField(maxDecimals: number, message: string) {
+  const pattern = new RegExp(`^-?\\d+(\\.\\d{1,${String(maxDecimals)}})?$`)
+  return z
+    .string()
+    .refine(value => pattern.test(value.trim()), message)
+    .transform(value => Number(value.trim()))
 }
 
 export const serviceFormSchema = z
@@ -37,18 +59,25 @@ export const serviceFormSchema = z
         DESCRIPTION_MAX_LENGTH,
         `A descrição não pode exceder ${String(DESCRIPTION_MAX_LENGTH)} caracteres.`,
       ),
-    durationMinutes: numberField('Informe durações válidas em minutos.'),
-    minDurationMinutes: numberField('Informe durações válidas em minutos.'),
-    maxDurationMinutes: numberField('Informe durações válidas em minutos.'),
-    price: numberField('Informe um preço válido.'),
-    maxDiscountPercentage: numberField('Informe um desconto válido.'),
+    durationMinutes: integerField('Informe uma duração válida em minutos inteiros.'),
+    minDurationMinutes: integerField('Informe uma duração válida em minutos inteiros.'),
+    maxDurationMinutes: integerField('Informe uma duração válida em minutos inteiros.'),
+    price: decimalField(
+      PRICE_MAX_DECIMALS,
+      'Informe um preço válido, com no máximo duas casas decimais.',
+    ),
+    maxDiscountPercentage: decimalField(
+      DISCOUNT_MAX_DECIMALS,
+      'Informe um desconto válido, com no máximo duas casas decimais.',
+    ),
     categoryId: z.string().nullable(),
     tagIds: z.array(z.string()),
   })
   .superRefine((values, ctx) => {
-    // A sibling field that fails its own numberField refine is passed through
-    // here as its original raw string (zod still runs superRefine even when
-    // another field in the same object failed) - comparing against it with
+    // A sibling field that fails its own integerField/decimalField refine is
+    // passed through here as its original raw string (zod still runs
+    // superRefine even when another field in the same object failed) -
+    // comparing against it with
     // `<`/`>` would coerce it (e.g. '' becomes 0) and produce a spurious
     // cross-field error. Only compare fields that actually parsed as numbers.
     const isNumber = (value: unknown): value is number =>

@@ -1,4 +1,4 @@
-import { useEffect, useState, type JSX } from 'react'
+import { useEffect, useRef, useState, type JSX, type MouseEvent } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useServices } from '../../hooks/useServices'
 import { useCategories } from '../../hooks/useCategories'
@@ -168,20 +168,31 @@ export function ServicesPage(): JSX.Element {
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
   const [serverError, setServerError] = useState<ServerFormError<ServiceFormField> | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [isFormDirty, setIsFormDirty] = useState(false)
+  const [showDiscardConfirm, setShowDiscardConfirm] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Service | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
+  // Restores focus to whichever button opened the form dialog once it
+  // closes, instead of relying on Radix's own previously-focused-element
+  // fallback (unreliable when the open state is driven externally rather
+  // than through a DialogTrigger, as here).
+  const formTriggerRef = useRef<HTMLButtonElement | null>(null)
 
-  function openCreateForm(): void {
+  function openCreateForm(event: MouseEvent<HTMLButtonElement>): void {
+    formTriggerRef.current = event.currentTarget
     setFormTarget('new')
     setDisplayTarget('new')
     setServerError(null)
+    setIsFormDirty(false)
   }
 
-  function openEditForm(service: Service): void {
+  function openEditForm(service: Service, event: MouseEvent<HTMLButtonElement>): void {
+    formTriggerRef.current = event.currentTarget
     setFormTarget(service)
     setDisplayTarget(service)
     setServerError(null)
+    setIsFormDirty(false)
   }
 
   function closeForm(): void {
@@ -190,6 +201,20 @@ export function ServicesPage(): JSX.Element {
     // blank the title/form during that animation instead of after it.
     setFormTarget(null)
     setServerError(null)
+    setIsFormDirty(false)
+    setShowDiscardConfirm(false)
+  }
+
+  // Single interception point for every way the dialog can close (Escape,
+  // the header close button, an overlay click, and the form's own Cancel
+  // button all route through Dialog's onOpenChange/onCancel into this) - a
+  // dirty form asks for confirmation instead of discarding silently.
+  function requestCloseForm(): void {
+    if (isFormDirty) {
+      setShowDiscardConfirm(true)
+      return
+    }
+    closeForm()
   }
 
   async function handleSubmit(values: ServiceFormValues): Promise<void> {
@@ -341,7 +366,9 @@ export function ServicesPage(): JSX.Element {
                   <TableHead>Preço</TableHead>
                   <TableHead>Desconto máx.</TableHead>
                   <TableHead>Etiquetas</TableHead>
-                  <TableHead className="text-right">Ações</TableHead>
+                  <TableHead className="sticky right-0 z-10 border-l border-border bg-background text-right">
+                    Ações
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -383,13 +410,13 @@ export function ServicesPage(): JSX.Element {
                         ))}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right">
+                    <TableCell className="sticky right-0 border-l border-border bg-background text-right">
                       <div className="flex justify-end gap-1">
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => {
-                            openEditForm(service)
+                          onClick={event => {
+                            openEditForm(service, event)
                           }}
                         >
                           Editar
@@ -446,10 +473,16 @@ export function ServicesPage(): JSX.Element {
       <Dialog
         open={formTarget !== null}
         onOpenChange={open => {
-          if (!open) closeForm()
+          if (!open) requestCloseForm()
         }}
       >
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent
+          className="sm:max-w-xl"
+          onCloseAutoFocus={event => {
+            event.preventDefault()
+            formTriggerRef.current?.focus()
+          }}
+        >
           <DialogHeader>
             <DialogTitle>{displayTarget === 'new' ? 'Novo serviço' : 'Editar serviço'}</DialogTitle>
           </DialogHeader>
@@ -471,14 +504,37 @@ export function ServicesPage(): JSX.Element {
               submitLabel={displayTarget === 'new' ? 'Criar serviço' : 'Salvar alterações'}
               isSubmitting={isSubmitting}
               serverError={serverError}
-              onCancel={closeForm}
+              onCancel={requestCloseForm}
               onSubmit={handleSubmit}
               onCreateCategory={createCategory}
               onCreateTag={createTag}
+              onDirtyChange={setIsFormDirty}
             />
           )}
         </DialogContent>
       </Dialog>
+
+      <AlertDialog
+        open={showDiscardConfirm}
+        onOpenChange={open => {
+          if (!open) setShowDiscardConfirm(false)
+        }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Descartar alterações?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Suas alterações não foram salvas. Deseja descartá-las?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continuar editando</AlertDialogCancel>
+            <AlertDialogAction variant="destructive" onClick={closeForm}>
+              Descartar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <AlertDialog
         open={deleteTarget !== null}

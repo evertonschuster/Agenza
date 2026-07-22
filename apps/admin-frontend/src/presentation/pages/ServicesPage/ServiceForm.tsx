@@ -76,6 +76,7 @@ interface ServiceFormProps {
   onSubmit: (values: ServiceFormValues) => Promise<void>
   onCreateCategory: (input: CreateCategoryInput) => Promise<Category>
   onCreateTag: (input: CreateTagInput) => Promise<Tag>
+  onDirtyChange: (isDirty: boolean) => void
 }
 
 export function ServiceForm({
@@ -96,6 +97,7 @@ export function ServiceForm({
   onSubmit,
   onCreateCategory,
   onCreateTag,
+  onDirtyChange,
 }: ServiceFormProps): JSX.Element {
   const {
     register,
@@ -103,7 +105,7 @@ export function ServiceForm({
     handleSubmit,
     setError,
     setFocus,
-    formState: { errors },
+    formState: { errors, isDirty },
   } = useForm<ServiceFormInput, unknown, ServiceFormValues>({
     resolver: zodResolver(serviceFormSchema),
     defaultValues: initialValues,
@@ -112,6 +114,10 @@ export function ServiceForm({
   })
   const hasErrors = Object.keys(errors).length > 0
   const descriptionValue = useWatch({ control, name: 'description' })
+
+  useEffect(() => {
+    onDirtyChange(isDirty)
+  }, [isDirty, onDirtyChange])
 
   useEffect(() => {
     if (serverError === null) {
