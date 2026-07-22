@@ -10,7 +10,6 @@ monorepo: React frontend, .NET backend microservices, Python AI services.
 | `apps/admin-frontend`    | Vite + React 19 + TS (strict)  | The admin panel UI                                |
 | `backend`                | .NET 10 (ASP.NET Core)         | Business microservices, one per bounded context   |
 | `ai-services`             | Python 3.14 (FastAPI)           | AI/ML services                                    |
-| `packages/shared-types`  | TypeScript                     | DTOs/types shared across Node workspaces          |
 | `infra`                  | Docker Compose                 | Local multi-stack orchestration                   |
 
 See [docs/MONOREPO.md](docs/MONOREPO.md) for conventions, and each stack's own
@@ -42,4 +41,15 @@ docker compose -f infra/docker-compose.yml up
 
 ## Versions
 
-Node 22.18, npm 10.9, .NET SDK 10.0, Python 3.14, Docker 29.5.
+| Stack  | Minimum supported (CI-gated)                        | Recommended local/runtime                         |
+| ------ | ---------------------------------------------------- | -------------------------------------------------- |
+| Node   | 22.22.1 (`.nvmrc`, `engines.node`)                    | Same — `nvm use` picks it up automatically          |
+| npm    | 10.9.3 (`packageManager`)                             | Same                                                |
+| .NET   | 10.0.302 (`backend/global.json`, `rollForward: latestPatch`) | Same                                         |
+| Python | 3.12 (`requires-python`, CI)                          | 3.14 (`.python-version`, Docker) — newer runtime is fine, the package itself only requires 3.12+ |
+| Docker | 29.5                                                  | Same                                                |
+
+Node was previously documented as 22.18 while `react-router`/`lint-staged`
+already required >=22.22 — `.nvmrc`/`engines.node` now enforce the real
+floor everywhere (local, Docker, CI) instead of letting them silently
+disagree.

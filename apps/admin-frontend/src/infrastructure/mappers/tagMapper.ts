@@ -1,12 +1,9 @@
 import { Tag } from '../../domain/entities/Tag'
+import type { components } from '../generated/services-api'
 
-/** The TagDto shape confirmed in docs/API.md. */
-export interface TagDto {
-  id: string
-  name: string
-  color: string
-  description: string | null
-}
+/** The TagDto shape - generated from the live OpenAPI contract, not
+ * hand-maintained (see src/infrastructure/generated/services-api.d.ts). */
+export type TagDto = components['schemas']['TagResponse']
 
 export function mapTagDtoToDomain(dto: TagDto): Tag {
   return Tag.create({

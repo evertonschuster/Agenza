@@ -2,10 +2,17 @@
   "name": "admin-monorepo",
   "private": true,
   "version": "0.0.0",
+  "engines": {
+    "node": ">=22.22.1"
+  },
+  "packageManager": "npm@10.9.3",
   "workspaces": [
     "apps/*",
     "packages/*"
   ],
+  "overrides": {
+    "typescript": "~5.9.3"
+  },
   "scripts": {
     "dev:frontend": "npm run dev --workspace=apps/admin-frontend",
     "build:frontend": "npm run build --workspace=apps/admin-frontend",

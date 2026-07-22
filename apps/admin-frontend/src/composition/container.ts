@@ -2,9 +2,13 @@ import { createUserManager } from '../infrastructure/config/createUserManager'
 import { OidcAuthRepository } from '../infrastructure/auth/OidcAuthRepository'
 import { AuthenticatedHttpClient } from '../infrastructure/http/AuthenticatedHttpClient'
 import { ApiTagRepository } from '../infrastructure/repositories/ApiTagRepository'
+import { ApiCategoryRepository } from '../infrastructure/repositories/ApiCategoryRepository'
+import { ApiServiceRepository } from '../infrastructure/repositories/ApiServiceRepository'
 import type { AuthRepository } from '../application/repositories/AuthRepository'
 import type { HttpClient } from '../application/ports/HttpClient'
 import type { TagRepository } from '../application/repositories/TagRepository'
+import type { CategoryRepository } from '../application/repositories/CategoryRepository'
+import type { ServiceRepository } from '../application/repositories/ServiceRepository'
 import { InitiateLogin } from '../application/use-cases/auth/InitiateLogin'
 import { HandleAuthCallback } from '../application/use-cases/auth/HandleAuthCallback'
 import { GetCurrentSession } from '../application/use-cases/auth/GetCurrentSession'
@@ -13,11 +17,21 @@ import { ListTags } from '../application/use-cases/tags/ListTags'
 import { CreateTag } from '../application/use-cases/tags/CreateTag'
 import { UpdateTag } from '../application/use-cases/tags/UpdateTag'
 import { DeleteTag } from '../application/use-cases/tags/DeleteTag'
+import { ListCategories } from '../application/use-cases/categories/ListCategories'
+import { CreateCategory } from '../application/use-cases/categories/CreateCategory'
+import { UpdateCategory } from '../application/use-cases/categories/UpdateCategory'
+import { DeleteCategory } from '../application/use-cases/categories/DeleteCategory'
+import { ListServices } from '../application/use-cases/services/ListServices'
+import { CreateService } from '../application/use-cases/services/CreateService'
+import { UpdateService } from '../application/use-cases/services/UpdateService'
+import { DeleteService } from '../application/use-cases/services/DeleteService'
 
 export interface AppContainer {
   authRepository: AuthRepository
   httpClient: HttpClient
   tagRepository: TagRepository
+  categoryRepository: CategoryRepository
+  serviceRepository: ServiceRepository
   useCases: {
     initiateLogin: InitiateLogin
     handleAuthCallback: HandleAuthCallback
@@ -27,6 +41,14 @@ export interface AppContainer {
     createTag: CreateTag
     updateTag: UpdateTag
     deleteTag: DeleteTag
+    listCategories: ListCategories
+    createCategory: CreateCategory
+    updateCategory: UpdateCategory
+    deleteCategory: DeleteCategory
+    listServices: ListServices
+    createService: CreateService
+    updateService: UpdateService
+    deleteService: DeleteService
   }
 }
 
@@ -63,11 +85,15 @@ export function createAppContainer(): AppContainer {
   )
 
   const tagRepository: TagRepository = new ApiTagRepository(httpClient)
+  const categoryRepository: CategoryRepository = new ApiCategoryRepository(httpClient)
+  const serviceRepository: ServiceRepository = new ApiServiceRepository(httpClient)
 
   return {
     authRepository,
     httpClient,
     tagRepository,
+    categoryRepository,
+    serviceRepository,
     useCases: {
       initiateLogin: new InitiateLogin(authRepository),
       handleAuthCallback: new HandleAuthCallback(authRepository),
@@ -77,6 +103,14 @@ export function createAppContainer(): AppContainer {
       createTag: new CreateTag(tagRepository),
       updateTag: new UpdateTag(tagRepository),
       deleteTag: new DeleteTag(tagRepository),
+      listCategories: new ListCategories(categoryRepository),
+      createCategory: new CreateCategory(categoryRepository),
+      updateCategory: new UpdateCategory(categoryRepository),
+      deleteCategory: new DeleteCategory(categoryRepository),
+      listServices: new ListServices(serviceRepository),
+      createService: new CreateService(serviceRepository),
+      updateService: new UpdateService(serviceRepository),
+      deleteService: new DeleteService(serviceRepository),
     },
   }
 }

@@ -2,4 +2,10 @@
 # local node_modules/.bin tools (eslint, prettier) resolve - workspace
 # deps are not hoisted to the root. Add one line per workspace that has
 # a lint-staged config file.
-cd apps/admin-frontend && npx lint-staged
+#
+# Invoke lint-staged's script via `node` directly instead of `npx` - on
+# Windows, npx resolves to npx.cmd, which git-bash hands off to cmd.exe.
+# With a long PATH, that hop can overflow cmd.exe's command-line buffer
+# and fail with "Commit failed" (GitHub Desktop then shows the raw PATH
+# as the error). Calling node directly skips that hop.
+cd apps/admin-frontend && node ../../node_modules/lint-staged/bin/lint-staged.js

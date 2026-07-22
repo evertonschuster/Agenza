@@ -4,6 +4,7 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+COPY ["Directory.Packages.props", "."]
 COPY ["services/services-service/ServicesService.Api/ServicesService.Api.csproj", "services/services-service/ServicesService.Api/"]
 COPY ["services/services-service/ServicesService.Application/ServicesService.Application.csproj", "services/services-service/ServicesService.Application/"]
 COPY ["services/services-service/ServicesService.Domain/ServicesService.Domain.csproj", "services/services-service/ServicesService.Domain/"]

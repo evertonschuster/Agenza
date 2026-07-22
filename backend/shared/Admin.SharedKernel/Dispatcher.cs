@@ -89,7 +89,18 @@ public sealed class Dispatcher : IDispatcher
             return null;
         }
 
+        // Grouped by field instead of collapsed into one joined string, so the
+        // Api can return a structured, per-field response (docs/adr/0012) - each
+        // failure's own WithErrorCode is preserved instead of discarded.
+        var fieldErrors = result.Errors
+            .GroupBy(failure => failure.PropertyName)
+            .ToDictionary(
+                group => group.Key,
+                IReadOnlyList<FieldError> (group) => group
+                    .Select(failure => new FieldError(failure.ErrorCode, failure.ErrorMessage))
+                    .ToList());
+
         var message = string.Join(" ", result.Errors.Select(failure => failure.ErrorMessage));
-        return Error.Validation("Validation.Failed", message);
+        return Error.Validation("Validation.Failed", message, fieldErrors);
     }
 }

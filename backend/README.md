@@ -30,19 +30,20 @@ hand-rolling token handling.
 
 ```bash
 dotnet build AdminBackend.slnx
-dotnet test AdminBackend.slnx    # unit + integration; integration needs Docker running
+dotnet test AdminBackend.slnx    # unit tests only, no database dependency
 dotnet run --project services/services-service/ServicesService.Api
 ```
 
 The 80% line-coverage gate for `*.Tests` projects (Domain + Application
 scope) is configured in `Directory.Build.props`, so local `dotnet test`
-enforces exactly what CI enforces. `*.IntegrationTests` projects
-(`WebApplicationFactory` + Testcontainers, real Postgres) cover
-Api/Infrastructure and are exempt from the gate — see `../docs/QUALITY.md`.
+enforces exactly what CI enforces. There are no integration tests
+(docs/adr/0015) — Api/Infrastructure have no automated coverage; verify
+those manually (`dotnet run` + a real HTTP client) — see
+`../docs/QUALITY.md`.
 
 ## Known gaps
 
-- `ServicesService` has two real verticals (Tags `/api/v1/tags`,
-  ServiceOfferings `/api/v1/service-offerings`) — the
+- `ServicesService` has three real verticals (Tags `/api/v1/tags`,
+  Categories `/api/v1/categories`, Services `/api/v1/services`) — the
   Appointments/Clients verticals mentioned in
   `apps/admin-frontend/docs/STATUS.md` are still unbuilt.

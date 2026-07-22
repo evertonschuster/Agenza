@@ -12,7 +12,7 @@
          never depend on (backend/CLAUDE.md layering). Kept as its own
          project instead of folded into Admin.SharedKernel (which
          Application references directly) so that boundary can't leak. -->
-    <PackageReference Include="Microsoft.EntityFrameworkCore" Version="10.0.10" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore" />
   </ItemGroup>
 
 </Project>

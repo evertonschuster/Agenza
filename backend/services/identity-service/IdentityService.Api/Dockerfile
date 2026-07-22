@@ -4,6 +4,7 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+COPY ["Directory.Packages.props", "."]
 COPY ["services/identity-service/IdentityService.Api/IdentityService.Api.csproj", "services/identity-service/IdentityService.Api/"]
 COPY ["services/identity-service/IdentityService.Application/IdentityService.Application.csproj", "services/identity-service/IdentityService.Application/"]
 COPY ["services/identity-service/IdentityService.Domain/IdentityService.Domain.csproj", "services/identity-service/IdentityService.Domain/"]

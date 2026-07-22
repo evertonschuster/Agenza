@@ -2,7 +2,7 @@
 # at container runtime, which only works with the Vite dev server (a
 # production `vite build` would need them at image build time instead).
 # Matches the compose file's port mapping (5173).
-FROM node:26-alpine
+FROM node:22.22-alpine
 
 WORKDIR /app
 

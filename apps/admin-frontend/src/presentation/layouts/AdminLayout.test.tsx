@@ -53,7 +53,7 @@ describe('AdminLayout', () => {
     localStorage.clear()
   })
 
-  it('renders every navigation item and the child route content', () => {
+  it('renders every navigation item and the child route content', async () => {
     renderLayout(buildContainer(buildTenantContext()))
 
     for (const label of [
@@ -68,6 +68,10 @@ describe('AdminLayout', () => {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
     expect(screen.getByText('Dashboard content')).toBeInTheDocument()
+    // useAuth()'s session load resolves after this test's own assertions -
+    // wait for it to settle so its state update is captured inside act()
+    // instead of warning after the test body has already returned.
+    await screen.findByText('Bella Studio')
   })
 
   it("shows the authenticated user's business name in the sidebar", async () => {
@@ -120,5 +124,22 @@ describe('AdminLayout', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
+  })
+
+  it('applies the dark class to the document when the real sidebar theme toggle is clicked', async () => {
+    renderLayout(buildContainer(buildTenantContext()))
+
+    expect(document.documentElement).not.toHaveClass('dark')
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mudar para modo escuro' }))
+
+    expect(document.documentElement).toHaveClass('dark')
+    expect(localStorage.getItem('admin-theme')).toBe('dark')
+    expect(screen.getByRole('button', { name: 'Mudar para modo claro' })).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: 'Mudar para modo claro' }))
+
+    expect(document.documentElement).not.toHaveClass('dark')
+    expect(localStorage.getItem('admin-theme')).toBe('light')
   })
 })

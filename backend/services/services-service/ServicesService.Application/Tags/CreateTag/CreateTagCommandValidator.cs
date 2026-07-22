@@ -4,7 +4,6 @@ using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Tags.CreateTag;
 
-// Cross-tenant name uniqueness needs a repository round-trip, so it stays in CreateTagCommandHandler, not here.
 public sealed class CreateTagCommandValidator : AbstractValidator<CreateTagCommand>
 {
     public CreateTagCommandValidator()
