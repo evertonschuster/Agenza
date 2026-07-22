@@ -33,10 +33,15 @@ jobs:
       - name: Skill sync check (agent-skills/ -> .agents/skills/, .claude/skills/)
         run: python scripts/sync_agent_skills.py --check
 
+      # Each remaining step uses if: always() so one failing check doesn't
+      # hide the others' diagnostics - the job still reports overall
+      # failure if any step fails, this only keeps every check running.
       - name: Governance structure check
+        if: always()
         run: python scripts/check_agent_governance.py
 
       - name: Architecture guard (blocking findings)
+        if: always()
         run: python scripts/architecture_guard.py
 
       - name: Architecture guard inventory (informational, always green)
@@ -44,4 +49,5 @@ jobs:
         run: python scripts/architecture_guard.py --inventory
 
       - name: Governance script tests
+        if: always()
         run: python -m unittest discover -s scripts/tests -t .
