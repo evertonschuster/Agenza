@@ -36,11 +36,21 @@ concern (exceptions / contracts / tenancy / migrations).>
 - agenza-api-contract-review (backend/frontend contract drift)
 - agenza-migration-safety (if a migration is in scope)
 
-## Mandatory commands (review-only mode still runs these — they're read-only)
+## Mandatory commands
+
+Review-only mode runs these — they're all read-only:
 
 ```bash
-python scripts/architecture_guard.py --inventory
+python scripts/sync_agent_skills.py --check
 python scripts/check_agent_governance.py
+python scripts/architecture_guard.py --inventory
+```
+
+Implement mode additionally must end with the blocking (non-`--inventory`)
+guard passing, same as any other change:
+
+```bash
+python scripts/architecture_guard.py
 ```
 
 ## Restrictions

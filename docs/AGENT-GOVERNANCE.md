@@ -65,7 +65,7 @@ either distribution directory** — edit `agent-skills/`, then run the sync
 script; a hand-edit in a distribution directory is exactly the "divergent
 copy" `scripts/check_agent_governance.py` is designed to catch.
 
-Two skills predate this framework and still live outside `agent-skills/`
+Three skills predate this framework and still live outside `agent-skills/`
 on purpose, because they don't duplicate one of the eight canonical
 skills: `backend/.skills/backend-new-microservice/SKILL.md` and
 `apps/admin-frontend/.skills/admin-api-contract`/`admin-tdd-conventions`.

@@ -15,7 +15,12 @@ every section; delete this instruction line before sending.
   `infrastructure/repositories/`, `presentation/{hooks,forms,pages}/`
 - Stub page being replaced (if any): `<PageName>`
 
-## API spec (do not invent — ask if any of this is missing)
+## API spec (search before asking — see root `AGENTS.md`'s question policy)
+
+Before asking the user for any of this, check
+`src/infrastructure/generated/services-api.d.ts`, the backend controller/
+DTOs under `backend/services/services-service/`, `docs/API.md`, and
+`docs/adr/` — only ask what's still genuinely missing after that search.
 
 - Base path: `<...>`
 - Methods + shapes (request/response) per operation: `<...>`
@@ -46,10 +51,10 @@ unsure, use `agenza-api-contract-review` to check instead of guessing.>
 ## Skills to use
 
 - agenza-frontend-feature (primary)
-- `.skills/admin-api-contract/SKILL.md` (translating the API spec above
-  into DTOs/mappers/MSW handlers)
-- `.skills/admin-tdd-conventions/SKILL.md` (test patterns, TS-strict test
-  gotchas)
+- `apps/admin-frontend/.skills/admin-api-contract/SKILL.md` (translating
+  the API spec above into DTOs/mappers/MSW handlers)
+- `apps/admin-frontend/.skills/admin-tdd-conventions/SKILL.md` (test
+  patterns, TS-strict test gotchas)
 - agenza-api-contract-review (if anything about the API spec above is
   uncertain against the real backend)
 
@@ -61,6 +66,8 @@ unsure, use `agenza-api-contract-review` to check instead of guessing.>
 ## Mandatory commands
 
 ```bash
+python scripts/sync_agent_skills.py --check
+python scripts/check_agent_governance.py
 npm run format:check --workspace=apps/admin-frontend
 npm run lint --workspace=apps/admin-frontend
 npm run build --workspace=apps/admin-frontend

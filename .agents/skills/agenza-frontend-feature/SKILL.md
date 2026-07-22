@@ -17,7 +17,7 @@ description: >
 
 A feature vertical in this project is a full slice:
 
-```
+```text
 domain/entities/          → plain TS class, no framework deps
 application/repositories/ → interface (port)
 application/use-cases/    → one class per use case, constructor-injected repo
@@ -29,9 +29,10 @@ presentation/pages/       → replaces the stub page
 ```
 
 For translating an external API spec into the DTO/mapper/MSW-handler seam,
-use `.skills/admin-api-contract/SKILL.md` alongside this skill. For
-TypeScript-strict-mode test gotchas and mock-strategy-per-layer rules, use
-`.skills/admin-tdd-conventions/SKILL.md`. This skill governs everything
+use `apps/admin-frontend/.skills/admin-api-contract/SKILL.md` alongside
+this skill. For TypeScript-strict-mode test gotchas and mock-strategy-per-
+layer rules, use `apps/admin-frontend/.skills/admin-tdd-conventions/SKILL.md`.
+This skill governs everything
 between those two: architecture, forms, state, UI, and completion
 criteria.
 
@@ -58,7 +59,14 @@ criteria.
 `src/domain/entities/FeatureName.ts` — zero imports from React,
 `application/`, `infrastructure/`, or `presentation/`. Private constructor
 + static `create(input)` factory that validates invariants and throws a
-named `DomainError` subclass. No constructor parameter property shorthand
+named `DomainError` subclass — see `Category.ts`/`Service.ts` for the
+existing pattern (`InvalidCategoryError`/`InvalidServiceError`). This is
+the frontend's own, already-established exception-and-catch convention
+for validation failures, distinct from the .NET backend's Result/
+DomainResult pattern (docs/adr/0014, `backend/AGENTS.md`) — that ADR
+governs the backend only; it does not require the frontend to adopt an
+equivalent Result type, and every caller here already expects a throw
+(`useAsync`'s `catch`, `mapApiErrorToForm`). No constructor parameter property shorthand
 (`erasableSyntaxOnly`) — explicit field declarations + assignment in the
 constructor body. Optional fields: `if (value !== undefined) { this.field
 = value }`, never a direct assignment of a possibly-`undefined` value
@@ -224,8 +232,11 @@ create's error/loading state leak into or reset the outer form.
 
 shadcn/ui primitives live in `src/components/ui/` and are already themed.
 If a page needs something not there (select, badge, etc.), add it with
-`npx shadcn@latest add <component> -c apps/admin-frontend` from the repo
-root, then check the result compiles under `exactOptionalPropertyTypes:
+`npx shadcn@<version> add <component> -c apps/admin-frontend` from the
+repo root — use the version already pinned in
+`apps/admin-frontend/package.json`'s `devDependencies.shadcn`, not
+`@latest` (which would bypass that pin and could fetch an update the
+repo hasn't reviewed). Then check the result compiles under `exactOptionalPropertyTypes:
 true` (some generated files need fixing — see `dropdown-menu.tsx`'s
 removal for when to give up and remove instead of patch).
 
@@ -363,7 +374,11 @@ Promise<string | null>`, prepends `VITE_API_BASE_URL`, attaches
 `Authorization: Bearer <token>`, throws a typed `ApiError` (`status`,
 `message`, `details` — the parsed `ProblemDetails`, see `serverFormError.ts`)
 on non-2xx. Wired into `createAppContainer()` using `authRepository` to
-supply the token.
+supply the token. Same note as the domain-entity section above: throwing
+`ApiError` here (and catching it in `useAsync`/`useCreateInline`/form
+`onSubmit` handlers) is this codebase's real, working frontend error
+convention — not a violation of the backend's exception policy, which is
+scoped to the .NET services.
 
 ---
 

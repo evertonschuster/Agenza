@@ -8,7 +8,7 @@ description: >
 # Admin Feature Vertical (obsolete — moved)
 
 This skill's content moved to
-[`agent-skills/agenza-frontend-feature/SKILL.md`](../../../agent-skills/agenza-frontend-feature/SKILL.md)
+[`agent-skills/agenza-frontend-feature/SKILL.md`](../../../../agent-skills/agenza-frontend-feature/SKILL.md)
 (distributed to `.claude/skills/agenza-frontend-feature/` and
 `.agents/skills/agenza-frontend-feature/` by
 `scripts/sync_agent_skills.py`) as part of the cross-tool governance

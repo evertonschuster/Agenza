@@ -187,6 +187,28 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].severity, "blocking")
+        # Line 4 is the actual offending code line; line 3 is the opening
+        # ``` fence itself - the finding must point at the former.
+        self.assertEqual(findings[0].line, 4)
+
+    def test_banned_identifier_on_a_later_code_line_reports_the_correct_line(self) -> None:
+        self._write(
+            "some-skill/SKILL.md",
+            "\n".join(
+                [
+                    "```csharp",
+                    "var x = 1;",
+                    "throw new BusinessExceptionHandler();",
+                    "```",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_stale_patterns_in_doc_code_blocks()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].line, 3)
 
     def test_validator_with_must_async_in_code_fence_is_blocking(self) -> None:
         self._write(

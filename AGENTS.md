@@ -71,17 +71,22 @@ that were never stated or implied by the spec/ADRs/code.
   and Python services talk over HTTP (and later, events) — never shared
   files, multi-service writes to the same database, or in-process calls
   across a service boundary.
-- **Exceptions are not conventional control flow.** No layer throws for an
+- **Exceptions are not conventional control flow in the .NET backend.** No
+  backend layer (Domain, Application, Infrastructure) throws for an
   *expected* outcome — validation failure, not-found, conflict/duplicate,
   in-use, tenant authorization. Every layer's failure signature is explicit
-  in its return type (`Result`/`DomainResult`/`PersistenceResult` in the
-  backend). Exceptions stay reserved for genuinely unexpected/unrecoverable
-  failures. This is not a style preference — it reverts a pattern
+  in its return type (`Result`/`DomainResult`/`PersistenceResult`).
+  Exceptions stay reserved for genuinely unexpected/unrecoverable failures.
+  This is not a style preference — it reverts a pattern
   (`BusinessException`/`DuplicateEntityException`/`BusinessExceptionHandler`,
   `MustAsync` repository checks in validators) this codebase already tried,
   hit problems with, and formally reverted (docs/adr/0012, docs/adr/0014).
   Full detail in backend/AGENTS.md; audit with
-  `agent-skills/agenza-exception-flow-audit`.
+  `agent-skills/agenza-exception-flow-audit`. **This is a backend-specific
+  rule, not a repo-wide ban on `throw`/`catch`** — the frontend has its
+  own, separate, already-established exception-and-catch convention
+  (`DomainError`, `ApiError`, see `apps/admin-frontend/AGENTS.md` and
+  `agent-skills/agenza-frontend-feature`) that this rule does not override.
 
 ## Testing & quality policy
 

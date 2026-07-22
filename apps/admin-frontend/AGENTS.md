@@ -67,12 +67,16 @@ Dashboard, Settings) are stubs awaiting implementation.
 ### Both must pass before every commit
 
 ```bash
-npm run test    # all tests green
-npm run build   # tsc catches what vitest/esbuild silently ignores
-npm run lint    # architectural boundary rules enforced here
+npm run format:check --workspace=apps/admin-frontend
+npm run lint --workspace=apps/admin-frontend
+npm run build --workspace=apps/admin-frontend          # tsc catches what vitest/esbuild silently ignores
+npm run test:coverage --workspace=apps/admin-frontend  # 80% line-coverage gate
 ```
 
-Also run the repo-wide governance checks from
+(`npm run test`/`build`/`lint` without the `--workspace` flag work the
+same way from inside `apps/admin-frontend/` itself — both forms run the
+identical scripts; use whichever matches your current directory.) Also
+run the repo-wide governance checks from
 [../../AGENTS.md](../../AGENTS.md).
 
 ---

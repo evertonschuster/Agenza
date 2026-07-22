@@ -44,7 +44,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 
 ### Layering (enforced by project references — never add a reference that violates this)
 
-```
+```text
 Domain          zero project references, zero NuGet framework deps
 Application     → Domain, Admin.SharedKernel. Ports live in Abstractions/
 Infrastructure  → Application, Admin.Identity.Client, Admin.SharedKernel.EntityFrameworkCore

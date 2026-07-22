@@ -59,6 +59,8 @@ section; delete this instruction line before sending.
 ## Mandatory commands
 
 ```bash
+python scripts/sync_agent_skills.py --check
+python scripts/check_agent_governance.py
 dotnet build backend/AdminBackend.slnx
 dotnet test backend/AdminBackend.slnx
 python scripts/architecture_guard.py

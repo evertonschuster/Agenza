@@ -220,11 +220,13 @@ _FENCE_PATTERN = re.compile(r"```[\w-]*\n(.*?)```", re.DOTALL)
 
 
 def _code_blocks(markdown_path: Path) -> list[tuple[int, str]]:
-    """Return (starting_line_number, code_text) for every fenced code block."""
+    """Return (first_content_line_number, code_text) for every fenced code
+    block. +2, not +1: match.start() is the opening ``` line itself, and
+    the capture group's content starts on the line right after it."""
     text = markdown_path.read_text(encoding="utf-8", errors="replace")
     blocks = []
     for match in _FENCE_PATTERN.finditer(text):
-        start_line = text.count("\n", 0, match.start()) + 1
+        start_line = text.count("\n", 0, match.start()) + 2
         blocks.append((start_line, match.group(1)))
     return blocks
 

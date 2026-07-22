@@ -134,7 +134,7 @@ def check_skill_frontmatter() -> list[str]:
         if parsed is None:
             problems.append(f"{_rel(skill_file)}: missing '---' frontmatter block")
             continue
-        fields, raw = parsed
+        fields, _raw = parsed
 
         if not fields.get("name"):
             problems.append(f"{_rel(skill_file)}: frontmatter missing 'name'")
@@ -147,8 +147,12 @@ def check_skill_frontmatter() -> list[str]:
         if not fields.get("description"):
             problems.append(f"{_rel(skill_file)}: frontmatter missing 'description'")
 
-        raw_keys = {line.split(":", 1)[0].strip() for line in raw.splitlines() if ":" in line}
-        forbidden_present = raw_keys & FORBIDDEN_FRONTMATTER_KEYS
+        # Use the already continuation-aware `fields` keys, not a fresh
+        # per-line split of `raw` - a wrapped multi-line description whose
+        # continuation line happens to contain a colon (e.g. "...the
+        # model: which layer owns it...") would otherwise be misread as a
+        # new top-level key by a naive split.
+        forbidden_present = set(fields.keys()) & FORBIDDEN_FRONTMATTER_KEYS
         if forbidden_present:
             problems.append(
                 f"{_rel(skill_file)}: frontmatter has tool-specific key(s) "

@@ -124,6 +124,36 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertEqual(problems, [])
 
+    def test_colon_in_a_wrapped_description_continuation_is_not_a_forbidden_key(self) -> None:
+        # The description's folded (">") value wraps onto an indented
+        # continuation line that itself starts with "model:" (quoting an
+        # example config key). A naive re-split of the raw frontmatter text
+        # (independent of _parse_frontmatter's continuation-aware logic)
+        # would misread that continuation line as a genuine top-level
+        # "model:" key and false-positive against FORBIDDEN_FRONTMATTER_KEYS,
+        # even though _parse_frontmatter itself correctly folds it into the
+        # description value.
+        self._write(
+            "agent-skills/foo/SKILL.md",
+            "\n".join(
+                [
+                    "---",
+                    "name: foo",
+                    "description: >",
+                    "  Use whenever the request looks like a config diff, e.g.",
+                    "  model: gpt-4-turbo",
+                    "  or a similar provider-settings change.",
+                    "---",
+                    "",
+                ]
+            ),
+        )
+
+        with self._patch():
+            problems = cag.check_skill_frontmatter()
+
+        self.assertEqual(problems, [])
+
     # -- skill sync ----------------------------------------------------------
 
     def test_unsynced_skills_are_reported_for_both_targets(self) -> None:
