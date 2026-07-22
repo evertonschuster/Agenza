@@ -30,6 +30,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0008-...md`                       | Automatic tenant assignment on save (AssignTenant + interceptor) |
 | `../docs/adr/0009-...md`                       | TenantOwnedEntity base class (BaseEntity + ITenantOwned combined) |
 | `../docs/adr/0014-...md`                       | Result pattern end-to-end — Domain/persistence no longer throw for expected outcomes |
+| `../docs/adr/0015-...md`                       | Integration tests removed — CI runs unit tests only, no database dependency |
 
 ## Critical constraints (non-negotiable)
 
@@ -40,7 +41,7 @@ Domain          zero project references, zero NuGet framework deps
 Application     → Domain, Admin.SharedKernel. Ports live in Abstractions/
 Infrastructure  → Application, Admin.Identity.Client, Admin.SharedKernel.EntityFrameworkCore
 Api             → Application + Infrastructure. Controllers stay thin
-Tests           → Application + Domain (unit); Api (integration)
+Tests           → Application + Domain (unit only — no integration tests, docs/adr/0015)
 ```
 
 `backend/shared/Admin.SharedKernel` is cross-cutting CQRS/Result
@@ -344,21 +345,18 @@ guards, an unrecognized database error, transactional rollback cleanup.
   `Directory.Build.props`/`.targets` and applies automatically —
   `Admin.SharedKernel` is excluded from every service's gate since it
   has its own (`Admin.SharedKernel.Tests`).
-- Api/Infrastructure are covered by integration tests
-  (`<Service>.IntegrationTests`): `WebApplicationFactory` +
-  Testcontainers against real Postgres — see
-  `identity-service/IdentityService.IntegrationTests` for the pattern
-  (including a resource server's `TestAuthHandler` trick in
-  `services-service/ServicesService.IntegrationTests` when the service
-  being tested isn't the OIDC provider itself). Requires Docker
-  running. Exempt from the line-coverage gate.
-- New endpoint = new integration test exercising auth (401/403),
-  validation (400), and the happy path — plus a unit test per new
-  handler/validator.
+- **No integration tests, by decision** (docs/adr/0015): CI runs unit
+  tests only — no Postgres, no Docker, no `WebApplicationFactory`.
+  Api/Infrastructure (controllers, EF configurations/migrations,
+  interceptors, exception handlers, auth/OIDC flows) have no automated
+  coverage as a result — verify those manually (`dotnet run` + a real
+  HTTP client) before merging a change that touches them.
+- New endpoint = a unit test per new handler/validator; manually
+  exercise auth (401/403) and the happy path before merging.
 
 ## Both must pass before every commit
 
 ```bash
 dotnet build backend/AdminBackend.slnx
-dotnet test backend/AdminBackend.slnx   # coverage gate applied via Directory.Build.props/.targets; integration needs Docker
+dotnet test backend/AdminBackend.slnx   # unit tests only; coverage gate applied via Directory.Build.props/.targets
 ```

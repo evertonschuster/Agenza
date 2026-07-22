@@ -1,6 +1,9 @@
 # ADR 0008 — Automatic tenant assignment on save
 
-Status: accepted (2026-07)
+Status: accepted (2026-07); the `ServicesService.IntegrationTests`-based
+regression test referenced below no longer exists — superseded by
+docs/adr/0015 (integration tests removed, unit tests only in CI); the
+mechanism itself is unchanged
 
 ## Context
 

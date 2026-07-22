@@ -23,19 +23,16 @@ NuGet, pip, Docker base images, and the workflows' actions.
   declarative wiring (`main.tsx`, `App.tsx`, the route table) and the
   stub pages listed explicitly in the config — remove a stub from that
   list when its feature vertical is implemented.
-- **Backend**: two test tiers, configured in `backend/Directory.Build.props`
-  + `.targets`. `*.Tests` (unit): coverlet instruments the assemblies
-  each project references — **Domain + Application** — gated at 80%
-  line coverage. `Admin.SharedKernel` is excluded from every *consuming*
-  service's gate (`Directory.Build.targets`) since it has its own
-  dedicated project (`Admin.SharedKernel.Tests`) and gate — counting it
-  twice would let one hide behind the other's number (docs/adr/0005).
-  `*.IntegrationTests`: `WebApplicationFactory` + Testcontainers suites
-  that boot the real host against real Postgres and exercise
-  Api/Infrastructure end-to-end (auth challenges, token flows, EF
-  persistence, transaction rollback); exempt from the line gate. All
-  tiers run in the same `dotnet test` locally and in CI (Docker required
-  for integration).
+- **Backend**: unit tests only (`*.Tests`), configured in
+  `backend/Directory.Build.props` + `.targets`. Coverlet instruments the
+  assemblies each project references — **Domain + Application** —
+  gated at 80% line coverage. `Admin.SharedKernel` is excluded from
+  every *consuming* service's gate (`Directory.Build.targets`) since it
+  has its own dedicated project (`Admin.SharedKernel.Tests`) and gate —
+  counting it twice would let one hide behind the other's number
+  (docs/adr/0005). There are no integration tests (docs/adr/0015) — CI
+  never needs Docker or a database; Api/Infrastructure have no
+  automated coverage.
 - **AI services**: `--cov=app` in `pyproject.toml` measures the whole
   package, gate at 80% (`--cov-fail-under=80`).
 

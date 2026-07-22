@@ -8,7 +8,7 @@
     Directory.Build.targets imports after every package's .targets/.props,
     guaranteeing this value wins.
   -->
-  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) And !$(MSBuildProjectName.EndsWith('.IntegrationTests')) And '$(MSBuildProjectName)' != 'Admin.SharedKernel.Tests'">
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) And '$(MSBuildProjectName)' != 'Admin.SharedKernel.Tests'">
     <!-- Admin.SharedKernel has its own dedicated test project
          (Admin.SharedKernel.Tests) and gate - counting it again against
          every consuming service's Tests project would let a service's

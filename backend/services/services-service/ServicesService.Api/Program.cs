@@ -67,6 +67,3 @@ app.MapControllers();
 app.MapDefaultEndpoints();
 
 app.Run();
-
-// Exposes Program to WebApplicationFactory<Program> in ServicesService.IntegrationTests.
-public partial class Program;

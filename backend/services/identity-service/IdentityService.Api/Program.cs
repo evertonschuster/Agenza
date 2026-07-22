@@ -130,6 +130,3 @@ app.MapRazorPages();
 app.MapDefaultEndpoints();
 
 app.Run();
-
-// Exposes Program to WebApplicationFactory<Program> in IdentityService.IntegrationTests.
-public partial class Program;
