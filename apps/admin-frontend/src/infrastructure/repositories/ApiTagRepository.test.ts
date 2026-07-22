@@ -35,6 +35,18 @@ describe('ApiTagRepository', () => {
     expect(tags[0]?.name).toBe(tagFixture.name)
   })
 
+  it('sends the search term as a query parameter', async () => {
+    server.use(
+      http.get(`${baseUrl}/api/v1/tags`, ({ request }) => {
+        expect(new URL(request.url).searchParams.get('search')).toBe('vip')
+        return HttpResponse.json([tagFixture])
+      }),
+    )
+    const repository = buildRepository()
+
+    await repository.listAll(buildTenantContext(), { search: 'vip' })
+  })
+
   it('creates a tag and returns the mapped result', async () => {
     server.use(
       http.post(`${baseUrl}/api/v1/tags`, async ({ request }) => {

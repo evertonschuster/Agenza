@@ -1,3 +1,4 @@
+using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 
@@ -5,6 +6,14 @@ namespace ServicesService.Application.Tags.UpdateTag;
 
 public static class UpdateTagCommandExtensions
 {
-    public static void ApplyTo(this UpdateTagCommand command, Tag tag) =>
-        tag.Update(command.Name, TagColor.From(command.Color), command.Description);
+    public static DomainResult ApplyTo(this UpdateTagCommand command, Tag tag)
+    {
+        var colorResult = TagColor.Create(command.Color);
+        if (colorResult.IsFailure)
+        {
+            return DomainResult.Failure(colorResult.Error);
+        }
+
+        return tag.Update(command.Name, colorResult.Value, command.Description);
+    }
 }

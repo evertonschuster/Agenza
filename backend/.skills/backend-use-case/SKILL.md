@@ -22,7 +22,6 @@ Open these files and mirror their shape:
 - `ServicesService.Application/Abstractions/` — ports (`ITagRepository`, `IUnitOfWork`)
 - `ServicesService.Api/Controllers/TagsController.cs` — direct command binding + Result → HTTP mapping (docs/adr/0007)
 - `ServicesService.Tests/Tags/CreateTag/` — handler + validator unit tests
-- `ServicesService.IntegrationTests/TagsEndpointTests.cs` — end-to-end HTTP tests
 
 identity-service's `Tenants/ProvisionTenant/` slice is the second
 reference — read it when the operation needs a database transaction
@@ -53,26 +52,38 @@ just adapt the templates.
   assign the tenant automatically on save (docs/adr/0008) — the
   constructor never takes a `tenantId` parameter at all; `TenantId`
   starts `Guid.Empty` and only `AssignTenant` (inherited) can set it,
-  throwing the shared `InvalidTenantException` on empty (docs/adr/0009)
-  — a missing tenant is a scoping bug, not a per-entity invariant, so
-  there's nothing to override here. A mapping extension (step 3) is
+  throwing a plain `InvalidOperationException` on empty (docs/adr/0009,
+  docs/adr/0014) — a missing tenant is a scoping bug, not a per-entity
+  invariant, so there's nothing to override here, and it's the one
+  entity-level path that's allowed to throw instead of returning
+  `DomainResult` (see step 1 below). A mapping extension (step 3) is
   therefore parameterless too — it never threads a tenant id through.
-- Constructor/factory validates every invariant; throw a dedicated
-  exception inheriting that service's `{Service}.Domain.Exceptions.BusinessException`
-  (`Code` + `Message`, e.g. `InvalidWidgetException(string message) :
-  base("Widget.Invalid", message)`) — never a raw `Exception`/
-  `ArgumentException`. Domain stays exception-based even though the rest
-  of the stack uses Result — see docs/adr/0005 for why (zero project
-  references; FluentValidation already checked shape by the time Domain
-  runs) and docs/adr/0006 for the `BusinessException` shape.
+- Public constructor becomes `private`; add a `public static
+  DomainResult<Widget> Create(...)` factory that validates every
+  invariant and returns `DomainResult.Failure<Widget>(new
+  DomainError("Widget.Invalid", message))` on the first invalid field
+  instead of throwing — never a raw `Exception`/`ArgumentException`, and
+  never a thrown domain exception at all (docs/adr/0014: no layer uses
+  exceptions for an expected/predictable outcome, including Domain
+  invariants). `DomainResult`/`DomainResult<T>`/`DomainError`
+  (`{Service}.Domain/Common/`) already exist per service — copy them
+  once, not per entity, same as `BaseEntity`. This is the repo-wide
+  default for every entity, new or existing.
+- State-changing methods (`Update`, `Cancel`, `Reschedule`) return
+  `DomainResult` (not `void`) for the same reason — validate every new
+  value into a local before assigning any field, so a failure never
+  leaves the entity partially mutated.
 - No public setters. Add a `private` parameterless constructor ONLY if EF
   needs it, and keep it private.
-- State changes go through named behavior methods (`Rename`, `Cancel`,
-  `Reschedule`), each keeping the entity valid.
 - Tests: plain xUnit + AwesomeAssertions, no mocks needed — Domain has
   zero dependencies. Cover `MarkCreated`/`MarkUpdated`/`MarkDeleted`
-  (inherited from `BaseEntity`) and `AssignTenant` (if `ITenantOwned`)
-  too — they count toward the coverage gate.
+  (inherited from `BaseEntity`) too — they count toward the coverage
+  gate. `AssignTenant` (if `ITenantOwned`) is the one exception to the
+  DomainResult rule — it still throws a plain `InvalidOperationException`
+  on an empty guid, since that path is only reachable via an internal
+  bug (`TenantHeaderFilter` already rejects a request with no/mismatched
+  tenant before any handler runs), not a business outcome — see step
+  1's `TenantOwnedEntity` note above and docs/adr/0014.
 
 ### 2. Port (interface) in `Application/Abstractions/`
 
@@ -106,11 +117,22 @@ Application/Tags/
   (`Admin.SharedKernel`) — never throws for an expected business outcome
   (validation failure, not-found, conflict, forbidden). Use
   `Error.Validation/.NotFound/.Conflict/.Forbidden(code, message)`.
-- Validator (commands with user input only): cheap synchronous shape
-  rules — required, length, enum/palette membership. NOT cross-aggregate
-  rules (uniqueness, existence) — those need the repository, so they
-  stay in the handler. The dispatcher runs the validator automatically
-  before the handler; don't call it yourself.
+- Validator (commands with user input only): **shape rules only**
+  (required, length, format, numeric range/precision, enum/palette
+  membership, cross-field comparisons within the same command) — no
+  repository dependencies (docs/adr/0012, reverting docs/adr/0010).
+  Cross-aggregate rules needing a repository round-trip (existence,
+  uniqueness, in-use) live in the **handler** as plain
+  `if (...) return Result.Failure(Error.NotFound(...)/Conflict(...))`
+  checks before persisting — see `CreateCategoryCommandHandler` for the
+  simple case and `Application/Services/ServiceRelationshipLoader.cs` for
+  a multi-dependency one (loads Category/Tags once, reused for both
+  construction and the response). The dispatcher runs the validator
+  automatically before the handler; don't call it yourself. It groups
+  every FluentValidation failure by field into `Error.FieldErrors`
+  (structured per-field errors, docs/adr/0012) — still set
+  `.WithErrorCode("Entity.SpecificCode")` on shape rules, it's cheap and
+  the front-end maps on it.
 - Constructor-injected ports only — no EF, no HttpClient, no ASP.NET
   types in Application.
 - Multiple writes that must succeed together → wrap in
@@ -129,6 +151,10 @@ Application/Tags/
   extension method beside the command (`ToModel(...)` for construction,
   `ApplyTo(entity)` for mutation) instead of inlining it in `Handle(...)`
   (docs/adr/0007) — see `CreateTagCommandExtensions`/`UpdateTagCommandExtensions`.
+  Both return `DomainResult<Widget>`/`DomainResult` respectively (step 1),
+  so the handler checks `IsFailure` and maps via `.Error.ToApplicationError()`
+  (`DomainErrorMapper`, `Application/Abstractions/`) before proceeding —
+  see the Create/Update handler templates below.
 
 ### 4. Unit tests with NSubstitute
 
@@ -138,10 +164,22 @@ Application/Tags/
   `.DidNotReceive().Method(...)`.
 - AwesomeAssertions, asserting on the `Result`: `result.IsSuccess`,
   `result.Value.Xyz`, `result.Error.Type.Should().Be(ErrorType.Conflict)`.
-- Test the happy path AND every failure path (validation, not-found,
-  conflict) — each should return the right `ErrorType`, never throw.
-- Add a small validator test file too (`AbstractValidator.Validate(...)`
-  directly, no DI needed) covering each rule's pass/fail case.
+- Test the happy path plus any `DomainResult.Failure` path the handler
+  can still hit (e.g. an invalid rename) — a handler unit test calls
+  `Handle(...)` directly, bypassing the validator, so it exercises paths
+  production traffic never reaches. Existence/uniqueness failures are no
+  longer handler-level concerns — test those on the validator instead.
+- Add a validator test file too, using `await validator.ValidateAsync(command)`
+  — **never the synchronous `Validate(...)`** if the validator has any
+  `MustAsync` rule; FluentValidation throws
+  `AsyncValidatorInvokedSynchronouslyException` even for a test that only
+  exercises an unrelated sync rule. Construct the validator with
+  NSubstitute repository fakes, stubbing the happy path as the default
+  (`repository.NameExistsAsync(...).Returns(false)`,
+  `repository.GetByIdAsync(...).Returns(someEntity)`) so pure shape-rule
+  tests aren't tripped up by the async rule, then add dedicated tests for
+  each `MustAsync` rule asserting `result.Errors` contains the expected
+  `ErrorCode`.
 
 ### 5. Infrastructure adapter
 
@@ -203,25 +241,22 @@ Application/Tags/
   M2M-only endpoints (see `TenantsController`, which is also
   `[IgnoreTenant]`).
 
-### 7. Integration test for the new endpoint
+### 7. Manual verification of the new endpoint
 
-- In the service's `<Service>.IntegrationTests` project (pattern:
-  `TagsEndpointTests`/`ProvisioningEndpointTests` — WebApplicationFactory
-  + Testcontainers Postgres, shared via `IClassFixture`). If the service
-  is a resource server (not the OIDC provider itself), use the
-  `TestAuthHandler` trick from `ServicesService.IntegrationTests` instead
-  of forging a real JWT.
-- Minimum: unauthenticated request → 401, wrong scope/tenant → 403,
-  a validation failure → 400, happy path → expected status + persisted
-  effect. Add a rollback-verification test if the handler uses
-  `ExecuteInTransactionAsync` (pattern: identity-service's
-  "fails and rolls back" test).
+There are no integration tests (docs/adr/0015) — CI runs unit tests only,
+no database, no Docker. Before merging, run the service (`dotnet run
+--project services/<service>/{Service}.Api`) and manually exercise the
+new endpoint with a real HTTP client: unauthenticated request → 401,
+wrong scope/tenant → 403, a validation failure → 400, happy path →
+expected status + persisted effect. If the handler uses
+`ExecuteInTransactionAsync`, manually verify a mid-transaction failure
+actually rolls back (e.g. temporarily force the second write to fail).
 
 ## Definition of done
 
 ```bash
 dotnet build backend/AdminBackend.slnx
-dotnet test backend/AdminBackend.slnx   # coverage gate via Directory.Build.props/.targets; integration needs Docker
+dotnet test backend/AdminBackend.slnx   # unit tests only; coverage gate via Directory.Build.props/.targets
 ```
 
 Both green, coverage gate passing, no new NU1903 (vulnerable package)
@@ -251,38 +286,95 @@ public sealed record CreateWidgetCommand(string Name) : ICommand<WidgetResponse>
 ```csharp
 // Application/Widgets/CreateWidget/CreateWidgetCommandValidator.cs
 using FluentValidation;
+using {Service}.Application.Abstractions;
 using {Service}.Domain.Entities;
 
 namespace {Service}.Application.Widgets.CreateWidget;
 
-// Cross-aggregate rules (uniqueness/existence) need the repository, so they stay in the handler below, not here.
 public sealed class CreateWidgetCommandValidator : AbstractValidator<CreateWidgetCommand>
 {
-    public CreateWidgetCommandValidator()
+    public CreateWidgetCommandValidator(IWidgetRepository repository)
     {
         RuleFor(command => command.Name).NotEmpty().MaximumLength(Widget.NameMaxLength);
+
+        // Delete this rule if the feature has no uniqueness rule.
+        RuleFor(command => command.Name)
+            .MustAsync(async (name, ct) => !await repository.NameExistsAsync(name, excludeId: null, ct))
+            .WithErrorCode("Widget.DuplicateName")
+            .WithMessage(command => $"A widget named '{command.Name}' already exists.");
     }
 }
 ```
 
 ```csharp
-// Domain/Exceptions/InvalidWidgetException.cs
-namespace {Service}.Domain.Exceptions;
+// Domain/Entities/Widget.cs
+using {Service}.Domain.Common;
 
-public class InvalidWidgetException : BusinessException
+namespace {Service}.Domain.Entities;
+
+public class Widget : TenantOwnedEntity
 {
-    public InvalidWidgetException(string message)
-        : base("Widget.Invalid", message)
+    public const int NameMaxLength = 80;
+
+    public string Name { get; private set; }
+
+    private Widget()
     {
+        Name = string.Empty; // EF Core materialization only.
+    }
+
+    private Widget(Guid id, string name)
+        : base(id)
+    {
+        Name = name;
+    }
+
+    public static DomainResult<Widget> Create(Guid id, string name)
+    {
+        var nameResult = ValidateName(name);
+        if (nameResult.IsFailure)
+        {
+            return DomainResult.Failure<Widget>(nameResult.Error);
+        }
+
+        return DomainResult.Success(new Widget(id, nameResult.Value));
+    }
+
+    public DomainResult Update(string name)
+    {
+        var nameResult = ValidateName(name);
+        if (nameResult.IsFailure)
+        {
+            return DomainResult.Failure(nameResult.Error);
+        }
+
+        Name = nameResult.Value;
+
+        return DomainResult.Success();
+    }
+
+    private static DomainResult<string> ValidateName(string name)
+    {
+        var trimmed = name?.Trim() ?? string.Empty;
+
+        if (trimmed.Length is 0 or > NameMaxLength)
+        {
+            return DomainResult.Failure<string>(new DomainError(
+                "Widget.Invalid",
+                $"Name is required and must be at most {NameMaxLength} characters."));
+        }
+
+        return DomainResult.Success(trimmed);
     }
 }
-// BusinessException itself already exists per service
-// ({Service}.Domain/Exceptions/BusinessException.cs) - copy it once, not
-// per entity (docs/adr/0006).
+// DomainResult/DomainError ({Service}.Domain/Common/) already exist per
+// service - copy them once, not per entity (docs/adr/0014). Never throw
+// for an invalid name/field - see step 1 above.
 ```
 
 ```csharp
 // Application/Widgets/CreateWidget/CreateWidgetCommandExtensions.cs
+using {Service}.Domain.Common;
 using {Service}.Domain.Entities;
 
 namespace {Service}.Application.Widgets.CreateWidget;
@@ -293,8 +385,8 @@ namespace {Service}.Application.Widgets.CreateWidget;
 // on save (docs/adr/0008).
 public static class CreateWidgetCommandExtensions
 {
-    public static Widget ToModel(this CreateWidgetCommand command) =>
-        new(Guid.CreateVersion7(), command.Name);
+    public static DomainResult<Widget> ToModel(this CreateWidgetCommand command) =>
+        Widget.Create(Guid.CreateVersion7(), command.Name);
 }
 ```
 
@@ -318,15 +410,13 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
 
     public async Task<Result<WidgetResponse>> Handle(CreateWidgetCommand command, CancellationToken cancellationToken)
     {
-        var widget = command.ToModel();
-
-        // Delete this block if the feature has no uniqueness rule.
-        if (await _repository.NameExistsAsync(widget.Name, excludeId: null, cancellationToken))
+        var widgetResult = command.ToModel();
+        if (widgetResult.IsFailure)
         {
-            return Result.Failure<WidgetResponse>(
-                Error.Conflict("Widget.DuplicateName", $"A widget named '{widget.Name}' already exists."));
+            return Result.Failure<WidgetResponse>(widgetResult.Error.ToApplicationError());
         }
 
+        var widget = widgetResult.Value;
         _repository.Add(widget);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
@@ -354,16 +444,30 @@ public sealed record UpdateWidgetCommand(Guid WidgetId, string Name) : ICommand<
 ```csharp
 // Application/Widgets/UpdateWidget/UpdateWidgetCommandValidator.cs
 using FluentValidation;
+using {Service}.Application.Abstractions;
 using {Service}.Domain.Entities;
 
 namespace {Service}.Application.Widgets.UpdateWidget;
 
 public sealed class UpdateWidgetCommandValidator : AbstractValidator<UpdateWidgetCommand>
 {
-    public UpdateWidgetCommandValidator()
+    public UpdateWidgetCommandValidator(IWidgetRepository repository)
     {
         RuleFor(command => command.WidgetId).NotEmpty();
+
+        RuleFor(command => command.WidgetId)
+            .MustAsync(async (id, ct) => await repository.GetByIdAsync(id, ct) is not null)
+            .WithErrorCode("Widget.NotFound")
+            .WithMessage(command => $"Widget '{command.WidgetId}' was not found.");
+
         RuleFor(command => command.Name).NotEmpty().MaximumLength(Widget.NameMaxLength);
+
+        // Delete this rule if the feature has no uniqueness rule.
+        RuleFor(command => command)
+            .MustAsync(async (command, ct) => !await repository.NameExistsAsync(command.Name, command.WidgetId, ct))
+            .WithErrorCode("Widget.DuplicateName")
+            .WithMessage(command => $"A widget named '{command.Name}' already exists.")
+            .OverridePropertyName(nameof(UpdateWidgetCommand.Name));
     }
 }
 // WidgetId is still validated even though it's route-sourced, not
@@ -374,14 +478,15 @@ public sealed class UpdateWidgetCommandValidator : AbstractValidator<UpdateWidge
 
 ```csharp
 // Application/Widgets/UpdateWidget/UpdateWidgetCommandExtensions.cs
+using {Service}.Domain.Common;
 using {Service}.Domain.Entities;
 
 namespace {Service}.Application.Widgets.UpdateWidget;
 
 public static class UpdateWidgetCommandExtensions
 {
-    public static void ApplyTo(this UpdateWidgetCommand command, Widget widget) =>
-        widget.Rename(command.Name);
+    public static DomainResult ApplyTo(this UpdateWidgetCommand command, Widget widget) =>
+        widget.Update(command.Name);
 }
 ```
 
@@ -405,21 +510,15 @@ public sealed class UpdateWidgetCommandHandler : ICommandHandler<UpdateWidgetCom
 
     public async Task<Result<WidgetResponse>> Handle(UpdateWidgetCommand command, CancellationToken cancellationToken)
     {
-        var widget = await _repository.GetByIdAsync(command.WidgetId, cancellationToken);
-        if (widget is null)
+        // Existence already guaranteed by UpdateWidgetCommandValidator.
+        var widget = (await _repository.GetByIdAsync(command.WidgetId, cancellationToken))!;
+
+        var applyResult = command.ApplyTo(widget);
+        if (applyResult.IsFailure)
         {
-            return Result.Failure<WidgetResponse>(
-                Error.NotFound("Widget.NotFound", $"Widget '{command.WidgetId}' was not found."));
+            return Result.Failure<WidgetResponse>(applyResult.Error.ToApplicationError());
         }
 
-        // Delete this block if the feature has no uniqueness rule.
-        if (await _repository.NameExistsAsync(command.Name, excludeId: widget.Id, cancellationToken))
-        {
-            return Result.Failure<WidgetResponse>(
-                Error.Conflict("Widget.DuplicateName", $"A widget named '{command.Name}' already exists."));
-        }
-
-        command.ApplyTo(widget);
         await _unitOfWork.SaveChangesAsync(cancellationToken);
 
         return WidgetResponse.FromWidget(widget);
@@ -599,7 +698,6 @@ using Admin.SharedKernel;
 using {Service}.Application.Abstractions;
 using {Service}.Application.Widgets.CreateWidget;
 using {Service}.Domain.Entities;
-using {Service}.Domain.Exceptions;
 
 namespace {Service}.Tests.Widgets.CreateWidget;
 
@@ -609,7 +707,6 @@ public class CreateWidgetCommandHandlerTests
     public async Task Handle_WithValidCommand_PersistsAndReturnsTheValue()
     {
         var repository = Substitute.For<IWidgetRepository>();
-        repository.NameExistsAsync("Example", null, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new CreateWidgetCommandHandler(repository, unitOfWork);
 
@@ -619,60 +716,67 @@ public class CreateWidgetCommandHandlerTests
         result.Value.Name.Should().Be("Example");
         // TenantId stays Guid.Empty here - AuditableEntitySaveChangesInterceptor
         // assigns it on save, which this handler-level test never runs
-        // (see AuditableEntitySaveChangesInterceptorTests for that, docs/adr/0008).
+        // (docs/adr/0008).
         repository.Received(1).Add(Arg.Is<Widget>(w => w.Id == result.Value.Id));
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_WithDuplicateName_ReturnsConflict()
-    {
-        var repository = Substitute.For<IWidgetRepository>();
-        repository.NameExistsAsync("example", null, Arg.Any<CancellationToken>()).Returns(true);
-        var handler = new CreateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>());
-
-        var result = await handler.Handle(
-            new CreateWidgetCommand("example"), CancellationToken.None); // case-insensitive match
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.Conflict);
-    }
-
-    [Fact]
-    public async Task Handle_WithInvalidName_Throws()
+    public async Task Handle_WithInvalidName_ReturnsFailure()
     {
         // Only reachable if a caller bypasses CreateWidgetCommandValidator
         // - handler unit tests call Handle(...) directly, so they exercise
         // this path even though production traffic never does.
         var handler = new CreateWidgetCommandHandler(Substitute.For<IWidgetRepository>(), Substitute.For<IUnitOfWork>());
 
-        var act = () => handler.Handle(new CreateWidgetCommand(""), CancellationToken.None);
+        var result = await handler.Handle(new CreateWidgetCommand(""), CancellationToken.None);
 
-        await act.Should().ThrowAsync<InvalidWidgetException>();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Widget.Invalid");
     }
 }
 ```
 
 ```csharp
 // Tests/Widgets/CreateWidget/CreateWidgetCommandValidatorTests.cs
+using {Service}.Application.Abstractions;
 using {Service}.Application.Widgets.CreateWidget;
 
 namespace {Service}.Tests.Widgets.CreateWidget;
 
 public class CreateWidgetCommandValidatorTests
 {
-    private readonly CreateWidgetCommandValidator _validator = new();
+    private readonly IWidgetRepository _repository = Substitute.For<IWidgetRepository>();
+    private readonly CreateWidgetCommandValidator _validator;
 
-    [Fact]
-    public void Validate_WithValidCommand_Passes()
+    public CreateWidgetCommandValidatorTests()
     {
-        _validator.Validate(new CreateWidgetCommand("Example")).IsValid.Should().BeTrue();
+        _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _validator = new CreateWidgetCommandValidator(_repository);
     }
 
     [Fact]
-    public void Validate_WithEmptyName_Fails()
+    public async Task Validate_WithValidCommand_Passes()
     {
-        _validator.Validate(new CreateWidgetCommand("")).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(new CreateWidgetCommand("Example"))).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithEmptyName_Fails()
+    {
+        (await _validator.ValidateAsync(new CreateWidgetCommand(""))).IsValid.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Validate_WithDuplicateName_FailsWithDuplicateNameErrorCode()
+    {
+        _repository.NameExistsAsync("Example", null, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _validator.ValidateAsync(new CreateWidgetCommand("Example"));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Widget.DuplicateName");
     }
 }
 ```
@@ -691,10 +795,9 @@ public class UpdateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
     {
-        var widget = new Widget(Guid.NewGuid(), "Old Name");
+        var widget = Widget.Create(Guid.NewGuid(), "Old Name").Value;
         var repository = Substitute.For<IWidgetRepository>();
         repository.GetByIdAsync(widget.Id, Arg.Any<CancellationToken>()).Returns(widget);
-        repository.NameExistsAsync("New Name", widget.Id, Arg.Any<CancellationToken>()).Returns(false);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new UpdateWidgetCommandHandler(repository, unitOfWork);
 
@@ -704,97 +807,81 @@ public class UpdateWidgetCommandHandlerTests
         result.Value.Name.Should().Be("New Name");
         await unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
-
-    [Fact]
-    public async Task Handle_WithUnknownWidgetId_ReturnsNotFound()
-    {
-        var repository = Substitute.For<IWidgetRepository>();
-        repository.GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>()).Returns((Widget?)null);
-        var handler = new UpdateWidgetCommandHandler(repository, Substitute.For<IUnitOfWork>());
-
-        var result = await handler.Handle(new UpdateWidgetCommand(Guid.NewGuid(), "New Name"), CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.NotFound);
-    }
 }
+// Existence/uniqueness failures (Widget.NotFound/Widget.DuplicateName)
+// are no longer handler-level outcomes - they're covered by
+// UpdateWidgetCommandValidatorTests below instead.
 ```
-
-### Regression test for automatic tenant assignment (EF Core InMemory, no Docker)
-
-Only needed once per service, the first time it gets a tenant-owned
-entity — not per feature. Copy
-`ServicesService.IntegrationTests/AuditableEntitySaveChangesInterceptorTests.cs`
-verbatim (rename the fake tenant provider/entity as needed): it wires
-the real `AuditableEntitySaveChangesInterceptor` against an
-`UseInMemoryDatabase` context and proves three things docs/adr/0008
-depends on — a newly added entity with `TenantId == Guid.Empty` gets
-the current tenant assigned on save, saving with no tenant available
-throws instead of persisting a tenant-less row, and an entity
-constructed with an explicit tenant is left alone.
-
-### Integration test (real HTTP, real Postgres)
-
-Replace `WidgetApiFactory` with whatever this service's own factory is
-actually called (`ServicesApiFactory`, `IdentityApiFactory`, ...) — see
-`ServicesApiFactory`/`TestAuthHandler` if this service doesn't exist yet.
 
 ```csharp
-// IntegrationTests/WidgetsEndpointTests.cs
-using System.Net;
-using System.Net.Http.Headers;
-using System.Net.Http.Json;
-using System.Text.Json;
+// Tests/Widgets/UpdateWidget/UpdateWidgetCommandValidatorTests.cs
+using {Service}.Application.Abstractions;
+using {Service}.Application.Widgets.UpdateWidget;
+using {Service}.Domain.Entities;
 
-namespace {Service}.IntegrationTests;
+namespace {Service}.Tests.Widgets.UpdateWidget;
 
-public class WidgetsEndpointTests : IClassFixture<WidgetApiFactory>
+public class UpdateWidgetCommandValidatorTests
 {
-    private const string Url = "/api/v1/widgets";
-    private readonly WidgetApiFactory _factory;
+    private readonly IWidgetRepository _repository = Substitute.For<IWidgetRepository>();
+    private readonly UpdateWidgetCommandValidator _validator;
+    private readonly Guid _widgetId = Guid.NewGuid();
 
-    public WidgetsEndpointTests(WidgetApiFactory factory) => _factory = factory;
-
-    [Fact]
-    public async Task List_without_a_token_is_unauthorized()
+    public UpdateWidgetCommandValidatorTests()
     {
-        var response = await _factory.CreateClient().GetAsync(Url);
-        response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+        var widget = Widget.Create(_widgetId, "Old Name").Value;
+        _repository.GetByIdAsync(_widgetId, Arg.Any<CancellationToken>()).Returns(widget);
+        _repository.NameExistsAsync(Arg.Any<string>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(false);
+        _validator = new UpdateWidgetCommandValidator(_repository);
     }
 
     [Fact]
-    public async Task Create_with_an_empty_name_is_rejected_by_validation()
+    public async Task Validate_WithValidCommand_Passes()
     {
-        var client = AuthenticatedClient(Guid.NewGuid());
-        var response = await client.PostAsJsonAsync(Url, new { name = "" });
-        response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+        (await _validator.ValidateAsync(new UpdateWidgetCommand(_widgetId, "New Name"))).IsValid.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Create_then_list_round_trips()
+    public async Task Validate_WithEmptyName_Fails()
     {
-        var client = AuthenticatedClient(Guid.NewGuid());
-
-        var createResponse = await client.PostAsJsonAsync(Url, new { name = "Example" });
-        createResponse.StatusCode.Should().Be(HttpStatusCode.Created);
-
-        var listResponse = await client.GetAsync(Url);
-        (await listResponse.Content.ReadFromJsonAsync<JsonElement[]>())
-            .Should().Contain(item => item.GetProperty("name").GetString() == "Example");
+        (await _validator.ValidateAsync(new UpdateWidgetCommand(_widgetId, ""))).IsValid.Should().BeFalse();
     }
 
-    private HttpClient AuthenticatedClient(Guid tenantId)
+    [Fact]
+    public async Task Validate_WithUnknownWidgetId_FailsWithNotFoundErrorCode()
     {
-        // If this service IS the OIDC provider, get a real token instead - see ProvisioningEndpointTests.RequestTokenAsync.
-        var client = _factory.CreateClient();
-        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Test", tenantId.ToString());
+        var unknownId = Guid.NewGuid();
+        _repository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Widget?)null);
 
-        // TenantHeaderFilter requires this to match the token's tenant_id
-        // claim (docs/adr/0006) - omit it entirely for an M2M-only test
-        // client that carries no tenant claim.
-        client.DefaultRequestHeaders.Add("X-Tenant-Id", tenantId.ToString());
+        var result = await _validator.ValidateAsync(new UpdateWidgetCommand(unknownId, "New Name"));
 
-        return client;
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Widget.NotFound");
+    }
+
+    [Fact]
+    public async Task Validate_RenamingToAnotherWidgetsName_FailsWithDuplicateNameErrorCode()
+    {
+        _repository.NameExistsAsync("New Name", _widgetId, Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await _validator.ValidateAsync(new UpdateWidgetCommand(_widgetId, "New Name"));
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(e => e.ErrorCode == "Widget.DuplicateName");
     }
 }
 ```
+
+### Automatic tenant assignment has no automated regression test
+
+`{Service}.Tests` references only Domain + Application (mocked ports,
+no EF Core) — deliberately, to keep the unit-test tier free of
+Infrastructure/EF dependencies (docs/adr/0015). This means the
+`AuditableEntitySaveChangesInterceptor` behavior docs/adr/0008 depends
+on — a newly added entity with `TenantId == Guid.Empty` gets the
+current tenant assigned on save, saving with no tenant available throws
+instead of persisting a tenant-less row — has no automated coverage.
+The first time a service gets a tenant-owned entity, manually verify
+this by running the service and creating a record through its API,
+confirming the persisted row's `TenantId` matches the caller's tenant.

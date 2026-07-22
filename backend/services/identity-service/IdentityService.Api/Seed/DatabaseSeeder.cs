@@ -26,7 +26,17 @@ public class DatabaseSeeder : IHostedService
         var services = scope.ServiceProvider;
 
         var dbContext = services.GetRequiredService<IdentityDataContext>();
-        await dbContext.Database.MigrateAsync(cancellationToken);
+
+        // Defaults to true for local-dev/single-instance convenience. Multiple
+        // replicas starting concurrently would race to apply the same
+        // migration - set Migrations:RunOnStartup=false and run migrations as
+        // a separate deployment step once a real multi-replica topology
+        // exists (see docs/MONOREPO.md's "Known gaps"). Seeding still runs
+        // either way - it assumes the schema is already migrated.
+        if (_configuration.GetValue("Migrations:RunOnStartup", true))
+        {
+            await dbContext.Database.MigrateAsync(cancellationToken);
+        }
 
         await SeedScopesAsync(services, cancellationToken);
         await SeedClientsAsync(services, cancellationToken);

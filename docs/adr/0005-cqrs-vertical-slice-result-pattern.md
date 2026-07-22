@@ -2,7 +2,13 @@
 
 Status: accepted (2026-07); testing convention partially superseded by
 docs/adr/0006 (NSubstitute replaces the hand-written fakes described
-below)
+below); FluentValidation convention further superseded by docs/adr/0010;
+Domain-throws-for-its-own-invariants convention (Tag/Category/Service
+only) further superseded by docs/adr/0011, reinstated by docs/adr/0012,
+and finally superseded by docs/adr/0014 (Domain returns DomainResult
+instead of throwing); the `IdentityService.IntegrationTests`-verified
+claim in "UnitOfWork shapes" superseded by docs/adr/0015 (integration
+tests removed, unit tests only in CI)
 
 ## Context
 

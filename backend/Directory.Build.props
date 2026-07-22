@@ -9,12 +9,8 @@
     the assemblies each test project references (Domain + Application)
     and fails `dotnet test` below 80% line coverage. Lives here instead
     of CI flags so local `dotnet test` enforces the same gate.
-
-    *.IntegrationTests projects are deliberately exempt: they exercise
-    Api + Infrastructure end-to-end (WebApplicationFactory +
-    Testcontainers) where a line-coverage threshold is noise.
   -->
-  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests')) And !$(MSBuildProjectName.EndsWith('.IntegrationTests'))">
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('.Tests'))">
     <CollectCoverage>true</CollectCoverage>
     <Threshold>80</Threshold>
     <ThresholdType>line</ThresholdType>

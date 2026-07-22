@@ -81,18 +81,34 @@ what's blocked, and what order to build things in.
 
 ### Services
 
-| Piece                                    | Status | Notes                        |
-| ---------------------------------------- | ------ | ---------------------------- |
-| `Service` entity                         | `stub` | Waiting on API spec          |
-| `ServiceRepository` interface            | `stub` |                              |
-| Use cases (List, Create, Update, Delete) | `stub` |                              |
-| `ApiServiceRepository`                   | `stub` |                              |
-| `serviceMapper`                          | `stub` |                              |
-| `useServices` hook                       | `stub` |                              |
-| `ServicesPage`                           | `stub` | Renders "under construction" |
+| Piece                                         | Status | Notes                                                                                         |
+| --------------------------------------------- | ------ | --------------------------------------------------------------------------------------------- |
+| `Service` entity                              | `done` | Duration range + discount-cap invariants validated in `create()`                              |
+| `ServiceRepository` interface                 | `done` |                                                                                               |
+| Use cases (List, Create, Update, Delete)      | `done` |                                                                                               |
+| `ApiServiceRepository` + `serviceMapper`      | `done` |                                                                                               |
+| `useServices` hook                            | `done` |                                                                                               |
+| `ServicesPage` + `ServiceForm` + nav entry    | `done` | Table list, dialog create/edit form (category `Select`, tag toggle grid), delete with confirm |
+| Backend (services-service `/api/v1/services`) | `done` | Search/filter/pagination added; see docs/adr/0012 for the latest validation/handler shape     |
 
-**Blocked on:** API spec from project owner, `HttpClient` implementation.
-**Dependency:** None — can be built first.
+**Dependency:** none structurally — depends on Categories and Tags for the
+create/edit form's pickers, both already built.
+
+---
+
+### Categories
+
+| Piece                                           | Status | Notes                                                                          |
+| ----------------------------------------------- | ------ | ------------------------------------------------------------------------------ |
+| `Category` entity                               | `done` |                                                                                |
+| `CategoryRepository` interface                  | `done` |                                                                                |
+| Use cases (List, Create, Update, Delete)        | `done` |                                                                                |
+| `ApiCategoryRepository` + `categoryMapper`      | `done` |                                                                                |
+| `useCategories` hook                            | `done` |                                                                                |
+| `CategoriesPage` + nav entry                    | `done` | Table list, dialog create/edit form, delete with confirm                       |
+| Backend (services-service `/api/v1/categories`) | `done` | Search/filter added; see docs/adr/0012 for the latest validation/handler shape |
+
+**Dependency:** none. Referenced by Services (optional `categoryId`).
 
 ---
 
@@ -167,13 +183,15 @@ what's blocked, and what order to build things in.
 ## Recommended build order
 
 ```
-1. HttpClient (unblocks all REST features)
-2. Services    (no dependencies, simplest CRUD — good first REST vertical)
-3. Clients     (simple CRUD)
-4. Appointments (depends on Services for create form)
-5. Inbox       (depends on Clients)
-6. Dashboard   (depends on Appointments + Inbox for overview data)
-7. Settings    (independent, can be done any time after HttpClient)
+1. HttpClient (unblocks all REST features)          [done]
+2. Tags        (no dependencies, first REST vertical) [done]
+3. Categories  (no dependencies, simplest CRUD)      [done]
+4. Services    (depends on Categories + Tags for its form pickers) [done]
+5. Clients     (simple CRUD)
+6. Appointments (depends on Services for create form)
+7. Inbox       (depends on Clients)
+8. Dashboard   (depends on Appointments + Inbox for overview data)
+9. Settings    (independent, can be done any time after HttpClient)
 ```
 
 ---
@@ -192,5 +210,37 @@ what's blocked, and what order to build things in.
 | Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager)  | 14                                     | 73                                |
 | Tags vertical + UI system (shadcn/ui migration, dark mode, mobile-responsive `AdminLayout`) | not logged incrementally               | 116 (verified via `npm run test`) |
 | UI reset to stock shadcn theme + Tags list/form → `Table`/`Dialog`                          | 0 (existing tests updated, none added) | 116 (verified via `npm run test`) |
+| Categories + Services verticals (entities, use cases, repos, mappers, hooks, pages)         | 75                                     | 191 (verified via `npm run test`) |
 
 Update the test count row whenever a feature vertical is completed.
+
+---
+
+## Bundle size baseline
+
+No bundle-size measurement or documentation existed anywhere in this
+repo before 2026-07-21 — the numbers below are the **first** recorded
+baseline, captured from `npm run build --workspace=apps/admin-frontend`
+(Vite 8, production build) after the Tags/Categories/Services verticals
+and the OpenAPI-generated-types/accessibility/error-handling hardening
+pass. They are not a confirmation of any prior figure.
+
+| Chunk                       | Raw       | Gzip      |
+| --------------------------- | --------- | --------- |
+| `index-*.js` (main entry)   | 447.82 kB | 137.38 kB |
+| `ServicesPage-*.js`         | 93.51 kB  | 29.58 kB  |
+| `table-*.js` (shared table) | 103.84 kB | 30.78 kB  |
+| `index-*.css`               | 63.32 kB  | 10.85 kB  |
+
+All other route chunks (Categories/Tags pages and forms, stub pages)
+are under 5 kB raw each — lazy-loaded per route, not part of the
+initial load.
+
+No pathological duplication was found (e.g. no repeated Radix/shadcn
+tree across chunks), so no bundle-splitting work was done against this
+baseline — only re-measure and revisit if a future change pushes a
+number up materially.
+
+Update this table whenever a change is expected to move the numbers
+meaningfully (a new heavy dependency, a new route, code-splitting
+work) — not on every commit.

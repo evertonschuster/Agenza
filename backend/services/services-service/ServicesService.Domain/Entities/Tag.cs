@@ -1,5 +1,4 @@
 using ServicesService.Domain.Common;
-using ServicesService.Domain.Exceptions;
 using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Domain.Entities;
@@ -21,49 +20,85 @@ public class Tag : TenantOwnedEntity
         Color = null!;
     }
 
-    public Tag(Guid id, string name, TagColor color, string? description)
+    private Tag(Guid id, string name, TagColor color, string? description)
         : base(id)
     {
-        Name = ValidateName(name);
+        Name = name;
         Color = color;
-        Description = ValidateDescription(description);
+        Description = description;
     }
 
-    public void Update(string name, TagColor color, string? description)
+    public static DomainResult<Tag> Create(Guid id, string name, TagColor color, string? description)
     {
-        Name = ValidateName(name);
-        Color = color;
-        Description = ValidateDescription(description);
+        var nameResult = ValidateName(name);
+        if (nameResult.IsFailure)
+        {
+            return DomainResult.Failure<Tag>(nameResult.Error);
+        }
+
+        var descriptionResult = ValidateDescription(description);
+        if (descriptionResult.IsFailure)
+        {
+            return DomainResult.Failure<Tag>(descriptionResult.Error);
+        }
+
+        return DomainResult.Success(new Tag(id, nameResult.Value, color, descriptionResult.Value));
     }
 
-    private static string ValidateName(string name)
+    public DomainResult Update(string name, TagColor color, string? description)
+    {
+        // Validate every new value before assigning anything, so a later
+        // validation failure (e.g. an over-length description) can never
+        // leave the entity with some fields already overwritten.
+        var nameResult = ValidateName(name);
+        if (nameResult.IsFailure)
+        {
+            return DomainResult.Failure(nameResult.Error);
+        }
+
+        var descriptionResult = ValidateDescription(description);
+        if (descriptionResult.IsFailure)
+        {
+            return DomainResult.Failure(descriptionResult.Error);
+        }
+
+        Name = nameResult.Value;
+        Color = color;
+        Description = descriptionResult.Value;
+
+        return DomainResult.Success();
+    }
+
+    private static DomainResult<string> ValidateName(string name)
     {
         var trimmed = name?.Trim() ?? string.Empty;
 
         if (trimmed.Length is 0 or > NameMaxLength)
         {
-            throw new InvalidTagException(
-                $"O nome da etiqueta é obrigatório e deve ter no máximo {NameMaxLength} caracteres.");
+            return DomainResult.Failure<string>(new DomainError(
+                "Tag.Invalid",
+                $"O nome da etiqueta é obrigatório e deve ter no máximo {NameMaxLength} caracteres."));
         }
 
-        return trimmed;
+        return DomainResult.Success(trimmed);
     }
 
-    private static string? ValidateDescription(string? description)
+    private static DomainResult<string?> ValidateDescription(string? description)
     {
         var trimmed = description?.Trim();
 
         if (string.IsNullOrEmpty(trimmed))
         {
-            return null;
+            return DomainResult.Success<string?>(null);
         }
 
         if (trimmed.Length > DescriptionMaxLength)
         {
-            throw new InvalidTagException(
-                $"A descrição da etiqueta deve ter no máximo {DescriptionMaxLength} caracteres.");
+            return DomainResult.Failure<string?>(new DomainError(
+                "Tag.Invalid",
+                $"A descrição da etiqueta deve ter no máximo {DescriptionMaxLength} caracteres."));
         }
 
-        return trimmed;
+        return DomainResult.Success<string?>(trimmed);
     }
 }

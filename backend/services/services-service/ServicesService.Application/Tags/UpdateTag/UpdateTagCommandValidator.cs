@@ -8,7 +8,8 @@ public sealed class UpdateTagCommandValidator : AbstractValidator<UpdateTagComma
 {
     public UpdateTagCommandValidator()
     {
-        RuleFor(command => command.TagId).NotEmpty().WithMessage("O id da etiqueta é obrigatório.");
+        RuleFor(command => command.TagId)
+            .NotEmpty().WithMessage("O id da etiqueta é obrigatório.");
 
         RuleFor(command => command.Name)
             .NotEmpty().WithMessage("O nome da etiqueta é obrigatório.")

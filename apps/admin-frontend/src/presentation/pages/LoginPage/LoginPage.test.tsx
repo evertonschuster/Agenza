@@ -30,10 +30,13 @@ function renderLoginPage(container: AppContainer): void {
 }
 
 describe('LoginPage', () => {
-  it('renders the sign-in button', () => {
+  it('renders the sign-in button', async () => {
     renderLoginPage(buildContainer())
 
-    expect(screen.getByRole('button', { name: /entrar/i })).toBeInTheDocument()
+    // useAuth()'s session load resolves after this test's own assertions -
+    // wait for it to settle so its state update is captured inside act()
+    // instead of warning after the test body has already returned.
+    expect(await screen.findByRole('button', { name: /entrar/i })).toBeInTheDocument()
   })
 
   it('calls login when the sign-in button is clicked', async () => {

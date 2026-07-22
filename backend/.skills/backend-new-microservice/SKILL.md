@@ -22,8 +22,8 @@ context (e.g. notifications/email, billing).
 ## Steps
 
 1. **Copy the five-project layout** of `services/services-service/`
-   (Domain, Application, Infrastructure, Api, Tests, IntegrationTests)
-   with your service's name. Both `services-service` and
+   (Domain, Application, Infrastructure, Api, Tests) with your service's
+   name. Both `services-service` and
    `identity-service` are real, fully-built services — mirror either's
    patterns for the *content* of each project (rich domain entities,
    use cases, EF Core repositories, thin controllers).
@@ -46,13 +46,10 @@ context (e.g. notifications/email, billing).
    too) — copy the ItemGroup from an existing Tests csproj; the 80%
    coverage gate from `backend/Directory.Build.props`/`.targets` applies
    to any `*.Tests` project automatically, with `Admin.SharedKernel`
-   already excluded).
-   Once the service has real endpoints, add a `<Service>.IntegrationTests`
-   project too (copy `ServicesService.IntegrationTests`: Mvc.Testing +
-   Testcontainers.PostgreSql + AwesomeAssertions,
-   `public partial class Program;` in the Api's Program.cs; add a
-   `TestAuthHandler` since this new service is a resource server, not an
-   OIDC provider).
+   already excluded). There is no `<Service>.IntegrationTests` project —
+   CI runs unit tests only, no database, no Docker (docs/adr/0015).
+   Verify endpoints/persistence/auth manually instead (`dotnet run` + a
+   real HTTP client) before merging.
 
 4. **Auth**: in `Program.cs`, call
    `AddIdentityServiceAuthentication(builder.Configuration, "<audience>")`
@@ -104,9 +101,11 @@ context (e.g. notifications/email, billing).
    read this property off the live `DbContext` instance at query time, it
    must never be baked in as a snapshotted `Guid` value (EF Core caches
    the compiled model per `DbContext` *type*, so a baked-in constant
-   would leak across every request regardless of the real caller;
-   `ServicesDataContextTenantScopingTests` in `ServicesService.IntegrationTests`
-   is the regression test that catches this). After
+   would leak across every request regardless of the real caller — there
+   is no automated regression test for this, `{Service}.Tests`
+   deliberately has no EF Core dependency, docs/adr/0015; verify
+   manually with two different tenants' tokens against a running
+   instance). After
    `ApplyConfigurationsFromAssembly` in `OnModelCreating`, call
    `builder.ApplyAuditableConventions(this, typeof(BaseEntity),
    typeof(ITenantOwned))` (`Admin.SharedKernel.EntityFrameworkCore`) —
@@ -115,20 +114,23 @@ context (e.g. notifications/email, billing).
    entity configuration or repository method needs an explicit tenant id
    (docs/adr/0006).
 
-8. **Exceptions**: add `{Service}.Domain/Exceptions/BusinessException.cs`
-   (copy verbatim — `Code` + `Message`, docs/adr/0006); every domain
-   invariant exception inherits it. Add
-   `{Service}.Api/ExceptionHandling/BusinessExceptionHandler.cs` (copy
-   verbatim, only the `using {Service}.Domain.Exceptions;` changes) and
-   register both handlers in `Program.cs`, in this order:
-   `builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
-   builder.Services.AddExceptionHandler<GenericExceptionHandler>();
-   builder.Services.AddProblemDetails();`, then `app.UseExceptionHandler();`
-   early in the pipeline (before `MapControllers`).
-   `Admin.SharedKernel.GenericExceptionHandler` is shared (no per-service
-   copy needed) - it logs and 500s anything `BusinessExceptionHandler`
-   didn't handle. Command handlers that construct/mutate a domain entity
-   never wrap it in try/catch — see `backend-use-case` skill step 3.
+8. **No exceptions for expected outcomes** (docs/adr/0014): add
+   `{Service}.Domain/Common/DomainResult.cs` + `DomainError.cs` (copy
+   verbatim — mirrors `Admin.SharedKernel.Result`/`Error` but with zero
+   external dependencies) and `{Service}.Application/Abstractions/DomainErrorMapper.cs`
+   (`DomainError.ToApplicationError()` → `Error.Validation(code, message)`,
+   copy verbatim). Every entity factory/`Update` method returns
+   `DomainResult`/`DomainResult<T>` instead of throwing — see
+   `backend-use-case` skill step 1. Register only
+   `builder.Services.AddExceptionHandler<GenericExceptionHandler>();
+   builder.Services.AddProblemDetails();` in `Program.cs`, then
+   `app.UseExceptionHandler();` early in the pipeline (before
+   `MapControllers`) — there is no per-service `BusinessExceptionHandler`
+   to register; `Admin.SharedKernel.GenericExceptionHandler` (shared, no
+   per-service copy) is the only exception handler, reserved for
+   genuinely unexpected failures. Command handlers that construct/mutate
+   a domain entity check `domainResult.IsFailure` and map it — never
+   wrap it in try/catch — see `backend-use-case` skill step 3.
 
 9. **Observability**: `builder.AddServiceDefaults()` +
    `app.MapDefaultEndpoints()` (health checks + OpenTelemetry come free).
@@ -160,7 +162,6 @@ using Admin.SharedKernel;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;
-using WidgetService.Api.ExceptionHandling;
 using WidgetService.Application;
 using WidgetService.Infrastructure;
 
@@ -176,7 +177,6 @@ builder.Services.AddControllers(options =>
 });
 builder.Services.AddOpenApi();
 
-builder.Services.AddExceptionHandler<BusinessExceptionHandler>();
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
 
@@ -225,9 +225,6 @@ app.MapControllers();
 app.MapDefaultEndpoints();
 
 app.Run();
-
-// Exposes Program to WebApplicationFactory<Program> in WidgetService.IntegrationTests.
-public partial class Program;
 ```
 
 ### Application/DependencyInjection.cs

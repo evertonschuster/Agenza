@@ -1,10 +1,14 @@
 import { useState, type JSX } from 'react'
 import { useAuth } from '../../hooks/useAuth'
 import { useTags } from '../../hooks/useTags'
+import { useDebouncedValue } from '../../hooks/useDebouncedValue'
 import { TAG_COLOR_PALETTE, type Tag, type TagColor } from '../../../domain/entities/Tag'
-import { TagForm, type TagFormValues } from './TagForm'
+import { TagForm, type TagFormValues, type TagFormField } from '../../forms/TagForm'
+import { mapApiErrorToForm, type ServerFormError } from '../../forms/serverFormError'
+import { tagFieldMap, tagCodeFieldMap } from '../../forms/fieldMaps'
 import { PageHeader } from '../../components/PageHeader'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import {
   AlertDialog,
@@ -53,11 +57,16 @@ function messageFrom(error: unknown, fallback: string): string {
 
 export function TagsPage(): JSX.Element {
   const { tenantContext } = useAuth()
-  const { tags, status, error, createTag, updateTag, deleteTag } = useTags(tenantContext)
+  const [searchInput, setSearchInput] = useState('')
+  const debouncedSearch = useDebouncedValue(searchInput, 300)
+  const { tags, status, error, refetch, createTag, updateTag, deleteTag } = useTags(
+    tenantContext,
+    debouncedSearch,
+  )
 
   const [formTarget, setFormTarget] = useState<FormTarget | null>(null)
   const [displayTarget, setDisplayTarget] = useState<FormTarget | null>(null)
-  const [formError, setFormError] = useState<string | null>(null)
+  const [serverError, setServerError] = useState<ServerFormError<TagFormField> | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [deleteTarget, setDeleteTarget] = useState<Tag | null>(null)
   const [deleteError, setDeleteError] = useState<string | null>(null)
@@ -66,13 +75,13 @@ export function TagsPage(): JSX.Element {
   function openCreateForm(): void {
     setFormTarget('new')
     setDisplayTarget('new')
-    setFormError(null)
+    setServerError(null)
   }
 
   function openEditForm(tag: Tag): void {
     setFormTarget(tag)
     setDisplayTarget(tag)
-    setFormError(null)
+    setServerError(null)
   }
 
   function closeForm(): void {
@@ -80,12 +89,12 @@ export function TagsPage(): JSX.Element {
     // after `open` flips to false, and clearing displayTarget here would
     // blank the title/form during that animation instead of after it.
     setFormTarget(null)
-    setFormError(null)
+    setServerError(null)
   }
 
   async function handleSubmit(values: TagFormValues): Promise<void> {
     setIsSubmitting(true)
-    setFormError(null)
+    setServerError(null)
     try {
       if (formTarget === 'new') {
         await createTag(toTagInput(values))
@@ -94,7 +103,14 @@ export function TagsPage(): JSX.Element {
       }
       closeForm()
     } catch (caughtError) {
-      setFormError(messageFrom(caughtError, 'Não foi possível salvar a etiqueta.'))
+      setServerError(
+        mapApiErrorToForm(
+          caughtError,
+          tagFieldMap,
+          tagCodeFieldMap,
+          'Não foi possível salvar a etiqueta.',
+        ),
+      )
     } finally {
       setIsSubmitting(false)
     }
@@ -128,22 +144,55 @@ export function TagsPage(): JSX.Element {
         action={<Button onClick={openCreateForm}>Nova etiqueta</Button>}
       />
 
-      <div className="mt-6">
-        {status === 'loading' && <StatusMessage>Carregando etiquetas…</StatusMessage>}
+      <div className="mt-4 max-w-sm">
+        <Input
+          type="search"
+          aria-label="Buscar etiqueta por nome"
+          placeholder="Buscar por nome…"
+          value={searchInput}
+          onChange={event => {
+            setSearchInput(event.target.value)
+          }}
+        />
+      </div>
 
-        {status === 'error' && (
+      <div className="mt-6">
+        {status === 'loading' && tags.length === 0 && (
+          <StatusMessage>Carregando etiquetas…</StatusMessage>
+        )}
+
+        {status === 'error' && tags.length === 0 && (
           <StatusMessage tone="error">
             Não foi possível carregar as etiquetas
             {error instanceof Error ? `: ${error.message}` : '.'}
           </StatusMessage>
         )}
 
-        {status === 'success' && tags.length === 0 && (
-          <StatusMessage>Nenhuma etiqueta ainda. Crie uma para começar.</StatusMessage>
+        {/* A refresh that fails after tags were already loaded (e.g. right
+            after a successful create/update/delete) keeps showing the last
+            known-good list instead of a blocking error - the mutation itself
+            already succeeded, only the sync afterward failed. */}
+        {status === 'error' && tags.length > 0 && (
+          <StatusMessage tone="error">
+            Não foi possível atualizar a lista de etiquetas
+            {error instanceof Error ? `: ${error.message}` : '.'} Mostrando os últimos dados
+            carregados.{' '}
+            <button type="button" onClick={() => void refetch()} className="underline">
+              Tentar novamente
+            </button>
+          </StatusMessage>
         )}
 
-        {status === 'success' && tags.length > 0 && (
-          <div className="rounded-lg border">
+        {status === 'success' && tags.length === 0 && (
+          <StatusMessage>
+            {debouncedSearch.trim() === ''
+              ? 'Nenhuma etiqueta ainda. Crie uma para começar.'
+              : 'Nenhuma etiqueta encontrada para essa busca.'}
+          </StatusMessage>
+        )}
+
+        {tags.length > 0 && (
+          <div className="overflow-x-auto rounded-lg border">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -218,7 +267,7 @@ export function TagsPage(): JSX.Element {
               }
               submitLabel={displayTarget === 'new' ? 'Criar etiqueta' : 'Salvar alterações'}
               isSubmitting={isSubmitting}
-              error={formError}
+              serverError={serverError}
               onCancel={closeForm}
               onSubmit={handleSubmit}
             />

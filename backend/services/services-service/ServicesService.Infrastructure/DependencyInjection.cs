@@ -28,7 +28,9 @@ public static class DependencyInjection
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
 
         services.AddScoped<ITagRepository, TagRepository>();
-        services.AddScoped<IServiceOfferingRepository, ServiceOfferingRepository>();
+        services.AddScoped<IServiceRepository, ServiceRepository>();
+        services.AddScoped<ICategoryRepository, CategoryRepository>();
+        services.AddScoped<IServiceCodeGenerator, ServiceCodeGenerator>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();
 
         return services;

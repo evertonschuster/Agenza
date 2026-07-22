@@ -12,9 +12,12 @@ what exists *today*.
 | `user-app`       | planned | Lightweight end-user app (booking, messages) — simpler than admin: fewer layers are acceptable, but tenant scoping and strict TS still apply |
 | `company-site`   | planned | Company marketing site — mostly static, SEO-focused             |
 
-All React + TypeScript, npm workspaces, shared DTO/contract types in
-`packages/shared-types`. New apps copy `admin-frontend`'s tooling
-(Vite, Vitest, ESLint boundaries) unless an ADR says otherwise.
+All React + TypeScript, npm workspaces. New apps copy `admin-frontend`'s
+tooling (Vite, Vitest, ESLint boundaries) unless an ADR says otherwise.
+`packages/shared-types` held shared DTO/contract types at one point but was
+removed as unused while `admin-frontend` is the only Node app in the
+workspace — recreate it once `user-app` or `company-site` actually exist and
+need to share contracts with `admin-frontend`, rather than before.
 
 ## Backend — context-aggregated .NET services (`backend/services/*`)
 
@@ -25,7 +28,7 @@ its own domain model, its own schema, its own API.
 | Service            | Status   | Context it owns                                              |
 | ------------------ | -------- | ------------------------------------------------------------ |
 | `identity-service` | active   | Authentication (OIDC/OpenIddict), tenants, users, M2M tokens |
-| `services-service` | active   | The business's offering: Tags and the services catalog (`ServiceOffering`) are done; appointments and clients belong here too unless they grow enough to justify their own context |
+| `services-service` | active   | The business's offering: Tags, Categories, and the Services catalog are done; appointments and clients belong here too unless they grow enough to justify their own context |
 | `notification-service` | planned | Email/SMS/push — one place for templates, delivery, retries |
 
 Cross-service communication: HTTP with M2M JWTs from identity-service

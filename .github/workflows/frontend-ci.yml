@@ -39,7 +39,7 @@ jobs:
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(apps/admin-frontend/|packages/shared-types/|package\.json$|package-lock\.json$|\.github/workflows/frontend-ci\.yml$)'; then
+          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(apps/admin-frontend/|package\.json$|package-lock\.json$|\.github/workflows/frontend-ci\.yml$)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -57,7 +57,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: '22'
+          node-version-file: '.nvmrc'
           cache: 'npm'
 
       - name: Install dependencies
@@ -83,3 +83,74 @@ jobs:
 
       - name: Test
         run: npm run test:coverage --workspace=apps/admin-frontend
+
+  # Separate gate from `changes` above: a services-service response shape
+  # change is exactly the kind of drift src/infrastructure/generated/
+  # services-api.d.ts needs to catch, even on a PR that never touches
+  # apps/admin-frontend itself.
+  api-contract-changes:
+    name: detect-api-contract-changes
+    runs-on: ubuntu-latest
+    outputs:
+      relevant: ${{ steps.filter.outputs.relevant }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+          fetch-depth: 0
+
+      - id: filter
+        run: |
+          BASE="${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
+          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(apps/admin-frontend/|backend/services/services-service/|backend/shared/|\.github/workflows/frontend-ci\.yml$)'; then
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=false" >> "$GITHUB_OUTPUT"
+          fi
+
+  api-contract-check:
+    name: api-contract-check
+    needs: api-contract-changes
+    if: needs.api-contract-changes.outputs.relevant == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version-file: '.nvmrc'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      # Only services-service is started - it's the only backend surface
+      # this admin-frontend generates DTO types from today (identity-service
+      # is consumed entirely through oidc-client-ts, not hand-written DTOs).
+      - name: Start services-service and its dependencies
+        run: docker compose -f infra/docker-compose.yml up -d --build postgres identity-service services-service
+
+      - name: Wait for services-service to serve its OpenAPI document
+        run: |
+          for _ in $(seq 1 30); do
+            if curl -sf http://localhost:5080/openapi/v1.json > /dev/null; then
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "services-service never became ready" >&2
+          docker compose -f infra/docker-compose.yml logs services-service
+          exit 1
+
+      - name: Check generated API types are up to date
+        run: npm run generate:api-types:check --workspace=apps/admin-frontend
+
+      - name: Tear down
+        if: always()
+        run: docker compose -f infra/docker-compose.yml down -v

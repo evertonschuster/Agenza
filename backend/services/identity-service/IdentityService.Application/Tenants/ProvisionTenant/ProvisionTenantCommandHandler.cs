@@ -27,8 +27,14 @@ public sealed class ProvisionTenantCommandHandler : ICommandHandler<ProvisionTen
         // Both writes run in one transaction so a failed owner creation rolls the tenant back too, instead of leaving it orphaned.
         return _unitOfWork.ExecuteInTransactionAsync<ProvisionTenantResponse>(async ct =>
         {
-            // Left uncaught on purpose - the Api's global exception handler maps InvalidTenantException to a 400 (docs/adr/0006).
-            var tenant = new Tenant(Guid.CreateVersion7(), command.TenantName);
+            var tenantResult = Tenant.Create(Guid.CreateVersion7(), command.TenantName);
+
+            if (tenantResult.IsFailure)
+            {
+                return Result.Failure<ProvisionTenantResponse>(tenantResult.Error.ToApplicationError());
+            }
+
+            var tenant = tenantResult.Value;
 
             await _tenantRepository.AddAsync(tenant, ct);
 

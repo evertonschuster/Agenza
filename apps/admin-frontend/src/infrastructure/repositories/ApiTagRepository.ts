@@ -1,6 +1,7 @@
 import type { Tag } from '../../domain/entities/Tag'
 import type {
   CreateTagInput,
+  ListAllTagsOptions,
   TagRepository,
   UpdateTagInput,
 } from '../../application/repositories/TagRepository'
@@ -24,8 +25,13 @@ export class ApiTagRepository implements TagRepository {
     this.httpClient = httpClient
   }
 
-  async listAll(_tenantContext: TenantContext): Promise<Tag[]> {
-    const dtos = await this.httpClient.get<TagDto[]>(TAGS_URL)
+  async listAll(_tenantContext: TenantContext, options: ListAllTagsOptions = {}): Promise<Tag[]> {
+    const query = new URLSearchParams()
+    if (options.search !== undefined && options.search.trim() !== '') {
+      query.set('search', options.search.trim())
+    }
+    const suffix = query.toString() === '' ? '' : `?${query.toString()}`
+    const dtos = await this.httpClient.get<TagDto[]>(`${TAGS_URL}${suffix}`)
     return dtos.map(mapTagDtoToDomain)
   }
 
