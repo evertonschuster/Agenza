@@ -226,6 +226,24 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertTrue(any("does_not_exist.py" in p for p in problems))
 
+    def test_missing_referenced_script_in_subagent_file_is_reported(self) -> None:
+        self._base_repo()
+        self._write(".claude/agents/some-reviewer.md", "Run scripts/does_not_exist.py first.\n")
+
+        with self._patch():
+            problems = cag.check_referenced_scripts_exist()
+
+        self.assertTrue(any("does_not_exist.py" in p for p in problems))
+
+    def test_missing_adr_reference_in_prompt_template_is_reported(self) -> None:
+        self._write("docs/adr/0001-something.md", "# ADR\n")
+        self._write("prompts/some-template.md", "See docs/adr/0099 for context.\n")
+
+        with self._patch():
+            problems = cag.check_adr_references()
+
+        self.assertTrue(any("0099" in p for p in problems))
+
     def test_present_referenced_script_passes(self) -> None:
         self._base_repo()
         self._write("AGENTS.md", "Run scripts/real_script.py before finishing.\n")

@@ -191,6 +191,25 @@ def check_no_codex_skills_dir() -> list[str]:
     return []
 
 
+def _governance_adjacent_files() -> list[Path]:
+    """Every file that might reasonably cite a docs/adr/NNNN or scripts/*.py
+    reference: the fixed governance docs/CLAUDE.md files, plus every
+    canonical skill, Claude Code subagent, and tool-neutral prompt template
+    - all of which are exactly the kind of governance-adjacent content that
+    can go stale unnoticed if left out of this scan."""
+    fixed = [
+        REPO_ROOT / rel
+        for rel in list(GOVERNANCE_DOC_GLOBS)
+        + ["CLAUDE.md", "backend/CLAUDE.md", "apps/admin-frontend/CLAUDE.md"]
+    ]
+    globbed = (
+        sorted((REPO_ROOT / "agent-skills").glob("*/SKILL.md"))
+        + sorted((REPO_ROOT / ".claude" / "agents").glob("*.md"))
+        + sorted((REPO_ROOT / "prompts").glob("*.md"))
+    )
+    return fixed + globbed
+
+
 def check_adr_references() -> list[str]:
     problems = []
     adr_dir = REPO_ROOT / "docs" / "adr"
@@ -201,22 +220,14 @@ def check_adr_references() -> list[str]:
             if match:
                 existing_numbers.add(match.group(1))
 
-    for rel_doc in GOVERNANCE_DOC_GLOBS:
-        doc_path = REPO_ROOT / rel_doc
+    for doc_path in _governance_adjacent_files():
         if not doc_path.is_file():
             continue
         text = doc_path.read_text(encoding="utf-8")
         for match in ADR_REF_PATTERN.finditer(text):
             number = match.group(1)
             if number not in existing_numbers:
-                problems.append(f"{rel_doc} references docs/adr/{number} which does not exist")
-
-    for skill_file in sorted((REPO_ROOT / "agent-skills").glob("*/SKILL.md")):
-        text = skill_file.read_text(encoding="utf-8")
-        for match in ADR_REF_PATTERN.finditer(text):
-            number = match.group(1)
-            if number not in existing_numbers:
-                problems.append(f"{_rel(skill_file)} references docs/adr/{number} which does not exist")
+                problems.append(f"{_rel(doc_path)} references docs/adr/{number} which does not exist")
 
     return problems
 
@@ -224,9 +235,8 @@ def check_adr_references() -> list[str]:
 def check_referenced_scripts_exist() -> list[str]:
     problems = []
     seen: set[str] = set()
-    docs_to_scan = list(GOVERNANCE_DOC_GLOBS) + ["CLAUDE.md", "backend/CLAUDE.md", "apps/admin-frontend/CLAUDE.md"]
-    for rel_doc in docs_to_scan:
-        doc_path = REPO_ROOT / rel_doc
+
+    for doc_path in _governance_adjacent_files():
         if not doc_path.is_file():
             continue
         text = doc_path.read_text(encoding="utf-8")
