@@ -71,7 +71,9 @@ npm run lint    # architectural boundary rules enforced here
 
 ## Tech stack
 
-- Vite 8 + React 19 + TypeScript 7 (strict)
+- Vite 8 + React 19 + TypeScript 5.9 (strict) — pinned below `^6.x`/`7.x`
+  until `openapi-typescript` (peer: `^5.x`) and `typescript-eslint` (peer:
+  `<6.1.0`) both support newer TypeScript majors
 - Tailwind CSS v4, CSS-variable theming (`src/index.css`) — no `tailwind.config.js`
 - shadcn/ui (Radix UI primitives, `src/components/ui/`) + `lucide-react` icons
 - React Router 8

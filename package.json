@@ -11,7 +11,7 @@
     "packages/*"
   ],
   "overrides": {
-    "typescript": "~7.0.2"
+    "typescript": "~5.9.3"
   },
   "scripts": {
     "dev:frontend": "npm run dev --workspace=apps/admin-frontend",
