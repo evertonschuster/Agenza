@@ -1,0 +1,53 @@
+# Verifies the AI agent governance framework (docs/AGENT-GOVERNANCE.md) is
+# internally consistent, independent of whether any agent tool (Claude
+# Code, Codex, or otherwise) is installed or was even used for a given
+# change. This is the backstop that doesn't trust a local hook to have run.
+name: Agent Governance
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+concurrency:
+  group: agent-governance-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  agent-governance:
+    name: agent-governance
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+
+      - name: Skill sync check (agent-skills/ -> .agents/skills/, .claude/skills/)
+        run: python scripts/sync_agent_skills.py --check
+
+      # Each remaining step uses if: always() so one failing check doesn't
+      # hide the others' diagnostics - the job still reports overall
+      # failure if any step fails, this only keeps every check running.
+      - name: Governance structure check
+        if: always()
+        run: python scripts/check_agent_governance.py
+
+      - name: Architecture guard (blocking findings)
+        if: always()
+        run: python scripts/architecture_guard.py
+
+      - name: Architecture guard inventory (informational, always green)
+        if: always()
+        run: python scripts/architecture_guard.py --inventory
+
+      - name: Governance script tests
+        if: always()
+        run: python -m unittest discover -s scripts/tests -t .

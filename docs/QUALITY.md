@@ -12,6 +12,7 @@ requires a paid plan.
 | `ai-services-ci.yml` | `ai-services/**`               | Ruff lint + format check, pytest with 80% coverage gate (pytest-cov) |
 | `codeql.yml`         | all PRs/pushes + weekly cron   | Static security analysis (C#, TS/JS, Python)                       |
 | `sonar.yml`          | all PRs/pushes                 | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists) |
+| `agent-governance.yml` | all PRs/pushes               | AI agent governance framework consistency — see [docs/AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md) |
 
 Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for npm,
 NuGet, pip, Docker base images, and the workflows' actions.
