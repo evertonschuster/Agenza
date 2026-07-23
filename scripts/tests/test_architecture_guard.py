@@ -309,37 +309,74 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
-    # -- cross-page imports ------------------------------------------------
+    # -- cross-feature internal imports (ADR 009) ---------------------------
 
-    def test_cross_page_import_is_blocking(self) -> None:
+    def test_cross_feature_internal_import_is_blocking(self) -> None:
         self._write(
-            "apps/admin-frontend/src/presentation/pages/PageA/Foo.ts",
-            "import { bar } from '../PageB/bar'\n",
+            "apps/admin-frontend/src/features/catalog/application/use-cases/tags/ListTags.ts",
+            "import type { TenantContext } from '@/features/auth/application/context/TenantContext'\n",
         )
-        self._write("apps/admin-frontend/src/presentation/pages/PageB/bar.ts", "export const bar = 1\n")
+        self._write(
+            "apps/admin-frontend/src/features/auth/application/context/TenantContext.ts",
+            "export interface TenantContext {}\n",
+        )
 
-        findings = ag.check_cross_page_imports()
+        findings = ag.check_cross_feature_internal_imports()
 
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].severity, "blocking")
 
-    def test_same_page_import_is_clean(self) -> None:
+    def test_import_through_feature_public_api_is_clean(self) -> None:
         self._write(
-            "apps/admin-frontend/src/presentation/pages/PageA/Foo.ts",
-            "import { helper } from './helper'\n",
+            "apps/admin-frontend/src/features/catalog/application/use-cases/tags/ListTags.ts",
+            "import type { TenantContext } from '@/features/auth'\n",
+        )
+        self._write(
+            "apps/admin-frontend/src/features/auth/application/context/TenantContext.ts",
+            "export interface TenantContext {}\n",
         )
 
-        findings = ag.check_cross_page_imports()
+        findings = ag.check_cross_feature_internal_imports()
 
         self.assertEqual(findings, [])
 
-    def test_import_outside_pages_dir_is_clean(self) -> None:
+    def test_feature_importing_its_own_internals_is_clean(self) -> None:
         self._write(
-            "apps/admin-frontend/src/presentation/pages/PageA/Foo.ts",
-            "import { Button } from '../../../components/ui/button'\n",
+            "apps/admin-frontend/src/features/auth/presentation/useAuth.ts",
+            "import type { TenantContext } from '@/features/auth/application/context/TenantContext'\n",
         )
 
-        findings = ag.check_cross_page_imports()
+        findings = ag.check_cross_feature_internal_imports()
+
+        self.assertEqual(findings, [])
+
+    def test_test_fixtures_reaching_into_feature_internals_is_clean(self) -> None:
+        self._write(
+            "apps/admin-frontend/src/test/mocks/handlers/tagHandlers.ts",
+            "import type { TagDto } from '@/features/catalog/infrastructure/mappers/tagMapper'\n",
+        )
+
+        findings = ag.check_cross_feature_internal_imports()
+
+        self.assertEqual(findings, [])
+
+    # -- stale horizontal layout (ADR 009) -----------------------------------
+
+    def test_stale_domain_dir_is_blocking(self) -> None:
+        self._write("apps/admin-frontend/src/domain/entities/Widget.ts", "export class Widget {}\n")
+
+        findings = ag.check_stale_horizontal_layout()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "blocking")
+
+    def test_feature_based_layout_is_clean(self) -> None:
+        self._write(
+            "apps/admin-frontend/src/features/catalog/domain/entities/Tag.ts",
+            "export class Tag {}\n",
+        )
+
+        findings = ag.check_stale_horizontal_layout()
 
         self.assertEqual(findings, [])
 
@@ -377,8 +414,8 @@ class ArchitectureGuardTests(unittest.TestCase):
                     "    'src/test/',",
                     "    '**/main.tsx',",
                     "    '**/App.tsx',",
-                    "    'src/presentation/routes/router.tsx',",
-                    "    'src/presentation/pages/StubPage/**',",
+                    "    'src/app/routes/router.tsx',",
+                    "    'src/app/pages/StubPage/**',",
                     "  ] } }",
                     "}",
                     "",
@@ -460,7 +497,7 @@ class ArchitectureGuardTests(unittest.TestCase):
             "public static DomainResult<Foo> Create(string name) => DomainResult.Success(new Foo(name));\n",
         )
         self._write(
-            "apps/admin-frontend/src/domain/entities/Foo.ts",
+            "apps/admin-frontend/src/features/catalog/domain/entities/Foo.ts",
             "export class Foo { private readonly name: string; constructor(name: string) { this.name = name } }\n",
         )
 

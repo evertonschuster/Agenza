@@ -1,5 +1,5 @@
 import { vi } from 'vitest'
-import type { SessionEventBus } from '../../application/ports/SessionEventBus'
+import type { SessionEventBus } from '@/shared/application/SessionEventBus'
 
 /**
  * A hand-written, fully-functional SessionEventBus fake - tests that don't

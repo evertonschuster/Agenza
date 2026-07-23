@@ -24,14 +24,14 @@ where "what the API sends" becomes "what the domain layer works with."
 
 When the user provides a spec, extract and confirm:
 
-| Item                                | Where it goes                                                |
-| ----------------------------------- | ------------------------------------------------------------ |
-| Base path (e.g. `/api/v1/services`) | `AuthenticatedHttpClient` prefix + repository method paths   |
-| HTTP method per operation           | Repository method implementation                             |
-| Request body shape                  | `CreateXInput` / `UpdateXInput` interfaces in the repository |
-| Response body shape                 | DTO interface in `src/infrastructure/mappers/`               |
-| Error codes and shapes              | `ApiError` handling in the repository                        |
-| Tenant scoping mechanism            | HTTP header? Path param? Query param? Confirm with user      |
+| Item                                | Where it goes                                                                                                         |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| Base path (e.g. `/api/v1/services`) | `AuthenticatedHttpClient` prefix + repository method paths                                                            |
+| HTTP method per operation           | Repository method implementation                                                                                      |
+| Request body shape                  | `CreateXInput` / `UpdateXInput` interfaces in the repository                                                          |
+| Response body shape                 | DTO interface in the feature's `infrastructure/mappers/`                                                              |
+| Error codes and shapes              | `AppError.code`/`backendCode` - the repository doesn't catch anything, `AuthenticatedHttpClient` already converted it |
+| Tenant scoping mechanism            | HTTP header? Path param? Query param? Confirm with user                                                               |
 
 If anything is ambiguous or missing, ask before writing code.
 
@@ -40,7 +40,7 @@ If anything is ambiguous or missing, ask before writing code.
 ## Step 2: Define the DTO interface
 
 Location: alongside the mapper, e.g.
-`src/infrastructure/mappers/serviceMapper.ts`
+`features/catalog/infrastructure/mappers/serviceMapper.ts`
 
 Rules:
 

@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { CategoryDto } from '../../../infrastructure/mappers/categoryMapper'
+import type { CategoryDto } from '@/features/catalog/infrastructure/mappers/categoryMapper'
 
 const API_BASE_URL = 'https://api.test'
 

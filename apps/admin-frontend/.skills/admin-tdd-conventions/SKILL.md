@@ -33,7 +33,7 @@ repos to test infrastructure repositories.
 Always extract to a shared test helper after the second use case needs it:
 
 ```typescript
-// src/application/test-helpers/createFakeServiceRepository.ts
+// features/catalog/application/test-helpers/createFakeServiceRepository.ts
 import type { ServiceRepository } from '../repositories/ServiceRepository'
 
 export function createFakeServiceRepository(
@@ -61,26 +61,22 @@ const repo = createFakeServiceRepository({ listAll: listAllSpy })
 
 ## Fake container pattern (presentation tests)
 
-```typescript
-function buildFakeContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
-  return {
-    authRepository: {} as AppContainer['authRepository'],
-    useCases: {
-      getCurrentSession: { execute: vi.fn(() => Promise.resolve(null)) },
-      // ... other use cases with safe defaults ...
-      ...overrides,
-    },
-  } as unknown as AppContainer
-}
+`AppContainer`'s public shape is `{ auth, catalog }` — grouped facades,
+never a raw repository or use-case bag (docs/adr/008). Build a fake with
+`createFakeAppContainer` (`src/test/fixtures/createFakeAppContainer.ts`),
+overriding only the `execute` functions a test actually exercises:
 
-// Always type the overrides with a local interface, not Partial<AppContainer['useCases']>
-// because the latter demands full class instances, not plain { execute } objects.
-interface FakeUseCases {
-  getCurrentSession: { execute: () => Promise<TenantContext | null> }
-  listServices: { execute: () => Promise<Service[]> }
-  // etc.
-}
+```typescript
+const container = createFakeAppContainer({
+  auth: { getCurrentSession: { execute: vi.fn(() => Promise.resolve(null)) } },
+  catalog: { listServices: { execute: vi.fn(() => Promise.resolve(pagedServices)) } },
+})
 ```
+
+Each facade member's type is `Pick<ConcreteUseCase, 'execute'>` (structural,
+drops the class's private-field nominal typing), so a plain
+`{ execute: vi.fn(...) }` object satisfies it directly — no
+`as unknown as AppContainer` cast needed anywhere in this pattern.
 
 ---
 
@@ -230,10 +226,10 @@ this lint error elsewhere it's likely a real violation, not a false positive.
 
 ```bash
 # Single file
-npx vitest run src/domain/entities/Service.test.ts
+npx vitest run src/features/catalog/domain/entities/Service.test.ts
 
-# Whole layer
-npx vitest run src/application/
+# Whole layer, within a feature
+npx vitest run src/features/catalog/application/
 
 # All tests
 npm run test

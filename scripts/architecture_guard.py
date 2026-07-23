@@ -345,47 +345,74 @@ def check_frontend_any() -> list[Finding]:
     )
 
 
-_IMPORT_PATTERN = re.compile(r"""from\s+['"](\.\.?/[^'"]+)['"]""")
+_FEATURE_INTERNAL_IMPORT_PATTERN = re.compile(
+    r"""from\s+['"]@/features/(\w+)/(?:domain|application|infrastructure|presentation)/[^'"]*['"]"""
+)
 
 
-def check_cross_page_imports() -> list[Finding]:
-    """A page importing another feature page's internal module bypasses the
-    composition root and couples two features directly."""
-    pages_dir = REPO_ROOT / "apps" / "admin-frontend" / "src" / "presentation" / "pages"
-    if not pages_dir.is_dir():
+def check_cross_feature_internal_imports() -> list[Finding]:
+    """ADR 009: a feature's domain/application/infrastructure/presentation is
+    reached from outside that feature only through its own index.ts public
+    API - never by importing past it into an internal module. Mirrors
+    eslint.config.js's no-restricted-imports rule as an independent,
+    tooling-agnostic check. src/test/** is exempt (MSW fixtures legitimately
+    need a feature's internal DTOs); a feature's own files are exempt for
+    their own internals."""
+    src_dir = REPO_ROOT / "apps" / "admin-frontend" / "src"
+    features_dir = src_dir / "features"
+    if not features_dir.is_dir():
         return []
+    feature_names = {d.name for d in features_dir.iterdir() if d.is_dir()}
 
     findings = []
-    for path in _iter_files(pages_dir, (".ts", ".tsx")):
+    for path in _iter_files(src_dir, (".ts", ".tsx")):
         if _is_allowlisted(path):
             continue
-        try:
-            own_page = path.relative_to(pages_dir).parts[0]
-        except (ValueError, IndexError):
+        rel = path.relative_to(src_dir).as_posix()
+        if rel.startswith("test/"):
             continue
 
         text = path.read_text(encoding="utf-8", errors="replace")
         for line_number, line in enumerate(text.splitlines(), start=1):
-            match = _IMPORT_PATTERN.search(line)
+            match = _FEATURE_INTERNAL_IMPORT_PATTERN.search(line)
             if not match:
                 continue
-            target = (path.parent / match.group(1)).resolve()
-            try:
-                target_rel = target.relative_to(pages_dir.resolve())
-            except ValueError:
+            feature = match.group(1)
+            if feature not in feature_names or rel.startswith(f"features/{feature}/"):
                 continue
-            target_page = target_rel.parts[0] if target_rel.parts else None
-            if target_page and target_page != own_page:
-                findings.append(
-                    Finding(
-                        "cross-page-import",
-                        "blocking",
-                        _rel(path),
-                        line_number,
-                        f"Imports from page '{target_page}' while inside page '{own_page}' - "
-                        "share through composition/container.ts or presentation/components/ instead.",
-                    )
+            findings.append(
+                Finding(
+                    "cross-feature-internal-import",
+                    "blocking",
+                    _rel(path),
+                    line_number,
+                    f"Imports '{feature}' internals directly - use its public API "
+                    f"(@/features/{feature}) instead (ADR 009).",
                 )
+            )
+    return findings
+
+
+def check_stale_horizontal_layout() -> list[Finding]:
+    """ADR 009 replaced the horizontal domain/application/infrastructure/
+    presentation/composition top-level layout with app/, features/*/,
+    shared/. Any of those directories reappearing directly under src/ means
+    the old layout is being reintroduced."""
+    src_dir = REPO_ROOT / "apps" / "admin-frontend" / "src"
+    findings = []
+    for name in ["domain", "application", "infrastructure", "presentation", "composition"]:
+        candidate = src_dir / name
+        if candidate.is_dir() and not _is_allowlisted(candidate):
+            findings.append(
+                Finding(
+                    "stale-horizontal-layout",
+                    "blocking",
+                    _rel(candidate),
+                    1,
+                    f"src/{name}/ reintroduces the pre-ADR-009 horizontal layout - "
+                    "move its contents into app/, features/*/, or shared/ instead.",
+                )
+            )
     return findings
 
 
@@ -395,8 +422,8 @@ _ALLOWED_COVERAGE_EXCLUDE_PATTERNS = [
     re.compile(r"^\*\*/\*\.config\.\{ts,js\}$"),
     re.compile(r"^\*\*/main\.tsx$"),
     re.compile(r"^\*\*/App\.tsx$"),
-    re.compile(r"^src/presentation/routes/router\.tsx$"),
-    re.compile(r"^src/presentation/pages/\w+/\*\*$"),
+    re.compile(r"^src/app/routes/router\.tsx$"),
+    re.compile(r"^src/app/pages/\w+/\*\*$"),
 ]
 
 
@@ -469,7 +496,8 @@ CHECKS = [
     check_stale_patterns_in_doc_code_blocks,
     check_dangling_adr_references,
     check_frontend_any,
-    check_cross_page_imports,
+    check_cross_feature_internal_imports,
+    check_stale_horizontal_layout,
     check_coverage_exclude_allowlist,
 ]
 

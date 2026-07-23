@@ -19,17 +19,18 @@ what's blocked, and what order to build things in.
 
 ## Infrastructure
 
-| Piece                                              | Status | Notes                                                            |
-| -------------------------------------------------- | ------ | ---------------------------------------------------------------- |
-| TypeScript strict config                           | `done` |                                                                  |
-| ESLint + Prettier                                  | `done` |                                                                  |
-| Vitest + RTL + MSW                                 | `done` |                                                                  |
-| Husky + lint-staged                                | `done` |                                                                  |
-| `HttpClient` interface + `AuthenticatedHttpClient` | `done` | Bearer token via AuthRepository, ApiError/UnauthenticatedError   |
-| MSW handlers (auth)                                | `stub` | Auth uses OIDC not REST — no handlers needed                     |
-| MSW handlers (REST features)                       | `stub` | Add per-feature as specs arrive                                  |
-| shadcn/ui design system (`src/components/ui/`)     | `done` | Radix-based, stock "Nova"/neutral theme, unmodified; see ADR 005 |
-| `ThemeProvider` / `useTheme` / `ThemeToggle`       | `done` | Light/dark, defaults to OS preference, persists an override      |
+| Piece                                              | Status | Notes                                                                                              |
+| -------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
+| TypeScript strict config                           | `done` |                                                                                                    |
+| ESLint + Prettier                                  | `done` |                                                                                                    |
+| Vitest + RTL + MSW                                 | `done` |                                                                                                    |
+| Husky + lint-staged                                | `done` |                                                                                                    |
+| `HttpClient` interface + `AuthenticatedHttpClient` | `done` | Single per-request session read (token + tenant id together); converts every failure to `AppError` |
+| MSW handlers (auth)                                | `stub` | Auth uses OIDC not REST — no handlers needed                                                       |
+| MSW handlers (Tags/Categories/Services)            | `done` | `tagHandlers.ts`/`categoryHandlers.ts`/`serviceHandlers.ts`                                        |
+| MSW handlers (remaining REST features)             | `stub` | Add per-feature as specs arrive (Clients, Appointments, Inbox, Settings)                           |
+| shadcn/ui design system (`src/components/ui/`)     | `done` | Radix-based, stock "Nova"/neutral theme, unmodified; see ADR 005                                   |
+| `ThemeProvider` / `useTheme` / `ThemeToggle`       | `done` | Light/dark, defaults to OS preference, persists an override                                        |
 
 ---
 
@@ -121,7 +122,7 @@ create/edit form's pickers, both already built.
 | Infrastructure  | `stub` |       |
 | `ClientsPage`   | `stub` |       |
 
-**Blocked on:** API spec, `HttpClient`.
+**Blocked on:** API spec (`HttpClient` already exists, not a blocker).
 **Dependency:** None structurally, but Appointments history view will depend on Appointments.
 
 ---
@@ -135,7 +136,7 @@ create/edit form's pickers, both already built.
 | Infrastructure       | `stub` |       |
 | `AppointmentsPage`   | `stub` |       |
 
-**Blocked on:** API spec, `HttpClient`, Services (for service selection in create form).
+**Blocked on:** API spec, Services (for service selection in create form) — `HttpClient` already exists, not a blocker.
 **Dependency:** Services should be built first.
 
 ---
@@ -161,7 +162,7 @@ create/edit form's pickers, both already built.
 | Infrastructure        | `stub` |       |
 | `InboxPage`           | `stub` |       |
 
-**Blocked on:** API spec, `HttpClient`. Real-time requirement (polling vs WebSocket) TBD.
+**Blocked on:** API spec (`HttpClient` already exists, not a blocker). Real-time requirement (polling vs WebSocket) TBD.
 **Dependency:** Clients (for linking conversations to clients).
 
 ---
@@ -175,8 +176,8 @@ create/edit form's pickers, both already built.
 | Infrastructure    | `stub` |       |
 | `SettingsPage`    | `stub` |       |
 
-**Blocked on:** API spec, `HttpClient`.
-**Dependency:** None — can be built any time after HttpClient exists.
+**Blocked on:** API spec (`HttpClient` already exists, not a blocker).
+**Dependency:** None — can be built any time.
 
 ---
 
@@ -198,34 +199,34 @@ create/edit form's pickers, both already built.
 
 ## Test counts
 
-| Session                                                                                                                   | Tests added                            | Total                                      |
-| ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------ |
-| Initial setup                                                                                                             | 0                                      | 0                                          |
-| Domain (Tenant, User, Session)                                                                                            | 17                                     | 17                                         |
-| Application (4 use cases)                                                                                                 | 7                                      | 24                                         |
-| Infrastructure (mapper + OidcAuthRepository)                                                                              | 13                                     | 37                                         |
-| Composition + hooks (useAsync, useAuth, useAppContainer)                                                                  | 10                                     | 47                                         |
-| Presentation (ProtectedRoute, LoginPage)                                                                                  | 6                                      | 53                                         |
-| HttpClient (AuthenticatedHttpClient via MSW)                                                                              | 6                                      | 59                                         |
-| Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager)                                | 14                                     | 73                                         |
-| Tags vertical + UI system (shadcn/ui migration, dark mode, mobile-responsive `AdminLayout`)                               | not logged incrementally               | 116 (verified via `npm run test`)          |
-| UI reset to stock shadcn theme + Tags list/form → `Table`/`Dialog`                                                        | 0 (existing tests updated, none added) | 116 (verified via `npm run test`)          |
-| Categories + Services verticals (entities, use cases, repos, mappers, hooks, pages)                                       | 75                                     | 191 (verified via `npm run test`)          |
-| Auth/tenant safety rewrite, error taxonomy, AppContainer facade split, ServicesPage decomposition (docs/adr/006-008)      | 211                                    | 402 (verified via `npm run test`)          |
-| Lint hardening to zero warnings, `test:coverage` thresholds raised (branches/functions added), Playwright E2E suite added | 24                                     | 426 (verified via `npm run test:coverage`) |
-| jest-axe broadened from TagForm to LoginPage and ServicesPage's create-service dialog                                     | 2                                      | 428 (verified via `npm run test:coverage`) |
+| Session                                                                                                                                   | Tests added                            | Total                                      |
+| ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------ |
+| Initial setup                                                                                                                             | 0                                      | 0                                          |
+| Domain (Tenant, User, Session)                                                                                                            | 17                                     | 17                                         |
+| Application (4 use cases)                                                                                                                 | 7                                      | 24                                         |
+| Infrastructure (mapper + OidcAuthRepository)                                                                                              | 13                                     | 37                                         |
+| Composition + hooks (useAsync, useAuth, useAppContainer)                                                                                  | 10                                     | 47                                         |
+| Presentation (ProtectedRoute, LoginPage)                                                                                                  | 6                                      | 53                                         |
+| HttpClient (AuthenticatedHttpClient via MSW)                                                                                              | 6                                      | 59                                         |
+| Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager)                                                | 14                                     | 73                                         |
+| Tags vertical + UI system (shadcn/ui migration, dark mode, mobile-responsive `AdminLayout`)                                               | not logged incrementally               | 116 (verified via `npm run test`)          |
+| UI reset to stock shadcn theme + Tags list/form → `Table`/`Dialog`                                                                        | 0 (existing tests updated, none added) | 116 (verified via `npm run test`)          |
+| Categories + Services verticals (entities, use cases, repos, mappers, hooks, pages)                                                       | 75                                     | 191 (verified via `npm run test`)          |
+| Auth/tenant safety rewrite, error taxonomy, AppContainer facade split, ServicesPage decomposition (docs/adr/006-008)                      | 211                                    | 402 (verified via `npm run test`)          |
+| Lint hardening to zero warnings, `test:coverage` thresholds raised (branches/functions added), Playwright E2E suite added                 | 24                                     | 426 (verified via `npm run test:coverage`) |
+| jest-axe broadened from TagForm to LoginPage and ServicesPage's create-service dialog                                                     | 2                                      | 428 (verified via `npm run test:coverage`) |
+| Architectural refactor: atomic session snapshot, `useAsync` simplification, Services/Tags/Categories decomposition, ADR 009 physical move | 23                                     | 451 (verified via `npm run test:coverage`) |
 
 Update the test count row whenever a feature vertical is completed. The
-428 above is Vitest only — see "End-to-end tests" below for the separate
+451 above is Vitest only — see "End-to-end tests" below for the separate
 Playwright suite (9 specs), which isn't counted in this table or in the
 coverage gate.
 
-**Pending architectural follow-up:** docs/adr/009 specifies a feature-based
-`features/{auth,catalog}` + `app/` + `shared/` reorganization (target tree
-and full migration runbook there) — decided but not yet physically moved;
-see that ADR before starting unrelated work in `presentation/`,
-`application/`, or `infrastructure/` so new files land in the right place
-once the move happens.
+**Architecture:** docs/adr/009's feature-based `features/{auth,catalog}` +
+`app/` + `shared/` reorganization is executed and `Accepted` — new code
+lands in that structure (see `agent-skills/agenza-frontend-feature` for
+the current tree), not in a top-level `presentation/`/`application/`/
+`infrastructure/`/`domain/`/`composition/`.
 
 ---
 
@@ -276,23 +277,27 @@ follow-up, deferred rather than added speculatively.
 
 ## Bundle size baseline
 
-No bundle-size measurement or documentation existed anywhere in this
-repo before 2026-07-21 — the numbers below are the **first** recorded
-baseline, captured from `npm run build --workspace=apps/admin-frontend`
-(Vite 8, production build) after the Tags/Categories/Services verticals
-and the OpenAPI-generated-types/accessibility/error-handling hardening
-pass. They are not a confirmation of any prior figure.
+First recorded 2026-07-21; re-measured 2026-07-23 after the architectural
+refactor (Services/Tags/Categories decomposition, shared
+`CollectionFeedback`/`DeleteConfirmationDialog`, ADR 009 physical move) —
+captured from `npm run build --workspace=apps/admin-frontend` (Vite 8,
+production build).
 
-| Chunk                       | Raw       | Gzip      |
-| --------------------------- | --------- | --------- |
-| `index-*.js` (main entry)   | 447.82 kB | 137.38 kB |
-| `ServicesPage-*.js`         | 93.51 kB  | 29.58 kB  |
-| `table-*.js` (shared table) | 103.84 kB | 30.78 kB  |
-| `index-*.css`               | 63.32 kB  | 10.85 kB  |
+| Chunk                                                   | Raw       | Gzip      |
+| ------------------------------------------------------- | --------- | --------- |
+| `index-*.js` (main entry)                               | 457.72 kB | 140.24 kB |
+| `DeleteConfirmationDialog-*.js` (shared table + dialog) | 105.01 kB | 31.34 kB  |
+| `ServicesPage-*.js`                                     | 96.02 kB  | 30.45 kB  |
+| `index-*.css`                                           | 64.32 kB  | 10.88 kB  |
 
 All other route chunks (Categories/Tags pages and forms, stub pages)
-are under 5 kB raw each — lazy-loaded per route, not part of the
-initial load.
+are under 7 kB raw each — lazy-loaded per route, not part of the
+initial load. The modest increase over the 2026-07-21 baseline
+(main entry +9.9 kB raw) is the new shared abstractions
+(`useDialogTarget`, `useDeleteConfirmation`, `CollectionFeedback`,
+`DeleteConfirmationDialog`, the feature `index.ts` barrels) - not
+duplication; per-route code-splitting is unchanged (confirmed: each
+lazy route still gets its own chunk).
 
 No pathological duplication was found (e.g. no repeated Radix/shadcn
 tree across chunks), so no bundle-splitting work was done against this

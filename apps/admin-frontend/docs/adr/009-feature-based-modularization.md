@@ -1,8 +1,7 @@
 # ADR 009 — Feature-based modularization (`features/`, `app/`, `shared/`)
 
-**Status:** Proposed — target structure and migration plan specified below;
-physical file move deliberately not executed in this change (see
-"Why this is deferred, not done").
+**Status:** Accepted — executed 2026-07-23 (see "Execution" below for what
+actually happened, including two deviations from the original plan).
 
 ## Decision
 
@@ -83,7 +82,48 @@ each feature, while making "what belongs to this feature" a directory,
 and making a feature's public surface an explicit, enforceable file
 (`index.ts`) instead of an implicit convention.
 
+## Execution
+
+Executed 2026-07-23 in one focused pass, using a scripted move (build the
+full old→new path map, rewrite every relative import to an absolute `@/...`
+specifier reflecting each target's new location, `git mv`, remove emptied
+directories) rather than hand-editing each importer - this is what made a
+213-file move tractable to verify in one sitting instead of the incremental
+per-feature schedule the original runbook below assumed. Full gate suite
+(build, lint, format, governance, `test:coverage`) confirmed green with no
+coverage regression after the move.
+
+Two deviations from the plan as originally written:
+
+- **`src/components/ui/**` and `src/lib/utils.ts` were left in place**,
+  not moved into `shared/presentation/ui/`. Both are shadcn/ui-generated
+  and import `@/lib/utils` by the CLI's own fixed convention; moving them
+  would mean hand-editing generated files' imports just to accommodate the
+  reorganization, which this file's own AGENTS.md guidance prohibits. They
+  remain shared, at their current top-level paths, unmoved.
+- **`features/catalog/index.ts` does not re-export `TagsPage`/
+  `CategoriesPage`/`ServicesPage`.** `app/routes/router.tsx` lazy-loads
+  each by its own module path (`import('@/features/catalog/presentation/
+services/ServicesPage')`) so Vite keeps each on its own chunk; importing
+  them through the barrel would trace all three into one module graph and
+  merge their chunks, regressing the bundle-splitting baseline in
+  docs/STATUS.md. `eslint.config.js`'s cross-feature-import rule and
+  `scripts/architecture_guard.py`'s `check_cross_feature_internal_imports`
+  both only match static `from '...'` imports, not dynamic `import(...)`,
+  so this exception needs no explicit allowlisting in either.
+
+Both `features/auth/index.ts` and `features/catalog/index.ts` also export
+what `app/composition/container.ts` needs to construct concrete
+implementations (`OidcAuthRepository`, `createUserManager`,
+`Api*Repository`, the use case classes) - per this ADR's own migration
+runbook below ("plus whatever composition/container.ts needs to wire the
+feature's use cases").
+
 ## Why this is deferred, not done
+
+This section is the original, pre-execution rationale for deferring the
+move - kept as the historical record of that decision, superseded by
+"Execution" above once the move actually happened.
 
 This same change already carried a large, high-risk diff before this ADR:
 the single-source-of-truth auth rewrite (docs/adr/006), the AppError
@@ -117,7 +157,7 @@ are decided and recorded now, so a following change can execute the move
 focused diff, verifying the full gate suite after each, without competing
 for review attention against unrelated behavioral changes.
 
-## Migration runbook (for the follow-up change)
+## Migration runbook (as originally planned; see "Execution" for what the actual pass did differently)
 
 1. **Move `auth` first.** `git mv` each file into its new path under
    `features/auth/{domain,application,infrastructure,presentation}/`

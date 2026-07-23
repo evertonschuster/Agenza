@@ -10,7 +10,7 @@ export default tseslint.config(
     ignores: [
       'dist',
       'coverage',
-      'src/infrastructure/generated',
+      'src/features/catalog/infrastructure/generated',
       'playwright-report',
       'test-results',
     ],
@@ -50,35 +50,10 @@ export default tseslint.config(
     },
   },
   {
-    // application/ must stay framework-agnostic: no React, no router, and
-    // it may not reach into infrastructure/ or presentation/ directly -
-    // those depend on application via injected interfaces, not the reverse.
-    files: ['src/application/**/*.{ts,tsx}'],
-    rules: {
-      'no-restricted-imports': [
-        'error',
-        {
-          patterns: [
-            {
-              group: [
-                'react',
-                'react-dom*',
-                'react-router*',
-                '**/infrastructure/*',
-                '**/presentation/*',
-              ],
-              message:
-                'application/ must stay framework-agnostic and may not import infrastructure/ or presentation/ (Clean Architecture: dependencies point inward only).',
-            },
-          ],
-        },
-      ],
-    },
-  },
-  {
     // domain/ has the strictest boundary: zero outward dependencies at all,
-    // not even on application/ - domain is the innermost layer.
-    files: ['src/domain/**/*.{ts,tsx}'],
+    // not even on application/ - domain is the innermost layer. Applies
+    // inside every feature and in shared/ alike (ADR 009).
+    files: ['src/features/*/domain/**/*.{ts,tsx}', 'src/shared/domain/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -102,14 +77,48 @@ export default tseslint.config(
     },
   },
   {
+    // application/ must stay framework-agnostic: no React, no router, and
+    // it may not reach into infrastructure/ or presentation/ directly -
+    // those depend on application via injected interfaces, not the reverse.
+    files: ['src/features/*/application/**/*.{ts,tsx}', 'src/shared/application/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                'react',
+                'react-dom*',
+                'react-router*',
+                '**/infrastructure/*',
+                '**/presentation/*',
+              ],
+              message:
+                'application/ must stay framework-agnostic and may not import infrastructure/ or presentation/ (Clean Architecture: dependencies point inward only).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // presentation/ depends on application/ and domain/ but never reaches
     // into infrastructure/ directly - HTTP/OIDC/ProblemDetails details are
     // infrastructure's job; infrastructure converts its own errors to
-    // AppError (application/errors/AppError.ts) before they ever reach a
+    // AppError (shared/application/AppError.ts) before they ever reach a
     // component or hook (docs/adr/007). Presentation tests use hand-written
     // fakes for ports (e.g. src/test/fixtures/fakeSessionEventBus.ts)
     // instead of reaching for a concrete infrastructure implementation.
-    files: ['src/presentation/**/*.{ts,tsx}'],
+    // app/ (composition root's callers) follows the same rule, except
+    // app/composition/ itself - that's the one place allowed to construct
+    // concrete infrastructure (docs/adr/008).
+    files: [
+      'src/features/*/presentation/**/*.{ts,tsx}',
+      'src/shared/presentation/**/*.{ts,tsx}',
+      'src/app/**/*.{ts,tsx}',
+    ],
+    ignores: ['src/app/composition/**/*.{ts,tsx}'],
     rules: {
       'no-restricted-imports': [
         'error',
@@ -118,7 +127,61 @@ export default tseslint.config(
             {
               group: ['**/infrastructure/*'],
               message:
-                'presentation/ must not import infrastructure/ directly - infrastructure converts errors to AppError before they reach presentation (docs/adr/007).',
+                'presentation/ must not import infrastructure/ directly - infrastructure converts errors to AppError before they reach presentation (docs/adr/007). app/composition/container.ts is the sole exception (docs/adr/008).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    // Each feature's internals (domain/application/infrastructure/presentation)
+    // are reached from outside the feature only through its own index.ts
+    // public API (ADR 009) - never by importing past it into an internal
+    // module. shared/ has no such boundary: it exists specifically to be
+    // imported from anywhere.
+    files: ['**/*.{ts,tsx}'],
+    // src/test/** is recognized test infrastructure (MSW fixtures typed
+    // against a feature's internal DTOs), not app/feature production code -
+    // exempt like router.tsx's code-splitting exception below.
+    ignores: ['src/features/auth/**/*.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/features/auth/domain/*',
+                '**/features/auth/application/*',
+                '**/features/auth/infrastructure/*',
+                '**/features/auth/presentation/*',
+              ],
+              message:
+                "Import the auth feature's public API (@/features/auth) instead of reaching into its internals (ADR 009).",
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['**/*.{ts,tsx}'],
+    ignores: ['src/features/catalog/**/*.{ts,tsx}', 'src/test/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: [
+                '**/features/catalog/domain/*',
+                '**/features/catalog/application/*',
+                '**/features/catalog/infrastructure/*',
+                '**/features/catalog/presentation/*',
+              ],
+              message:
+                "Import the catalog feature's public API (@/features/catalog) instead of reaching into its internals (ADR 009).",
             },
           ],
         },
@@ -148,7 +211,7 @@ export default tseslint.config(
     // references lazy-loaded page components, but the file's own export
     // (`router`) is a data structure, never a component. react-refresh's
     // rule doesn't apply to a file that never exports a component itself.
-    files: ['src/presentation/routes/router.tsx'],
+    files: ['src/app/routes/router.tsx'],
     rules: {
       'react-refresh/only-export-components': 'off',
     },

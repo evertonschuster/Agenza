@@ -45,15 +45,15 @@ export default defineConfig({
         // ARE tested - the route table itself is declarative config.
         '**/main.tsx',
         '**/App.tsx',
-        'src/presentation/routes/router.tsx',
+        'src/app/routes/router.tsx',
         // Stub pages awaiting their feature vertical (docs/STATUS.md).
         // Remove each line here when that vertical is implemented so its
         // real page counts toward the gate.
-        'src/presentation/pages/AppointmentsPage/**',
-        'src/presentation/pages/ClientsPage/**',
-        'src/presentation/pages/DashboardPage/**',
-        'src/presentation/pages/InboxPage/**',
-        'src/presentation/pages/SettingsPage/**',
+        'src/app/pages/AppointmentsPage/**',
+        'src/app/pages/ClientsPage/**',
+        'src/app/pages/DashboardPage/**',
+        'src/app/pages/InboxPage/**',
+        'src/app/pages/SettingsPage/**',
       ],
     },
   },

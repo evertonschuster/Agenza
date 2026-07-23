@@ -1,6 +1,6 @@
 import { vi } from 'vitest'
-import type { AppContainer, AuthFacade, CatalogFacade } from '../../composition/container'
-import { createFakeSessionEventBus } from './fakeSessionEventBus'
+import type { AppContainer, AuthFacade, CatalogFacade } from '@/app/composition/container'
+import { createFakeSessionEventBus } from '@/test/fixtures/fakeSessionEventBus'
 
 const NOT_USED_IN_THIS_FAKE = (): Promise<never> =>
   Promise.reject(new Error('not used in this fake'))

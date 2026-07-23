@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { TagDto } from '../../../infrastructure/mappers/tagMapper'
+import type { TagDto } from '@/features/catalog/infrastructure/mappers/tagMapper'
 
 const API_BASE_URL = 'https://api.test'
 
