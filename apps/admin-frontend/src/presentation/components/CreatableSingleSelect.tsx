@@ -1,4 +1,4 @@
-import { useId, useState, type JSX, type ReactNode } from 'react'
+import { useId, useState, type JSX, type ReactNode, type Ref } from 'react'
 import { ChevronDownIcon, Plus } from 'lucide-react'
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import {
@@ -37,6 +37,12 @@ interface CreatableSingleSelectProps<T> {
   status: CreatableSelectStatus
   error?: string | null
   onRetry?: (() => void) | undefined
+  /**
+   * Forwarded to the trigger button - lets react-hook-form's setFocus(name)
+   * land here when this field is wired through Controller (whose `field`
+   * has no DOM node of its own to focus otherwise).
+   */
+  ref?: Ref<HTMLButtonElement>
 }
 
 /**
@@ -62,6 +68,7 @@ export function CreatableSingleSelect<T>({
   status,
   error,
   onRetry,
+  ref,
 }: CreatableSingleSelectProps<T>): JSX.Element {
   const contentId = useId()
   const [open, setOpen] = useState(false)
@@ -91,6 +98,7 @@ export function CreatableSingleSelect<T>({
     <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
+          ref={ref}
           type="button"
           variant="outline"
           id={id}

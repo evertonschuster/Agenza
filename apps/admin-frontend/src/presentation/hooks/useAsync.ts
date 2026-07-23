@@ -11,8 +11,24 @@ interface UseAsyncResult<T> {
    * Applies a local, synchronous update to `data` without a network round
    * trip - e.g. inserting a just-created item immediately instead of
    * waiting for (or depending on the success of) a background refetch.
+   *
+   * Pass the generation captured via `captureGeneration()` *before* starting
+   * the async operation that produced this update, so a stale operation
+   * (e.g. a create started against tenant A, resolving after the app has
+   * already switched to tenant B) can't apply its result to the current
+   * state - see docs/adr for the tenant-switch-during-a-POST scenario this
+   * guards against. Omit it for an update that should always apply (e.g.
+   * clearing state on session invalidation, which is authoritative
+   * regardless of what else is in flight).
    */
-  mutate: (updater: (current: T | null) => T | null) => void
+  mutate: (updater: (current: T | null) => T | null, expectedGeneration?: number) => void
+  /**
+   * Snapshots "which execute()/resetKey era we're currently in" - capture
+   * this right before starting a mutation, then pass it back to `mutate` so
+   * the mutation can detect if a resetKey change (tenant switch) or a newer
+   * execute() has since superseded it.
+   */
+  captureGeneration: () => number
 }
 
 interface UseAsyncOptions {
@@ -59,6 +75,10 @@ export function useAsync<T>(
   const [previousResetKey, setPreviousResetKey] = useState(resetKey)
   const isMountedRef = useRef(true)
   const latestRequestIdRef = useRef(0)
+  // Always mirrors the latest resetKey, independent of any particular
+  // execute() closure - lets a call started under an old resetKey detect,
+  // at commit time, that it belongs to an abandoned era (see execute below).
+  const currentResetKeyRef = useRef(resetKey)
 
   if (previousResetKey !== resetKey) {
     setPreviousResetKey(resetKey)
@@ -82,31 +102,68 @@ export function useAsync<T>(
     }
   }, [])
 
+  // No dependency array: syncs after every render (refs must not be
+  // written during render itself - react-hooks/refs), which is still
+  // synchronously ahead of any async continuation that reads it, since
+  // effects for this commit all run before any microtask from a pending
+  // execute()/mutate() call gets a chance to.
+  useEffect(() => {
+    currentResetKeyRef.current = resetKey
+  })
+
   const execute = useCallback(async (): Promise<T | undefined> => {
     const requestId = ++latestRequestIdRef.current
+    // Captured now, not read again later: a closure created under tenant A
+    // (e.g. a createTag's own background `void execute()`, called from
+    // inside an async function that only reaches this point after an
+    // earlier await) must not apply its result once the app has since
+    // moved on to tenant B, even if no *newer* execute() call happened to
+    // race it - requestId ordering alone can't detect that case, since
+    // this closure would otherwise look like "the latest call" by default.
+    const resetKeyAtStart = resetKey
     setStatus('loading')
     setError(null)
+
+    function isStillCurrent(): boolean {
+      return (
+        isMountedRef.current &&
+        requestId === latestRequestIdRef.current &&
+        resetKeyAtStart === currentResetKeyRef.current
+      )
+    }
 
     try {
       const result = await asyncFn()
 
-      if (isMountedRef.current && requestId === latestRequestIdRef.current) {
+      if (isStillCurrent()) {
         setData(result)
         setStatus('success')
       }
       return result
     } catch (caughtError) {
-      if (isMountedRef.current && requestId === latestRequestIdRef.current) {
+      if (isStillCurrent()) {
         setError(caughtError)
         setStatus('error')
       }
       return undefined
     }
-  }, [asyncFn])
+    // resetKey is intentionally included even though asyncFn's identity is
+    // contractually paired with it (see UseAsyncOptions.resetKey) - this
+    // makes execute robust even if a future caller changes resetKey without
+    // also changing asyncFn's identity.
+  }, [asyncFn, resetKey])
 
-  const mutate = useCallback((updater: (current: T | null) => T | null) => {
-    setData(current => updater(current))
-  }, [])
+  const mutate = useCallback(
+    (updater: (current: T | null) => T | null, expectedGeneration?: number) => {
+      if (expectedGeneration !== undefined && expectedGeneration !== latestRequestIdRef.current) {
+        return
+      }
+      setData(current => updater(current))
+    },
+    [],
+  )
+
+  const captureGeneration = useCallback((): number => latestRequestIdRef.current, [])
 
   useEffect(() => {
     if (immediate) {
@@ -128,5 +185,5 @@ export function useAsync<T>(
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [execute])
 
-  return { status, data, error, execute, mutate }
+  return { status, data, error, execute, mutate, captureGeneration }
 }

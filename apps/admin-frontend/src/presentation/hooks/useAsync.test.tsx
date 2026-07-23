@@ -194,4 +194,111 @@ describe('useAsync', () => {
     })
     expect(result.current.data).toBe('tenant-b-rows')
   })
+
+  it('ignores a manually-triggered execute() call started before a resetKey change, even with no newer call racing it', async () => {
+    // Simulates useTags' createTag: it captures `execute` from its own
+    // render (tenant A), awaits a POST, and only calls execute() in the
+    // background afterward - by which point the app may have already
+    // switched to tenant B. No newer execute() call happens to race it in
+    // this scenario, so only the resetKey check (not requestId ordering)
+    // can catch it.
+    const fetchForTenant = vi.fn((tenantId: string) =>
+      tenantId === 'tenant-a'
+        ? Promise.resolve('a-initial')
+        : // eslint-disable-next-line @typescript-eslint/no-empty-function
+          new Promise<string>(() => {}),
+    )
+
+    const { result, rerender } = renderHook(
+      ({ tenantId }: { tenantId: string }) => {
+        const asyncFn = useCallback(() => fetchForTenant(tenantId), [tenantId])
+        return useAsync(asyncFn, { resetKey: tenantId })
+      },
+      { initialProps: { tenantId: 'tenant-a' } },
+    )
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+    expect(result.current.data).toBe('a-initial')
+
+    const staleExecute = result.current.execute
+
+    rerender({ tenantId: 'tenant-b' })
+    expect(result.current.data).toBeNull()
+
+    await act(async () => {
+      await staleExecute()
+    })
+
+    // Tenant A's stale execute() resolved successfully, but must not have
+    // clobbered tenant B's (still-loading) state.
+    expect(result.current.data).toBeNull()
+  })
+})
+
+describe('useAsync mutate generation guard', () => {
+  it('applies a mutate when no expectedGeneration is passed (always-apply, e.g. session invalidation)', async () => {
+    const asyncFn = vi.fn(() => Promise.resolve(['a1']))
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    act(() => {
+      result.current.mutate(() => null)
+    })
+
+    expect(result.current.data).toBeNull()
+  })
+
+  it('applies a mutate whose captured generation still matches the current one', async () => {
+    const asyncFn = vi.fn(() => Promise.resolve(['a1']))
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    const generation = result.current.captureGeneration()
+    act(() => {
+      result.current.mutate(current => [...(current ?? []), 'a2'], generation)
+    })
+
+    expect(result.current.data).toEqual(['a1', 'a2'])
+  })
+
+  it('ignores a mutate whose captured generation predates a tenant switch', async () => {
+    const fetchForTenant = vi.fn((tenantId: string) =>
+      tenantId === 'tenant-a'
+        ? Promise.resolve(['a1'])
+        : // eslint-disable-next-line @typescript-eslint/no-empty-function
+          new Promise<string[]>(() => {}),
+    )
+
+    const { result, rerender } = renderHook(
+      ({ tenantId }: { tenantId: string }) => {
+        const asyncFn = useCallback(() => fetchForTenant(tenantId), [tenantId])
+        return useAsync(asyncFn, { resetKey: tenantId })
+      },
+      { initialProps: { tenantId: 'tenant-a' } },
+    )
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    // Captured before starting a (hypothetical) create POST against tenant A.
+    const staleGeneration = result.current.captureGeneration()
+
+    rerender({ tenantId: 'tenant-b' })
+    expect(result.current.data).toBeNull()
+
+    act(() => {
+      result.current.mutate(current => [...(current ?? []), 'stale-insert'], staleGeneration)
+    })
+
+    expect(result.current.data).toBeNull()
+  })
 })

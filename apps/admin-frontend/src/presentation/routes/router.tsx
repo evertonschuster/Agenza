@@ -1,6 +1,7 @@
 import { lazy, Suspense, type ReactElement } from 'react'
 import { createBrowserRouter, Navigate } from 'react-router'
 import { ProtectedRoute } from './ProtectedRoute'
+import { RouteErrorElement } from './RouteErrorElement'
 import { AdminLayout } from '../layouts/AdminLayout'
 import { LoginPage } from '../pages/LoginPage/LoginPage'
 import { CallbackPage } from '../pages/CallbackPage/CallbackPage'
@@ -42,30 +43,38 @@ function withSuspense(element: ReactElement): ReactElement {
 
 export const router = createBrowserRouter([
   {
-    path: '/login',
-    element: <LoginPage />,
-  },
-  {
-    path: '/callback',
-    element: <CallbackPage />,
-  },
-  {
-    // All routes inside here require an authenticated session.
-    // ProtectedRoute reads useAuth and redirects to /login if needed.
-    element: <ProtectedRoute />,
+    // No path/element of its own - a pure grouping route so every route
+    // below shares one errorElement (a thrown loader, an unmatched path,
+    // or a lazy route's chunk failing to load) without adding a layout.
+    errorElement: <RouteErrorElement />,
     children: [
       {
-        element: <AdminLayout />,
+        path: '/login',
+        element: <LoginPage />,
+      },
+      {
+        path: '/callback',
+        element: <CallbackPage />,
+      },
+      {
+        // All routes inside here require an authenticated session.
+        // ProtectedRoute reads useAuth and redirects to /login if needed.
+        element: <ProtectedRoute />,
         children: [
-          { index: true, element: <Navigate to="/dashboard" replace /> },
-          { path: 'dashboard', element: withSuspense(<DashboardPage />) },
-          { path: 'appointments', element: withSuspense(<AppointmentsPage />) },
-          { path: 'services', element: withSuspense(<ServicesPage />) },
-          { path: 'categories', element: withSuspense(<CategoriesPage />) },
-          { path: 'clients', element: withSuspense(<ClientsPage />) },
-          { path: 'inbox', element: withSuspense(<InboxPage />) },
-          { path: 'tags', element: withSuspense(<TagsPage />) },
-          { path: 'settings', element: withSuspense(<SettingsPage />) },
+          {
+            element: <AdminLayout />,
+            children: [
+              { index: true, element: <Navigate to="/dashboard" replace /> },
+              { path: 'dashboard', element: withSuspense(<DashboardPage />) },
+              { path: 'appointments', element: withSuspense(<AppointmentsPage />) },
+              { path: 'services', element: withSuspense(<ServicesPage />) },
+              { path: 'categories', element: withSuspense(<CategoriesPage />) },
+              { path: 'clients', element: withSuspense(<ClientsPage />) },
+              { path: 'inbox', element: withSuspense(<InboxPage />) },
+              { path: 'tags', element: withSuspense(<TagsPage />) },
+              { path: 'settings', element: withSuspense(<SettingsPage />) },
+            ],
+          },
         ],
       },
     ],

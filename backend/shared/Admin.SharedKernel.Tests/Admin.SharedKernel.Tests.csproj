@@ -23,6 +23,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\Admin.SharedKernel\Admin.SharedKernel.csproj" />
+    <ProjectReference Include="..\Admin.SharedKernel.AspNetCore\Admin.SharedKernel.AspNetCore.csproj" />
   </ItemGroup>
 
 </Project>

@@ -4,3 +4,5 @@ node_modules
 *.tsbuildinfo
 graphify-out
 src/infrastructure/generated
+playwright-report
+test-results

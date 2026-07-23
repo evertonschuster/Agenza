@@ -3,12 +3,14 @@ import { render, screen, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { TagsPage } from './TagsPage'
 import { AppContainerContext } from '../../providers/AppContainerContext'
-import type { AppContainer } from '../../../composition/container'
+import { AuthProvider } from '../../providers/AuthProvider'
+import type { AppContainer, CatalogFacade } from '../../../composition/container'
 import { Tag } from '../../../domain/entities/Tag'
 import { Tenant } from '../../../domain/value-objects/Tenant'
 import { User } from '../../../domain/entities/User'
 import { MALICIOUS_PAYLOADS } from '../../../test/fixtures/maliciousPayloads'
-import { ApiError } from '../../../infrastructure/http/ApiError'
+import { createFakeAppContainer } from '../../../test/fixtures/createFakeAppContainer'
+import { AppError } from '../../../application/errors/AppError'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
@@ -19,34 +21,25 @@ const vipTag = Tag.create({
   description: 'High-value client',
 })
 
-interface FakeUseCases {
-  getCurrentSession: { execute: () => Promise<typeof tenantContext | null> }
-  listTags: { execute: () => Promise<Tag[]> }
-  createTag: { execute: (...args: unknown[]) => Promise<Tag> }
-  updateTag: { execute: (...args: unknown[]) => Promise<Tag> }
-  deleteTag: { execute: (...args: unknown[]) => Promise<void> }
-}
-
-function buildContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
-  return {
-    useCases: {
-      initiateLogin: { execute: vi.fn(() => Promise.resolve()) },
-      handleAuthCallback: { execute: vi.fn(() => Promise.reject(new Error('not used'))) },
-      logout: { execute: vi.fn(() => Promise.resolve()) },
-      getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) },
+function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
+  return createFakeAppContainer({
+    auth: { getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) } },
+    catalog: {
       listTags: { execute: vi.fn(() => Promise.resolve([vipTag])) },
       createTag: { execute: vi.fn(() => Promise.resolve(vipTag)) },
       updateTag: { execute: vi.fn(() => Promise.resolve(vipTag)) },
       deleteTag: { execute: vi.fn(() => Promise.resolve()) },
       ...overrides,
     },
-  } as unknown as AppContainer
+  })
 }
 
 function renderTagsPage(container: AppContainer): void {
   render(
     <AppContainerContext.Provider value={container}>
-      <TagsPage />
+      <AuthProvider>
+        <TagsPage />
+      </AuthProvider>
     </AppContainerContext.Provider>,
   )
 }
@@ -88,7 +81,7 @@ describe('TagsPage', () => {
 
     await userEvent.click(screen.getByRole('button', { name: /nova etiqueta/i }))
     await userEvent.type(screen.getByLabelText('Nome'), 'Returning')
-    await userEvent.click(screen.getByRole('button', { name: 'Cor #ef4444' }))
+    await userEvent.click(screen.getByRole('radio', { name: 'Cor #ef4444' }))
     await userEvent.click(screen.getByRole('button', { name: /criar etiqueta/i }))
 
     expect(createTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
@@ -156,12 +149,13 @@ describe('TagsPage', () => {
 
   describe('structured server errors', () => {
     it('maps validation field errors from the API onto the Nome and Descrição fields', async () => {
-      const validationError = new ApiError(400, 'Ocorreram erros de validação.', {
-        status: 400,
-        code: 'Tag.ValidationFailed',
-        errors: {
-          Name: [{ code: 'Tag.NameRequired', message: 'O nome é obrigatório.' }],
-          Description: [{ code: 'Tag.DescriptionTooLong', message: 'A descrição é muito longa.' }],
+      const validationError = new AppError({
+        code: 'validation',
+        message: 'Ocorreram erros de validação.',
+        retryable: false,
+        rawFieldErrors: {
+          Name: 'O nome é obrigatório.',
+          Description: 'A descrição é muito longa.',
         },
       })
       renderTagsPage(
@@ -183,9 +177,11 @@ describe('TagsPage', () => {
     })
 
     it('maps a duplicate-name conflict code from the API onto the Nome field', async () => {
-      const conflictError = new ApiError(409, 'Já existe uma etiqueta com esse nome.', {
-        status: 409,
-        code: 'Tag.DuplicateName',
+      const conflictError = new AppError({
+        code: 'conflict',
+        message: 'Já existe uma etiqueta com esse nome.',
+        retryable: false,
+        backendCode: 'Tag.DuplicateName',
       })
       renderTagsPage(
         buildContainer({ createTag: { execute: vi.fn(() => Promise.reject(conflictError)) } }),

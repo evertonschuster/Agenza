@@ -31,16 +31,16 @@ export function useCategories(
   tenantContext: TenantContext | null,
   search = '',
 ): UseCategoriesResult {
-  const { useCases } = useAppContainer()
+  const { catalog } = useAppContainer()
 
   const listCategories = useCallback(async (): Promise<Category[]> => {
     if (tenantContext === null) {
       return []
     }
-    return useCases.listCategories.execute(tenantContext, { search })
-  }, [tenantContext, useCases, search])
+    return catalog.listCategories.execute(tenantContext, { search })
+  }, [tenantContext, catalog, search])
 
-  const { data, status, error, execute, mutate } = useAsync(listCategories, {
+  const { data, status, error, execute, mutate, captureGeneration } = useAsync(listCategories, {
     resetKey: tenantContext?.tenant.id,
   })
 
@@ -49,17 +49,21 @@ export function useCategories(
       if (tenantContext === null) {
         throw new Error('Não é possível criar uma categoria sem um contexto de tenant autenticado')
       }
-      const category = await useCases.createCategory.execute(tenantContext, input)
+      // Captured before the POST starts: if the tenant switches while this
+      // request is in flight, the mutate below must not insert tenant A's
+      // newly created category into what is now tenant B's list.
+      const generation = captureGeneration()
+      const category = await catalog.createCategory.execute(tenantContext, input)
       // Insert immediately so the new category is selectable and shows up
       // as soon as the POST succeeds - the mutation's success never
       // depends on the background refetch below. If that refetch fails,
       // this optimistic entry is what keeps the category visible (see
       // useAsync's own status/error, surfaced separately by the page).
-      mutate(current => [...(current ?? []), category])
+      mutate(current => [...(current ?? []), category], generation)
       void execute()
       return category
     },
-    [tenantContext, useCases, execute, mutate],
+    [tenantContext, catalog, execute, mutate, captureGeneration],
   )
 
   const updateCategory = useCallback(
@@ -69,11 +73,11 @@ export function useCategories(
           'Não é possível atualizar uma categoria sem um contexto de tenant autenticado',
         )
       }
-      const category = await useCases.updateCategory.execute(tenantContext, id, input)
+      const category = await catalog.updateCategory.execute(tenantContext, id, input)
       await execute()
       return category
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, catalog, execute],
   )
 
   const deleteCategory = useCallback(
@@ -83,10 +87,10 @@ export function useCategories(
           'Não é possível excluir uma categoria sem um contexto de tenant autenticado',
         )
       }
-      await useCases.deleteCategory.execute(tenantContext, id)
+      await catalog.deleteCategory.execute(tenantContext, id)
       await execute()
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, catalog, execute],
   )
 
   return {

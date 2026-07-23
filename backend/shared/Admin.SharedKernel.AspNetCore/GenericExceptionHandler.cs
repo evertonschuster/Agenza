@@ -3,7 +3,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace Admin.SharedKernel;
+namespace Admin.SharedKernel.AspNetCore;
 
 public class GenericExceptionHandler : IExceptionHandler
 {

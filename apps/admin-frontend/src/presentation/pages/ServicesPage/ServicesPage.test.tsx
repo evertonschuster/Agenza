@@ -1,16 +1,19 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { axe } from 'jest-axe'
 import { ServicesPage } from './ServicesPage'
 import { AppContainerContext } from '../../providers/AppContainerContext'
-import type { AppContainer } from '../../../composition/container'
+import { AuthProvider } from '../../providers/AuthProvider'
+import type { AppContainer, CatalogFacade } from '../../../composition/container'
 import { Service } from '../../../domain/entities/Service'
 import { Category } from '../../../domain/entities/Category'
 import { Tag, TAG_COLOR_PALETTE } from '../../../domain/entities/Tag'
 import { Tenant } from '../../../domain/value-objects/Tenant'
 import { User } from '../../../domain/entities/User'
 import { MALICIOUS_PAYLOADS } from '../../../test/fixtures/maliciousPayloads'
-import { ApiError } from '../../../infrastructure/http/ApiError'
+import { createFakeAppContainer } from '../../../test/fixtures/createFakeAppContainer'
+import { AppError } from '../../../application/errors/AppError'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
@@ -31,29 +34,10 @@ const massagemService = Service.create({
 const massagensCategory = Category.create({ id: 'category-1', name: 'Massagens' })
 const vipTag = Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488' })
 
-interface FakeUseCases {
-  getCurrentSession: { execute: () => Promise<typeof tenantContext | null> }
-  listServices: {
-    execute: (
-      ...args: unknown[]
-    ) => Promise<{ services: Service[]; totalCount: number; page: number; pageSize: number }>
-  }
-  createService: { execute: (...args: unknown[]) => Promise<Service> }
-  updateService: { execute: (...args: unknown[]) => Promise<Service> }
-  deleteService: { execute: (...args: unknown[]) => Promise<void> }
-  listCategories: { execute: () => Promise<Category[]> }
-  createCategory: { execute: (...args: unknown[]) => Promise<Category> }
-  listTags: { execute: () => Promise<Tag[]> }
-  createTag: { execute: (...args: unknown[]) => Promise<Tag> }
-}
-
-function buildContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
-  return {
-    useCases: {
-      initiateLogin: { execute: vi.fn(() => Promise.resolve()) },
-      handleAuthCallback: { execute: vi.fn(() => Promise.reject(new Error('not used'))) },
-      logout: { execute: vi.fn(() => Promise.resolve()) },
-      getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) },
+function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
+  return createFakeAppContainer({
+    auth: { getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) } },
+    catalog: {
       listServices: {
         execute: vi.fn(() =>
           Promise.resolve({ services: [massagemService], totalCount: 1, page: 1, pageSize: 20 }),
@@ -72,15 +56,17 @@ function buildContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
       deleteTag: { execute: vi.fn(() => Promise.resolve()) },
       ...overrides,
     },
-  } as unknown as AppContainer
+  })
 }
 
-function renderServicesPage(container: AppContainer): void {
-  render(
+function renderServicesPage(container: AppContainer): HTMLElement {
+  return render(
     <AppContainerContext.Provider value={container}>
-      <ServicesPage />
+      <AuthProvider>
+        <ServicesPage />
+      </AuthProvider>
     </AppContainerContext.Provider>,
-  )
+  ).container
 }
 
 // The InlineCreatePopover's content is portaled to document.body as a
@@ -393,10 +379,11 @@ describe('ServicesPage', () => {
     }
 
     it('maps a validation field error from the API onto the Nome field and focuses it', async () => {
-      const validationError = new ApiError(400, 'Ocorreram erros de validação.', {
-        status: 400,
-        code: 'Service.ValidationFailed',
-        errors: { Name: [{ code: 'Service.NameRequired', message: 'O nome é obrigatório.' }] },
+      const validationError = new AppError({
+        code: 'validation',
+        message: 'Ocorreram erros de validação.',
+        retryable: false,
+        rawFieldErrors: { Name: 'O nome é obrigatório.' },
       })
       renderServicesPage(
         buildContainer({
@@ -413,9 +400,11 @@ describe('ServicesPage', () => {
     })
 
     it('maps a duplicate-name conflict code from the API onto the Nome field', async () => {
-      const conflictError = new ApiError(409, 'Já existe um serviço com esse nome.', {
-        status: 409,
-        code: 'Service.DuplicateName',
+      const conflictError = new AppError({
+        code: 'conflict',
+        message: 'Já existe um serviço com esse nome.',
+        retryable: false,
+        backendCode: 'Service.DuplicateName',
       })
       renderServicesPage(
         buildContainer({ createService: { execute: vi.fn(() => Promise.reject(conflictError)) } }),
@@ -427,6 +416,30 @@ describe('ServicesPage', () => {
       const fieldError = await screen.findByText('Já existe um serviço com esse nome.')
       expect(fieldError).toHaveAttribute('role', 'alert')
       expect(screen.getByLabelText(/^nome$/i)).toHaveFocus()
+    })
+
+    it('maps a validation field error from the API onto the Categoria field and focuses its trigger', async () => {
+      const validationError = new AppError({
+        code: 'validation',
+        message: 'Ocorreram erros de validação.',
+        retryable: false,
+        rawFieldErrors: { CategoryId: 'Categoria inválida.' },
+      })
+      renderServicesPage(
+        buildContainer({
+          createService: { execute: vi.fn(() => Promise.reject(validationError)) },
+        }),
+      )
+      await screen.findByText('Massagem relaxante')
+
+      await fillValidServiceForm()
+
+      const fieldError = await screen.findByText('Categoria inválida.')
+      expect(fieldError).toHaveAttribute('role', 'alert')
+      // The categoryId field is wired through Controller/CreatableSingleSelect,
+      // which has no DOM node of its own unless the trigger forwards a ref -
+      // this proves setFocus('categoryId') actually lands somewhere focusable.
+      expect(screen.getByRole('combobox', { name: 'Categoria' })).toHaveFocus()
     })
   })
 
@@ -538,6 +551,18 @@ describe('ServicesPage', () => {
         expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
       })
       expect(editButton).toHaveFocus()
+    })
+  })
+
+  describe('accessibility', () => {
+    it('has no axe violations with the create-service dialog open', async () => {
+      const container = renderServicesPage(buildContainer())
+      await screen.findByText('Massagem relaxante')
+
+      await userEvent.click(screen.getByRole('button', { name: /novo serviço/i }))
+      await screen.findByRole('dialog')
+
+      expect(await axe(container)).toHaveNoViolations()
     })
   })
 

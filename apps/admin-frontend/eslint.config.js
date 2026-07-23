@@ -6,7 +6,15 @@ import tseslint from 'typescript-eslint'
 import eslintConfigPrettier from 'eslint-config-prettier'
 
 export default tseslint.config(
-  { ignores: ['dist', 'coverage', 'src/infrastructure/generated'] },
+  {
+    ignores: [
+      'dist',
+      'coverage',
+      'src/infrastructure/generated',
+      'playwright-report',
+      'test-results',
+    ],
+  },
   {
     extends: [
       js.configs.recommended,
@@ -19,7 +27,7 @@ export default tseslint.config(
       ecmaVersion: 2023,
       globals: globals.browser,
       parserOptions: {
-        project: ['./tsconfig.app.json', './tsconfig.node.json'],
+        project: ['./tsconfig.app.json', './tsconfig.node.json', './tsconfig.e2e.json'],
         tsconfigRootDir: import.meta.dirname,
       },
     },
@@ -94,6 +102,30 @@ export default tseslint.config(
     },
   },
   {
+    // presentation/ depends on application/ and domain/ but never reaches
+    // into infrastructure/ directly - HTTP/OIDC/ProblemDetails details are
+    // infrastructure's job; infrastructure converts its own errors to
+    // AppError (application/errors/AppError.ts) before they ever reach a
+    // component or hook (docs/adr/007). Presentation tests use hand-written
+    // fakes for ports (e.g. src/test/fixtures/fakeSessionEventBus.ts)
+    // instead of reaching for a concrete infrastructure implementation.
+    files: ['src/presentation/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['**/infrastructure/*'],
+              message:
+                'presentation/ must not import infrastructure/ directly - infrastructure converts errors to AppError before they reach presentation (docs/adr/007).',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
     // shadcn/ui generates these files verbatim via its CLI and they're kept
     // exactly as generated (see feedback_shadcn_minimal_customization) -
     // explicit-function-return-type isn't part of shadcn's own style and
@@ -103,6 +135,22 @@ export default tseslint.config(
     files: ['src/components/ui/**/*.{ts,tsx}', 'src/lib/utils.ts'],
     rules: {
       '@typescript-eslint/explicit-function-return-type': 'off',
+      // shadcn's own convention exports a variants() helper (cva) alongside
+      // the component (e.g. buttonVariants next to Button) - a non-component
+      // export Fast Refresh can't cleanly hot-reload around, but changing
+      // the generated file's export shape would drift it from the CLI
+      // output this project deliberately stays close to (ADR 005).
+      'react-refresh/only-export-components': 'off',
+    },
+  },
+  {
+    // A router configuration file - createBrowserRouter's routes array
+    // references lazy-loaded page components, but the file's own export
+    // (`router`) is a data structure, never a component. react-refresh's
+    // rule doesn't apply to a file that never exports a component itself.
+    files: ['src/presentation/routes/router.tsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
     },
   },
 )

@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor, act, type RenderHookResult } from '@testing-library/react'
 import { useServices, type UseServicesResult } from './useServices'
 import { AppContainerContext } from '../providers/AppContainerContext'
-import type { AppContainer } from '../../composition/container'
+import { createFakeAppContainer } from '../../test/fixtures/createFakeAppContainer'
+import type { AppContainer, CatalogFacade } from '../../composition/container'
 import { Service } from '../../domain/entities/Service'
 import { Tenant } from '../../domain/value-objects/Tenant'
 import { User } from '../../domain/entities/User'
@@ -32,23 +33,16 @@ const createInput: CreateServiceInput = {
 
 const pagedFixture = { services: [serviceFixture], totalCount: 1, page: 1, pageSize: 20 }
 
-interface FakeUseCases {
-  listServices: { execute: () => Promise<typeof pagedFixture> }
-  createService: { execute: () => Promise<Service> }
-  updateService: { execute: () => Promise<Service> }
-  deleteService: { execute: () => Promise<void> }
-}
-
-function createFakeContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
-  return {
-    useCases: {
+function createFakeContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
+  return createFakeAppContainer({
+    catalog: {
       listServices: { execute: vi.fn(() => Promise.resolve(pagedFixture)) },
       createService: { execute: vi.fn(() => Promise.resolve(serviceFixture)) },
       updateService: { execute: vi.fn(() => Promise.resolve(serviceFixture)) },
       deleteService: { execute: vi.fn(() => Promise.resolve()) },
       ...overrides,
     },
-  } as unknown as AppContainer
+  })
 }
 
 function buildTenantContext(): TenantContext {

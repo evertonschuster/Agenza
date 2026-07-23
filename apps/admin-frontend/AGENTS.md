@@ -54,15 +54,70 @@ Dashboard, Settings) are stubs awaiting implementation.
   or anything from `infrastructure/` or `presentation/`.
   ESLint enforces this — do not disable those rules.
 - `composition/container.ts` is the ONLY place allowed to construct
-  concrete repository implementations.
+  concrete repository implementations. `AppContainer`'s public shape is
+  `{ auth, catalog }` — grouped application facades, never a raw
+  repository or `HttpClient` (docs/adr/008). Add a new use case to the
+  matching facade's interface (`Pick<NewUseCase, 'execute'>`), not as a
+  new top-level container field.
+- `AppProviders` receives an already-built `AppContainer` as a prop; it
+  never calls `createAppContainer()` itself. `main.tsx` is the composition
+  root — the only place that does.
 - Every repository interface method takes `TenantContext` as first param.
+- `useAuth()` is a pure consumer of `AuthProvider`'s shared session state —
+  it has no state of its own. Never re-fetch the session from a page or
+  hook directly; read `useAuth()` instead (see docs/adr/006).
+- A 401/missing-token from `AuthenticatedHttpClient` reaches `AuthProvider`
+  through the `SessionEventBus` port (`application/ports/SessionEventBus.ts`),
+  not a direct callback — infrastructure never imports React.
+- Routed, tenant-scoped page content renders inside `TenantBoundary`
+  (already wired in `AdminLayout`) so a session/tenant switch remounts it —
+  don't bypass this with a page that renders outside `AdminLayout`'s
+  `Outlet`.
+- `presentation/` must never import `infrastructure/` (ESLint-enforced).
+  Any caught error is an `AppError` (`application/errors/AppError.ts`) by
+  the time it reaches a hook/component — `AuthenticatedHttpClient` converts
+  everything (missing token, 401, `ProblemDetails`, network/timeout
+  failure) before it leaves infrastructure (see docs/adr/007). Never render
+  a caught error's raw `.message` directly for an unexpected/network/
+  timeout/unauthorized failure — use the `AppError`'s own curated message.
 
 ### Testing
 
 - Use case tests → hand-written fake repositories
 - Infrastructure tests → MSW handlers (real HttpClient code path)
-- Presentation tests → fake `AppContainer` via `AppContainerContext.Provider`
+- Presentation tests → fake `AppContainer` via `AppContainerContext.Provider`,
+  built with `createFakeAppContainer({ auth: {...}, catalog: {...} })`
+  from `src/test/fixtures/createFakeAppContainer.ts` — fully typed, no
+  `as unknown as AppContainer` cast needed (docs/adr/008). Any component
+  that (transitively) calls `useAuth()` also needs `AuthProvider` wrapped
+  around it.
 - `onUnhandledRequest: 'error'` — every HTTP call needs a registered MSW handler.
+- `jest-axe` (`import { axe } from 'jest-axe'`, `expect(container).toHaveNoViolations()`)
+  is available for accessibility assertions — the matcher is registered
+  globally in `src/test/setup.ts`. Add it to any new or changed form/page
+  that a screen-reader or keyboard-only user would rely on; see
+  `TagForm.test.tsx` for the pattern.
+- A form field wired through `Controller` (not `register()`) needs its
+  rendered component to forward a `ref` to a real, focusable DOM node
+  (`CreatableSingleSelect`/`CreatableMultiSelect` both do) - otherwise
+  `setFocus(fieldName)` silently does nothing when a server error targets
+  that field.
+- A PUT body still includes the resource's own id even though the backend
+  always overwrites it with the route id (docs/adr/0007, docs/adr/010) -
+  build it explicitly against the generated `Update*Command` type, keyed
+  on the same `id` the URL uses, never a separately-sourced value.
+- A domain entity whose input can come from the generated API types
+  (`number | string`-widened fields, docs/adr/010) must validate at
+  runtime (finite, correct type, integer where required) in its `create()`
+  factory - a type-level narrowing in the mapper is not enough. Store any
+  externally-supplied array as a defensive copy, not by reference.
+- `e2e/` holds a Playwright suite (`npm run test:e2e`) - separate from the
+  Vitest unit/component suite and not part of its coverage gate. Runs
+  against the production build (`vite build` + `vite preview`), not
+  `vite dev`, since dev-only StrictMode effect double-invocation would
+  make its request-count assertions nondeterministic. See "End-to-end
+  tests" in docs/STATUS.md for what it covers, what's deliberately left to
+  unit tests instead, and why it isn't wired into CI yet.
 
 ### Both must pass before every commit
 

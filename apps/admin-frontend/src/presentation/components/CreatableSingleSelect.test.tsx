@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { useState, type JSX } from 'react'
 import { CreatableSingleSelect } from './CreatableSingleSelect'
 
 interface Item {
@@ -22,7 +22,7 @@ function Harness({
   status?: 'loading' | 'error' | 'success'
   error?: string | null
   onRetry?: () => void
-}) {
+}): JSX.Element {
   const [value, setValue] = useState<string | null>(null)
   return (
     <CreatableSingleSelect
@@ -84,7 +84,7 @@ describe('CreatableSingleSelect', () => {
   })
 
   it('selects the "no selection" option', async () => {
-    function ControlledHarness() {
+    function ControlledHarness(): JSX.Element {
       const [value, setValue] = useState<string | null>('1')
       return (
         <CreatableSingleSelect
@@ -207,7 +207,7 @@ describe('CreatableSingleSelect', () => {
   it('switches to the create form, creates an item, and selects it', async () => {
     // Mirrors real usage: the parent's item list gains the new entry (via a
     // refetch) at the same time selection happens.
-    function HarnessWithGrowingList() {
+    function HarnessWithGrowingList(): JSX.Element {
       const [value, setValue] = useState<string | null>(null)
       const [allItems, setAllItems] = useState(items)
       return (

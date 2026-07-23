@@ -1,11 +1,13 @@
 import { createUserManager } from '../infrastructure/config/createUserManager'
 import { OidcAuthRepository } from '../infrastructure/auth/OidcAuthRepository'
+import { InMemorySessionEventBus } from '../infrastructure/auth/InMemorySessionEventBus'
 import { AuthenticatedHttpClient } from '../infrastructure/http/AuthenticatedHttpClient'
 import { ApiTagRepository } from '../infrastructure/repositories/ApiTagRepository'
 import { ApiCategoryRepository } from '../infrastructure/repositories/ApiCategoryRepository'
 import { ApiServiceRepository } from '../infrastructure/repositories/ApiServiceRepository'
 import type { AuthRepository } from '../application/repositories/AuthRepository'
 import type { HttpClient } from '../application/ports/HttpClient'
+import type { SessionEventBus } from '../application/ports/SessionEventBus'
 import type { TagRepository } from '../application/repositories/TagRepository'
 import type { CategoryRepository } from '../application/repositories/CategoryRepository'
 import type { ServiceRepository } from '../application/repositories/ServiceRepository'
@@ -26,38 +28,57 @@ import { CreateService } from '../application/use-cases/services/CreateService'
 import { UpdateService } from '../application/use-cases/services/UpdateService'
 import { DeleteService } from '../application/use-cases/services/DeleteService'
 
-export interface AppContainer {
-  authRepository: AuthRepository
-  httpClient: HttpClient
-  tagRepository: TagRepository
-  categoryRepository: CategoryRepository
-  serviceRepository: ServiceRepository
-  useCases: {
-    initiateLogin: InitiateLogin
-    handleAuthCallback: HandleAuthCallback
-    getCurrentSession: GetCurrentSession
-    logout: Logout
-    listTags: ListTags
-    createTag: CreateTag
-    updateTag: UpdateTag
-    deleteTag: DeleteTag
-    listCategories: ListCategories
-    createCategory: CreateCategory
-    updateCategory: UpdateCategory
-    deleteCategory: DeleteCategory
-    listServices: ListServices
-    createService: CreateService
-    updateService: UpdateService
-    deleteService: DeleteService
-  }
+/**
+ * What presentation depends on for auth - each entry is the *shape* of a
+ * use case (via Pick<Class, 'execute'>, which is structural and drops the
+ * class's private-field nominal typing), not the concrete class itself.
+ * This is what makes a plain `{ execute: vi.fn(...) }` object a valid,
+ * fully-typed test fake with no `as unknown as AppContainer` cast needed -
+ * see src/test/fixtures/createFakeAppContainer.ts.
+ */
+export interface AuthFacade {
+  initiateLogin: Pick<InitiateLogin, 'execute'>
+  handleAuthCallback: Pick<HandleAuthCallback, 'execute'>
+  getCurrentSession: Pick<GetCurrentSession, 'execute'>
+  logout: Pick<Logout, 'execute'>
+  /** AuthProvider subscribes here to clear the session on a 401 (docs/adr/006). */
+  sessionEvents: SessionEventBus
+}
+
+/** Tags, Categories, and Services collaborate in the same business context. */
+export interface CatalogFacade {
+  listTags: Pick<ListTags, 'execute'>
+  createTag: Pick<CreateTag, 'execute'>
+  updateTag: Pick<UpdateTag, 'execute'>
+  deleteTag: Pick<DeleteTag, 'execute'>
+  listCategories: Pick<ListCategories, 'execute'>
+  createCategory: Pick<CreateCategory, 'execute'>
+  updateCategory: Pick<UpdateCategory, 'execute'>
+  deleteCategory: Pick<DeleteCategory, 'execute'>
+  listServices: Pick<ListServices, 'execute'>
+  createService: Pick<CreateService, 'execute'>
+  updateService: Pick<UpdateService, 'execute'>
+  deleteService: Pick<DeleteService, 'execute'>
 }
 
 /**
- * Builds the application's dependency graph. This is the one place
- * outside of infrastructure/ itself that is allowed to know
- * OidcAuthRepository exists - everywhere else (hooks, components, even
- * other use cases) depends only on the AuthRepository interface or on
- * already-constructed use case instances handed to it.
+ * What presentation is allowed to see - grouped application facades, never
+ * a raw repository or HttpClient (those stay local to createAppContainer,
+ * below). Presentation reaches a use case through `auth`/`catalog`; it has
+ * no way to reach `AuthenticatedHttpClient`, `OidcAuthRepository`, or any
+ * `Api*Repository` at all, by construction (docs/adr/008).
+ */
+export interface AppContainer {
+  auth: AuthFacade
+  catalog: CatalogFacade
+}
+
+/**
+ * Builds the application's dependency graph. This is the one place outside
+ * of infrastructure/ itself that is allowed to know OidcAuthRepository,
+ * AuthenticatedHttpClient, or any Api*Repository exists - everywhere else
+ * (hooks, components) depends only on the auth/catalog facades returned
+ * below.
  *
  * Takes no parameters and reads no config directly: createUserManager
  * already isolates environment variable access, so swapping how
@@ -66,6 +87,7 @@ export interface AppContainer {
 export function createAppContainer(): AppContainer {
   const userManager = createUserManager()
   const authRepository: AuthRepository = new OidcAuthRepository(userManager)
+  const sessionEvents: SessionEventBus = new InMemorySessionEventBus()
 
   const apiBaseUrl = import.meta.env.VITE_API_BASE_URL
   if (!apiBaseUrl) {
@@ -82,6 +104,7 @@ export function createAppContainer(): AppContainer {
       const session = await authRepository.getCurrentSession()
       return session?.user.tenant.id ?? null
     },
+    sessionEvents,
   )
 
   const tagRepository: TagRepository = new ApiTagRepository(httpClient)
@@ -89,16 +112,14 @@ export function createAppContainer(): AppContainer {
   const serviceRepository: ServiceRepository = new ApiServiceRepository(httpClient)
 
   return {
-    authRepository,
-    httpClient,
-    tagRepository,
-    categoryRepository,
-    serviceRepository,
-    useCases: {
+    auth: {
       initiateLogin: new InitiateLogin(authRepository),
       handleAuthCallback: new HandleAuthCallback(authRepository),
       getCurrentSession: new GetCurrentSession(authRepository),
       logout: new Logout(authRepository),
+      sessionEvents,
+    },
+    catalog: {
       listTags: new ListTags(tagRepository),
       createTag: new CreateTag(tagRepository),
       updateTag: new UpdateTag(tagRepository),

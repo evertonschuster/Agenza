@@ -9,9 +9,12 @@ admin/
 │   ├── AppHost/            .NET Aspire orchestrator — local dev only, see below
 │   ├── ServiceDefaults/    shared OpenTelemetry/health-check/service-discovery wiring
 │   ├── shared/
-│   │   ├── Admin.Identity.Client/  JWT validation + ITenantAccessor for resource services
-│   │   └── Admin.SharedKernel/     CQRS/Result-pattern kernel (docs/adr/0005) — Result,
-│   │                               ICommand/IQuery + handlers, IDispatcher, HTTP mapping
+│   │   ├── Admin.Identity.Client/       JWT validation + ITenantAccessor for resource services
+│   │   ├── Admin.SharedKernel/          CQRS/Result-pattern kernel (docs/adr/0005) — Result,
+│   │   │                                ICommand/IQuery + handlers, IDispatcher; framework-agnostic
+│   │   └── Admin.SharedKernel.AspNetCore/  Result → IActionResult mapping + the generic
+│   │                                        exception handler (docs/adr/0018) — only .Api
+│   │                                        projects reference this one
 │   └── services/
 │       ├── identity-service/   OIDC provider (OpenIddict), tenants, users, M2M tokens
 │       └── services-service/   the business's offerings — Tags,
@@ -89,3 +92,21 @@ workspace gains a lint-staged config.
   left on would race to apply the same migration. Prefer that dedicated step
   over adding ad hoc locking here, since the right mechanism depends on the
   orchestrator chosen.
+- If you already ran `docker compose up` or `dotnet run --project
+  backend/AppHost` before docs/adr/0017 landed, your local Postgres
+  volume has migration history recorded in `public.__EFMigrationsHistory`
+  shared by both services. The next startup will try to re-apply every
+  migration against the new schema-scoped history tables and fail loudly
+  (`relation already exists`) until you follow the one-time runbook in
+  docs/adr/0017 (drop the local dev volume, or manually split the table).
+- Both services connect as the same Postgres superuser (`ConnectionStrings__Default`,
+  `postgres`/`postgres` in both `infra/docker-compose.yml` and Aspire's
+  `.WithDataVolume()` resource) — schema-per-service (docs/adr/0002) is
+  enforced by convention/review only, not by Postgres grants; nothing
+  technically stops identity-service's connection from querying
+  `services.*` or vice versa. A follow-up worth doing: one least-privilege
+  Postgres role per service, granted only on its own schema. Not applied
+  as part of docs/adr/0017/0018 — it needs real credential/secrets
+  handling for both `docker-compose` and Aspire's Postgres resource, which
+  is its own piece of infra work, not a drive-by change alongside a
+  migrations-history fix.

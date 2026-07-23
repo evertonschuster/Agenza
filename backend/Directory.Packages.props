@@ -40,6 +40,11 @@
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
 
+    <!-- Admin.SharedKernel / consumers - framework-agnostic DI + logging
+         abstractions, no ASP.NET Core coupling (docs/adr/0018) -->
+    <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
+    <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
+
     <!-- Testing (shared across every *.Tests project) -->
     <PackageVersion Include="AwesomeAssertions" Version="9.5.0" />
     <PackageVersion Include="coverlet.msbuild" Version="10.0.1" />

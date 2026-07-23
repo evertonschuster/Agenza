@@ -8,6 +8,20 @@ import type {
 import type { HttpClient } from '../../application/ports/HttpClient'
 import type { TenantContext } from '../../application/context/TenantContext'
 import { mapTagDtoToDomain, type TagDto } from '../mappers/tagMapper'
+import type { components } from '../generated/services-api'
+
+/**
+ * The generated OpenAPI type marks `tagId` as required in the PUT body -
+ * the backend controller always overwrites it with the route id before
+ * dispatching (`command with { TagId = id }`, ServicesService.Api's
+ * TagsController + docs/adr/0007), so the value sent here is never
+ * actually read, but building the wire body explicitly against this type
+ * - keyed on the exact same `id` this method already routes to - makes
+ * route id and body id structurally incapable of diverging, and keeps the
+ * outgoing request honestly conformant to the contract it's generated
+ * from (docs/adr/010).
+ */
+type UpdateTagRequestBody = components['schemas']['UpdateTagCommand']
 
 const TAGS_URL = '/api/v1/tags'
 
@@ -41,7 +55,13 @@ export class ApiTagRepository implements TagRepository {
   }
 
   async update(_tenantContext: TenantContext, id: string, input: UpdateTagInput): Promise<Tag> {
-    const dto = await this.httpClient.put<TagDto>(`${TAGS_URL}/${id}`, input)
+    const body: UpdateTagRequestBody = {
+      tagId: id,
+      name: input.name,
+      color: input.color,
+      description: input.description ?? null,
+    }
+    const dto = await this.httpClient.put<TagDto>(`${TAGS_URL}/${id}`, body)
     return mapTagDtoToDomain(dto)
   }
 

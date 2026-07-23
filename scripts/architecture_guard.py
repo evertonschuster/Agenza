@@ -410,14 +410,38 @@ def check_coverage_exclude_allowlist() -> list[Finding]:
         return []
 
     text = config_path.read_text(encoding="utf-8")
-    match = re.search(r"exclude:\s*\[(.*?)\]", text, re.DOTALL)
+
+    coverage_match = re.search(r"coverage:\s*\{", text)
+    if not coverage_match:
+        return []
+
+    # Scope the exclude search to inside coverage's own object, found by
+    # counting braces from its opening one - vitest.config.ts also has a
+    # top-level `test.exclude` (which test *files* to collect, e.g. keeping
+    # Playwright specs under e2e/ out of Vitest's run) that is unrelated to
+    # what counts toward the coverage gate and must not be matched instead.
+    brace_start = coverage_match.end() - 1
+    depth = 0
+    block_end = len(text)
+    for index in range(brace_start, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                block_end = index + 1
+                break
+    coverage_block = text[brace_start:block_end]
+    block_start_line = text.count("\n", 0, brace_start) + 1
+
+    match = re.search(r"exclude:\s*\[(.*?)\]", coverage_block, re.DOTALL)
     if not match:
         return []
 
     findings = []
     entry_pattern = re.compile(r"""['"]([^'"]+)['"]""")
     block = match.group(1)
-    start_line = text.count("\n", 0, match.start()) + 1
+    start_line = block_start_line + coverage_block.count("\n", 0, match.start())
     for line_offset, line in enumerate(block.splitlines()):
         for entry_match in entry_pattern.finditer(line):
             entry = entry_match.group(1)

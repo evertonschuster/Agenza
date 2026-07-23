@@ -33,7 +33,11 @@ public static class DependencyInjection
 
         services.AddDbContext<IdentityDataContext>((serviceProvider, options) =>
             options
-                .UseNpgsql(connectionString)
+                // HasDefaultSchema("identity") in IdentityDataContext only moves entity
+                // tables - EF's own __EFMigrationsHistory still defaults to "public" and
+                // would otherwise be shared with services-service on this same database
+                // (docs/adr/0017).
+                .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "identity"))
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
 
         services

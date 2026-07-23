@@ -5,6 +5,9 @@ dist-ssr/
 *.local
 npm-debug.log*
 coverage/
+playwright-report/
+test-results/
+blob-report/
 
 # .NET
 bin/

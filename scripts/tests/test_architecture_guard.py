@@ -390,6 +390,60 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
+    def test_test_level_exclude_before_coverage_exclude_is_not_flagged(self) -> None:
+        # vitest.config.ts has two different `exclude:` keys: test.exclude
+        # (which test *files* to collect - unrelated to the coverage gate)
+        # and test.coverage.exclude (what this check actually polices). A
+        # naive first-match search over the whole file would grab the
+        # former - e.g. 'e2e/**', keeping Playwright specs out of Vitest's
+        # own run - and wrongly flag it as an undocumented coverage-gate
+        # widening.
+        self._write(
+            "apps/admin-frontend/vitest.config.ts",
+            "\n".join(
+                [
+                    "export default {",
+                    "  test: {",
+                    "    exclude: ['e2e/**'],",
+                    "    coverage: { exclude: [",
+                    "      'node_modules/',",
+                    "      'src/test/',",
+                    "    ] },",
+                    "  },",
+                    "}",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_coverage_exclude_allowlist()
+
+        self.assertEqual(findings, [])
+
+    def test_coverage_exclude_drift_still_caught_alongside_test_exclude(self) -> None:
+        self._write(
+            "apps/admin-frontend/vitest.config.ts",
+            "\n".join(
+                [
+                    "export default {",
+                    "  test: {",
+                    "    exclude: ['e2e/**'],",
+                    "    coverage: { exclude: [",
+                    "      'node_modules/',",
+                    "      'src/application/**',",
+                    "    ] },",
+                    "  },",
+                    "}",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_coverage_exclude_allowlist()
+
+        self.assertEqual(len(findings), 1)
+        self.assertIn("src/application/**", findings[0].message)
+
     # -- full run --------------------------------------------------------------
 
     def test_run_all_on_clean_repo_has_no_blocking_findings(self) -> None:

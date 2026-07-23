@@ -63,4 +63,105 @@ describe('HandleAuthCallback', () => {
       handleAuthCallback.execute('https://admin.example.com/callback?error=access_denied'),
     ).rejects.toThrow('invalid_grant: code expired')
   })
+
+  it('exchanges the code only once for two concurrent calls with the same callback URL', async () => {
+    const tenant = Tenant.create('tenant-123')
+    const user = User.create({ id: 'user-1', tenant })
+    const session = Session.create({
+      user,
+      accessToken: 'token',
+      expiresAt: new Date('2099-01-01T00:00:00Z'),
+    })
+    let callCount = 0
+    const authRepository = createFakeAuthRepository({
+      handleCallback: () => {
+        callCount += 1
+        return Promise.resolve(session)
+      },
+    })
+
+    const handleAuthCallback = new HandleAuthCallback(authRepository)
+    const callbackUrl = 'https://admin.example.com/callback?code=abc123&state=xyz'
+
+    // Simulates React.StrictMode's double effect invoke: two calls with
+    // the exact same URL, fired before either has resolved.
+    const [first, second] = await Promise.all([
+      handleAuthCallback.execute(callbackUrl),
+      handleAuthCallback.execute(callbackUrl),
+    ])
+
+    expect(callCount).toBe(1)
+    expect(first).toBe(second)
+  })
+
+  it('exchanges the code only once for a sequential repeat call with the same callback URL', async () => {
+    const tenant = Tenant.create('tenant-123')
+    const user = User.create({ id: 'user-1', tenant })
+    const session = Session.create({
+      user,
+      accessToken: 'token',
+      expiresAt: new Date('2099-01-01T00:00:00Z'),
+    })
+    let callCount = 0
+    const authRepository = createFakeAuthRepository({
+      handleCallback: () => {
+        callCount += 1
+        return Promise.resolve(session)
+      },
+    })
+
+    const handleAuthCallback = new HandleAuthCallback(authRepository)
+    const callbackUrl = 'https://admin.example.com/callback?code=abc123&state=xyz'
+
+    await handleAuthCallback.execute(callbackUrl)
+    await handleAuthCallback.execute(callbackUrl)
+
+    expect(callCount).toBe(1)
+  })
+
+  it('propagates the same rejection to every caller sharing a failed callback URL', async () => {
+    let callCount = 0
+    const authRepository = createFakeAuthRepository({
+      handleCallback: () => {
+        callCount += 1
+        return Promise.reject(new Error('invalid_grant: code expired'))
+      },
+    })
+
+    const handleAuthCallback = new HandleAuthCallback(authRepository)
+    const callbackUrl = 'https://admin.example.com/callback?code=abc123&state=xyz'
+
+    const [firstResult, secondResult] = await Promise.allSettled([
+      handleAuthCallback.execute(callbackUrl),
+      handleAuthCallback.execute(callbackUrl),
+    ])
+
+    expect(callCount).toBe(1)
+    expect(firstResult.status).toBe('rejected')
+    expect(secondResult.status).toBe('rejected')
+  })
+
+  it('exchanges the code again for a different callback URL (a fresh login)', async () => {
+    const tenant = Tenant.create('tenant-123')
+    const user = User.create({ id: 'user-1', tenant })
+    const session = Session.create({
+      user,
+      accessToken: 'token',
+      expiresAt: new Date('2099-01-01T00:00:00Z'),
+    })
+    let callCount = 0
+    const authRepository = createFakeAuthRepository({
+      handleCallback: () => {
+        callCount += 1
+        return Promise.resolve(session)
+      },
+    })
+
+    const handleAuthCallback = new HandleAuthCallback(authRepository)
+
+    await handleAuthCallback.execute('https://admin.example.com/callback?code=first&state=xyz')
+    await handleAuthCallback.execute('https://admin.example.com/callback?code=second&state=abc')
+
+    expect(callCount).toBe(2)
+  })
 })

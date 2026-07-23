@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { ProtectedRoute } from './ProtectedRoute'
 import { AppContainerContext } from '../providers/AppContainerContext'
+import { AuthProvider } from '../providers/AuthProvider'
+import { createFakeAppContainer } from '../../test/fixtures/createFakeAppContainer'
 import type { AppContainer } from '../../composition/container'
 import { Tenant } from '../../domain/value-objects/Tenant'
 import { User } from '../../domain/entities/User'
@@ -15,11 +17,8 @@ function buildContainer(
   const user = User.create({ id: 'user-1', tenant })
   const tenantContext = { tenant, user }
 
-  return {
-    authRepository: {} as AppContainer['authRepository'],
-    useCases: {
-      initiateLogin: { execute: vi.fn(() => Promise.resolve()) },
-      handleAuthCallback: { execute: vi.fn(() => Promise.reject(new Error('not used'))) },
+  return createFakeAppContainer({
+    auth: {
       getCurrentSession: {
         execute:
           sessionResult === 'loading'
@@ -29,22 +28,23 @@ function buildContainer(
               ? vi.fn(() => Promise.resolve(tenantContext))
               : vi.fn(() => Promise.resolve(null)),
       },
-      logout: { execute: vi.fn(() => Promise.resolve()) },
     },
-  } as unknown as AppContainer
+  })
 }
 
 function renderWithRouter(container: AppContainer): void {
   render(
     <AppContainerContext.Provider value={container}>
-      <MemoryRouter initialEntries={['/dashboard']}>
-        <Routes>
-          <Route element={<ProtectedRoute />}>
-            <Route path="/dashboard" element={<div>Protected content</div>} />
-          </Route>
-          <Route path="/login" element={<div>Login page</div>} />
-        </Routes>
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/dashboard']}>
+          <Routes>
+            <Route element={<ProtectedRoute />}>
+              <Route path="/dashboard" element={<div>Protected content</div>} />
+            </Route>
+            <Route path="/login" element={<div>Login page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
     </AppContainerContext.Provider>,
   )
 }

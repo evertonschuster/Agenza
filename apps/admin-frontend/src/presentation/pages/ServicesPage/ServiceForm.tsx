@@ -230,6 +230,7 @@ export function ServiceForm({
                 Categoria
               </label>
               <CreatableSingleSelect
+                ref={field.ref}
                 id="service-category"
                 label="Categoria"
                 items={categories}
@@ -261,6 +262,11 @@ export function ServiceForm({
             </>
           )}
         />
+        {errors.categoryId?.message !== undefined && (
+          <p role="alert" className="mt-1 text-sm text-destructive">
+            {errors.categoryId.message}
+          </p>
+        )}
       </div>
 
       <div>
@@ -270,6 +276,7 @@ export function ServiceForm({
           name="tagIds"
           render={({ field }) => (
             <CreatableMultiSelect
+              ref={field.ref}
               id="service-tags"
               label="Etiquetas"
               items={tags}

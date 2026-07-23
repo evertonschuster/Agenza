@@ -1,5 +1,5 @@
 import { useEffect, type JSX } from 'react'
-import { useForm, useWatch, Controller } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { TAG_COLOR_PALETTE } from '../../domain/entities/Tag'
@@ -53,9 +53,9 @@ export function TagForm({
     mode: 'onTouched',
     reValidateMode: 'onChange',
   })
-  const selectedColor = useWatch({ control, name: 'color' })
   const descriptionValue = useWatch({ control, name: 'description' })
   const hasErrors = Object.keys(errors).length > 0
+  const colorErrorId = 'tag-color-error'
 
   useEffect(() => {
     if (serverError === null) {
@@ -83,33 +83,34 @@ export function TagForm({
         {...register('name')}
       />
 
-      <div>
-        <span className="block text-sm font-medium text-foreground">Cor</span>
-        <Controller
-          control={control}
-          name="color"
-          render={({ field }) => (
-            <div className="mt-1 flex flex-wrap gap-2">
-              {TAG_COLOR_PALETTE.map(paletteColor => (
-                <button
-                  key={paletteColor}
-                  type="button"
-                  aria-label={`Cor ${paletteColor}`}
-                  aria-pressed={selectedColor === paletteColor}
-                  onClick={() => {
-                    field.onChange(paletteColor)
-                  }}
-                  className={[
-                    'h-7 w-7 rounded-full border-2',
-                    selectedColor === paletteColor ? 'border-foreground' : 'border-transparent',
-                  ].join(' ')}
-                  style={{ backgroundColor: paletteColor }}
-                />
-              ))}
-            </div>
-          )}
-        />
-      </div>
+      <fieldset>
+        <legend className="text-sm font-medium text-foreground">Cor</legend>
+        <div className="mt-1 flex flex-wrap gap-2">
+          {TAG_COLOR_PALETTE.map(paletteColor => (
+            <label key={paletteColor} className="relative inline-block size-7 cursor-pointer">
+              <input
+                type="radio"
+                value={paletteColor}
+                aria-label={`Cor ${paletteColor}`}
+                aria-invalid={errors.color !== undefined}
+                aria-describedby={errors.color !== undefined ? colorErrorId : undefined}
+                className="peer absolute inset-0 size-7 cursor-pointer appearance-none outline-none"
+                {...register('color')}
+              />
+              <span
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 block rounded-full border-2 border-transparent peer-checked:border-foreground peer-focus-visible:ring-3 peer-focus-visible:ring-ring/50 peer-aria-invalid:ring-3 peer-aria-invalid:ring-destructive/20"
+                style={{ backgroundColor: paletteColor }}
+              />
+            </label>
+          ))}
+        </div>
+        {errors.color?.message !== undefined && (
+          <p id={colorErrorId} role="alert" className="mt-1 text-sm text-destructive">
+            {errors.color.message}
+          </p>
+        )}
+      </fieldset>
 
       <TextAreaField
         id="tag-description"

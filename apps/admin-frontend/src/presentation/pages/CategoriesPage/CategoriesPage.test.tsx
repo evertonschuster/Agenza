@@ -3,45 +3,38 @@ import { render, screen, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { CategoriesPage } from './CategoriesPage'
 import { AppContainerContext } from '../../providers/AppContainerContext'
-import type { AppContainer } from '../../../composition/container'
+import { AuthProvider } from '../../providers/AuthProvider'
+import type { AppContainer, CatalogFacade } from '../../../composition/container'
 import { Category } from '../../../domain/entities/Category'
 import { Tenant } from '../../../domain/value-objects/Tenant'
 import { User } from '../../../domain/entities/User'
 import { MALICIOUS_PAYLOADS } from '../../../test/fixtures/maliciousPayloads'
-import { ApiError } from '../../../infrastructure/http/ApiError'
+import { createFakeAppContainer } from '../../../test/fixtures/createFakeAppContainer'
+import { AppError } from '../../../application/errors/AppError'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
 const massagensCategory = Category.create({ id: 'category-1', name: 'Massagens' })
 
-interface FakeUseCases {
-  getCurrentSession: { execute: () => Promise<typeof tenantContext | null> }
-  listCategories: { execute: () => Promise<Category[]> }
-  createCategory: { execute: (...args: unknown[]) => Promise<Category> }
-  updateCategory: { execute: (...args: unknown[]) => Promise<Category> }
-  deleteCategory: { execute: (...args: unknown[]) => Promise<void> }
-}
-
-function buildContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
-  return {
-    useCases: {
-      initiateLogin: { execute: vi.fn(() => Promise.resolve()) },
-      handleAuthCallback: { execute: vi.fn(() => Promise.reject(new Error('not used'))) },
-      logout: { execute: vi.fn(() => Promise.resolve()) },
-      getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) },
+function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
+  return createFakeAppContainer({
+    auth: { getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) } },
+    catalog: {
       listCategories: { execute: vi.fn(() => Promise.resolve([massagensCategory])) },
       createCategory: { execute: vi.fn(() => Promise.resolve(massagensCategory)) },
       updateCategory: { execute: vi.fn(() => Promise.resolve(massagensCategory)) },
       deleteCategory: { execute: vi.fn(() => Promise.resolve()) },
       ...overrides,
     },
-  } as unknown as AppContainer
+  })
 }
 
 function renderCategoriesPage(container: AppContainer): void {
   render(
     <AppContainerContext.Provider value={container}>
-      <CategoriesPage />
+      <AuthProvider>
+        <CategoriesPage />
+      </AuthProvider>
     </AppContainerContext.Provider>,
   )
 }
@@ -186,10 +179,11 @@ describe('CategoriesPage', () => {
 
   describe('structured server errors', () => {
     it('maps a validation field error from the API onto the Nome field and focuses it', async () => {
-      const validationError = new ApiError(400, 'Ocorreram erros de validação.', {
-        status: 400,
-        code: 'Category.ValidationFailed',
-        errors: { Name: [{ code: 'Category.NameRequired', message: 'O nome é obrigatório.' }] },
+      const validationError = new AppError({
+        code: 'validation',
+        message: 'Ocorreram erros de validação.',
+        retryable: false,
+        rawFieldErrors: { Name: 'O nome é obrigatório.' },
       })
       renderCategoriesPage(
         buildContainer({
@@ -212,9 +206,11 @@ describe('CategoriesPage', () => {
     })
 
     it('maps a duplicate-name conflict code from the API onto the Nome field', async () => {
-      const conflictError = new ApiError(409, 'Já existe uma categoria com esse nome.', {
-        status: 409,
-        code: 'Category.DuplicateName',
+      const conflictError = new AppError({
+        code: 'conflict',
+        message: 'Já existe uma categoria com esse nome.',
+        retryable: false,
+        backendCode: 'Category.DuplicateName',
       })
       renderCategoriesPage(
         buildContainer({ createCategory: { execute: vi.fn(() => Promise.reject(conflictError)) } }),

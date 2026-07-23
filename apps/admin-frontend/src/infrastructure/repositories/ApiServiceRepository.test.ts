@@ -121,7 +121,19 @@ describe('ApiServiceRepository', () => {
   it('updates a service at the correct path', async () => {
     server.use(
       http.put(`${baseUrl}/api/v1/services/service-1`, async ({ request }) => {
-        expect(await request.json()).toEqual({ ...createInput, name: 'Renamed' })
+        // serviceId mirrors the route id explicitly (docs/adr/010) - the
+        // backend overwrites it regardless, but the two must never
+        // structurally be able to diverge. Optional fields the input
+        // omitted are sent as explicit null, matching the OpenAPI schema
+        // (`null | string`, not optional) rather than omitting the key.
+        expect(await request.json()).toEqual({
+          ...createInput,
+          serviceId: 'service-1',
+          name: 'Renamed',
+          description: null,
+          categoryId: null,
+          tagIds: null,
+        })
         return HttpResponse.json({ ...serviceFixture, name: 'Renamed' })
       }),
     )
@@ -150,7 +162,7 @@ describe('ApiServiceRepository', () => {
     expect(deleteWasCalled).toBe(true)
   })
 
-  it('propagates ApiError from the HttpClient on a non-2xx response', async () => {
+  it('propagates a curated AppError from the HttpClient on a non-2xx response, not the raw backend title', async () => {
     server.use(
       http.get(`${baseUrl}/api/v1/services`, () =>
         HttpResponse.json({ title: 'Something went wrong' }, { status: 500 }),
@@ -158,6 +170,8 @@ describe('ApiServiceRepository', () => {
     )
     const repository = buildRepository()
 
-    await expect(repository.listAll(buildTenantContext())).rejects.toThrow('Something went wrong')
+    await expect(repository.listAll(buildTenantContext())).rejects.toThrow(
+      'Não foi possível concluir a operação. Tente novamente.',
+    )
   })
 })

@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor, act, type RenderHookResult } from '@testing-library/react'
 import { useCategories, type UseCategoriesResult } from './useCategories'
 import { AppContainerContext } from '../providers/AppContainerContext'
-import type { AppContainer } from '../../composition/container'
+import { createFakeAppContainer } from '../../test/fixtures/createFakeAppContainer'
+import type { AppContainer, CatalogFacade } from '../../composition/container'
 import { Category } from '../../domain/entities/Category'
 import { Tenant } from '../../domain/value-objects/Tenant'
 import { User } from '../../domain/entities/User'
@@ -10,23 +11,16 @@ import type { TenantContext } from '../../application/context/TenantContext'
 
 const categoryFixture = Category.create({ id: 'category-1', name: 'Massagens' })
 
-interface FakeUseCases {
-  listCategories: { execute: () => Promise<Category[]> }
-  createCategory: { execute: () => Promise<Category> }
-  updateCategory: { execute: () => Promise<Category> }
-  deleteCategory: { execute: () => Promise<void> }
-}
-
-function createFakeContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
-  return {
-    useCases: {
+function createFakeContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
+  return createFakeAppContainer({
+    catalog: {
       listCategories: { execute: vi.fn(() => Promise.resolve([categoryFixture])) },
       createCategory: { execute: vi.fn(() => Promise.resolve(categoryFixture)) },
       updateCategory: { execute: vi.fn(() => Promise.resolve(categoryFixture)) },
       deleteCategory: { execute: vi.fn(() => Promise.resolve()) },
       ...overrides,
     },
-  } as unknown as AppContainer
+  })
 }
 
 function buildTenantContext(): TenantContext {

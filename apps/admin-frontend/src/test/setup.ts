@@ -1,7 +1,10 @@
 import '@testing-library/jest-dom/vitest'
-import { afterAll, afterEach, beforeAll, vi } from 'vitest'
+import { afterAll, afterEach, beforeAll, expect, vi } from 'vitest'
 import { cleanup } from '@testing-library/react'
+import { toHaveNoViolations } from 'jest-axe'
 import { server } from './mocks/server'
+
+expect.extend(toHaveNoViolations)
 
 // jsdom doesn't implement matchMedia - ThemeProvider needs it to read the
 // OS color-scheme preference on mount.

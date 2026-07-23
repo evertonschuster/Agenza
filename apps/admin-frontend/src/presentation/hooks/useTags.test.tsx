@@ -2,7 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor, act, type RenderHookResult } from '@testing-library/react'
 import { useTags, type UseTagsResult } from './useTags'
 import { AppContainerContext } from '../providers/AppContainerContext'
-import type { AppContainer } from '../../composition/container'
+import { createFakeAppContainer } from '../../test/fixtures/createFakeAppContainer'
+import type { AppContainer, CatalogFacade } from '../../composition/container'
 import { Tag } from '../../domain/entities/Tag'
 import { Tenant } from '../../domain/value-objects/Tenant'
 import { User } from '../../domain/entities/User'
@@ -10,23 +11,16 @@ import type { TenantContext } from '../../application/context/TenantContext'
 
 const tagFixture = Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488' })
 
-interface FakeUseCases {
-  listTags: { execute: () => Promise<Tag[]> }
-  createTag: { execute: () => Promise<Tag> }
-  updateTag: { execute: () => Promise<Tag> }
-  deleteTag: { execute: () => Promise<void> }
-}
-
-function createFakeContainer(overrides: Partial<FakeUseCases> = {}): AppContainer {
-  return {
-    useCases: {
+function createFakeContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
+  return createFakeAppContainer({
+    catalog: {
       listTags: { execute: vi.fn(() => Promise.resolve([tagFixture])) },
       createTag: { execute: vi.fn(() => Promise.resolve(tagFixture)) },
       updateTag: { execute: vi.fn(() => Promise.resolve(tagFixture)) },
       deleteTag: { execute: vi.fn(() => Promise.resolve()) },
       ...overrides,
     },
-  } as unknown as AppContainer
+  })
 }
 
 function buildTenantContext(): TenantContext {
@@ -169,5 +163,74 @@ describe('useTags', () => {
     })
 
     await expect(result.current.createTag({ name: 'VIP', color: '#0d9488' })).rejects.toThrow()
+  })
+
+  it('does not let a create started against the previous tenant leak into the new tenant after a switch', async () => {
+    const tenantA = buildTenantContext()
+    const tenantBValue = Tenant.create('tenant-456')
+    const tenantB: TenantContext = {
+      tenant: tenantBValue,
+      user: User.create({ id: 'user-1', tenant: tenantBValue }),
+    }
+
+    let resolveCreate: ((tag: Tag) => void) | undefined
+    const createTagSpy = vi.fn(
+      () =>
+        new Promise<Tag>(resolve => {
+          resolveCreate = resolve
+        }),
+    )
+    const listTagsSpy = vi
+      .fn<() => Promise<Tag[]>>()
+      .mockResolvedValueOnce([tagFixture]) // tenant A's initial load
+      .mockResolvedValueOnce([]) // tenant B's auto-fetch right after the switch
+      .mockResolvedValue([tagFixture]) // any further stale tenant-A refetch
+
+    const container = createFakeContainer({
+      listTags: { execute: listTagsSpy },
+      createTag: { execute: createTagSpy },
+    })
+
+    const { result, rerender } = renderHook<UseTagsResult, { tenantContext: TenantContext | null }>(
+      ({ tenantContext }) => useTags(tenantContext),
+      {
+        wrapper: ({ children }) => (
+          <AppContainerContext.Provider value={container}>{children}</AppContainerContext.Provider>
+        ),
+        initialProps: { tenantContext: tenantA },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+    expect(result.current.tags).toEqual([tagFixture])
+
+    // Start a create against tenant A - deliberately left pending.
+    let createPromise: Promise<Tag> | undefined
+    act(() => {
+      createPromise = result.current.createTag({ name: 'VIP', color: '#0d9488' })
+    })
+
+    // Switch to tenant B before the create resolves.
+    rerender({ tenantContext: tenantB })
+    await waitFor(() => {
+      expect(result.current.tags).toEqual([])
+    })
+
+    // Tenant A's create finally resolves. The extra microtask flushes give
+    // its background `void execute()` (fired after mutate, not awaited by
+    // createTag itself) a chance to settle before the assertion below, so
+    // this test would actually fail if the tenant-switch guard regressed.
+    await act(async () => {
+      resolveCreate?.(tagFixture)
+      await createPromise
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    // Tenant B's list must still be empty - the stale create's optimistic
+    // insert and its own background refetch must not have applied.
+    expect(result.current.tags).toEqual([])
   })
 })

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { useState } from 'react'
+import { useState, type JSX } from 'react'
 import { CreatableMultiSelect } from './CreatableMultiSelect'
 
 interface Item {
@@ -23,7 +23,7 @@ function Harness({
   status?: 'loading' | 'error' | 'success'
   error?: string | null
   onRetry?: () => void
-}) {
+}): JSX.Element {
   const [values, setValues] = useState<string[]>([])
   return (
     <CreatableMultiSelect
@@ -158,7 +158,7 @@ describe('CreatableMultiSelect', () => {
   it('switches to the create form, creates an item, and selects it as a chip', async () => {
     // Mirrors real usage: the parent's item list gains the new entry (via a
     // refetch) at the same time selection happens.
-    function HarnessWithGrowingList() {
+    function HarnessWithGrowingList(): JSX.Element {
       const [values, setValues] = useState<string[]>([])
       const [allItems, setAllItems] = useState(items)
       return (

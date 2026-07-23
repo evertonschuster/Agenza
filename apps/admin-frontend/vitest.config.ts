@@ -1,5 +1,5 @@
 import { fileURLToPath } from 'node:url'
-import { defineConfig } from 'vitest/config'
+import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
 export default defineConfig({
@@ -14,6 +14,11 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
     css: false,
+    // e2e/ holds Playwright specs (own test runner, own `test`/`expect`
+    // globals from @playwright/test) - without this, Vitest's default
+    // *.spec.ts include pattern would also try to run them as Vitest
+    // tests and fail immediately on the missing vitest globals.
+    exclude: [...configDefaults.exclude, 'e2e/**'],
     coverage: {
       provider: 'v8',
       // Without an explicit include, Vitest only measures files that are
@@ -21,8 +26,15 @@ export default defineConfig({
       // gate instead of counting against it.
       include: ['src/**'],
       reporter: ['text', 'html', 'lcov'],
+      // Raised from the original lines-only 80% gate now that
+      // statements/branches/functions are all comfortably above these
+      // numbers in practice (~91/91/85/85 as of docs/adr/011) - never
+      // lower `lines` below its previous value.
       thresholds: {
-        lines: 80,
+        lines: 85,
+        statements: 85,
+        branches: 80,
+        functions: 80,
       },
       exclude: [
         'node_modules/',

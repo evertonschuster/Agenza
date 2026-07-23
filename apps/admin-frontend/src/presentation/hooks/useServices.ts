@@ -50,7 +50,7 @@ export function useServices(
   tenantContext: TenantContext | null,
   filters: UseServicesFilters = {},
 ): UseServicesResult {
-  const { useCases } = useAppContainer()
+  const { catalog } = useAppContainer()
   const [page, setPage] = useState(1)
   const { search, categoryId, tagId } = filters
 
@@ -58,16 +58,16 @@ export function useServices(
     if (tenantContext === null) {
       return EMPTY_PAGE
     }
-    return useCases.listServices.execute(tenantContext, {
+    return catalog.listServices.execute(tenantContext, {
       page,
       pageSize: DEFAULT_PAGE_SIZE,
       ...(search !== undefined ? { search } : {}),
       ...(categoryId !== undefined ? { categoryId } : {}),
       ...(tagId !== undefined ? { tagId } : {}),
     })
-  }, [tenantContext, useCases, page, search, categoryId, tagId])
+  }, [tenantContext, catalog, page, search, categoryId, tagId])
 
-  const { data, status, error, execute, mutate } = useAsync(listServices, {
+  const { data, status, error, execute, mutate, captureGeneration } = useAsync(listServices, {
     resetKey: tenantContext?.tenant.id,
   })
 
@@ -76,25 +76,31 @@ export function useServices(
       if (tenantContext === null) {
         throw new Error('Não é possível criar um serviço sem um contexto de tenant autenticado')
       }
-      const service = await useCases.createService.execute(tenantContext, input)
+      // Captured before the POST starts: if the tenant switches while this
+      // request is in flight, the mutate below must not insert tenant A's
+      // newly created service into what is now tenant B's list.
+      const generation = captureGeneration()
+      const service = await catalog.createService.execute(tenantContext, input)
       // Insert immediately so the new service shows up as soon as the POST
       // succeeds - the mutation's success never depends on the background
       // refetch below. If that refetch fails, this optimistic entry is
       // what keeps the service visible (see useAsync's own status/error,
       // surfaced separately by the page).
-      mutate(current =>
-        current === null
-          ? current
-          : {
-              ...current,
-              services: [...current.services, service],
-              totalCount: current.totalCount + 1,
-            },
+      mutate(
+        current =>
+          current === null
+            ? current
+            : {
+                ...current,
+                services: [...current.services, service],
+                totalCount: current.totalCount + 1,
+              },
+        generation,
       )
       void execute()
       return service
     },
-    [tenantContext, useCases, execute, mutate],
+    [tenantContext, catalog, execute, mutate, captureGeneration],
   )
 
   const updateService = useCallback(
@@ -102,11 +108,11 @@ export function useServices(
       if (tenantContext === null) {
         throw new Error('Não é possível atualizar um serviço sem um contexto de tenant autenticado')
       }
-      const service = await useCases.updateService.execute(tenantContext, id, input)
+      const service = await catalog.updateService.execute(tenantContext, id, input)
       await execute()
       return service
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, catalog, execute],
   )
 
   const deleteService = useCallback(
@@ -114,7 +120,7 @@ export function useServices(
       if (tenantContext === null) {
         throw new Error('Não é possível excluir um serviço sem um contexto de tenant autenticado')
       }
-      await useCases.deleteService.execute(tenantContext, id)
+      await catalog.deleteService.execute(tenantContext, id)
       const refreshed = await execute()
       // Deleting the last item on a page past the first leaves the user
       // stranded on a now-empty page - step back to the last page that
@@ -123,7 +129,7 @@ export function useServices(
         setPage(page - 1)
       }
     },
-    [tenantContext, useCases, execute, page],
+    [tenantContext, catalog, execute, page],
   )
 
   return {

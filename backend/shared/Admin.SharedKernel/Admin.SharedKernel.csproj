@@ -8,15 +8,11 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <!-- Both consumers (identity-service, services-service) are ASP.NET
-         Core Web APIs, so ResultExtensions.cs (Result -> IActionResult)
-         living here - instead of duplicated per-service - costs nothing
-         in practice. Also brings DI abstractions (IServiceCollection etc)
-         transitively, so no separate package reference is needed for those. -->
-    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- IServiceCollection/AddScoped/GetRequiredService only - this package
+         has zero ASP.NET Core coupling (docs/adr/0018). The MVC-specific
+         half (Result -> IActionResult, the exception handler) lives in the
+         sibling Admin.SharedKernel.AspNetCore project instead. -->
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
 </Project>

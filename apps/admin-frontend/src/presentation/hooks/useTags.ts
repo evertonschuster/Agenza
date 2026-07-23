@@ -25,16 +25,16 @@ export interface UseTagsResult {
  * fetch automatically (see useAsync: execute's identity follows listTags').
  */
 export function useTags(tenantContext: TenantContext | null, search = ''): UseTagsResult {
-  const { useCases } = useAppContainer()
+  const { catalog } = useAppContainer()
 
   const listTags = useCallback(async (): Promise<Tag[]> => {
     if (tenantContext === null) {
       return []
     }
-    return useCases.listTags.execute(tenantContext, { search })
-  }, [tenantContext, useCases, search])
+    return catalog.listTags.execute(tenantContext, { search })
+  }, [tenantContext, catalog, search])
 
-  const { data, status, error, execute, mutate } = useAsync(listTags, {
+  const { data, status, error, execute, mutate, captureGeneration } = useAsync(listTags, {
     resetKey: tenantContext?.tenant.id,
   })
 
@@ -43,17 +43,21 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
       if (tenantContext === null) {
         throw new Error('Não é possível criar uma etiqueta sem um contexto de tenant autenticado')
       }
-      const tag = await useCases.createTag.execute(tenantContext, input)
+      // Captured before the POST starts: if the tenant switches while this
+      // request is in flight, the mutate below must not insert tenant A's
+      // newly created tag into what is now tenant B's list.
+      const generation = captureGeneration()
+      const tag = await catalog.createTag.execute(tenantContext, input)
       // Insert immediately so the new tag is selectable and shows up as
       // soon as the POST succeeds - the mutation's success never depends
       // on the background refetch below. If that refetch fails, this
       // optimistic entry is what keeps the tag visible as a chip (see
       // useAsync's own status/error, surfaced separately by the page).
-      mutate(current => [...(current ?? []), tag])
+      mutate(current => [...(current ?? []), tag], generation)
       void execute()
       return tag
     },
-    [tenantContext, useCases, execute, mutate],
+    [tenantContext, catalog, execute, mutate, captureGeneration],
   )
 
   const updateTag = useCallback(
@@ -63,11 +67,11 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
           'Não é possível atualizar uma etiqueta sem um contexto de tenant autenticado',
         )
       }
-      const tag = await useCases.updateTag.execute(tenantContext, id, input)
+      const tag = await catalog.updateTag.execute(tenantContext, id, input)
       await execute()
       return tag
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, catalog, execute],
   )
 
   const deleteTag = useCallback(
@@ -75,10 +79,10 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
       if (tenantContext === null) {
         throw new Error('Não é possível excluir uma etiqueta sem um contexto de tenant autenticado')
       }
-      await useCases.deleteTag.execute(tenantContext, id)
+      await catalog.deleteTag.execute(tenantContext, id)
       await execute()
     },
-    [tenantContext, useCases, execute],
+    [tenantContext, catalog, execute],
   )
 
   return {

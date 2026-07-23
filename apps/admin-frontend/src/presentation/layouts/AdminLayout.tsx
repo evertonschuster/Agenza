@@ -19,6 +19,7 @@ import { useAuth } from '../hooks/useAuth'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ThemeToggle } from '../components/ThemeToggle'
+import { TenantBoundary } from '../providers/TenantBoundary'
 
 interface NavItem {
   label: string
@@ -222,7 +223,9 @@ export function AdminLayout(): JSX.Element {
 
         <main className="flex-1 overflow-y-auto">
           <div className="p-4 md:p-8">
-            <Outlet />
+            <TenantBoundary>
+              <Outlet />
+            </TenantBoundary>
           </div>
         </main>
       </div>

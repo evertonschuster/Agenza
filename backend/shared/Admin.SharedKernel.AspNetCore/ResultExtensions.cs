@@ -1,7 +1,7 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 
-namespace Admin.SharedKernel;
+namespace Admin.SharedKernel.AspNetCore;
 
 public static class ResultExtensions
 {

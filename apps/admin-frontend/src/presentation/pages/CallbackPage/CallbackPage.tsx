@@ -8,14 +8,14 @@ import { FullScreenSpinner } from '../../components/FullScreenSpinner'
 type CallbackStatus = 'processing' | 'error'
 
 export function CallbackPage(): JSX.Element {
-  const { useCases } = useAppContainer()
+  const { auth } = useAppContainer()
   const navigate = useNavigate()
   const [status, setStatus] = useState<CallbackStatus>('processing')
 
   useEffect(() => {
     async function completeLogin(): Promise<void> {
       try {
-        await useCases.handleAuthCallback.execute(window.location.href)
+        await auth.handleAuthCallback.execute(window.location.href)
         await navigate('/dashboard', { replace: true })
       } catch {
         setStatus('error')

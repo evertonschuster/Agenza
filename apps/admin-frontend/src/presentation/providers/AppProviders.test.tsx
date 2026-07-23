@@ -1,25 +1,14 @@
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { AppProviders } from './AppProviders'
 import { useAppContainer } from '../hooks/useAppContainer'
+import { createFakeAppContainer } from '../../test/fixtures/createFakeAppContainer'
 import type { AppContainer } from '../../composition/container'
 import type { JSX } from 'react'
 
 describe('AppProviders', () => {
-  beforeEach(() => {
-    vi.stubEnv('VITE_API_BASE_URL', 'https://api.example.com')
-    vi.stubEnv('VITE_OIDC_AUTHORITY', 'https://identity.example.com')
-    vi.stubEnv('VITE_OIDC_CLIENT_ID', 'admin-panel')
-    vi.stubEnv('VITE_OIDC_REDIRECT_URI', 'https://app.example.com/callback')
-    vi.stubEnv('VITE_OIDC_POST_LOGOUT_REDIRECT_URI', 'https://app.example.com/login')
-    vi.stubEnv('VITE_OIDC_SCOPE', 'openid profile tenant_id')
-  })
-
-  afterEach(() => {
-    vi.unstubAllEnvs()
-  })
-
-  it('provides a real container to descendants', () => {
+  it('provides the given container to descendants', () => {
+    const container = createFakeAppContainer()
     let received: AppContainer | null = null
 
     function Consumer(): JSX.Element {
@@ -28,16 +17,17 @@ describe('AppProviders', () => {
     }
 
     render(
-      <AppProviders>
+      <AppProviders container={container}>
         <Consumer />
       </AppProviders>,
     )
 
     expect(screen.getByText('container ready')).toBeInTheDocument()
-    expect(received).not.toBeNull()
+    expect(received).toBe(container)
   })
 
-  it('constructs the container exactly once across re-renders', () => {
+  it('exposes the exact same container reference to every consumer', () => {
+    const container = createFakeAppContainer()
     const seen: AppContainer[] = []
 
     function Consumer(): JSX.Element {
@@ -46,12 +36,12 @@ describe('AppProviders', () => {
     }
 
     const { rerender } = render(
-      <AppProviders>
+      <AppProviders container={container}>
         <Consumer />
       </AppProviders>,
     )
     rerender(
-      <AppProviders>
+      <AppProviders container={container}>
         <Consumer />
       </AppProviders>,
     )

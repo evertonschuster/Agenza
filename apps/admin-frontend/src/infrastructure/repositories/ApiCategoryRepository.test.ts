@@ -76,7 +76,10 @@ describe('ApiCategoryRepository', () => {
   it('updates a category at the correct path', async () => {
     server.use(
       http.put(`${baseUrl}/api/v1/categories/category-1`, async ({ request }) => {
-        expect(await request.json()).toEqual({ name: 'Renamed' })
+        // categoryId mirrors the route id explicitly (docs/adr/010) - the
+        // backend overwrites it regardless, but the two must never
+        // structurally be able to diverge.
+        expect(await request.json()).toEqual({ categoryId: 'category-1', name: 'Renamed' })
         return HttpResponse.json({ ...categoryFixture, name: 'Renamed' })
       }),
     )
@@ -104,7 +107,7 @@ describe('ApiCategoryRepository', () => {
     expect(deleteWasCalled).toBe(true)
   })
 
-  it('propagates ApiError from the HttpClient on a non-2xx response', async () => {
+  it('propagates a curated AppError from the HttpClient on a non-2xx response, not the raw backend title', async () => {
     server.use(
       http.get(`${baseUrl}/api/v1/categories`, () =>
         HttpResponse.json({ title: 'Something went wrong' }, { status: 500 }),
@@ -112,6 +115,8 @@ describe('ApiCategoryRepository', () => {
     )
     const repository = buildRepository()
 
-    await expect(repository.listAll(buildTenantContext())).rejects.toThrow('Something went wrong')
+    await expect(repository.listAll(buildTenantContext())).rejects.toThrow(
+      'Não foi possível concluir a operação. Tente novamente.',
+    )
   })
 })

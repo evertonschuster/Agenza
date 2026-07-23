@@ -13,11 +13,22 @@ import {
   type PagedServiceDto,
   type ServiceDto,
 } from '../mappers/serviceMapper'
+import type { components } from '../generated/services-api'
 
 const DEFAULT_PAGE = 1
 const DEFAULT_PAGE_SIZE = 20
 
 const SERVICES_URL = '/api/v1/services'
+
+/**
+ * The generated OpenAPI type marks `serviceId` as required in the PUT
+ * body - the backend controller always overwrites it with the route id
+ * before dispatching, so the value sent here is never actually read, but
+ * building the wire body explicitly against this type - keyed on the
+ * exact same `id` this method already routes to - makes route id and body
+ * id structurally incapable of diverging (docs/adr/010).
+ */
+type UpdateServiceRequestBody = components['schemas']['UpdateServiceCommand']
 
 /**
  * The /api/v1/services contract from docs/API.md. Tenant scope travels
@@ -69,7 +80,19 @@ export class ApiServiceRepository implements ServiceRepository {
     id: string,
     input: UpdateServiceInput,
   ): Promise<Service> {
-    const dto = await this.httpClient.put<ServiceDto>(`${SERVICES_URL}/${id}`, input)
+    const body: UpdateServiceRequestBody = {
+      serviceId: id,
+      name: input.name,
+      description: input.description ?? null,
+      durationMinutes: input.durationMinutes,
+      minDurationMinutes: input.minDurationMinutes,
+      maxDurationMinutes: input.maxDurationMinutes,
+      price: input.price,
+      maxDiscountPercentage: input.maxDiscountPercentage,
+      categoryId: input.categoryId ?? null,
+      tagIds: input.tagIds ?? null,
+    }
+    const dto = await this.httpClient.put<ServiceDto>(`${SERVICES_URL}/${id}`, body)
     return mapServiceDtoToDomain(dto)
   }
 

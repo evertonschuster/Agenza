@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
 using IdentityService.Application.Tenants.ProvisionTenant;
 using Microsoft.AspNetCore.Authorization;

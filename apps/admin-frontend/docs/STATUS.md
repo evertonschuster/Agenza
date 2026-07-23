@@ -198,21 +198,79 @@ create/edit form's pickers, both already built.
 
 ## Test counts
 
-| Session                                                                                     | Tests added                            | Total                             |
-| ------------------------------------------------------------------------------------------- | -------------------------------------- | --------------------------------- |
-| Initial setup                                                                               | 0                                      | 0                                 |
-| Domain (Tenant, User, Session)                                                              | 17                                     | 17                                |
-| Application (4 use cases)                                                                   | 7                                      | 24                                |
-| Infrastructure (mapper + OidcAuthRepository)                                                | 13                                     | 37                                |
-| Composition + hooks (useAsync, useAuth, useAppContainer)                                    | 10                                     | 47                                |
-| Presentation (ProtectedRoute, LoginPage)                                                    | 6                                      | 53                                |
-| HttpClient (AuthenticatedHttpClient via MSW)                                                | 6                                      | 59                                |
-| Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager)  | 14                                     | 73                                |
-| Tags vertical + UI system (shadcn/ui migration, dark mode, mobile-responsive `AdminLayout`) | not logged incrementally               | 116 (verified via `npm run test`) |
-| UI reset to stock shadcn theme + Tags list/form → `Table`/`Dialog`                          | 0 (existing tests updated, none added) | 116 (verified via `npm run test`) |
-| Categories + Services verticals (entities, use cases, repos, mappers, hooks, pages)         | 75                                     | 191 (verified via `npm run test`) |
+| Session                                                                                                                   | Tests added                            | Total                                      |
+| ------------------------------------------------------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------ |
+| Initial setup                                                                                                             | 0                                      | 0                                          |
+| Domain (Tenant, User, Session)                                                                                            | 17                                     | 17                                         |
+| Application (4 use cases)                                                                                                 | 7                                      | 24                                         |
+| Infrastructure (mapper + OidcAuthRepository)                                                                              | 13                                     | 37                                         |
+| Composition + hooks (useAsync, useAuth, useAppContainer)                                                                  | 10                                     | 47                                         |
+| Presentation (ProtectedRoute, LoginPage)                                                                                  | 6                                      | 53                                         |
+| HttpClient (AuthenticatedHttpClient via MSW)                                                                              | 6                                      | 59                                         |
+| Coverage hardening (CallbackPage, AdminLayout, container, AppProviders, createUserManager)                                | 14                                     | 73                                         |
+| Tags vertical + UI system (shadcn/ui migration, dark mode, mobile-responsive `AdminLayout`)                               | not logged incrementally               | 116 (verified via `npm run test`)          |
+| UI reset to stock shadcn theme + Tags list/form → `Table`/`Dialog`                                                        | 0 (existing tests updated, none added) | 116 (verified via `npm run test`)          |
+| Categories + Services verticals (entities, use cases, repos, mappers, hooks, pages)                                       | 75                                     | 191 (verified via `npm run test`)          |
+| Auth/tenant safety rewrite, error taxonomy, AppContainer facade split, ServicesPage decomposition (docs/adr/006-008)      | 211                                    | 402 (verified via `npm run test`)          |
+| Lint hardening to zero warnings, `test:coverage` thresholds raised (branches/functions added), Playwright E2E suite added | 24                                     | 426 (verified via `npm run test:coverage`) |
+| jest-axe broadened from TagForm to LoginPage and ServicesPage's create-service dialog                                     | 2                                      | 428 (verified via `npm run test:coverage`) |
 
-Update the test count row whenever a feature vertical is completed.
+Update the test count row whenever a feature vertical is completed. The
+428 above is Vitest only — see "End-to-end tests" below for the separate
+Playwright suite (9 specs), which isn't counted in this table or in the
+coverage gate.
+
+**Pending architectural follow-up:** docs/adr/009 specifies a feature-based
+`features/{auth,catalog}` + `app/` + `shared/` reorganization (target tree
+and full migration runbook there) — decided but not yet physically moved;
+see that ADR before starting unrelated work in `presentation/`,
+`application/`, or `infrastructure/` so new files land in the right place
+once the move happens.
+
+---
+
+## End-to-end tests
+
+`e2e/` holds a Playwright suite (`npm run test:e2e`, `npm run test:e2e:ui`
+for the interactive runner) that runs against the **production build**
+(`vite build` + `vite preview`, wired as `playwright.config.ts`'s
+`webServer`) rather than `vite dev` — several specs count exactly how many
+times a mocked endpoint is hit, and React's StrictMode double-invokes
+effects in development only, which would make those counts nondeterministic
+against the dev server.
+
+Every spec mocks its own backend via `page.route()` and, where a signed-in
+session is needed, writes an oidc-client-ts user record straight into
+localStorage (`e2e/support/session.ts`) — no identity-service,
+services-service, or Postgres needs to be running. Covered so far:
+
+- Unauthenticated access to a protected route or `/` redirects to `/login`.
+- `LoginPage` renders correctly in dark mode and at a 375px viewport.
+- The authenticated shell: index → `/dashboard` redirect, sidebar
+  navigation, and logout (mocking the OIDC discovery document + end-session
+  redirect, not just a REST endpoint, so the real `OidcAuthRepository` runs
+  unmodified).
+- Tags: full create → edit → delete flow through the real
+  `HttpClient`/repository/mapper stack (not a faked `AppContainer`, unlike
+  the unit tests).
+- Tags list: a failed refetch keeps showing the last known-good data with a
+  retry action, and retry recovers.
+
+**Deliberately not duplicated here** (already covered at the unit level,
+listed so the gap is explicit rather than silent): the OIDC callback's
+idempotency under `StrictMode` (`CallbackPage.test.tsx`,
+`HandleAuthCallback.test.ts`), tenant-switch races in `useAsync`/
+`useCreateInline` (their own dedicated test files), and cross-tenant/
+cross-session visual bleed (`TenantBoundary.test.tsx`). Categories/Services
+CRUD aren't E2E-tested separately — Tags is the reference flow and the
+other two verticals share the same `useAsync`/repository/mapper
+machinery already exercised there and at the unit level.
+
+**Not yet wired into CI** (`.github/workflows/frontend-ci.yml`): doing so
+would need `npx playwright install --with-deps chromium` added as a step
+and `VITE_API_BASE_URL`/`VITE_OIDC_*` provided in the runner (today only
+`.env.local`, which is gitignored, supplies them locally) — a reasonable
+follow-up, deferred rather than added speculatively.
 
 ---
 

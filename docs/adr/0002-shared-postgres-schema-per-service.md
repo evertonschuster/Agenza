@@ -20,7 +20,10 @@ another service's schema — cross-context data flows through APIs.
 ## Consequences
 
 - Single `postgres` container locally (docker-compose and Aspire).
-- Migrations can't collide across services.
+- Migrations can't collide across services — this held for entity
+  tables from the start, but `HasDefaultSchema` alone didn't cover EF
+  Core's own `__EFMigrationsHistory` bookkeeping table; see docs/adr/0017
+  for the gap this left and the schema-scoped fix.
 - If a service later needs its own instance (scale, isolation,
   compliance), moving a whole schema out is straightforward.
 - Discipline is by convention + review: Postgres won't stop a service

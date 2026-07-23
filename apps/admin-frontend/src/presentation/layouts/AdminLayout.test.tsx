@@ -4,11 +4,13 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { AdminLayout } from './AdminLayout'
 import { AppContainerContext } from '../providers/AppContainerContext'
+import { AuthProvider } from '../providers/AuthProvider'
 import { ThemeProvider } from '../providers/ThemeProvider'
 import type { AppContainer } from '../../composition/container'
 import type { TenantContext } from '../../application/context/TenantContext'
 import { Tenant } from '../../domain/value-objects/Tenant'
 import { User } from '../../domain/entities/User'
+import { createFakeAppContainer } from '../../test/fixtures/createFakeAppContainer'
 import { vi } from 'vitest'
 
 function buildTenantContext(): TenantContext {
@@ -21,29 +23,28 @@ function buildContainer(
   tenantContext: TenantContext | null,
   logoutFn = vi.fn(() => Promise.resolve()),
 ): AppContainer {
-  return {
-    authRepository: {} as AppContainer['authRepository'],
-    useCases: {
-      initiateLogin: { execute: vi.fn(() => Promise.resolve()) },
-      handleAuthCallback: { execute: vi.fn(() => Promise.reject(new Error('not used'))) },
+  return createFakeAppContainer({
+    auth: {
       getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) },
       logout: { execute: logoutFn },
     },
-  } as unknown as AppContainer
+  })
 }
 
 function renderLayout(container: AppContainer): void {
   render(
     <AppContainerContext.Provider value={container}>
-      <ThemeProvider>
-        <MemoryRouter initialEntries={['/dashboard']}>
-          <Routes>
-            <Route element={<AdminLayout />}>
-              <Route path="/dashboard" element={<div>Dashboard content</div>} />
-            </Route>
-          </Routes>
-        </MemoryRouter>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider>
+          <MemoryRouter initialEntries={['/dashboard']}>
+            <Routes>
+              <Route element={<AdminLayout />}>
+                <Route path="/dashboard" element={<div>Dashboard content</div>} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
+      </AuthProvider>
     </AppContainerContext.Provider>,
   )
 }

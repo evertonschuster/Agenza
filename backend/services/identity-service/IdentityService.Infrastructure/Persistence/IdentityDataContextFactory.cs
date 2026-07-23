@@ -24,7 +24,11 @@ public class IdentityDataContextFactory : IDesignTimeDbContextFactory<IdentityDa
                 "ConnectionStrings__Default environment variable.");
 
         var optionsBuilder = new DbContextOptionsBuilder<IdentityDataContext>();
-        optionsBuilder.UseNpgsql(connectionString);
+        // Kept in sync with DependencyInjection.AddIdentityInfrastructure's runtime
+        // configuration (docs/adr/0017) - design-time tooling (`dotnet ef migrations
+        // list`/`database update`) must resolve migrations against the same
+        // schema-scoped history table the running service uses.
+        optionsBuilder.UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "identity"));
 
         return new IdentityDataContext(optionsBuilder.Options);
     }

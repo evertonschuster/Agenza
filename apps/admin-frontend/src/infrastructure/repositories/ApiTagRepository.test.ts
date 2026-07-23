@@ -64,7 +64,15 @@ describe('ApiTagRepository', () => {
   it('updates a tag at the correct path', async () => {
     server.use(
       http.put(`${baseUrl}/api/v1/tags/tag-1`, async ({ request }) => {
-        expect(await request.json()).toEqual({ name: 'Renamed', color: '#ef4444' })
+        // tagId mirrors the route id explicitly (docs/adr/010) - the
+        // backend overwrites it regardless, but the two must never
+        // structurally be able to diverge.
+        expect(await request.json()).toEqual({
+          tagId: 'tag-1',
+          name: 'Renamed',
+          color: '#ef4444',
+          description: null,
+        })
         return HttpResponse.json({ ...tagFixture, name: 'Renamed', color: '#ef4444' })
       }),
     )
@@ -93,7 +101,7 @@ describe('ApiTagRepository', () => {
     expect(deleteWasCalled).toBe(true)
   })
 
-  it('propagates ApiError from the HttpClient on a non-2xx response', async () => {
+  it('propagates a curated AppError from the HttpClient on a non-2xx response, not the raw backend title', async () => {
     server.use(
       http.get(`${baseUrl}/api/v1/tags`, () =>
         HttpResponse.json({ title: 'Something went wrong' }, { status: 500 }),
@@ -101,6 +109,8 @@ describe('ApiTagRepository', () => {
     )
     const repository = buildRepository()
 
-    await expect(repository.listAll(buildTenantContext())).rejects.toThrow('Something went wrong')
+    await expect(repository.listAll(buildTenantContext())).rejects.toThrow(
+      'Não foi possível concluir a operação. Tente novamente.',
+    )
   })
 })
