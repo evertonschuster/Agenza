@@ -1,13 +1,14 @@
 import type { JSX, MouseEvent } from 'react'
 import type { Service } from '@/features/catalog/domain/entities/Service'
-import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
+import { CollectionFeedback } from '@/shared/presentation/components/CollectionFeedback'
 import { ServicesTable } from '@/features/catalog/presentation/services/ServicesTable'
 import { ServicesPagination } from '@/features/catalog/presentation/services/ServicesPagination'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 
 export interface ServicesListProps {
-  services: Service[]
-  status: 'idle' | 'loading' | 'success' | 'error'
-  error: unknown
+  services: readonly Service[]
+  listState: AsyncState<readonly Service[], UiError>
   hasActiveFilters: boolean
   page: number
   totalPages: number
@@ -20,8 +21,7 @@ export interface ServicesListProps {
 /** Decides loading/error/empty/last-known-good; delegates rendering to ServicesTable/ServicesPagination. */
 export function ServicesList({
   services,
-  status,
-  error,
+  listState,
   hasActiveFilters,
   page,
   totalPages,
@@ -32,37 +32,18 @@ export function ServicesList({
 }: ServicesListProps): JSX.Element {
   return (
     <div className="mt-6">
-      {status === 'loading' && services.length === 0 && (
-        <StatusMessage>Carregando serviços…</StatusMessage>
-      )}
-
-      {status === 'error' && services.length === 0 && (
-        <StatusMessage tone="error">
-          Não foi possível carregar os serviços
-          {error instanceof Error ? `: ${error.message}` : '.'}
-        </StatusMessage>
-      )}
-
-      {/* A refetch failing after a service was already loaded keeps showing
-          the last known-good list instead of a blocking error. */}
-      {status === 'error' && services.length > 0 && (
-        <StatusMessage tone="error">
-          Não foi possível atualizar a lista de serviços
-          {error instanceof Error ? `: ${error.message}` : '.'} Mostrando os últimos dados
-          carregados.{' '}
-          <button type="button" onClick={onRetry} className="underline">
-            Tentar novamente
-          </button>
-        </StatusMessage>
-      )}
-
-      {status === 'success' && services.length === 0 && (
-        <StatusMessage>
-          {hasActiveFilters
+      <CollectionFeedback
+        state={listState}
+        loadingMessage="Carregando serviços…"
+        loadErrorMessage="Não foi possível carregar os serviços"
+        refreshErrorMessage="Não foi possível atualizar a lista de serviços"
+        emptyMessage={
+          hasActiveFilters
             ? 'Nenhum serviço encontrado para esses filtros.'
-            : 'Nenhum serviço ainda. Crie um para começar.'}
-        </StatusMessage>
-      )}
+            : 'Nenhum serviço ainda. Crie um para começar.'
+        }
+        onRetry={onRetry}
+      />
 
       {services.length > 0 && (
         <ServicesTable services={services} onEdit={onEdit} onDelete={onDelete} />

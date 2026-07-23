@@ -12,8 +12,7 @@ export function TagsPage(): JSX.Element {
     searchInput,
     onSearchInputChange,
     tags,
-    status,
-    error,
+    listState,
     hasActiveSearch,
     onRetry,
     onOpenCreate,
@@ -44,8 +43,7 @@ export function TagsPage(): JSX.Element {
 
       <TagsTable
         tags={tags}
-        status={status}
-        error={error}
+        listState={listState}
         hasActiveSearch={hasActiveSearch}
         onRetry={onRetry}
         onEdit={onEdit}

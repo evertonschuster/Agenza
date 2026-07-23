@@ -64,9 +64,7 @@ export function ServiceCategoryField({ options }: ServiceCategoryFieldProps): JS
               searchPlaceholder="Buscar categoria…"
               emptyText="Nenhuma categoria encontrada."
               createActionLabel="Nova categoria"
-              status={options.status}
-              error={options.error}
-              onRetry={options.onRetry}
+              loadState={options.loadState}
               renderCreateForm={({ close, onCreated }) => (
                 <CategoryForm
                   initialValues={EMPTY_CATEGORY_FORM_VALUES}

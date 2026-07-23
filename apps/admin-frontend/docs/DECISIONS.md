@@ -101,17 +101,22 @@ to `true` (auto-run on mount).
 `immediate: false` option covers action-style calls (e.g. mutations)
 that should only run on explicit user interaction.
 
-### `react-hooks/set-state-in-effect` suppression in `useAsync`
+### `react-hooks/set-state-in-effect` suppression in `useAsync` (no longer needed)
 
-**Decision:** The `void execute()` call inside `useEffect` is suppressed
-with an eslint-disable comment.
-**Reason:** This is a documented false positive. The rule traces async
-call graphs and flags setState calls that happen after `await` — but
+**Decision (superseded):** The `void execute()` call inside `useEffect` was
+suppressed with an eslint-disable comment.
+**Reason:** This was a documented false positive. The rule traced async
+call graphs and flagged setState calls that happen after `await` — but
 those calls are genuinely async and not synchronous within the effect.
 React's own docs show the same pattern as recommended. See open issue
 react/react#34743.
-**Do not remove:** If this lint error appears elsewhere in the codebase,
-treat it as a real violation.
+**Removed when:** `useAsync`'s internal state was consolidated from three
+separate `useState` calls (`status`/`data`/`error`) into one
+`useState<AsyncState<T>>` (the discriminated-union refactor - see
+`AsyncState` in `useAsync.ts`). The rule no longer traces a violation
+through the restructured `execute()`, and ESLint flags the disable comment
+itself as unused. If this lint error reappears anywhere in the codebase,
+treat it as a real violation before reaching for a suppression again.
 
 ---
 

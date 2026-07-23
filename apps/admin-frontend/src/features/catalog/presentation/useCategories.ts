@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useAppContainer } from '@/app/providers/useAppContainer'
-import { useAsync } from '@/shared/presentation/hooks/useAsync'
+import { useAsync, toUiAsyncState, type AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 import type { Category } from '@/features/catalog/domain/entities/Category'
 import type { TenantContext } from '@/features/auth'
 import type {
@@ -8,12 +9,9 @@ import type {
   UpdateCategoryInput,
 } from '@/features/catalog/application/repositories/CategoryRepository'
 
-type UseCategoriesStatus = 'idle' | 'loading' | 'success' | 'error'
-
 export interface UseCategoriesResult {
-  categories: Category[]
-  status: UseCategoriesStatus
-  error: unknown
+  categories: readonly Category[]
+  listState: AsyncState<readonly Category[], UiError>
   refetch: () => Promise<void>
   createCategory: (input: CreateCategoryInput) => Promise<Category>
   updateCategory: (id: string, input: UpdateCategoryInput) => Promise<Category>
@@ -40,9 +38,8 @@ export function useCategories(
     return catalog.listCategories.execute(tenantContext, { search })
   }, [tenantContext, catalog, search])
 
-  const { data, status, error, execute, mutate, captureGeneration } = useAsync(listCategories, {
-    resetKey: tenantContext?.tenant.id,
-  })
+  const asyncState = useAsync(listCategories, { resetKey: tenantContext?.tenant.id })
+  const { data, execute, mutate, captureGeneration } = asyncState
 
   const createCategory = useCallback(
     async (input: CreateCategoryInput): Promise<Category> => {
@@ -95,8 +92,7 @@ export function useCategories(
 
   return {
     categories: data ?? [],
-    status,
-    error,
+    listState: toUiAsyncState(asyncState),
     refetch: async () => {
       await execute()
     },

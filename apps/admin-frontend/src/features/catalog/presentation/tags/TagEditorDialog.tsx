@@ -8,12 +8,13 @@ import {
 import type { ServerFormError } from '@/shared/presentation/forms/serverFormError'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
+type TagEditorContent =
+  | { kind: 'create'; title: string; submitLabel: string; initialValues: TagFormValues }
+  | { kind: 'edit'; item: Tag; title: string; submitLabel: string; initialValues: TagFormValues }
+
 export interface TagEditorDialogProps {
   isOpen: boolean
-  displayTarget: 'new' | Tag | null
-  title: string
-  submitLabel: string
-  initialValues: TagFormValues
+  content: TagEditorContent | null
   isSubmitting: boolean
   serverError: ServerFormError<TagFormField> | null
   onCancel: () => void
@@ -22,10 +23,7 @@ export interface TagEditorDialogProps {
 
 export function TagEditorDialog({
   isOpen,
-  displayTarget,
-  title,
-  submitLabel,
-  initialValues,
+  content,
   isSubmitting,
   serverError,
   onCancel,
@@ -40,13 +38,13 @@ export function TagEditorDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{content?.title ?? ''}</DialogTitle>
         </DialogHeader>
-        {displayTarget !== null && (
+        {content !== null && (
           <TagForm
-            key={displayTarget === 'new' ? 'new' : displayTarget.id}
-            initialValues={initialValues}
-            submitLabel={submitLabel}
+            key={content.kind === 'create' ? 'new' : content.item.id}
+            initialValues={content.initialValues}
+            submitLabel={content.submitLabel}
             isSubmitting={isSubmitting}
             serverError={serverError}
             onCancel={onCancel}

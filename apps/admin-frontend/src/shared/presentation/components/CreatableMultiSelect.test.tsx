@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type JSX } from 'react'
 import { CreatableMultiSelect } from '@/shared/presentation/components/CreatableMultiSelect'
+import type { SelectLoadState } from '@/shared/presentation/components/SelectLoadState'
 
 interface Item {
   id: string
@@ -16,13 +17,9 @@ const items: Item[] = [
 ]
 
 function Harness({
-  status = 'success',
-  error = null,
-  onRetry,
+  loadState = { status: 'success' },
 }: {
-  status?: 'loading' | 'error' | 'success'
-  error?: string | null
-  onRetry?: () => void
+  loadState?: SelectLoadState
 }): JSX.Element {
   const [values, setValues] = useState<string[]>([])
   return (
@@ -38,9 +35,7 @@ function Harness({
       searchPlaceholder="Buscar etiqueta…"
       emptyText="Nenhuma etiqueta encontrada."
       createActionLabel="Nova etiqueta"
-      status={status}
-      error={error}
-      onRetry={onRetry}
+      loadState={loadState}
       renderCreateForm={({ onCreated }) => (
         <button
           type="button"
@@ -137,7 +132,7 @@ describe('CreatableMultiSelect', () => {
   })
 
   it('shows a loading state instead of the list', async () => {
-    render(<Harness status="loading" />)
+    render(<Harness loadState={{ status: 'loading' }} />)
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Etiquetas' }))
 
@@ -146,13 +141,22 @@ describe('CreatableMultiSelect', () => {
 
   it('shows an error state with a retry action', async () => {
     const onRetry = vi.fn()
-    render(<Harness status="error" error="network down" onRetry={onRetry} />)
+    render(<Harness loadState={{ status: 'error', message: 'network down', onRetry }} />)
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Etiquetas' }))
     expect(screen.getByText('network down')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /tentar novamente/i }))
 
     expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  it('shows the error message without a retry action when the failure is not retryable', async () => {
+    render(<Harness loadState={{ status: 'error', message: 'Não autorizado.' }} />)
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Etiquetas' }))
+
+    expect(screen.getByText('Não autorizado.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /tentar novamente/i })).not.toBeInTheDocument()
   })
 
   it('switches to the create form, creates an item, and selects it as a chip', async () => {
@@ -174,8 +178,7 @@ describe('CreatableMultiSelect', () => {
           searchPlaceholder="Buscar etiqueta…"
           emptyText="Nenhuma etiqueta encontrada."
           createActionLabel="Nova etiqueta"
-          status="success"
-          error={null}
+          loadState={{ status: 'success' }}
           renderCreateForm={({ onCreated }) => (
             <button
               type="button"

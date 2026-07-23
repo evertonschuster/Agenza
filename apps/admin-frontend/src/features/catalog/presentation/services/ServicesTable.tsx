@@ -4,7 +4,7 @@ import { Table, TableBody, TableHead, TableHeader, TableRow } from '@/components
 import { ServiceTableRow } from '@/features/catalog/presentation/services/ServiceTableRow'
 
 export interface ServicesTableProps {
-  services: Service[]
+  services: readonly Service[]
   onEdit: (service: Service, event: MouseEvent<HTMLButtonElement>) => void
   onDelete: (service: Service) => void
 }

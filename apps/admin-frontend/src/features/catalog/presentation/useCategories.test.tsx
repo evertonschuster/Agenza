@@ -47,7 +47,7 @@ describe('useCategories', () => {
     const { result } = renderUseCategories(createFakeContainer(), buildTenantContext())
 
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     expect(result.current.categories).toEqual([categoryFixture])
@@ -61,7 +61,7 @@ describe('useCategories', () => {
     )
 
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     expect(result.current.categories).toEqual([])
@@ -80,7 +80,7 @@ describe('useCategories', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
     listCategoriesSpy.mockClear()
 
@@ -117,7 +117,7 @@ describe('useCategories', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     // createCategory resolves even though the refetch it triggers never
@@ -151,7 +151,7 @@ describe('useCategories', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     await act(async () => {
@@ -164,7 +164,7 @@ describe('useCategories', () => {
     expect(result.current.categories).toEqual([categoryFixture, newCategory])
 
     await waitFor(() => {
-      expect(result.current.status).toBe('error')
+      expect(result.current.listState.status).toBe('refreshError')
     })
     // Still there after the failed refetch settles - not cleared, not
     // reported as a failed creation.
@@ -183,7 +183,7 @@ describe('useCategories', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
     listCategoriesSpy.mockClear()
 
@@ -198,7 +198,7 @@ describe('useCategories', () => {
   it('rejects mutations when tenantContext is null', async () => {
     const { result } = renderUseCategories(createFakeContainer(), null)
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     await expect(result.current.createCategory({ name: 'Massagens' })).rejects.toThrow()

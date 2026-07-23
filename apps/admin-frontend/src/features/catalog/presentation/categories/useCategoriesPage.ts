@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useAuth } from '@/features/auth'
 import { useCategories } from '@/features/catalog/presentation/useCategories'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 import { useDebouncedValue } from '@/shared/presentation/hooks/useDebouncedValue'
-import { useDialogTarget } from '@/shared/presentation/hooks/useDialogTarget'
+import { useDialogTarget, type DialogTarget } from '@/shared/presentation/hooks/useDialogTarget'
 import { useDeleteConfirmation } from '@/shared/presentation/hooks/useDeleteConfirmation'
 import type { Category } from '@/features/catalog/domain/entities/Category'
 import type {
@@ -28,12 +30,39 @@ function toFormValues(category: Category): CategoryFormValues {
   return { name: category.name }
 }
 
+export type CategoryEditorContent =
+  | { kind: 'create'; title: string; submitLabel: string; initialValues: CategoryFormValues }
+  | {
+      kind: 'edit'
+      item: Category
+      title: string
+      submitLabel: string
+      initialValues: CategoryFormValues
+    }
+
+function toEditorContent(target: DialogTarget<Category>): CategoryEditorContent {
+  if (target.kind === 'edit') {
+    return {
+      kind: 'edit',
+      item: target.item,
+      title: 'Editar categoria',
+      submitLabel: 'Salvar alterações',
+      initialValues: toFormValues(target.item),
+    }
+  }
+  return {
+    kind: 'create',
+    title: 'Nova categoria',
+    submitLabel: 'Criar categoria',
+    initialValues: EMPTY_FORM_VALUES,
+  }
+}
+
 export interface UseCategoriesPageResult {
   searchInput: string
   onSearchInputChange: (value: string) => void
-  categories: Category[]
-  status: 'idle' | 'loading' | 'success' | 'error'
-  error: unknown
+  categories: readonly Category[]
+  listState: AsyncState<readonly Category[], UiError>
   hasActiveSearch: boolean
   onRetry: () => void
   onOpenCreate: () => void
@@ -41,10 +70,7 @@ export interface UseCategoriesPageResult {
   onDelete: (category: Category) => void
   dialog: {
     isOpen: boolean
-    displayTarget: 'new' | Category | null
-    title: string
-    submitLabel: string
-    initialValues: CategoryFormValues
+    content: CategoryEditorContent | null
     isSubmitting: boolean
     serverError: ServerFormError<CategoryFormField> | null
     onCancel: () => void
@@ -64,7 +90,7 @@ export function useCategoriesPage(): UseCategoriesPageResult {
   const { tenantContext } = useAuth()
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebouncedValue(searchInput, 300)
-  const { categories, status, error, refetch, createCategory, updateCategory, deleteCategory } =
+  const { categories, listState, refetch, createCategory, updateCategory, deleteCategory } =
     useCategories(tenantContext, debouncedSearch)
 
   const dialogTarget = useDialogTarget<Category>()
@@ -94,10 +120,10 @@ export function useCategoriesPage(): UseCategoriesPageResult {
     setIsSubmitting(true)
     setServerError(null)
     try {
-      if (dialogTarget.formTarget === 'new') {
+      if (dialogTarget.formTarget?.kind === 'create') {
         await createCategory(toCategoryInput(values))
-      } else if (dialogTarget.formTarget !== null) {
-        await updateCategory(dialogTarget.formTarget.id, toCategoryInput(values))
+      } else if (dialogTarget.formTarget?.kind === 'edit') {
+        await updateCategory(dialogTarget.formTarget.item.id, toCategoryInput(values))
       }
       closeForm()
     } catch (caughtError) {
@@ -114,14 +140,11 @@ export function useCategoriesPage(): UseCategoriesPageResult {
     }
   }
 
-  const { displayTarget } = dialogTarget
-
   return {
     searchInput,
     onSearchInputChange: setSearchInput,
     categories,
-    status,
-    error,
+    listState,
     hasActiveSearch: debouncedSearch.trim() !== '',
     onRetry: () => void refetch(),
     onOpenCreate: openCreateForm,
@@ -129,15 +152,8 @@ export function useCategoriesPage(): UseCategoriesPageResult {
     onDelete: deletion.onRequestDelete,
     dialog: {
       isOpen: dialogTarget.isOpen,
-      displayTarget,
-      title:
-        displayTarget === 'new' || displayTarget === null ? 'Nova categoria' : 'Editar categoria',
-      submitLabel:
-        displayTarget === 'new' || displayTarget === null ? 'Criar categoria' : 'Salvar alterações',
-      initialValues:
-        displayTarget === 'new' || displayTarget === null
-          ? EMPTY_FORM_VALUES
-          : toFormValues(displayTarget),
+      content:
+        dialogTarget.displayTarget !== null ? toEditorContent(dialogTarget.displayTarget) : null,
       isSubmitting,
       serverError,
       onCancel: closeForm,

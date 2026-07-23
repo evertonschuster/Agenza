@@ -1,4 +1,4 @@
-import type { HttpClient } from '@/shared/application/HttpClient'
+import type { Decoder, HttpClient } from '@/shared/application/HttpClient'
 import type { SessionInvalidationNotifier } from '@/shared/application/SessionEventBus'
 import type { GetRequestSession } from '@/shared/application/RequestSession'
 import { ApiError } from '@/shared/infrastructure/http/ApiError'
@@ -30,30 +30,37 @@ export class AuthenticatedHttpClient implements HttpClient {
     this.sessionInvalidationNotifier = sessionInvalidationNotifier
   }
 
-  async get<T>(path: string): Promise<T> {
-    return this.request<T>('GET', path)
+  async get<T>(path: string, decode: Decoder<T>): Promise<T> {
+    return this.request(decode, 'GET', path)
   }
 
-  async post<T>(path: string, body: unknown): Promise<T> {
-    return this.request<T>('POST', path, body)
+  async post<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T> {
+    return this.request(decode, 'POST', path, body)
   }
 
-  async put<T>(path: string, body: unknown): Promise<T> {
-    return this.request<T>('PUT', path, body)
+  async put<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T> {
+    return this.request(decode, 'PUT', path, body)
   }
 
   async delete(path: string): Promise<void> {
-    await this.request<undefined>('DELETE', path)
+    await this.request<undefined>(() => undefined, 'DELETE', path)
   }
 
   /**
-   * Every failure path below (missing token, 401, non-2xx ProblemDetails,
-   * a fetch-level network/timeout failure) is converted to AppError by the
-   * single catch at the bottom before it leaves this method - callers
-   * (repositories, use cases, forms) only ever see AppError, never ApiError/
-   * UnauthenticatedError/NetworkError/TimeoutError directly (docs/adr/007).
+   * Every failure path below (missing token, 401, non-2xx ProblemDetails, a
+   * fetch-level network/timeout failure, or `decode` rejecting a malformed
+   * payload) is converted to AppError by the single catch at the bottom
+   * before it leaves this method - callers (repositories, use cases, forms)
+   * only ever see AppError, never ApiError/UnauthenticatedError/
+   * NetworkError/TimeoutError/a raw decode failure directly (docs/adr/007,
+   * docs/adr/011).
    */
-  private async request<T>(method: string, path: string, body?: unknown): Promise<T> {
+  private async request<T>(
+    decode: Decoder<T>,
+    method: string,
+    path: string,
+    body?: unknown,
+  ): Promise<T> {
     try {
       const requestSession = await this.getRequestSession()
       if (requestSession === null) {
@@ -105,10 +112,11 @@ export class AuthenticatedHttpClient implements HttpClient {
       }
 
       if (response.status === 204) {
-        return undefined as T
+        return decode(undefined)
       }
 
-      return (await response.json()) as T
+      const rawBody: unknown = await response.json()
+      return decode(rawBody)
     } catch (error) {
       throw mapErrorToAppError(error)
     }

@@ -12,9 +12,8 @@ import {
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
 import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
+import type { SelectLoadState } from '@/shared/presentation/components/SelectLoadState'
 import { cn } from '@/lib/utils'
-
-export type CreatableSelectStatus = 'loading' | 'error' | 'success'
 
 interface CreatableSelectHelpers<T> {
   close: () => void
@@ -24,8 +23,8 @@ interface CreatableSelectHelpers<T> {
 interface CreatableMultiSelectProps<T> {
   id?: string
   label: string
-  items: T[]
-  values: string[]
+  items: readonly T[]
+  values: readonly string[]
   getKey: (item: T) => string
   getLabel: (item: T) => string
   getColor?: (item: T) => string
@@ -35,9 +34,7 @@ interface CreatableMultiSelectProps<T> {
   emptyText: string
   createActionLabel: string
   renderCreateForm: (helpers: CreatableSelectHelpers<T>) => ReactNode
-  status: CreatableSelectStatus
-  error?: string | null
-  onRetry?: (() => void) | undefined
+  loadState: SelectLoadState
   /**
    * Forwarded to the trigger button - lets react-hook-form's setFocus(name)
    * land here when this field is wired through Controller (whose `field`
@@ -69,9 +66,7 @@ export function CreatableMultiSelect<T>({
   emptyText,
   createActionLabel,
   renderCreateForm,
-  status,
-  error,
-  onRetry,
+  loadState,
   ref,
 }: CreatableMultiSelectProps<T>): JSX.Element {
   const contentId = useId()
@@ -99,7 +94,7 @@ export function CreatableMultiSelect<T>({
 
   function handleCreated(item: T): void {
     const key = getKey(item)
-    onChange(values.includes(key) ? values : [...values, key])
+    onChange(values.includes(key) ? [...values] : [...values, key])
     setOpen(false)
     setMode('list')
   }
@@ -141,23 +136,23 @@ export function CreatableMultiSelect<T>({
           ) : (
             <Command label={searchPlaceholder}>
               <CommandInput autoFocus placeholder={searchPlaceholder} />
-              {status === 'loading' && (
+              {loadState.status === 'loading' && (
                 <div className="flex items-center gap-2 px-3 py-4 text-sm text-muted-foreground">
                   <Spinner />
                   Carregando…
                 </div>
               )}
-              {status === 'error' && (
+              {loadState.status === 'error' && (
                 <div className="space-y-2 p-3">
-                  <StatusMessage tone="error">{error}</StatusMessage>
-                  {onRetry !== undefined && (
-                    <Button type="button" variant="outline" size="sm" onClick={onRetry}>
+                  <StatusMessage tone="error">{loadState.message}</StatusMessage>
+                  {loadState.onRetry !== undefined && (
+                    <Button type="button" variant="outline" size="sm" onClick={loadState.onRetry}>
                       Tentar novamente
                     </Button>
                   )}
                 </div>
               )}
-              {status === 'success' && (
+              {loadState.status === 'success' && (
                 <>
                   <CommandList aria-multiselectable="true">
                     <CommandEmpty>{emptyText}</CommandEmpty>

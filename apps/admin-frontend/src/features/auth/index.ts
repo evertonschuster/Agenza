@@ -2,6 +2,7 @@
 // and app/ may import auth internals through.
 
 export { useAuth } from './presentation/useAuth'
+export { useAuthenticatedTenant } from './presentation/useAuthenticatedTenant'
 export { AuthProvider } from './presentation/AuthProvider'
 export { TenantBoundary } from './presentation/TenantBoundary'
 export { ProtectedRoute } from './presentation/ProtectedRoute'

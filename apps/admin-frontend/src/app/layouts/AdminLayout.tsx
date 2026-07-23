@@ -15,7 +15,7 @@ import {
   Tag as TagIcon,
   Users,
 } from 'lucide-react'
-import { useAuth, TenantBoundary } from '@/features/auth'
+import { useAuth, useAuthenticatedTenant, TenantBoundary } from '@/features/auth'
 import { Button } from '@/components/ui/button'
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet'
 import { ThemeToggle } from '@/shared/presentation/components/ThemeToggle'
@@ -26,7 +26,7 @@ interface NavItem {
   icon: LucideIcon
 }
 
-const NAV_ITEMS: NavItem[] = [
+const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Painel', to: '/dashboard', icon: LayoutDashboard },
   { label: 'Agendamentos', to: '/appointments', icon: CalendarDays },
   { label: 'Serviços', to: '/services', icon: Sparkles },
@@ -127,8 +127,9 @@ function SidebarFooter({ isCollapsed, businessName, onLogout }: SidebarFooterPro
 }
 
 export function AdminLayout(): JSX.Element {
-  const { tenantContext, logout } = useAuth()
-  const businessName = tenantContext?.user.name ?? 'Minha Empresa'
+  const { logout } = useAuth()
+  const { user } = useAuthenticatedTenant()
+  const businessName = user.name ?? 'Minha Empresa'
   const [isCollapsed, setIsCollapsed] = useState(getInitialCollapsed)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
 

@@ -1,7 +1,17 @@
 import { AppError } from '@/shared/application/AppError'
 
+export interface FieldError<TField extends string> {
+  field: TField
+  message: string
+}
+
 export interface ServerFormError<TField extends string> {
-  fieldErrors: Partial<Record<TField, string>>
+  // A readonly list, not Partial<Record<TField, string>> - Object.entries()
+  // on a Record always returns string keys, erasing TField, which is
+  // exactly what forced a `field as TagFormField`-style cast at every call
+  // site before. A list of {field, message} pairs preserves TField and
+  // first-error order without one.
+  fieldErrors: readonly FieldError<TField>[]
   firstField: TField | null
   globalMessage: string | null
 }
@@ -28,25 +38,25 @@ export function mapApiErrorToForm<TField extends string>(
 ): ServerFormError<TField> {
   if (!(error instanceof AppError)) {
     const message = error instanceof Error ? error.message : fallbackMessage
-    return { fieldErrors: {}, firstField: null, globalMessage: message }
+    return { fieldErrors: [], firstField: null, globalMessage: message }
   }
 
   if (error.rawFieldErrors !== undefined) {
-    const fieldErrors: Partial<Record<TField, string>> = {}
+    const fieldErrors: FieldError<TField>[] = []
     let firstField: TField | null = null
     const unmapped: string[] = []
 
     for (const [backendField, message] of Object.entries(error.rawFieldErrors)) {
       const mappedField = fieldMap[backendField]
       if (mappedField !== undefined) {
-        fieldErrors[mappedField] = message
+        fieldErrors.push({ field: mappedField, message })
         firstField ??= mappedField
       } else {
         unmapped.push(message)
       }
     }
 
-    if (Object.keys(fieldErrors).length > 0 || unmapped.length > 0) {
+    if (fieldErrors.length > 0 || unmapped.length > 0) {
       return {
         fieldErrors,
         firstField,
@@ -57,10 +67,12 @@ export function mapApiErrorToForm<TField extends string>(
 
   const mappedField = error.backendCode !== undefined ? codeFieldMap[error.backendCode] : undefined
   if (mappedField !== undefined) {
-    const fieldErrors: Partial<Record<TField, string>> = {}
-    fieldErrors[mappedField] = error.message
-    return { fieldErrors, firstField: mappedField, globalMessage: null }
+    return {
+      fieldErrors: [{ field: mappedField, message: error.message }],
+      firstField: mappedField,
+      globalMessage: null,
+    }
   }
 
-  return { fieldErrors: {}, firstField: null, globalMessage: error.message }
+  return { fieldErrors: [], firstField: null, globalMessage: error.message }
 }

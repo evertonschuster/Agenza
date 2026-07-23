@@ -51,8 +51,8 @@ export function CategoryForm({
     if (serverError === null) {
       return
     }
-    for (const [field, message] of Object.entries(serverError.fieldErrors)) {
-      setError(field as CategoryFormField, { type: 'server', message })
+    for (const { field, message } of serverError.fieldErrors) {
+      setError(field, { type: 'server', message })
     }
     if (serverError.firstField !== null) {
       setFocus(serverError.firstField)

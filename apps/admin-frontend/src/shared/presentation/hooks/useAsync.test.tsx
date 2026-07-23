@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useCallback } from 'react'
-import { useAsync } from '@/shared/presentation/hooks/useAsync'
+import { useAsync, toUiAsyncState, type AsyncState } from '@/shared/presentation/hooks/useAsync'
+import { AppError } from '@/shared/application/AppError'
 
 describe('useAsync', () => {
   it('starts in a loading state and resolves to data on success', async () => {
@@ -18,15 +19,16 @@ describe('useAsync', () => {
     expect(result.current.data).toBe('result')
   })
 
-  it('resolves to an error state when the async function rejects', async () => {
+  it('resolves to an initialError state (no data yet) when the async function rejects', async () => {
     const asyncFn = vi.fn(() => Promise.reject(new Error('boom')))
 
     const { result } = renderHook(() => useAsync(asyncFn))
 
     await waitFor(() => {
-      expect(result.current.status).toBe('error')
+      expect(result.current.status).toBe('initialError')
     })
 
+    expect(result.current.data).toBeNull()
     expect(result.current.error).toBeInstanceOf(Error)
     expect((result.current.error as Error).message).toBe('boom')
   })
@@ -300,5 +302,166 @@ describe('useAsync mutate generation guard', () => {
     })
 
     expect(result.current.data).toBeNull()
+  })
+})
+
+describe('useAsync state table', () => {
+  it('starts idle with no data/error when immediate is false', () => {
+    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const { result } = renderHook(() => useAsync(asyncFn, { immediate: false }))
+
+    expect(result.current).toMatchObject({ status: 'idle', data: null, error: null })
+  })
+
+  it('starts loading with no data/error on an initial load', () => {
+    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    expect(result.current).toMatchObject({ status: 'loading', data: null, error: null })
+  })
+
+  it('moves to refreshing (keeps last known-good data, clears error) once a re-execute starts', async () => {
+    let resolveSecond: ((value: string) => void) | undefined
+    const asyncFn = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce('first')
+      .mockImplementationOnce(() => new Promise<string>(resolve => (resolveSecond = resolve)))
+
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    act(() => {
+      void result.current.execute()
+    })
+
+    expect(result.current).toMatchObject({ status: 'refreshing', data: 'first', error: null })
+
+    await act(async () => {
+      resolveSecond?.('second')
+      await Promise.resolve()
+    })
+
+    expect(result.current).toMatchObject({ status: 'success', data: 'second', error: null })
+  })
+
+  it('moves to refreshError (keeps last known-good data, carries the new error) when a refresh fails', async () => {
+    const asyncFn = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce('first')
+      .mockRejectedValueOnce(new Error('refresh failed'))
+
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    await act(async () => {
+      await result.current.execute()
+    })
+
+    expect(result.current.status).toBe('refreshError')
+    expect(result.current.data).toBe('first')
+    expect(result.current.error).toBeInstanceOf(Error)
+  })
+
+  it('a subsequent successful refetch clears a refreshError back to success', async () => {
+    const asyncFn = vi
+      .fn<() => Promise<string>>()
+      .mockResolvedValueOnce('first')
+      .mockRejectedValueOnce(new Error('refresh failed'))
+      .mockResolvedValueOnce('recovered')
+
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+    await act(async () => {
+      await result.current.execute()
+    })
+    expect(result.current.status).toBe('refreshError')
+
+    await act(async () => {
+      await result.current.execute()
+    })
+
+    expect(result.current).toMatchObject({ status: 'success', data: 'recovered', error: null })
+  })
+
+  it('mutate with a non-null result sets status to success, clearing any prior error', async () => {
+    const asyncFn = vi.fn<() => Promise<string>>(() => Promise.reject(new Error('boom')))
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('initialError')
+    })
+
+    act(() => {
+      result.current.mutate(() => 'inserted')
+    })
+
+    expect(result.current).toMatchObject({ status: 'success', data: 'inserted', error: null })
+  })
+
+  it('mutate with a null result sets status to idle', async () => {
+    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    await waitFor(() => {
+      expect(result.current.status).toBe('success')
+    })
+
+    act(() => {
+      result.current.mutate(() => null)
+    })
+
+    expect(result.current).toMatchObject({ status: 'idle', data: null, error: null })
+  })
+})
+
+describe('toUiAsyncState', () => {
+  it('passes idle/loading/refreshing/success through unchanged', () => {
+    const states: AsyncState<string>[] = [
+      { status: 'idle', data: null, error: null },
+      { status: 'loading', data: null, error: null },
+      { status: 'refreshing', data: 'x', error: null },
+      { status: 'success', data: 'x', error: null },
+    ]
+
+    for (const state of states) {
+      expect(toUiAsyncState(state)).toEqual(state)
+    }
+  })
+
+  it('curates an initialError into a UiError, dropping the raw unknown', () => {
+    const state: AsyncState<string> = {
+      status: 'initialError',
+      data: null,
+      error: new AppError({ code: 'conflict', message: 'Já existe.', retryable: false }),
+    }
+
+    expect(toUiAsyncState(state)).toEqual({
+      status: 'initialError',
+      data: null,
+      error: { message: 'Já existe.', retryable: false },
+    })
+  })
+
+  it('curates a refreshError into a UiError while preserving last known-good data', () => {
+    const state: AsyncState<string> = {
+      status: 'refreshError',
+      data: 'last-known-good',
+      error: new Error('unexpected'),
+    }
+
+    expect(toUiAsyncState(state)).toEqual({
+      status: 'refreshError',
+      data: 'last-known-good',
+      error: { message: 'Ocorreu um erro inesperado. Tente novamente.', retryable: true },
+    })
   })
 })

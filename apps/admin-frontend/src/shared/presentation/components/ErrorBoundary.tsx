@@ -64,8 +64,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         description="Não foi possível exibir esta tela. Você pode tentar novamente ou voltar ao início."
         primaryActionLabel="Tentar novamente"
         onPrimaryAction={this.handleRetry}
-        secondaryActionLabel="Voltar ao início"
-        onSecondaryAction={this.handleGoHome}
+        secondaryAction={{ label: 'Voltar ao início', onAction: this.handleGoHome }}
       />
     )
   }

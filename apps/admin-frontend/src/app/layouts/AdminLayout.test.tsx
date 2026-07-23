@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { AdminLayout } from '@/app/layouts/AdminLayout'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
-import { AuthProvider, Tenant, User, type TenantContext } from '@/features/auth'
+import { AuthProvider, ProtectedRoute, Tenant, User, type TenantContext } from '@/features/auth'
 import { ThemeProvider } from '@/shared/presentation/providers/ThemeProvider'
 import type { AppContainer } from '@/app/composition/container'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
@@ -13,6 +13,12 @@ import { vi } from 'vitest'
 function buildTenantContext(): TenantContext {
   const tenant = Tenant.create('tenant-123')
   const user = User.create({ id: 'user-1', tenant, name: 'Bella Studio' })
+  return { tenant, user }
+}
+
+function buildTenantContextWithoutName(): TenantContext {
+  const tenant = Tenant.create('tenant-123')
+  const user = User.create({ id: 'user-1', tenant })
   return { tenant, user }
 }
 
@@ -28,6 +34,10 @@ function buildContainer(
   })
 }
 
+// AdminLayout is only ever mounted through ProtectedRoute's Outlet in the
+// real router (see router.tsx), so it never sees a loading/unauthenticated
+// session (useAuthenticatedTenant relies on this) - the test tree mirrors
+// that gating instead of mounting AdminLayout directly.
 function renderLayout(container: AppContainer): void {
   render(
     <AppContainerContext.Provider value={container}>
@@ -35,9 +45,12 @@ function renderLayout(container: AppContainer): void {
         <ThemeProvider>
           <MemoryRouter initialEntries={['/dashboard']}>
             <Routes>
-              <Route element={<AdminLayout />}>
-                <Route path="/dashboard" element={<div>Dashboard content</div>} />
+              <Route element={<ProtectedRoute />}>
+                <Route element={<AdminLayout />}>
+                  <Route path="/dashboard" element={<div>Dashboard content</div>} />
+                </Route>
               </Route>
+              <Route path="/login" element={<div>Login page</div>} />
             </Routes>
           </MemoryRouter>
         </ThemeProvider>
@@ -54,8 +67,8 @@ describe('AdminLayout', () => {
   it('renders every navigation item and the child route content', async () => {
     renderLayout(buildContainer(buildTenantContext()))
 
+    expect(await screen.findByRole('link', { name: 'Painel' })).toBeInTheDocument()
     for (const label of [
-      'Painel',
       'Agendamentos',
       'Serviços',
       'Clientes',
@@ -66,10 +79,7 @@ describe('AdminLayout', () => {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
     }
     expect(screen.getByText('Dashboard content')).toBeInTheDocument()
-    // useAuth()'s session load resolves after this test's own assertions -
-    // wait for it to settle so its state update is captured inside act()
-    // instead of warning after the test body has already returned.
-    await screen.findByText('Bella Studio')
+    expect(screen.getByText('Bella Studio')).toBeInTheDocument()
   })
 
   it("shows the authenticated user's business name in the sidebar", async () => {
@@ -78,8 +88,8 @@ describe('AdminLayout', () => {
     expect(await screen.findByText('Bella Studio')).toBeInTheDocument()
   })
 
-  it('falls back to a generic business name when there is no session', async () => {
-    renderLayout(buildContainer(null))
+  it('falls back to a generic business name when the authenticated user has no name', async () => {
+    renderLayout(buildContainer(buildTenantContextWithoutName()))
 
     expect(await screen.findByText('Minha Empresa')).toBeInTheDocument()
   })
@@ -88,7 +98,7 @@ describe('AdminLayout', () => {
     const logoutSpy = vi.fn(() => Promise.resolve())
     renderLayout(buildContainer(buildTenantContext(), logoutSpy))
 
-    await userEvent.click(screen.getByRole('button', { name: /sair/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /sair/i }))
 
     expect(logoutSpy).toHaveBeenCalledTimes(1)
   })
@@ -96,7 +106,7 @@ describe('AdminLayout', () => {
   it('collapses the sidebar to icon-only and remembers the choice', async () => {
     renderLayout(buildContainer(buildTenantContext()))
 
-    expect(screen.getByRole('link', { name: 'Painel' })).not.toHaveAttribute('title')
+    expect(await screen.findByRole('link', { name: 'Painel' })).not.toHaveAttribute('title')
 
     await userEvent.click(screen.getByRole('button', { name: /recolher menu lateral/i }))
 
@@ -112,9 +122,7 @@ describe('AdminLayout', () => {
   it('opens and closes the mobile sidebar drawer', async () => {
     renderLayout(buildContainer(buildTenantContext()))
 
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
-
-    await userEvent.click(screen.getByRole('button', { name: /abrir menu/i }))
+    await userEvent.click(await screen.findByRole('button', { name: /abrir menu/i }))
     const drawer = await screen.findByRole('dialog')
 
     await userEvent.click(within(drawer).getByRole('link', { name: 'Painel' }))
@@ -129,7 +137,7 @@ describe('AdminLayout', () => {
 
     expect(document.documentElement).not.toHaveClass('dark')
 
-    await userEvent.click(screen.getByRole('button', { name: 'Mudar para modo escuro' }))
+    await userEvent.click(await screen.findByRole('button', { name: 'Mudar para modo escuro' }))
 
     expect(document.documentElement).toHaveClass('dark')
     expect(localStorage.getItem('admin-theme')).toBe('dark')

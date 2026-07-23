@@ -61,13 +61,36 @@ describe('TagsPage', () => {
   it('shows an error state when loading tags fails', async () => {
     renderTagsPage(
       buildContainer({
-        listTags: { execute: vi.fn(() => Promise.reject(new Error('network down'))) },
+        listTags: {
+          execute: vi.fn(() =>
+            Promise.reject(
+              new AppError({ code: 'network', message: 'network down', retryable: true }),
+            ),
+          ),
+        },
       }),
     )
 
     expect(
       await screen.findByText(/não foi possível carregar as etiquetas: network down/i),
     ).toBeInTheDocument()
+  })
+
+  it('shows the generic curated message, never a raw error message, when an unexpected error occurs', async () => {
+    renderTagsPage(
+      buildContainer({
+        listTags: {
+          execute: vi.fn(() => Promise.reject(new Error('undefined.trim is not a function'))),
+        },
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        /não foi possível carregar as etiquetas: ocorreu um erro inesperado/i,
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText(/undefined\.trim/i)).not.toBeInTheDocument()
   })
 
   it('creates a tag through the form and refreshes the list', async () => {

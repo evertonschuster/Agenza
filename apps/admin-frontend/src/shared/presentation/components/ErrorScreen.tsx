@@ -8,8 +8,7 @@ interface ErrorScreenProps {
   description: string
   primaryActionLabel: string
   onPrimaryAction: () => void
-  secondaryActionLabel?: string
-  onSecondaryAction?: () => void
+  secondaryAction?: { label: string; onAction: () => void }
 }
 
 /**
@@ -23,8 +22,7 @@ export function ErrorScreen({
   description,
   primaryActionLabel,
   onPrimaryAction,
-  secondaryActionLabel,
-  onSecondaryAction,
+  secondaryAction,
 }: ErrorScreenProps): JSX.Element {
   return (
     <CenteredScreen>
@@ -37,9 +35,9 @@ export function ErrorScreen({
           <p className="mt-2 text-sm text-muted-foreground">{description}</p>
           <div className="mt-6 flex flex-col gap-2 sm:flex-row sm:justify-center">
             <Button onClick={onPrimaryAction}>{primaryActionLabel}</Button>
-            {secondaryActionLabel !== undefined && onSecondaryAction !== undefined && (
-              <Button variant="outline" onClick={onSecondaryAction}>
-                {secondaryActionLabel}
+            {secondaryAction !== undefined && (
+              <Button variant="outline" onClick={secondaryAction.onAction}>
+                {secondaryAction.label}
               </Button>
             )}
           </div>

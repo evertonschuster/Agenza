@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useAppContainer } from '@/app/providers/useAppContainer'
-import { useAsync } from '@/shared/presentation/hooks/useAsync'
+import { useAsync, toUiAsyncState, type AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 import type { Tag } from '@/features/catalog/domain/entities/Tag'
 import type { TenantContext } from '@/features/auth'
 import type {
@@ -8,12 +9,9 @@ import type {
   UpdateTagInput,
 } from '@/features/catalog/application/repositories/TagRepository'
 
-type UseTagsStatus = 'idle' | 'loading' | 'success' | 'error'
-
 export interface UseTagsResult {
-  tags: Tag[]
-  status: UseTagsStatus
-  error: unknown
+  tags: readonly Tag[]
+  listState: AsyncState<readonly Tag[], UiError>
   refetch: () => Promise<void>
   createTag: (input: CreateTagInput) => Promise<Tag>
   updateTag: (id: string, input: UpdateTagInput) => Promise<Tag>
@@ -37,9 +35,8 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
     return catalog.listTags.execute(tenantContext, { search })
   }, [tenantContext, catalog, search])
 
-  const { data, status, error, execute, mutate, captureGeneration } = useAsync(listTags, {
-    resetKey: tenantContext?.tenant.id,
-  })
+  const asyncState = useAsync(listTags, { resetKey: tenantContext?.tenant.id })
+  const { data, execute, mutate, captureGeneration } = asyncState
 
   const createTag = useCallback(
     async (input: CreateTagInput): Promise<Tag> => {
@@ -90,8 +87,7 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
 
   return {
     tags: data ?? [],
-    status,
-    error,
+    listState: toUiAsyncState(asyncState),
     refetch: async () => {
       await execute()
     },

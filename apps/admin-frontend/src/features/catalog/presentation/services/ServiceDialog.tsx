@@ -11,10 +11,6 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import {
-  EMPTY_SERVICE_FORM_VALUES,
-  toServiceFormValues,
-} from '@/features/catalog/presentation/services/serviceFormatters'
 import type {
   DiscardConfirmationViewModel,
   ServiceCategoryOptions,
@@ -56,20 +52,16 @@ export function ServiceDialog({
           }}
         >
           <DialogHeader>
-            <DialogTitle>{editor.title}</DialogTitle>
+            <DialogTitle>{editor.content?.title ?? ''}</DialogTitle>
           </DialogHeader>
-          {editor.displayTarget !== null && (
+          {editor.content !== null && (
             <ServiceForm
-              key={editor.displayTarget === 'new' ? 'new' : editor.displayTarget.id}
-              code={editor.code}
-              initialValues={
-                editor.displayTarget === 'new'
-                  ? EMPTY_SERVICE_FORM_VALUES
-                  : toServiceFormValues(editor.displayTarget)
-              }
+              key={editor.content.kind === 'create' ? 'new' : editor.content.item.id}
+              code={editor.content.code}
+              initialValues={editor.content.initialValues}
               categoryOptions={categoryOptions}
               tagOptions={tagOptions}
-              submitLabel={editor.submitLabel}
+              submitLabel={editor.content.submitLabel}
               isSubmitting={editor.isSubmitting}
               serverError={editor.serverError}
               onCancel={editor.onRequestClose}

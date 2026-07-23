@@ -41,10 +41,10 @@ describe('useServiceEditor', () => {
     const { result } = renderHook(() => useServiceEditor({ onCreate: vi.fn(), onUpdate: vi.fn() }))
 
     expect(result.current.editor.isOpen).toBe(false)
-    expect(result.current.editor.displayTarget).toBeNull()
+    expect(result.current.editor.content).toBeNull()
   })
 
-  it('onOpenCreate opens a "new" target with the create title/label and no code', () => {
+  it('onOpenCreate opens a create target with the create title/label and no code', () => {
     const { result } = renderHook(() => useServiceEditor({ onCreate: vi.fn(), onUpdate: vi.fn() }))
 
     act(() => {
@@ -52,10 +52,10 @@ describe('useServiceEditor', () => {
     })
 
     expect(result.current.editor.isOpen).toBe(true)
-    expect(result.current.editor.displayTarget).toBe('new')
-    expect(result.current.editor.code).toBeNull()
-    expect(result.current.editor.title).toBe('Novo serviço')
-    expect(result.current.editor.submitLabel).toBe('Criar serviço')
+    expect(result.current.editor.content?.kind).toBe('create')
+    expect(result.current.editor.content?.code).toBeNull()
+    expect(result.current.editor.content?.title).toBe('Novo serviço')
+    expect(result.current.editor.content?.submitLabel).toBe('Criar serviço')
   })
 
   it('onOpenEdit opens with the service as target, its code, and the edit title/label', () => {
@@ -65,10 +65,13 @@ describe('useServiceEditor', () => {
       result.current.onOpenEdit(service, fakeClickEvent())
     })
 
-    expect(result.current.editor.displayTarget).toBe(service)
-    expect(result.current.editor.code).toBe(1001)
-    expect(result.current.editor.title).toBe('Editar serviço')
-    expect(result.current.editor.submitLabel).toBe('Salvar alterações')
+    expect(result.current.editor.content?.kind).toBe('edit')
+    expect(
+      result.current.editor.content?.kind === 'edit' ? result.current.editor.content.item : null,
+    ).toBe(service)
+    expect(result.current.editor.content?.code).toBe(1001)
+    expect(result.current.editor.content?.title).toBe('Editar serviço')
+    expect(result.current.editor.content?.submitLabel).toBe('Salvar alterações')
   })
 
   it('onRequestClose closes immediately when the form is not dirty', () => {
@@ -205,7 +208,9 @@ describe('useServiceEditor', () => {
     })
 
     expect(result.current.editor.isOpen).toBe(true)
-    expect(result.current.editor.serverError?.fieldErrors.name).toBe('O nome é obrigatório.')
+    expect(
+      result.current.editor.serverError?.fieldErrors.find(({ field }) => field === 'name')?.message,
+    ).toBe('O nome é obrigatório.')
     expect(result.current.editor.isSubmitting).toBe(false)
   })
 })

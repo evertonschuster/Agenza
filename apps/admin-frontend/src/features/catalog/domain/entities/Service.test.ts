@@ -185,4 +185,16 @@ describe('Service', () => {
 
     expect(service.tags).toHaveLength(1)
   })
+
+  it('rejects mutating a tag element or the tags array at the type level', () => {
+    const service = Service.create(
+      validInput({ tags: [{ id: 'tag-1', name: 'VIP', color: '#0d9488' }] }),
+    )
+
+    // @ts-expect-error TagSummary fields are readonly - a consumer must not reassign them
+    service.tags[0].name = 'Renamed'
+
+    // @ts-expect-error service.tags is a readonly array - index assignment is not permitted
+    service.tags[0] = { id: 'tag-2', name: 'Novo', color: '#ef4444' }
+  })
 })

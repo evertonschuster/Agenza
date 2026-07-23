@@ -4,6 +4,7 @@ import { server } from '@/test/mocks/server'
 import { AuthenticatedHttpClient } from '@/shared/infrastructure/http/AuthenticatedHttpClient'
 import { AppError } from '@/shared/application/AppError'
 import type { RequestSession } from '@/shared/application/RequestSession'
+import type { Decoder } from '@/shared/application/HttpClient'
 
 const baseUrl = 'https://api.test'
 
@@ -12,6 +13,27 @@ function withSession(accessToken: string, tenantId: string | null = 'tenant-abc'
 }
 
 const noSession = (): Promise<RequestSession | null> => Promise.resolve(null)
+
+interface Widget {
+  id: string
+  name: string
+}
+
+function decodeWidget(payload: unknown): Widget {
+  if (
+    typeof payload !== 'object' ||
+    payload === null ||
+    typeof (payload as Record<string, unknown>).id !== 'string' ||
+    typeof (payload as Record<string, unknown>).name !== 'string'
+  ) {
+    throw new Error('Malformed widget payload')
+  }
+  return payload as Widget
+}
+
+// Used by tests that only care about the request/error path, never the
+// decoded value - a real decoder would be pure overhead there.
+const ignoreBody: Decoder<unknown> = payload => payload
 
 describe('AuthenticatedHttpClient', () => {
   it('attaches the bearer token and returns the parsed JSON body', async () => {
@@ -24,7 +46,7 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    const result = await client.get<{ id: string; name: string }>('/widgets/1')
+    const result = await client.get('/widgets/1', decodeWidget)
 
     expect(result).toEqual({ id: '1', name: 'Widget' })
   })
@@ -40,7 +62,7 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    const result = await client.post<{ id: string; name: string }>('/widgets', { name: 'Widget' })
+    const result = await client.post('/widgets', { name: 'Widget' }, decodeWidget)
 
     expect(result).toEqual({ id: '1', name: 'Widget' })
   })
@@ -48,7 +70,7 @@ describe('AuthenticatedHttpClient', () => {
   it('throws an unauthenticated AppError instead of making a request when there is no session', async () => {
     const client = new AuthenticatedHttpClient(baseUrl, noSession)
 
-    const error = await client.get('/widgets/1').catch((thrown: unknown) => thrown)
+    const error = await client.get('/widgets/1', ignoreBody).catch((thrown: unknown) => thrown)
 
     expect(error).toBeInstanceOf(AppError)
     expect((error as AppError).code).toBe('unauthenticated')
@@ -58,7 +80,7 @@ describe('AuthenticatedHttpClient', () => {
     const notifyUnauthenticated = vi.fn()
     const client = new AuthenticatedHttpClient(baseUrl, noSession, { notifyUnauthenticated })
 
-    await client.get('/widgets/1').catch(() => undefined)
+    await client.get('/widgets/1', ignoreBody).catch(() => undefined)
 
     expect(notifyUnauthenticated).toHaveBeenCalledTimes(1)
   })
@@ -73,7 +95,7 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    await client.get('/widgets/1')
+    await client.get('/widgets/1', ignoreBody)
   })
 
   it('omits the X-Tenant-Id header when no tenant is known', async () => {
@@ -86,7 +108,7 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123', null))
 
-    await client.get('/widgets/1')
+    await client.get('/widgets/1', ignoreBody)
   })
 
   it('reads the session exactly once per request, and the token/tenant headers come from that same read', async () => {
@@ -103,7 +125,7 @@ describe('AuthenticatedHttpClient', () => {
     )
     const client = new AuthenticatedHttpClient(baseUrl, getRequestSession)
 
-    await client.get('/widgets/1')
+    await client.get('/widgets/1', ignoreBody)
 
     expect(getRequestSession).toHaveBeenCalledTimes(1)
   })
@@ -120,7 +142,9 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    const error = await client.get('/widgets/missing').catch((thrown: unknown) => thrown)
+    const error = await client
+      .get('/widgets/missing', ignoreBody)
+      .catch((thrown: unknown) => thrown)
 
     expect(error).toBeInstanceOf(AppError)
     expect((error as AppError).code).toBe('notFound')
@@ -136,7 +160,9 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    const error = await client.get('/widgets/detail-only').catch((thrown: unknown) => thrown)
+    const error = await client
+      .get('/widgets/detail-only', ignoreBody)
+      .catch((thrown: unknown) => thrown)
 
     expect(error).toBeInstanceOf(AppError)
     expect((error as AppError).code).toBe('validation')
@@ -150,7 +176,9 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    const error = await client.get('/widgets/empty-body').catch((thrown: unknown) => thrown)
+    const error = await client
+      .get('/widgets/empty-body', ignoreBody)
+      .catch((thrown: unknown) => thrown)
 
     expect(error).toBeInstanceOf(AppError)
     expect((error as AppError).code).toBe('unexpected')
@@ -167,7 +195,7 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    const error = await client.get('/widgets/1').catch((thrown: unknown) => thrown)
+    const error = await client.get('/widgets/1', ignoreBody).catch((thrown: unknown) => thrown)
 
     expect(error).toBeInstanceOf(AppError)
     expect((error as AppError).code).toBe('unauthenticated')
@@ -178,7 +206,7 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    const error = await client.get('/widgets/1').catch((thrown: unknown) => thrown)
+    const error = await client.get('/widgets/1', ignoreBody).catch((thrown: unknown) => thrown)
 
     expect(error).toBeInstanceOf(AppError)
     expect((error as AppError).code).toBe('network')
@@ -194,7 +222,7 @@ describe('AuthenticatedHttpClient', () => {
 
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
-    const error = await client.get('/widgets/1').catch((thrown: unknown) => thrown)
+    const error = await client.get('/widgets/1', ignoreBody).catch((thrown: unknown) => thrown)
 
     expect(error).toBeInstanceOf(AppError)
     expect((error as AppError).code).toBe('timeout')
@@ -211,7 +239,7 @@ describe('AuthenticatedHttpClient', () => {
       notifyUnauthenticated,
     })
 
-    await client.get('/widgets/1').catch(() => undefined)
+    await client.get('/widgets/1', ignoreBody).catch(() => undefined)
 
     expect(notifyUnauthenticated).toHaveBeenCalledTimes(1)
   })
@@ -224,7 +252,7 @@ describe('AuthenticatedHttpClient', () => {
       notifyUnauthenticated,
     })
 
-    await client.get('/widgets/missing').catch(() => undefined)
+    await client.get('/widgets/missing', ignoreBody).catch(() => undefined)
 
     expect(notifyUnauthenticated).not.toHaveBeenCalled()
   })
@@ -235,5 +263,51 @@ describe('AuthenticatedHttpClient', () => {
     const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
 
     await expect(client.delete('/widgets/1')).resolves.toBeUndefined()
+  })
+
+  it('produces a curated AppError, not the raw decode failure, when the decoder rejects the payload', async () => {
+    server.use(
+      http.get(`${baseUrl}/widgets/malformed`, () =>
+        HttpResponse.json({ id: '1' /* missing name */ }),
+      ),
+    )
+
+    const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
+
+    const error = await client
+      .get('/widgets/malformed', decodeWidget)
+      .catch((thrown: unknown) => thrown)
+
+    expect(error).toBeInstanceOf(AppError)
+    expect((error as AppError).code).toBe('unexpected')
+    expect((error as AppError).message).toBe('Ocorreu um erro inesperado. Tente novamente.')
+  })
+
+  it('produces a curated AppError, not a raw SyntaxError, for a 2xx response with an unparsable body', async () => {
+    server.use(
+      http.get(`${baseUrl}/widgets/not-json`, () => new HttpResponse('not json', { status: 200 })),
+    )
+
+    const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
+
+    const error = await client
+      .get('/widgets/not-json', decodeWidget)
+      .catch((thrown: unknown) => thrown)
+
+    expect(error).toBeInstanceOf(AppError)
+    expect((error as AppError).code).toBe('unexpected')
+  })
+
+  it('passes undefined to the decoder for a 204 response on get/post/put, never a bare `undefined as T`', async () => {
+    server.use(
+      http.get(`${baseUrl}/widgets/no-content`, () => new HttpResponse(null, { status: 204 })),
+    )
+
+    const client = new AuthenticatedHttpClient(baseUrl, withSession('token-123'))
+    const decodeSpy = vi.fn((payload: unknown) => payload)
+
+    await client.get('/widgets/no-content', decodeSpy)
+
+    expect(decodeSpy).toHaveBeenCalledExactlyOnceWith(undefined)
   })
 })

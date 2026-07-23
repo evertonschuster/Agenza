@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import {
   mapServiceDtoToDomain,
+  decodeServiceDto,
+  decodePagedServiceDto,
   type ServiceDto,
 } from '@/features/catalog/infrastructure/mappers/serviceMapper'
 import { InvalidServiceError } from '@/features/catalog/domain/errors/InvalidServiceError'
@@ -60,5 +62,88 @@ describe('mapServiceDtoToDomain', () => {
     expect(() =>
       mapServiceDtoToDomain(buildDto({ minDurationMinutes: 100, durationMinutes: 60 })),
     ).toThrow(InvalidServiceError)
+  })
+})
+
+describe('decodeServiceDto', () => {
+  it('accepts a well-formed payload', () => {
+    const dto = buildDto()
+
+    expect(decodeServiceDto(dto)).toEqual(dto)
+  })
+
+  it('accepts a numeric field arriving as a string, deferring the real check to Service.create', () => {
+    const dto = { ...buildDto(), durationMinutes: '60' as unknown as number }
+
+    expect(decodeServiceDto(dto)).toEqual(dto)
+  })
+
+  it('rejects a payload missing a required property', () => {
+    const withoutName: Record<string, unknown> = { ...buildDto() }
+    delete withoutName.name
+
+    expect(() => decodeServiceDto(withoutName)).toThrow()
+  })
+
+  it('rejects a payload with a wrong-typed property', () => {
+    expect(() => decodeServiceDto({ ...buildDto(), id: 42 })).toThrow()
+  })
+
+  it('rejects a payload whose tags are not an array of TagSummary', () => {
+    expect(() => decodeServiceDto({ ...buildDto(), tags: [{ id: 'tag-1' }] })).toThrow()
+  })
+
+  it('rejects a non-object payload', () => {
+    expect(() => decodeServiceDto(null)).toThrow()
+    expect(() => decodeServiceDto('not an object')).toThrow()
+  })
+})
+
+describe('decodePagedServiceDto', () => {
+  function buildEnvelope(overrides: Record<string, unknown> = {}): Record<string, unknown> {
+    return {
+      items: [buildDto()],
+      totalCount: 1,
+      page: 1,
+      pageSize: 20,
+      ...overrides,
+    }
+  }
+
+  it('accepts a well-formed envelope', () => {
+    const envelope = decodePagedServiceDto(buildEnvelope())
+
+    expect(envelope.items).toEqual([buildDto()])
+    expect(envelope.totalCount).toBe(1)
+    expect(envelope.page).toBe(1)
+    expect(envelope.pageSize).toBe(20)
+  })
+
+  it('coerces numeric-string pagination metadata into real numbers', () => {
+    const envelope = decodePagedServiceDto(buildEnvelope({ totalCount: '45', page: '2' }))
+
+    expect(envelope.totalCount).toBe(45)
+    expect(envelope.page).toBe(2)
+  })
+
+  it('rejects an envelope whose items are not an array', () => {
+    expect(() => decodePagedServiceDto(buildEnvelope({ items: buildDto() }))).toThrow()
+  })
+
+  it('rejects an envelope containing a malformed item', () => {
+    expect(() => decodePagedServiceDto(buildEnvelope({ items: [{}] }))).toThrow()
+  })
+
+  it('rejects an envelope with a non-numeric totalCount', () => {
+    expect(() => decodePagedServiceDto(buildEnvelope({ totalCount: 'not a number' }))).toThrow()
+  })
+
+  it('rejects an envelope missing pagination metadata entirely', () => {
+    expect(() => decodePagedServiceDto({ items: [buildDto()] })).toThrow()
+  })
+
+  it('rejects a non-object envelope', () => {
+    expect(() => decodePagedServiceDto(null)).toThrow()
+    expect(() => decodePagedServiceDto([buildDto()])).toThrow()
   })
 })

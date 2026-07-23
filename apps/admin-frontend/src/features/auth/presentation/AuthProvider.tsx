@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, type ReactNode, type JSX } from 'react'
-import { AuthContext, type AuthStatus } from '@/features/auth/presentation/AuthContext'
+import { AuthContext, type AuthContextValue } from '@/features/auth/presentation/AuthContext'
 import { useAppContainer } from '@/app/providers/useAppContainer'
 import { useAsync } from '@/shared/presentation/hooks/useAsync'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
@@ -48,17 +48,15 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     mutate(() => null)
   }, [auth, mutate])
 
-  const status: AuthStatus =
-    loadStatus === 'loading'
-      ? 'loading'
-      : tenantContext !== null
-        ? 'authenticated'
-        : 'unauthenticated'
-
-  const value = useMemo(
-    () => ({ status, tenantContext, login, logout }),
-    [status, tenantContext, login, logout],
-  )
+  const value = useMemo<AuthContextValue>(() => {
+    if (loadStatus === 'loading') {
+      return { status: 'loading', tenantContext: null, login, logout }
+    }
+    if (tenantContext !== null) {
+      return { status: 'authenticated', tenantContext, login, logout }
+    }
+    return { status: 'unauthenticated', tenantContext: null, login, logout }
+  }, [loadStatus, tenantContext, login, logout])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

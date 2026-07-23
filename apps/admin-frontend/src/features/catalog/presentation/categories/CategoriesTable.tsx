@@ -10,11 +10,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { CollectionFeedback } from '@/shared/presentation/components/CollectionFeedback'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 
 export interface CategoriesTableProps {
-  categories: Category[]
-  status: 'idle' | 'loading' | 'success' | 'error'
-  error: unknown
+  categories: readonly Category[]
+  listState: AsyncState<readonly Category[], UiError>
   hasActiveSearch: boolean
   onRetry: () => void
   onEdit: (category: Category) => void
@@ -23,8 +24,7 @@ export interface CategoriesTableProps {
 
 export function CategoriesTable({
   categories,
-  status,
-  error,
+  listState,
   hasActiveSearch,
   onRetry,
   onEdit,
@@ -33,9 +33,7 @@ export function CategoriesTable({
   return (
     <div className="mt-6">
       <CollectionFeedback
-        status={status}
-        hasItems={categories.length > 0}
-        error={error}
+        state={listState}
         loadingMessage="Carregando categorias…"
         loadErrorMessage="Não foi possível carregar as categorias"
         refreshErrorMessage="Não foi possível atualizar a lista de categorias"

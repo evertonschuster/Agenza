@@ -8,12 +8,19 @@ import {
 import type { ServerFormError } from '@/shared/presentation/forms/serverFormError'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 
+type CategoryEditorContent =
+  | { kind: 'create'; title: string; submitLabel: string; initialValues: CategoryFormValues }
+  | {
+      kind: 'edit'
+      item: Category
+      title: string
+      submitLabel: string
+      initialValues: CategoryFormValues
+    }
+
 export interface CategoryEditorDialogProps {
   isOpen: boolean
-  displayTarget: 'new' | Category | null
-  title: string
-  submitLabel: string
-  initialValues: CategoryFormValues
+  content: CategoryEditorContent | null
   isSubmitting: boolean
   serverError: ServerFormError<CategoryFormField> | null
   onCancel: () => void
@@ -22,10 +29,7 @@ export interface CategoryEditorDialogProps {
 
 export function CategoryEditorDialog({
   isOpen,
-  displayTarget,
-  title,
-  submitLabel,
-  initialValues,
+  content,
   isSubmitting,
   serverError,
   onCancel,
@@ -40,13 +44,13 @@ export function CategoryEditorDialog({
     >
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>{title}</DialogTitle>
+          <DialogTitle>{content?.title ?? ''}</DialogTitle>
         </DialogHeader>
-        {displayTarget !== null && (
+        {content !== null && (
           <CategoryForm
-            key={displayTarget === 'new' ? 'new' : displayTarget.id}
-            initialValues={initialValues}
-            submitLabel={submitLabel}
+            key={content.kind === 'create' ? 'new' : content.item.id}
+            initialValues={content.initialValues}
+            submitLabel={content.submitLabel}
             isSubmitting={isSubmitting}
             serverError={serverError}
             onCancel={onCancel}

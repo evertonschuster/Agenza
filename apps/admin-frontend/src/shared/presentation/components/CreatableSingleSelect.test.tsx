@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type JSX } from 'react'
 import { CreatableSingleSelect } from '@/shared/presentation/components/CreatableSingleSelect'
+import type { SelectLoadState } from '@/shared/presentation/components/SelectLoadState'
 
 interface Item {
   id: string
@@ -15,13 +16,9 @@ const items: Item[] = [
 ]
 
 function Harness({
-  status = 'success',
-  error = null,
-  onRetry,
+  loadState = { status: 'success' },
 }: {
-  status?: 'loading' | 'error' | 'success'
-  error?: string | null
-  onRetry?: () => void
+  loadState?: SelectLoadState
 }): JSX.Element {
   const [value, setValue] = useState<string | null>(null)
   return (
@@ -36,9 +33,7 @@ function Harness({
       searchPlaceholder="Buscar categoria…"
       emptyText="Nenhuma categoria encontrada."
       createActionLabel="Nova categoria"
-      status={status}
-      error={error}
-      onRetry={onRetry}
+      loadState={loadState}
       renderCreateForm={({ onCreated }) => (
         <button
           type="button"
@@ -98,8 +93,7 @@ describe('CreatableSingleSelect', () => {
           searchPlaceholder="Buscar categoria…"
           emptyText="Nenhuma categoria encontrada."
           createActionLabel="Nova categoria"
-          status="success"
-          error={null}
+          loadState={{ status: 'success' }}
           renderCreateForm={() => null}
         />
       )
@@ -113,7 +107,7 @@ describe('CreatableSingleSelect', () => {
   })
 
   it('shows a loading state instead of the list', async () => {
-    render(<Harness status="loading" />)
+    render(<Harness loadState={{ status: 'loading' }} />)
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }))
 
@@ -123,13 +117,22 @@ describe('CreatableSingleSelect', () => {
 
   it('shows an error state with a retry action', async () => {
     const onRetry = vi.fn()
-    render(<Harness status="error" error="network down" onRetry={onRetry} />)
+    render(<Harness loadState={{ status: 'error', message: 'network down', onRetry }} />)
 
     await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }))
     expect(screen.getByText('network down')).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: /tentar novamente/i }))
 
     expect(onRetry).toHaveBeenCalledOnce()
+  })
+
+  it('shows the error message without a retry action when the failure is not retryable', async () => {
+    render(<Harness loadState={{ status: 'error', message: 'Não autorizado.' }} />)
+
+    await userEvent.click(screen.getByRole('combobox', { name: 'Categoria' }))
+
+    expect(screen.getByText('Não autorizado.')).toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /tentar novamente/i })).not.toBeInTheDocument()
   })
 
   it('exposes aria-expanded/aria-controls on the trigger and opens on click', async () => {
@@ -222,8 +225,7 @@ describe('CreatableSingleSelect', () => {
           searchPlaceholder="Buscar categoria…"
           emptyText="Nenhuma categoria encontrada."
           createActionLabel="Nova categoria"
-          status="success"
-          error={null}
+          loadState={{ status: 'success' }}
           renderCreateForm={({ onCreated }) => (
             <button
               type="button"

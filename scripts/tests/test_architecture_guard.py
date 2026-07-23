@@ -380,6 +380,86 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
+    # -- stale OpenAPI generated-types path (ADR 009) --------------------------
+
+    def test_stale_openapi_path_in_package_json_is_blocking(self) -> None:
+        self._write(
+            "apps/admin-frontend/package.json",
+            '{"scripts": {"generate:api-types": "openapi-typescript x -o '
+            'src/infrastructure/generated/services-api.d.ts"}}\n',
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "blocking")
+
+    def test_stale_openapi_path_in_prettierignore_is_blocking(self) -> None:
+        self._write("apps/admin-frontend/.prettierignore", "src/infrastructure/generated\n")
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(len(findings), 1)
+
+    def test_feature_based_openapi_path_is_clean(self) -> None:
+        self._write(
+            "apps/admin-frontend/package.json",
+            '{"scripts": {"generate:api-types": "openapi-typescript x -o '
+            'src/features/catalog/infrastructure/generated/services-api.d.ts"}}\n',
+        )
+        self._write(
+            "apps/admin-frontend/.prettierignore",
+            "src/features/catalog/infrastructure/generated\n",
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(findings, [])
+
+    def test_stale_openapi_path_in_code_fence_is_blocking(self) -> None:
+        self._write(
+            "some-skill/SKILL.md",
+            "\n".join(
+                [
+                    "```typescript",
+                    "import type { components } from 'src/infrastructure/generated/services-api'",
+                    "```",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(len(findings), 1)
+
+    def test_stale_openapi_path_in_prose_outside_code_fence_is_not_flagged(self) -> None:
+        self._write(
+            "docs/some-narrative.md",
+            "The old path was `src/infrastructure/generated/services-api.d.ts`, moved by ADR 009.\n",
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(findings, [])
+
+    def test_stale_openapi_path_in_adr_directory_is_skipped(self) -> None:
+        self._write(
+            "docs/adr/0009-feature-based-modularization.md",
+            "\n".join(
+                [
+                    "```typescript",
+                    "// old: src/infrastructure/generated/services-api.d.ts",
+                    "```",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(findings, [])
+
     # -- coverage exclude allowlist -------------------------------------------
 
     def test_coverage_exclude_outside_allowlist_is_blocking(self) -> None:

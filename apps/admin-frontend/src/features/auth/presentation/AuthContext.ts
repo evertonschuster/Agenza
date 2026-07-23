@@ -1,14 +1,19 @@
 import { createContext } from 'react'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
 
-export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated'
+export type AuthSessionState =
+  | { status: 'loading'; tenantContext: null }
+  | { status: 'unauthenticated'; tenantContext: null }
+  | { status: 'authenticated'; tenantContext: TenantContext }
 
-export interface AuthContextValue {
-  status: AuthStatus
-  tenantContext: TenantContext | null
+export type AuthStatus = AuthSessionState['status']
+
+export interface AuthActions {
   login: () => Promise<void>
   logout: () => Promise<void>
 }
+
+export type AuthContextValue = AuthSessionState & AuthActions
 
 /**
  * Holds the single, shared session snapshot for the whole app - populated

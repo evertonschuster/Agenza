@@ -3,13 +3,15 @@ import { useAuth } from '@/features/auth'
 import { useServices } from '@/features/catalog/presentation/useServices'
 import { useCategories } from '@/features/catalog/presentation/useCategories'
 import { useTags } from '@/features/catalog/presentation/useTags'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 import type { Category } from '@/features/catalog/domain/entities/Category'
 import type { Tag } from '@/features/catalog/domain/entities/Tag'
 import type { Service } from '@/features/catalog/domain/entities/Service'
 import { useServiceFilters } from '@/features/catalog/presentation/services/useServiceFilters'
 import { useServiceEditor } from '@/features/catalog/presentation/services/useServiceEditor'
 import { useServiceDeletion } from '@/features/catalog/presentation/services/useServiceDeletion'
-import { toAsyncSelectStatus } from '@/features/catalog/presentation/services/serviceFormatters'
+import { toSelectLoadState } from '@/features/catalog/presentation/services/serviceFormatters'
 import type {
   DiscardConfirmationViewModel,
   ServiceCategoryOptions,
@@ -27,16 +29,15 @@ interface ServicesFiltersViewModel {
   onCategoryFilterChange: (value: string) => void
   tagFilter: string
   onTagFilterChange: (value: string) => void
-  categories: Category[]
-  tags: Tag[]
+  categories: readonly Category[]
+  tags: readonly Tag[]
   allCategoriesValue: string
   allTagsValue: string
 }
 
 interface ServicesListViewModel {
-  services: Service[]
-  status: 'idle' | 'loading' | 'success' | 'error'
-  error: unknown
+  services: readonly Service[]
+  listState: AsyncState<readonly Service[], UiError>
   hasActiveFilters: boolean
   page: number
   totalPages: number
@@ -74,8 +75,7 @@ export function useServicesPage(): UseServicesPageResult {
 
   const {
     services,
-    status,
-    error,
+    listState,
     page,
     pageSize,
     totalCount,
@@ -93,18 +93,11 @@ export function useServicesPage(): UseServicesPageResult {
 
   const {
     categories,
-    status: categoriesStatus,
-    error: categoriesError,
+    listState: categoriesListState,
     createCategory,
     refetch: refetchCategories,
   } = useCategories(tenantContext)
-  const {
-    tags,
-    status: tagsStatus,
-    error: tagsError,
-    createTag,
-    refetch: refetchTags,
-  } = useTags(tenantContext)
+  const { tags, listState: tagsListState, createTag, refetch: refetchTags } = useTags(tenantContext)
 
   useEffect(() => {
     setPage(1)
@@ -132,8 +125,7 @@ export function useServicesPage(): UseServicesPageResult {
     },
     list: {
       services,
-      status,
-      error,
+      listState,
       hasActiveFilters: filters.hasActiveFilters,
       page,
       totalPages,
@@ -146,16 +138,12 @@ export function useServicesPage(): UseServicesPageResult {
       editor: editor.editor,
       categoryOptions: {
         items: categories,
-        status: toAsyncSelectStatus(categoriesStatus),
-        error: categoriesError instanceof Error ? categoriesError.message : null,
-        onRetry: () => void refetchCategories(),
+        loadState: toSelectLoadState(categoriesListState, () => void refetchCategories()),
         onCreate: createCategory,
       },
       tagOptions: {
         items: tags,
-        status: toAsyncSelectStatus(tagsStatus),
-        error: tagsError instanceof Error ? tagsError.message : null,
-        onRetry: () => void refetchTags(),
+        loadState: toSelectLoadState(tagsListState, () => void refetchTags()),
         onCreate: createTag,
       },
       discardConfirmation: editor.discardConfirmation,

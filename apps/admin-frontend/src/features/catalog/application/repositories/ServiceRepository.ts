@@ -10,7 +10,7 @@ export interface CreateServiceInput {
   price: number
   maxDiscountPercentage: number
   categoryId?: string | null
-  tagIds?: string[]
+  tagIds?: readonly string[]
 }
 
 export interface UpdateServiceInput {
@@ -22,7 +22,7 @@ export interface UpdateServiceInput {
   price: number
   maxDiscountPercentage: number
   categoryId?: string | null
-  tagIds?: string[]
+  tagIds?: readonly string[]
 }
 
 export interface ListAllServicesOptions {
@@ -35,7 +35,7 @@ export interface ListAllServicesOptions {
 
 /** The paginated shape `ServiceRepository.listAll` resolves to (docs/API.md `PagedResult<ServiceDto>`). */
 export interface PagedServices {
-  services: Service[]
+  services: readonly Service[]
   totalCount: number
   page: number
   pageSize: number

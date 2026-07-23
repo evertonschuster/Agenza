@@ -7,7 +7,9 @@ import type {
   ServiceFormInput,
   ServiceFormValues,
 } from '@/features/catalog/presentation/services/ServiceForm.schema'
-import type { CreatableSelectStatus } from '@/shared/presentation/components/CreatableSingleSelect'
+import type { SelectLoadState } from '@/shared/presentation/components/SelectLoadState'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 
 // Kept out of the page/components themselves: plain runtime helpers
 // exported alongside a component would break Vite Fast Refresh for that
@@ -67,10 +69,23 @@ export function toServiceFormValues(service: Service): ServiceFormInput {
   }
 }
 
-export function toAsyncSelectStatus(
-  status: 'idle' | 'loading' | 'success' | 'error',
-): CreatableSelectStatus {
-  return status === 'success' || status === 'error' ? status : 'loading'
+export function toSelectLoadState<T>(
+  state: AsyncState<T, UiError>,
+  onRetry: () => void,
+): SelectLoadState {
+  switch (state.status) {
+    case 'success':
+      return { status: 'success' }
+    case 'initialError':
+    case 'refreshError':
+      return {
+        status: 'error',
+        message: state.error.message,
+        ...(state.error.retryable ? { onRetry } : {}),
+      }
+    default:
+      return { status: 'loading' }
+  }
 }
 
 export function messageFrom(error: unknown, fallback: string): string {

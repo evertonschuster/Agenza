@@ -1,8 +1,10 @@
 import { useState } from 'react'
 import { useAuth } from '@/features/auth'
 import { useTags } from '@/features/catalog/presentation/useTags'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 import { useDebouncedValue } from '@/shared/presentation/hooks/useDebouncedValue'
-import { useDialogTarget } from '@/shared/presentation/hooks/useDialogTarget'
+import { useDialogTarget, type DialogTarget } from '@/shared/presentation/hooks/useDialogTarget'
 import { useDeleteConfirmation } from '@/shared/presentation/hooks/useDeleteConfirmation'
 import { TAG_COLOR_PALETTE, type Tag, type TagColor } from '@/features/catalog/domain/entities/Tag'
 import type { TagFormValues, TagFormField } from '@/features/catalog/presentation/forms/TagForm'
@@ -31,12 +33,33 @@ function toFormValues(tag: Tag): TagFormValues {
   return { name: tag.name, color: tag.color, description: tag.description ?? '' }
 }
 
+export type TagEditorContent =
+  | { kind: 'create'; title: string; submitLabel: string; initialValues: TagFormValues }
+  | { kind: 'edit'; item: Tag; title: string; submitLabel: string; initialValues: TagFormValues }
+
+function toEditorContent(target: DialogTarget<Tag>): TagEditorContent {
+  if (target.kind === 'edit') {
+    return {
+      kind: 'edit',
+      item: target.item,
+      title: 'Editar etiqueta',
+      submitLabel: 'Salvar alterações',
+      initialValues: toFormValues(target.item),
+    }
+  }
+  return {
+    kind: 'create',
+    title: 'Nova etiqueta',
+    submitLabel: 'Criar etiqueta',
+    initialValues: EMPTY_FORM_VALUES,
+  }
+}
+
 export interface UseTagsPageResult {
   searchInput: string
   onSearchInputChange: (value: string) => void
-  tags: Tag[]
-  status: 'idle' | 'loading' | 'success' | 'error'
-  error: unknown
+  tags: readonly Tag[]
+  listState: AsyncState<readonly Tag[], UiError>
   hasActiveSearch: boolean
   onRetry: () => void
   onOpenCreate: () => void
@@ -44,10 +67,7 @@ export interface UseTagsPageResult {
   onDelete: (tag: Tag) => void
   dialog: {
     isOpen: boolean
-    displayTarget: 'new' | Tag | null
-    title: string
-    submitLabel: string
-    initialValues: TagFormValues
+    content: TagEditorContent | null
     isSubmitting: boolean
     serverError: ServerFormError<TagFormField> | null
     onCancel: () => void
@@ -67,7 +87,7 @@ export function useTagsPage(): UseTagsPageResult {
   const { tenantContext } = useAuth()
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebouncedValue(searchInput, 300)
-  const { tags, status, error, refetch, createTag, updateTag, deleteTag } = useTags(
+  const { tags, listState, refetch, createTag, updateTag, deleteTag } = useTags(
     tenantContext,
     debouncedSearch,
   )
@@ -99,10 +119,10 @@ export function useTagsPage(): UseTagsPageResult {
     setIsSubmitting(true)
     setServerError(null)
     try {
-      if (dialogTarget.formTarget === 'new') {
+      if (dialogTarget.formTarget?.kind === 'create') {
         await createTag(toTagInput(values))
-      } else if (dialogTarget.formTarget !== null) {
-        await updateTag(dialogTarget.formTarget.id, toTagInput(values))
+      } else if (dialogTarget.formTarget?.kind === 'edit') {
+        await updateTag(dialogTarget.formTarget.item.id, toTagInput(values))
       }
       closeForm()
     } catch (caughtError) {
@@ -119,14 +139,11 @@ export function useTagsPage(): UseTagsPageResult {
     }
   }
 
-  const { displayTarget } = dialogTarget
-
   return {
     searchInput,
     onSearchInputChange: setSearchInput,
     tags,
-    status,
-    error,
+    listState,
     hasActiveSearch: debouncedSearch.trim() !== '',
     onRetry: () => void refetch(),
     onOpenCreate: openCreateForm,
@@ -134,15 +151,8 @@ export function useTagsPage(): UseTagsPageResult {
     onDelete: deletion.onRequestDelete,
     dialog: {
       isOpen: dialogTarget.isOpen,
-      displayTarget,
-      title:
-        displayTarget === 'new' || displayTarget === null ? 'Nova etiqueta' : 'Editar etiqueta',
-      submitLabel:
-        displayTarget === 'new' || displayTarget === null ? 'Criar etiqueta' : 'Salvar alterações',
-      initialValues:
-        displayTarget === 'new' || displayTarget === null
-          ? EMPTY_FORM_VALUES
-          : toFormValues(displayTarget),
+      content:
+        dialogTarget.displayTarget !== null ? toEditorContent(dialogTarget.displayTarget) : null,
       isSubmitting,
       serverError,
       onCancel: closeForm,

@@ -138,4 +138,48 @@ describe('TextAreaField', () => {
       expect(uncontrolledRenderCount - renderCountAfterMount).toBeLessThanOrEqual(2)
     })
   })
+
+  it('sets aria-invalid and aria-describedby from error, with nothing to override them with', () => {
+    render(
+      <TextAreaField
+        id="description"
+        label="Descrição"
+        value=""
+        error="Obrigatório"
+        onChange={() => undefined}
+      />,
+    )
+
+    const textarea = screen.getByLabelText('Descrição')
+    expect(textarea).toHaveAttribute('aria-invalid', 'true')
+    expect(textarea).toHaveAttribute('aria-describedby', 'description-error')
+  })
+
+  it('ignores a consumer-supplied aria-invalid, keeping the wrapper computed value', () => {
+    // TypeScript's JSX checker special-cases aria-*/data-* attributes as
+    // always assignable regardless of a component's declared props (Omit
+    // can't block them at the type level) - the real protection is the
+    // spread order in TextAreaField.tsx, which this test verifies directly
+    // against the rendered DOM.
+    render(
+      <TextAreaField
+        id="description"
+        label="Descrição"
+        value=""
+        error="Obrigatório"
+        onChange={() => undefined}
+        aria-invalid={false}
+      />,
+    )
+
+    expect(screen.getByLabelText('Descrição')).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  it('rejects showCount: true without a usable maxLength at the type level', () => {
+    const invalid = (
+      // @ts-expect-error showCount: true has no counter to render without maxLength
+      <TextAreaField id="x" label="X" value="" onChange={() => undefined} showCount />
+    )
+    void invalid
+  })
 })

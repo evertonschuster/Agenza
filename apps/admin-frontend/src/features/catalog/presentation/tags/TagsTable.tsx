@@ -10,11 +10,12 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import { CollectionFeedback } from '@/shared/presentation/components/CollectionFeedback'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 
 export interface TagsTableProps {
-  tags: Tag[]
-  status: 'idle' | 'loading' | 'success' | 'error'
-  error: unknown
+  tags: readonly Tag[]
+  listState: AsyncState<readonly Tag[], UiError>
   hasActiveSearch: boolean
   onRetry: () => void
   onEdit: (tag: Tag) => void
@@ -23,8 +24,7 @@ export interface TagsTableProps {
 
 export function TagsTable({
   tags,
-  status,
-  error,
+  listState,
   hasActiveSearch,
   onRetry,
   onEdit,
@@ -33,9 +33,7 @@ export function TagsTable({
   return (
     <div className="mt-6">
       <CollectionFeedback
-        status={status}
-        hasItems={tags.length > 0}
-        error={error}
+        state={listState}
         loadingMessage="Carregando etiquetas…"
         loadErrorMessage="Não foi possível carregar as etiquetas"
         refreshErrorMessage="Não foi possível atualizar a lista de etiquetas"

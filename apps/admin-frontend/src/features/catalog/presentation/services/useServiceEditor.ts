@@ -16,12 +16,37 @@ import type {
   ServiceFormField,
   ServiceFormValues,
 } from '@/features/catalog/presentation/services/ServiceForm.schema'
-import { toServiceInput } from '@/features/catalog/presentation/services/serviceFormatters'
+import {
+  toServiceInput,
+  toServiceFormValues,
+  EMPTY_SERVICE_FORM_VALUES,
+} from '@/features/catalog/presentation/services/serviceFormatters'
 import type {
   DiscardConfirmationViewModel,
+  ServiceEditorContent,
   ServiceEditorViewModel,
   ServiceFormTarget,
 } from '@/features/catalog/presentation/services/servicePresentationModels'
+
+function toEditorContent(target: ServiceFormTarget): ServiceEditorContent {
+  if (target.kind === 'edit') {
+    return {
+      kind: 'edit',
+      item: target.item,
+      title: 'Editar serviço',
+      submitLabel: 'Salvar alterações',
+      code: target.item.code,
+      initialValues: toServiceFormValues(target.item),
+    }
+  }
+  return {
+    kind: 'create',
+    title: 'Novo serviço',
+    submitLabel: 'Criar serviço',
+    code: null,
+    initialValues: EMPTY_SERVICE_FORM_VALUES,
+  }
+}
 
 interface UseServiceEditorParams {
   onCreate: (input: CreateServiceInput) => Promise<Service>
@@ -53,16 +78,16 @@ export function useServiceEditor({
 
   function onOpenCreate(event: MouseEvent<HTMLButtonElement>): void {
     formTriggerRef.current = event.currentTarget
-    setFormTarget('new')
-    setDisplayTarget('new')
+    setFormTarget({ kind: 'create' })
+    setDisplayTarget({ kind: 'create' })
     setServerError(null)
     setIsFormDirty(false)
   }
 
   function onOpenEdit(service: Service, event: MouseEvent<HTMLButtonElement>): void {
     formTriggerRef.current = event.currentTarget
-    setFormTarget(service)
-    setDisplayTarget(service)
+    setFormTarget({ kind: 'edit', item: service })
+    setDisplayTarget({ kind: 'edit', item: service })
     setServerError(null)
     setIsFormDirty(false)
   }
@@ -88,10 +113,10 @@ export function useServiceEditor({
     setIsSubmitting(true)
     setServerError(null)
     try {
-      if (formTarget === 'new') {
+      if (formTarget?.kind === 'create') {
         await onCreate(toServiceInput(values))
-      } else if (formTarget !== null) {
-        await onUpdate(formTarget.id, toServiceInput(values))
+      } else if (formTarget?.kind === 'edit') {
+        await onUpdate(formTarget.item.id, toServiceInput(values))
       }
       closeForm()
     } catch (caughtError) {
@@ -113,10 +138,7 @@ export function useServiceEditor({
     onOpenEdit,
     editor: {
       isOpen: formTarget !== null,
-      displayTarget,
-      code: displayTarget === 'new' || displayTarget === null ? null : displayTarget.code,
-      title: displayTarget === 'new' ? 'Novo serviço' : 'Editar serviço',
-      submitLabel: displayTarget === 'new' ? 'Criar serviço' : 'Salvar alterações',
+      content: displayTarget !== null ? toEditorContent(displayTarget) : null,
       isSubmitting,
       serverError,
       formTriggerRef,

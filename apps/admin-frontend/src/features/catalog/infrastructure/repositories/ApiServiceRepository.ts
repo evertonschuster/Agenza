@@ -10,8 +10,8 @@ import type { HttpClient } from '@/shared/application/HttpClient'
 import type { TenantContext } from '@/features/auth'
 import {
   mapServiceDtoToDomain,
-  type PagedServiceDto,
-  type ServiceDto,
+  decodeServiceDto,
+  decodePagedServiceDto,
 } from '@/features/catalog/infrastructure/mappers/serviceMapper'
 import type { components } from '@/features/catalog/infrastructure/generated/services-api'
 
@@ -28,6 +28,7 @@ const SERVICES_URL = '/api/v1/services'
  * exact same `id` this method already routes to - makes route id and body
  * id structurally incapable of diverging (docs/adr/010).
  */
+type CreateServiceRequestBody = components['schemas']['CreateServiceCommand']
 type UpdateServiceRequestBody = components['schemas']['UpdateServiceCommand']
 
 /**
@@ -59,8 +60,9 @@ export class ApiServiceRepository implements ServiceRepository {
     if (tagId !== undefined) {
       query.set('tagId', tagId)
     }
-    const envelope = await this.httpClient.get<PagedServiceDto>(
+    const envelope = await this.httpClient.get(
       `${SERVICES_URL}?${query.toString()}`,
+      decodePagedServiceDto,
     )
     return {
       services: envelope.items.map(mapServiceDtoToDomain),
@@ -71,7 +73,18 @@ export class ApiServiceRepository implements ServiceRepository {
   }
 
   async create(_tenantContext: TenantContext, input: CreateServiceInput): Promise<Service> {
-    const dto = await this.httpClient.post<ServiceDto>(SERVICES_URL, input)
+    const body = {
+      name: input.name,
+      description: input.description ?? null,
+      durationMinutes: input.durationMinutes,
+      minDurationMinutes: input.minDurationMinutes,
+      maxDurationMinutes: input.maxDurationMinutes,
+      price: input.price,
+      maxDiscountPercentage: input.maxDiscountPercentage,
+      categoryId: input.categoryId ?? null,
+      tagIds: input.tagIds !== undefined ? [...input.tagIds] : null,
+    } satisfies CreateServiceRequestBody
+    const dto = await this.httpClient.post(SERVICES_URL, body, decodeServiceDto)
     return mapServiceDtoToDomain(dto)
   }
 
@@ -90,9 +103,9 @@ export class ApiServiceRepository implements ServiceRepository {
       price: input.price,
       maxDiscountPercentage: input.maxDiscountPercentage,
       categoryId: input.categoryId ?? null,
-      tagIds: input.tagIds ?? null,
+      tagIds: input.tagIds !== undefined ? [...input.tagIds] : null,
     }
-    const dto = await this.httpClient.put<ServiceDto>(`${SERVICES_URL}/${id}`, body)
+    const dto = await this.httpClient.put(`${SERVICES_URL}/${id}`, body, decodeServiceDto)
     return mapServiceDtoToDomain(dto)
   }
 

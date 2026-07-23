@@ -20,7 +20,7 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "preview": "vite preview",
-    "generate:api-types": "openapi-typescript http://localhost:5080/openapi/v1.json -o src/infrastructure/generated/services-api.d.ts",
+    "generate:api-types": "openapi-typescript http://localhost:5080/openapi/v1.json -o src/features/catalog/infrastructure/generated/services-api.d.ts",
     "generate:api-types:check": "node scripts/checkGeneratedApiTypes.mjs"
   },
   "dependencies": {

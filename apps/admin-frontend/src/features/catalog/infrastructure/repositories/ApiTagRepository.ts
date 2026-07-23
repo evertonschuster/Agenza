@@ -7,7 +7,11 @@ import type {
 } from '@/features/catalog/application/repositories/TagRepository'
 import type { HttpClient } from '@/shared/application/HttpClient'
 import type { TenantContext } from '@/features/auth'
-import { mapTagDtoToDomain, type TagDto } from '@/features/catalog/infrastructure/mappers/tagMapper'
+import {
+  mapTagDtoToDomain,
+  decodeTagDto,
+  decodeTagDtoArray,
+} from '@/features/catalog/infrastructure/mappers/tagMapper'
 import type { components } from '@/features/catalog/infrastructure/generated/services-api'
 
 /**
@@ -21,6 +25,7 @@ import type { components } from '@/features/catalog/infrastructure/generated/ser
  * outgoing request honestly conformant to the contract it's generated
  * from (docs/adr/010).
  */
+type CreateTagRequestBody = components['schemas']['CreateTagCommand']
 type UpdateTagRequestBody = components['schemas']['UpdateTagCommand']
 
 const TAGS_URL = '/api/v1/tags'
@@ -45,12 +50,17 @@ export class ApiTagRepository implements TagRepository {
       query.set('search', options.search.trim())
     }
     const suffix = query.toString() === '' ? '' : `?${query.toString()}`
-    const dtos = await this.httpClient.get<TagDto[]>(`${TAGS_URL}${suffix}`)
+    const dtos = await this.httpClient.get(`${TAGS_URL}${suffix}`, decodeTagDtoArray)
     return dtos.map(mapTagDtoToDomain)
   }
 
   async create(_tenantContext: TenantContext, input: CreateTagInput): Promise<Tag> {
-    const dto = await this.httpClient.post<TagDto>(TAGS_URL, input)
+    const body = {
+      name: input.name,
+      color: input.color,
+      description: input.description ?? null,
+    } satisfies CreateTagRequestBody
+    const dto = await this.httpClient.post(TAGS_URL, body, decodeTagDto)
     return mapTagDtoToDomain(dto)
   }
 
@@ -61,7 +71,7 @@ export class ApiTagRepository implements TagRepository {
       color: input.color,
       description: input.description ?? null,
     }
-    const dto = await this.httpClient.put<TagDto>(`${TAGS_URL}/${id}`, body)
+    const dto = await this.httpClient.put(`${TAGS_URL}/${id}`, body, decodeTagDto)
     return mapTagDtoToDomain(dto)
   }
 

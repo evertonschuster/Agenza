@@ -9,7 +9,8 @@ import type { HttpClient } from '@/shared/application/HttpClient'
 import type { TenantContext } from '@/features/auth'
 import {
   mapCategoryDtoToDomain,
-  type CategoryDto,
+  decodeCategoryDto,
+  decodeCategoryDtoArray,
 } from '@/features/catalog/infrastructure/mappers/categoryMapper'
 import type { components } from '@/features/catalog/infrastructure/generated/services-api'
 
@@ -23,6 +24,7 @@ const CATEGORIES_URL = '/api/v1/categories'
  * exact same `id` this method already routes to - makes route id and body
  * id structurally incapable of diverging (docs/adr/010).
  */
+type CreateCategoryRequestBody = components['schemas']['CreateCategoryCommand']
 type UpdateCategoryRequestBody = components['schemas']['UpdateCategoryCommand']
 
 /**
@@ -48,12 +50,13 @@ export class ApiCategoryRepository implements CategoryRepository {
       query.set('search', options.search.trim())
     }
     const suffix = query.toString() === '' ? '' : `?${query.toString()}`
-    const dtos = await this.httpClient.get<CategoryDto[]>(`${CATEGORIES_URL}${suffix}`)
+    const dtos = await this.httpClient.get(`${CATEGORIES_URL}${suffix}`, decodeCategoryDtoArray)
     return dtos.map(mapCategoryDtoToDomain)
   }
 
   async create(_tenantContext: TenantContext, input: CreateCategoryInput): Promise<Category> {
-    const dto = await this.httpClient.post<CategoryDto>(CATEGORIES_URL, input)
+    const body = { name: input.name } satisfies CreateCategoryRequestBody
+    const dto = await this.httpClient.post(CATEGORIES_URL, body, decodeCategoryDto)
     return mapCategoryDtoToDomain(dto)
   }
 
@@ -63,7 +66,7 @@ export class ApiCategoryRepository implements CategoryRepository {
     input: UpdateCategoryInput,
   ): Promise<Category> {
     const body: UpdateCategoryRequestBody = { categoryId: id, name: input.name }
-    const dto = await this.httpClient.put<CategoryDto>(`${CATEGORIES_URL}/${id}`, body)
+    const dto = await this.httpClient.put(`${CATEGORIES_URL}/${id}`, body, decodeCategoryDto)
     return mapCategoryDtoToDomain(dto)
   }
 

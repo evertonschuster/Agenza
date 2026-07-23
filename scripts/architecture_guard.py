@@ -32,7 +32,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # a whole directory.
 ALLOWLIST: dict[str, str] = {}
 
-EXCLUDED_DIR_NAMES = {"bin", "obj", "node_modules", ".git", "dist", "coverage", "generated"}
+EXCLUDED_DIR_NAMES = {
+    "bin",
+    "obj",
+    "node_modules",
+    ".git",
+    "dist",
+    "coverage",
+    "generated",
+    "worktrees",
+}
 
 
 @dataclass
@@ -416,6 +425,67 @@ def check_stale_horizontal_layout() -> list[Finding]:
     return findings
 
 
+_STALE_OPENAPI_GENERATED_PATH = "src/infrastructure/generated"
+
+
+def check_stale_openapi_generated_path() -> list[Finding]:
+    """ADR 009 relocated the generated OpenAPI client from the pre-move
+    top-level src/infrastructure/generated/ to src/features/catalog/
+    infrastructure/generated/, but several consumers (package.json,
+    checkGeneratedApiTypes.mjs, .prettierignore, skills, templates) kept
+    pointing at the old path and generate:api-types:check silently
+    ENOENT'd - this exact class of drift was found and fixed once already.
+    Source/config files are checked in full; markdown is checked only
+    inside fenced code blocks, mirroring
+    check_stale_patterns_in_doc_code_blocks - a prose sentence can
+    correctly describe the old path as history (e.g. this ADR's own
+    'Execution' section) without teaching it as current."""
+    findings: list[Finding] = []
+    code_suffixes = (".ts", ".tsx", ".mjs", ".js", ".json", ".yml", ".yaml")
+    candidate_names = {".prettierignore"}
+
+    code_files = [
+        p
+        for p in REPO_ROOT.rglob("*")
+        if p.is_file()
+        and (p.suffix in code_suffixes or p.name in candidate_names)
+        and not any(part in EXCLUDED_DIR_NAMES for part in p.parts)
+    ]
+    findings += _findings_for_pattern(
+        code_files,
+        re.compile(re.escape(_STALE_OPENAPI_GENERATED_PATH)),
+        "stale-openapi-generated-path",
+        "blocking",
+        "References the pre-ADR-009 src/infrastructure/generated/ path - the generated "
+        "OpenAPI client now lives at src/features/catalog/infrastructure/generated/.",
+    )
+
+    md_files = [
+        p
+        for p in REPO_ROOT.rglob("*.md")
+        if not any(part in EXCLUDED_DIR_NAMES for part in p.parts)
+        and "docs/adr" not in p.as_posix().replace("\\", "/")
+    ]
+    for path in md_files:
+        if _is_allowlisted(path):
+            continue
+        for start_line, code in _code_blocks(path):
+            if _STALE_OPENAPI_GENERATED_PATH in code:
+                offset = code.split(_STALE_OPENAPI_GENERATED_PATH)[0].count("\n")
+                findings.append(
+                    Finding(
+                        "stale-openapi-generated-path",
+                        "blocking",
+                        _rel(path),
+                        start_line + offset,
+                        "Code block references the pre-ADR-009 src/infrastructure/generated/ "
+                        "path - the generated OpenAPI client now lives at "
+                        "src/features/catalog/infrastructure/generated/.",
+                    )
+                )
+    return findings
+
+
 _ALLOWED_COVERAGE_EXCLUDE_PATTERNS = [
     re.compile(r"^node_modules/?$"),
     re.compile(r"^src/test/?$"),
@@ -498,6 +568,7 @@ CHECKS = [
     check_frontend_any,
     check_cross_feature_internal_imports,
     check_stale_horizontal_layout,
+    check_stale_openapi_generated_path,
     check_coverage_exclude_allowlist,
 ]
 

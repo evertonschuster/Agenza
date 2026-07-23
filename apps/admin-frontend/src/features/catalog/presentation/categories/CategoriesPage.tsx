@@ -12,8 +12,7 @@ export function CategoriesPage(): JSX.Element {
     searchInput,
     onSearchInputChange,
     categories,
-    status,
-    error,
+    listState,
     hasActiveSearch,
     onRetry,
     onOpenCreate,
@@ -44,8 +43,7 @@ export function CategoriesPage(): JSX.Element {
 
       <CategoriesTable
         categories={categories}
-        status={status}
-        error={error}
+        listState={listState}
         hasActiveSearch={hasActiveSearch}
         onRetry={onRetry}
         onEdit={onEdit}

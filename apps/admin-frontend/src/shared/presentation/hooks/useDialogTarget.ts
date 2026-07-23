@@ -1,6 +1,7 @@
 import { useState } from 'react'
 
-export type DialogTarget<T> = 'new' | T
+/** A discriminant, not a sentinel value - unlike `'new' | T`, this can never collide with a legitimate T (e.g. a T that happens to be the string 'new'). */
+export type DialogTarget<T> = { kind: 'create' } | { kind: 'edit'; item: T }
 
 export interface UseDialogTargetResult<T> {
   formTarget: DialogTarget<T> | null
@@ -17,13 +18,13 @@ export function useDialogTarget<T>(): UseDialogTargetResult<T> {
   const [displayTarget, setDisplayTarget] = useState<DialogTarget<T> | null>(null)
 
   function openCreate(): void {
-    setFormTarget('new')
-    setDisplayTarget('new')
+    setFormTarget({ kind: 'create' })
+    setDisplayTarget({ kind: 'create' })
   }
 
   function openEdit(item: T): void {
-    setFormTarget(item)
-    setDisplayTarget(item)
+    setFormTarget({ kind: 'edit', item })
+    setDisplayTarget({ kind: 'edit', item })
   }
 
   function close(): void {

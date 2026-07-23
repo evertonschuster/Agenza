@@ -44,7 +44,7 @@ describe('useTags', () => {
     const { result } = renderUseTags(createFakeContainer(), buildTenantContext())
 
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     expect(result.current.tags).toEqual([tagFixture])
@@ -58,7 +58,7 @@ describe('useTags', () => {
     )
 
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     expect(result.current.tags).toEqual([])
@@ -77,7 +77,7 @@ describe('useTags', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
     listTagsSpy.mockClear()
 
@@ -112,7 +112,7 @@ describe('useTags', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     await act(async () => {
@@ -125,7 +125,7 @@ describe('useTags', () => {
     expect(result.current.tags).toEqual([tagFixture, newTag])
 
     await waitFor(() => {
-      expect(result.current.status).toBe('error')
+      expect(result.current.listState.status).toBe('refreshError')
     })
     // Still there after the failed refetch settles - not cleared, not
     // reported as a failed creation, so it keeps showing as a chip.
@@ -144,7 +144,7 @@ describe('useTags', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
     listTagsSpy.mockClear()
 
@@ -159,7 +159,7 @@ describe('useTags', () => {
   it('rejects mutations when tenantContext is null', async () => {
     const { result } = renderUseTags(createFakeContainer(), null)
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     await expect(result.current.createTag({ name: 'VIP', color: '#0d9488' })).rejects.toThrow()
@@ -202,7 +202,7 @@ describe('useTags', () => {
     )
 
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
     expect(result.current.tags).toEqual([tagFixture])
 

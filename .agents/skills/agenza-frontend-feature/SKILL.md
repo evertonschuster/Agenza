@@ -519,23 +519,37 @@ built.
 
 ```typescript
 // shared/application/HttpClient.ts
+export type Decoder<T> = (payload: unknown) => T
+
 export interface HttpClient {
-  get<T>(path: string): Promise<T>
-  post<T>(path: string, body: unknown): Promise<T>
-  put<T>(path: string, body: unknown): Promise<T>
+  get<T>(path: string, decode: Decoder<T>): Promise<T>
+  post<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>
+  put<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>
   delete(path: string): Promise<void>
 }
 ```
+
+Every `get`/`post`/`put` call takes a `decode` function alongside its `T` -
+a generic type parameter alone validates nothing at runtime, so the
+decoder is what actually stands between an untrusted response body and a
+value the rest of the app treats as `T` (docs/adr/011). A feature's mapper
+owns its own decoder next to its DTO type (e.g. `tagMapper.ts`'s
+`decodeTagDto`/`decodeTagDtoArray`) - hand-rolled `typeof`/`Array.isArray`
+guards matching `shared/infrastructure/http/ProblemDetails.ts`'s existing
+style, not a schema library. A decoder that throws is caught by the same
+place every other infrastructure failure already is (see below) - never
+add a second try/catch in the repository for this.
 
 `AuthenticatedHttpClient` (`shared/infrastructure/http/`): constructor
 takes `getRequestSession: GetRequestSession` (returns both the access
 token and tenant id from one session read — `shared/application/
 RequestSession.ts`), prepends `VITE_API_BASE_URL`, attaches `Authorization:
 Bearer <token>` and `X-Tenant-Id`, converts every failure (missing
-session, 401, non-2xx `ProblemDetails`, network/timeout) into an
-`AppError` (`shared/application/AppError.ts`) before it leaves
-infrastructure — never `ApiError`/`ProblemDetails` directly (docs/adr/007).
-Wired into `createAppContainer()` (`app/composition/container.ts`) using
+session, 401, non-2xx `ProblemDetails`, network/timeout, or a `decode`
+rejection) into an `AppError` (`shared/application/AppError.ts`) before it
+leaves infrastructure — never `ApiError`/`ProblemDetails`/a raw decode
+error directly (docs/adr/007, docs/adr/011). Wired into
+`createAppContainer()` (`app/composition/container.ts`) using
 `authRepository.getCurrentSession()` to supply both values from the same
 read.
 

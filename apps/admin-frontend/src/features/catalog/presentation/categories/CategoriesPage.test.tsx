@@ -57,7 +57,13 @@ describe('CategoriesPage', () => {
   it('shows an error state when loading categories fails', async () => {
     renderCategoriesPage(
       buildContainer({
-        listCategories: { execute: vi.fn(() => Promise.reject(new Error('network down'))) },
+        listCategories: {
+          execute: vi.fn(() =>
+            Promise.reject(
+              new AppError({ code: 'network', message: 'network down', retryable: true }),
+            ),
+          ),
+        },
       }),
     )
 

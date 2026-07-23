@@ -68,9 +68,7 @@ export function ServiceTagsField({ options }: ServiceTagsFieldProps): JSX.Elemen
             searchPlaceholder="Buscar etiqueta…"
             emptyText="Nenhuma etiqueta encontrada."
             createActionLabel="Nova etiqueta"
-            status={options.status}
-            error={options.error}
-            onRetry={options.onRetry}
+            loadState={options.loadState}
             renderCreateForm={({ close, onCreated }) => (
               <TagForm
                 initialValues={EMPTY_TAG_FORM_VALUES}

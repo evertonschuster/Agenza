@@ -66,7 +66,7 @@ describe('useServices', () => {
     const { result } = renderUseServices(createFakeContainer(), buildTenantContext())
 
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     expect(result.current.services).toEqual([serviceFixture])
@@ -80,7 +80,7 @@ describe('useServices', () => {
     )
 
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     expect(result.current.services).toEqual([])
@@ -99,7 +99,7 @@ describe('useServices', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
     listServicesSpy.mockClear()
 
@@ -141,7 +141,7 @@ describe('useServices', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     await act(async () => {
@@ -153,7 +153,7 @@ describe('useServices', () => {
     expect(result.current.totalCount).toBe(2)
 
     await waitFor(() => {
-      expect(result.current.status).toBe('error')
+      expect(result.current.listState.status).toBe('refreshError')
     })
     // Still there after the failed refetch settles - not cleared, not
     // reported as a failed creation.
@@ -172,7 +172,7 @@ describe('useServices', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
     listServicesSpy.mockClear()
 
@@ -187,7 +187,7 @@ describe('useServices', () => {
   it('rejects mutations when tenantContext is null', async () => {
     const { result } = renderUseServices(createFakeContainer(), null)
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     await expect(result.current.createService(createInput)).rejects.toThrow()
@@ -206,7 +206,7 @@ describe('useServices', () => {
     )
 
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     expect(result.current.totalCount).toBe(42)
@@ -235,7 +235,7 @@ describe('useServices', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
 
     act(() => {
@@ -262,7 +262,7 @@ describe('useServices', () => {
       tenantContext,
     )
     await waitFor(() => {
-      expect(result.current.status).toBe('success')
+      expect(result.current.listState.status).toBe('success')
     })
     listServicesSpy.mockClear()
 

@@ -5,14 +5,13 @@ import { TenantBoundary } from '@/features/auth/presentation/TenantBoundary'
 import { AuthContext, type AuthContextValue } from '@/features/auth/presentation/AuthContext'
 import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
 import { User } from '@/features/auth/domain/entities/User'
+import type { TenantContext } from '@/features/auth/application/context/TenantContext'
 
-function buildAuthValue(tenantContext: AuthContextValue['tenantContext']): AuthContextValue {
-  return {
-    status: tenantContext !== null ? 'authenticated' : 'unauthenticated',
-    tenantContext,
-    login: () => Promise.resolve(),
-    logout: () => Promise.resolve(),
-  }
+function buildAuthValue(tenantContext: TenantContext | null): AuthContextValue {
+  const actions = { login: () => Promise.resolve(), logout: () => Promise.resolve() }
+  return tenantContext !== null
+    ? { status: 'authenticated', tenantContext, ...actions }
+    : { status: 'unauthenticated', tenantContext: null, ...actions }
 }
 
 function StatefulChild(): JSX.Element {

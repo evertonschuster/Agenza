@@ -40,9 +40,11 @@ export function RouteErrorElement(): JSX.Element {
       onPrimaryAction={() => {
         window.location.reload()
       }}
-      secondaryActionLabel="Voltar ao início"
-      onSecondaryAction={() => {
-        void navigate('/dashboard', { replace: true })
+      secondaryAction={{
+        label: 'Voltar ao início',
+        onAction: () => {
+          void navigate('/dashboard', { replace: true })
+        },
       }}
     />
   )

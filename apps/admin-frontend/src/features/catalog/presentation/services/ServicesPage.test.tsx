@@ -122,7 +122,13 @@ describe('ServicesPage', () => {
   it('shows an error state when loading services fails', async () => {
     renderServicesPage(
       buildContainer({
-        listServices: { execute: vi.fn(() => Promise.reject(new Error('network down'))) },
+        listServices: {
+          execute: vi.fn(() =>
+            Promise.reject(
+              new AppError({ code: 'network', message: 'network down', retryable: true }),
+            ),
+          ),
+        },
       }),
     )
 

@@ -81,7 +81,7 @@ describe('TagForm color picker accessibility', () => {
 
   it('renders an accessible, announced error when the color field is invalid', async () => {
     const serverError: ServerFormError<TagFormField> = {
-      fieldErrors: { color: 'Cor inválida.' },
+      fieldErrors: [{ field: 'color', message: 'Cor inválida.' }],
       firstField: 'color',
       globalMessage: null,
     }
@@ -99,7 +99,7 @@ describe('TagForm color picker accessibility', () => {
 
   it('focuses a color radio when a server error targets the color field', async () => {
     const serverError: ServerFormError<TagFormField> = {
-      fieldErrors: { color: 'Cor inválida.' },
+      fieldErrors: [{ field: 'color', message: 'Cor inválida.' }],
       firstField: 'color',
       globalMessage: null,
     }
@@ -127,7 +127,7 @@ describe('TagForm color picker accessibility', () => {
 
   it('has no axe violations while showing the color validation error', async () => {
     const serverError: ServerFormError<TagFormField> = {
-      fieldErrors: { color: 'Cor inválida.' },
+      fieldErrors: [{ field: 'color', message: 'Cor inválida.' }],
       firstField: 'color',
       globalMessage: null,
     }

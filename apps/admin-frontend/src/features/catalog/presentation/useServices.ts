@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useAppContainer } from '@/app/providers/useAppContainer'
-import { useAsync } from '@/shared/presentation/hooks/useAsync'
+import { useAsync, type AsyncState } from '@/shared/presentation/hooks/useAsync'
+import { toUiError, type UiError } from '@/shared/application/UiError'
 import type { Service } from '@/features/catalog/domain/entities/Service'
 import type { TenantContext } from '@/features/auth'
 import type {
@@ -8,8 +9,6 @@ import type {
   PagedServices,
   UpdateServiceInput,
 } from '@/features/catalog/application/repositories/ServiceRepository'
-
-type UseServicesStatus = 'idle' | 'loading' | 'success' | 'error'
 
 const DEFAULT_PAGE_SIZE = 20
 const EMPTY_PAGE: PagedServices = {
@@ -20,9 +19,8 @@ const EMPTY_PAGE: PagedServices = {
 }
 
 export interface UseServicesResult {
-  services: Service[]
-  status: UseServicesStatus
-  error: unknown
+  services: readonly Service[]
+  listState: AsyncState<readonly Service[], UiError>
   page: number
   pageSize: number
   totalCount: number
@@ -31,6 +29,24 @@ export interface UseServicesResult {
   createService: (input: CreateServiceInput) => Promise<Service>
   updateService: (id: string, input: UpdateServiceInput) => Promise<Service>
   deleteService: (id: string) => Promise<void>
+}
+
+/** Unwraps the paged envelope's `services` array into its own AsyncState, curating the error the same way every other list does. */
+function toServicesListState(
+  state: AsyncState<PagedServices>,
+): AsyncState<readonly Service[], UiError> {
+  switch (state.status) {
+    case 'refreshing':
+      return { status: 'refreshing', data: state.data.services, error: null }
+    case 'success':
+      return { status: 'success', data: state.data.services, error: null }
+    case 'initialError':
+      return { status: 'initialError', data: null, error: toUiError(state.error) }
+    case 'refreshError':
+      return { status: 'refreshError', data: state.data.services, error: toUiError(state.error) }
+    default:
+      return state
+  }
 }
 
 /**
@@ -67,9 +83,8 @@ export function useServices(
     })
   }, [tenantContext, catalog, page, search, categoryId, tagId])
 
-  const { data, status, error, execute, mutate, captureGeneration } = useAsync(listServices, {
-    resetKey: tenantContext?.tenant.id,
-  })
+  const asyncState = useAsync(listServices, { resetKey: tenantContext?.tenant.id })
+  const { data, execute, mutate, captureGeneration } = asyncState
 
   const createService = useCallback(
     async (input: CreateServiceInput): Promise<Service> => {
@@ -134,8 +149,7 @@ export function useServices(
 
   return {
     services: data?.services ?? [],
-    status,
-    error,
+    listState: toServicesListState(asyncState),
     page,
     pageSize: data?.pageSize ?? DEFAULT_PAGE_SIZE,
     totalCount: data?.totalCount ?? 0,

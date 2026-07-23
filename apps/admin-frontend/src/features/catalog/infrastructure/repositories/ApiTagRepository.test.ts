@@ -45,10 +45,17 @@ describe('ApiTagRepository', () => {
     await repository.listAll(buildTenantContext(), { search: 'vip' })
   })
 
-  it('creates a tag and returns the mapped result', async () => {
+  it('creates a tag, sending an omitted description as explicit null', async () => {
     server.use(
       http.post(`${baseUrl}/api/v1/tags`, async ({ request }) => {
-        expect(await request.json()).toEqual({ name: 'VIP', color: '#0d9488' })
+        // CreateTagCommand marks description required-but-nullable in the
+        // OpenAPI schema, not optional - an absent app-side description
+        // must still be sent as an explicit `null` key, not omitted.
+        expect(await request.json()).toEqual({
+          name: 'VIP',
+          color: '#0d9488',
+          description: null,
+        })
         return HttpResponse.json(tagFixture, { status: 201 })
       }),
     )
@@ -57,6 +64,26 @@ describe('ApiTagRepository', () => {
     const tag = await repository.create(buildTenantContext(), { name: 'VIP', color: '#0d9488' })
 
     expect(tag.id).toBe(tagFixture.id)
+  })
+
+  it('creates a tag, sending a provided description as-is', async () => {
+    server.use(
+      http.post(`${baseUrl}/api/v1/tags`, async ({ request }) => {
+        expect(await request.json()).toEqual({
+          name: 'VIP',
+          color: '#0d9488',
+          description: 'High-value returning client',
+        })
+        return HttpResponse.json(tagFixture, { status: 201 })
+      }),
+    )
+    const repository = buildRepository()
+
+    await repository.create(buildTenantContext(), {
+      name: 'VIP',
+      color: '#0d9488',
+      description: 'High-value returning client',
+    })
   })
 
   it('updates a tag at the correct path', async () => {

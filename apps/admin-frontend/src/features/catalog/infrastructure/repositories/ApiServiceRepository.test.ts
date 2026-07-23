@@ -102,10 +102,18 @@ describe('ApiServiceRepository', () => {
     expect(capturedUrl?.searchParams.has('tagId')).toBe(false)
   })
 
-  it('creates a service and returns the mapped result', async () => {
+  it('creates a service, sending omitted description/categoryId/tagIds as explicit null', async () => {
     server.use(
       http.post(`${baseUrl}/api/v1/services`, async ({ request }) => {
-        expect(await request.json()).toEqual(createInput)
+        // CreateServiceCommand marks these fields required-but-nullable in
+        // the OpenAPI schema, not optional - an absent app-side value must
+        // still be sent as an explicit `null` key, not omitted.
+        expect(await request.json()).toEqual({
+          ...createInput,
+          description: null,
+          categoryId: null,
+          tagIds: null,
+        })
         return HttpResponse.json(serviceFixture, { status: 201 })
       }),
     )
@@ -114,6 +122,28 @@ describe('ApiServiceRepository', () => {
     const service = await repository.create(buildTenantContext(), createInput)
 
     expect(service.id).toBe(serviceFixture.id)
+  })
+
+  it('creates a service, sending provided description/categoryId/tagIds as-is', async () => {
+    server.use(
+      http.post(`${baseUrl}/api/v1/services`, async ({ request }) => {
+        expect(await request.json()).toEqual({
+          ...createInput,
+          description: 'Uma massagem relaxante de corpo inteiro',
+          categoryId: 'category-1',
+          tagIds: ['tag-1'],
+        })
+        return HttpResponse.json(serviceFixture, { status: 201 })
+      }),
+    )
+    const repository = buildRepository()
+
+    await repository.create(buildTenantContext(), {
+      ...createInput,
+      description: 'Uma massagem relaxante de corpo inteiro',
+      categoryId: 'category-1',
+      tagIds: ['tag-1'],
+    })
   })
 
   it('updates a service at the correct path', async () => {

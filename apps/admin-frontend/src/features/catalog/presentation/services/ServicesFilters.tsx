@@ -17,8 +17,8 @@ export interface ServicesFiltersProps {
   onCategoryFilterChange: (value: string) => void
   tagFilter: string
   onTagFilterChange: (value: string) => void
-  categories: Category[]
-  tags: Tag[]
+  categories: readonly Category[]
+  tags: readonly Tag[]
   allCategoriesValue: string
   allTagsValue: string
 }

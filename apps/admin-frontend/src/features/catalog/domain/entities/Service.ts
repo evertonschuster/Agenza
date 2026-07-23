@@ -14,9 +14,9 @@ function isFiniteInteger(value: unknown): value is number {
 
 /** A tag summary as embedded on a Service (docs/API.md `TagSummaryDto`). */
 export interface TagSummary {
-  id: string
-  name: string
-  color: string
+  readonly id: string
+  readonly name: string
+  readonly color: string
 }
 
 interface CreateServiceInput {
