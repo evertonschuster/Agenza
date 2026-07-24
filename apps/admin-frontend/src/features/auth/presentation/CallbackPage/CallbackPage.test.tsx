@@ -3,6 +3,8 @@ import { render, screen } from '@testing-library/react'
 import { StrictMode } from 'react'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { CallbackPage } from '@/features/auth/presentation/CallbackPage/CallbackPage'
+import { AuthProvider } from '@/features/auth/presentation/AuthProvider'
+import { ProtectedRoute } from '@/features/auth/presentation/ProtectedRoute'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { HandleAuthCallback } from '@/features/auth/application/use-cases/HandleAuthCallback'
 import { createFakeAuthRepository } from '@/features/auth/application/test-helpers/createFakeAuthRepository'
@@ -26,12 +28,14 @@ function buildContainer(handleCallbackFn: (url: string) => Promise<TenantContext
 function renderCallbackPage(container: AppContainer): void {
   render(
     <AppContainerContext.Provider value={container}>
-      <MemoryRouter initialEntries={['/callback']}>
-        <Routes>
-          <Route path="/callback" element={<CallbackPage />} />
-          <Route path="/dashboard" element={<div>Dashboard page</div>} />
-        </Routes>
-      </MemoryRouter>
+      <AuthProvider>
+        <MemoryRouter initialEntries={['/callback']}>
+          <Routes>
+            <Route path="/callback" element={<CallbackPage />} />
+            <Route path="/dashboard" element={<div>Dashboard page</div>} />
+          </Routes>
+        </MemoryRouter>
+      </AuthProvider>
     </AppContainerContext.Provider>,
   )
 }
@@ -59,6 +63,29 @@ describe('CallbackPage', () => {
     renderCallbackPage(buildContainer(vi.fn(() => Promise.resolve(fakeTenantContext))))
 
     expect(await screen.findByText('Dashboard page')).toBeInTheDocument()
+  })
+
+  it('updates the shared auth session before entering a protected route', async () => {
+    const container = buildContainer(vi.fn(() => Promise.resolve(fakeTenantContext)))
+
+    render(
+      <AppContainerContext.Provider value={container}>
+        <AuthProvider>
+          <MemoryRouter initialEntries={['/callback']}>
+            <Routes>
+              <Route path="/callback" element={<CallbackPage />} />
+              <Route element={<ProtectedRoute />}>
+                <Route path="/dashboard" element={<div>Dashboard page</div>} />
+              </Route>
+              <Route path="/login" element={<div>Login page</div>} />
+            </Routes>
+          </MemoryRouter>
+        </AuthProvider>
+      </AppContainerContext.Provider>,
+    )
+
+    expect(await screen.findByText('Dashboard page')).toBeInTheDocument()
+    expect(screen.queryByText('Login page')).not.toBeInTheDocument()
   })
 
   it('shows the error state with a way back to login when the callback fails', async () => {
@@ -97,12 +124,14 @@ describe('CallbackPage', () => {
     render(
       <StrictMode>
         <AppContainerContext.Provider value={container}>
-          <MemoryRouter initialEntries={['/callback']}>
-            <Routes>
-              <Route path="/callback" element={<CallbackPage />} />
-              <Route path="/dashboard" element={<div>Dashboard page</div>} />
-            </Routes>
-          </MemoryRouter>
+          <AuthProvider>
+            <MemoryRouter initialEntries={['/callback']}>
+              <Routes>
+                <Route path="/callback" element={<CallbackPage />} />
+                <Route path="/dashboard" element={<div>Dashboard page</div>} />
+              </Routes>
+            </MemoryRouter>
+          </AuthProvider>
         </AppContainerContext.Provider>
       </StrictMode>,
     )

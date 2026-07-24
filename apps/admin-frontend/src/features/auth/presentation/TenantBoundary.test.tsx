@@ -8,7 +8,11 @@ import { User } from '@/features/auth/domain/entities/User'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
 
 function buildAuthValue(tenantContext: TenantContext | null): AuthContextValue {
-  const actions = { login: () => Promise.resolve(), logout: () => Promise.resolve() }
+  const actions = {
+    login: () => Promise.resolve(),
+    completeLogin: () => Promise.resolve(),
+    logout: () => Promise.resolve(),
+  }
   return tenantContext !== null
     ? { status: 'authenticated', tenantContext, ...actions }
     : { status: 'unauthenticated', tenantContext: null, ...actions }

@@ -1,6 +1,6 @@
 import { useEffect, useState, type JSX } from 'react'
 import { Link, useNavigate } from 'react-router'
-import { useAppContainer } from '@/app/providers/useAppContainer'
+import { useAuth } from '@/features/auth/presentation/useAuth'
 import { CenteredScreen } from '@/shared/presentation/components/CenteredScreen'
 import { Card, CardContent } from '@/components/ui/card'
 import { FullScreenSpinner } from '@/shared/presentation/components/FullScreenSpinner'
@@ -8,23 +8,22 @@ import { FullScreenSpinner } from '@/shared/presentation/components/FullScreenSp
 type CallbackStatus = 'processing' | 'error'
 
 export function CallbackPage(): JSX.Element {
-  const { auth } = useAppContainer()
+  const { completeLogin } = useAuth()
   const navigate = useNavigate()
   const [status, setStatus] = useState<CallbackStatus>('processing')
 
   useEffect(() => {
-    async function completeLogin(): Promise<void> {
+    async function finishCallback(): Promise<void> {
       try {
-        await auth.handleAuthCallback.execute(window.location.href)
+        await completeLogin(window.location.href)
         await navigate('/dashboard', { replace: true })
       } catch {
         setStatus('error')
       }
     }
 
-    void completeLogin()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    void finishCallback()
+  }, [completeLogin, navigate])
 
   if (status === 'error') {
     return (

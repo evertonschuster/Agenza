@@ -31,6 +31,14 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     await auth.initiateLogin.execute()
   }, [auth])
 
+  const completeLogin = useCallback(
+    async (callbackUrl: string): Promise<void> => {
+      const authenticatedTenantContext = await auth.handleAuthCallback.execute(callbackUrl)
+      mutate(() => authenticatedTenantContext)
+    },
+    [auth, mutate],
+  )
+
   const logout = useCallback(async (): Promise<void> => {
     await auth.logout.execute()
     mutate(() => null)
@@ -38,13 +46,13 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
 
   const value = useMemo<AuthContextValue>(() => {
     if (loadStatus === 'loading') {
-      return { status: 'loading', tenantContext: null, login, logout }
+      return { status: 'loading', tenantContext: null, login, completeLogin, logout }
     }
     if (tenantContext !== null) {
-      return { status: 'authenticated', tenantContext, login, logout }
+      return { status: 'authenticated', tenantContext, login, completeLogin, logout }
     }
-    return { status: 'unauthenticated', tenantContext: null, login, logout }
-  }, [loadStatus, tenantContext, login, logout])
+    return { status: 'unauthenticated', tenantContext: null, login, completeLogin, logout }
+  }, [loadStatus, tenantContext, login, completeLogin, logout])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }
