@@ -62,4 +62,5 @@ independently.
   directory yet - that's part of the larger feature-based reorganization
   (`features/`, `app/`) tracked separately; `main.tsx` already treats
   `composition/container.ts` as the composition root regardless of its
-  current file path.
+  current file path. (Done — see docs/adr/009; the composition root now
+  lives at `app/composition/container.ts`.)

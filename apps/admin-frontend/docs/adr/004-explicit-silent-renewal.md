@@ -7,7 +7,9 @@
 `automaticSilentRenew: false` in `UserManager`. Silent renewal is
 handled explicitly inside `OidcAuthRepository.getCurrentSession()`.
 Tokens with at most 60 seconds left are treated as expiring, and concurrent
-callers share one in-flight renewal.
+callers share one in-flight renewal. A renewed session is accepted only when
+both `user.id` and `tenant.id` match the cached session; a claim change clears
+the local OIDC user and requires a full login.
 
 ## Rationale
 
@@ -36,3 +38,6 @@ refresh token.
 - A failed renewal removes the stale OIDC user and returns `null`; the
   shared auth state then becomes unauthenticated and the protected route
   sends the user to login
+- A renewal that changes the user or tenant is treated exactly like a failed
+  renewal. This fail-closed check prevents a token for a new identity from
+  being used while React still holds tenant-scoped state for the previous one

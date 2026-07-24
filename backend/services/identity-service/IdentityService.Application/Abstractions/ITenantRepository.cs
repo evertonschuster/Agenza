@@ -6,5 +6,7 @@ public interface ITenantRepository
 {
     Task<Tenant?> GetByIdAsync(Guid tenantId, CancellationToken cancellationToken);
 
+    Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken);
+
     Task AddAsync(Tenant tenant, CancellationToken cancellationToken);
 }

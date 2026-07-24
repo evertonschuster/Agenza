@@ -1,16 +1,19 @@
 import { test, expect } from '@playwright/test'
+import { mockOidcLoginStart } from './support/session'
 
 test.describe('unauthenticated access', () => {
-  test('redirects a protected route to /login without a session', async ({ page }) => {
+  test('automatically opens login for a protected route without a session', async ({ page }) => {
+    await mockOidcLoginStart(page)
     await page.goto('/services')
 
-    await expect(page).toHaveURL(/\/login$/)
-    await expect(page.getByRole('button', { name: 'Entrar' })).toBeVisible()
+    await expect(page).toHaveURL(/localhost:5081\/connect\/authorize/)
+    await expect(page.getByRole('heading', { name: 'Acesso seguro' })).toBeVisible()
   })
 
-  test('redirects the root path to /login without a session', async ({ page }) => {
+  test('automatically opens login from the root path without a session', async ({ page }) => {
+    await mockOidcLoginStart(page)
     await page.goto('/')
 
-    await expect(page).toHaveURL(/\/login$/)
+    await expect(page).toHaveURL(/localhost:5081\/connect\/authorize/)
   })
 })

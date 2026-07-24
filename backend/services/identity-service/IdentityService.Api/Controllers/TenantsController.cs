@@ -1,6 +1,7 @@
 using Admin.SharedKernel;
 using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
+using IdentityService.Application.Tenants;
 using IdentityService.Application.Tenants.ProvisionTenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -24,6 +25,7 @@ public class TenantsController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType<ProvisionTenantResponse>(StatusCodes.Status201Created)]
     public async Task<IActionResult> Provision(ProvisionTenantCommand command, CancellationToken cancellationToken)
     {
         if (!User.HasScope("identity-admin"))

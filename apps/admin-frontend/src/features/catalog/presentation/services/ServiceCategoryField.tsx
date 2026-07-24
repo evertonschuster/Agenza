@@ -65,6 +65,7 @@ export function ServiceCategoryField({ options }: ServiceCategoryFieldProps): JS
               emptyText="Nenhuma categoria encontrada."
               createActionLabel="Nova categoria"
               loadState={options.loadState}
+              onCreatePopoverClose={createCategory.reset}
               renderCreateForm={({ close, onCreated }) => (
                 <CategoryForm
                   initialValues={EMPTY_CATEGORY_FORM_VALUES}

@@ -27,6 +27,12 @@ public sealed class ProvisionTenantCommandHandler : ICommandHandler<ProvisionTen
         // Both writes run in one transaction so a failed owner creation rolls the tenant back too, instead of leaving it orphaned.
         return _unitOfWork.ExecuteInTransactionAsync<ProvisionTenantResponse>(async ct =>
         {
+            if (await _tenantRepository.NameExistsAsync(command.TenantName, ct))
+            {
+                return Result.Failure<ProvisionTenantResponse>(
+                    Error.Conflict("Tenant.DuplicateName", $"Já existe um tenant chamado '{command.TenantName}'."));
+            }
+
             var tenantResult = Tenant.Create(Guid.CreateVersion7(), command.TenantName);
 
             if (tenantResult.IsFailure)

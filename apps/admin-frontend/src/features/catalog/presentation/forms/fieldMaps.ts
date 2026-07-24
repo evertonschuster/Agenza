@@ -44,4 +44,6 @@ export const serviceFieldMap: Record<string, ServiceFormField> = {
 /** Conflict/NotFound/Forbidden `code` -> the ServiceForm field it should highlight. */
 export const serviceCodeFieldMap: Record<string, ServiceFormField> = {
   'Service.DuplicateName': 'name',
+  'Category.NotFound': 'categoryId',
+  'Tag.NotFound': 'tagIds',
 }

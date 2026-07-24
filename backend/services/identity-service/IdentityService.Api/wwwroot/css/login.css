@@ -1,5 +1,5 @@
 :root {
-    color-scheme: light dark;
+    color-scheme: light;
     font-family:
         Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI",
         sans-serif;
@@ -206,6 +206,7 @@ a {
 }
 
 .login-panel {
+    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -215,6 +216,60 @@ a {
     background:
         radial-gradient(circle at 100% 0%, rgb(91 104 223 / 7%), transparent 30rem),
         var(--page);
+}
+
+.theme-toggle {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    z-index: 2;
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    place-items: center;
+    border: 1px solid var(--border);
+    border-radius: 0.75rem;
+    background: color-mix(in srgb, var(--surface) 88%, transparent);
+    color: var(--text-muted);
+    cursor: pointer;
+    transition:
+        border-color 150ms ease,
+        background-color 150ms ease,
+        color 150ms ease,
+        transform 150ms ease;
+}
+
+.theme-toggle:hover {
+    border-color: var(--border-strong);
+    background: var(--surface);
+    color: var(--text);
+    transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+    outline: 3px solid rgb(91 104 223 / 28%);
+    outline-offset: 2px;
+}
+
+.theme-toggle svg {
+    width: 1.1rem;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 1.6;
+}
+
+.theme-toggle__sun {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-toggle__moon {
+    display: none;
+}
+
+html[data-theme="dark"] .theme-toggle__sun {
+    display: block;
 }
 
 .login-card {
@@ -291,6 +346,29 @@ a {
     color: color-mix(in srgb, var(--danger) 82%, var(--text));
     font-size: 0.78rem;
     line-height: 1.45;
+}
+
+.alert__support {
+    display: grid;
+    gap: 0.2rem;
+    margin-top: 0.7rem;
+    padding-top: 0.65rem;
+    border-top: 1px solid color-mix(in srgb, var(--danger) 20%, transparent);
+}
+
+.alert__support span,
+.alert__support small {
+    color: color-mix(in srgb, var(--danger) 68%, var(--text-muted));
+    font-size: 0.68rem;
+    line-height: 1.4;
+}
+
+.alert__support code {
+    color: var(--danger);
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
 }
 
 .field + .field {
@@ -558,40 +636,39 @@ a {
     }
 }
 
-@media (prefers-color-scheme: dark) {
-    :root {
-        --page: #111318;
-        --surface: #191b20;
-        --surface-subtle: #202329;
-        --text: #f4f5f7;
-        --text-muted: #a4a8b2;
-        --border: #30333a;
-        --border-strong: #464b55;
-        --primary: #f1f2f4;
-        --primary-hover: #ffffff;
-        --primary-foreground: #17191d;
-        --danger: #ff8790;
-        --danger-surface: #321b20;
-        --danger-border: #602831;
-        --shadow: 0 24px 70px rgb(0 0 0 / 28%);
-    }
+html[data-theme="dark"] {
+    color-scheme: dark;
+    --page: #111318;
+    --surface: #191b20;
+    --surface-subtle: #202329;
+    --text: #f4f5f7;
+    --text-muted: #a4a8b2;
+    --border: #30333a;
+    --border-strong: #464b55;
+    --primary: #f1f2f4;
+    --primary-hover: #ffffff;
+    --primary-foreground: #17191d;
+    --danger: #ff8790;
+    --danger-surface: #321b20;
+    --danger-border: #602831;
+    --shadow: 0 24px 70px rgb(0 0 0 / 28%);
+}
 
-    .login-card {
-        border-color: rgb(255 255 255 / 8%);
-    }
+html[data-theme="dark"] .login-card {
+    border-color: rgb(255 255 255 / 8%);
+}
 
-    .field input::placeholder {
-        color: #777d88;
-    }
+html[data-theme="dark"] .field input::placeholder {
+    color: #777d88;
+}
 
-    .submit-button {
-        box-shadow: 0 8px 22px rgb(0 0 0 / 25%);
-    }
+html[data-theme="dark"] .submit-button {
+    box-shadow: 0 8px 22px rgb(0 0 0 / 25%);
+}
 
-    .submit-button__spinner {
-        border-color: rgb(23 25 29 / 28%);
-        border-top-color: #17191d;
-    }
+html[data-theme="dark"] .submit-button__spinner {
+    border-color: rgb(23 25 29 / 28%);
+    border-top-color: #17191d;
 }
 
 @media (prefers-reduced-motion: reduce) {

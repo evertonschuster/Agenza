@@ -1,75 +1,89 @@
-import { useState, type JSX } from 'react'
-import { useLocation } from 'react-router'
+import { useCallback, useEffect, useRef, useState, type JSX } from 'react'
+import { useLocation, useNavigate } from 'react-router'
+import { resolvePostLoginPath } from '@/features/auth/application/navigation/postLoginPath'
+import { AuthFlowScreen } from '@/features/auth/presentation/AuthFlowScreen'
+import {
+  toAuthFlowFeedback,
+  type AuthFlowFeedback,
+} from '@/features/auth/presentation/authFlowFeedback'
 import { useAuth } from '@/features/auth/presentation/useAuth'
-import { CenteredScreen } from '@/shared/presentation/components/CenteredScreen'
-import { Card, CardContent } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Spinner } from '@/components/ui/spinner'
+import { useTheme } from '@/shared/presentation/hooks/useTheme'
 
 export function LoginPage(): JSX.Element {
-  const { login } = useAuth()
+  const { status, login } = useAuth()
+  const { theme } = useTheme()
   const location = useLocation()
-  const [isRedirecting, setIsRedirecting] = useState(false)
-  const [hasError, setHasError] = useState(false)
-
+  const navigate = useNavigate()
   const returnTo = readReturnTo(location.state)
+  const loginStarted = useRef(false)
+  const [feedback, setFeedback] = useState<AuthFlowFeedback | null>(null)
 
-  async function handleSignIn(): Promise<void> {
-    setHasError(false)
-    setIsRedirecting(true)
+  const startLogin = useCallback(async (): Promise<void> => {
+    setFeedback(null)
     try {
-      await login(returnTo)
-      setIsRedirecting(false)
-    } catch {
-      setHasError(true)
-      setIsRedirecting(false)
+      await login(returnTo, theme)
+    } catch (error) {
+      setFeedback(toAuthFlowFeedback(error))
     }
+  }, [login, returnTo, theme])
+
+  useEffect(() => {
+    if (status === 'authenticated') {
+      void navigate(resolvePostLoginPath(returnTo), { replace: true })
+      return
+    }
+
+    if (status === 'unauthenticated' && !loginStarted.current) {
+      loginStarted.current = true
+      void startLogin()
+    }
+  }, [navigate, returnTo, startLogin, status])
+
+  if (feedback !== null) {
+    return (
+      <AuthFlowScreen
+        state="error"
+        eyebrow="Acesso não concluído"
+        title={feedback.title}
+        description={feedback.description}
+        supportCode={feedback.supportCode}
+        action={{
+          label: 'Tentar entrar novamente',
+          onAction: () => void startLogin(),
+        }}
+      />
+    )
+  }
+
+  if (status === 'loading') {
+    return (
+      <AuthFlowScreen
+        state="progress"
+        eyebrow="Acesso seguro"
+        title="Verificando sua sessão"
+        description="Estamos conferindo se seu acesso ainda é válido antes de continuar."
+      />
+    )
+  }
+
+  if (status === 'authenticated') {
+    return (
+      <AuthFlowScreen
+        state="progress"
+        eyebrow="Acesso confirmado"
+        title="Abrindo o sistema"
+        description="Sua sessão está ativa. Você será levado automaticamente para a página solicitada."
+      />
+    )
   }
 
   return (
-    <CenteredScreen>
-      <div className="w-full max-w-sm">
-        <Card className="shadow-sm [--card-spacing:--spacing(8)]">
-          <CardContent>
-            <div className="mb-8 text-center">
-              <span className="text-xs font-semibold tracking-widest text-primary uppercase">
-                Receptionist AI
-              </span>
-              <h1 className="mt-3 text-2xl font-semibold text-foreground">Bem-vindo de volta</h1>
-              <p className="mt-2 text-sm text-muted-foreground">
-                Entre para gerenciar seus agendamentos e clientes.
-              </p>
-            </div>
-
-            <Button
-              size="lg"
-              className="w-full"
-              onClick={() => void handleSignIn()}
-              disabled={isRedirecting}
-            >
-              {isRedirecting ? (
-                <>
-                  <Spinner />
-                  Entrando…
-                </>
-              ) : (
-                'Entrar'
-              )}
-            </Button>
-
-            {hasError ? (
-              <p className="mt-4 text-center text-sm text-destructive">
-                Não foi possível acessar o serviço de login. Tente novamente em instantes.
-              </p>
-            ) : null}
-          </CardContent>
-        </Card>
-
-        <p className="mt-6 text-center text-xs text-muted-foreground">
-          O acesso é restrito a empresas cadastradas.
-        </p>
-      </div>
-    </CenteredScreen>
+    <AuthFlowScreen
+      state="progress"
+      eyebrow="Acesso seguro"
+      title="Redirecionando para o login"
+      description="Você será levado para informar suas credenciais. Depois da confirmação, voltará para a página em que estava."
+    />
   )
 }
 

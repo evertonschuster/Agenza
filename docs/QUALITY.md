@@ -7,7 +7,7 @@ requires a paid plan.
 
 | Workflow             | Triggers on                    | What it gates                                                     |
 | -------------------- | ------------------------------ | ----------------------------------------------------------------- |
-| `frontend-ci.yml`    | `apps/**`, `packages/**`       | Prettier check, ESLint (incl. architecture rules), tsc build, Vitest with 85% line/statement + 80% branch/function coverage gate |
+| `frontend-ci.yml`    | `apps/admin-frontend/**`, `package.json`, `package-lock.json` | Prettier check, ESLint (incl. architecture rules), tsc build, Vitest with 85% line/statement + 80% branch/function coverage gate |
 | `backend-ci.yml`     | `backend/**`                   | `dotnet build` + `dotnet test` with 80% line-coverage gate (coverlet) |
 | `ai-services-ci.yml` | `ai-services/**`               | Ruff lint + format check, pytest with 80% coverage gate (pytest-cov) |
 | `codeql.yml`         | all PRs/pushes + weekly cron   | Static security analysis (C#, TS/JS, Python)                       |

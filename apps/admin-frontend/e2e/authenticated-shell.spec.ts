@@ -28,12 +28,13 @@ test.describe('authenticated shell', () => {
     await expect(page.getByRole('heading', { name: 'Etiquetas' })).toBeVisible()
   })
 
-  test('logs out and lands back on /login', async ({ page }) => {
+  test('logs out and automatically opens a fresh login', async ({ page }) => {
     await mockOidcSignout(page, 'http://localhost:4173/login')
 
     await page.goto('/dashboard')
     await page.getByRole('button', { name: 'Sair' }).click()
 
-    await expect(page).toHaveURL(/\/login$/)
+    await expect(page).toHaveURL(/localhost:5081\/connect\/authorize/)
+    await expect(page.getByRole('heading', { name: 'Acesso seguro' })).toBeVisible()
   })
 })

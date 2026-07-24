@@ -1,5 +1,13 @@
 # Revisão e refatoração de TypeScript no frontend React
 
+> **Status: executado.** As modelagens descritas abaixo (estados de auth e
+> async como uniões discriminadas, `DialogTarget`, `SelectLoadState`,
+> wrappers de campo com `Omit`, HttpClient com decoder) já existem no
+> código atual. O bug de ENOENT na seção 4 já foi corrigido — o gate usa o
+> caminho `features/catalog/infrastructure/generated/` atualmente. Mantido
+> como histórico da tarefa original; para o estado atual use
+> `apps/admin-frontend/AGENTS.md` e `agent-skills/agenza-frontend-feature/SKILL.md`.
+
 ## Prompt para o agente
 
 Você vai revisar e, somente onde houver ganho concreto de segurança,
@@ -136,17 +144,16 @@ python scripts/architecture_guard.py
 Registre falhas preexistentes separadamente. Não “corrija” uma falha
 reduzindo cobertura, desligando regras ou adicionando casts.
 
-Estado já observado na auditoria:
+Estado já observado na auditoria original (histórico — o gate ENOENT
+abaixo já foi corrigido desde então, não reproduza esta falha esperando
+encontrá-la):
 
 - format, lint e build passam;
 - não há `any` explícito no código de produção;
 - não há non-null assertions;
-- o gate `generate:api-types:check` falha com `ENOENT` porque ainda tenta
-  ler `src/infrastructure/generated/services-api.d.ts`;
-- o arquivo real está em
-  `src/features/catalog/infrastructure/generated/services-api.d.ts`.
+- ~~o gate `generate:api-types:check` falhava com `ENOENT`~~ (corrigido).
 
-Reproduza isso; não confie apenas neste texto.
+Reproduza o baseline atual do zero; não confie neste texto.
 
 ---
 
@@ -689,7 +696,8 @@ Não explique a refatoração em JSDocs.
 Comentários:
 
 - zero por padrão;
-- no máximo uma ou duas linhas para um “porquê” não evidente;
+- no máximo uma linha, nunca um parágrafo, para um "porquê" não evidente
+  (regra atual em `apps/admin-frontend/AGENTS.md`);
 - não narram uma união discriminada que o próprio tipo já expressa;
 - não registram “antes/depois”;
 - não deixam TODOs especulativos;

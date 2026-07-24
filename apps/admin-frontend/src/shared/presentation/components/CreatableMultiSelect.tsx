@@ -35,6 +35,8 @@ interface CreatableMultiSelectProps<T> {
   createActionLabel: string
   renderCreateForm: (helpers: CreatableSelectHelpers<T>) => ReactNode
   loadState: SelectLoadState
+  /** Called whenever the popover closes (Escape, outside click, or the create form's own Cancelar) - reset any in-flight/stale inline-create state here. */
+  onCreatePopoverClose?: () => void
   /** Forwarded to the trigger button so react-hook-form's setFocus(name) has a DOM node to land on. */
   ref?: Ref<HTMLButtonElement>
 }
@@ -56,6 +58,7 @@ export function CreatableMultiSelect<T>({
   createActionLabel,
   renderCreateForm,
   loadState,
+  onCreatePopoverClose,
   ref,
 }: CreatableMultiSelectProps<T>): JSX.Element {
   const contentId = useId()
@@ -70,6 +73,7 @@ export function CreatableMultiSelect<T>({
     setOpen(nextOpen)
     if (!nextOpen) {
       setMode('list')
+      onCreatePopoverClose?.()
     }
   }
 
@@ -111,7 +115,15 @@ export function CreatableMultiSelect<T>({
             <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
           </Button>
         </PopoverTrigger>
-        <PopoverContent id={contentId} align="start" className="w-72 p-0">
+        <PopoverContent
+          id={contentId}
+          align="start"
+          className="w-72 p-0"
+          // Submitting disables the focused button, which blurs it - Radix reads that as focus-outside and would close this mid-request.
+          onFocusOutside={event => {
+            event.preventDefault()
+          }}
+        >
           {mode === 'create' ? (
             <div className="p-3">
               <p className="mb-3 text-sm font-medium text-foreground">{createActionLabel}</p>

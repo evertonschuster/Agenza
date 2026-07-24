@@ -17,13 +17,28 @@ public class UnitOfWork : IUnitOfWork
 
     public async Task<PersistenceResult<int>> SaveChangesAsync(CancellationToken cancellationToken)
     {
+        // Commits/rolls back alongside any transaction ServiceCodeGenerator began,
+        // so a code-sequence increment never survives a rejected save.
+        var ambientTransaction = _dbContext.Database.CurrentTransaction;
+
         try
         {
             var affectedRows = await _dbContext.SaveChangesAsync(cancellationToken);
+
+            if (ambientTransaction is not null)
+            {
+                await ambientTransaction.CommitAsync(cancellationToken);
+            }
+
             return PersistenceResult.Success(affectedRows);
         }
         catch (DbUpdateException exception) when (IsUniqueViolation(exception, out var constraintName))
         {
+            if (ambientTransaction is not null)
+            {
+                await ambientTransaction.RollbackAsync(cancellationToken);
+            }
+
             return PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, constraintName));
         }

@@ -95,7 +95,7 @@ describe('AuthProvider', () => {
 
     function LoginConsumer(): JSX.Element {
       const { login } = useAuth()
-      return <button onClick={() => void login()}>Entrar</button>
+      return <button onClick={() => void login(undefined, 'dark')}>Entrar</button>
     }
 
     renderWithAuth(
@@ -105,7 +105,7 @@ describe('AuthProvider', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Entrar' }))
 
-    expect(initiateLoginSpy).toHaveBeenCalledTimes(1)
+    expect(initiateLoginSpy).toHaveBeenCalledExactlyOnceWith(undefined, 'dark')
   })
 
   it('calls logout and clears the session when logout is invoked', async () => {

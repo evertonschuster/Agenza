@@ -172,6 +172,12 @@ alongside the existing `AwesomeAssertions` using.
 
 ### BusinessException hierarchy + one global exception handler, not a try/catch per handler
 
+> **2026-07 update:** deleted outright by docs/adr/0014.
+> `BusinessException`/`BusinessExceptionHandler` no longer exist — Domain
+> returns `DomainResult`, persistence conflicts return `PersistenceResult`.
+> This subsection is kept for historical context only — do not follow it
+> for new code.
+
 Every exception a Domain entity/value object throws for its own
 invariant violations now inherits `{Service}.Domain.Exceptions.BusinessException`
 (abstract, `Code` + `Message` - `InvalidTagException`/

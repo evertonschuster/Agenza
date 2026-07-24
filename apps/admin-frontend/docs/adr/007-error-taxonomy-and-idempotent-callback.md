@@ -4,7 +4,7 @@
 
 ## Decision
 
-1. **`AppError`** (`application/errors/AppError.ts`) is the one error shape
+1. **`AppError`** (`shared/application/AppError.ts`) is the one error shape
    presentation ever depends on for infrastructure-originated failures.
    `AuthenticatedHttpClient` converts every failure (missing token, 401,
    non-2xx `ProblemDetails`, or a fetch-level network/timeout failure) into
@@ -52,6 +52,13 @@
    outside any specific route element). Both detect a stale lazy-loaded
    chunk (`isChunkLoadError`) and offer "reload" instead of "retry" for
    that case, since re-rendering the same tree can't fetch a new chunk.
+8. **OIDC failures are classified at the auth infrastructure boundary.**
+   `OidcAuthRepository` converts `ErrorResponse`, `ErrorTimeout`, network
+   failures, missing tenant claims, and unknown callback failures into
+   `AuthFlowError` (an `AppError`) with a stable `AUTH_*` flow code. Login
+   presentation renders the curated explanation, the recovery action, and
+   instructions to include the code and attempt time when requesting help.
+   Raw provider descriptions are never displayed.
 
 ## Rationale
 
@@ -87,5 +94,13 @@ ApiError(...)` rejection now construct `new AppError({...})` directly
   Category/Service equivalents were updated to expect the curated message.
 - This ADR does not yet address `composition/container.ts` exposing raw
   repositories/`httpClient` to presentation, or moving the composition root
-  under `app/`/`main/` — those are separate, later decisions (see
-  docs/adr/006's own note on this).
+  under `app/`/`main/` — those are separate, later decisions (resolved by
+  docs/adr/008 and docs/adr/009 respectively; see docs/adr/006's own note
+  on this too).
+- Authentication support codes are diagnostic identifiers, not secrets and
+  not proof that an account exists. Invalid e-mail and invalid password keep
+  the same credential error to avoid account enumeration.
+- The feedback requirement is semantic and is enforced by regression tests
+  for known mappings and screens. A static architecture guard cannot
+  reliably decide whether user-facing copy is sufficiently actionable, so
+  no new pattern check was added.

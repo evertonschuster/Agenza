@@ -15,7 +15,9 @@ import type { AppContainer } from '@/app/composition/container'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
 import type { CompletedAuthCallback } from '@/features/auth/application/use-cases/HandleAuthCallback'
+import { AuthFlowError } from '@/features/auth/application/errors/AuthFlowError'
 import { vi } from 'vitest'
+import userEvent from '@testing-library/user-event'
 
 const fakeTenantContext: TenantContext = {
   tenant: Tenant.create('tenant-123'),
@@ -41,6 +43,7 @@ function renderCallbackPage(container: AppContainer): void {
             <Route path="/callback" element={<CallbackPage />} />
             <Route path="/dashboard" element={<div>Dashboard page</div>} />
             <Route path="/services" element={<div>Services page</div>} />
+            <Route path="/login" element={<div>Login page</div>} />
           </Routes>
         </MemoryRouter>
       </AuthProvider>
@@ -55,7 +58,10 @@ describe('CallbackPage', () => {
     const handleCallback = vi.fn(() => new Promise<CompletedAuthCallback>(() => {}))
     renderCallbackPage(buildContainer(handleCallback))
 
-    expect(screen.getByText(/concluindo login/i)).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: /concluindo seu login/i })).toBeInTheDocument()
+    expect(
+      screen.getByText(/voltará automaticamente para a página em que estava/i),
+    ).toBeInTheDocument()
   })
 
   it('passes the full current URL to the callback use case', async () => {
@@ -111,14 +117,31 @@ describe('CallbackPage', () => {
     expect(screen.queryByText('Login page')).not.toBeInTheDocument()
   })
 
-  it('shows the error state with a way back to login when the callback fails', async () => {
-    renderCallbackPage(buildContainer(vi.fn(() => Promise.reject(new Error('exchange failed')))))
-
-    expect(await screen.findByText(/falha no login/i)).toBeInTheDocument()
-    expect(screen.getByRole('link', { name: /voltar para o login/i })).toHaveAttribute(
-      'href',
-      '/login',
+  it('shows a specific error, support code, and a new-login action when callback fails', async () => {
+    renderCallbackPage(
+      buildContainer(
+        vi.fn(() =>
+          Promise.reject(
+            new AuthFlowError({
+              code: 'unauthenticated',
+              flowCode: 'AUTH_ATTEMPT_EXPIRED',
+              message:
+                'Esta tentativa de login expirou ou já foi utilizada. Inicie uma nova tentativa para entrar.',
+              retryable: true,
+            }),
+          ),
+        ),
+      ),
     )
+
+    expect(
+      await screen.findByRole('heading', { name: /tentativa de login expirada/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('AUTH_ATTEMPT_EXPIRED')).toBeInTheDocument()
+
+    await userEvent.click(screen.getByRole('button', { name: /iniciar um novo login/i }))
+
+    expect(await screen.findByText('Login page')).toBeInTheDocument()
   })
 
   it('exchanges the authorization code only once under React.StrictMode', async () => {

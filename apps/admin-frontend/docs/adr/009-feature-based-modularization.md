@@ -192,7 +192,9 @@ for review attention against unrelated behavioral changes.
    `scripts/architecture_guard.py` (a new check alongside
    `check_cross_page_imports`). Update
    `agent-skills/agenza-frontend-feature` and
-   `apps/admin-frontend/AGENTS.md` to teach the new structure - the
-   current versions still describe and enforce the horizontal layout.
+   `apps/admin-frontend/AGENTS.md` to teach the new structure - at the
+   time this ADR was drafted, the then-current versions still described
+   and enforced the horizontal layout (since done — both now document the
+   feature-based structure).
 6. Update `docs/STATUS.md` and this ADR's `Status` line to `Accepted`
    once every step above is done and green.

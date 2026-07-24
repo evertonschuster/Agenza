@@ -15,6 +15,9 @@ public class TenantRepository : RepositoryBase<Tenant>, ITenantRepository
     public Task<Tenant?> GetByIdAsync(Guid tenantId, CancellationToken cancellationToken) =>
         FindAsync(t => t.Id == tenantId, cancellationToken);
 
+    public Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken) =>
+        AnyAsync(t => t.Name == name, cancellationToken);
+
     public async Task AddAsync(Tenant tenant, CancellationToken cancellationToken)
     {
         Add(tenant);

@@ -29,7 +29,8 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
                 .OrderBy(s => s.Name),
             page,
             pageSize,
-            cancellationToken);
+            cancellationToken,
+            asNoTracking: true);
 
     public Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken) =>
         Set.Include(s => s.Tags).FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);

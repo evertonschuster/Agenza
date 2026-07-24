@@ -53,9 +53,42 @@ export async function injectAuthenticatedSession(
 
   await page.addInitScript(
     ({ key, value }: { key: string; value: string }) => {
-      window.localStorage.setItem(key, value)
+      if (window.localStorage.getItem('__e2e_session_initialized__') === null) {
+        window.localStorage.setItem(key, value)
+        window.localStorage.setItem('__e2e_session_initialized__', 'true')
+      }
     },
     { key: oidcUserStorageKey(), value: JSON.stringify(record) },
+  )
+}
+
+export async function mockOidcLoginStart(page: Page, discoveryDelayMs = 0): Promise<void> {
+  await page.route(
+    url => url.origin === OIDC_AUTHORITY,
+    async route => {
+      const requestUrl = new URL(route.request().url())
+
+      if (requestUrl.pathname.endsWith('/.well-known/openid-configuration')) {
+        if (discoveryDelayMs > 0) {
+          await new Promise(resolve => setTimeout(resolve, discoveryDelayMs))
+        }
+
+        return route.fulfill({
+          json: {
+            issuer: OIDC_AUTHORITY,
+            authorization_endpoint: `${OIDC_AUTHORITY}/connect/authorize`,
+            token_endpoint: `${OIDC_AUTHORITY}/connect/token`,
+            userinfo_endpoint: `${OIDC_AUTHORITY}/connect/userinfo`,
+            jwks_uri: `${OIDC_AUTHORITY}/.well-known/openid-configuration/jwks`,
+          },
+        })
+      }
+
+      return route.fulfill({
+        contentType: 'text/html',
+        body: '<!doctype html><html lang="pt-BR"><body><h1>Acesso seguro</h1></body></html>',
+      })
+    },
   )
 }
 
@@ -89,7 +122,14 @@ export async function mockOidcSignout(page: Page, postLogoutRedirectUri: string)
         })
       }
 
-      return route.fulfill({ status: 302, headers: { location: postLogoutRedirectUri } })
+      if (requestUrl.pathname === '/connect/endsession') {
+        return route.fulfill({ status: 302, headers: { location: postLogoutRedirectUri } })
+      }
+
+      return route.fulfill({
+        contentType: 'text/html',
+        body: '<!doctype html><html lang="pt-BR"><body><h1>Acesso seguro</h1></body></html>',
+      })
     },
   )
 }

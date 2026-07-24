@@ -1,6 +1,8 @@
 # ADR 0009 — TenantOwnedEntity base class
 
-Status: accepted (2026-07)
+Status: accepted (2026-07); `AssignTenant`'s exception type superseded by
+docs/adr/0014 (throws `InvalidOperationException`; `InvalidTenantException`
+shown below was deleted)
 
 ## Context
 

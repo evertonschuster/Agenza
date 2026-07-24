@@ -90,6 +90,19 @@ infrastructure/presentation`. ESLint (`no-restricted-imports`) and
   session transition. A 401/missing-session reaches `AuthProvider` through
   the `SessionEventBus` port (`shared/application/SessionEventBus.ts`), not
   a direct callback — infrastructure never imports React.
+- Silent renewal must preserve both `user.id` and `tenant.id`. If either
+  claim changes, discard the renewed OIDC user and require a full login;
+  never let a refreshed token for one identity reach React state that is
+  still keyed to another identity.
+- `/login` is an automatic OIDC orchestrator, not a second confirmation
+  screen. It explains the redirect while session state resolves, starts
+  login once when unauthenticated, sends the current `light` or `dark` theme
+  as a validated OIDC extension parameter, and sends an
+  already-authenticated user to the validated return path. Authentication
+  failures use a stable
+  `AuthFlowError` code, a specific curated pt-BR explanation, a recovery
+  action, and instructions for requesting help without sharing a password;
+  never replace these with a generic “contacte o administrador” message.
 - Routed, tenant-scoped page content renders inside `TenantBoundary`
   (already wired in `AdminLayout`) so a session/tenant switch remounts it —
   don't bypass this with a page that renders outside `AdminLayout`'s
