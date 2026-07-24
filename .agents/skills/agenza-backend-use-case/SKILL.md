@@ -280,8 +280,6 @@ public sealed record CreateWidgetCommand(string Name) : ICommand<WidgetResponse>
 
 ```csharp
 // Application/Widgets/CreateWidget/CreateWidgetCommandValidator.cs
-// Shape rules only. No constructor, no repository, no MustAsync/CustomAsync -
-// see "Hard prohibitions" above.
 using FluentValidation;
 using {Service}.Domain.Entities;
 
@@ -377,7 +375,6 @@ public static class CreateWidgetCommandExtensions
 
 ```csharp
 // Application/Widgets/WidgetPersistenceErrorMapper.cs
-// Feature-root, shared across this feature's Create/Update/Delete handlers.
 using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using {Service}.Application.Abstractions;
@@ -427,8 +424,6 @@ public sealed class CreateWidgetCommandHandler : ICommandHandler<CreateWidgetCom
 
     public async Task<Result<WidgetResponse>> Handle(CreateWidgetCommand command, CancellationToken cancellationToken)
     {
-        // Cheap pre-check for the common case - the unique index is what
-        // actually guarantees this under concurrency (step 5).
         if (await _repository.NameExistsAsync(command.Name, excludeId: null, cancellationToken))
         {
             return Result.Failure<WidgetResponse>(
@@ -489,11 +484,12 @@ public sealed class UpdateWidgetCommandValidator : AbstractValidator<UpdateWidge
             .MaximumLength(Widget.NameMaxLength);
     }
 }
-// No existence/uniqueness rule here - that's the handler's job (see
-// UpdateWidgetCommandHandler below). WidgetId is still validated even
-// though it's route-sourced: the controller merges the route id in via
-// `with` BEFORE dispatching (see the Controller template below).
 ```
+
+Cross-aggregate rules (existence, uniqueness) never live in the validator —
+that's the handler's job below. `WidgetId` is still shape-validated even
+though it's route-sourced: the controller merges the route id in via
+`with` BEFORE dispatching (see the Controller template below).
 
 ```csharp
 // Application/Widgets/UpdateWidget/UpdateWidgetCommandExtensions.cs
@@ -533,8 +529,6 @@ public sealed class UpdateWidgetCommandHandler : ICommandHandler<UpdateWidgetCom
 
     public async Task<Result<WidgetResponse>> Handle(UpdateWidgetCommand command, CancellationToken cancellationToken)
     {
-        // Fetched and null-checked here, not assumed via `!` - no validator
-        // step guarantees this exists (see "Hard prohibitions" above).
         var widget = await _repository.GetByIdAsync(command.WidgetId, cancellationToken);
         if (widget is null)
         {
@@ -608,8 +602,6 @@ public sealed class DeleteWidgetCommandHandler : ICommandHandler<DeleteWidgetCom
 
         _repository.Remove(widget);
 
-        // Checked even though there's nothing to catch here - discarding
-        // this would silently swallow a real conflict and report success.
         var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
@@ -657,8 +649,9 @@ public sealed class ListWidgetsQueryHandler : IQueryHandler<ListWidgetsQuery, IR
         return Result.Success(response);
     }
 }
-// No validator needed unless the query takes user input.
 ```
+
+No validator needed unless the query takes user input.
 
 ### Shared feature DTO (once per feature, not per operation)
 
@@ -782,9 +775,6 @@ public class CreateWidgetCommandHandlerTests
     [Fact]
     public async Task Handle_WithInvalidName_ReturnsFailure()
     {
-        // Only reachable if a caller bypasses CreateWidgetCommandValidator -
-        // handler unit tests call Handle(...) directly, exercising this
-        // path even though production traffic never does.
         var result = await _handler.Handle(new CreateWidgetCommand(""), CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -815,9 +805,10 @@ public class CreateWidgetCommandValidatorTests
         _validator.Validate(new CreateWidgetCommand("")).IsValid.Should().BeFalse();
     }
 }
-// No repository fake needed - the validator takes no dependencies.
-// Duplicate-name coverage lives in CreateWidgetCommandHandlerTests instead.
 ```
+
+No repository fake needed - the validator takes no dependencies.
+Duplicate-name coverage lives in `CreateWidgetCommandHandlerTests` instead.
 
 ### Automatic tenant assignment has no automated regression test
 

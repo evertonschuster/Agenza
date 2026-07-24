@@ -270,10 +270,6 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("Default")
             ?? throw new InvalidOperationException("Missing 'ConnectionStrings:Default' configuration.");
 
-        // BaseEntity audit stamping + soft delete (docs/adr/0006) - copy
-        // AuditableEntitySaveChangesInterceptor from services-service or
-        // identity-service verbatim, only the Domain.Common.BaseEntity
-        // type it pattern-matches changes.
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<AuditableEntitySaveChangesInterceptor>();
 
@@ -319,9 +315,6 @@ directly.
 ```xml
 <ItemGroup>
   <ProjectReference Include="..\WidgetService.Application\WidgetService.Application.csproj" />
-  <!-- ICurrentUserAccessor for the audit interceptor, RepositoryBase<TEntity>
-       for repositories (docs/adr/0006) - Infrastructure-only, never
-       referenced from Application/Domain. -->
   <ProjectReference Include="..\..\..\shared\Admin.Identity.Client\Admin.Identity.Client.csproj" />
   <ProjectReference Include="..\..\..\shared\Admin.SharedKernel.EntityFrameworkCore\Admin.SharedKernel.EntityFrameworkCore.csproj" />
 </ItemGroup>
@@ -333,11 +326,7 @@ directly.
 <ItemGroup>
   <PackageReference Include="Asp.Versioning.Mvc" Version="10.0.0" />
   <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.9" />
-  <!-- The webapi template's Microsoft.AspNetCore.OpenApi pulls in
-       Microsoft.OpenApi 2.0.0 transitively, which has a known High
-       advisory (GHSA-v5pm-xwqc-g5wc) - pin the patched version directly
-       (3.x breaks Microsoft.AspNetCore.OpenApi's source generators as of
-       this writing, so don't jump to the latest major without checking). -->
+  <!-- Pinned: transitive Microsoft.OpenApi 2.0.0 has GHSA-v5pm-xwqc-g5wc; don't jump past 3.x without checking source-gen compat. -->
   <PackageReference Include="Microsoft.OpenApi" Version="2.10.0" />
   <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.9">
     <!-- dotnet-ef requires Design on the STARTUP project, not just Infrastructure -->

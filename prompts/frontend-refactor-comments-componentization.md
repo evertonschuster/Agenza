@@ -1,5 +1,14 @@
 # Refatoração do frontend — comentários, componentização e organização
 
+> **Status: executado.** Este prompt orientou a refatoração que já
+> aconteceu (ADR 009 aplicado, `ServiceForm`/`ServiceDialog`/`useServicesPage`
+> decompostos, `ServicesPage.test.tsx` dividido). As contagens de
+> linhas/props e a regra de comentários descritas abaixo refletem o estado
+> **anterior** à refatoração, não o atual — para o estado e as regras
+> atuais, use `apps/admin-frontend/AGENTS.md` e
+> `agent-skills/agenza-frontend-feature/SKILL.md` como fonte de verdade,
+> não este arquivo. Mantido apenas como histórico da tarefa original.
+
 Use este prompt para orientar um agente de programação a continuar a
 refatoração arquitetural do frontend do Agenza.
 
@@ -138,7 +147,8 @@ como:
 
 Regras:
 
-- Comentários normalmente devem ter uma a três linhas.
+- Comentário tem no máximo uma linha, nunca um parágrafo (regra atual em
+  `apps/admin-frontend/AGENTS.md` — mais estrita do que "uma a três linhas").
 - Não crie JSDoc para apenas descrever uma interface, classe, hook, prop,
   retorno ou método claramente nomeado.
 - Não narre o que a próxima linha faz.
@@ -585,11 +595,12 @@ Use `agenza-rule-persistence`.
 
 ### 13.1 Comentários
 
-Adicione ao AGENTS do frontend e à skill canônica:
+Adicione ao AGENTS do frontend e à skill canônica (já feito — regra atual
+em `apps/admin-frontend/AGENTS.md` "Comments"):
 
 - O padrão é código sem comentário.
 - Comentário explica somente um motivo não óbvio.
-- Comentário normalmente tem uma a três linhas.
+- Comentário tem no máximo uma linha, nunca um parágrafo.
 - JSDoc não repete tipos, nomes ou retornos.
 - História e racional arquitetural pertencem aos ADRs.
 - Se um bloco grande for necessário, primeiro revisar o design.
