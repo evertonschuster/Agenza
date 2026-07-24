@@ -1,12 +1,6 @@
-/**
- * A stale lazy-loaded chunk reference (e.g. the user still has an old
- * index.html open after a new deploy replaced the built asset files) fails
- * differently from a genuine rendering bug - vite/esbuild-bundled dynamic
- * imports reject with "Failed to fetch dynamically imported module", while
- * webpack-style bundlers historically threw a named ChunkLoadError. Neither
- * case can be recovered by simply re-rendering the same tree; only a full
- * reload (fetching the new asset manifest) fixes it.
- */
+// A stale chunk after a deploy fails differently per bundler (Vite/esbuild:
+// "Failed to fetch dynamically imported module"; webpack: ChunkLoadError) -
+// neither recovers by re-rendering, only a full reload does.
 export function isChunkLoadError(error: unknown): boolean {
   if (!(error instanceof Error)) {
     return false

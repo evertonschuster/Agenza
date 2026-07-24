@@ -1,18 +1,5 @@
 namespace ServicesService.Domain.Common;
 
-/// <summary>
-/// Base audit shape for every aggregate root in this service. Not shared
-/// across services (Domain has zero project references - backend/CLAUDE.md)
-/// - each service's Domain owns its own copy, kept in sync by convention
-/// since it never carries business rules.
-///
-/// Mark*/IsDeleted are behavior methods, not property setters (rich
-/// domain model rule) - the EF SaveChanges interceptor calls them, it
-/// never sets CreatedAt/UpdatedAt/DeletedAt directly. Delete is soft:
-/// DeletedAt/DeletedBy record the fact, the interceptor turns a tracked
-/// delete into an update, and a global query filter excludes deleted
-/// rows from every read.
-/// </summary>
 public abstract class BaseEntity
 {
     public Guid Id { get; private set; }

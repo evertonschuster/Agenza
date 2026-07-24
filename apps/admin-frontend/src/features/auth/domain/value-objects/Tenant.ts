@@ -1,11 +1,5 @@
 import { InvalidTenantError } from '@/features/auth/domain/errors/InvalidTenantError'
 
-/**
- * Represents a business/tenant in the multi-tenant system. A Tenant is the
- * unit of data isolation: every Appointment, Client, Service, and
- * Conversation belongs to exactly one Tenant, and that boundary must never
- * be crossed.
- */
 export class Tenant {
   readonly id: string
 

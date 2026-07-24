@@ -3,12 +3,8 @@ import { isRouteErrorResponse, useNavigate, useRouteError } from 'react-router'
 import { ErrorScreen } from '@/shared/presentation/components/ErrorScreen'
 import { isChunkLoadError } from '@/shared/presentation/components/isChunkLoadError'
 
-/**
- * The router's top-level errorElement (see router.tsx) - catches errors
- * React Router's own mechanism handles directly (a thrown loader, no
- * matching route, or a lazy route chunk failing to load), distinct from
- * ErrorBoundary which covers everything outside the routed tree.
- */
+// The router's errorElement (router.tsx) - distinct from ErrorBoundary,
+// which covers everything outside the routed tree.
 export function RouteErrorElement(): JSX.Element {
   const error = useRouteError()
   const navigate = useNavigate()

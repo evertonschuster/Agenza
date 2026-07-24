@@ -5,13 +5,6 @@ using Microsoft.EntityFrameworkCore.Diagnostics;
 
 namespace IdentityService.Infrastructure.Persistence.Interceptors;
 
-/// <summary>
-/// Stamps BaseEntity's audit fields on every save and turns a tracked
-/// delete into a soft delete (DeletedAt/DeletedBy set, state reverted to
-/// Modified) so a repository's Remove() never actually removes a row -
-/// the paired HasQueryFilter(DeletedAt == null) then hides it from every
-/// read.
-/// </summary>
 public class AuditableEntitySaveChangesInterceptor : SaveChangesInterceptor
 {
     private readonly ICurrentUserAccessor _currentUserAccessor;

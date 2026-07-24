@@ -49,19 +49,14 @@ function toServicesListState(
   }
 }
 
-/**
- * tenantContext is nullable because the page can mount while its own
- * useAuth() call is still resolving (same brief window AdminLayout
- * already tolerates for the business name). Guards below no-op until
- * it resolves, then the changed tenantContext identity re-triggers the
- * fetch automatically (see useAsync: execute's identity follows listServices).
- */
 export interface UseServicesFilters {
   search?: string
   categoryId?: string
   tagId?: string
 }
 
+// tenantContext is nullable: the page can mount before useAuth() resolves.
+// Guards below no-op until it does, then the changed identity re-triggers the fetch.
 export function useServices(
   tenantContext: TenantContext | null,
   filters: UseServicesFilters = {},

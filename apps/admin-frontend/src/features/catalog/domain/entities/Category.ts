@@ -5,10 +5,7 @@ interface CreateCategoryInput {
   name: string
 }
 
-/**
- * A tenant-scoped grouping the business uses to organize its Services
- * catalog (docs/DOMAIN.md "Category").
- */
+/** A tenant-scoped grouping the business uses to organize its Services catalog (docs/DOMAIN.md "Category"). */
 export class Category {
   readonly id: string
   readonly name: string

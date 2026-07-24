@@ -46,15 +46,9 @@ export class AuthenticatedHttpClient implements HttpClient {
     await this.request<undefined>(() => undefined, 'DELETE', path)
   }
 
-  /**
-   * Every failure path below (missing token, 401, non-2xx ProblemDetails, a
-   * fetch-level network/timeout failure, or `decode` rejecting a malformed
-   * payload) is converted to AppError by the single catch at the bottom
-   * before it leaves this method - callers (repositories, use cases, forms)
-   * only ever see AppError, never ApiError/UnauthenticatedError/
-   * NetworkError/TimeoutError/a raw decode failure directly (docs/adr/007,
-   * docs/adr/011).
-   */
+  // Every failure path below is converted to AppError by the catch at the
+  // bottom - callers never see ApiError/UnauthenticatedError/NetworkError/
+  // TimeoutError directly (docs/adr/007, docs/adr/011).
   private async request<T>(
     decode: Decoder<T>,
     method: string,

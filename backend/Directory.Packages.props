@@ -53,6 +53,11 @@
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
+
+    <!-- ServicesService.PersistenceTests only (docs/adr/0019) - EF Core
+         InMemory, no Postgres/Docker, deliberately outside the *.Tests
+         Domain+Application-only boundary and its coverage gate -->
+    <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />
   </ItemGroup>
 
 </Project>

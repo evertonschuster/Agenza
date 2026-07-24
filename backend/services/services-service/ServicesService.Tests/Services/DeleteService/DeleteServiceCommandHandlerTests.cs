@@ -3,6 +3,7 @@ using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services.DeleteService;
 using ServicesService.Domain.Entities;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Services.DeleteService;
 
@@ -11,7 +12,7 @@ public class DeleteServiceCommandHandlerTests
     [Fact]
     public async Task Handle_WithExistingService_RemovesItAndCommits()
     {
-        var service = Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1).Value;
+        var service = Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
         var repository = Substitute.For<IServiceRepository>();
         repository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         var unitOfWork = Substitute.For<IUnitOfWork>();
@@ -47,7 +48,7 @@ public class DeleteServiceCommandHandlerTests
     [Fact]
     public async Task Handle_WithConcurrentConflictAtSaveTime_ReturnsConflict()
     {
-        var service = Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1).Value;
+        var service = Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
         var repository = Substitute.For<IServiceRepository>();
         repository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         var unitOfWork = Substitute.For<IUnitOfWork>();

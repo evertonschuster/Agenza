@@ -11,12 +11,8 @@ interface ErrorScreenProps {
   secondaryAction?: { label: string; onAction: () => void }
 }
 
-/**
- * The shared full-page "something went wrong" presentation used by both
- * ErrorBoundary (unexpected render/chunk-load errors) and RouteErrorElement
- * (React Router's own error mechanism) - one visual and copy source so the
- * two don't drift into inconsistent messaging.
- */
+// Shared by ErrorBoundary and RouteErrorElement so the two don't drift into
+// inconsistent messaging.
 export function ErrorScreen({
   title,
   description,

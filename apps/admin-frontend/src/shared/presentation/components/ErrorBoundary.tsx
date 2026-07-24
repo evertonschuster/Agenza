@@ -11,12 +11,8 @@ interface ErrorBoundaryState {
   isChunkLoadError: boolean
 }
 
-/**
- * Catches render/lifecycle errors in its subtree - not a crash before
- * render starts (main.tsx's createAppContainer() call) or errors from event
- * handlers/async code. RouteErrorElement handles router-level errors instead.
- * console.error below also runs in production - only the UI message is hidden.
- */
+// Catches render/lifecycle errors only - not a pre-render crash or errors
+// from event handlers/async code. RouteErrorElement covers router-level errors.
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { hasError: false, isChunkLoadError: false }
 

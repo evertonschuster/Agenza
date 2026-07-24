@@ -1,5 +1,6 @@
 using FluentValidation;
 using ServicesService.Domain.Entities;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Services.CreateService;
 
@@ -17,13 +18,13 @@ public sealed class CreateServiceCommandValidator : AbstractValidator<CreateServ
             .WithMessage($"A descrição do serviço deve ter no máximo {Service.DescriptionMaxLength} caracteres.");
 
         RuleFor(command => command.MinDurationMinutes)
-            .GreaterThanOrEqualTo(1)
-            .WithMessage("A duração mínima do serviço deve ser de pelo menos 1 minuto.");
+            .GreaterThanOrEqualTo(DurationRange.MinAllowedMinutes)
+            .WithMessage($"A duração mínima do serviço deve ser de pelo menos {DurationRange.MinAllowedMinutes} minuto.");
 
         RuleFor(command => command.MaxDurationMinutes)
-            .LessThanOrEqualTo(Service.MaxAllowedDurationMinutes)
+            .LessThanOrEqualTo(DurationRange.MaxAllowedMinutes)
             .WithMessage(
-                $"A duração máxima do serviço não pode ultrapassar {Service.MaxAllowedDurationMinutes} minutos.");
+                $"A duração máxima do serviço não pode ultrapassar {DurationRange.MaxAllowedMinutes} minutos.");
 
         RuleFor(command => command)
             .Must(command => command.MinDurationMinutes <= command.MaxDurationMinutes)

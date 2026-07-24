@@ -8,15 +8,8 @@ interface CreateUserInput {
   name?: string
 }
 
-/**
- * Represents a logged-in business owner/staff member. A User always
- * belongs to exactly one Tenant (one-to-one, per product decision) -
- * there is no concept of a User without a Tenant in this system.
- *
- * email and name are optional because the exact claims IdentityServer
- * issues in the token have not yet been confirmed; this entity will be
- * adjusted once that's verified against a real token.
- */
+// email/name are optional: the exact claims IdentityServer issues aren't
+// confirmed yet - adjust once verified against a real token.
 export class User {
   readonly id: string
   readonly tenant: Tenant

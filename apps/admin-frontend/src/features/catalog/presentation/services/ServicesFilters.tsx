@@ -10,31 +10,24 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 
-export interface ServicesFiltersProps {
-  searchInput: string
-  onSearchInputChange: (value: string) => void
-  categoryFilter: string
-  onCategoryFilterChange: (value: string) => void
-  tagFilter: string
-  onTagFilterChange: (value: string) => void
-  categories: readonly Category[]
-  tags: readonly Tag[]
-  allCategoriesValue: string
-  allTagsValue: string
+// Radix Select can't take an empty-string value, so each filter maps "no
+// filter" ("") to a local sentinel and back - an implementation detail of
+// this component, not something callers need to know about.
+const ALL_CATEGORIES_VALUE = '__all_categories__'
+const ALL_TAGS_VALUE = '__all_tags__'
+
+export interface ServiceFilterField {
+  value: string
+  onChange: (value: string) => void
 }
 
-export function ServicesFilters({
-  searchInput,
-  onSearchInputChange,
-  categoryFilter,
-  onCategoryFilterChange,
-  tagFilter,
-  onTagFilterChange,
-  categories,
-  tags,
-  allCategoriesValue,
-  allTagsValue,
-}: ServicesFiltersProps): JSX.Element {
+export interface ServicesFiltersProps {
+  search: ServiceFilterField
+  category: ServiceFilterField & { options: readonly Category[] }
+  tag: ServiceFilterField & { options: readonly Tag[] }
+}
+
+export function ServicesFilters({ search, category, tag }: ServicesFiltersProps): JSX.Element {
   return (
     <div className="mt-4 flex flex-wrap gap-2">
       <Input
@@ -42,43 +35,43 @@ export function ServicesFilters({
         aria-label="Buscar serviço por nome"
         placeholder="Buscar por nome…"
         className="max-w-sm"
-        value={searchInput}
+        value={search.value}
         onChange={event => {
-          onSearchInputChange(event.target.value)
+          search.onChange(event.target.value)
         }}
       />
       <Select
-        value={categoryFilter === '' ? allCategoriesValue : categoryFilter}
+        value={category.value === '' ? ALL_CATEGORIES_VALUE : category.value}
         onValueChange={value => {
-          onCategoryFilterChange(value === allCategoriesValue ? '' : value)
+          category.onChange(value === ALL_CATEGORIES_VALUE ? '' : value)
         }}
       >
         <SelectTrigger aria-label="Filtrar por categoria" className="w-48">
           <SelectValue placeholder="Todas as categorias" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={allCategoriesValue}>Todas as categorias</SelectItem>
-          {categories.map(category => (
-            <SelectItem key={category.id} value={category.id}>
-              {category.name}
+          <SelectItem value={ALL_CATEGORIES_VALUE}>Todas as categorias</SelectItem>
+          {category.options.map(item => (
+            <SelectItem key={item.id} value={item.id}>
+              {item.name}
             </SelectItem>
           ))}
         </SelectContent>
       </Select>
       <Select
-        value={tagFilter === '' ? allTagsValue : tagFilter}
+        value={tag.value === '' ? ALL_TAGS_VALUE : tag.value}
         onValueChange={value => {
-          onTagFilterChange(value === allTagsValue ? '' : value)
+          tag.onChange(value === ALL_TAGS_VALUE ? '' : value)
         }}
       >
         <SelectTrigger aria-label="Filtrar por etiqueta" className="w-48">
           <SelectValue placeholder="Todas as etiquetas" />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value={allTagsValue}>Todas as etiquetas</SelectItem>
-          {tags.map(tag => (
-            <SelectItem key={tag.id} value={tag.id}>
-              {tag.name}
+          <SelectItem value={ALL_TAGS_VALUE}>Todas as etiquetas</SelectItem>
+          {tag.options.map(item => (
+            <SelectItem key={item.id} value={item.id}>
+              {item.name}
             </SelectItem>
           ))}
         </SelectContent>

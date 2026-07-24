@@ -74,14 +74,8 @@ function mapApiError(error: ApiError): AppError {
   })
 }
 
-/**
- * The one place that classifies "what kind of failure was this" into the
- * taxonomy presentation works with (AppError) - called from inside
- * AuthenticatedHttpClient only, so ApiError/ProblemDetails/NetworkError/
- * TimeoutError never cross into application or presentation (docs/adr/007).
- * Idempotent on an already-converted AppError, since a caller further up
- * the stack may re-wrap a lower-level call's result.
- */
+// The one place that classifies a failure into the AppError taxonomy
+// (docs/adr/007). Idempotent on an already-converted AppError.
 export function mapErrorToAppError(error: unknown): AppError {
   if (error instanceof AppError) {
     return error

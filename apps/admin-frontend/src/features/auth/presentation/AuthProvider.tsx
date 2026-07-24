@@ -8,20 +8,8 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
-/**
- * The single source of truth for session state in the app - mounted once
- * near the root (see AppProviders), so every consumer of useAuth() reads
- * the same snapshot instead of each call site running its own independent
- * getCurrentSession() fetch (the bug this replaces).
- *
- * Builds on useAsync for the initial session load - reusing its existing
- * out-of-order/unmount guarding - and additionally subscribes to the
- * composition root's SessionEventBus so a 401 anywhere in the app (reported
- * by AuthenticatedHttpClient, with no knowledge of React) clears the shared
- * session via the same `mutate` used for user-initiated logout. Both paths
- * clear tenantContext synchronously; ProtectedRoute reacts to the resulting
- * `unauthenticated` status and TenantBoundary remounts tenant-scoped state.
- */
+// Mounted once near the root so every useAuth() consumer reads the same
+// snapshot, instead of each call site polling getCurrentSession() itself.
 export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   const { auth } = useAppContainer()
 

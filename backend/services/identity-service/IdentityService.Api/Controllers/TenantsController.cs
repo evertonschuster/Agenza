@@ -23,17 +23,14 @@ public class TenantsController : ControllerBase
         _dispatcher = dispatcher;
     }
 
-    public record ProvisionTenantBody(string TenantName, string OwnerEmail, string OwnerPassword);
-
     [HttpPost]
-    public async Task<IActionResult> Provision(ProvisionTenantBody body, CancellationToken cancellationToken)
+    public async Task<IActionResult> Provision(ProvisionTenantCommand command, CancellationToken cancellationToken)
     {
         if (!User.HasScope("identity-admin"))
         {
             return Forbid();
         }
 
-        var command = new ProvisionTenantCommand(body.TenantName, body.OwnerEmail, body.OwnerPassword);
         var result = await _dispatcher.Send(command, cancellationToken);
 
         return result.ToActionResult(

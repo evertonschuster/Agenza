@@ -19,20 +19,10 @@ import type {
   ServiceTagOptions,
 } from '@/features/catalog/presentation/services/servicePresentationModels'
 
-const ALL_CATEGORIES_VALUE = '__all_categories__'
-const ALL_TAGS_VALUE = '__all_tags__'
-
 interface ServicesFiltersViewModel {
-  searchInput: string
-  onSearchInputChange: (value: string) => void
-  categoryFilter: string
-  onCategoryFilterChange: (value: string) => void
-  tagFilter: string
-  onTagFilterChange: (value: string) => void
-  categories: readonly Category[]
-  tags: readonly Tag[]
-  allCategoriesValue: string
-  allTagsValue: string
+  search: { value: string; onChange: (value: string) => void }
+  category: { value: string; onChange: (value: string) => void; options: readonly Category[] }
+  tag: { value: string; onChange: (value: string) => void; options: readonly Tag[] }
 }
 
 interface ServicesListViewModel {
@@ -112,16 +102,13 @@ export function useServicesPage(): UseServicesPageResult {
   return {
     onOpenCreate: editor.onOpenCreate,
     filters: {
-      searchInput: filters.searchInput,
-      onSearchInputChange: filters.onSearchInputChange,
-      categoryFilter: filters.categoryFilter,
-      onCategoryFilterChange: filters.onCategoryFilterChange,
-      tagFilter: filters.tagFilter,
-      onTagFilterChange: filters.onTagFilterChange,
-      categories,
-      tags,
-      allCategoriesValue: ALL_CATEGORIES_VALUE,
-      allTagsValue: ALL_TAGS_VALUE,
+      search: { value: filters.searchInput, onChange: filters.onSearchInputChange },
+      category: {
+        value: filters.categoryFilter,
+        onChange: filters.onCategoryFilterChange,
+        options: categories,
+      },
+      tag: { value: filters.tagFilter, onChange: filters.onTagFilterChange, options: tags },
     },
     list: {
       services,

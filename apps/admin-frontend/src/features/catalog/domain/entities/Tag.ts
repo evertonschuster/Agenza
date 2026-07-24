@@ -21,10 +21,7 @@ interface CreateTagInput {
   description?: string
 }
 
-/**
- * A tenant-scoped label the business defines to organize its records
- * (docs/DOMAIN.md "Tag"). v1 manages the tag catalog only.
- */
+/** A tenant-scoped label the business defines to organize its records (docs/DOMAIN.md "Tag"). */
 export class Tag {
   readonly id: string
   readonly name: string

@@ -15,10 +15,4 @@ export interface AuthActions {
 
 export type AuthContextValue = AuthSessionState & AuthActions
 
-/**
- * Holds the single, shared session snapshot for the whole app - populated
- * by AuthProvider. Starts as null so useAuth can fail loudly if a component
- * tries to use it outside of AuthProvider, rather than silently reading an
- * unconfigured value (same rationale as AppContainerContext).
- */
 export const AuthContext = createContext<AuthContextValue | null>(null)

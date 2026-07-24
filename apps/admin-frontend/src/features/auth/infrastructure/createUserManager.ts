@@ -1,18 +1,7 @@
 import { UserManager, WebStorageStateStore } from 'oidc-client-ts'
 
-/**
- * Builds the oidc-client-ts UserManager from environment configuration.
- * All UserManagerSettings live here and nowhere else, so changing how we
- * configure OIDC (e.g. switching storage, adding extraQueryParams for a
- * future IdentityServer requirement) never requires touching
- * OidcAuthRepository itself.
- *
- * automaticSilentRenew is disabled deliberately: our product decision is
- * to attempt silent renewal explicitly inside
- * OidcAuthRepository.getCurrentSession() and clear the session on
- * failure, rather than relying on event-driven background renewal that
- * the rest of the app has no visibility into.
- */
+// automaticSilentRenew is off on purpose: OidcAuthRepository.getCurrentSession()
+// drives renewal explicitly instead of relying on background events.
 export function createUserManager(): UserManager {
   return new UserManager({
     authority: import.meta.env.VITE_OIDC_AUTHORITY,

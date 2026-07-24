@@ -16,24 +16,14 @@ import type { components } from '@/features/catalog/infrastructure/generated/ser
 
 const CATEGORIES_URL = '/api/v1/categories'
 
-/**
- * The generated OpenAPI type marks `categoryId` as required in the PUT
- * body - the backend controller always overwrites it with the route id
- * before dispatching, so the value sent here is never actually read, but
- * building the wire body explicitly against this type - keyed on the
- * exact same `id` this method already routes to - makes route id and body
- * id structurally incapable of diverging (docs/adr/010).
- */
+// The route id is always keyed into the PUT body too (docs/adr/010) so the
+// two are structurally incapable of diverging, even though the backend
+// controller only ever trusts the route id.
 type CreateCategoryRequestBody = components['schemas']['CreateCategoryCommand']
 type UpdateCategoryRequestBody = components['schemas']['UpdateCategoryCommand']
 
-/**
- * The /api/v1/categories contract from docs/API.md. Tenant scope travels
- * in the X-Tenant-Id header the HttpClient attaches (verified server-side
- * against the JWT's tenant_id claim) - tenantContext is accepted here
- * only for structural enforcement (see admin-feature-vertical skill),
- * never read directly.
- */
+// tenantContext is accepted for structural enforcement only - tenant scope
+// travels in the X-Tenant-Id header the HttpClient attaches.
 export class ApiCategoryRepository implements CategoryRepository {
   private readonly httpClient: HttpClient
 

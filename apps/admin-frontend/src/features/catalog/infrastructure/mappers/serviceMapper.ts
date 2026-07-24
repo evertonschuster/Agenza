@@ -13,13 +13,9 @@ type NumericServiceFields =
   | 'price'
   | 'maxDiscountPercentage'
 
-/**
- * The generated ServiceResponse types every numeric field as `number | string`
- * - a known quirk of the built-in ASP.NET Core OpenAPI generator's schema
- * for value types, not an actual API behavior difference (the API only ever
- * sends real JSON numbers). Narrowed back to `number` here so callers don't
- * have to guard against a union that never occurs in practice.
- */
+// The ASP.NET Core OpenAPI generator types every numeric field as
+// `number | string` for value types (not a real API behavior difference -
+// it only ever sends JSON numbers); narrowed back to `number` here.
 export type ServiceDto = Omit<components['schemas']['ServiceResponse'], NumericServiceFields> &
   Record<NumericServiceFields, number>
 
@@ -39,12 +35,8 @@ function isNullableString(value: unknown): value is string | null {
   return value === null || typeof value === 'string'
 }
 
-// The generated ServiceResponse widens every numeric field to number|string
-// (see the ServiceDto comment above) - Service.create() performs the real
-// finite/integer narrowing with its own curated per-field messages
-// (docs/adr/010), so this boundary check only rules out a value that isn't
-// plausibly numeric at all (e.g. a boolean or nested object), rather than
-// duplicating that finite-number validation here.
+// Only rules out non-numeric-shaped values - Service.create() does the real
+// finite/integer narrowing (docs/adr/010).
 function isPlausibleNumeric(value: unknown): value is number | string {
   return typeof value === 'number' || typeof value === 'string'
 }
@@ -83,11 +75,7 @@ function isServiceDto(value: unknown): value is ServiceDto {
   )
 }
 
-/**
- * Envelope pagination metadata has no domain entity of its own to validate
- * it (unlike Service's own fields, guarded by Service.create) - coerced and
- * checked for real finiteness right here instead.
- */
+// Pagination metadata has no domain entity to validate it - checked here.
 function toFiniteNumber(value: unknown): number | null {
   if (typeof value === 'number' && Number.isFinite(value)) {
     return value
