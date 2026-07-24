@@ -1,5 +1,5 @@
 import { http, HttpResponse } from 'msw'
-import type { ServiceDto } from '../../../infrastructure/mappers/serviceMapper'
+import type { ServiceDto } from '@/features/catalog/infrastructure/mappers/serviceMapper'
 
 const API_BASE_URL = 'https://api.test'
 

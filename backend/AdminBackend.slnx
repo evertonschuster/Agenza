@@ -16,6 +16,7 @@
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/Admin.Identity.Client/Admin.Identity.Client.csproj" />
+    <Project Path="shared/Admin.SharedKernel.AspNetCore/Admin.SharedKernel.AspNetCore.csproj" />
     <Project Path="shared/Admin.SharedKernel.EntityFrameworkCore/Admin.SharedKernel.EntityFrameworkCore.csproj" />
     <Project Path="shared/Admin.SharedKernel.Tests/Admin.SharedKernel.Tests.csproj" />
     <Project Path="shared/Admin.SharedKernel/Admin.SharedKernel.csproj" />

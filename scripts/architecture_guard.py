@@ -32,7 +32,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # a whole directory.
 ALLOWLIST: dict[str, str] = {}
 
-EXCLUDED_DIR_NAMES = {"bin", "obj", "node_modules", ".git", "dist", "coverage", "generated"}
+EXCLUDED_DIR_NAMES = {
+    "bin",
+    "obj",
+    "node_modules",
+    ".git",
+    "dist",
+    "coverage",
+    "generated",
+    "worktrees",
+}
 
 
 @dataclass
@@ -345,45 +354,133 @@ def check_frontend_any() -> list[Finding]:
     )
 
 
-_IMPORT_PATTERN = re.compile(r"""from\s+['"](\.\.?/[^'"]+)['"]""")
+_FEATURE_INTERNAL_IMPORT_PATTERN = re.compile(
+    r"""from\s+['"]@/features/(\w+)/(?:domain|application|infrastructure|presentation)/[^'"]*['"]"""
+)
 
 
-def check_cross_page_imports() -> list[Finding]:
-    """A page importing another feature page's internal module bypasses the
-    composition root and couples two features directly."""
-    pages_dir = REPO_ROOT / "apps" / "admin-frontend" / "src" / "presentation" / "pages"
-    if not pages_dir.is_dir():
+def check_cross_feature_internal_imports() -> list[Finding]:
+    """ADR 009: a feature's domain/application/infrastructure/presentation is
+    reached from outside that feature only through its own index.ts public
+    API - never by importing past it into an internal module. Mirrors
+    eslint.config.js's no-restricted-imports rule as an independent,
+    tooling-agnostic check. src/test/** is exempt (MSW fixtures legitimately
+    need a feature's internal DTOs); a feature's own files are exempt for
+    their own internals."""
+    src_dir = REPO_ROOT / "apps" / "admin-frontend" / "src"
+    features_dir = src_dir / "features"
+    if not features_dir.is_dir():
         return []
+    feature_names = {d.name for d in features_dir.iterdir() if d.is_dir()}
 
     findings = []
-    for path in _iter_files(pages_dir, (".ts", ".tsx")):
+    for path in _iter_files(src_dir, (".ts", ".tsx")):
         if _is_allowlisted(path):
             continue
-        try:
-            own_page = path.relative_to(pages_dir).parts[0]
-        except (ValueError, IndexError):
+        rel = path.relative_to(src_dir).as_posix()
+        if rel.startswith("test/"):
             continue
 
         text = path.read_text(encoding="utf-8", errors="replace")
         for line_number, line in enumerate(text.splitlines(), start=1):
-            match = _IMPORT_PATTERN.search(line)
+            match = _FEATURE_INTERNAL_IMPORT_PATTERN.search(line)
             if not match:
                 continue
-            target = (path.parent / match.group(1)).resolve()
-            try:
-                target_rel = target.relative_to(pages_dir.resolve())
-            except ValueError:
+            feature = match.group(1)
+            if feature not in feature_names or rel.startswith(f"features/{feature}/"):
                 continue
-            target_page = target_rel.parts[0] if target_rel.parts else None
-            if target_page and target_page != own_page:
+            findings.append(
+                Finding(
+                    "cross-feature-internal-import",
+                    "blocking",
+                    _rel(path),
+                    line_number,
+                    f"Imports '{feature}' internals directly - use its public API "
+                    f"(@/features/{feature}) instead (ADR 009).",
+                )
+            )
+    return findings
+
+
+def check_stale_horizontal_layout() -> list[Finding]:
+    """ADR 009 replaced the horizontal domain/application/infrastructure/
+    presentation/composition top-level layout with app/, features/*/,
+    shared/. Any of those directories reappearing directly under src/ means
+    the old layout is being reintroduced."""
+    src_dir = REPO_ROOT / "apps" / "admin-frontend" / "src"
+    findings = []
+    for name in ["domain", "application", "infrastructure", "presentation", "composition"]:
+        candidate = src_dir / name
+        if candidate.is_dir() and not _is_allowlisted(candidate):
+            findings.append(
+                Finding(
+                    "stale-horizontal-layout",
+                    "blocking",
+                    _rel(candidate),
+                    1,
+                    f"src/{name}/ reintroduces the pre-ADR-009 horizontal layout - "
+                    "move its contents into app/, features/*/, or shared/ instead.",
+                )
+            )
+    return findings
+
+
+_STALE_OPENAPI_GENERATED_PATH = "src/infrastructure/generated"
+
+
+def check_stale_openapi_generated_path() -> list[Finding]:
+    """ADR 009 relocated the generated OpenAPI client from the pre-move
+    top-level src/infrastructure/generated/ to src/features/catalog/
+    infrastructure/generated/, but several consumers (package.json,
+    checkGeneratedApiTypes.mjs, .prettierignore, skills, templates) kept
+    pointing at the old path and generate:api-types:check silently
+    ENOENT'd - this exact class of drift was found and fixed once already.
+    Source/config files are checked in full; markdown is checked only
+    inside fenced code blocks, mirroring
+    check_stale_patterns_in_doc_code_blocks - a prose sentence can
+    correctly describe the old path as history (e.g. this ADR's own
+    'Execution' section) without teaching it as current."""
+    findings: list[Finding] = []
+    code_suffixes = (".ts", ".tsx", ".mjs", ".js", ".json", ".yml", ".yaml")
+    candidate_names = {".prettierignore"}
+
+    code_files = [
+        p
+        for p in REPO_ROOT.rglob("*")
+        if p.is_file()
+        and (p.suffix in code_suffixes or p.name in candidate_names)
+        and not any(part in EXCLUDED_DIR_NAMES for part in p.parts)
+    ]
+    findings += _findings_for_pattern(
+        code_files,
+        re.compile(re.escape(_STALE_OPENAPI_GENERATED_PATH)),
+        "stale-openapi-generated-path",
+        "blocking",
+        "References the pre-ADR-009 src/infrastructure/generated/ path - the generated "
+        "OpenAPI client now lives at src/features/catalog/infrastructure/generated/.",
+    )
+
+    md_files = [
+        p
+        for p in REPO_ROOT.rglob("*.md")
+        if not any(part in EXCLUDED_DIR_NAMES for part in p.parts)
+        and "docs/adr" not in p.as_posix().replace("\\", "/")
+    ]
+    for path in md_files:
+        if _is_allowlisted(path):
+            continue
+        for start_line, code in _code_blocks(path):
+            if _STALE_OPENAPI_GENERATED_PATH in code:
+                offset = code.split(_STALE_OPENAPI_GENERATED_PATH)[0].count("\n")
                 findings.append(
                     Finding(
-                        "cross-page-import",
+                        "stale-openapi-generated-path",
                         "blocking",
                         _rel(path),
-                        line_number,
-                        f"Imports from page '{target_page}' while inside page '{own_page}' - "
-                        "share through composition/container.ts or presentation/components/ instead.",
+                        start_line + offset,
+                        "Code block references the pre-ADR-009 src/infrastructure/generated/ "
+                        "path - the generated OpenAPI client now lives at "
+                        "src/features/catalog/infrastructure/generated/.",
                     )
                 )
     return findings
@@ -395,8 +492,8 @@ _ALLOWED_COVERAGE_EXCLUDE_PATTERNS = [
     re.compile(r"^\*\*/\*\.config\.\{ts,js\}$"),
     re.compile(r"^\*\*/main\.tsx$"),
     re.compile(r"^\*\*/App\.tsx$"),
-    re.compile(r"^src/presentation/routes/router\.tsx$"),
-    re.compile(r"^src/presentation/pages/\w+/\*\*$"),
+    re.compile(r"^src/app/routes/router\.tsx$"),
+    re.compile(r"^src/app/pages/\w+/\*\*$"),
 ]
 
 
@@ -410,14 +507,38 @@ def check_coverage_exclude_allowlist() -> list[Finding]:
         return []
 
     text = config_path.read_text(encoding="utf-8")
-    match = re.search(r"exclude:\s*\[(.*?)\]", text, re.DOTALL)
+
+    coverage_match = re.search(r"coverage:\s*\{", text)
+    if not coverage_match:
+        return []
+
+    # Scope the exclude search to inside coverage's own object, found by
+    # counting braces from its opening one - vitest.config.ts also has a
+    # top-level `test.exclude` (which test *files* to collect, e.g. keeping
+    # Playwright specs under e2e/ out of Vitest's run) that is unrelated to
+    # what counts toward the coverage gate and must not be matched instead.
+    brace_start = coverage_match.end() - 1
+    depth = 0
+    block_end = len(text)
+    for index in range(brace_start, len(text)):
+        if text[index] == "{":
+            depth += 1
+        elif text[index] == "}":
+            depth -= 1
+            if depth == 0:
+                block_end = index + 1
+                break
+    coverage_block = text[brace_start:block_end]
+    block_start_line = text.count("\n", 0, brace_start) + 1
+
+    match = re.search(r"exclude:\s*\[(.*?)\]", coverage_block, re.DOTALL)
     if not match:
         return []
 
     findings = []
     entry_pattern = re.compile(r"""['"]([^'"]+)['"]""")
     block = match.group(1)
-    start_line = text.count("\n", 0, match.start()) + 1
+    start_line = block_start_line + coverage_block.count("\n", 0, match.start())
     for line_offset, line in enumerate(block.splitlines()):
         for entry_match in entry_pattern.finditer(line):
             entry = entry_match.group(1)
@@ -445,7 +566,9 @@ CHECKS = [
     check_stale_patterns_in_doc_code_blocks,
     check_dangling_adr_references,
     check_frontend_any,
-    check_cross_page_imports,
+    check_cross_feature_internal_imports,
+    check_stale_horizontal_layout,
+    check_stale_openapi_generated_path,
     check_coverage_exclude_allowlist,
 ]
 

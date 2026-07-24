@@ -85,9 +85,9 @@ jobs:
         run: npm run test:coverage --workspace=apps/admin-frontend
 
   # Separate gate from `changes` above: a services-service response shape
-  # change is exactly the kind of drift src/infrastructure/generated/
-  # services-api.d.ts needs to catch, even on a PR that never touches
-  # apps/admin-frontend itself.
+  # change is exactly the kind of drift
+  # src/features/catalog/infrastructure/generated/services-api.d.ts needs to
+  # catch, even on a PR that never touches apps/admin-frontend itself.
   api-contract-changes:
     name: detect-api-contract-changes
     runs-on: ubuntu-latest

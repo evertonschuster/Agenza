@@ -18,7 +18,7 @@ every section; delete this instruction line before sending.
 ## API spec (search before asking — see root `AGENTS.md`'s question policy)
 
 Before asking the user for any of this, check
-`src/infrastructure/generated/services-api.d.ts`, the backend controller/
+`src/features/catalog/infrastructure/generated/services-api.d.ts`, the backend controller/
 DTOs under `backend/services/services-service/`, `docs/API.md`, and
 `docs/adr/` — only ask what's still genuinely missing after that search.
 
@@ -85,7 +85,7 @@ python scripts/architecture_guard.py
 - No new global client-state store (Redux/Zustand) used as a server cache.
 - No Formik/Yup without an explicit ADR.
 - No hand-duplicated DTO for something already in
-  `src/infrastructure/generated/services-api.d.ts`.
+  `src/features/catalog/infrastructure/generated/services-api.d.ts`.
 
 ## Report format
 

@@ -1,0 +1,11 @@
+**/node_modules
+.git
+**/bin
+**/obj
+**/*.tsbuildinfo
+apps/admin-frontend/dist
+apps/admin-frontend/coverage
+apps/admin-frontend/playwright-report
+apps/admin-frontend/test-results
+ai-services/**/__pycache__
+ai-services/**/.venv

@@ -1,5 +1,6 @@
 using Admin.Identity.Client;
 using Admin.SharedKernel;
+using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc.Authorization;

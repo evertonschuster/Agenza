@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
 using IdentityService.Api.Seed;
 using IdentityService.Application;

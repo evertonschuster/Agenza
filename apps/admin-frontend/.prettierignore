@@ -3,4 +3,6 @@ coverage
 node_modules
 *.tsbuildinfo
 graphify-out
-src/infrastructure/generated
+src/features/catalog/infrastructure/generated
+playwright-report
+test-results

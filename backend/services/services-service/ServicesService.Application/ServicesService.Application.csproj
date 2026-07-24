@@ -7,6 +7,11 @@
 
   <ItemGroup>
     <PackageReference Include="FluentValidation.DependencyInjectionExtensions" />
+    <!-- ILogger<T> in the handlers below - previously available transitively
+         through Admin.SharedKernel's ASP.NET Core FrameworkReference, which
+         no longer flows through the pure kernel project (docs/adr/0018).
+         This package has no ASP.NET Core coupling of its own. -->
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
   </ItemGroup>
 
   <PropertyGroup>

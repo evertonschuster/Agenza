@@ -39,6 +39,8 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0012-...md`                       | Cross-aggregate checks live in handlers, not validators — validators take no repository dependencies |
 | `../docs/adr/0014-...md`                       | Result pattern end-to-end — Domain/persistence no longer throw for expected outcomes |
 | `../docs/adr/0015-...md`                       | Integration tests removed — CI runs unit tests only, no database dependency |
+| `../docs/adr/0017-...md`                       | Schema-scoped `__EFMigrationsHistory` per service — read before touching either service's migrations or `DependencyInjection.cs` |
+| `../docs/adr/0018-...md`                       | `Admin.SharedKernel` vs `Admin.SharedKernel.AspNetCore` split — read before adding to either |
 
 ## Critical constraints (non-negotiable)
 
@@ -48,14 +50,20 @@ why MediatR/FluentAssertions specifically are NOT used here).
 Domain          zero project references, zero NuGet framework deps
 Application     → Domain, Admin.SharedKernel. Ports live in Abstractions/
 Infrastructure  → Application, Admin.Identity.Client, Admin.SharedKernel.EntityFrameworkCore
-Api             → Application + Infrastructure. Controllers stay thin
+Api             → Application + Infrastructure + Admin.SharedKernel.AspNetCore. Controllers stay thin
 Tests           → Application + Domain (unit only — no integration tests, docs/adr/0015)
 ```
 
 `backend/shared/Admin.SharedKernel` is cross-cutting CQRS/Result
 infrastructure (like `Admin.Identity.Client` is for auth) — every
 service's Application layer references it. It is NOT a place for
-business logic. `backend/shared/Admin.SharedKernel.EntityFrameworkCore`
+business logic, and it takes no ASP.NET Core dependency (no
+`FrameworkReference`, just `Microsoft.Extensions.DependencyInjection.Abstractions` +
+FluentValidation) so that Application, which references it, stays
+framework-agnostic. The MVC-specific half — `ResultExtensions.ToActionResult`
+and `GenericExceptionHandler` — lives in the sibling
+`backend/shared/Admin.SharedKernel.AspNetCore` instead (docs/adr/0018);
+only `.Api` projects reference it. `backend/shared/Admin.SharedKernel.EntityFrameworkCore`
 is a separate project (generic `RepositoryBase<TEntity>`, docs/adr/0006)
 because it needs EF Core — Infrastructure-only, Application must never
 see it.
@@ -261,7 +269,7 @@ guards, an unrecognized database error, transactional rollback cleanup.
   `Result`-aware; its `try/catch` exists only for transactional rollback
   on a genuinely unexpected failure, not to convert a business outcome —
   see "UnitOfWork" below.
-- **`Admin.SharedKernel.GenericExceptionHandler`** (`IExceptionHandler`,
+- **`Admin.SharedKernel.AspNetCore.GenericExceptionHandler`** (`IExceptionHandler`,
   registered via `AddExceptionHandler<T>()` + `app.UseExceptionHandler()`
   in each `Program.cs`) is the *only* global exception handler in either
   service — it logs at Error level via `ILogger` and returns a generic

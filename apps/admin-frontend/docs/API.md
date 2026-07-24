@@ -24,20 +24,23 @@ Every request to the backend API requires:
 Authorization: Bearer <access_token>
 ```
 
-The access token comes from `oidc-client-ts` via `OidcAuthRepository`.
-In `AuthenticatedHttpClient`, wire it like this:
+The access token comes from `oidc-client-ts` via `OidcAuthRepository`
+(`features/auth/infrastructure/`). `AuthenticatedHttpClient`
+(`shared/infrastructure/http/`) reads the token and tenant id together,
+from a single `GetRequestSession` call per request
+(`shared/application/RequestSession.ts`) — never two independent reads,
+so they can't end up from different moments of a session transition:
 
 ```typescript
-constructor(
-  private readonly baseUrl: string,
-  private readonly getAccessToken: () => Promise<string | null>,
-  private readonly getTenantId: () => Promise<string | null>,
-) {}
+export interface RequestSession {
+  readonly accessToken: string
+  readonly tenantId: string | null
+}
+export type GetRequestSession = () => Promise<RequestSession | null>
 ```
 
-Call `getAccessToken()` before each request and attach the header.
-If `getAccessToken()` returns `null`, the session has expired — throw
-an `UnauthenticatedError` rather than making a request without a token.
+If `getRequestSession()` returns `null`, the session has expired — throw
+an `UnauthenticatedError` rather than making a request without one.
 
 ---
 
@@ -56,9 +59,10 @@ This means:
 
 - Repository methods still take `TenantContext` as first param (structural
   enforcement in application layer)
-- `AuthenticatedHttpClient` attaches `X-Tenant-Id` whenever a tenant is
-  known (omitted only for pre-session calls, e.g. before login) —
-  individual repositories never set this header themselves
+- `AuthenticatedHttpClient` attaches `X-Tenant-Id` whenever the same
+  per-request session read returned a tenant id (omitted only for
+  pre-session calls, e.g. before login) — individual repositories never
+  set this header themselves
 
 ---
 
@@ -104,18 +108,21 @@ HTTP status codes:
 - `409` — conflict (e.g. duplicate)
 - `500` — server error
 
-`src/infrastructure/http/ProblemDetails.ts` defines the typed contract
+`shared/infrastructure/http/ProblemDetails.ts` defines the typed contract
 (`ProblemDetails`, `FieldError`) and `parseProblemDetails`, a safe runtime
-parser (no `any`, no sniffing error kind from message text). The
-`ApiError` class in `AuthenticatedHttpClient` carries `status: number`,
-`message: string` (populated from `title`, falling back to `detail`, then
-the raw body), and `details: ProblemDetails | undefined` for callers that
-need `code`/`errors`. `src/presentation/forms/serverFormError.ts`'s
-`mapApiErrorToForm` turns a caught `ApiError` into field-level messages a
-form applies via react-hook-form's `setError` — each form
-(`ServiceForm`/`CategoryForm`/`TagForm`) exports its own backend-property
-→ field-name map (e.g. `DurationMinutes` → `durationMinutes`) and a
-conflict-`code` → field map (e.g. `Service.DuplicateName` → `name`).
+parser (no `any`, no sniffing error kind from message text). Infrastructure
+first builds an `ApiError` (`status`, `message` from `title` falling back
+to `detail`, `details: ProblemDetails | undefined`) and immediately
+converts it to an `AppError` (`shared/application/AppError.ts`) before it
+leaves `AuthenticatedHttpClient` — `ApiError`/`ProblemDetails` never cross
+into application or presentation (docs/adr/007).
+`shared/presentation/forms/serverFormError.ts`'s `mapApiErrorToForm` turns
+a caught `AppError` into field-level messages a form applies via
+react-hook-form's `setError`, reading `AppError.rawFieldErrors`/
+`backendCode` — each form (`ServiceForm`/`CategoryForm`/`TagForm`) exports
+its own backend-property → field-name map (e.g. `DurationMinutes` →
+`durationMinutes`) and a conflict-`code` → field map (e.g.
+`Service.DuplicateName` → `name`).
 
 ---
 

@@ -1,7 +1,13 @@
 services:
   admin-frontend:
     build:
-      context: ../apps/admin-frontend
+      # Repo root, not apps/admin-frontend - this is an npm workspace, and
+      # `npm ci` inside the Dockerfile needs the root package.json/
+      # package-lock.json to reproduce the exact dependency tree CI
+      # installs (see apps/admin-frontend/Dockerfile). infra/ sits directly
+      # under the repo root, same as ../backend below.
+      context: ..
+      dockerfile: apps/admin-frontend/Dockerfile
     ports:
       - "5173:5173"
     environment:

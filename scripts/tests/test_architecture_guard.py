@@ -309,37 +309,154 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
-    # -- cross-page imports ------------------------------------------------
+    # -- cross-feature internal imports (ADR 009) ---------------------------
 
-    def test_cross_page_import_is_blocking(self) -> None:
+    def test_cross_feature_internal_import_is_blocking(self) -> None:
         self._write(
-            "apps/admin-frontend/src/presentation/pages/PageA/Foo.ts",
-            "import { bar } from '../PageB/bar'\n",
+            "apps/admin-frontend/src/features/catalog/application/use-cases/tags/ListTags.ts",
+            "import type { TenantContext } from '@/features/auth/application/context/TenantContext'\n",
         )
-        self._write("apps/admin-frontend/src/presentation/pages/PageB/bar.ts", "export const bar = 1\n")
+        self._write(
+            "apps/admin-frontend/src/features/auth/application/context/TenantContext.ts",
+            "export interface TenantContext {}\n",
+        )
 
-        findings = ag.check_cross_page_imports()
+        findings = ag.check_cross_feature_internal_imports()
 
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].severity, "blocking")
 
-    def test_same_page_import_is_clean(self) -> None:
+    def test_import_through_feature_public_api_is_clean(self) -> None:
         self._write(
-            "apps/admin-frontend/src/presentation/pages/PageA/Foo.ts",
-            "import { helper } from './helper'\n",
+            "apps/admin-frontend/src/features/catalog/application/use-cases/tags/ListTags.ts",
+            "import type { TenantContext } from '@/features/auth'\n",
+        )
+        self._write(
+            "apps/admin-frontend/src/features/auth/application/context/TenantContext.ts",
+            "export interface TenantContext {}\n",
         )
 
-        findings = ag.check_cross_page_imports()
+        findings = ag.check_cross_feature_internal_imports()
 
         self.assertEqual(findings, [])
 
-    def test_import_outside_pages_dir_is_clean(self) -> None:
+    def test_feature_importing_its_own_internals_is_clean(self) -> None:
         self._write(
-            "apps/admin-frontend/src/presentation/pages/PageA/Foo.ts",
-            "import { Button } from '../../../components/ui/button'\n",
+            "apps/admin-frontend/src/features/auth/presentation/useAuth.ts",
+            "import type { TenantContext } from '@/features/auth/application/context/TenantContext'\n",
         )
 
-        findings = ag.check_cross_page_imports()
+        findings = ag.check_cross_feature_internal_imports()
+
+        self.assertEqual(findings, [])
+
+    def test_test_fixtures_reaching_into_feature_internals_is_clean(self) -> None:
+        self._write(
+            "apps/admin-frontend/src/test/mocks/handlers/tagHandlers.ts",
+            "import type { TagDto } from '@/features/catalog/infrastructure/mappers/tagMapper'\n",
+        )
+
+        findings = ag.check_cross_feature_internal_imports()
+
+        self.assertEqual(findings, [])
+
+    # -- stale horizontal layout (ADR 009) -----------------------------------
+
+    def test_stale_domain_dir_is_blocking(self) -> None:
+        self._write("apps/admin-frontend/src/domain/entities/Widget.ts", "export class Widget {}\n")
+
+        findings = ag.check_stale_horizontal_layout()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "blocking")
+
+    def test_feature_based_layout_is_clean(self) -> None:
+        self._write(
+            "apps/admin-frontend/src/features/catalog/domain/entities/Tag.ts",
+            "export class Tag {}\n",
+        )
+
+        findings = ag.check_stale_horizontal_layout()
+
+        self.assertEqual(findings, [])
+
+    # -- stale OpenAPI generated-types path (ADR 009) --------------------------
+
+    def test_stale_openapi_path_in_package_json_is_blocking(self) -> None:
+        self._write(
+            "apps/admin-frontend/package.json",
+            '{"scripts": {"generate:api-types": "openapi-typescript x -o '
+            'src/infrastructure/generated/services-api.d.ts"}}\n',
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "blocking")
+
+    def test_stale_openapi_path_in_prettierignore_is_blocking(self) -> None:
+        self._write("apps/admin-frontend/.prettierignore", "src/infrastructure/generated\n")
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(len(findings), 1)
+
+    def test_feature_based_openapi_path_is_clean(self) -> None:
+        self._write(
+            "apps/admin-frontend/package.json",
+            '{"scripts": {"generate:api-types": "openapi-typescript x -o '
+            'src/features/catalog/infrastructure/generated/services-api.d.ts"}}\n',
+        )
+        self._write(
+            "apps/admin-frontend/.prettierignore",
+            "src/features/catalog/infrastructure/generated\n",
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(findings, [])
+
+    def test_stale_openapi_path_in_code_fence_is_blocking(self) -> None:
+        self._write(
+            "some-skill/SKILL.md",
+            "\n".join(
+                [
+                    "```typescript",
+                    "import type { components } from 'src/infrastructure/generated/services-api'",
+                    "```",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(len(findings), 1)
+
+    def test_stale_openapi_path_in_prose_outside_code_fence_is_not_flagged(self) -> None:
+        self._write(
+            "docs/some-narrative.md",
+            "The old path was `src/infrastructure/generated/services-api.d.ts`, moved by ADR 009.\n",
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
+
+        self.assertEqual(findings, [])
+
+    def test_stale_openapi_path_in_adr_directory_is_skipped(self) -> None:
+        self._write(
+            "docs/adr/0009-feature-based-modularization.md",
+            "\n".join(
+                [
+                    "```typescript",
+                    "// old: src/infrastructure/generated/services-api.d.ts",
+                    "```",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_stale_openapi_generated_path()
 
         self.assertEqual(findings, [])
 
@@ -377,8 +494,8 @@ class ArchitectureGuardTests(unittest.TestCase):
                     "    'src/test/',",
                     "    '**/main.tsx',",
                     "    '**/App.tsx',",
-                    "    'src/presentation/routes/router.tsx',",
-                    "    'src/presentation/pages/StubPage/**',",
+                    "    'src/app/routes/router.tsx',",
+                    "    'src/app/pages/StubPage/**',",
                     "  ] } }",
                     "}",
                     "",
@@ -389,6 +506,60 @@ class ArchitectureGuardTests(unittest.TestCase):
         findings = ag.check_coverage_exclude_allowlist()
 
         self.assertEqual(findings, [])
+
+    def test_test_level_exclude_before_coverage_exclude_is_not_flagged(self) -> None:
+        # vitest.config.ts has two different `exclude:` keys: test.exclude
+        # (which test *files* to collect - unrelated to the coverage gate)
+        # and test.coverage.exclude (what this check actually polices). A
+        # naive first-match search over the whole file would grab the
+        # former - e.g. 'e2e/**', keeping Playwright specs out of Vitest's
+        # own run - and wrongly flag it as an undocumented coverage-gate
+        # widening.
+        self._write(
+            "apps/admin-frontend/vitest.config.ts",
+            "\n".join(
+                [
+                    "export default {",
+                    "  test: {",
+                    "    exclude: ['e2e/**'],",
+                    "    coverage: { exclude: [",
+                    "      'node_modules/',",
+                    "      'src/test/',",
+                    "    ] },",
+                    "  },",
+                    "}",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_coverage_exclude_allowlist()
+
+        self.assertEqual(findings, [])
+
+    def test_coverage_exclude_drift_still_caught_alongside_test_exclude(self) -> None:
+        self._write(
+            "apps/admin-frontend/vitest.config.ts",
+            "\n".join(
+                [
+                    "export default {",
+                    "  test: {",
+                    "    exclude: ['e2e/**'],",
+                    "    coverage: { exclude: [",
+                    "      'node_modules/',",
+                    "      'src/application/**',",
+                    "    ] },",
+                    "  },",
+                    "}",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_coverage_exclude_allowlist()
+
+        self.assertEqual(len(findings), 1)
+        self.assertIn("src/application/**", findings[0].message)
 
     # -- full run --------------------------------------------------------------
 
@@ -406,7 +577,7 @@ class ArchitectureGuardTests(unittest.TestCase):
             "public static DomainResult<Foo> Create(string name) => DomainResult.Success(new Foo(name));\n",
         )
         self._write(
-            "apps/admin-frontend/src/domain/entities/Foo.ts",
+            "apps/admin-frontend/src/features/catalog/domain/entities/Foo.ts",
             "export class Foo { private readonly name: string; constructor(name: string) { this.name = name } }\n",
         )
 

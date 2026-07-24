@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using ServicesService.Application.Tags;
