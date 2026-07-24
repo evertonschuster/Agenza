@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { MemoryRouter, Routes, Route } from 'react-router'
+import { MemoryRouter, Routes, Route, useLocation } from 'react-router'
+import type { JSX } from 'react'
 import { ProtectedRoute } from '@/features/auth/presentation/ProtectedRoute'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { AuthProvider } from '@/features/auth/presentation/AuthProvider'
@@ -32,16 +33,30 @@ function buildContainer(
   })
 }
 
-function renderWithRouter(container: AppContainer): void {
+function LoginDestination(): JSX.Element {
+  const state: unknown = useLocation().state
+  const returnTo =
+    typeof state === 'object' &&
+    state !== null &&
+    'returnTo' in state &&
+    typeof state.returnTo === 'string'
+      ? state.returnTo
+      : 'none'
+
+  return <div>Login page: {returnTo}</div>
+}
+
+function renderWithRouter(container: AppContainer, initialEntry = '/dashboard'): void {
   render(
     <AppContainerContext.Provider value={container}>
       <AuthProvider>
-        <MemoryRouter initialEntries={['/dashboard']}>
+        <MemoryRouter initialEntries={[initialEntry]}>
           <Routes>
             <Route element={<ProtectedRoute />}>
               <Route path="/dashboard" element={<div>Protected content</div>} />
+              <Route path="/services" element={<div>Services content</div>} />
             </Route>
-            <Route path="/login" element={<div>Login page</div>} />
+            <Route path="/login" element={<LoginDestination />} />
           </Routes>
         </MemoryRouter>
       </AuthProvider>
@@ -66,7 +81,16 @@ describe('ProtectedRoute', () => {
   it('redirects to /login when there is no session', async () => {
     renderWithRouter(buildContainer('unauthenticated'))
 
-    expect(await screen.findByText('Login page')).toBeInTheDocument()
+    expect(await screen.findByText('Login page: /dashboard')).toBeInTheDocument()
     expect(screen.queryByText('Protected content')).not.toBeInTheDocument()
+  })
+
+  it('preserves pathname, query, and hash when an expired session redirects to login', async () => {
+    renderWithRouter(buildContainer('unauthenticated'), '/services?search=massagem&page=2#editor')
+
+    expect(
+      await screen.findByText('Login page: /services?search=massagem&page=2#editor'),
+    ).toBeInTheDocument()
+    expect(screen.queryByText('Services content')).not.toBeInTheDocument()
   })
 })

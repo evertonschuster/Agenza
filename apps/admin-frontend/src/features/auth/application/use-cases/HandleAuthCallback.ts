@@ -3,10 +3,16 @@ import {
   toTenantContext,
   type TenantContext,
 } from '@/features/auth/application/context/TenantContext'
+import { resolvePostLoginPath } from '@/features/auth/application/navigation/postLoginPath'
+
+export interface CompletedAuthCallback {
+  tenantContext: TenantContext
+  returnTo: string
+}
 
 interface CachedCallback {
   url: string
-  promise: Promise<TenantContext>
+  promise: Promise<CompletedAuthCallback>
 }
 
 // Single-flight per callback URL: an OAuth code is single-use, and
@@ -20,7 +26,7 @@ export class HandleAuthCallback {
     this.authRepository = authRepository
   }
 
-  async execute(callbackUrl: string): Promise<TenantContext> {
+  async execute(callbackUrl: string): Promise<CompletedAuthCallback> {
     if (this.cached?.url !== callbackUrl) {
       this.cached = { url: callbackUrl, promise: this.performCallback(callbackUrl) }
     }
@@ -28,9 +34,12 @@ export class HandleAuthCallback {
     return this.cached.promise
   }
 
-  private async performCallback(callbackUrl: string): Promise<TenantContext> {
-    const session = await this.authRepository.handleCallback(callbackUrl)
+  private async performCallback(callbackUrl: string): Promise<CompletedAuthCallback> {
+    const { session, returnTo } = await this.authRepository.handleCallback(callbackUrl)
 
-    return toTenantContext(session.user)
+    return {
+      tenantContext: toTenantContext(session.user),
+      returnTo: resolvePostLoginPath(returnTo),
+    }
   }
 }

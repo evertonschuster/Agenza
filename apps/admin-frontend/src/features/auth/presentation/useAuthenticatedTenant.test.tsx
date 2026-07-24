@@ -8,7 +8,7 @@ import { User } from '@/features/auth/domain/entities/User'
 
 const noopActions = {
   login: () => Promise.resolve(),
-  completeLogin: () => Promise.resolve(),
+  completeLogin: () => Promise.resolve('/dashboard'),
   logout: () => Promise.resolve(),
 }
 

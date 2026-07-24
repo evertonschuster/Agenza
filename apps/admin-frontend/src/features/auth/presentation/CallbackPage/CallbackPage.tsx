@@ -15,8 +15,8 @@ export function CallbackPage(): JSX.Element {
   useEffect(() => {
     async function finishCallback(): Promise<void> {
       try {
-        await completeLogin(window.location.href)
-        await navigate('/dashboard', { replace: true })
+        const returnTo = await completeLogin(window.location.href)
+        await navigate(returnTo, { replace: true })
       } catch {
         setStatus('error')
       }

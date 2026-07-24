@@ -10,7 +10,7 @@ import type { TenantContext } from '@/features/auth/application/context/TenantCo
 function buildAuthValue(tenantContext: TenantContext | null): AuthContextValue {
   const actions = {
     login: () => Promise.resolve(),
-    completeLogin: () => Promise.resolve(),
+    completeLogin: () => Promise.resolve('/dashboard'),
     logout: () => Promise.resolve(),
   }
   return tenantContext !== null

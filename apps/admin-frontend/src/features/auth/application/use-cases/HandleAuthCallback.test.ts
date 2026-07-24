@@ -4,6 +4,11 @@ import { createFakeAuthRepository } from '@/features/auth/application/test-helpe
 import { Session } from '@/features/auth/domain/entities/Session'
 import { User } from '@/features/auth/domain/entities/User'
 import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
+import type { AuthCallbackResult } from '@/features/auth/application/repositories/AuthRepository'
+
+function callbackResult(session: Session, returnTo: string | null = null): AuthCallbackResult {
+  return { session, returnTo }
+}
 
 describe('HandleAuthCallback', () => {
   it('returns the tenant context when the callback is handled successfully', async () => {
@@ -16,7 +21,7 @@ describe('HandleAuthCallback', () => {
     })
 
     const authRepository = createFakeAuthRepository({
-      handleCallback: () => Promise.resolve(session),
+      handleCallback: () => Promise.resolve(callbackResult(session)),
     })
 
     const handleAuthCallback = new HandleAuthCallback(authRepository)
@@ -24,8 +29,9 @@ describe('HandleAuthCallback', () => {
       'https://admin.example.com/callback?code=abc123&state=xyz',
     )
 
-    expect(result.tenant.equals(tenant)).toBe(true)
-    expect(result.user).toBe(user)
+    expect(result.tenantContext.tenant.equals(tenant)).toBe(true)
+    expect(result.tenantContext.user).toBe(user)
+    expect(result.returnTo).toBe('/dashboard')
   })
 
   it('passes the callback URL through to the repository unchanged', async () => {
@@ -41,7 +47,7 @@ describe('HandleAuthCallback', () => {
     const authRepository = createFakeAuthRepository({
       handleCallback: url => {
         receivedUrl = url
-        return Promise.resolve(session)
+        return Promise.resolve(callbackResult(session))
       },
     })
 
@@ -76,7 +82,7 @@ describe('HandleAuthCallback', () => {
     const authRepository = createFakeAuthRepository({
       handleCallback: () => {
         callCount += 1
-        return Promise.resolve(session)
+        return Promise.resolve(callbackResult(session))
       },
     })
 
@@ -106,7 +112,7 @@ describe('HandleAuthCallback', () => {
     const authRepository = createFakeAuthRepository({
       handleCallback: () => {
         callCount += 1
-        return Promise.resolve(session)
+        return Promise.resolve(callbackResult(session))
       },
     })
 
@@ -153,7 +159,7 @@ describe('HandleAuthCallback', () => {
     const authRepository = createFakeAuthRepository({
       handleCallback: () => {
         callCount += 1
-        return Promise.resolve(session)
+        return Promise.resolve(callbackResult(session))
       },
     })
 
@@ -163,5 +169,45 @@ describe('HandleAuthCallback', () => {
     await handleAuthCallback.execute('https://admin.example.com/callback?code=second&state=abc')
 
     expect(callCount).toBe(2)
+  })
+
+  it('returns a validated internal destination carried through the login callback', async () => {
+    const tenant = Tenant.create('tenant-123')
+    const user = User.create({ id: 'user-1', tenant })
+    const session = Session.create({
+      user,
+      accessToken: 'token',
+      expiresAt: new Date('2099-01-01T00:00:00Z'),
+    })
+    const authRepository = createFakeAuthRepository({
+      handleCallback: () =>
+        Promise.resolve(callbackResult(session, '/services?search=massagem#editor')),
+    })
+
+    const result = await new HandleAuthCallback(authRepository).execute(
+      'https://admin.example.com/callback?code=abc',
+    )
+
+    expect(result.returnTo).toBe('/services?search=massagem#editor')
+  })
+
+  it('falls back to the dashboard when callback state contains an external URL', async () => {
+    const tenant = Tenant.create('tenant-123')
+    const user = User.create({ id: 'user-1', tenant })
+    const session = Session.create({
+      user,
+      accessToken: 'token',
+      expiresAt: new Date('2099-01-01T00:00:00Z'),
+    })
+    const authRepository = createFakeAuthRepository({
+      handleCallback: () =>
+        Promise.resolve(callbackResult(session, 'https://evil.example/steal-session')),
+    })
+
+    const result = await new HandleAuthCallback(authRepository).execute(
+      'https://admin.example.com/callback?code=abc',
+    )
+
+    expect(result.returnTo).toBe('/dashboard')
   })
 })

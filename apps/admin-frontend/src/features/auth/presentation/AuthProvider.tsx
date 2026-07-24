@@ -27,14 +27,18 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     })
   }, [auth, mutate])
 
-  const login = useCallback(async (): Promise<void> => {
-    await auth.initiateLogin.execute()
-  }, [auth])
+  const login = useCallback(
+    async (returnTo?: string): Promise<void> => {
+      await auth.initiateLogin.execute(returnTo)
+    },
+    [auth],
+  )
 
   const completeLogin = useCallback(
-    async (callbackUrl: string): Promise<void> => {
-      const authenticatedTenantContext = await auth.handleAuthCallback.execute(callbackUrl)
-      mutate(() => authenticatedTenantContext)
+    async (callbackUrl: string): Promise<string> => {
+      const result = await auth.handleAuthCallback.execute(callbackUrl)
+      mutate(() => result.tenantContext)
+      return result.returnTo
     },
     [auth, mutate],
   )

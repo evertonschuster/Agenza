@@ -55,6 +55,20 @@ they can't observe failure, can't trigger logout on failure, and can't
 control timing. Explicit renewal inside `getCurrentSession()` gives the
 application full control: try renewal, clear session on failure, return
 `null` so callers redirect to login.
+**Impact:** A token with at most 60 seconds remaining is renewed before
+use. Parallel session reads share the same in-flight renewal, avoiding
+refresh-token rotation races. If renewal fails, the stale OIDC user is
+removed and the protected route sends the user to login.
+
+### Restore the interrupted page after login
+
+**Decision:** Carry pathname, query, and fragment through the OIDC
+application `state`, then restore that route only after committing the new
+authenticated tenant context.
+**Reason:** Expiration or a 401 should interrupt the user's work, not
+discard their navigation context. The application-layer validator accepts
+only internal non-auth-entry paths; unsafe or missing values fall back to
+`/dashboard`.
 
 ### `HandleAuthCallback` propagates errors unwrapped
 
