@@ -255,6 +255,27 @@ describe('useAsync mutate generation guard', () => {
     expect(result.current.data).toBeNull()
   })
 
+  it('prevents an in-flight request from overwriting an authoritative mutate', async () => {
+    let resolveRequest: ((value: string) => void) | undefined
+    const asyncFn = vi.fn(() => new Promise<string>(resolve => (resolveRequest = resolve)))
+    const { result } = renderHook(() => useAsync(asyncFn))
+
+    await waitFor(() => {
+      expect(asyncFn).toHaveBeenCalledTimes(1)
+    })
+
+    act(() => {
+      result.current.mutate(() => 'authoritative')
+    })
+
+    await act(async () => {
+      resolveRequest?.('stale')
+      await Promise.resolve()
+    })
+
+    expect(result.current.data).toBe('authoritative')
+  })
+
   it('applies a mutate whose captured generation still matches the current one', async () => {
     const asyncFn = vi.fn(() => Promise.resolve(['a1']))
     const { result } = renderHook(() => useAsync(asyncFn))

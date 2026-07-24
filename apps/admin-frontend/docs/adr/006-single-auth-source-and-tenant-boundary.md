@@ -9,7 +9,9 @@ Replace the per-call-site `useAuth()` (each call independently ran its own
 
 - `AuthProvider`, mounted once in `AppProviders`, as the single source of
   session state. `useAuth()` is now a pure `useContext` consumer with no
-  state of its own.
+  state of its own. The OIDC callback completes through the provider's
+  `completeLogin(callbackUrl)` action, which commits the returned tenant
+  context before navigating into a protected route.
 - `SessionEventBus` (`application/ports/SessionEventBus.ts`), a framework-
   agnostic pub/sub port. `AuthenticatedHttpClient` publishes to it (no
   React import needed) on a 401 or a missing token; `AuthProvider`
@@ -29,7 +31,10 @@ Replace the per-call-site `useAuth()` (each call independently ran its own
   after the app has already switched tenants). `mutate` accepts an optional
   `expectedGeneration` (captured via `captureGeneration()` before starting
   an async write) and no-ops if it's stale, so an optimistic insert from an
-  abandoned tenant/session can't land in the current one either.
+  abandoned tenant/session can't land in the current one either. A mutate
+  without `expectedGeneration` is authoritative: it starts a new generation
+  so an older in-flight read cannot overwrite a login, logout, or session
+  invalidation.
 
 ## Rationale
 

@@ -10,6 +10,7 @@ export type AuthStatus = AuthSessionState['status']
 
 export interface AuthActions {
   login: () => Promise<void>
+  completeLogin: (callbackUrl: string) => Promise<void>
   logout: () => Promise<void>
 }
 

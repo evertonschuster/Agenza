@@ -6,7 +6,11 @@ import { AuthContext, type AuthContextValue } from '@/features/auth/presentation
 import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
 import { User } from '@/features/auth/domain/entities/User'
 
-const noopActions = { login: () => Promise.resolve(), logout: () => Promise.resolve() }
+const noopActions = {
+  login: () => Promise.resolve(),
+  completeLogin: () => Promise.resolve(),
+  logout: () => Promise.resolve(),
+}
 
 function buildWrapper(value: AuthContextValue): (props: { children: ReactNode }) => JSX.Element {
   return function Wrapper({ children }: { children: ReactNode }): JSX.Element {

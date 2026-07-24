@@ -24,7 +24,7 @@ interface RequestEra {
 
 type UseAsyncResult<T> = AsyncState<T> & {
   execute: () => Promise<T | undefined>
-  /** Local, synchronous update to `data`; pass captureGeneration()'s value as expectedGeneration to no-op if a newer request/resetKey has since superseded it. */
+  /** Local, synchronous update to `data`; without expectedGeneration it supersedes in-flight requests, while a captured generation only applies if still current. */
   mutate: (updater: (current: T | null) => T | null, expectedGeneration?: number) => void
   captureGeneration: () => number
 }
@@ -122,6 +122,9 @@ export function useAsync<T>(
     (updater: (current: T | null) => T | null, expectedGeneration?: number) => {
       if (expectedGeneration !== undefined && expectedGeneration !== eraRef.current.generation) {
         return
+      }
+      if (expectedGeneration === undefined) {
+        eraRef.current.generation += 1
       }
       setState(current => {
         const nextData = updater(current.data)
