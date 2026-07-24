@@ -20,10 +20,13 @@ public class LoginModel : PageModel
     [BindProperty]
     public string Password { get; set; } = string.Empty;
 
+    public string? ReturnUrl { get; private set; }
+
     public string? ErrorMessage { get; private set; }
 
     public void OnGet(string? returnUrl = null)
     {
+        ReturnUrl = returnUrl;
     }
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
@@ -36,7 +39,8 @@ public class LoginModel : PageModel
 
         if (!result.Succeeded)
         {
-            ErrorMessage = "Invalid email or password.";
+            ReturnUrl = returnUrl;
+            ErrorMessage = "E-mail ou senha incorretos. Confira os dados e tente novamente.";
             return Page();
         }
 
