@@ -14,11 +14,15 @@ function buildContainer(loginFn = vi.fn(() => Promise.resolve())): AppContainer 
   return createFakeAppContainer({ auth: { initiateLogin: { execute: loginFn } } })
 }
 
-function renderLoginPage(container: AppContainer): HTMLElement {
+function renderLoginPage(container: AppContainer, returnTo?: string): HTMLElement {
   return render(
     <AppContainerContext.Provider value={container}>
       <AuthProvider>
-        <MemoryRouter>
+        <MemoryRouter
+          initialEntries={
+            returnTo === undefined ? ['/login'] : [{ pathname: '/login', state: { returnTo } }]
+          }
+        >
           <LoginPage />
         </MemoryRouter>
       </AuthProvider>
@@ -43,6 +47,15 @@ describe('LoginPage', () => {
     await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
 
     expect(loginSpy).toHaveBeenCalledTimes(1)
+  })
+
+  it('carries the protected page through the external login redirect', async () => {
+    const loginSpy = vi.fn(() => Promise.resolve())
+    renderLoginPage(buildContainer(loginSpy), '/services?search=massagem#editor')
+
+    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
+
+    expect(loginSpy).toHaveBeenCalledExactlyOnceWith('/services?search=massagem#editor')
   })
 
   it('disables the button while the login redirect is in progress', async () => {

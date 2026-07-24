@@ -3,13 +3,13 @@ import { InitiateLogin } from '@/features/auth/application/use-cases/InitiateLog
 import { createFakeAuthRepository } from '@/features/auth/application/test-helpers/createFakeAuthRepository'
 
 describe('InitiateLogin', () => {
-  it('delegates to the auth repository to begin the redirect-based login flow', async () => {
+  it('delegates with the page that should be restored after login', async () => {
     const initiateLoginSpy = vi.fn(() => Promise.resolve())
     const authRepository = createFakeAuthRepository({ initiateLogin: initiateLoginSpy })
 
     const initiateLogin = new InitiateLogin(authRepository)
-    await initiateLogin.execute()
+    await initiateLogin.execute('/services?search=massagem#editor')
 
-    expect(initiateLoginSpy).toHaveBeenCalledTimes(1)
+    expect(initiateLoginSpy).toHaveBeenCalledExactlyOnceWith('/services?search=massagem#editor')
   })
 })

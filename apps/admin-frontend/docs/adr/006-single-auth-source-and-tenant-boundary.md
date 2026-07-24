@@ -11,7 +11,12 @@ Replace the per-call-site `useAuth()` (each call independently ran its own
   session state. `useAuth()` is now a pure `useContext` consumer with no
   state of its own. The OIDC callback completes through the provider's
   `completeLogin(callbackUrl)` action, which commits the returned tenant
-  context before navigating into a protected route.
+  context before navigating into a protected route. `ProtectedRoute`
+  carries the interrupted internal path (pathname, query, and hash) to the
+  login page, and the OIDC redirect carries it through provider-managed
+  application state. The callback validates that state as an internal,
+  non-auth-entry path before restoring it; missing or unsafe state falls
+  back to `/dashboard`.
 - `SessionEventBus` (`application/ports/SessionEventBus.ts`), a framework-
   agnostic pub/sub port. `AuthenticatedHttpClient` publishes to it (no
   React import needed) on a 401 or a missing token; `AuthProvider`
@@ -79,6 +84,15 @@ of duplicated per hook call.
 - `TenantBoundary` only wraps the routed content inside `AdminLayout`, not
   the layout shell itself — the sidebar/nav don't need to remount on a
   tenant switch, only the tenant-scoped pages underneath.
+- After an expired or invalidated session, successful interactive login
+  returns to the exact interrupted path, including query and fragment.
+  The destination stores no tenant data and is navigated only after the
+  new authenticated tenant context has been committed. `TenantBoundary`
+  then remounts the page subtree for the new `${user.id}:${tenant.id}` key,
+  so state from the previous session cannot be reused.
+- Absolute URLs, scheme-relative URLs, malformed destinations, `/login`,
+  and `/callback` are rejected as return destinations to prevent open
+  redirects and authentication loops; `/dashboard` is the safe fallback.
 - This ADR does not yet address the composition-root/`AppContainer`
   reshaping (raw repositories/`httpClient` still exposed to presentation)
   — that's a separate, later decision.

@@ -1,4 +1,5 @@
 import { useState, type JSX } from 'react'
+import { useLocation } from 'react-router'
 import { useAuth } from '@/features/auth/presentation/useAuth'
 import { CenteredScreen } from '@/shared/presentation/components/CenteredScreen'
 import { Card, CardContent } from '@/components/ui/card'
@@ -7,14 +8,17 @@ import { Spinner } from '@/components/ui/spinner'
 
 export function LoginPage(): JSX.Element {
   const { login } = useAuth()
+  const location = useLocation()
   const [isRedirecting, setIsRedirecting] = useState(false)
   const [hasError, setHasError] = useState(false)
+
+  const returnTo = readReturnTo(location.state)
 
   async function handleSignIn(): Promise<void> {
     setHasError(false)
     setIsRedirecting(true)
     try {
-      await login()
+      await login(returnTo)
       setIsRedirecting(false)
     } catch {
       setHasError(true)
@@ -67,4 +71,17 @@ export function LoginPage(): JSX.Element {
       </div>
     </CenteredScreen>
   )
+}
+
+function readReturnTo(state: unknown): string | undefined {
+  if (
+    typeof state === 'object' &&
+    state !== null &&
+    'returnTo' in state &&
+    typeof state.returnTo === 'string'
+  ) {
+    return state.returnTo
+  }
+
+  return undefined
 }

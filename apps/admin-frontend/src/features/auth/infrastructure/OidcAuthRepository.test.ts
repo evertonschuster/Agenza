@@ -47,9 +47,11 @@ describe('OidcAuthRepository', () => {
       const userManager = createFakeUserManager()
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      await repository.initiateLogin()
+      await repository.initiateLogin('/services?search=massagem#editor')
 
-      expect(userManager.signinRedirect).toHaveBeenCalledTimes(1)
+      expect(userManager.signinRedirect).toHaveBeenCalledExactlyOnceWith({
+        state: '/services?search=massagem#editor',
+      })
     })
   })
 
@@ -58,12 +60,28 @@ describe('OidcAuthRepository', () => {
       const userManager = createFakeUserManager()
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      const session = await repository.handleCallback('https://admin.example.com/callback?code=abc')
+      const result = await repository.handleCallback('https://admin.example.com/callback?code=abc')
 
       expect(userManager.signinRedirectCallback).toHaveBeenCalledWith(
         'https://admin.example.com/callback?code=abc',
       )
-      expect(session.user.tenant.id).toBe('tenant-123')
+      expect(result.session.user.tenant.id).toBe('tenant-123')
+      expect(result.returnTo).toBeNull()
+    })
+
+    it('returns the string application state that was carried through the provider', async () => {
+      const userManager = createFakeUserManager({
+        signinRedirectCallback: vi.fn(() =>
+          Promise.resolve(createFakeOidcUser({ state: '/services?search=massagem#editor' })),
+        ),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const result = await repository.handleCallback(
+        'https://admin.example.com/callback?code=abc&state=oidc-state',
+      )
+
+      expect(result.returnTo).toBe('/services?search=massagem#editor')
     })
 
     it('propagates MissingTenantClaimError when the token has no tenant_id', async () => {
@@ -126,6 +144,42 @@ describe('OidcAuthRepository', () => {
       expect(userManager.signinSilent).toHaveBeenCalledTimes(1)
       expect(session).not.toBeNull()
       expect(session?.isExpiredAt(new Date())).toBe(false)
+    })
+
+    it('renews before expiry so a request never starts with a token about to expire', async () => {
+      const expiringUser = createFakeOidcUser({
+        expires_at: Math.floor(Date.now() / 1000) + 30,
+      })
+      const renewedUser = createFakeOidcUser({ expires_at: 9_999_999_999 })
+      const userManager = createFakeUserManager({
+        getUser: vi.fn(() => Promise.resolve(expiringUser)),
+        signinSilent: vi.fn(() => Promise.resolve(renewedUser)),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const session = await repository.getCurrentSession()
+
+      expect(userManager.signinSilent).toHaveBeenCalledTimes(1)
+      expect(session?.isExpiredAt(new Date())).toBe(false)
+    })
+
+    it('shares one silent renewal across concurrent session reads', async () => {
+      const expiredUser = createFakeOidcUser({ expires_at: 1 })
+      const renewedUser = createFakeOidcUser({ expires_at: 9_999_999_999 })
+      const userManager = createFakeUserManager({
+        getUser: vi.fn(() => Promise.resolve(expiredUser)),
+        signinSilent: vi.fn(() => Promise.resolve(renewedUser)),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const [first, second] = await Promise.all([
+        repository.getCurrentSession(),
+        repository.getCurrentSession(),
+      ])
+
+      expect(userManager.signinSilent).toHaveBeenCalledTimes(1)
+      expect(first?.accessToken).toBe('access-token-value')
+      expect(second?.accessToken).toBe('access-token-value')
     })
 
     it('clears the session and returns null when silent renewal fails', async () => {
