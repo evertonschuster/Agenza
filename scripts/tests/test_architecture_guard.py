@@ -625,7 +625,7 @@ class ArchitectureGuardTests(unittest.TestCase):
             "backend/AppHost/AppHost.cs",
             "\n".join(
                 [
-                    'builder.AddParameter("development-password")',
+                    'builder.AddParameter("development-password", secret: true);',
                     'builder.AddPostgres("postgres")',
                     "    .WithHostPort(5432)",
                     '    .WithEnvironment("POSTGRES_DB", "appdb")',
@@ -673,6 +673,22 @@ class ArchitectureGuardTests(unittest.TestCase):
         self.assertTrue(
             any(
                 finding.category == "duplicated-aspire-development-secret"
+                for finding in findings
+            )
+        )
+
+    def test_unprotected_aspire_development_secret_is_blocking(self) -> None:
+        self._write(
+            "backend/AppHost/AppHost.cs",
+            'builder.AddParameter("development-password");\n',
+        )
+
+        findings = ag.check_aspire_local_orchestration()
+
+        self.assertTrue(
+            any(
+                finding.category == "incomplete-aspire-orchestration"
+                and "secret: true" in finding.message
                 for finding in findings
             )
         )
@@ -888,7 +904,7 @@ class ArchitectureGuardTests(unittest.TestCase):
             "backend/AppHost/AppHost.cs",
             "\n".join(
                 [
-                    'builder.AddParameter("development-password")',
+                    'builder.AddParameter("development-password", secret: true);',
                     'builder.AddPostgres("postgres")',
                     "    .WithHostPort(5432)",
                     '    .WithEnvironment("POSTGRES_DB", "appdb")',

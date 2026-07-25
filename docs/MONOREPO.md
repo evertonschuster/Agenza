@@ -53,6 +53,15 @@ The full stack has one local orchestration path:
   dotnet user-secrets set "Parameters:development-password" "<value>" --project backend/AppHost
   ```
 
+  Existing volumes retain the role passwords created during their first
+  initialization. After adopting or changing this shared password, stop
+  AppHost and recreate the local demo database once:
+
+  ```bash
+  docker volume rm agenza-postgres-data
+  dotnet run --project backend/AppHost --launch-profile http
+  ```
+
   The database users remain distinct: `identity_app` and `services_app` keep
   separate schema permissions even though their local-development passwords
   are equal.

@@ -396,9 +396,14 @@ def check_aspire_local_orchestration() -> list[Finding]:
                 )
             )
 
-    if not re.search(
-        r'AddParameter\s*\(\s*"development-password"',
+    development_parameter = re.search(
+        r'AddParameter\s*\(\s*"development-password"(?P<arguments>.*?)\);',
         apphost_text,
+        re.DOTALL,
+    )
+    if development_parameter is None or not re.search(
+        r"\bsecret\s*:\s*true\b",
+        development_parameter.group("arguments"),
     ):
         findings.append(
             Finding(
@@ -406,7 +411,8 @@ def check_aspire_local_orchestration() -> list[Finding]:
                 "blocking",
                 _rel(apphost),
                 1,
-                "Missing the shared 'development-password' Aspire parameter.",
+                "The shared 'development-password' Aspire parameter is missing "
+                "or is not marked 'secret: true'.",
             )
         )
 
