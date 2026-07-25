@@ -564,14 +564,6 @@ html[data-theme="dark"] .theme-toggle__sun {
     stroke-width: 1.5;
 }
 
-.login-panel__footer {
-    max-width: 27rem;
-    margin: 1.5rem 0 0;
-    color: var(--text-muted);
-    font-size: 0.72rem;
-    line-height: 1.5;
-    text-align: center;
-}
 
 @keyframes spin {
     to {
@@ -629,10 +621,6 @@ html[data-theme="dark"] .theme-toggle__sun {
 
     .mobile-brand {
         margin-bottom: 2.25rem;
-    }
-
-    .login-panel__footer {
-        padding-inline: 1rem;
     }
 }
 
