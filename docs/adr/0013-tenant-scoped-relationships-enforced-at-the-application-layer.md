@@ -1,6 +1,6 @@
 # ADR 0013 — Tenant-scoped relationships stay enforced at the application layer, not by composite FKs
 
-Status: accepted (2026-07)
+Status: superseded by ADR 0024 (2026-07); retained as the historical decision
 
 ## Context
 

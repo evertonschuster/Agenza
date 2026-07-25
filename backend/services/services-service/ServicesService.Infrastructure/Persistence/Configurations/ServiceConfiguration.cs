@@ -10,6 +10,7 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
     {
         builder.ToTable("Services");
         builder.HasKey(s => s.Id);
+        builder.HasAlternateKey(s => new { s.TenantId, s.Id });
 
         builder.Property(s => s.TenantId).IsRequired();
         builder.Property(s => s.Code).IsRequired();
@@ -21,7 +22,11 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.Price).IsRequired().HasPrecision(10, 2);
         builder.Property(s => s.MaxDiscountPercentage).IsRequired().HasPrecision(5, 2);
         builder.Property(s => s.CategoryId);
-        builder.HasOne<Category>().WithMany().HasForeignKey(s => s.CategoryId).OnDelete(DeleteBehavior.SetNull);
+        builder.HasOne<Category>()
+            .WithMany()
+            .HasForeignKey(s => new { s.TenantId, s.CategoryId })
+            .HasPrincipalKey(c => new { c.TenantId, c.Id })
+            .OnDelete(DeleteBehavior.Restrict);
 
         // Case-insensitive uniqueness enforced by the database itself (docs/adr/0012),
         // not just the application-level NameExistsAsync pre-check: a generated,
@@ -40,7 +45,24 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
 
         builder.HasMany(s => s.Tags)
             .WithMany()
-            .UsingEntity(join => join.ToTable("ServiceTags", "services"));
+            .UsingEntity<Dictionary<string, object>>(
+                "ServiceTags",
+                tag => tag.HasOne<Tag>()
+                    .WithMany()
+                    .HasForeignKey("TenantId", "TagsId")
+                    .HasPrincipalKey(nameof(Tag.TenantId), nameof(Tag.Id))
+                    .OnDelete(DeleteBehavior.Cascade),
+                service => service.HasOne<Service>()
+                    .WithMany()
+                    .HasForeignKey("TenantId", "ServiceId")
+                    .HasPrincipalKey(nameof(Service.TenantId), nameof(Service.Id))
+                    .OnDelete(DeleteBehavior.Cascade),
+                join =>
+                {
+                    join.ToTable("ServiceTags", "services");
+                    join.Property<Guid>("TenantId").IsRequired();
+                    join.HasKey("TenantId", "ServiceId", "TagsId");
+                });
 
         builder.Metadata.FindSkipNavigation(nameof(Service.Tags))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);

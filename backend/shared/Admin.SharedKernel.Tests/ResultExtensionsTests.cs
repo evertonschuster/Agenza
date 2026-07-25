@@ -45,7 +45,7 @@ public class ResultExtensionsTests
 
         var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(StatusCodes.Status404NotFound);
-        objectResult.Value.Should().BeOfType<ProblemDetails>()
+        objectResult.Value.Should().BeOfType<ApiProblemDetails>()
             .Which.Title.Should().Be("not found");
     }
 
@@ -82,7 +82,7 @@ public class ResultExtensionsTests
 
         var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        objectResult.Value.Should().BeOfType<ProblemDetails>().Which.Title.Should().Be("bad input");
+        objectResult.Value.Should().BeOfType<ApiProblemDetails>().Which.Title.Should().Be("bad input");
     }
 
     [Fact]
@@ -99,9 +99,9 @@ public class ResultExtensionsTests
 
         var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        var problemDetails = objectResult.Value.Should().BeOfType<ProblemDetails>().Subject;
+        var problemDetails = objectResult.Value.Should().BeOfType<ApiProblemDetails>().Subject;
         problemDetails.Title.Should().Be("Ocorreram erros de validação.");
-        problemDetails.Extensions["code"].Should().Be("Validation.Failed");
-        problemDetails.Extensions["errors"].Should().BeSameAs(fieldErrors);
+        problemDetails.Code.Should().Be("Validation.Failed");
+        problemDetails.Errors.Should().BeSameAs(fieldErrors);
     }
 }

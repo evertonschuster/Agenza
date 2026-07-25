@@ -1,15 +1,20 @@
-FROM python:3.14-slim
+FROM python:3.12-slim
 
 WORKDIR /app
 
-COPY requirements.txt ./
-RUN pip install --no-cache-dir -r requirements.txt
+RUN pip install --no-cache-dir uv==0.11.15
 
-COPY . .
+COPY pyproject.toml uv.lock README.md ./
+RUN uv sync --frozen --no-dev --no-install-project
+
+COPY app ./app
+RUN uv sync --frozen --no-dev --no-editable
 
 RUN useradd --create-home --shell /bin/bash appuser \
     && chown -R appuser:appuser /app
 USER appuser
+
+ENV PATH="/app/.venv/bin:${PATH}"
 
 EXPOSE 8001
 

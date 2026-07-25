@@ -33,7 +33,8 @@ services:
       # separate database. Once EF Core is wired up here, ServicesDataContext
       # should call modelBuilder.HasDefaultSchema("services") so its tables
       # land under that schema (see IdentityDataContext for the pattern).
-      - ConnectionStrings__Default=Host=postgres;Database=appdb;Username=postgres;Password=postgres
+      - ConnectionStrings__Default=Host=postgres;Database=appdb;Username=services_app;Password=dev-services-db-change-me
+      - DatabaseBootstrap__RunOnStartup=true
       - ASPNETCORE_ENVIRONMENT=Development
       - Identity__Authority=http://identity-service:8080
       - Identity__RequireHttpsMetadata=false
@@ -69,7 +70,8 @@ services:
       # Shared Postgres instance - identity-service's tables live under the
       # "identity" schema (IdentityDataContext.OnModelCreating), not a
       # separate database.
-      - ConnectionStrings__Default=Host=postgres;Database=appdb;Username=postgres;Password=postgres
+      - ConnectionStrings__Default=Host=postgres;Database=appdb;Username=identity_app;Password=dev-identity-db-change-me
+      - DatabaseBootstrap__RunOnStartup=true
       - ASPNETCORE_ENVIRONMENT=Development
     depends_on:
       postgres:
@@ -86,6 +88,10 @@ services:
       - POSTGRES_DB=appdb
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - IDENTITY_DB_PASSWORD=dev-identity-db-change-me
+      - SERVICES_DB_PASSWORD=dev-services-db-change-me
+    volumes:
+      - ./postgres/init:/docker-entrypoint-initdb.d:ro
     ports:
       - "5432:5432"
     healthcheck:

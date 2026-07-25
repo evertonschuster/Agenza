@@ -30,12 +30,14 @@ public class CreateTagCommandHandlerTests
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Name.Should().Be("VIP");
-        result.Value.Color.Should().Be("#0d9488");
-        result.Value.Description.Should().Be("High-value client");
+        var createdTag = result.Value!;
+        createdTag.Name.Should().Be("VIP");
+        createdTag.Color.Should().Be("#0d9488");
+        createdTag.Description.Should().Be("High-value client");
         // TenantId stays Guid.Empty here - AuditableEntitySaveChangesInterceptor
         // assigns it on save, which this handler-level test never runs.
-        _repository.Received(1).Add(Arg.Is<Tag>(tag => tag.Id == result.Value.Id));
+        _repository.Received(1).Add(
+            Arg.Is<Tag>(tag => tag != null && tag.Id == createdTag.Id));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

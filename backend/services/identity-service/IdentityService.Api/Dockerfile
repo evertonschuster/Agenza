@@ -4,7 +4,15 @@ EXPOSE 8080
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
+COPY ["NuGet.Config", "."]
+COPY ["Directory.Build.props", "."]
+COPY ["Directory.Build.targets", "."]
 COPY ["Directory.Packages.props", "."]
+COPY ["ServiceDefaults/ServiceDefaults.csproj", "ServiceDefaults/"]
+COPY ["shared/Admin.Identity.Client/Admin.Identity.Client.csproj", "shared/Admin.Identity.Client/"]
+COPY ["shared/Admin.SharedKernel/Admin.SharedKernel.csproj", "shared/Admin.SharedKernel/"]
+COPY ["shared/Admin.SharedKernel.AspNetCore/Admin.SharedKernel.AspNetCore.csproj", "shared/Admin.SharedKernel.AspNetCore/"]
+COPY ["shared/Admin.SharedKernel.EntityFrameworkCore/Admin.SharedKernel.EntityFrameworkCore.csproj", "shared/Admin.SharedKernel.EntityFrameworkCore/"]
 COPY ["services/identity-service/IdentityService.Api/IdentityService.Api.csproj", "services/identity-service/IdentityService.Api/"]
 COPY ["services/identity-service/IdentityService.Application/IdentityService.Application.csproj", "services/identity-service/IdentityService.Application/"]
 COPY ["services/identity-service/IdentityService.Domain/IdentityService.Domain.csproj", "services/identity-service/IdentityService.Domain/"]
@@ -12,10 +20,10 @@ COPY ["services/identity-service/IdentityService.Infrastructure/IdentityService.
 RUN dotnet restore "services/identity-service/IdentityService.Api/IdentityService.Api.csproj"
 COPY . .
 WORKDIR "/src/services/identity-service/IdentityService.Api"
-RUN dotnet build "IdentityService.Api.csproj" -c Release -o /app/build
+RUN dotnet build "IdentityService.Api.csproj" -c Release -o /app/build --no-restore
 
 FROM build AS publish
-RUN dotnet publish "IdentityService.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false
+RUN dotnet publish "IdentityService.Api.csproj" -c Release -o /app/publish /p:UseAppHost=false --no-restore
 
 FROM base AS final
 WORKDIR /app

@@ -39,8 +39,18 @@ Postgres) together locally:
   identity-service's `Identity:PublicIssuer` and CORS origin are fixed to
   those values. Requires Docker running (Postgres) and Node/Python deps
   already installed (`npm install` at root, the assistant-service `.venv`).
-  Set the one local secret once: `dotnet user-secrets set
-  "Parameters:assistant-worker-secret" "<value>" --project backend/AppHost`.
+  Set the four local secrets once:
+
+  ```bash
+  dotnet user-secrets set "Parameters:identity-db-password" "<value>" --project backend/AppHost
+  dotnet user-secrets set "Parameters:services-db-password" "<value>" --project backend/AppHost
+  dotnet user-secrets set "Parameters:assistant-worker-secret" "<value>" --project backend/AppHost
+  dotnet user-secrets set "Parameters:tenant-provisioning-secret" "<value>" --project backend/AppHost
+  ```
+
+  AppHost passes the same worker secret to the identity provider and the
+  assistant, so client-credentials authentication cannot drift between them.
+
 - **`docker-compose -f infra/docker-compose.yml up`** — fully containerized,
   no .NET/Node/Python toolchain required on the host. Still the option to
   reach for if you don't have the SDKs installed, or want production-like
@@ -80,33 +90,25 @@ workspace gains a lint-staged config.
 
 - `apps/admin-frontend/graphify-out/` is stale (generated before the restructure) —
   regenerate rather than trust it.
-- `ServicesService.Api`/`IdentityService.Api` each run EF Core migrations from
-  an `IHostedService` (`DatabaseMigrator`/`DatabaseSeeder`) on startup, guarded
-  by a `Migrations:RunOnStartup` config flag (defaults to `true`). This is fine
-  for local dev (`dotnet run`/Aspire) and for the current single-container
-  `docker-compose` setup — there's no evidence yet of a multi-replica
-  production deployment (no k8s manifests, no CD pipeline in this repo as of
-  2026-07). If/when one is introduced, set `Migrations:RunOnStartup=false` for
-  that environment and run migrations as a dedicated job/step in the
-  deployment pipeline instead — N replicas starting concurrently with the flag
-  left on would race to apply the same migration. Prefer that dedicated step
-  over adding ad hoc locking here, since the right mechanism depends on the
-  orchestrator chosen.
+- Database bootstrap is opt-in through
+  `DatabaseBootstrap:RunOnStartup` (base configuration is `false`;
+  Development and the demo Compose stack explicitly enable it). When
+  enabled, each service holds a PostgreSQL advisory lock across its
+  migration/seed window. A future multi-replica deployment should still
+  run the same chain as a one-shot bootstrap before starting replicas;
+  the repository intentionally has no production deployment design yet
+  (docs/adr/0025).
 - If you already ran `docker compose up` or `dotnet run --project
-  backend/AppHost` before docs/adr/0017 landed, your local Postgres
+backend/AppHost` before docs/adr/0017 landed, your local Postgres
   volume has migration history recorded in `public.__EFMigrationsHistory`
   shared by both services. The next startup will try to re-apply every
   migration against the new schema-scoped history tables and fail loudly
   (`relation already exists`) until you follow the one-time runbook in
   docs/adr/0017 (drop the local dev volume, or manually split the table).
-- Both services connect as the same Postgres superuser (`ConnectionStrings__Default`,
-  `postgres`/`postgres` in both `infra/docker-compose.yml` and Aspire's
-  `.WithDataVolume()` resource) — schema-per-service (docs/adr/0002) is
-  enforced by convention/review only, not by Postgres grants; nothing
-  technically stops identity-service's connection from querying
-  `services.*` or vice versa. A follow-up worth doing: one least-privilege
-  Postgres role per service, granted only on its own schema. Not applied
-  as part of docs/adr/0017/0018 — it needs real credential/secrets
-  handling for both `docker-compose` and Aspire's Postgres resource, which
-  is its own piece of infra work, not a drive-by change alongside a
-  migrations-history fix.
+- Compose and Aspire initialize separate non-superuser roles:
+  `identity_app` owns only the `identity` schema and `services_app` owns
+  only the `services` schema. Existing local volumes created before
+  docs/adr/0024 must be recreated once so the init script can create the
+  roles and grants. Aspire expects the secret parameters
+  `identity-db-password`, `services-db-password`,
+  `assistant-worker-secret`, and `tenant-provisioning-secret`.

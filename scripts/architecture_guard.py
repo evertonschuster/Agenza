@@ -20,8 +20,10 @@ Exit code: 0 if no BLOCKING finding (or --inventory mode), 1 otherwise.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -31,6 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # reason). Extend this only for a genuine, reviewed exception - never widen
 # a whole directory.
 ALLOWLIST: dict[str, str] = {}
+IGNORE_TENANT_ATTRIBUTE_ALLOWLIST: dict[str, str] = {}
 
 EXCLUDED_DIR_NAMES = {
     "bin",
@@ -219,6 +222,417 @@ def check_dangling_null_forgiving_after_lookup() -> list[Finding]:
         "Null-forgiving '!' directly on a GetByIdAsync(...) result - verify this handler null-checks "
         "the lookup itself rather than assuming a validator already guaranteed existence (docs/adr/0012).",
     )
+
+
+# ---------------------------------------------------------------------------
+# Security and operability fitness functions (docs/adr/0022-0025)
+# ---------------------------------------------------------------------------
+
+def check_ai_tenant_boundaries() -> list[Finding]:
+    """Every non-health FastAPI route must consume the validated
+    TenantContext rather than raw claims or headers."""
+    main_path = REPO_ROOT / "ai-services" / "assistant-service" / "app" / "main.py"
+    if not main_path.is_file():
+        return []
+
+    text = main_path.read_text(encoding="utf-8", errors="replace")
+    route_pattern = re.compile(
+        r'(?m)^@app\.(?:get|post|put|patch|delete)\("([^"]+)"\)'
+    )
+    matches = list(route_pattern.finditer(text))
+    findings: list[Finding] = []
+
+    for index, match in enumerate(matches):
+        route = match.group(1)
+        if route in {"/health", "/ready"}:
+            continue
+
+        block_end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        route_block = text[match.start():block_end]
+        if "Depends(require_tenant_context)" in route_block:
+            continue
+
+        findings.append(
+            Finding(
+                "ai-route-without-tenant-context",
+                "blocking",
+                _rel(main_path),
+                text.count("\n", 0, match.start()) + 1,
+                f"Tenant-owned AI route '{route}' does not depend on require_tenant_context "
+                "(docs/adr/0022).",
+            )
+        )
+
+    return findings
+
+
+def check_ai_dependency_parity() -> list[Finding]:
+    """Local development, CI, and the image share Python 3.12 + uv.lock."""
+    service_dir = REPO_ROOT / "ai-services" / "assistant-service"
+    if not service_dir.is_dir():
+        return []
+
+    findings: list[Finding] = []
+    lock_path = service_dir / "uv.lock"
+    requirements_path = service_dir / "requirements.txt"
+    dockerfile = service_dir / "Dockerfile"
+    workflow = REPO_ROOT / ".github" / "workflows" / "ai-services-ci.yml"
+
+    if not lock_path.is_file():
+        findings.append(
+            Finding(
+                "ai-dependency-drift",
+                "blocking",
+                _rel(lock_path),
+                1,
+                "AI service has no uv.lock shared by local development, CI, and Docker.",
+            )
+        )
+    if requirements_path.exists():
+        findings.append(
+            Finding(
+                "ai-dependency-drift",
+                "blocking",
+                _rel(requirements_path),
+                1,
+                "Hand-maintained requirements.txt duplicates pyproject.toml/uv.lock.",
+            )
+        )
+
+    expected_fragments = {
+        dockerfile: ["FROM python:3.12", "uv sync --frozen"],
+        workflow: [
+            'python-version: "3.12"',
+            "uv sync --frozen",
+            "docker build",
+            "docker run",
+            "/health",
+        ],
+    }
+    for path, fragments in expected_fragments.items():
+        text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+        for fragment in fragments:
+            if fragment not in text:
+                findings.append(
+                    Finding(
+                        "ai-runtime-parity",
+                        "blocking",
+                        _rel(path),
+                        1,
+                        f"Missing '{fragment}' required for AI runtime/CI parity.",
+                    )
+                )
+
+    return findings
+
+
+def check_backend_container_parity() -> list[Finding]:
+    """Backend image contexts and CI must exercise both runtime artifacts."""
+    dockerfiles = [
+        REPO_ROOT
+        / "backend/services/identity-service/IdentityService.Api/Dockerfile",
+        REPO_ROOT
+        / "backend/services/services-service/ServicesService.Api/Dockerfile",
+    ]
+    if not any(path.is_file() for path in dockerfiles):
+        return []
+
+    findings: list[Finding] = []
+    ignore_path = REPO_ROOT / "backend" / ".dockerignore"
+    if not ignore_path.is_file():
+        findings.append(
+            Finding(
+                "backend-container-context-drift",
+                "blocking",
+                _rel(ignore_path),
+                1,
+                "Backend Docker context has no .dockerignore.",
+            )
+        )
+
+    for dockerfile in dockerfiles:
+        text = (
+            dockerfile.read_text(encoding="utf-8", errors="replace")
+            if dockerfile.is_file()
+            else ""
+        )
+        for fragment in ['COPY ["NuGet.Config", "."]', "--no-restore"]:
+            if fragment not in text:
+                findings.append(
+                    Finding(
+                        "backend-container-restore-drift",
+                        "blocking",
+                        _rel(dockerfile),
+                        1,
+                        f"Missing '{fragment}' required for reproducible image restore/build.",
+                    )
+                )
+
+    workflow = REPO_ROOT / ".github" / "workflows" / "backend-ci.yml"
+    workflow_text = (
+        workflow.read_text(encoding="utf-8", errors="replace")
+        if workflow.is_file()
+        else ""
+    )
+    if "build identity-service services-service" not in workflow_text:
+        findings.append(
+            Finding(
+                "backend-images-not-built-in-ci",
+                "blocking",
+                _rel(workflow),
+                1,
+                "Backend CI does not build both runtime service images.",
+            )
+        )
+
+    return findings
+
+
+def check_dotnet_project_reference_boundaries() -> list[Finding]:
+    """Enforce the accepted service-layer graph using resolved project paths."""
+    services_root = REPO_ROOT / "backend" / "services"
+    if not services_root.is_dir():
+        return []
+
+    findings: list[Finding] = []
+    shared_root = REPO_ROOT / "backend" / "shared"
+    service_defaults = REPO_ROOT / "backend" / "ServiceDefaults" / "ServiceDefaults.csproj"
+
+    for project in _iter_files(services_root, (".csproj",)):
+        project_name = project.parent.name
+        if project_name.endswith(("Tests", "RuntimeTests", "PersistenceTests")):
+            continue
+
+        layer = next(
+            (
+                suffix
+                for suffix in (".Domain", ".Application", ".Infrastructure", ".Api")
+                if project_name.endswith(suffix)
+            ),
+            None,
+        )
+        if layer is None:
+            continue
+
+        try:
+            root = ET.parse(project).getroot()
+        except ET.ParseError:
+            continue
+
+        source_service = project.relative_to(services_root).parts[0]
+        own_service_root = services_root / source_service
+        allowed_by_layer = {
+            ".Application": {
+                own_service_root / project_name.replace(".Application", ".Domain")
+                / project_name.replace(".Application", ".Domain.csproj"),
+                shared_root / "Admin.SharedKernel" / "Admin.SharedKernel.csproj",
+            },
+            ".Infrastructure": {
+                own_service_root / project_name.replace(".Infrastructure", ".Application")
+                / project_name.replace(".Infrastructure", ".Application.csproj"),
+                shared_root / "Admin.Identity.Client" / "Admin.Identity.Client.csproj",
+                shared_root
+                / "Admin.SharedKernel.EntityFrameworkCore"
+                / "Admin.SharedKernel.EntityFrameworkCore.csproj",
+            },
+            ".Api": {
+                own_service_root / project_name.replace(".Api", ".Application")
+                / project_name.replace(".Api", ".Application.csproj"),
+                own_service_root / project_name.replace(".Api", ".Infrastructure")
+                / project_name.replace(".Api", ".Infrastructure.csproj"),
+                shared_root / "Admin.Identity.Client" / "Admin.Identity.Client.csproj",
+                shared_root
+                / "Admin.SharedKernel.AspNetCore"
+                / "Admin.SharedKernel.AspNetCore.csproj",
+                service_defaults,
+            },
+        }
+        allowed = {path.resolve() for path in allowed_by_layer.get(layer, set())}
+
+        for reference in root.findall(".//ProjectReference"):
+            include = reference.get("Include")
+            if not include:
+                continue
+            target = (project.parent / include.replace("\\", "/")).resolve()
+            if layer == ".Domain" or target not in allowed:
+                findings.append(
+                    Finding(
+                        "dotnet-project-reference-boundary",
+                        "blocking",
+                        _rel(project),
+                        1,
+                        f"{project_name} cannot reference {_rel(target)}; "
+                        f"the accepted layer graph is documented in backend/AGENTS.md.",
+                    )
+                )
+
+    return findings
+
+
+def check_ignore_tenant_attribute_allowlist() -> list[Finding]:
+    """A tenant opt-out is security-sensitive and requires an explicit file allowlist."""
+    findings: list[Finding] = []
+    for path in _iter_files(REPO_ROOT / "backend" / "services", (".cs",)):
+        relative = _rel(path)
+        if relative in IGNORE_TENANT_ATTRIBUTE_ALLOWLIST:
+            continue
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8-sig", errors="replace").splitlines(),
+            start=1,
+        ):
+            if re.match(r"^\s*\[IgnoreTenant(?:Attribute)?(?:\(|\])", line):
+                findings.append(
+                    Finding(
+                        "unreviewed-ignore-tenant",
+                        "blocking",
+                        relative,
+                        line_number,
+                        "[IgnoreTenant] bypasses the default tenant boundary and is not "
+                        "in IGNORE_TENANT_ATTRIBUTE_ALLOWLIST.",
+                    )
+                )
+    return findings
+
+
+def check_database_bootstrap_defaults() -> list[Finding]:
+    """Base configuration must never silently migrate/seed on process start."""
+    paths = [
+        REPO_ROOT
+        / "backend/services/identity-service/IdentityService.Api/appsettings.json",
+        REPO_ROOT
+        / "backend/services/services-service/ServicesService.Api/appsettings.json",
+    ]
+    findings: list[Finding] = []
+
+    for path in paths:
+        if not path.parent.is_dir():
+            continue
+        try:
+            settings = json.loads(path.read_text(encoding="utf-8"))
+            enabled = settings["DatabaseBootstrap"]["RunOnStartup"]
+        except (FileNotFoundError, KeyError, json.JSONDecodeError, TypeError):
+            enabled = None
+
+        if enabled is not False:
+            findings.append(
+                Finding(
+                    "unsafe-database-bootstrap-default",
+                    "blocking",
+                    _rel(path),
+                    1,
+                    "Base configuration must set DatabaseBootstrap:RunOnStartup to false "
+                    "(docs/adr/0025).",
+                )
+            )
+
+    return findings
+
+
+def check_database_boundary_configuration() -> list[Finding]:
+    """The current tenant relationships and service database identities are
+    small enough to enforce with exact, low-noise structural checks."""
+    findings: list[Finding] = []
+    config_path = (
+        REPO_ROOT
+        / "backend/services/services-service/ServicesService.Infrastructure"
+        / "Persistence/Configurations/ServiceConfiguration.cs"
+    )
+    if config_path.is_file():
+        text = config_path.read_text(encoding="utf-8", errors="replace")
+        required = [
+            'HasForeignKey(s => new { s.TenantId, s.CategoryId })',
+            '.HasForeignKey("TenantId", "ServiceId")',
+            '.HasForeignKey("TenantId", "TagsId")',
+            'join.HasKey("TenantId", "ServiceId", "TagsId")',
+        ]
+        for fragment in required:
+            if fragment not in text:
+                findings.append(
+                    Finding(
+                        "tenant-relationship-not-database-enforced",
+                        "blocking",
+                        _rel(config_path),
+                        1,
+                        f"Missing composite tenant relationship fragment '{fragment}' "
+                        "(docs/adr/0024).",
+                    )
+                )
+
+    compose_path = REPO_ROOT / "infra" / "docker-compose.yml"
+    if compose_path.is_file():
+        for line_number, line in enumerate(
+            compose_path.read_text(encoding="utf-8", errors="replace").splitlines(),
+            start=1,
+        ):
+            if "ConnectionStrings__Default=" in line and "Username=postgres" in line:
+                findings.append(
+                    Finding(
+                        "service-uses-database-superuser",
+                        "blocking",
+                        _rel(compose_path),
+                        line_number,
+                        "Application service connects as the PostgreSQL superuser "
+                        "(docs/adr/0024).",
+                    )
+                )
+
+    return findings
+
+
+_KNOWN_DESTRUCTIVE_UP_MIGRATIONS = {
+    (
+        "backend/services/services-service/ServicesService.Infrastructure/"
+        "Persistence/Migrations/"
+        "20260711172110_RenameServiceOfferingToServiceAndExtend.cs"
+    )
+}
+
+
+def check_destructive_migration_safety() -> list[Finding]:
+    """A new destructive Up migration needs an explicit reviewed safety
+    marker. The one historical exception remains visible in a fixed inventory."""
+    migration_files = [
+        path
+        for path in _iter_files(REPO_ROOT / "backend" / "services", (".cs",))
+        if "/Migrations/" in path.as_posix() and not path.name.endswith(".Designer.cs")
+    ]
+    destructive_pattern = re.compile(
+        r"migrationBuilder\.(DropTable|DropColumn)\s*\(|"
+        r"\b(?:DELETE\s+FROM|TRUNCATE\s+TABLE)\b",
+        re.IGNORECASE,
+    )
+    findings: list[Finding] = []
+
+    for path in migration_files:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        up_match = re.search(
+            r"protected\s+override\s+void\s+Up\b(.*?)"
+            r"protected\s+override\s+void\s+Down\b",
+            text,
+            re.DOTALL,
+        )
+        if not up_match:
+            continue
+
+        destructive = destructive_pattern.search(up_match.group(1))
+        if not destructive or _rel(path) in _KNOWN_DESTRUCTIVE_UP_MIGRATIONS:
+            continue
+        if "migration-safety:" in up_match.group(1):
+            continue
+
+        absolute_offset = up_match.start(1) + destructive.start()
+        findings.append(
+            Finding(
+                "destructive-migration-without-safety-plan",
+                "blocking",
+                _rel(path),
+                text.count("\n", 0, absolute_offset) + 1,
+                "Destructive Up migration has no 'migration-safety:' marker documenting "
+                "preflight/backfill/rollback review (docs/adr/0025).",
+            )
+        )
+
+    return findings
 
 
 # ---------------------------------------------------------------------------
@@ -563,6 +977,14 @@ CHECKS = [
     check_validator_repository_dependency,
     check_domain_entity_throws,
     check_dangling_null_forgiving_after_lookup,
+    check_ai_tenant_boundaries,
+    check_ai_dependency_parity,
+    check_backend_container_parity,
+    check_dotnet_project_reference_boundaries,
+    check_ignore_tenant_attribute_allowlist,
+    check_database_bootstrap_defaults,
+    check_database_boundary_configuration,
+    check_destructive_migration_safety,
     check_stale_patterns_in_doc_code_blocks,
     check_dangling_adr_references,
     check_frontend_any,

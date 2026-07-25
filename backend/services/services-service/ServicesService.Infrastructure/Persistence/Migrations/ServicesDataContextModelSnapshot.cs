@@ -18,22 +18,25 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("services")
-                .HasAnnotation("ProductVersion", "10.0.9")
+                .HasAnnotation("ProductVersion", "10.0.10")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
 
-            modelBuilder.Entity("ServiceTag", b =>
+            modelBuilder.Entity("ServiceTags", b =>
                 {
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
                     b.Property<Guid>("ServiceId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid>("TagsId")
                         .HasColumnType("uuid");
 
-                    b.HasKey("ServiceId", "TagsId");
+                    b.HasKey("TenantId", "ServiceId", "TagsId");
 
-                    b.HasIndex("TagsId");
+                    b.HasIndex("TenantId", "TagsId");
 
                     b.ToTable("ServiceTags", "services");
                 });
@@ -154,11 +157,11 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("CategoryId");
-
                     b.HasIndex("DeletedAt");
 
                     b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "CategoryId");
 
                     b.HasIndex("TenantId", "Code")
                         .IsUnique()
@@ -247,29 +250,30 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                     b.ToTable("TenantSequences", "services");
                 });
 
-            modelBuilder.Entity("ServiceTag", b =>
+            modelBuilder.Entity("ServiceTags", b =>
                 {
                     b.HasOne("ServicesService.Domain.Entities.Service", null)
                         .WithMany()
-                        .HasForeignKey("ServiceId")
+                        .HasForeignKey("TenantId", "ServiceId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.HasOne("ServicesService.Domain.Entities.Tag", null)
                         .WithMany()
-                        .HasForeignKey("TagsId")
+                        .HasForeignKey("TenantId", "TagsId")
+                        .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
             modelBuilder.Entity("ServicesService.Domain.Entities.Service", b =>
                 {
-                    b.HasOne("ServicesService.Domain.Entities.Category", "Category")
+                    b.HasOne("ServicesService.Domain.Entities.Category", null)
                         .WithMany()
-                        .HasForeignKey("CategoryId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("Category");
+                        .HasForeignKey("TenantId", "CategoryId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict);
                 });
 #pragma warning restore 612, 618
         }

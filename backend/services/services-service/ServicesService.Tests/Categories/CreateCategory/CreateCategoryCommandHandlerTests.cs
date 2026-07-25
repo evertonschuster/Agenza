@@ -28,8 +28,10 @@ public class CreateCategoryCommandHandlerTests
         var result = await _handler.Handle(new CreateCategoryCommand("Hair"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Name.Should().Be("Hair");
-        _repository.Received(1).Add(Arg.Is<Category>(category => category.Id == result.Value.Id));
+        var createdCategory = result.Value!;
+        createdCategory.Name.Should().Be("Hair");
+        _repository.Received(1).Add(
+            Arg.Is<Category>(category => category != null && category.Id == createdCategory.Id));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

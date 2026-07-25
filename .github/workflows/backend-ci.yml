@@ -38,7 +38,7 @@ jobs:
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(backend/|\.github/workflows/backend-ci\.yml$)'; then
+          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(backend/|\.editorconfig$|\.github/workflows/backend-ci\.yml$)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -49,6 +49,7 @@ jobs:
     needs: changes
     if: needs.changes.outputs.relevant == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     permissions:
       contents: read
     steps:
@@ -58,7 +59,7 @@ jobs:
 
       - uses: actions/setup-dotnet@v6
         with:
-          dotnet-version: '10.0.x'
+          dotnet-version: "10.0.x"
 
       - name: Restore
         run: dotnet restore backend/AdminBackend.slnx
@@ -66,9 +67,12 @@ jobs:
       - name: Build
         run: dotnet build backend/AdminBackend.slnx -c Release --no-restore
 
-      - name: Test
-        # Unit tests only (*.Tests projects) - no database, no Docker
-        # dependency. The 80% line-coverage gate (Domain + Application
-        # scope) is configured in backend/Directory.Build.props - see
-        # docs/QUALITY.md.
+      - name: Build backend runtime images
+        run: docker compose -f infra/docker-compose.yml build identity-service services-service
+
+      - name: Test (unit coverage + narrow PostgreSQL security tier)
+        # The runtime project shares one bounded Testcontainers PostgreSQL
+        # instance and only covers invariants an in-memory provider cannot
+        # prove. The 80% Domain + Application coverage gate still applies
+        # to the ordinary *.Tests projects.
         run: dotnet test backend/AdminBackend.slnx -c Release --no-build --logger trx

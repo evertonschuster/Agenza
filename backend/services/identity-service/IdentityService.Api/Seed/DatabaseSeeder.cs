@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Admin.SharedKernel.EntityFrameworkCore;
 using IdentityService.Application.Tenants.ProvisionTenant;
 using IdentityService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -22,21 +23,22 @@ public class DatabaseSeeder : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if (!_configuration.GetValue<bool>("DatabaseBootstrap:RunOnStartup"))
+        {
+            return;
+        }
+
         using var scope = _serviceProvider.CreateScope();
         var services = scope.ServiceProvider;
 
         var dbContext = services.GetRequiredService<IdentityDataContext>();
 
-        // Defaults to true for local-dev/single-instance convenience. Multiple
-        // replicas starting concurrently would race to apply the same
-        // migration - set Migrations:RunOnStartup=false and run migrations as
-        // a separate deployment step once a real multi-replica topology
-        // exists (see docs/MONOREPO.md's "Known gaps"). Seeding still runs
-        // either way - it assumes the schema is already migrated.
-        if (_configuration.GetValue("Migrations:RunOnStartup", true))
-        {
-            await dbContext.Database.MigrateAsync(cancellationToken);
-        }
+        await using var bootstrapLock = await PostgresAdvisoryLock.AcquireAsync(
+            dbContext,
+            "agenza:identity-service:database-bootstrap",
+            cancellationToken);
+
+        await dbContext.Database.MigrateAsync(cancellationToken);
 
         await SeedScopesAsync(services, cancellationToken);
         await SeedClientsAsync(services, cancellationToken);

@@ -1,3 +1,4 @@
+using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Infrastructure.Persistence;
 
@@ -16,18 +17,19 @@ public class DatabaseMigrator : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
-        // Defaults to true for local-dev/single-instance convenience. Multiple
-        // replicas starting concurrently would race to apply the same
-        // migration - set Migrations:RunOnStartup=false and run migrations as
-        // a separate deployment step once a real multi-replica topology
-        // exists (see docs/MONOREPO.md's "Known gaps").
-        if (!_configuration.GetValue("Migrations:RunOnStartup", true))
+        if (!_configuration.GetValue<bool>("DatabaseBootstrap:RunOnStartup"))
         {
             return;
         }
 
         using var scope = _serviceProvider.CreateScope();
         var dbContext = scope.ServiceProvider.GetRequiredService<ServicesDataContext>();
+
+        await using var bootstrapLock = await PostgresAdvisoryLock.AcquireAsync(
+            dbContext,
+            "agenza:services-service:database-bootstrap",
+            cancellationToken);
+
         await dbContext.Database.MigrateAsync(cancellationToken);
     }
 

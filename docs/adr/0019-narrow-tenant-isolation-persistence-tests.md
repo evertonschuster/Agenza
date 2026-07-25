@@ -1,6 +1,6 @@
 # ADR 0019 — Narrow EF InMemory tests for tenant isolation, without reopening docs/adr/0015
 
-Status: accepted (2026-07); narrows docs/adr/0015, does not reverse it
+Status: accepted (2026-07); complemented by the PostgreSQL runtime tier in ADR 0023
 
 ## Context
 

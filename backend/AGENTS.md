@@ -38,10 +38,13 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0009-...md`                       | TenantOwnedEntity base class (BaseEntity + ITenantOwned combined) |
 | `../docs/adr/0012-...md`                       | Cross-aggregate checks live in handlers, not validators — validators take no repository dependencies |
 | `../docs/adr/0014-...md`                       | Result pattern end-to-end — Domain/persistence no longer throw for expected outcomes |
-| `../docs/adr/0015-...md`                       | Integration tests removed — CI runs unit tests only, no database dependency |
+| `../docs/adr/0015-...md`                       | Historical removal of the old broad/flaky integration suites |
 | `../docs/adr/0017-...md`                       | Schema-scoped `__EFMigrationsHistory` per service — read before touching either service's migrations or `DependencyInjection.cs` |
 | `../docs/adr/0018-...md`                       | `Admin.SharedKernel` vs `Admin.SharedKernel.AspNetCore` split — read before adding to either |
 | `../docs/adr/0019-...md`                       | `ServicesService.PersistenceTests` — narrow EF InMemory coverage for tenant assignment/scoping, outside the *.Tests boundary and its coverage gate |
+| `../docs/adr/0023-...md`                       | Narrow PostgreSQL/HTTP runtime tests for irreversible security boundaries |
+| `../docs/adr/0024-...md`                       | Per-service database roles and composite tenant relationships |
+| `../docs/adr/0025-...md`                       | Explicit, serialized database bootstrap |
 
 ## Critical constraints (non-negotiable)
 
@@ -52,7 +55,8 @@ Domain          zero project references, zero NuGet framework deps
 Application     → Domain, Admin.SharedKernel. Ports live in Abstractions/
 Infrastructure  → Application, Admin.Identity.Client, Admin.SharedKernel.EntityFrameworkCore
 Api             → Application + Infrastructure + Admin.SharedKernel.AspNetCore. Controllers stay thin
-Tests           → Application + Domain (unit only — no integration tests, docs/adr/0015)
+Tests           → Application + Domain (unit tests)
+RuntimeTests    → Api + Infrastructure (narrow PostgreSQL/HTTP invariants only, docs/adr/0023)
 ```
 
 `backend/shared/Admin.SharedKernel` is cross-cutting CQRS/Result
@@ -369,25 +373,23 @@ guards, an unrecognized database error, transactional rollback cleanup.
   `Directory.Build.props`/`.targets` and applies automatically —
   `Admin.SharedKernel` is excluded from every service's gate since it
   has its own (`Admin.SharedKernel.Tests`).
-- **No integration tests, by decision** (docs/adr/0015): CI runs unit
-  tests only — no Postgres, no Docker, no `WebApplicationFactory`.
-  Api/Infrastructure (controllers, EF configurations/migrations,
-  interceptors, exception handlers, auth/OIDC flows) have no automated
-  coverage as a result — verify those manually (`dotnet run` + a real
-  HTTP client) before merging a change that touches them. One narrow
-  exception (docs/adr/0019): `ServicesService.PersistenceTests` covers
-  automatic tenant assignment on save and the tenant-scoped query filter
-  with EF Core InMemory (no Postgres/Docker) — the two mechanisms behind
-  this file's tenant-scoping non-negotiable. Everything else Api/
-  Infrastructure still has no automated coverage.
-- New endpoint = a unit test per new handler/validator; manually
-  exercise auth (401/403) and the happy path before merging.
+- ADR 0015 still prevents restoring a broad, flaky endpoint suite.
+  `ServicesService.PersistenceTests` covers automatic tenant assignment
+  and query filtering with EF InMemory (docs/adr/0019).
+  `ServicesService.RuntimeTests` is the narrow exception defined by
+  docs/adr/0023: one PostgreSQL container per assembly, shared fixture,
+  and tests only for invariants a unit/in-memory provider cannot prove
+  (migration chain, schema privileges, database tenant constraints,
+  401/403 tenant boundary, and cross-tenant HTTP isolation).
+- New endpoint = a unit test per new handler/validator. Add a runtime
+  test only when a cheaper test cannot prove a security/data invariant;
+  state that reason in the test or its ADR.
 
 ## Both must pass before every commit
 
 ```bash
 dotnet build backend/AdminBackend.slnx
-dotnet test backend/AdminBackend.slnx   # unit tests only; coverage gate applied via Directory.Build.props/.targets
+dotnet test backend/AdminBackend.slnx   # unit coverage + narrow runtime security tier
 ```
 
 Also run the repo-wide governance checks from [../AGENTS.md](../AGENTS.md)

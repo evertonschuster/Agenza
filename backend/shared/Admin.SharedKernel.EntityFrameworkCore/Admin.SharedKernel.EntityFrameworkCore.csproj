@@ -13,6 +13,7 @@
          project instead of folded into Admin.SharedKernel (which
          Application references directly) so that boundary can't leak. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
 </Project>

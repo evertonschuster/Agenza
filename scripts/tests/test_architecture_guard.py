@@ -561,6 +561,189 @@ class ArchitectureGuardTests(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("src/application/**", findings[0].message)
 
+    # -- evolutionary architecture fitness functions -------------------------
+
+    def test_tenant_owned_ai_route_requires_tenant_context(self) -> None:
+        self._write(
+            "ai-services/assistant-service/app/main.py",
+            "\n".join(
+                [
+                    '@app.get("/health")',
+                    "def health(): return {}",
+                    '@app.post("/draft")',
+                    "def draft(claims=Depends(require_valid_token)): return {}",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_ai_tenant_boundaries()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "ai-route-without-tenant-context")
+
+    def test_ai_health_and_tenant_context_route_are_clean(self) -> None:
+        self._write(
+            "ai-services/assistant-service/app/main.py",
+            "\n".join(
+                [
+                    '@app.get("/health")',
+                    "def health(): return {}",
+                    '@app.post("/draft")',
+                    "def draft(tenant=Depends(require_tenant_context)): return {}",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertEqual(ag.check_ai_tenant_boundaries(), [])
+
+    def test_backend_container_context_requires_dockerignore(self) -> None:
+        for path in [
+            "backend/services/identity-service/IdentityService.Api/Dockerfile",
+            "backend/services/services-service/ServicesService.Api/Dockerfile",
+        ]:
+            self._write(
+                path,
+                'COPY ["NuGet.Config", "."]\nRUN dotnet build Api.csproj --no-restore\n',
+            )
+        self._write(
+            ".github/workflows/backend-ci.yml",
+            "run: docker compose build identity-service services-service\n",
+        )
+
+        findings = ag.check_backend_container_parity()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "backend-container-context-drift")
+
+    def test_backend_ci_must_build_both_runtime_images(self) -> None:
+        self._write("backend/.dockerignore", "**/bin\n")
+        for path in [
+            "backend/services/identity-service/IdentityService.Api/Dockerfile",
+            "backend/services/services-service/ServicesService.Api/Dockerfile",
+        ]:
+            self._write(
+                path,
+                'COPY ["NuGet.Config", "."]\nRUN dotnet build Api.csproj --no-restore\n',
+            )
+        self._write(".github/workflows/backend-ci.yml", "run: dotnet build\n")
+
+        findings = ag.check_backend_container_parity()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "backend-images-not-built-in-ci")
+
+    def test_domain_project_reference_is_blocking(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Domain/Catalog.Domain.csproj",
+            '<Project><ItemGroup><ProjectReference Include="../Catalog.Application/Catalog.Application.csproj" /></ItemGroup></Project>',
+        )
+
+        findings = ag.check_dotnet_project_reference_boundaries()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "dotnet-project-reference-boundary")
+
+    def test_application_cannot_reference_infrastructure(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Application/Catalog.Application.csproj",
+            '<Project><ItemGroup><ProjectReference Include="../Catalog.Infrastructure/Catalog.Infrastructure.csproj" /></ItemGroup></Project>',
+        )
+
+        findings = ag.check_dotnet_project_reference_boundaries()
+
+        self.assertEqual(len(findings), 1)
+
+    def test_application_to_own_domain_and_shared_kernel_is_clean(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Application/Catalog.Application.csproj",
+            "\n".join(
+                [
+                    "<Project><ItemGroup>",
+                    '<ProjectReference Include="../Catalog.Domain/Catalog.Domain.csproj" />',
+                    '<ProjectReference Include="../../../shared/Admin.SharedKernel/Admin.SharedKernel.csproj" />',
+                    "</ItemGroup></Project>",
+                ]
+            ),
+        )
+
+        self.assertEqual(ag.check_dotnet_project_reference_boundaries(), [])
+
+    def test_ignore_tenant_requires_an_explicit_allowlist_entry(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Api/Controllers/PublicController.cs",
+            "[IgnoreTenant]\npublic sealed class PublicController { }\n",
+        )
+
+        findings = ag.check_ignore_tenant_attribute_allowlist()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "unreviewed-ignore-tenant")
+
+    def test_base_database_bootstrap_true_is_blocking(self) -> None:
+        self._write(
+            "backend/services/identity-service/IdentityService.Api/appsettings.json",
+            '{"DatabaseBootstrap":{"RunOnStartup":true}}',
+        )
+
+        findings = ag.check_database_bootstrap_defaults()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "unsafe-database-bootstrap-default")
+
+    def test_superuser_application_connection_is_blocking(self) -> None:
+        self._write(
+            "infra/docker-compose.yml",
+            "- ConnectionStrings__Default=Host=postgres;Username=postgres;Password=postgres\n",
+        )
+
+        findings = ag.check_database_boundary_configuration()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "service-uses-database-superuser")
+
+    def test_destructive_up_migration_requires_safety_marker(self) -> None:
+        self._write(
+            "backend/services/x/X.Infrastructure/Persistence/Migrations/20990101000000_DropLegacy.cs",
+            "\n".join(
+                [
+                    "protected override void Up(MigrationBuilder migrationBuilder)",
+                    "{",
+                    '    migrationBuilder.DropTable(name: "Legacy");',
+                    "}",
+                    "protected override void Down(MigrationBuilder migrationBuilder) { }",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_destructive_migration_safety()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(
+            findings[0].category,
+            "destructive-migration-without-safety-plan",
+        )
+
+    def test_reviewed_destructive_up_migration_is_clean(self) -> None:
+        self._write(
+            "backend/services/x/X.Infrastructure/Persistence/Migrations/20990101000000_DropLegacy.cs",
+            "\n".join(
+                [
+                    "protected override void Up(MigrationBuilder migrationBuilder)",
+                    "{",
+                    "    // migration-safety: backup and rollback reviewed",
+                    '    migrationBuilder.DropTable(name: "Legacy");',
+                    "}",
+                    "protected override void Down(MigrationBuilder migrationBuilder) { }",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertEqual(ag.check_destructive_migration_safety(), [])
+
     # -- full run --------------------------------------------------------------
 
     def test_run_all_on_clean_repo_has_no_blocking_findings(self) -> None:

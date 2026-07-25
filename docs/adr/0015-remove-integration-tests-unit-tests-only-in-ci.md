@@ -1,9 +1,11 @@
 # ADR 0015 — Remove integration tests; CI runs unit tests only
 
-Status: accepted (2026-07); supersedes the integration-test-tier passages
-of docs/adr/0005 and docs/adr/0008; narrowed by docs/adr/0019 (adds one
-Docker-free EF InMemory project for tenant-assignment/scoping coverage
-only — the rest of this decision stands)
+Status: superseded in part by ADR 0023 (2026-07); the broad suite remains
+removed. This ADR superseded the integration-test-tier passages of
+docs/adr/0005 and docs/adr/0008 and was first narrowed by docs/adr/0019
+(adds one Docker-free EF InMemory project for tenant-assignment/scoping
+coverage). ADR 0023 later restored only a bounded PostgreSQL/HTTP
+security tier; the former broad endpoint suites remain removed.
 
 ## Context
 

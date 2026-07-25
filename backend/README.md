@@ -29,17 +29,19 @@ hand-rolling token handling.
 ## Commands
 
 ```bash
+dotnet tool restore
 dotnet build AdminBackend.slnx
-dotnet test AdminBackend.slnx    # unit tests only, no database dependency
+dotnet test AdminBackend.slnx    # unit + narrow PostgreSQL runtime security tests
 dotnet run --project services/services-service/ServicesService.Api
 ```
 
 The 80% line-coverage gate for `*.Tests` projects (Domain + Application
 scope) is configured in `Directory.Build.props`, so local `dotnet test`
-enforces exactly what CI enforces. There are no integration tests
-(docs/adr/0015) — Api/Infrastructure have no automated coverage; verify
-those manually (`dotnet run` + a real HTTP client) — see
-`../docs/QUALITY.md`.
+enforces exactly what CI enforces. `ServicesService.RuntimeTests`
+(docs/adr/0023) adds one shared PostgreSQL container for the migration
+chain, database ownership, composite tenant constraints, and the HTTP
+tenant boundary. It is intentionally not a broad endpoint suite; ordinary
+behavior remains in unit tests. See `../docs/QUALITY.md`.
 
 ## Known gaps
 

@@ -21,6 +21,9 @@ from typing import Any, Iterable
 
 IGNORED_DIRS = {
     ".git",
+    ".agents",
+    ".claude",
+    ".codex",
     ".hg",
     ".svn",
     ".idea",
@@ -38,6 +41,7 @@ IGNORED_DIRS = {
     "packages",
     "target",
     "vendor",
+    "worktrees",
 }
 
 LANGUAGES = {

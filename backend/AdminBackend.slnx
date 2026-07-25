@@ -13,6 +13,7 @@
     <Project Path="services/services-service/ServicesService.Domain/ServicesService.Domain.csproj" />
     <Project Path="services/services-service/ServicesService.Infrastructure/ServicesService.Infrastructure.csproj" />
     <Project Path="services/services-service/ServicesService.PersistenceTests/ServicesService.PersistenceTests.csproj" />
+    <Project Path="services/services-service/ServicesService.RuntimeTests/ServicesService.RuntimeTests.csproj" />
     <Project Path="services/services-service/ServicesService.Tests/ServicesService.Tests.csproj" />
   </Folder>
   <Folder Name="/shared/">

@@ -5,14 +5,14 @@ requires a paid plan.
 
 ## Workflows (`.github/workflows/`)
 
-| Workflow             | Triggers on                    | What it gates                                                     |
-| -------------------- | ------------------------------ | ----------------------------------------------------------------- |
-| `frontend-ci.yml`    | `apps/**`, `packages/**`       | Prettier check, ESLint (incl. architecture rules), tsc build, Vitest with 85% line/statement + 80% branch/function coverage gate |
-| `backend-ci.yml`     | `backend/**`                   | `dotnet build` + `dotnet test` with 80% line-coverage gate (coverlet) |
-| `ai-services-ci.yml` | `ai-services/**`               | Ruff lint + format check, pytest with 80% coverage gate (pytest-cov) |
-| `codeql.yml`         | all PRs/pushes + weekly cron   | Static security analysis (C#, TS/JS, Python)                       |
-| `sonar.yml`          | all PRs/pushes                 | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists) |
-| `agent-governance.yml` | all PRs/pushes               | AI agent governance framework consistency — see [docs/AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md) |
+| Workflow               | Triggers on                   | What it gates                                                                                           |
+| ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `frontend-ci.yml`      | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
+| `backend-ci.yml`       | `backend/**`                  | warning-free build, both runtime images, unit coverage, and narrow PostgreSQL security tests            |
+| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python 3.12 deps, Ruff, pytest coverage, runtime image build, and `/health` smoke                |
+| `codeql.yml`           | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
+| `sonar.yml`            | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
+| `agent-governance.yml` | all PRs/pushes                | AI agent governance framework consistency — see [docs/AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md)         |
 
 Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for npm,
 NuGet, pip, Docker base images, and the workflows' actions.
@@ -24,16 +24,20 @@ NuGet, pip, Docker base images, and the workflows' actions.
   declarative wiring (`main.tsx`, `App.tsx`, the route table) and the
   stub pages listed explicitly in the config — remove a stub from that
   list when its feature vertical is implemented.
-- **Backend**: unit tests only (`*.Tests`), configured in
+- **Backend unit coverage**: `*.Tests`, configured in
   `backend/Directory.Build.props` + `.targets`. Coverlet instruments the
   assemblies each project references — **Domain + Application** —
   gated at 80% line coverage. `Admin.SharedKernel` is excluded from
-  every *consuming* service's gate (`Directory.Build.targets`) since it
+  every _consuming_ service's gate (`Directory.Build.targets`) since it
   has its own dedicated project (`Admin.SharedKernel.Tests`) and gate —
   counting it twice would let one hide behind the other's number
-  (docs/adr/0005). There are no integration tests (docs/adr/0015) — CI
-  never needs Docker or a database; Api/Infrastructure have no
-  automated coverage.
+  (docs/adr/0005). `ServicesService.PersistenceTests` covers EF tenant
+  filtering in memory (docs/adr/0019). `ServicesService.RuntimeTests`
+  uses one PostgreSQL container to prove the migration chain, per-service
+  schema privileges, composite tenant foreign keys, serialized bootstrap,
+  database/identity readiness, 401/403 behavior, and cross-tenant HTTP
+  read/write isolation (docs/adr/0023). It has no coverage percentage
+  target because its gate is the listed invariants.
 - **AI services**: `--cov=app` in `pyproject.toml` measures the whole
   package, gate at 80% (`--cov-fail-under=80`).
 

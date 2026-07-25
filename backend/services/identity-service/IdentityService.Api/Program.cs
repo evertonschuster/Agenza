@@ -18,6 +18,7 @@ builder.Services.AddOpenApi();
 
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddAuthorizationProblemDetails();
 
 builder.Services
     .AddApiVersioning(options =>

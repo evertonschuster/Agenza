@@ -13,7 +13,7 @@ namespace ServicesService.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/categories")]
-public class CategoriesController : ControllerBase
+public class CategoriesController : AgenzaControllerBase
 {
     private readonly IDispatcher _dispatcher;
 

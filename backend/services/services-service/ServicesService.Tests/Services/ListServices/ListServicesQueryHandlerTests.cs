@@ -54,7 +54,7 @@ public class ListServicesQueryHandlerTests
     public async Task Handle_WithACategorizedService_ResolvesTheCategoryName()
     {
         var handler = CreateHandler(out var serviceRepository, out var categoryRepository);
-        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value!;
         var service = Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, category.Id, 1).Value;
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
@@ -71,7 +71,7 @@ public class ListServicesQueryHandlerTests
     public async Task Handle_OnlyQueriesTheDistinctCategoriesReferencedByThisPage_NotTheWholeCatalog()
     {
         var handler = CreateHandler(out var serviceRepository, out var categoryRepository);
-        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value!;
         var services = new List<Service>
         {
             Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, category.Id, 1).Value,
@@ -89,7 +89,8 @@ public class ListServicesQueryHandlerTests
         // Exactly one call, with only the single distinct category id actually
         // referenced by this page - not every category the tenant owns.
         await categoryRepository.Received(1).GetByIdsAsync(
-            Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 1 && ids.Contains(category.Id)),
+            Arg.Is<IReadOnlyCollection<Guid>>(
+                ids => ids != null && ids.Count == 1 && ids.Contains(category.Id)),
             Arg.Any<CancellationToken>());
     }
 

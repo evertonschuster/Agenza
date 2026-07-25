@@ -39,6 +39,8 @@ public static class DependencyInjection
                 // (docs/adr/0017).
                 .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "identity"))
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
+        services.AddHealthChecks()
+            .AddDbContextCheck<IdentityDataContext>("database", tags: ["ready"]);
 
         services
             .AddIdentity<ApplicationUser, IdentityRole<Guid>>(options =>
