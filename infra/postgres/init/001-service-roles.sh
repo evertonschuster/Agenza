@@ -1,31 +1,29 @@
 #!/bin/sh
 set -eu
 
-: "${IDENTITY_DB_PASSWORD:?IDENTITY_DB_PASSWORD is required}"
-: "${SERVICES_DB_PASSWORD:?SERVICES_DB_PASSWORD is required}"
+: "${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}"
 
 psql \
   --username "$POSTGRES_USER" \
   --dbname "$POSTGRES_DB" \
   --set ON_ERROR_STOP=1 \
-  --set identity_password="$IDENTITY_DB_PASSWORD" \
-  --set services_password="$SERVICES_DB_PASSWORD" <<'EOSQL'
+  --set app_password="$APP_DB_PASSWORD" <<'EOSQL'
 SELECT format(
   'CREATE ROLE identity_app LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION',
-  :'identity_password')
+  :'app_password')
 WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'identity_app')
 \gexec
 
-SELECT format('ALTER ROLE identity_app PASSWORD %L', :'identity_password')
+SELECT format('ALTER ROLE identity_app PASSWORD %L', :'app_password')
 \gexec
 
 SELECT format(
   'CREATE ROLE services_app LOGIN PASSWORD %L NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION',
-  :'services_password')
+  :'app_password')
 WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'services_app')
 \gexec
 
-SELECT format('ALTER ROLE services_app PASSWORD %L', :'services_password')
+SELECT format('ALTER ROLE services_app PASSWORD %L', :'app_password')
 \gexec
 
 REVOKE CREATE ON DATABASE appdb FROM PUBLIC;

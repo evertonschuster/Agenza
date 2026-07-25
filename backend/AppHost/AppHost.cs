@@ -1,28 +1,14 @@
 var builder = DistributedApplication.CreateBuilder(args);
 
-var postgresPassword = builder.AddParameter("postgres-password", "postgres", secret: true);
-var identityDbPassword = builder.AddParameter(
-    "identity-db-password",
-    "dev-identity-db-change-me",
-    secret: true);
-var servicesDbPassword = builder.AddParameter(
-    "services-db-password",
-    "dev-services-db-change-me",
-    secret: true);
-var workerSecret = builder.AddParameter(
-    "assistant-worker-secret",
-    "dev-assistant-worker-secret-change-me",
-    secret: true);
-var provisioningSecret = builder.AddParameter(
-    "tenant-provisioning-secret",
-    "dev-tenant-provisioning-secret-change-me",
+var developmentPassword = builder.AddParameter(
+    "development-password",
+    "postgres",
     secret: true);
 
-var postgres = builder.AddPostgres("postgres", password: postgresPassword)
+var postgres = builder.AddPostgres("postgres", password: developmentPassword)
     .WithHostPort(5432)
     .WithEnvironment("POSTGRES_DB", "appdb")
-    .WithEnvironment("IDENTITY_DB_PASSWORD", identityDbPassword)
-    .WithEnvironment("SERVICES_DB_PASSWORD", servicesDbPassword)
+    .WithEnvironment("APP_DB_PASSWORD", developmentPassword)
     .WithInitFiles("../../infra/postgres/init")
     .WithDataVolume("agenza-postgres-data");
 var appdb = postgres.AddDatabase("appdb", "appdb");
@@ -33,19 +19,19 @@ var identityDatabase = builder.AddConnectionString(
     ReferenceExpression.Create(
         $"Host={postgresEndpoint.Property(EndpointProperty.Host)};" +
         $"Port={postgresEndpoint.Property(EndpointProperty.Port)};" +
-        $"Database=appdb;Username=identity_app;Password={identityDbPassword}"));
+        $"Database=appdb;Username=identity_app;Password={developmentPassword}"));
 var servicesDatabase = builder.AddConnectionString(
     "services-database",
     ReferenceExpression.Create(
         $"Host={postgresEndpoint.Property(EndpointProperty.Host)};" +
         $"Port={postgresEndpoint.Property(EndpointProperty.Port)};" +
-        $"Database=appdb;Username=services_app;Password={servicesDbPassword}"));
+        $"Database=appdb;Username=services_app;Password={developmentPassword}"));
 
 var identityService = builder.AddProject<Projects.IdentityService_Api>("identity-service", launchProfileName: "http")
     .WithHttpEndpoint(port: 5081, name: "http")
     .WithReference(identityDatabase, connectionName: "Default")
-    .WithEnvironment("IdentityClients__AssistantServiceWorker__Secret", workerSecret)
-    .WithEnvironment("IdentityClients__TenantProvisioning__Secret", provisioningSecret)
+    .WithEnvironment("IdentityClients__AssistantServiceWorker__Secret", developmentPassword)
+    .WithEnvironment("IdentityClients__TenantProvisioning__Secret", developmentPassword)
     .WaitFor(appdb);
 
 var servicesService = builder.AddProject<Projects.ServicesService_Api>("services-service", launchProfileName: "http")
@@ -66,7 +52,7 @@ var assistantService = builder.AddUvicornApp(
     .WithEnvironment("IDENTITY_ISSUER", ReferenceExpression.Create($"{identityService.GetEndpoint("http")}/"))
     .WithEnvironment("IDENTITY_AUDIENCE", "services-api")
     .WithEnvironment("IDENTITY_CLIENT_ID", "assistant-service-worker")
-    .WithEnvironment("IDENTITY_CLIENT_SECRET", workerSecret)
+    .WithEnvironment("IDENTITY_CLIENT_SECRET", developmentPassword)
     .WithEnvironment("IDENTITY_SCOPE", "services-api")
     .WaitFor(identityService);
 

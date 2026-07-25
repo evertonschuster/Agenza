@@ -625,11 +625,15 @@ class ArchitectureGuardTests(unittest.TestCase):
             "backend/AppHost/AppHost.cs",
             "\n".join(
                 [
+                    'builder.AddParameter("development-password")',
                     'builder.AddPostgres("postgres")',
                     "    .WithHostPort(5432)",
                     '    .WithEnvironment("POSTGRES_DB", "appdb")',
-                    '    .WithEnvironment("IDENTITY_DB_PASSWORD", identityPassword)',
-                    '    .WithEnvironment("SERVICES_DB_PASSWORD", servicesPassword)',
+                    '    .WithEnvironment("APP_DB_PASSWORD", developmentPassword)',
+                    '    $"Password={developmentPassword}";',
+                    'builder.WithEnvironment("IdentityClients__AssistantServiceWorker__Secret", developmentPassword);',
+                    'builder.WithEnvironment("IdentityClients__TenantProvisioning__Secret", developmentPassword);',
+                    'builder.WithEnvironment("IDENTITY_CLIENT_SECRET", developmentPassword);',
                     '    .WithDataVolume("agenza-postgres-data")',
                     '    .WithInitFiles("../../infra/postgres/init");',
                     "builder.AddProject<Projects.IdentityService_Api>();",
@@ -651,8 +655,27 @@ class ArchitectureGuardTests(unittest.TestCase):
             ".github/workflows/frontend-ci.yml",
             "run: dotnet run --project backend/AppHost\n",
         )
+        self._write(
+            "infra/postgres/init/001-service-roles.sh",
+            ': "${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}"\n',
+        )
 
         self.assertEqual(ag.check_aspire_local_orchestration(), [])
+
+    def test_duplicate_aspire_development_secret_is_blocking(self) -> None:
+        self._write(
+            "backend/AppHost/AppHost.cs",
+            'builder.AddParameter("identity-db-password");\n',
+        )
+
+        findings = ag.check_aspire_local_orchestration()
+
+        self.assertTrue(
+            any(
+                finding.category == "duplicated-aspire-development-secret"
+                for finding in findings
+            )
+        )
 
     def test_missing_trunk_precommit_guard_is_blocking(self) -> None:
         self._write(".husky/pre-commit", "npm run lint-staged\n")
@@ -865,11 +888,15 @@ class ArchitectureGuardTests(unittest.TestCase):
             "backend/AppHost/AppHost.cs",
             "\n".join(
                 [
+                    'builder.AddParameter("development-password")',
                     'builder.AddPostgres("postgres")',
                     "    .WithHostPort(5432)",
                     '    .WithEnvironment("POSTGRES_DB", "appdb")',
-                    '    .WithEnvironment("IDENTITY_DB_PASSWORD", identityPassword)',
-                    '    .WithEnvironment("SERVICES_DB_PASSWORD", servicesPassword)',
+                    '    .WithEnvironment("APP_DB_PASSWORD", developmentPassword)',
+                    '    $"Password={developmentPassword}";',
+                    'builder.WithEnvironment("IdentityClients__AssistantServiceWorker__Secret", developmentPassword);',
+                    'builder.WithEnvironment("IdentityClients__TenantProvisioning__Secret", developmentPassword);',
+                    'builder.WithEnvironment("IDENTITY_CLIENT_SECRET", developmentPassword);',
                     '    .WithDataVolume("agenza-postgres-data")',
                     '    .WithInitFiles("../../infra/postgres/init");',
                     "builder.AddProject<Projects.IdentityService_Api>();",
@@ -890,6 +917,10 @@ class ArchitectureGuardTests(unittest.TestCase):
         self._write(
             ".github/workflows/frontend-ci.yml",
             "run: dotnet run --project backend/AppHost\n",
+        )
+        self._write(
+            "infra/postgres/init/001-service-roles.sh",
+            ': "${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}"\n',
         )
         self._write(
             ".husky/pre-commit",

@@ -106,11 +106,11 @@ def main() -> None:
     parser.add_argument("--services-url", default="http://localhost:5080")
     parser.add_argument(
         "--assistant-secret",
-        default="dev-assistant-worker-secret-change-me",
+        default="postgres",
     )
     parser.add_argument(
         "--provisioning-secret",
-        default="dev-tenant-provisioning-secret-change-me",
+        default="postgres",
     )
     args = parser.parse_args()
 
