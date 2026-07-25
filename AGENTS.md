@@ -150,7 +150,6 @@ worktree add ../agenza-<slug> <branch>`, or the Agent tool's
   `isolation: "worktree"` — never share one working directory across
   simultaneous tasks. Uncommitted changes belong to a task's own branch,
   never left sitting on `main` or on another task's branch.
-
 ## Rule persistence policy
 
 A correction to an agent, a recurring bug, or a new architectural decision

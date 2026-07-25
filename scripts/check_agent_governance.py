@@ -12,6 +12,8 @@ governance *meta-files themselves* are present, consistent, and in sync:
 - .agents/skills/ and .claude/skills/ are byte-identical to agent-skills/.
 - Every docs/adr/NNNN reference mentioned in a governance file resolves to
   a real ADR file.
+- Every agent-skills/<name> reference mentioned in a governance file
+  resolves to a canonical skill.
 - Every scripts/*.py reference mentioned in a governance file exists.
 - Documented npm scripts actually exist in the relevant package.json.
 - .codex/skills is not used as a skill distribution directory.
@@ -66,6 +68,7 @@ GOVERNANCE_DOC_GLOBS = [
 ]
 
 ADR_REF_PATTERN = re.compile(r"docs/adr/(\d{4})")
+SKILL_REF_PATTERN = re.compile(r"agent-skills/([\w-]+)")
 SCRIPT_REF_PATTERN = re.compile(r"scripts/([\w-]+\.py)")
 NPM_RUN_PATTERN = re.compile(r"npm run ([\w:.-]+)")
 
@@ -256,6 +259,27 @@ def check_referenced_scripts_exist() -> list[str]:
     return problems
 
 
+def check_referenced_skills_exist() -> list[str]:
+    problems = []
+    seen: set[str] = set()
+
+    for doc_path in _governance_adjacent_files():
+        if not doc_path.is_file():
+            continue
+        text = doc_path.read_text(encoding="utf-8")
+        for match in SKILL_REF_PATTERN.finditer(text):
+            seen.add(match.group(1))
+
+    for skill_name in sorted(seen):
+        skill_file = REPO_ROOT / "agent-skills" / skill_name / "SKILL.md"
+        if not skill_file.is_file():
+            problems.append(
+                f"referenced skill agent-skills/{skill_name} does not exist"
+            )
+
+    return problems
+
+
 def check_documented_npm_commands() -> list[str]:
     problems = []
     package_json_path = REPO_ROOT / "apps" / "admin-frontend" / "package.json"
@@ -294,6 +318,7 @@ CHECKS = [
     ("skills synced to .agents/ and .claude/", check_skills_synced),
     ("no .codex/skills distribution dir", check_no_codex_skills_dir),
     ("ADR references resolve", check_adr_references),
+    ("referenced skills exist", check_referenced_skills_exist),
     ("referenced scripts exist", check_referenced_scripts_exist),
     ("documented npm commands exist", check_documented_npm_commands),
 ]

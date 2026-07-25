@@ -215,6 +215,31 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertEqual(problems, [])
 
+    # -- referenced skills -------------------------------------------------
+
+    def test_missing_referenced_skill_is_reported(self) -> None:
+        self._write("AGENTS.md", "Use agent-skills/missing-skill for this task.\n")
+
+        with self._patch():
+            problems = cag.check_referenced_skills_exist()
+
+        self.assertEqual(
+            problems,
+            ["referenced skill agent-skills/missing-skill does not exist"],
+        )
+
+    def test_present_referenced_skill_passes(self) -> None:
+        self._write("AGENTS.md", "Use agent-skills/present-skill for this task.\n")
+        self._write(
+            "agent-skills/present-skill/SKILL.md",
+            "---\nname: present-skill\ndescription: does things\n---\n",
+        )
+
+        with self._patch():
+            problems = cag.check_referenced_skills_exist()
+
+        self.assertEqual(problems, [])
+
     # -- referenced scripts --------------------------------------------------
 
     def test_missing_referenced_script_is_reported(self) -> None:
