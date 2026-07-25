@@ -3,6 +3,7 @@ import { AuthContext, type AuthContextValue } from '@/features/auth/presentation
 import { useAppContainer } from '@/app/providers/useAppContainer'
 import { useAsync } from '@/shared/presentation/hooks/useAsync'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
+import type { LoginTheme } from '@/features/auth/application/repositories/AuthRepository'
 
 interface AuthProviderProps {
   children: ReactNode
@@ -27,9 +28,21 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
     })
   }, [auth, mutate])
 
-  const login = useCallback(async (): Promise<void> => {
-    await auth.initiateLogin.execute()
-  }, [auth])
+  const login = useCallback(
+    async (returnTo: string | undefined, theme: LoginTheme): Promise<void> => {
+      await auth.initiateLogin.execute(returnTo, theme)
+    },
+    [auth],
+  )
+
+  const completeLogin = useCallback(
+    async (callbackUrl: string): Promise<string> => {
+      const result = await auth.handleAuthCallback.execute(callbackUrl)
+      mutate(() => result.tenantContext)
+      return result.returnTo
+    },
+    [auth, mutate],
+  )
 
   const logout = useCallback(async (): Promise<void> => {
     await auth.logout.execute()
@@ -38,13 +51,13 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
 
   const value = useMemo<AuthContextValue>(() => {
     if (loadStatus === 'loading') {
-      return { status: 'loading', tenantContext: null, login, logout }
+      return { status: 'loading', tenantContext: null, login, completeLogin, logout }
     }
     if (tenantContext !== null) {
-      return { status: 'authenticated', tenantContext, login, logout }
+      return { status: 'authenticated', tenantContext, login, completeLogin, logout }
     }
-    return { status: 'unauthenticated', tenantContext: null, login, logout }
-  }, [loadStatus, tenantContext, login, logout])
+    return { status: 'unauthenticated', tenantContext: null, login, completeLogin, logout }
+  }, [loadStatus, tenantContext, login, completeLogin, logout])
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
 }

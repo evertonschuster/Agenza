@@ -205,6 +205,25 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   services-service's `Program.cs` only, not identity-service's, and for
   the automatic tenant-scoping mechanism in full.
 
+### Identity login feedback
+
+- The identity-service credential page classifies expected sign-in outcomes
+  into stable `AUTH_*` codes and actionable pt-BR text: invalid credentials,
+  temporary lockout, account not allowed, and two-factor required. Keep
+  invalid e-mail and invalid password under the same code to avoid account
+  enumeration.
+- Every visible authentication failure states what happened, what the user
+  can do next, and which code plus attempt time to include when requesting
+  help. Never expose raw protocol/exception details, ask for a password, or
+  replace this with a generic “contacte o administrador” message
+  (docs/adr/0020).
+- The credential page preserves visual continuity with the admin frontend:
+  accept only `light` or `dark` from the OIDC authorization request, apply
+  the theme before loading the stylesheet, expose an accessible toggle, and
+  persist the identity-origin preference. An explicit identity-page
+  preference wins on later visits; otherwise, use the valid frontend request
+  and then the operating-system theme.
+
 ### CQRS + vertical slices
 
 - One folder per feature under `Application/<Feature>/`, one subfolder

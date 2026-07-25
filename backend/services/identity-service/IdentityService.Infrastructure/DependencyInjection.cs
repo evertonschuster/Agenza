@@ -47,6 +47,8 @@ public static class DependencyInjection
             {
                 options.Password.RequireNonAlphanumeric = false;
                 options.User.RequireUniqueEmail = true;
+                options.Lockout.MaxFailedAccessAttempts = 5;
+                options.Lockout.DefaultLockoutTimeSpan = TimeSpan.FromMinutes(5);
 
                 // Without this remap to OpenIddict's short claim types, CreateUserPrincipalAsync() produces a principal OpenIddict rejects (no "sub" claim).
                 options.ClaimsIdentity.UserIdClaimType = OpenIddictConstants.Claims.Subject;

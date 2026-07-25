@@ -1,51 +1,52 @@
 import { useEffect, useState, type JSX } from 'react'
-import { Link, useNavigate } from 'react-router'
-import { useAppContainer } from '@/app/providers/useAppContainer'
-import { CenteredScreen } from '@/shared/presentation/components/CenteredScreen'
-import { Card, CardContent } from '@/components/ui/card'
-import { FullScreenSpinner } from '@/shared/presentation/components/FullScreenSpinner'
-
-type CallbackStatus = 'processing' | 'error'
+import { useNavigate } from 'react-router'
+import { AuthFlowScreen } from '@/features/auth/presentation/AuthFlowScreen'
+import {
+  toAuthFlowFeedback,
+  type AuthFlowFeedback,
+} from '@/features/auth/presentation/authFlowFeedback'
+import { useAuth } from '@/features/auth/presentation/useAuth'
 
 export function CallbackPage(): JSX.Element {
-  const { auth } = useAppContainer()
+  const { completeLogin } = useAuth()
   const navigate = useNavigate()
-  const [status, setStatus] = useState<CallbackStatus>('processing')
+  const [feedback, setFeedback] = useState<AuthFlowFeedback | null>(null)
 
   useEffect(() => {
-    async function completeLogin(): Promise<void> {
+    async function finishCallback(): Promise<void> {
       try {
-        await auth.handleAuthCallback.execute(window.location.href)
-        await navigate('/dashboard', { replace: true })
-      } catch {
-        setStatus('error')
+        const returnTo = await completeLogin(window.location.href)
+        await navigate(returnTo, { replace: true })
+      } catch (error) {
+        setFeedback(toAuthFlowFeedback(error))
       }
     }
 
-    void completeLogin()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    void finishCallback()
+  }, [completeLogin, navigate])
 
-  if (status === 'error') {
+  if (feedback !== null) {
     return (
-      <CenteredScreen>
-        <Card className="w-full max-w-sm shadow-sm ring-destructive/20 [--card-spacing:--spacing(8)]">
-          <CardContent className="text-center">
-            <p className="text-sm font-semibold text-destructive">Falha no login</p>
-            <p className="mt-2 text-sm text-muted-foreground">
-              Algo deu errado ao concluir o login. Tente novamente.
-            </p>
-            <Link
-              to="/login"
-              className="mt-6 inline-block text-sm font-medium text-primary hover:underline"
-            >
-              Voltar para o login
-            </Link>
-          </CardContent>
-        </Card>
-      </CenteredScreen>
+      <AuthFlowScreen
+        state="error"
+        eyebrow="Acesso não concluído"
+        title={feedback.title}
+        description={feedback.description}
+        supportCode={feedback.supportCode}
+        action={{
+          label: 'Iniciar um novo login',
+          onAction: () => void navigate('/login', { replace: true }),
+        }}
+      />
     )
   }
 
-  return <FullScreenSpinner label="Concluindo login…" />
+  return (
+    <AuthFlowScreen
+      state="progress"
+      eyebrow="Credenciais confirmadas"
+      title="Concluindo seu login"
+      description="Estamos preparando sua sessão segura. Em seguida, você voltará automaticamente para a página em que estava."
+    />
+  )
 }

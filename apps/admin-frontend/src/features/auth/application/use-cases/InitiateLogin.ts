@@ -1,4 +1,8 @@
-import type { AuthRepository } from '@/features/auth/application/repositories/AuthRepository'
+import type {
+  AuthRepository,
+  LoginTheme,
+} from '@/features/auth/application/repositories/AuthRepository'
+import { resolvePostLoginPath } from '@/features/auth/application/navigation/postLoginPath'
 
 export class InitiateLogin {
   private readonly authRepository: AuthRepository
@@ -7,7 +11,7 @@ export class InitiateLogin {
     this.authRepository = authRepository
   }
 
-  async execute(): Promise<void> {
-    await this.authRepository.initiateLogin()
+  async execute(returnTo: string | undefined, theme: LoginTheme): Promise<void> {
+    await this.authRepository.initiateLogin(resolvePostLoginPath(returnTo), theme)
   }
 }

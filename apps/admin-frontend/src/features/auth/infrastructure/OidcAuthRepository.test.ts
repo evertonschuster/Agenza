@@ -1,8 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
 import type { Mock } from 'vitest'
-import type { User as OidcUser, UserManager } from 'oidc-client-ts'
+import {
+  ErrorResponse,
+  ErrorTimeout,
+  type User as OidcUser,
+  type UserManager,
+} from 'oidc-client-ts'
 import { OidcAuthRepository } from '@/features/auth/infrastructure/OidcAuthRepository'
-import { MissingTenantClaimError } from '@/features/auth/infrastructure/MissingTenantClaimError'
 
 function createFakeOidcUser(overrides: Partial<OidcUser> = {}): OidcUser {
   return {
@@ -47,9 +51,40 @@ describe('OidcAuthRepository', () => {
       const userManager = createFakeUserManager()
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      await repository.initiateLogin()
+      await repository.initiateLogin('/services?search=massagem#editor', 'dark')
 
-      expect(userManager.signinRedirect).toHaveBeenCalledTimes(1)
+      expect(userManager.signinRedirect).toHaveBeenCalledExactlyOnceWith({
+        state: '/services?search=massagem#editor',
+        extraQueryParams: { theme: 'dark' },
+      })
+    })
+
+    it.each([
+      {
+        error: new TypeError('Failed to fetch'),
+        flowCode: 'AUTH_LOGIN_UNAVAILABLE',
+        message: /verifique sua conexão/i,
+      },
+      {
+        error: new ErrorTimeout('Network timed out'),
+        flowCode: 'AUTH_LOGIN_TIMEOUT',
+        message: /demorou para responder/i,
+      },
+      {
+        error: new Error('metadata malformed'),
+        flowCode: 'AUTH_LOGIN_FAILED',
+        message: /nova tentativa/i,
+      },
+    ] as const)('maps login start failures to $flowCode', async ({ error, flowCode, message }) => {
+      const userManager = createFakeUserManager({
+        signinRedirect: vi.fn(() => Promise.reject(error)),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const result = repository.initiateLogin('/dashboard', 'light')
+
+      await expect(result).rejects.toMatchObject({ flowCode })
+      await expect(result).rejects.toThrow(message)
     })
   })
 
@@ -58,12 +93,28 @@ describe('OidcAuthRepository', () => {
       const userManager = createFakeUserManager()
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      const session = await repository.handleCallback('https://admin.example.com/callback?code=abc')
+      const result = await repository.handleCallback('https://admin.example.com/callback?code=abc')
 
       expect(userManager.signinRedirectCallback).toHaveBeenCalledWith(
         'https://admin.example.com/callback?code=abc',
       )
-      expect(session.user.tenant.id).toBe('tenant-123')
+      expect(result.session.user.tenant.id).toBe('tenant-123')
+      expect(result.returnTo).toBeNull()
+    })
+
+    it('returns the string application state that was carried through the provider', async () => {
+      const userManager = createFakeUserManager({
+        signinRedirectCallback: vi.fn(() =>
+          Promise.resolve(createFakeOidcUser({ state: '/services?search=massagem#editor' })),
+        ),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const result = await repository.handleCallback(
+        'https://admin.example.com/callback?code=abc&state=oidc-state',
+      )
+
+      expect(result.returnTo).toBe('/services?search=massagem#editor')
     })
 
     it('propagates MissingTenantClaimError when the token has no tenant_id', async () => {
@@ -84,9 +135,45 @@ describe('OidcAuthRepository', () => {
       })
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      await expect(
-        repository.handleCallback('https://admin.example.com/callback?code=abc'),
-      ).rejects.toThrow(MissingTenantClaimError)
+      const result = repository.handleCallback('https://admin.example.com/callback?code=abc')
+
+      await expect(result).rejects.toMatchObject({
+        flowCode: 'AUTH_ACCOUNT_WITHOUT_TENANT',
+      })
+      await expect(result).rejects.toThrow(/não está vinculada a uma empresa/i)
+    })
+
+    it.each([
+      {
+        error: new ErrorResponse({ error: 'access_denied' }),
+        flowCode: 'AUTH_ACCESS_CANCELLED',
+        message: /acesso foi cancelado/i,
+      },
+      {
+        error: new ErrorResponse({ error: 'invalid_grant' }),
+        flowCode: 'AUTH_ATTEMPT_EXPIRED',
+        message: /expirou ou já foi utilizada/i,
+      },
+      {
+        error: new ErrorResponse({ error: 'temporarily_unavailable' }),
+        flowCode: 'AUTH_LOGIN_UNAVAILABLE',
+        message: /temporariamente indisponível/i,
+      },
+      {
+        error: new Error('state mismatch'),
+        flowCode: 'AUTH_RESPONSE_INVALID',
+        message: /validar a resposta/i,
+      },
+    ] as const)('maps callback failures to $flowCode', async ({ error, flowCode, message }) => {
+      const userManager = createFakeUserManager({
+        signinRedirectCallback: vi.fn(() => Promise.reject(error)),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const result = repository.handleCallback('https://admin.example.com/callback?code=abc')
+
+      await expect(result).rejects.toMatchObject({ flowCode })
+      await expect(result).rejects.toThrow(message)
     })
   })
 
@@ -128,11 +215,88 @@ describe('OidcAuthRepository', () => {
       expect(session?.isExpiredAt(new Date())).toBe(false)
     })
 
+    it('renews before expiry so a request never starts with a token about to expire', async () => {
+      const expiringUser = createFakeOidcUser({
+        expires_at: Math.floor(Date.now() / 1000) + 30,
+      })
+      const renewedUser = createFakeOidcUser({ expires_at: 9_999_999_999 })
+      const userManager = createFakeUserManager({
+        getUser: vi.fn(() => Promise.resolve(expiringUser)),
+        signinSilent: vi.fn(() => Promise.resolve(renewedUser)),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const session = await repository.getCurrentSession()
+
+      expect(userManager.signinSilent).toHaveBeenCalledTimes(1)
+      expect(session?.isExpiredAt(new Date())).toBe(false)
+    })
+
+    it('shares one silent renewal across concurrent session reads', async () => {
+      const expiredUser = createFakeOidcUser({ expires_at: 1 })
+      const renewedUser = createFakeOidcUser({ expires_at: 9_999_999_999 })
+      const userManager = createFakeUserManager({
+        getUser: vi.fn(() => Promise.resolve(expiredUser)),
+        signinSilent: vi.fn(() => Promise.resolve(renewedUser)),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const [first, second] = await Promise.all([
+        repository.getCurrentSession(),
+        repository.getCurrentSession(),
+      ])
+
+      expect(userManager.signinSilent).toHaveBeenCalledTimes(1)
+      expect(first?.accessToken).toBe('access-token-value')
+      expect(second?.accessToken).toBe('access-token-value')
+    })
+
     it('clears the session and returns null when silent renewal fails', async () => {
       const expiredUser = createFakeOidcUser({ expires_at: 1 })
       const userManager = createFakeUserManager({
         getUser: vi.fn(() => Promise.resolve(expiredUser)),
         signinSilent: vi.fn(() => Promise.reject(new Error('login_required'))),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const session = await repository.getCurrentSession()
+
+      expect(session).toBeNull()
+      expect(userManager.removeUser).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+      {
+        name: 'user',
+        renewedProfile: {
+          sub: 'user-2',
+          tenant_id: 'tenant-123',
+          iss: 'https://identity.example.com',
+          aud: 'admin-panel',
+          exp: 9_999_999_999,
+          iat: 1_799_996_400,
+        },
+      },
+      {
+        name: 'tenant',
+        renewedProfile: {
+          sub: 'user-1',
+          tenant_id: 'tenant-456',
+          iss: 'https://identity.example.com',
+          aud: 'admin-panel',
+          exp: 9_999_999_999,
+          iat: 1_799_996_400,
+        },
+      },
+    ])('rejects a silent renewal that changes the $name', async ({ renewedProfile }) => {
+      const expiredUser = createFakeOidcUser({ expires_at: 1 })
+      const renewedUser = createFakeOidcUser({
+        expires_at: 9_999_999_999,
+        profile: renewedProfile,
+      })
+      const userManager = createFakeUserManager({
+        getUser: vi.fn(() => Promise.resolve(expiredUser)),
+        signinSilent: vi.fn(() => Promise.resolve(renewedUser)),
       })
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 

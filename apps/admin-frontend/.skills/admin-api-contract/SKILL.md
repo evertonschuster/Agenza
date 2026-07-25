@@ -52,7 +52,6 @@ Rules:
 Example:
 
 ```typescript
-// Exactly mirrors what the API sends — no transformation yet
 interface ServiceDto {
   id: string
   tenant_id: string
@@ -61,7 +60,7 @@ interface ServiceDto {
   price_cents: number
   description?: string | null
   is_active: boolean
-  created_at: string // ISO 8601
+  created_at: string
 }
 ```
 

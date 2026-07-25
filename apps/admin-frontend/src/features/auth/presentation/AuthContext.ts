@@ -1,5 +1,6 @@
 import { createContext } from 'react'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
+import type { LoginTheme } from '@/features/auth/application/repositories/AuthRepository'
 
 export type AuthSessionState =
   | { status: 'loading'; tenantContext: null }
@@ -9,7 +10,8 @@ export type AuthSessionState =
 export type AuthStatus = AuthSessionState['status']
 
 export interface AuthActions {
-  login: () => Promise<void>
+  login: (returnTo: string | undefined, theme: LoginTheme) => Promise<void>
+  completeLogin: (callbackUrl: string) => Promise<string>
   logout: () => Promise<void>
 }
 

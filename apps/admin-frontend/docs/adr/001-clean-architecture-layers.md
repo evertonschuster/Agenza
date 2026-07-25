@@ -1,6 +1,10 @@
 # ADR 001 — Clean Architecture layer structure
 
-**Status:** Accepted
+**Status:** Accepted; the top-level `domain`/`application`/`infrastructure`/
+`presentation` physical layout superseded by docs/adr/009's feature-based
+layout (`app/`, `features/{auth,catalog}/`, `shared/`). The inward-only
+dependency rule itself still applies, now enforced per-feature instead of
+per top-level directory.
 
 ## Decision
 

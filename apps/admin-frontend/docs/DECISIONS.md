@@ -55,17 +55,43 @@ they can't observe failure, can't trigger logout on failure, and can't
 control timing. Explicit renewal inside `getCurrentSession()` gives the
 application full control: try renewal, clear session on failure, return
 `null` so callers redirect to login.
+**Impact:** A token with at most 60 seconds remaining is renewed before
+use. Parallel session reads share the same in-flight renewal, avoiding
+refresh-token rotation races. If renewal fails, the stale OIDC user is
+removed and the protected route sends the user to login.
 
-### `HandleAuthCallback` propagates errors unwrapped
+### Restore the interrupted page after login
 
-**Decision:** `HandleAuthCallback.execute()` does not catch or wrap
-errors from `authRepository.handleCallback()`.
-**Reason:** At build time, the exact error shapes from `oidc-client-ts`
-on various failure modes (expired code, denied consent, network error)
-were unknown. Wrapping prematurely would discard information the
-presentation layer might need to show different messages.
-**Revisit when:** The IdentityServer backend exists and real error shapes
-can be observed. At that point, consider a typed `AuthCallbackError`.
+**Decision:** Carry pathname, query, and fragment through the OIDC
+application `state`, then restore that route only after committing the new
+authenticated tenant context.
+**Reason:** Expiration or a 401 should interrupt the user's work, not
+discard their navigation context. The application-layer validator accepts
+only internal non-auth-entry paths; unsafe or missing values fall back to
+`/dashboard`.
+
+### Preserve theme through the OIDC transition
+
+**Decision:** Pass the current `light` or `dark` theme as an OIDC
+authorization extension parameter. The identity-service validates and
+applies it before its login stylesheet loads, while its own accessible
+toggle persists an explicit preference on the identity origin. That explicit
+choice takes precedence on later visits; without one, the frontend request
+and then the operating-system preference are used.
+**Reason:** The credential page is a separate application and origin, so it
+cannot read the React application's local storage. An explicit,
+allowlisted parameter preserves visual continuity without coupling the two
+applications' storage.
+
+### OIDC failures leave infrastructure as `AuthFlowError`
+
+**Decision:** `OidcAuthRepository` classifies login-start and callback
+failures into `AuthFlowError`, an `AppError` with a stable `AUTH_*` support
+code and curated pt-BR message. `HandleAuthCallback.execute()` still does not
+reclassify errors.
+**Reason:** The real IdentityServer and `oidc-client-ts` failure shapes are
+now known. Classification at the adapter boundary gives presentation
+actionable feedback without exposing raw protocol or network details.
 
 ### `tenant_id` claim name
 
@@ -143,8 +169,9 @@ hand-written fake in infrastructure tests, not with MSW (MSW intercepts
 
 ### Context-based DI (not module-level singletons)
 
-**Decision:** The `AppContainer` is built once via `useState(() => createAppContainer())`
-in `AppProviders` and distributed via React context.
+**Decision:** `app/main.tsx` (the composition root) calls `createAppContainer()`
+exactly once and passes the result into `AppProviders` as a `container`
+prop, which distributes it via React context (`AppContainerContext`).
 **Reason:** Singleton modules make testing harder (shared state between
 tests). Context-based DI means each test can provide its own fake
 container without module-level mocking.

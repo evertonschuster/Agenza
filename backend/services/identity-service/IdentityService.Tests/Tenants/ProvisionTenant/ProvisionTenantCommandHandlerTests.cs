@@ -28,6 +28,7 @@ public class ProvisionTenantCommandHandlerTests
     public async Task Handle_WithValidCommand_CreatesTenantAndOwnerUser()
     {
         var tenantRepository = Substitute.For<ITenantRepository>();
+        tenantRepository.AddAsync(Arg.Any<Tenant>(), Arg.Any<CancellationToken>()).Returns(true);
         var userAccountService = Substitute.For<IUserAccountService>();
         userAccountService
             .CreateOwnerAsync(Arg.Any<Guid>(), "owner@demo.local", "Passw0rd!", Arg.Any<CancellationToken>())
@@ -56,6 +57,7 @@ public class ProvisionTenantCommandHandlerTests
     public async Task Handle_WhenOwnerCreationFails_ReturnsTheFailure()
     {
         var tenantRepository = Substitute.For<ITenantRepository>();
+        tenantRepository.AddAsync(Arg.Any<Tenant>(), Arg.Any<CancellationToken>()).Returns(true);
         var userAccountService = Substitute.For<IUserAccountService>();
         userAccountService
             .CreateOwnerAsync(Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>())
@@ -72,6 +74,52 @@ public class ProvisionTenantCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Owner.CreationFailed");
+    }
+
+    [Fact]
+    public async Task Handle_WithDuplicateTenantName_ReturnsConflictAndDoesNotCreateAnOwner()
+    {
+        var tenantRepository = Substitute.For<ITenantRepository>();
+        tenantRepository.NameExistsAsync("Demo Business", Arg.Any<CancellationToken>()).Returns(true);
+        var userAccountService = Substitute.For<IUserAccountService>();
+        var handler = new ProvisionTenantCommandHandler(
+            tenantRepository,
+            userAccountService,
+            CreatePassthroughUnitOfWork());
+
+        var result = await handler.Handle(
+            new ProvisionTenantCommand("Demo Business", "owner@demo.local", "Passw0rd!"),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Tenant.DuplicateName");
+        await tenantRepository.DidNotReceive().AddAsync(Arg.Any<Tenant>(), Arg.Any<CancellationToken>());
+        await userAccountService.DidNotReceive().CreateOwnerAsync(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WhenAddAsyncLosesTheNameRaceAfterThePreCheck_ReturnsConflictAndDoesNotCreateAnOwner()
+    {
+        var tenantRepository = Substitute.For<ITenantRepository>();
+        tenantRepository.NameExistsAsync("Demo Business", Arg.Any<CancellationToken>()).Returns(false);
+        tenantRepository.AddAsync(Arg.Any<Tenant>(), Arg.Any<CancellationToken>()).Returns(false);
+        var userAccountService = Substitute.For<IUserAccountService>();
+        var handler = new ProvisionTenantCommandHandler(
+            tenantRepository,
+            userAccountService,
+            CreatePassthroughUnitOfWork());
+
+        var result = await handler.Handle(
+            new ProvisionTenantCommand("Demo Business", "owner@demo.local", "Passw0rd!"),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Tenant.DuplicateName");
+        await userAccountService.DidNotReceive().CreateOwnerAsync(
+            Arg.Any<Guid>(), Arg.Any<string>(), Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

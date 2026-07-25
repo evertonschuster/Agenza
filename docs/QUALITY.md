@@ -69,6 +69,6 @@ Until step 4 happens, `sonar.yml` skips itself — it never blocks a PR.
 ## Branch protection recommendation
 
 Require these checks on `main`: `frontend-build-and-test`,
-`backend-build-and-test`, `ai-services-build-and-test`, the CodeQL
-languages, and (after setup) the Sonar quality gate. All jobs already
-have stable, unique names for this purpose.
+`backend-build-and-test`, `ai-services-build-and-test`, `agent-governance`,
+the CodeQL languages, and (after setup) the Sonar quality gate. All jobs
+already have stable, unique names for this purpose.

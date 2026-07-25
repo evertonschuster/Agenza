@@ -9,8 +9,15 @@ Replace the per-call-site `useAuth()` (each call independently ran its own
 
 - `AuthProvider`, mounted once in `AppProviders`, as the single source of
   session state. `useAuth()` is now a pure `useContext` consumer with no
-  state of its own.
-- `SessionEventBus` (`application/ports/SessionEventBus.ts`), a framework-
+  state of its own. The OIDC callback completes through the provider's
+  `completeLogin(callbackUrl)` action, which commits the returned tenant
+  context before navigating into a protected route. `ProtectedRoute`
+  carries the interrupted internal path (pathname, query, and hash) to the
+  login page, and the OIDC redirect carries it through provider-managed
+  application state. The callback validates that state as an internal,
+  non-auth-entry path before restoring it; missing or unsafe state falls
+  back to `/dashboard`.
+- `SessionEventBus` (`shared/application/SessionEventBus.ts`), a framework-
   agnostic pub/sub port. `AuthenticatedHttpClient` publishes to it (no
   React import needed) on a 401 or a missing token; `AuthProvider`
   subscribes and clears the shared session via the same `useAsync.mutate`
@@ -29,7 +36,14 @@ Replace the per-call-site `useAuth()` (each call independently ran its own
   after the app has already switched tenants). `mutate` accepts an optional
   `expectedGeneration` (captured via `captureGeneration()` before starting
   an async write) and no-ops if it's stale, so an optimistic insert from an
-  abandoned tenant/session can't land in the current one either.
+  abandoned tenant/session can't land in the current one either. A mutate
+  without `expectedGeneration` is authoritative: it starts a new generation
+  so an older in-flight read cannot overwrite a login, logout, or session
+  invalidation.
+- `/login` as an automatic transition route: after `AuthProvider` resolves,
+  it redirects unauthenticated users to the OIDC provider once, redirects an
+  already-authenticated user to the validated return path, and remains visible
+  only to explain progress or offer recovery from a classified failure.
 
 ## Rationale
 
@@ -74,6 +88,19 @@ of duplicated per hook call.
 - `TenantBoundary` only wraps the routed content inside `AdminLayout`, not
   the layout shell itself — the sidebar/nav don't need to remount on a
   tenant switch, only the tenant-scoped pages underneath.
+- After an expired or invalidated session, successful interactive login
+  returns to the exact interrupted path, including query and fragment.
+  The destination stores no tenant data and is navigated only after the
+  new authenticated tenant context has been committed. `TenantBoundary`
+  then remounts the page subtree for the new `${user.id}:${tenant.id}` key,
+  so state from the previous session cannot be reused.
+- The intermediate login route no longer asks for a redundant second click.
+  Progress text explains the automatic provider redirect and callback. A
+  failed start or callback shows a stable support code, a curated cause, and
+  an explicit retry/new-login action.
+- Absolute URLs, scheme-relative URLs, malformed destinations, `/login`,
+  and `/callback` are rejected as return destinations to prevent open
+  redirects and authentication loops; `/dashboard` is the safe fallback.
 - This ADR does not yet address the composition-root/`AppContainer`
   reshaping (raw repositories/`httpClient` still exposed to presentation)
-  — that's a separate, later decision.
+  — that's a separate, later decision (resolved by docs/adr/008).
