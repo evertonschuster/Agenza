@@ -43,16 +43,17 @@ description: >
   didn't call for (an unexpected `DropColumn`, an unexpected
   `RENAME`-as-`DROP`-then-`ADD` that EF sometimes generates for a rename
   it can't detect as one).
-- **Tests**: this repo has no integration test tier against a real
-  database (docs/adr/0015) — a migration's actual effect on data has no
-  automated coverage. State this explicitly rather than claiming the
-  migration is "tested" because unit tests pass; if the change is
-  destructive or high-risk, recommend (or perform, if tooling allows) a
-  manual dry run against a copy of representative data.
+- **Tests**: this repo has no representative-data migration test tier
+  (docs/adr/0015). The Aspire API-contract job proves that the current
+  migration chain applies to an empty PostgreSQL database, but it does not
+  prove a transition's effect on existing data. State that distinction
+  explicitly; if the change is destructive or high-risk, recommend (or
+  perform, if tooling allows) a dry run against a copy of representative
+  data.
 - **Operational documentation**: note in the PR/commit or `docs/MONOREPO.md`'s
   "Known gaps" section anything an operator needs to know before applying
   this in a non-local environment (e.g. the existing note there about
-  `Migrations:RunOnStartup` and concurrent replicas — a new migration
+  `DatabaseBootstrap:RunOnStartup` and concurrent replicas — a new migration
   doesn't change that mechanism, but a schema change that's unsafe to
   apply concurrently with multiple running replicas needs the same kind
   of callout).
