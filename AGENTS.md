@@ -115,6 +115,36 @@ that were never stated or implied by the spec/ADRs/code.
   library quirk, a subtle ordering/transaction constraint) — never *what*
   the code does, and never rationale that belongs in an ADR instead.
 
+## Git workflow
+
+Trunk-based, single long-lived branch (`main`) — no permanent `develop`/
+staging branch. Full rationale: docs/adr/0021.
+
+- **Never commit directly to `main`.** Every task — including a "quick"
+  fix — starts on its own branch cut from an up-to-date `main`:
+  `git fetch origin && git checkout -b <type>/<slug> origin/main`, with
+  `<type>` one of `feat`, `fix`, `chore`, `docs`, `refactor`. This is
+  enforced mechanically by `.husky/pre-commit` (rejects a commit made on
+  `main`), not just documented — don't rely on remembering the rule.
+- **One task, one branch.** Don't stack a branch on top of another
+  unmerged feature branch (merging B into unmerged A, then A into `main`
+  later) — that's what turned a small, current diff into a large,
+  stale-conflict one here before this ADR. If work genuinely depends on
+  another unmerged branch, rebase onto `main` once that branch lands,
+  don't merge into it.
+- **Rebase onto `origin/main` before opening or updating a PR**, and
+  again if `main` moves before merge. Small, same-day conflicts beat a
+  multi-week reconciliation.
+- **Squash merge only**, branch auto-deleted on merge (already configured
+  on the GitHub repo — don't change the merge-method settings without
+  updating docs/adr/0021).
+- **Concurrent agents (or an agent running alongside a human's own
+  GitHub Desktop / IDE commits) use isolated working trees** — `git
+  worktree add ../agenza-<slug> <branch>`, or the Agent tool's
+  `isolation: "worktree"` — never share one working directory across
+  simultaneous tasks. Uncommitted changes belong to a task's own branch,
+  never left sitting on `main` or on another task's branch.
+
 ## Rule persistence policy
 
 A correction to an agent, a recurring bug, or a new architectural decision
