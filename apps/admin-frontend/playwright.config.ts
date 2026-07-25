@@ -1,5 +1,16 @@
 import { defineConfig, devices } from '@playwright/test'
 
+const e2eEnvironment = {
+  VITE_OIDC_AUTHORITY: process.env.VITE_OIDC_AUTHORITY ?? 'http://localhost:5081',
+  VITE_OIDC_CLIENT_ID: process.env.VITE_OIDC_CLIENT_ID ?? 'admin-panel',
+  VITE_OIDC_REDIRECT_URI: process.env.VITE_OIDC_REDIRECT_URI ?? 'http://localhost:4173/callback',
+  VITE_OIDC_POST_LOGOUT_REDIRECT_URI:
+    process.env.VITE_OIDC_POST_LOGOUT_REDIRECT_URI ?? 'http://localhost:4173/login',
+  VITE_OIDC_SCOPE:
+    process.env.VITE_OIDC_SCOPE ?? 'openid profile tenant_id services-api offline_access',
+  VITE_API_BASE_URL: process.env.VITE_API_BASE_URL ?? 'http://localhost:5080',
+}
+
 /**
  * Every spec here mocks its own backend calls via page.route() and injects
  * an oidc-client-ts session directly into localStorage where it needs one -
@@ -32,6 +43,7 @@ export default defineConfig({
   ],
   webServer: {
     command: 'npm run build && npm run preview',
+    env: e2eEnvironment,
     url: 'http://localhost:4173',
     reuseExistingServer: !process.env.CI,
     timeout: 120_000,

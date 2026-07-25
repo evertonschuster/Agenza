@@ -1,9 +1,9 @@
 import type { Page } from '@playwright/test'
 
 /**
- * Mirrors .env.local (see .env.example) - these must match the real
- * VITE_OIDC_AUTHORITY/VITE_OIDC_CLIENT_ID the dev server is started with,
- * since oidc-client-ts's WebStorageStateStore keys the cached user by both.
+ * Mirrors the deterministic defaults in playwright.config.ts. These must
+ * match VITE_OIDC_AUTHORITY/VITE_OIDC_CLIENT_ID because oidc-client-ts's
+ * WebStorageStateStore keys the cached user by both.
  */
 const OIDC_AUTHORITY = 'http://localhost:5081'
 const OIDC_CLIENT_ID = 'admin-panel'
