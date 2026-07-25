@@ -28,8 +28,9 @@ runtime contract CI:
 - AppHost owns PostgreSQL, identity-service, services-service,
   assistant-service, and admin-frontend;
 - PostgreSQL uses the stable `agenza-postgres-data` volume and host port 5432;
-- AppHost injects database role passwords, service credentials, service
-  references, and the frontend's complete OIDC/API environment;
+- AppHost injects one shared local-development password into PostgreSQL,
+  restricted database roles, and internal OAuth clients, plus service
+  references and the frontend's complete OIDC/API environment;
 - safe local-demo parameter defaults allow a zero-configuration first run and
   remain overridable through .NET user secrets;
 - the API-contract CI job starts AppHost and runs the OpenAPI drift and real
@@ -65,6 +66,11 @@ fully containerized fallback. This is accepted for the current development
 workflow. PostgreSQL remains reachable from a desktop client at
 `localhost:5432`, database `appdb`, user `postgres`, password `postgres` unless
 the AppHost parameter is overridden.
+
+Sharing one password is deliberately limited to this local demo. Database
+users and their grants remain separate, so a service still cannot access
+another service's schema. A production deployment must replace the shared
+development password with independently managed credentials.
 
 There is deliberately no production image output. When deployment becomes a
 real requirement, its runtime artifacts, secret model, migration execution,

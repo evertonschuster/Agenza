@@ -365,8 +365,11 @@ def check_aspire_local_orchestration() -> list[Finding]:
         'AddPostgres("postgres"',
         ".WithHostPort(5432)",
         '.WithEnvironment("POSTGRES_DB", "appdb")',
-        '.WithEnvironment("IDENTITY_DB_PASSWORD"',
-        '.WithEnvironment("SERVICES_DB_PASSWORD"',
+        '.WithEnvironment("APP_DB_PASSWORD"',
+        "Password={developmentPassword}",
+        '.WithEnvironment("IdentityClients__AssistantServiceWorker__Secret", developmentPassword)',
+        '.WithEnvironment("IdentityClients__TenantProvisioning__Secret", developmentPassword)',
+        '.WithEnvironment("IDENTITY_CLIENT_SECRET", developmentPassword)',
         '.WithDataVolume("agenza-postgres-data")',
         ".WithInitFiles(",
         "AddProject<Projects.IdentityService_Api>",
@@ -392,6 +395,66 @@ def check_aspire_local_orchestration() -> list[Finding]:
                     f"Missing '{fragment}' required by the Aspire-only local runtime.",
                 )
             )
+
+    development_parameter = re.search(
+        r'AddParameter\s*\(\s*"development-password"(?P<arguments>.*?)\);',
+        apphost_text,
+        re.DOTALL,
+    )
+    if development_parameter is None or not re.search(
+        r"\bsecret\s*:\s*true\b",
+        development_parameter.group("arguments"),
+    ):
+        findings.append(
+            Finding(
+                "incomplete-aspire-orchestration",
+                "blocking",
+                _rel(apphost),
+                1,
+                "The shared 'development-password' Aspire parameter is missing "
+                "or is not marked 'secret: true'.",
+            )
+        )
+
+    obsolete_dev_parameters = [
+        "postgres-password",
+        "identity-db-password",
+        "services-db-password",
+        "assistant-worker-secret",
+        "tenant-provisioning-secret",
+    ]
+    for parameter in obsolete_dev_parameters:
+        if not re.search(
+            rf'AddParameter\s*\(\s*"{re.escape(parameter)}"',
+            apphost_text,
+        ):
+            continue
+        findings.append(
+            Finding(
+                "duplicated-aspire-development-secret",
+                "blocking",
+                _rel(apphost),
+                1,
+                f"'{parameter}' duplicates the shared local-development password.",
+            )
+        )
+
+    init_script = REPO_ROOT / "infra/postgres/init/001-service-roles.sh"
+    init_text = (
+        init_script.read_text(encoding="utf-8", errors="replace")
+        if init_script.is_file()
+        else ""
+    )
+    if "APP_DB_PASSWORD" not in init_text:
+        findings.append(
+            Finding(
+                "incomplete-aspire-orchestration",
+                "blocking",
+                _rel(init_script),
+                1,
+                "The PostgreSQL role bootstrap does not consume the shared password.",
+            )
+        )
 
     workflow = REPO_ROOT / ".github" / "workflows" / "frontend-ci.yml"
     workflow_text = (

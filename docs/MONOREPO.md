@@ -44,19 +44,27 @@ The full stack has one local orchestration path:
   Python 3.12, and `uv` must be installed; AppHost runs the npm and locked
   `uv sync` setup resources before starting Vite and Uvicorn.
 
-  Safe demo defaults are built into AppHost, so the command works without
-  secret setup. Override any of them through .NET user secrets when needed:
+  A single local-development password is shared by PostgreSQL, the restricted
+  application roles, and the internal OAuth clients. Its safe demo default is
+  `postgres`, so the command works without secret setup. Override it through
+  .NET user secrets when needed:
 
   ```bash
-  dotnet user-secrets set "Parameters:postgres-password" "<value>" --project backend/AppHost
-  dotnet user-secrets set "Parameters:identity-db-password" "<value>" --project backend/AppHost
-  dotnet user-secrets set "Parameters:services-db-password" "<value>" --project backend/AppHost
-  dotnet user-secrets set "Parameters:assistant-worker-secret" "<value>" --project backend/AppHost
-  dotnet user-secrets set "Parameters:tenant-provisioning-secret" "<value>" --project backend/AppHost
+  dotnet user-secrets set "Parameters:development-password" "<value>" --project backend/AppHost
   ```
 
-  AppHost passes the same worker secret to the identity provider and the
-  assistant, so client-credentials authentication cannot drift between them.
+  Existing volumes retain the role passwords created during their first
+  initialization. After adopting or changing this shared password, stop
+  AppHost and recreate the local demo database once:
+
+  ```bash
+  docker volume rm agenza-postgres-data
+  dotnet run --project backend/AppHost --launch-profile http
+  ```
+
+  The database users remain distinct: `identity_app` and `services_app` keep
+  separate schema permissions even though their local-development passwords
+  are equal.
 
 Docker Compose and application Dockerfiles are intentionally absent. This
 repository is still a demo without a production deployment design; adding
