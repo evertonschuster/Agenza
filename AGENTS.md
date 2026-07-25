@@ -15,17 +15,17 @@ React frontend, .NET microservices, Python AI services. See
 
 ## Read next (in this order)
 
-| Area                                       | Read                                                                    |
-| ------------------------------------------- | ------------------------------------------------------------------------ |
-| `.NET backend (backend/**)`                | [backend/AGENTS.md](backend/AGENTS.md)                                  |
-| `Admin frontend (apps/admin-frontend/**)`  | [apps/admin-frontend/AGENTS.md](apps/admin-frontend/AGENTS.md)          |
-| `Python AI service (ai-services/<svc>/**)` | that service's own `README.md`                                          |
-| Repo layout & workspace conventions        | [docs/MONOREPO.md](docs/MONOREPO.md)                                    |
-| Target architecture                        | [docs/VISION.md](docs/VISION.md)                                        |
-| How humans direct agents here (SDD)        | [docs/SDD-GUIDE.md](docs/SDD-GUIDE.md)                                  |
-| CI, coverage gates, review tooling         | [docs/QUALITY.md](docs/QUALITY.md)                                      |
-| Cross-cutting decisions with rationale     | [docs/adr/](docs/adr/)                                                  |
-| How this governance framework works        | [docs/AGENT-GOVERNANCE.md](docs/AGENT-GOVERNANCE.md)                    |
+| Area                                       | Read                                                           |
+| ------------------------------------------ | -------------------------------------------------------------- |
+| `.NET backend (backend/**)`                | [backend/AGENTS.md](backend/AGENTS.md)                         |
+| `Admin frontend (apps/admin-frontend/**)`  | [apps/admin-frontend/AGENTS.md](apps/admin-frontend/AGENTS.md) |
+| `Python AI service (ai-services/<svc>/**)` | that service's own `README.md`                                 |
+| Repo layout & workspace conventions        | [docs/MONOREPO.md](docs/MONOREPO.md)                           |
+| Target architecture                        | [docs/VISION.md](docs/VISION.md)                               |
+| How humans direct agents here (SDD)        | [docs/SDD-GUIDE.md](docs/SDD-GUIDE.md)                         |
+| CI, coverage gates, review tooling         | [docs/QUALITY.md](docs/QUALITY.md)                             |
+| Cross-cutting decisions with rationale     | [docs/adr/](docs/adr/)                                         |
+| How this governance framework works        | [docs/AGENT-GOVERNANCE.md](docs/AGENT-GOVERNANCE.md)           |
 
 An area's own `AGENTS.md` always wins on anything specific to that area;
 this file only covers what applies everywhere.
@@ -71,9 +71,15 @@ that were never stated or implied by the spec/ADRs/code.
   and Python services talk over HTTP (and later, events) — never shared
   files, multi-service writes to the same database, or in-process calls
   across a service boundary.
+- **Aspire is the single local application orchestrator.** Add and evolve
+  frontend, backend, Python, and PostgreSQL resources in
+  `backend/AppHost/AppHost.cs`; do not add Docker Compose or application
+  Dockerfiles as a parallel local runtime. Docker is used only as Aspire's
+  PostgreSQL container engine until a real deployment design is accepted
+  with its own ADR and CI proof (docs/adr/0029).
 - **Exceptions are not conventional control flow in the .NET backend.** No
   backend layer (Domain, Application, Infrastructure) throws for an
-  *expected* outcome — validation failure, not-found, conflict/duplicate,
+  _expected_ outcome — validation failure, not-found, conflict/duplicate,
   in-use, tenant authorization. Every layer's failure signature is explicit
   in its return type (`Result`/`DomainResult`/`PersistenceResult`).
   Exceptions stay reserved for genuinely unexpected/unrecoverable failures.
@@ -111,8 +117,8 @@ that were never stated or implied by the spec/ADRs/code.
 - Docs are updated in the same change that makes them stale (STATUS.md
   rows, API docs, this file, area `AGENTS.md`/`CLAUDE.md` files) — not in a
   follow-up.
-- A code comment explains a non-obvious *why* (a security default, a
-  library quirk, a subtle ordering/transaction constraint) — never *what*
+- A code comment explains a non-obvious _why_ (a security default, a
+  library quirk, a subtle ordering/transaction constraint) — never _what_
   the code does, and never rationale that belongs in an ADR instead.
 
 ## Git workflow
@@ -140,7 +146,7 @@ staging branch. Full rationale: docs/adr/0021.
   updating docs/adr/0021).
 - **Concurrent agents (or an agent running alongside a human's own
   GitHub Desktop / IDE commits) use isolated working trees** — `git
-  worktree add ../agenza-<slug> <branch>`, or the Agent tool's
+worktree add ../agenza-<slug> <branch>`, or the Agent tool's
   `isolation: "worktree"` — never share one working directory across
   simultaneous tasks. Uncommitted changes belong to a task's own branch,
   never left sitting on `main` or on another task's branch.
@@ -173,6 +179,14 @@ synced — never hand-copied — into `.agents/skills/` (Codex) and
 `.claude/skills/` (Claude Code) by `scripts/sync_agent_skills.py`. Run
 `python scripts/sync_agent_skills.py --check` after editing anything under
 `agent-skills/`; run it without `--check` to actually sync.
+
+Use `agent-skills/agenza-architecture-review` to audit whether the current
+monorepo follows its established rules. Use
+`agent-skills/evolve-modular-architecture` when deciding how the
+architecture should evolve: defining or repairing module boundaries,
+choosing between a modular monolith and selective service extraction,
+planning an incremental migration, writing the ADR, or defining fitness
+functions for the new boundary.
 
 ## Mandatory commands before calling anything done
 

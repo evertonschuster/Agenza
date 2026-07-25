@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Controllers;
 using Microsoft.AspNetCore.Mvc.Filters;
@@ -32,7 +33,18 @@ public class TenantHeaderFilter : IAsyncActionFilter
             || !_tenantAccessor.TryGetTenantId(out var claimTenantId)
             || headerTenantId != claimTenantId)
         {
-            context.Result = new ForbidResult();
+            var problem = new ProblemDetails
+            {
+                Type = "https://agenza/errors/authorization",
+                Title = "O tenant autenticado não corresponde ao X-Tenant-Id.",
+                Status = StatusCodes.Status403Forbidden,
+            };
+            problem.Extensions["code"] = "Tenant.ContextMismatch";
+
+            context.Result = new ObjectResult(problem)
+            {
+                StatusCode = StatusCodes.Status403Forbidden,
+            };
             return;
         }
 

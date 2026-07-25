@@ -21,27 +21,34 @@ why MediatR/FluentAssertions specifically are NOT used here).
 
 ## Read these before doing any work
 
-| Resource                                       | When to read                                |
-| ----------------------------------------------- | -------------------------------------------- |
-| `README.md`                                    | Solution layout, commands                   |
-| `agent-skills/agenza-backend-use-case`         | Adding any command/query / business logic — canonical, portable |
-| `.skills/backend-new-microservice/SKILL.md`    | Creating a new service                      |
-| `agent-skills/agenza-exception-flow-audit`     | Auditing throw/try/catch/Exception usage    |
-| `agent-skills/agenza-tenant-isolation-review`  | Auditing tenant scoping                     |
-| `agent-skills/agenza-migration-safety`         | Any EF Core migration or schema change      |
-| `../docs/QUALITY.md`                           | What CI gates, before pushing               |
-| `../docs/adr/0005-...md`                       | CQRS/vertical-slice/Result convention rationale |
-| `../docs/adr/`                                 | Cross-cutting decisions with rationale      |
-| `../docs/adr/0006-...md`                       | Tenant header/automatic scoping, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions |
-| `../docs/adr/0007-...md`                       | Controllers bind commands directly (no per-endpoint body record), Command→Domain mapping extension methods |
-| `../docs/adr/0008-...md`                       | Automatic tenant assignment on save (AssignTenant + interceptor) |
-| `../docs/adr/0009-...md`                       | TenantOwnedEntity base class (BaseEntity + ITenantOwned combined) |
-| `../docs/adr/0012-...md`                       | Cross-aggregate checks live in handlers, not validators — validators take no repository dependencies |
-| `../docs/adr/0014-...md`                       | Result pattern end-to-end — Domain/persistence no longer throw for expected outcomes |
-| `../docs/adr/0015-...md`                       | Integration tests removed — CI runs unit tests only, no database dependency |
-| `../docs/adr/0017-...md`                       | Schema-scoped `__EFMigrationsHistory` per service — read before touching either service's migrations or `DependencyInjection.cs` |
-| `../docs/adr/0018-...md`                       | `Admin.SharedKernel` vs `Admin.SharedKernel.AspNetCore` split — read before adding to either |
-| `../docs/adr/0019-...md`                       | `ServicesService.PersistenceTests` — narrow EF InMemory coverage for tenant assignment/scoping, outside the *.Tests boundary and its coverage gate |
+| Resource                                      | When to read                                                                                                                                       |
+| --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `README.md`                                   | Solution layout, commands                                                                                                                          |
+| `agent-skills/agenza-backend-use-case`        | Adding any command/query / business logic — canonical, portable                                                                                    |
+| `.skills/backend-new-microservice/SKILL.md`   | Creating a new service                                                                                                                             |
+| `agent-skills/agenza-exception-flow-audit`    | Auditing throw/try/catch/Exception usage                                                                                                           |
+| `agent-skills/agenza-tenant-isolation-review` | Auditing tenant scoping                                                                                                                            |
+| `agent-skills/agenza-migration-safety`        | Any EF Core migration or schema change                                                                                                             |
+| `../docs/QUALITY.md`                          | What CI gates, before pushing                                                                                                                      |
+| `../docs/adr/0005-...md`                      | CQRS/vertical-slice/Result convention rationale                                                                                                    |
+| `../docs/adr/`                                | Cross-cutting decisions with rationale                                                                                                             |
+| `../docs/adr/0006-...md`                      | Tenant header/automatic scoping, BaseEntity/soft delete, GUID v7, generic repository, NSubstitute, business exceptions                             |
+| `../docs/adr/0007-...md`                      | Controllers bind commands directly (no per-endpoint body record), Command→Domain mapping extension methods                                         |
+| `../docs/adr/0008-...md`                      | Automatic tenant assignment on save (AssignTenant + interceptor)                                                                                   |
+| `../docs/adr/0009-...md`                      | TenantOwnedEntity base class (BaseEntity + ITenantOwned combined)                                                                                  |
+| `../docs/adr/0012-...md`                      | Cross-aggregate checks live in handlers, not validators — validators take no repository dependencies                                               |
+| `../docs/adr/0014-...md`                      | Result pattern end-to-end — Domain/persistence no longer throw for expected outcomes                                                               |
+| `../docs/adr/0015-...md`                      | Historical removal of the old broad/flaky integration suites                                                                                       |
+| `../docs/adr/0017-...md`                      | Schema-scoped `__EFMigrationsHistory` per service — read before touching either service's migrations or `DependencyInjection.cs`                   |
+| `../docs/adr/0018-...md`                      | `Admin.SharedKernel` vs `Admin.SharedKernel.AspNetCore` split — read before adding to either                                                       |
+| `../docs/adr/0019-...md`                      | `ServicesService.PersistenceTests` — narrow EF InMemory coverage for tenant assignment/scoping, outside the *.Tests boundary and its coverage gate |
+| `../docs/adr/0023-...md`                      | Historical bounded runtime-test decision, superseded by ADR 0026                                                                                   |
+| `../docs/adr/0024-...md`                      | Per-service database roles and composite tenant relationships                                                                                      |
+| `../docs/adr/0025-...md`                      | Historical explicit/serialized bootstrap decision, narrowed by ADR 0027                                                                            |
+| `../docs/adr/0026-...md`                      | Removal of the dedicated runtime-test project; retained runtime smokes and known gaps                                                              |
+| `../docs/adr/0027-...md`                      | Single-instance demo bootstrap without a distributed advisory lock                                                                                 |
+| `../docs/adr/0028-...md`                      | One-time EF migration baseline reset before the first deployment                                                                                   |
+| `../docs/adr/0029-...md`                      | Aspire as the single local application orchestrator                                                                                                |
 
 ## Critical constraints (non-negotiable)
 
@@ -52,7 +59,8 @@ Domain          zero project references, zero NuGet framework deps
 Application     → Domain, Admin.SharedKernel. Ports live in Abstractions/
 Infrastructure  → Application, Admin.Identity.Client, Admin.SharedKernel.EntityFrameworkCore
 Api             → Application + Infrastructure + Admin.SharedKernel.AspNetCore. Controllers stay thin
-Tests           → Application + Domain (unit only — no integration tests, docs/adr/0015)
+Tests           → Application + Domain (unit tests)
+PersistenceTests → Infrastructure (narrow Docker-free EF tenant mechanisms only, docs/adr/0019)
 ```
 
 `backend/shared/Admin.SharedKernel` is cross-cutting CQRS/Result
@@ -79,7 +87,7 @@ inline comment only for something a careful reviewer would still get
 wrong without it: a security-relevant default (fail-closed auth), a
 protocol/library quirk (OpenIddict claim remapping, a docker-network
 issuer mismatch), or a non-obvious ordering/transaction constraint. One
-line, not a paragraph — rationale for *why* a pattern was chosen (CQRS
+line, not a paragraph — rationale for _why_ a pattern was chosen (CQRS
 vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
 `docs/adr/`, not repeated in every file that uses the pattern.
 
@@ -179,7 +187,7 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   `ApplyAuditableConventions` — the query filter must read
   `CurrentTenantId` off the live instance, never a value snapshotted at
   model-build time (EF Core caches the compiled model per `DbContext`
-  *type*, so a baked-in constant would leak across every request — see
+  _type_, so a baked-in constant would leak across every request — see
   docs/adr/0006 for the incident this caught). Repository methods,
   commands, and queries for that entity never take an explicit
   `tenantId` parameter (see `ITagRepository`/`CreateTagCommand`).
@@ -201,7 +209,7 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
 
 - One folder per feature under `Application/<Feature>/`, one subfolder
   per operation: `Application/Tags/CreateTag/{CreateTagCommand,
-  CreateTagCommandHandler, CreateTagCommandValidator}.cs`. A DTO shared
+CreateTagCommandHandler, CreateTagCommandValidator}.cs`. A DTO shared
   by more than one operation in the feature sits at the feature root
   (`Application/Tags/TagResponse.cs`).
 - Commands mutate (`ICommand` when there's nothing to return,
@@ -235,7 +243,7 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
 
 ### Result pattern — exceptions are not conventional control flow (docs/adr/0014)
 
-No layer uses exceptions for an *expected* outcome — input validation,
+No layer uses exceptions for an _expected_ outcome — input validation,
 domain invariants, not-found, conflict/duplicate, in-use, tenant
 authorization. Every layer's failure signature is explicit in its return
 type. Exceptions are reserved for genuinely unexpected/unrecoverable
@@ -272,7 +280,7 @@ guards, an unrecognized database error, transactional rollback cleanup.
   see "UnitOfWork" below.
 - **`Admin.SharedKernel.AspNetCore.GenericExceptionHandler`** (`IExceptionHandler`,
   registered via `AddExceptionHandler<T>()` + `app.UseExceptionHandler()`
-  in each `Program.cs`) is the *only* global exception handler in either
+  in each `Program.cs`) is the _only_ global exception handler in either
   service — it logs at Error level via `ILogger` and returns a generic
   500 Problem Details with no exception details in the body. There is no
   `BusinessExceptionHandler` anymore: nothing throws a business exception
@@ -339,7 +347,7 @@ guards, an unrecognized database error, transactional rollback cleanup.
   - Writing through more than one abstraction that each commit on their
     own (e.g. an EF repository AND `UserManager`)? Wrap both in an
     explicit transaction: `ExecuteInTransactionAsync<TResult>(Func<...,
-    Task<Result<TResult>>>, ...)`, Result-aware so a handler's
+Task<Result<TResult>>>, ...)`, Result-aware so a handler's
     `Result.Failure` rolls back exactly like an exception would
     (identity-service).
 
@@ -369,25 +377,22 @@ guards, an unrecognized database error, transactional rollback cleanup.
   `Directory.Build.props`/`.targets` and applies automatically —
   `Admin.SharedKernel` is excluded from every service's gate since it
   has its own (`Admin.SharedKernel.Tests`).
-- **No integration tests, by decision** (docs/adr/0015): CI runs unit
-  tests only — no Postgres, no Docker, no `WebApplicationFactory`.
-  Api/Infrastructure (controllers, EF configurations/migrations,
-  interceptors, exception handlers, auth/OIDC flows) have no automated
-  coverage as a result — verify those manually (`dotnet run` + a real
-  HTTP client) before merging a change that touches them. One narrow
-  exception (docs/adr/0019): `ServicesService.PersistenceTests` covers
-  automatic tenant assignment on save and the tenant-scoped query filter
-  with EF Core InMemory (no Postgres/Docker) — the two mechanisms behind
-  this file's tenant-scoping non-negotiable. Everything else Api/
-  Infrastructure still has no automated coverage.
-- New endpoint = a unit test per new handler/validator; manually
-  exercise auth (401/403) and the happy path before merging.
+- ADR 0015 still prevents restoring a broad, flaky endpoint suite.
+  `ServicesService.PersistenceTests` covers automatic tenant assignment
+  and query filtering with EF InMemory (docs/adr/0019).
+  There is no Testcontainers/`WebApplicationFactory` project. The Aspire
+  API-contract job applies migrations to a fresh PostgreSQL database and
+  exercises real OIDC authentication, scope denial, tenant fail-closed
+  behavior, and authorized provisioning (docs/adr/0026).
+- New endpoint = a unit test per new handler/validator. Add a runtime
+  test tier only when concrete failure evidence justifies its maintenance
+  cost, and record the boundary and exit criteria in an ADR.
 
 ## Both must pass before every commit
 
 ```bash
 dotnet build backend/AdminBackend.slnx
-dotnet test backend/AdminBackend.slnx   # unit tests only; coverage gate applied via Directory.Build.props/.targets
+dotnet test backend/AdminBackend.slnx   # unit coverage + EF tenant persistence tier
 ```
 
 Also run the repo-wide governance checks from [../AGENTS.md](../AGENTS.md)

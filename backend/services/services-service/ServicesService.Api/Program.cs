@@ -3,7 +3,6 @@ using Admin.SharedKernel;
 using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Mvc.Authorization;
 using ServicesService.Api.Setup;
 using ServicesService.Application;
 using ServicesService.Infrastructure;
@@ -14,14 +13,14 @@ builder.AddServiceDefaults();
 
 builder.Services.AddControllers(options =>
 {
-    // Fail-closed: auth required unless [AllowAnonymous]; a verified X-Tenant-Id header required unless [IgnoreTenant].
-    options.Filters.Add(new AuthorizeFilter());
+    // A verified X-Tenant-Id header is required unless [IgnoreTenant].
     options.Filters.Add<TenantHeaderFilter>();
 });
 builder.Services.AddOpenApi();
 
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
+builder.Services.AddAuthorizationProblemDetails();
 
 builder.Services
     .AddApiVersioning(options =>
@@ -33,6 +32,14 @@ builder.Services
     .AddMvc();
 
 builder.Services.AddIdentityServiceAuthentication(builder.Configuration, audience: "services-api");
+builder.Services.AddAuthorization(options =>
+{
+    // Endpoint-level fallback keeps the API fail-closed while allowing the
+    // authorization middleware to return the shared problem contract.
+    options.FallbackPolicy = new AuthorizationPolicyBuilder()
+        .RequireAuthenticatedUser()
+        .Build();
+});
 
 builder.Services.AddSharedKernel();
 builder.Services.AddServicesApplication();
@@ -54,7 +61,10 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    // The generated contract is a development/CI artifact, not tenant-owned
+    // business data. Keep it readable without a bearer token so the contract
+    // drift gate can regenerate types from the running service.
+    app.MapOpenApi().AllowAnonymous();
 }
 
 app.UseHttpsRedirection();

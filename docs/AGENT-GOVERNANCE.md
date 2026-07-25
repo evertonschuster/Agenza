@@ -66,7 +66,7 @@ script; a hand-edit in a distribution directory is exactly the "divergent
 copy" `scripts/check_agent_governance.py` is designed to catch.
 
 Three skills predate this framework and still live outside `agent-skills/`
-on purpose, because they don't duplicate one of the eight canonical
+on purpose, because they don't duplicate one of the nine canonical
 skills: `backend/.skills/backend-new-microservice/SKILL.md` and
 `apps/admin-frontend/.skills/admin-api-contract`/`admin-tdd-conventions`.
 They're referenced directly from `backend/AGENTS.md`/
@@ -76,7 +76,7 @@ duplicates of canonical skills and are now redirect stubs pointing at
 `agent-skills/agenza-backend-use-case` and `agent-skills/agenza-frontend-feature`
 respectively.
 
-## The eight canonical skills
+## The nine canonical skills
 
 | Skill | Purpose |
 | --- | --- |
@@ -84,6 +84,7 @@ respectively.
 | `agenza-frontend-feature` | Build/change a React feature vertical |
 | `agenza-exception-flow-audit` | Classify every throw/try/catch in `backend/` against docs/adr/0012/0014 |
 | `agenza-architecture-review` | General architecture audit across the monorepo |
+| `evolve-modular-architecture` | Make evidence-led module, topology, migration, ADR, and fitness-function decisions |
 | `agenza-rule-persistence` | Turn a one-off correction into a durable, cross-file rule |
 | `agenza-api-contract-review` | Audit backend/frontend contract drift |
 | `agenza-tenant-isolation-review` | Audit multi-tenancy end to end |

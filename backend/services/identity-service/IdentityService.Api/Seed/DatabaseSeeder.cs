@@ -6,7 +6,6 @@ using OpenIddict.Abstractions;
 
 namespace IdentityService.Api.Seed;
 
-// Dev-time bootstrap: migrates, then idempotently seeds OpenIddict clients/scopes and a demo Tenant+owner. Safe to run on every startup.
 public class DatabaseSeeder : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -22,21 +21,17 @@ public class DatabaseSeeder : IHostedService
 
     public async Task StartAsync(CancellationToken cancellationToken)
     {
+        if (!_configuration.GetValue<bool>("DatabaseBootstrap:RunOnStartup"))
+        {
+            return;
+        }
+
         using var scope = _serviceProvider.CreateScope();
         var services = scope.ServiceProvider;
 
         var dbContext = services.GetRequiredService<IdentityDataContext>();
 
-        // Defaults to true for local-dev/single-instance convenience. Multiple
-        // replicas starting concurrently would race to apply the same
-        // migration - set Migrations:RunOnStartup=false and run migrations as
-        // a separate deployment step once a real multi-replica topology
-        // exists (see docs/MONOREPO.md's "Known gaps"). Seeding still runs
-        // either way - it assumes the schema is already migrated.
-        if (_configuration.GetValue("Migrations:RunOnStartup", true))
-        {
-            await dbContext.Database.MigrateAsync(cancellationToken);
-        }
+        await dbContext.Database.MigrateAsync(cancellationToken);
 
         await SeedScopesAsync(services, cancellationToken);
         await SeedClientsAsync(services, cancellationToken);

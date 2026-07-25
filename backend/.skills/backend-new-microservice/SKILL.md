@@ -5,7 +5,7 @@ description: >
   backend/services/. Trigger on "new service", "new microservice", or
   when a feature clearly belongs to a business context no existing
   service owns. Encodes the project layout, solution wiring, shared
-  Postgres schema convention, auth wiring, Docker, and CI expectations.
+  Postgres schema convention, auth wiring, Aspire, and CI expectations.
 ---
 
 # New Backend Microservice
@@ -25,7 +25,7 @@ context (e.g. notifications/email, billing).
    (Domain, Application, Infrastructure, Api, Tests) with your service's
    name. Both `services-service` and
    `identity-service` are real, fully-built services — mirror either's
-   patterns for the *content* of each project (rich domain entities,
+   patterns for the _content_ of each project (rich domain entities,
    use cases, EF Core repositories, thin controllers).
 
 2. **Add to the solution**:
@@ -72,8 +72,8 @@ context (e.g. notifications/email, billing).
 
 6. **API versioning**: in `Program.cs`, add
    `builder.Services.AddApiVersioning(options => { options.DefaultApiVersion
-   = new ApiVersion(1, 0); options.AssumeDefaultVersionWhenUnspecified =
-   true; options.ReportApiVersions = true; }).AddMvc();`. Every business
+= new ApiVersion(1, 0); options.AssumeDefaultVersionWhenUnspecified =
+true; options.ReportApiVersions = true; }).AddMvc();`. Every business
    controller gets `[ApiVersion("1.0")]` +
    `[Route("api/v{version:apiVersion}/...")]`.
 
@@ -92,27 +92,27 @@ context (e.g. notifications/email, billing).
    `AddWidgetServiceInfrastructure` above). If this service has
    tenant-owned entities, also add `{Service}.Domain/Common/ITenantOwned.cs`
    (copy verbatim), `ICurrentTenantProvider` in `Application/Abstractions/`
-   + its `Infrastructure/Security/CurrentTenantProvider.cs` implementation
-   (registered as scoped), give the `DbContext` an optional
-   `ICurrentTenantProvider?` constructor parameter (defaults to `null` so
-   `dotnet ef` design-time tooling still works) that it uses to capture
-   the current tenant id, and expose it as a **public `CurrentTenantId`
-   property** (`_currentTenantId ?? Guid.Empty`) — the query filter has to
-   read this property off the live `DbContext` instance at query time, it
-   must never be baked in as a snapshotted `Guid` value (EF Core caches
-   the compiled model per `DbContext` *type*, so a baked-in constant
-   would leak across every request regardless of the real caller — there
-   is no automated regression test for this, `{Service}.Tests`
-   deliberately has no EF Core dependency, docs/adr/0015; verify
-   manually with two different tenants' tokens against a running
-   instance). After
-   `ApplyConfigurationsFromAssembly` in `OnModelCreating`, call
-   `builder.ApplyAuditableConventions(this, typeof(BaseEntity),
-   typeof(ITenantOwned))` (`Admin.SharedKernel.EntityFrameworkCore`) —
-   applies the soft-delete filter/index to every `BaseEntity`, and the
-   tenant filter/index to every `ITenantOwned` entity, automatically. No
-   entity configuration or repository method needs an explicit tenant id
-   (docs/adr/0006).
+   - its `Infrastructure/Security/CurrentTenantProvider.cs` implementation
+     (registered as scoped), give the `DbContext` an optional
+     `ICurrentTenantProvider?` constructor parameter (defaults to `null` so
+     `dotnet ef` design-time tooling still works) that it uses to capture
+     the current tenant id, and expose it as a **public `CurrentTenantId`
+     property** (`_currentTenantId ?? Guid.Empty`) — the query filter has to
+     read this property off the live `DbContext` instance at query time, it
+     must never be baked in as a snapshotted `Guid` value (EF Core caches
+     the compiled model per `DbContext` _type_, so a baked-in constant
+     would leak across every request regardless of the real caller — there
+     is no automated regression test for this, `{Service}.Tests`
+     deliberately has no EF Core dependency, docs/adr/0015; verify
+     manually with two different tenants' tokens against a running
+     instance). After
+     `ApplyConfigurationsFromAssembly` in `OnModelCreating`, call
+     `builder.ApplyAuditableConventions(this, typeof(BaseEntity),
+typeof(ITenantOwned))` (`Admin.SharedKernel.EntityFrameworkCore`) —
+     applies the soft-delete filter/index to every `BaseEntity`, and the
+     tenant filter/index to every `ITenantOwned` entity, automatically. No
+     entity configuration or repository method needs an explicit tenant id
+     (docs/adr/0006).
 
 8. **No exceptions for expected outcomes** (docs/adr/0014): add
    `{Service}.Domain/Common/DomainResult.cs` + `DomainError.cs` (copy
@@ -123,7 +123,7 @@ context (e.g. notifications/email, billing).
    `DomainResult`/`DomainResult<T>` instead of throwing — see
    `backend-use-case` skill step 1. Register only
    `builder.Services.AddExceptionHandler<GenericExceptionHandler>();
-   builder.Services.AddProblemDetails();` in `Program.cs`, then
+builder.Services.AddProblemDetails();` in `Program.cs`, then
    `app.UseExceptionHandler();` early in the pipeline (before
    `MapControllers`) — there is no per-service `BusinessExceptionHandler`
    to register; `Admin.SharedKernel.GenericExceptionHandler` (shared, no
@@ -135,13 +135,16 @@ context (e.g. notifications/email, billing).
 9. **Observability**: `builder.AddServiceDefaults()` +
    `app.MapDefaultEndpoints()` (health checks + OpenTelemetry come free).
 
-10. **Docker**: copy `identity-service`'s `Dockerfile` (build context is
-    `backend/`), add the service to `infra/docker-compose.yml` and to
-    `backend/AppHost/AppHost.cs` for Aspire local dev.
+10. **Aspire**: add the project to `backend/AppHost/AppHost.cs`, give it a
+    stable local HTTP endpoint, reference its database connection and upstream
+    services, and use `WaitFor` to make startup dependencies explicit. Do not
+    add a Dockerfile or Compose service; Aspire is the single local
+    application orchestrator (docs/adr/0029).
 
 11. **CI**: nothing to do — `backend-ci.yml` builds/tests the whole
-    solution and the coverage gate applies automatically. Add the new
-    Dockerfile directory to `.github/dependabot.yml`'s docker entry.
+    solution and the coverage gate applies automatically. The API-contract
+    job starts AppHost, so the new resource joins the runtime graph when its
+    API surface affects that smoke.
 
 12. **Docs**: add the service to `docs/MONOREPO.md`'s tree and note its
     context in `docs/VISION.md`.

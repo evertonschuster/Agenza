@@ -22,39 +22,74 @@ admin/
 ├── ai-services/
 │   └── assistant-service/  placeholder Python/FastAPI AI service
 ├── infra/
-│   └── docker-compose.yml  local multi-stack orchestration
+│   └── postgres/init/      roles and grants loaded by Aspire's Postgres resource
 └── docs/                   monorepo-level docs only — app/service-specific docs live
                              inside that app/service's own folder
 ```
 
 ## Local development
 
-Two ways to run the full stack (frontend, both .NET services, assistant-service,
-Postgres) together locally:
+The full stack has one local orchestration path:
 
-- **`dotnet run --project backend/AppHost`** (recommended) — .NET Aspire starts
-  every resource with one command and opens a dashboard (URL printed on
-  startup) with live logs, traces, and health across all five resources.
-  Ports are pinned to match `docker-compose`'s (5081/5080/8001/5173) since
-  identity-service's `Identity:PublicIssuer` and CORS origin are fixed to
-  those values. Requires Docker running (Postgres) and Node/Python deps
-  already installed (`npm install` at root, the assistant-service `.venv`).
-  Set the one local secret once: `dotnet user-secrets set
-  "Parameters:assistant-worker-secret" "<value>" --project backend/AppHost`.
-- **`docker-compose -f infra/docker-compose.yml up`** — fully containerized,
-  no .NET/Node/Python toolchain required on the host. Still the option to
-  reach for if you don't have the SDKs installed, or want production-like
-  container builds.
+- **`dotnet run --project backend/AppHost --launch-profile http`** — .NET
+  Aspire starts the frontend, both .NET services, assistant-service, and
+  PostgreSQL with one command. Its dashboard URL is printed on startup and
+  provides live logs, traces, health, and resource lifecycle controls.
+  Application ports are fixed at 5081/5080/8001/5173 because the OIDC public
+  issuer, redirects, and CORS origin use those addresses. PostgreSQL is fixed
+  at 5432 for desktop database clients and persists in the named
+  `agenza-postgres-data` volume.
 
-Aspire is local-dev tooling only here — it doesn't change how any service is
-built, tested, or deployed; `AppHost`/`ServiceDefaults` are not referenced by
-any `*.Tests.csproj` and aren't part of the CI or Docker image build paths.
+  Docker is required only as Aspire's container runtime for PostgreSQL. Node,
+  Python 3.12, and `uv` must be installed; AppHost runs the npm and locked
+  `uv sync` setup resources before starting Vite and Uvicorn.
+
+  Safe demo defaults are built into AppHost, so the command works without
+  secret setup. Override any of them through .NET user secrets when needed:
+
+  ```bash
+  dotnet user-secrets set "Parameters:postgres-password" "<value>" --project backend/AppHost
+  dotnet user-secrets set "Parameters:identity-db-password" "<value>" --project backend/AppHost
+  dotnet user-secrets set "Parameters:services-db-password" "<value>" --project backend/AppHost
+  dotnet user-secrets set "Parameters:assistant-worker-secret" "<value>" --project backend/AppHost
+  dotnet user-secrets set "Parameters:tenant-provisioning-secret" "<value>" --project backend/AppHost
+  ```
+
+  AppHost passes the same worker secret to the identity provider and the
+  assistant, so client-credentials authentication cannot drift between them.
+
+Docker Compose and application Dockerfiles are intentionally absent. This
+repository is still a demo without a production deployment design; adding
+runtime images is a deployment decision, not a second local-development path
+(docs/adr/0029).
+
+### Connect a local database client
+
+Start AppHost, then use these settings in DBeaver, DataGrip, pgAdmin,
+TablePlus, or another PostgreSQL client:
+
+| Setting  | Value                          |
+| -------- | ------------------------------ |
+| Host     | `localhost`                    |
+| Port     | `5432`                         |
+| Database | `appdb`                        |
+| User     | `postgres`                     |
+| Password | `postgres`                     |
+| SSL      | disabled for local development |
+
+The administrative credentials above are local-demo credentials only. The
+application services continue to use the restricted `identity_app` and
+`services_app` roles created by `infra/postgres/init/001-service-roles.sh`.
+
+Aspire is local-development orchestration only here. It does not define a
+production deployment, but CI exercises the same AppHost resource graph for
+the OpenAPI/OIDC runtime smoke instead of maintaining a parallel Compose graph.
 
 ## Adding a new backend microservice
 
 Follow `backend/.skills/backend-new-microservice/SKILL.md` — it covers the
 full checklist (layout, solution wiring, auth via Admin.Identity.Client,
-shared-Postgres schema convention, Docker/Aspire, CI, docs). The short
+shared-Postgres schema convention, Aspire, CI, docs). The short
 version: copy the five-project layout, mirror identity-service's patterns,
 one schema per service in the shared Postgres.
 
@@ -80,33 +115,21 @@ workspace gains a lint-staged config.
 
 - `apps/admin-frontend/graphify-out/` is stale (generated before the restructure) —
   regenerate rather than trust it.
-- `ServicesService.Api`/`IdentityService.Api` each run EF Core migrations from
-  an `IHostedService` (`DatabaseMigrator`/`DatabaseSeeder`) on startup, guarded
-  by a `Migrations:RunOnStartup` config flag (defaults to `true`). This is fine
-  for local dev (`dotnet run`/Aspire) and for the current single-container
-  `docker-compose` setup — there's no evidence yet of a multi-replica
-  production deployment (no k8s manifests, no CD pipeline in this repo as of
-  2026-07). If/when one is introduced, set `Migrations:RunOnStartup=false` for
-  that environment and run migrations as a dedicated job/step in the
-  deployment pipeline instead — N replicas starting concurrently with the flag
-  left on would race to apply the same migration. Prefer that dedicated step
-  over adding ad hoc locking here, since the right mechanism depends on the
-  orchestrator chosen.
-- If you already ran `docker compose up` or `dotnet run --project
-  backend/AppHost` before docs/adr/0017 landed, your local Postgres
-  volume has migration history recorded in `public.__EFMigrationsHistory`
-  shared by both services. The next startup will try to re-apply every
-  migration against the new schema-scoped history tables and fail loudly
-  (`relation already exists`) until you follow the one-time runbook in
-  docs/adr/0017 (drop the local dev volume, or manually split the table).
-- Both services connect as the same Postgres superuser (`ConnectionStrings__Default`,
-  `postgres`/`postgres` in both `infra/docker-compose.yml` and Aspire's
-  `.WithDataVolume()` resource) — schema-per-service (docs/adr/0002) is
-  enforced by convention/review only, not by Postgres grants; nothing
-  technically stops identity-service's connection from querying
-  `services.*` or vice versa. A follow-up worth doing: one least-privilege
-  Postgres role per service, granted only on its own schema. Not applied
-  as part of docs/adr/0017/0018 — it needs real credential/secrets
-  handling for both `docker-compose` and Aspire's Postgres resource, which
-  is its own piece of infra work, not a drive-by change alongside a
-  migrations-history fix.
+- Database bootstrap is opt-in through
+  `DatabaseBootstrap:RunOnStartup` (base configuration is `false`;
+  Development explicitly enables it). The demo
+  assumes at most one bootstrap-enabled instance of each service. A future
+  multi-replica deployment must run the migration/seed chain as a one-shot
+  bootstrap before starting replicas with startup bootstrap disabled; the
+  repository intentionally has no production deployment design yet
+  (docs/adr/0025, docs/adr/0027).
+- ADR 0028 replaced both EF histories with clean initial baselines. Any local
+  database created before that reset is intentionally incompatible. Stop
+  AppHost, back up anything worth keeping, and recreate it once with
+  `docker volume rm agenza-postgres-data`. The demo has no data migration
+  path from the deleted histories.
+- `identity_app` owns only the `identity` schema and `services_app` owns only
+  the `services` schema. Existing local volumes created before docs/adr/0024
+  must be recreated once so Aspire's init script can create the roles and
+  grants. Changing either role password also requires recreating the local
+  volume because PostgreSQL init files run only on first initialization.

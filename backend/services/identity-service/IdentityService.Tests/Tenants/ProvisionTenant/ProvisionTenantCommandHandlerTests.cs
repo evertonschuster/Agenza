@@ -18,7 +18,7 @@ public class ProvisionTenantCommandHandlerTests
             .ExecuteInTransactionAsync(
                 Arg.Any<Func<CancellationToken, Task<Result<ProvisionTenantResponse>>>>(),
                 Arg.Any<CancellationToken>())
-            .Returns(callInfo => callInfo.Arg<Func<CancellationToken, Task<Result<ProvisionTenantResponse>>>>()(
+            .Returns(callInfo => callInfo.Arg<Func<CancellationToken, Task<Result<ProvisionTenantResponse>>>>()!(
                 callInfo.Arg<CancellationToken>()));
 
         return unitOfWork;
@@ -43,7 +43,7 @@ public class ProvisionTenantCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         await tenantRepository.Received(1).AddAsync(
-            Arg.Is<Tenant>(tenant => tenant.Name == "Demo Business"),
+            Arg.Is<Tenant>(tenant => tenant != null && tenant.Name == "Demo Business"),
             Arg.Any<CancellationToken>());
         await userAccountService.Received(1).CreateOwnerAsync(
             result.Value.TenantId,

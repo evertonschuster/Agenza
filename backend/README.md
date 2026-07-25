@@ -29,17 +29,20 @@ hand-rolling token handling.
 ## Commands
 
 ```bash
+dotnet tool restore
 dotnet build AdminBackend.slnx
-dotnet test AdminBackend.slnx    # unit tests only, no database dependency
+dotnet test AdminBackend.slnx    # unit + EF InMemory tenant persistence tests
 dotnet run --project services/services-service/ServicesService.Api
 ```
 
 The 80% line-coverage gate for `*.Tests` projects (Domain + Application
 scope) is configured in `Directory.Build.props`, so local `dotnet test`
-enforces exactly what CI enforces. There are no integration tests
-(docs/adr/0015) — Api/Infrastructure have no automated coverage; verify
-those manually (`dotnet run` + a real HTTP client) — see
-`../docs/QUALITY.md`.
+enforces exactly what CI enforces. `ServicesService.PersistenceTests`
+(docs/adr/0019) adds Docker-free EF coverage for automatic tenant
+assignment and tenant query filtering. The Aspire API-contract job applies
+the migration chain to a fresh PostgreSQL database and exercises the real
+OIDC boundary; there is no dedicated Testcontainers or in-process HTTP test
+project (docs/adr/0026). See `../docs/QUALITY.md`.
 
 ## Known gaps
 

@@ -1,0 +1,146 @@
+import { useEffect, type MouseEvent } from 'react'
+import { useAuth } from '@/features/auth'
+import { useServices } from '@/features/catalog/presentation/services/hooks/useServices'
+import { useCategories } from '@/features/catalog/presentation/categories/hooks/useCategories'
+import { useTags } from '@/features/catalog/presentation/tags/hooks/useTags'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
+import type { Category } from '@/features/catalog/domain/entities/Category'
+import type { Tag } from '@/features/catalog/domain/entities/Tag'
+import type { Service } from '@/features/catalog/domain/entities/Service'
+import { useServiceFilters } from '@/features/catalog/presentation/services/hooks/useServiceFilters'
+import { useServiceEditor } from '@/features/catalog/presentation/services/hooks/useServiceEditor'
+import { useServiceDeletion } from '@/features/catalog/presentation/services/hooks/useServiceDeletion'
+import { toSelectLoadState } from '@/features/catalog/presentation/services/models/serviceFormatters'
+import type {
+  DiscardConfirmationViewModel,
+  ServiceCategoryOptions,
+  ServiceEditorViewModel,
+  ServiceTagOptions,
+} from '@/features/catalog/presentation/services/models/servicePresentationModels'
+
+interface ServicesFiltersViewModel {
+  search: { value: string; onChange: (value: string) => void }
+  category: { value: string; onChange: (value: string) => void; options: readonly Category[] }
+  tag: { value: string; onChange: (value: string) => void; options: readonly Tag[] }
+}
+
+interface ServicesListViewModel {
+  services: readonly Service[]
+  listState: AsyncState<readonly Service[], UiError>
+  hasActiveFilters: boolean
+  page: number
+  totalPages: number
+  onPageChange: (page: number) => void
+  onRetry: () => void
+  onEdit: (service: Service, event: MouseEvent<HTMLButtonElement>) => void
+  onDelete: (service: Service) => void
+}
+
+interface ServiceDeleteDialogViewModel {
+  target: Service | null
+  error: string | null
+  isDeleting: boolean
+  onCancel: () => void
+  onConfirm: () => void
+}
+
+export interface UseServicesPageResult {
+  onOpenCreate: (event: MouseEvent<HTMLButtonElement>) => void
+  filters: ServicesFiltersViewModel
+  list: ServicesListViewModel
+  dialog: {
+    editor: ServiceEditorViewModel
+    categoryOptions: ServiceCategoryOptions
+    tagOptions: ServiceTagOptions
+    discardConfirmation: DiscardConfirmationViewModel
+  }
+  deleteDialog: ServiceDeleteDialogViewModel
+}
+
+/** Composes the filters/list/editor/deletion hooks into ServicesPage's view models - owns no machine of its own. */
+export function useServicesPage(): UseServicesPageResult {
+  const { tenantContext } = useAuth()
+  const filters = useServiceFilters()
+
+  const {
+    services,
+    listState,
+    page,
+    pageSize,
+    totalCount,
+    setPage,
+    refetch,
+    createService,
+    updateService,
+    deleteService,
+  } = useServices(tenantContext, {
+    search: filters.debouncedSearch,
+    ...(filters.categoryFilter !== '' ? { categoryId: filters.categoryFilter } : {}),
+    ...(filters.tagFilter !== '' ? { tagId: filters.tagFilter } : {}),
+  })
+  const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
+
+  const {
+    categories,
+    listState: categoriesListState,
+    createCategory,
+    refetch: refetchCategories,
+  } = useCategories(tenantContext)
+  const { tags, listState: tagsListState, createTag, refetch: refetchTags } = useTags(tenantContext)
+
+  useEffect(() => {
+    setPage(1)
+    // Only re-run when a filter narrows the result set - setPage/page
+    // themselves aren't inputs to this reset, they're what it resets.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filters.debouncedSearch, filters.categoryFilter, filters.tagFilter])
+
+  const editor = useServiceEditor({ onCreate: createService, onUpdate: updateService })
+  const deletion = useServiceDeletion({ onDelete: deleteService })
+
+  return {
+    onOpenCreate: editor.onOpenCreate,
+    filters: {
+      search: { value: filters.searchInput, onChange: filters.onSearchInputChange },
+      category: {
+        value: filters.categoryFilter,
+        onChange: filters.onCategoryFilterChange,
+        options: categories,
+      },
+      tag: { value: filters.tagFilter, onChange: filters.onTagFilterChange, options: tags },
+    },
+    list: {
+      services,
+      listState,
+      hasActiveFilters: filters.hasActiveFilters,
+      page,
+      totalPages,
+      onPageChange: setPage,
+      onRetry: () => void refetch(),
+      onEdit: editor.onOpenEdit,
+      onDelete: deletion.onRequestDelete,
+    },
+    dialog: {
+      editor: editor.editor,
+      categoryOptions: {
+        items: categories,
+        loadState: toSelectLoadState(categoriesListState, () => void refetchCategories()),
+        onCreate: createCategory,
+      },
+      tagOptions: {
+        items: tags,
+        loadState: toSelectLoadState(tagsListState, () => void refetchTags()),
+        onCreate: createTag,
+      },
+      discardConfirmation: editor.discardConfirmation,
+    },
+    deleteDialog: {
+      target: deletion.target,
+      error: deletion.error,
+      isDeleting: deletion.isDeleting,
+      onCancel: deletion.onCancel,
+      onConfirm: () => void deletion.onConfirm(),
+    },
+  }
+}

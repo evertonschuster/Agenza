@@ -38,16 +38,18 @@ public class CreateServiceCommandHandlerTests
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Name.Should().Be("Haircut");
-        result.Value.Code.Should().Be(1);
-        result.Value.MinDurationMinutes.Should().Be(15);
-        result.Value.MaxDurationMinutes.Should().Be(60);
-        result.Value.MaxDiscountPercentage.Should().Be(10m);
-        result.Value.CategoryId.Should().BeNull();
-        result.Value.CategoryName.Should().BeNull();
-        result.Value.Tags.Should().BeEmpty();
+        var createdService = result.Value!;
+        createdService.Name.Should().Be("Haircut");
+        createdService.Code.Should().Be(1);
+        createdService.MinDurationMinutes.Should().Be(15);
+        createdService.MaxDurationMinutes.Should().Be(60);
+        createdService.MaxDiscountPercentage.Should().Be(10m);
+        createdService.CategoryId.Should().BeNull();
+        createdService.CategoryName.Should().BeNull();
+        createdService.Tags.Should().BeEmpty();
         await _serviceCodeGenerator.Received(1).GetNextCodeAsync(Arg.Any<CancellationToken>());
-        _serviceRepository.Received(1).Add(Arg.Is<Service>(s => s.Id == result.Value.Id));
+        _serviceRepository.Received(1).Add(
+            Arg.Is<Service>(service => service != null && service.Id == createdService.Id));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

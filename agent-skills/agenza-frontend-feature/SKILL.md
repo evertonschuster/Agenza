@@ -45,12 +45,24 @@ src/
       domain/          Tag, Category, Service entities + their errors
       application/     3 repository ports, 12 use cases
       infrastructure/  Api*Repository, mappers, generated/ (OpenAPI types)
-      presentation/
-        tags/          TagsPage, useTagsPage, TagsTable, TagEditorDialog, TagDeleteDialog
-        categories/    same shape as tags/
-        services/      ServicesPage + its decomposed sub-components (see
-                        "Componentization" below)
-        forms/         TagForm, CategoryForm, fieldMaps (shared inside catalog)
+      presentation/    every entity folder (tags/, categories/, services/)
+                        shares the same internal shape - location alone
+                        tells you a file's role:
+        <entity>/
+          <Entity>Page.tsx   composition shell (stays at entity root - see
+                             "Componentization" below for why)
+          hooks/             data hook (useTags/useCategories/useServices)
+                             + controller hook (useXPage) + any sub-hooks
+                             (useServiceEditor, useServiceDeletion, ...)
+          components/        presentational pieces: tables, dialogs,
+                             field-groups
+          forms/             the entity's create/edit form + its zod
+                             schema + its own fieldMaps.ts (never shared
+                             across entities - see "Forms" below)
+          models/            services/ only - pure, non-React view-model/
+                             formatting logic (servicePresentationModels,
+                             serviceFormatters); tags/categories have no
+                             equivalent, so no models/ for them
       index.ts         public API
 
   shared/
@@ -291,12 +303,12 @@ machine behind it.
   (search/filter state, an editor with dirty-tracking, a deletion
   confirmation are three *different* concerns), split it into focused
   hooks (`useXFilters`, `useXEditor`, `useXDeletion`) that the page's
-  composer hook assembles — see `features/catalog/presentation/services/`
+  composer hook assembles — see `features/catalog/presentation/services/hooks/`
   for the reference (`useServicesPage` composing `useServiceFilters` +
   `useServiceEditor` + `useServiceDeletion`).
 - Extract a component or hook on its **first** use if it's already a
   distinct concern (a field group, a delete dialog) — keep it
-  feature-local (e.g. `features/catalog/presentation/services/
+  feature-local (e.g. `features/catalog/presentation/services/components/
   ServiceCategoryField.tsx`). Only **promote** something to `shared/`
   once a **second**, genuinely-identical use appears across features —
   the "second use" rule gates promotion, not the initial extraction.
@@ -322,7 +334,7 @@ machine behind it.
 
 Any form beyond a single trivial field uses `react-hook-form` +
 `@hookform/resolvers/zod` — see `TagForm.tsx`
-(`features/catalog/presentation/forms/`) for the exact shape:
+(`features/catalog/presentation/tags/forms/`) for the exact shape:
 
 ```typescript
 const tagFormSchema = z.object({

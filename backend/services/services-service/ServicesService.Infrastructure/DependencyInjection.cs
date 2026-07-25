@@ -30,6 +30,8 @@ public static class DependencyInjection
                 // (docs/adr/0017).
                 .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "services"))
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
+        services.AddHealthChecks()
+            .AddDbContextCheck<ServicesDataContext>("database", tags: ["ready"]);
 
         services.AddScoped<ITagRepository, TagRepository>();
         services.AddScoped<IServiceRepository, ServiceRepository>();

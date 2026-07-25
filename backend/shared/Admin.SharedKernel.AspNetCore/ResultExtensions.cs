@@ -22,7 +22,7 @@ public static class ResultExtensions
         ControllerBase controller,
         Func<IActionResult> onSuccess)
     {
-        return result.IsSuccess ? onSuccess() : ToProblemResult(result.Error, controller);
+        return result.IsSuccess ? onSuccess() : ToProblemResult(result.Error);
     }
 
     public static IActionResult ToActionResult<TValue>(
@@ -30,35 +30,33 @@ public static class ResultExtensions
         ControllerBase controller,
         Func<TValue, IActionResult> onSuccess)
     {
-        return result.IsSuccess ? onSuccess(result.Value) : ToProblemResult(result.Error, controller);
+        return result.IsSuccess ? onSuccess(result.Value) : ToProblemResult(result.Error);
     }
 
-    private static IActionResult ToProblemResult(Error error, ControllerBase controller)
+    private static IActionResult ToProblemResult(Error error)
     {
         if (error.Type == ErrorType.Validation && error.FieldErrors is not null)
         {
-            // Field/code/message preserved per-error instead of one joined string
-            // (docs/adr/0012) - the front-end maps errors to fields without parsing
-            // free text out of a single title.
-            var validationProblem = new ProblemDetails
+            var validationProblem = new ApiProblemDetails
             {
                 Type = ValidationProblemType,
                 Title = "Ocorreram erros de validação.",
                 Status = StatusCodes.Status400BadRequest,
+                Code = error.Code,
+                Errors = error.FieldErrors,
             };
-            validationProblem.Extensions["code"] = error.Code;
-            validationProblem.Extensions["errors"] = error.FieldErrors;
 
             return new ObjectResult(validationProblem) { StatusCode = validationProblem.Status };
         }
 
-        var result = (ObjectResult)controller.Problem(title: error.Message, statusCode: error.Type.ToHttpStatusCode());
+        var problem = new ApiProblemDetails
+        {
+            Type = "https://agenza/errors/application",
+            Title = error.Message,
+            Status = error.Type.ToHttpStatusCode(),
+            Code = error.Code,
+        };
 
-        // Every error carries a machine-readable code, not just validation
-        // errors with FieldErrors - Conflict/NotFound/Forbidden callers can
-        // branch on `code` instead of parsing the free-text title.
-        ((ProblemDetails)result.Value!).Extensions["code"] = error.Code;
-
-        return result;
+        return new ObjectResult(problem) { StatusCode = problem.Status };
     }
 }

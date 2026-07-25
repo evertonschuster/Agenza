@@ -27,10 +27,12 @@ public class GenericExceptionHandler : IExceptionHandler
 
         httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
         await httpContext.Response.WriteAsJsonAsync(
-            new ProblemDetails
+            new ApiProblemDetails
             {
+                Type = "https://agenza/errors/unexpected",
                 Status = StatusCodes.Status500InternalServerError,
                 Title = "Ocorreu um erro inesperado.",
+                Code = "Unexpected.Error",
             },
             options: null,
             contentType: "application/problem+json",

@@ -1,9 +1,9 @@
 # ADR 0015 — Remove integration tests; CI runs unit tests only
 
-Status: accepted (2026-07); supersedes the integration-test-tier passages
-of docs/adr/0005 and docs/adr/0008; narrowed by docs/adr/0019 (adds one
-Docker-free EF InMemory project for tenant-assignment/scoping coverage
-only — the rest of this decision stands)
+Status: accepted (2026-07); narrowed by ADR 0019's Docker-free EF
+InMemory project. ADR 0023 temporarily restored a bounded PostgreSQL/HTTP
+tier, which ADR 0026 removed. The former broad endpoint suites and the
+dedicated runtime-test tier are not part of the solution.
 
 ## Context
 
@@ -19,7 +19,7 @@ three endpoint-test classes, `MigrationDataSafetyTests`,
 
 This became unreliable on GitHub Actions' shared runners specifically —
 `backend-build-and-test` failed 3 times in a row on the same PR, each
-time a *different* test class the victim, always with the same
+time a _different_ test class the victim, always with the same
 signature (`Npgsql.NpgsqlException`, `Connection reset by peer` /
 `unexpected EOF` during container startup), never a real assertion
 failure. Grouping the affected classes into a single xUnit
@@ -70,7 +70,7 @@ isolation per docs/adr/0006) has no automated replacement — see
   comment updated; the `dotnet test` invocation itself needed no change
   (it already just runs whatever's in the solution).
 - Both `Api/Program.cs` files — the now-pointless `public partial class
-  Program;` (which existed solely to let `WebApplicationFactory<Program>`
+Program;` (which existed solely to let `WebApplicationFactory<Program>`
   construct the host in tests) removed along with its comment.
 
 ## Consequences
@@ -100,7 +100,9 @@ so explicitly instead of teaching a pattern this repo no longer uses.
 - Migration safety (`MigrationDataSafetyTests`,
   `MigrationsRunOnStartupTests`) — that a migration shrinking a column
   fails loudly against real pre-existing data, and that
-  `Migrations:RunOnStartup=false` genuinely skips migrating.
+  the startup-bootstrap flag (now
+  `DatabaseBootstrap:RunOnStartup=false`, docs/adr/0025) genuinely skips
+  migrating.
 - Automatic tenant assignment on save and tenant-scoped query-filter
   isolation (docs/adr/0008, docs/adr/0006) — both were EF-InMemory-only
   and could have stayed, but were deliberately left out (see Decision).

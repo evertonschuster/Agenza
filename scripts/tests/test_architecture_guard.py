@@ -561,6 +561,287 @@ class ArchitectureGuardTests(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("src/application/**", findings[0].message)
 
+    # -- evolutionary architecture fitness functions -------------------------
+
+    def test_tenant_owned_ai_route_requires_tenant_context(self) -> None:
+        self._write(
+            "ai-services/assistant-service/app/main.py",
+            "\n".join(
+                [
+                    '@app.get("/health")',
+                    "def health(): return {}",
+                    '@app.post("/draft")',
+                    "def draft(claims=Depends(require_valid_token)): return {}",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_ai_tenant_boundaries()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "ai-route-without-tenant-context")
+
+    def test_ai_health_and_tenant_context_route_are_clean(self) -> None:
+        self._write(
+            "ai-services/assistant-service/app/main.py",
+            "\n".join(
+                [
+                    '@app.get("/health")',
+                    "def health(): return {}",
+                    '@app.post("/draft")',
+                    "def draft(tenant=Depends(require_tenant_context)): return {}",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertEqual(ag.check_ai_tenant_boundaries(), [])
+
+    def test_compose_is_blocking_when_aspire_is_the_local_orchestrator(self) -> None:
+        self._write("infra/docker-compose.yml", "services: {}\n")
+
+        findings = ag.check_aspire_local_orchestration()
+
+        self.assertTrue(
+            any(finding.category == "parallel-local-orchestrator" for finding in findings)
+        )
+
+    def test_incomplete_aspire_graph_is_blocking(self) -> None:
+        self._write("backend/AppHost/AppHost.cs", 'builder.AddPostgres("postgres");\n')
+        self._write(
+            ".github/workflows/frontend-ci.yml",
+            "run: dotnet run --project backend/AppHost\n",
+        )
+
+        findings = ag.check_aspire_local_orchestration()
+
+        self.assertTrue(
+            any(finding.category == "incomplete-aspire-orchestration" for finding in findings)
+        )
+
+    def test_complete_aspire_only_orchestration_is_clean(self) -> None:
+        self._write(
+            "backend/AppHost/AppHost.cs",
+            "\n".join(
+                [
+                    'builder.AddPostgres("postgres")',
+                    "    .WithHostPort(5432)",
+                    '    .WithEnvironment("POSTGRES_DB", "appdb")',
+                    '    .WithEnvironment("IDENTITY_DB_PASSWORD", identityPassword)',
+                    '    .WithEnvironment("SERVICES_DB_PASSWORD", servicesPassword)',
+                    '    .WithDataVolume("agenza-postgres-data")',
+                    '    .WithInitFiles("../../infra/postgres/init");',
+                    "builder.AddProject<Projects.IdentityService_Api>();",
+                    "builder.AddProject<Projects.ServicesService_Api>();",
+                    "builder.AddUvicornApp();",
+                    '.WithUv(args: ["sync", "--frozen", "--extra", "dev"]);',
+                    "builder.AddViteApp();",
+                    'builder.WithEnvironment("VITE_OIDC_AUTHORITY", identity);',
+                    'builder.WithEnvironment("VITE_OIDC_CLIENT_ID", "admin-panel");',
+                    'builder.WithEnvironment("VITE_OIDC_REDIRECT_URI", redirect);',
+                    'builder.WithEnvironment("VITE_OIDC_POST_LOGOUT_REDIRECT_URI", logout);',
+                    'builder.WithEnvironment("VITE_OIDC_SCOPE", scope);',
+                    'builder.WithEnvironment("VITE_API_BASE_URL", services);',
+                    "",
+                ]
+            ),
+        )
+        self._write(
+            ".github/workflows/frontend-ci.yml",
+            "run: dotnet run --project backend/AppHost\n",
+        )
+
+        self.assertEqual(ag.check_aspire_local_orchestration(), [])
+
+    def test_missing_trunk_precommit_guard_is_blocking(self) -> None:
+        self._write(".husky/pre-commit", "npm run lint-staged\n")
+
+        findings = ag.check_trunk_precommit_guard()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "direct-main-commit-not-blocked")
+
+    def test_trunk_precommit_guard_is_clean(self) -> None:
+        self._write(
+            ".husky/pre-commit",
+            "\n".join(
+                [
+                    "branch=$(git symbolic-ref --short HEAD 2>/dev/null)",
+                    'if [ "$branch" = "main" ]; then',
+                    "  exit 1",
+                    "fi",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertEqual(ag.check_trunk_precommit_guard(), [])
+
+    def test_domain_project_reference_is_blocking(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Domain/Catalog.Domain.csproj",
+            '<Project><ItemGroup><ProjectReference Include="../Catalog.Application/Catalog.Application.csproj" /></ItemGroup></Project>',
+        )
+
+        findings = ag.check_dotnet_project_reference_boundaries()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "dotnet-project-reference-boundary")
+
+    def test_application_cannot_reference_infrastructure(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Application/Catalog.Application.csproj",
+            '<Project><ItemGroup><ProjectReference Include="../Catalog.Infrastructure/Catalog.Infrastructure.csproj" /></ItemGroup></Project>',
+        )
+
+        findings = ag.check_dotnet_project_reference_boundaries()
+
+        self.assertEqual(len(findings), 1)
+
+    def test_application_to_own_domain_and_shared_kernel_is_clean(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Application/Catalog.Application.csproj",
+            "\n".join(
+                [
+                    "<Project><ItemGroup>",
+                    '<ProjectReference Include="../Catalog.Domain/Catalog.Domain.csproj" />',
+                    '<ProjectReference Include="../../../shared/Admin.SharedKernel/Admin.SharedKernel.csproj" />',
+                    "</ItemGroup></Project>",
+                ]
+            ),
+        )
+
+        self.assertEqual(ag.check_dotnet_project_reference_boundaries(), [])
+
+    def test_runtime_test_project_is_blocking(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.RuntimeTests/Catalog.RuntimeTests.csproj",
+            "<Project />",
+        )
+
+        findings = ag.check_dedicated_runtime_test_tier_absent()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "dedicated-runtime-test-tier")
+
+    def test_runtime_test_packages_are_blocking(self) -> None:
+        self._write(
+            "backend/Directory.Packages.props",
+            '<Project><PackageVersion Include="Testcontainers.PostgreSql" '
+            'Version="4.13.0" /></Project>',
+        )
+
+        findings = ag.check_dedicated_runtime_test_tier_absent()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "dedicated-runtime-test-tier")
+
+    def test_backend_without_runtime_test_tier_is_clean(self) -> None:
+        self._write(
+            "backend/Directory.Packages.props",
+            '<Project><PackageVersion Include="xunit" Version="2.9.3" /></Project>',
+        )
+        self._write(
+            "backend/AdminBackend.slnx",
+            '<Solution><Project Path="services/catalog/Catalog.Tests.csproj" /></Solution>',
+        )
+
+        self.assertEqual(ag.check_dedicated_runtime_test_tier_absent(), [])
+
+    def test_ignore_tenant_requires_an_explicit_allowlist_entry(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Api/Controllers/PublicController.cs",
+            "[IgnoreTenant]\npublic sealed class PublicController { }\n",
+        )
+
+        findings = ag.check_ignore_tenant_attribute_allowlist()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "unreviewed-ignore-tenant")
+
+    def test_base_database_bootstrap_true_is_blocking(self) -> None:
+        self._write(
+            "backend/services/identity-service/IdentityService.Api/appsettings.json",
+            '{"DatabaseBootstrap":{"RunOnStartup":true}}',
+        )
+
+        findings = ag.check_database_bootstrap_defaults()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "unsafe-database-bootstrap-default")
+
+    def test_bootstrap_advisory_lock_is_blocking(self) -> None:
+        self._write(
+            "backend/shared/Database/PostgresAdvisoryLock.cs",
+            'await command.ExecuteAsync("SELECT pg_advisory_lock(42);");\n',
+        )
+
+        findings = ag.check_bootstrap_advisory_lock_absent()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "bootstrap-advisory-lock")
+
+    def test_bootstrap_without_advisory_lock_is_clean(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Api/DatabaseMigrator.cs",
+            "await dbContext.Database.MigrateAsync(cancellationToken);\n",
+        )
+
+        self.assertEqual(ag.check_bootstrap_advisory_lock_absent(), [])
+
+    def test_superuser_application_connection_is_blocking(self) -> None:
+        self._write(
+            "backend/AppHost/AppHost.cs",
+            'var connection = "Host=postgres;Username=postgres;Password=postgres";\n',
+        )
+
+        findings = ag.check_database_boundary_configuration()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "service-uses-database-superuser")
+
+    def test_destructive_up_migration_requires_safety_marker(self) -> None:
+        self._write(
+            "backend/services/x/X.Infrastructure/Persistence/Migrations/20990101000000_DropLegacy.cs",
+            "\n".join(
+                [
+                    "protected override void Up(MigrationBuilder migrationBuilder)",
+                    "{",
+                    '    migrationBuilder.DropTable(name: "Legacy");',
+                    "}",
+                    "protected override void Down(MigrationBuilder migrationBuilder) { }",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_destructive_migration_safety()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(
+            findings[0].category,
+            "destructive-migration-without-safety-plan",
+        )
+
+    def test_reviewed_destructive_up_migration_is_clean(self) -> None:
+        self._write(
+            "backend/services/x/X.Infrastructure/Persistence/Migrations/20990101000000_DropLegacy.cs",
+            "\n".join(
+                [
+                    "protected override void Up(MigrationBuilder migrationBuilder)",
+                    "{",
+                    "    // migration-safety: backup and rollback reviewed",
+                    '    migrationBuilder.DropTable(name: "Legacy");',
+                    "}",
+                    "protected override void Down(MigrationBuilder migrationBuilder) { }",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertEqual(ag.check_destructive_migration_safety(), [])
+
     # -- full run --------------------------------------------------------------
 
     def test_run_all_on_clean_repo_has_no_blocking_findings(self) -> None:
@@ -579,6 +860,48 @@ class ArchitectureGuardTests(unittest.TestCase):
         self._write(
             "apps/admin-frontend/src/features/catalog/domain/entities/Foo.ts",
             "export class Foo { private readonly name: string; constructor(name: string) { this.name = name } }\n",
+        )
+        self._write(
+            "backend/AppHost/AppHost.cs",
+            "\n".join(
+                [
+                    'builder.AddPostgres("postgres")',
+                    "    .WithHostPort(5432)",
+                    '    .WithEnvironment("POSTGRES_DB", "appdb")',
+                    '    .WithEnvironment("IDENTITY_DB_PASSWORD", identityPassword)',
+                    '    .WithEnvironment("SERVICES_DB_PASSWORD", servicesPassword)',
+                    '    .WithDataVolume("agenza-postgres-data")',
+                    '    .WithInitFiles("../../infra/postgres/init");',
+                    "builder.AddProject<Projects.IdentityService_Api>();",
+                    "builder.AddProject<Projects.ServicesService_Api>();",
+                    "builder.AddUvicornApp();",
+                    '.WithUv(args: ["sync", "--frozen", "--extra", "dev"]);',
+                    "builder.AddViteApp();",
+                    'builder.WithEnvironment("VITE_OIDC_AUTHORITY", identity);',
+                    'builder.WithEnvironment("VITE_OIDC_CLIENT_ID", "admin-panel");',
+                    'builder.WithEnvironment("VITE_OIDC_REDIRECT_URI", redirect);',
+                    'builder.WithEnvironment("VITE_OIDC_POST_LOGOUT_REDIRECT_URI", logout);',
+                    'builder.WithEnvironment("VITE_OIDC_SCOPE", scope);',
+                    'builder.WithEnvironment("VITE_API_BASE_URL", services);',
+                    "",
+                ]
+            ),
+        )
+        self._write(
+            ".github/workflows/frontend-ci.yml",
+            "run: dotnet run --project backend/AppHost\n",
+        )
+        self._write(
+            ".husky/pre-commit",
+            "\n".join(
+                [
+                    "branch=$(git symbolic-ref --short HEAD 2>/dev/null)",
+                    'if [ "$branch" = "main" ]; then',
+                    "  exit 1",
+                    "fi",
+                    "",
+                ]
+            ),
         )
 
         findings = ag.run_all()

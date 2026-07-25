@@ -39,7 +39,7 @@ jobs:
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(ai-services/|\.github/workflows/ai-services-ci\.yml$)'; then
+          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(ai-services/|\.editorconfig$|\.github/workflows/ai-services-ci\.yml$)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -62,18 +62,32 @@ jobs:
 
       - uses: actions/setup-python@v7
         with:
-          python-version: '3.12'
-          cache: 'pip'
-          cache-dependency-path: ai-services/assistant-service/pyproject.toml
+          python-version: "3.12"
 
-      - name: Install dependencies
-        run: pip install -e ".[dev]"
+      - name: Install locked dependencies
+        run: |
+          pip install uv==0.11.15
+          uv sync --frozen --extra dev
 
       - name: Lint
-        run: ruff check app tests
+        run: uv run ruff check app tests
 
       - name: Format check
-        run: ruff format --check app tests
+        run: uv run ruff format --check app tests
 
       - name: Test (coverage gate configured in pyproject.toml, 80%)
-        run: pytest
+        run: uv run pytest
+
+      - name: Smoke the Aspire runtime command
+        run: |
+          uv run uvicorn app.main:app --host 127.0.0.1 --port 8001 > "$RUNNER_TEMP/assistant-service.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          for _ in $(seq 1 20); do
+            if curl --fail --silent http://localhost:8001/health > /dev/null; then
+              exit 0
+            fi
+            sleep 1
+          done
+          cat "$RUNNER_TEMP/assistant-service.log"
+          exit 1

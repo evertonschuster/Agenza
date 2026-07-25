@@ -20,8 +20,10 @@ Exit code: 0 if no BLOCKING finding (or --inventory mode), 1 otherwise.
 from __future__ import annotations
 
 import argparse
+import json
 import re
 import sys
+import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -31,6 +33,7 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 # reason). Extend this only for a genuine, reviewed exception - never widen
 # a whole directory.
 ALLOWLIST: dict[str, str] = {}
+IGNORE_TENANT_ATTRIBUTE_ALLOWLIST: dict[str, str] = {}
 
 EXCLUDED_DIR_NAMES = {
     "bin",
@@ -219,6 +222,548 @@ def check_dangling_null_forgiving_after_lookup() -> list[Finding]:
         "Null-forgiving '!' directly on a GetByIdAsync(...) result - verify this handler null-checks "
         "the lookup itself rather than assuming a validator already guaranteed existence (docs/adr/0012).",
     )
+
+
+# ---------------------------------------------------------------------------
+# Security and operability fitness functions (docs/adr/0022-0027)
+# ---------------------------------------------------------------------------
+
+def check_ai_tenant_boundaries() -> list[Finding]:
+    """Every non-health FastAPI route must consume the validated
+    TenantContext rather than raw claims or headers."""
+    main_path = REPO_ROOT / "ai-services" / "assistant-service" / "app" / "main.py"
+    if not main_path.is_file():
+        return []
+
+    text = main_path.read_text(encoding="utf-8", errors="replace")
+    route_pattern = re.compile(
+        r'(?m)^@app\.(?:get|post|put|patch|delete)\("([^"]+)"\)'
+    )
+    matches = list(route_pattern.finditer(text))
+    findings: list[Finding] = []
+
+    for index, match in enumerate(matches):
+        route = match.group(1)
+        if route in {"/health", "/ready"}:
+            continue
+
+        block_end = matches[index + 1].start() if index + 1 < len(matches) else len(text)
+        route_block = text[match.start():block_end]
+        if "Depends(require_tenant_context)" in route_block:
+            continue
+
+        findings.append(
+            Finding(
+                "ai-route-without-tenant-context",
+                "blocking",
+                _rel(main_path),
+                text.count("\n", 0, match.start()) + 1,
+                f"Tenant-owned AI route '{route}' does not depend on require_tenant_context "
+                "(docs/adr/0022).",
+            )
+        )
+
+    return findings
+
+
+def check_ai_dependency_parity() -> list[Finding]:
+    """Local development, CI, and Aspire share Python 3.12 + uv.lock."""
+    service_dir = REPO_ROOT / "ai-services" / "assistant-service"
+    if not service_dir.is_dir():
+        return []
+
+    findings: list[Finding] = []
+    lock_path = service_dir / "uv.lock"
+    requirements_path = service_dir / "requirements.txt"
+    workflow = REPO_ROOT / ".github" / "workflows" / "ai-services-ci.yml"
+
+    if not lock_path.is_file():
+        findings.append(
+            Finding(
+                "ai-dependency-drift",
+                "blocking",
+                _rel(lock_path),
+                1,
+                "AI service has no uv.lock shared by local development, CI, and Aspire.",
+            )
+        )
+    if requirements_path.exists():
+        findings.append(
+            Finding(
+                "ai-dependency-drift",
+                "blocking",
+                _rel(requirements_path),
+                1,
+                "Hand-maintained requirements.txt duplicates pyproject.toml/uv.lock.",
+            )
+        )
+
+    expected_fragments = {
+        workflow: [
+            'python-version: "3.12"',
+            "uv sync --frozen",
+            "uv run pytest",
+            "uv run uvicorn",
+            "/health",
+        ],
+    }
+    for path, fragments in expected_fragments.items():
+        text = path.read_text(encoding="utf-8", errors="replace") if path.is_file() else ""
+        for fragment in fragments:
+            if fragment not in text:
+                findings.append(
+                    Finding(
+                        "ai-runtime-parity",
+                        "blocking",
+                        _rel(path),
+                        1,
+                        f"Missing '{fragment}' required for AI runtime/CI parity.",
+                    )
+                )
+
+    return findings
+
+
+def check_aspire_local_orchestration() -> list[Finding]:
+    """Aspire is the only application orchestrator until deployment is designed."""
+    findings: list[Finding] = []
+    forbidden_paths = [
+        REPO_ROOT / "infra/docker-compose.yml",
+        REPO_ROOT / "infra/docker-compose.yaml",
+        REPO_ROOT / "compose.yml",
+        REPO_ROOT / "compose.yaml",
+    ]
+    for application_root in (
+        REPO_ROOT / "apps",
+        REPO_ROOT / "ai-services",
+        REPO_ROOT / "backend/services",
+    ):
+        if application_root.is_dir():
+            forbidden_paths.extend(application_root.rglob("Dockerfile"))
+
+    for path in forbidden_paths:
+        if not path.exists():
+            continue
+        findings.append(
+            Finding(
+                "parallel-local-orchestrator",
+                "blocking",
+                _rel(path),
+                1,
+                "Application Docker/Compose orchestration conflicts with the "
+                "Aspire-only local runtime decision (docs/adr/0029).",
+            )
+        )
+
+    apphost = REPO_ROOT / "backend/AppHost/AppHost.cs"
+    apphost_text = (
+        apphost.read_text(encoding="utf-8", errors="replace")
+        if apphost.is_file()
+        else ""
+    )
+    required_apphost_fragments = [
+        'AddPostgres("postgres"',
+        ".WithHostPort(5432)",
+        '.WithEnvironment("POSTGRES_DB", "appdb")',
+        '.WithEnvironment("IDENTITY_DB_PASSWORD"',
+        '.WithEnvironment("SERVICES_DB_PASSWORD"',
+        '.WithDataVolume("agenza-postgres-data")',
+        ".WithInitFiles(",
+        "AddProject<Projects.IdentityService_Api>",
+        "AddProject<Projects.ServicesService_Api>",
+        "AddUvicornApp(",
+        '.WithUv(args: ["sync", "--frozen", "--extra", "dev"])',
+        "AddViteApp(",
+        '"VITE_OIDC_AUTHORITY"',
+        '"VITE_OIDC_CLIENT_ID"',
+        '"VITE_OIDC_REDIRECT_URI"',
+        '"VITE_OIDC_POST_LOGOUT_REDIRECT_URI"',
+        '"VITE_OIDC_SCOPE"',
+        '"VITE_API_BASE_URL"',
+    ]
+    for fragment in required_apphost_fragments:
+        if fragment not in apphost_text:
+            findings.append(
+                Finding(
+                    "incomplete-aspire-orchestration",
+                    "blocking",
+                    _rel(apphost),
+                    1,
+                    f"Missing '{fragment}' required by the Aspire-only local runtime.",
+                )
+            )
+
+    workflow = REPO_ROOT / ".github" / "workflows" / "frontend-ci.yml"
+    workflow_text = (
+        workflow.read_text(encoding="utf-8", errors="replace")
+        if workflow.is_file()
+        else ""
+    )
+    if "dotnet run --project backend/AppHost" not in workflow_text:
+        findings.append(
+            Finding(
+                "aspire-runtime-not-exercised",
+                "blocking",
+                _rel(workflow),
+                1,
+                "The API-contract job does not start the application through Aspire.",
+            )
+        )
+    if "docker compose" in workflow_text:
+        findings.append(
+            Finding(
+                "parallel-local-orchestrator",
+                "blocking",
+                _rel(workflow),
+                1,
+                "The API-contract job still starts the application through Docker Compose.",
+            )
+        )
+
+    return findings
+
+
+def check_trunk_precommit_guard() -> list[Finding]:
+    """The documented trunk policy must remain mechanically enforced."""
+    hook = REPO_ROOT / ".husky/pre-commit"
+    text = hook.read_text(encoding="utf-8", errors="replace") if hook.is_file() else ""
+    required = [
+        "git symbolic-ref --short HEAD",
+        'if [ "$branch" = "main" ]',
+        "exit 1",
+    ]
+    missing = [fragment for fragment in required if fragment not in text]
+    if not missing:
+        return []
+
+    return [
+        Finding(
+            "direct-main-commit-not-blocked",
+            "blocking",
+            _rel(hook),
+            1,
+            "The pre-commit hook no longer enforces docs/adr/0021; missing "
+            + ", ".join(repr(fragment) for fragment in missing)
+            + ".",
+        )
+    ]
+
+
+def check_dotnet_project_reference_boundaries() -> list[Finding]:
+    """Enforce the accepted service-layer graph using resolved project paths."""
+    services_root = REPO_ROOT / "backend" / "services"
+    if not services_root.is_dir():
+        return []
+
+    findings: list[Finding] = []
+    shared_root = REPO_ROOT / "backend" / "shared"
+    service_defaults = REPO_ROOT / "backend" / "ServiceDefaults" / "ServiceDefaults.csproj"
+
+    for project in _iter_files(services_root, (".csproj",)):
+        project_name = project.parent.name
+        if project_name.endswith(("Tests", "RuntimeTests", "PersistenceTests")):
+            continue
+
+        layer = next(
+            (
+                suffix
+                for suffix in (".Domain", ".Application", ".Infrastructure", ".Api")
+                if project_name.endswith(suffix)
+            ),
+            None,
+        )
+        if layer is None:
+            continue
+
+        try:
+            root = ET.parse(project).getroot()
+        except ET.ParseError:
+            continue
+
+        source_service = project.relative_to(services_root).parts[0]
+        own_service_root = services_root / source_service
+        allowed_by_layer = {
+            ".Application": {
+                own_service_root / project_name.replace(".Application", ".Domain")
+                / project_name.replace(".Application", ".Domain.csproj"),
+                shared_root / "Admin.SharedKernel" / "Admin.SharedKernel.csproj",
+            },
+            ".Infrastructure": {
+                own_service_root / project_name.replace(".Infrastructure", ".Application")
+                / project_name.replace(".Infrastructure", ".Application.csproj"),
+                shared_root / "Admin.Identity.Client" / "Admin.Identity.Client.csproj",
+                shared_root
+                / "Admin.SharedKernel.EntityFrameworkCore"
+                / "Admin.SharedKernel.EntityFrameworkCore.csproj",
+            },
+            ".Api": {
+                own_service_root / project_name.replace(".Api", ".Application")
+                / project_name.replace(".Api", ".Application.csproj"),
+                own_service_root / project_name.replace(".Api", ".Infrastructure")
+                / project_name.replace(".Api", ".Infrastructure.csproj"),
+                shared_root / "Admin.Identity.Client" / "Admin.Identity.Client.csproj",
+                shared_root
+                / "Admin.SharedKernel.AspNetCore"
+                / "Admin.SharedKernel.AspNetCore.csproj",
+                service_defaults,
+            },
+        }
+        allowed = {path.resolve() for path in allowed_by_layer.get(layer, set())}
+
+        for reference in root.findall(".//ProjectReference"):
+            include = reference.get("Include")
+            if not include:
+                continue
+            target = (project.parent / include.replace("\\", "/")).resolve()
+            if layer == ".Domain" or target not in allowed:
+                findings.append(
+                    Finding(
+                        "dotnet-project-reference-boundary",
+                        "blocking",
+                        _rel(project),
+                        1,
+                        f"{project_name} cannot reference {_rel(target)}; "
+                        f"the accepted layer graph is documented in backend/AGENTS.md.",
+                    )
+                )
+
+    return findings
+
+
+def check_dedicated_runtime_test_tier_absent() -> list[Finding]:
+    """ADR 0026 removed the Testcontainers/WebApplicationFactory tier.
+    Reintroducing it requires an explicit architecture decision."""
+    findings: list[Finding] = []
+    backend_root = REPO_ROOT / "backend"
+
+    for project in _iter_files(backend_root, (".csproj",)):
+        if "RuntimeTests" not in project.stem:
+            continue
+        findings.append(
+            Finding(
+                "dedicated-runtime-test-tier",
+                "blocking",
+                _rel(project),
+                1,
+                "A RuntimeTests project reintroduces the tier removed by docs/adr/0026; "
+                "record concrete failure evidence and a new ADR before restoring it.",
+            )
+        )
+
+    solution = backend_root / "AdminBackend.slnx"
+    if solution.is_file():
+        for line_number, line in enumerate(
+            solution.read_text(encoding="utf-8", errors="replace").splitlines(),
+            start=1,
+        ):
+            if "RuntimeTests" in line:
+                findings.append(
+                    Finding(
+                        "dedicated-runtime-test-tier",
+                        "blocking",
+                        _rel(solution),
+                        line_number,
+                        "AdminBackend.slnx references a RuntimeTests project removed by "
+                        "docs/adr/0026.",
+                    )
+                )
+
+    packages = backend_root / "Directory.Packages.props"
+    if packages.is_file():
+        forbidden_packages = (
+            "Testcontainers.PostgreSql",
+            "Microsoft.AspNetCore.Mvc.Testing",
+        )
+        for line_number, line in enumerate(
+            packages.read_text(encoding="utf-8", errors="replace").splitlines(),
+            start=1,
+        ):
+            for package in forbidden_packages:
+                if f'Include="{package}"' not in line:
+                    continue
+                findings.append(
+                    Finding(
+                        "dedicated-runtime-test-tier",
+                        "blocking",
+                        _rel(packages),
+                        line_number,
+                        f"{package} belongs to the runtime-test tier removed by "
+                        "docs/adr/0026.",
+                    )
+                )
+
+    return findings
+
+
+def check_ignore_tenant_attribute_allowlist() -> list[Finding]:
+    """A tenant opt-out is security-sensitive and requires an explicit file allowlist."""
+    findings: list[Finding] = []
+    for path in _iter_files(REPO_ROOT / "backend" / "services", (".cs",)):
+        relative = _rel(path)
+        if relative in IGNORE_TENANT_ATTRIBUTE_ALLOWLIST:
+            continue
+        for line_number, line in enumerate(
+            path.read_text(encoding="utf-8-sig", errors="replace").splitlines(),
+            start=1,
+        ):
+            if re.match(r"^\s*\[IgnoreTenant(?:Attribute)?(?:\(|\])", line):
+                findings.append(
+                    Finding(
+                        "unreviewed-ignore-tenant",
+                        "blocking",
+                        relative,
+                        line_number,
+                        "[IgnoreTenant] bypasses the default tenant boundary and is not "
+                        "in IGNORE_TENANT_ATTRIBUTE_ALLOWLIST.",
+                    )
+                )
+    return findings
+
+
+def check_database_bootstrap_defaults() -> list[Finding]:
+    """Base configuration must never silently migrate/seed on process start."""
+    paths = [
+        REPO_ROOT
+        / "backend/services/identity-service/IdentityService.Api/appsettings.json",
+        REPO_ROOT
+        / "backend/services/services-service/ServicesService.Api/appsettings.json",
+    ]
+    findings: list[Finding] = []
+
+    for path in paths:
+        if not path.parent.is_dir():
+            continue
+        try:
+            settings = json.loads(path.read_text(encoding="utf-8"))
+            enabled = settings["DatabaseBootstrap"]["RunOnStartup"]
+        except (FileNotFoundError, KeyError, json.JSONDecodeError, TypeError):
+            enabled = None
+
+        if enabled is not False:
+            findings.append(
+                Finding(
+                    "unsafe-database-bootstrap-default",
+                    "blocking",
+                    _rel(path),
+                    1,
+                    "Base configuration must set DatabaseBootstrap:RunOnStartup to false "
+                    "(docs/adr/0025).",
+                )
+            )
+
+    return findings
+
+
+def check_bootstrap_advisory_lock_absent() -> list[Finding]:
+    """ADR 0027 keeps the demo bootstrap single-instance and rejects a
+    speculative distributed lock until a deployment driver exists."""
+    cs_files = _iter_files(REPO_ROOT / "backend", (".cs",))
+    return _findings_for_pattern(
+        cs_files,
+        re.compile(r"\bPostgresAdvisoryLock\b|\bpg_advisory_(?:lock|unlock)\b"),
+        "bootstrap-advisory-lock",
+        "blocking",
+        "PostgreSQL advisory bootstrap locking was removed by docs/adr/0027; "
+        "use a one-shot deployment bootstrap when multiple replicas become real.",
+    )
+
+
+def check_database_boundary_configuration() -> list[Finding]:
+    """The current tenant relationships and service database identities are
+    small enough to enforce with exact, low-noise structural checks."""
+    findings: list[Finding] = []
+    config_path = (
+        REPO_ROOT
+        / "backend/services/services-service/ServicesService.Infrastructure"
+        / "Persistence/Configurations/ServiceConfiguration.cs"
+    )
+    if config_path.is_file():
+        text = config_path.read_text(encoding="utf-8", errors="replace")
+        required = [
+            'HasForeignKey(s => new { s.TenantId, s.CategoryId })',
+            '.HasForeignKey("TenantId", "ServiceId")',
+            '.HasForeignKey("TenantId", "TagsId")',
+            'join.HasKey("TenantId", "ServiceId", "TagsId")',
+        ]
+        for fragment in required:
+            if fragment not in text:
+                findings.append(
+                    Finding(
+                        "tenant-relationship-not-database-enforced",
+                        "blocking",
+                        _rel(config_path),
+                        1,
+                        f"Missing composite tenant relationship fragment '{fragment}' "
+                        "(docs/adr/0024).",
+                    )
+                )
+
+    apphost_path = REPO_ROOT / "backend/AppHost/AppHost.cs"
+    if apphost_path.is_file():
+        for line_number, line in enumerate(
+            apphost_path.read_text(encoding="utf-8", errors="replace").splitlines(),
+            start=1,
+        ):
+            if "Username=postgres" in line:
+                findings.append(
+                    Finding(
+                        "service-uses-database-superuser",
+                        "blocking",
+                        _rel(apphost_path),
+                        line_number,
+                        "Application service connects as the PostgreSQL superuser "
+                        "(docs/adr/0024).",
+                    )
+                )
+
+    return findings
+
+
+def check_destructive_migration_safety() -> list[Finding]:
+    """A new destructive Up migration needs an explicit reviewed safety
+    marker."""
+    migration_files = [
+        path
+        for path in _iter_files(REPO_ROOT / "backend" / "services", (".cs",))
+        if "/Migrations/" in path.as_posix() and not path.name.endswith(".Designer.cs")
+    ]
+    destructive_pattern = re.compile(
+        r"migrationBuilder\.(DropTable|DropColumn)\s*\(|"
+        r"\b(?:DELETE\s+FROM|TRUNCATE\s+TABLE)\b",
+        re.IGNORECASE,
+    )
+    findings: list[Finding] = []
+
+    for path in migration_files:
+        text = path.read_text(encoding="utf-8", errors="replace")
+        up_match = re.search(
+            r"protected\s+override\s+void\s+Up\b(.*?)"
+            r"protected\s+override\s+void\s+Down\b",
+            text,
+            re.DOTALL,
+        )
+        if not up_match:
+            continue
+
+        destructive = destructive_pattern.search(up_match.group(1))
+        if not destructive:
+            continue
+        if "migration-safety:" in up_match.group(1):
+            continue
+
+        absolute_offset = up_match.start(1) + destructive.start()
+        findings.append(
+            Finding(
+                "destructive-migration-without-safety-plan",
+                "blocking",
+                _rel(path),
+                text.count("\n", 0, absolute_offset) + 1,
+                "Destructive Up migration has no 'migration-safety:' marker documenting "
+                "preflight/backfill/rollback review (docs/adr/0025).",
+            )
+        )
+
+    return findings
 
 
 # ---------------------------------------------------------------------------
@@ -563,6 +1108,17 @@ CHECKS = [
     check_validator_repository_dependency,
     check_domain_entity_throws,
     check_dangling_null_forgiving_after_lookup,
+    check_ai_tenant_boundaries,
+    check_ai_dependency_parity,
+    check_aspire_local_orchestration,
+    check_trunk_precommit_guard,
+    check_dotnet_project_reference_boundaries,
+    check_dedicated_runtime_test_tier_absent,
+    check_ignore_tenant_attribute_allowlist,
+    check_database_bootstrap_defaults,
+    check_bootstrap_advisory_lock_absent,
+    check_database_boundary_configuration,
+    check_destructive_migration_safety,
     check_stale_patterns_in_doc_code_blocks,
     check_dangling_adr_references,
     check_frontend_any,

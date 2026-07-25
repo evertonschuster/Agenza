@@ -1,6 +1,7 @@
 # ADR 0019 — Narrow EF InMemory tests for tenant isolation, without reopening docs/adr/0015
 
-Status: accepted (2026-07); narrows docs/adr/0015, does not reverse it
+Status: accepted (2026-07); remains the only dedicated services-service
+persistence test project after ADR 0026
 
 ## Context
 

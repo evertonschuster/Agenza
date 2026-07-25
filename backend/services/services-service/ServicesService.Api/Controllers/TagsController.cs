@@ -13,7 +13,7 @@ namespace ServicesService.Api.Controllers;
 [ApiController]
 [ApiVersion("1.0")]
 [Route("api/v{version:apiVersion}/tags")]
-public class TagsController : ControllerBase
+public class TagsController : AgenzaControllerBase
 {
     private readonly IDispatcher _dispatcher;
 

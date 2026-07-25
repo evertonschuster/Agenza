@@ -18,6 +18,13 @@ public static class IdentityJwtBearerExtensions
         services.AddScoped<ITenantAccessor, HttpContextTenantAccessor>();
         services.AddScoped<ICurrentUserAccessor, HttpContextCurrentUserAccessor>();
         services.AddScoped<TenantHeaderFilter>();
+        services.AddHttpClient(
+            IdentityAuthorityHealthCheck.HttpClientName,
+            client => client.BaseAddress = new Uri($"{authority.TrimEnd('/')}/"));
+        services.AddHealthChecks()
+            .AddCheck<IdentityAuthorityHealthCheck>(
+                "identity-service",
+                tags: ["ready"]);
 
         services
             .AddAuthentication(JwtBearerDefaults.AuthenticationScheme)

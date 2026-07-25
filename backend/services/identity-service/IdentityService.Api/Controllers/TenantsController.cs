@@ -1,6 +1,7 @@
 using Admin.SharedKernel;
 using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
+using IdentityService.Application.Tenants;
 using IdentityService.Application.Tenants.ProvisionTenant;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -14,7 +15,7 @@ namespace IdentityService.Api.Controllers;
 [ApiVersion("1.0")]
 [Route("internal/v{version:apiVersion}/tenants")]
 [Authorize(AuthenticationSchemes = OpenIddictValidationAspNetCoreDefaults.AuthenticationScheme)]
-public class TenantsController : ControllerBase
+public class TenantsController : AgenzaControllerBase
 {
     private readonly IDispatcher _dispatcher;
 
@@ -24,11 +25,20 @@ public class TenantsController : ControllerBase
     }
 
     [HttpPost]
+    [ProducesResponseType<ProvisionTenantResponse>(StatusCodes.Status201Created)]
     public async Task<IActionResult> Provision(ProvisionTenantCommand command, CancellationToken cancellationToken)
     {
         if (!User.HasScope("identity-admin"))
         {
-            return Forbid();
+            return StatusCode(
+                StatusCodes.Status403Forbidden,
+                new ApiProblemDetails
+                {
+                    Type = "https://agenza/errors/authorization",
+                    Title = "Acesso negado.",
+                    Status = StatusCodes.Status403Forbidden,
+                    Code = "Authorization.MissingScope",
+                });
         }
 
         var result = await _dispatcher.Send(command, cancellationToken);

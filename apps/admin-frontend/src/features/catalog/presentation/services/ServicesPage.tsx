@@ -1,11 +1,11 @@
 import type { JSX } from 'react'
 import { PageHeader } from '@/shared/presentation/components/PageHeader'
 import { Button } from '@/components/ui/button'
-import { useServicesPage } from '@/features/catalog/presentation/services/useServicesPage'
-import { ServicesFilters } from '@/features/catalog/presentation/services/ServicesFilters'
-import { ServicesList } from '@/features/catalog/presentation/services/ServicesList'
-import { ServiceDialog } from '@/features/catalog/presentation/services/ServiceDialog'
-import { ServiceDeleteDialog } from '@/features/catalog/presentation/services/ServiceDeleteDialog'
+import { useServicesPage } from '@/features/catalog/presentation/services/hooks/useServicesPage'
+import { ServicesFilters } from '@/features/catalog/presentation/services/components/ServicesFilters'
+import { ServicesList } from '@/features/catalog/presentation/services/components/ServicesList'
+import { ServiceDialog } from '@/features/catalog/presentation/services/components/ServiceDialog'
+import { ServiceDeleteDialog } from '@/features/catalog/presentation/services/components/ServiceDeleteDialog'
 
 export function ServicesPage(): JSX.Element {
   const { onOpenCreate, filters, list, dialog, deleteDialog } = useServicesPage()
