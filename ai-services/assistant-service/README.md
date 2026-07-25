@@ -33,8 +33,8 @@ uv run pytest
 
 Authentication is configured through `IDENTITY_AUTHORITY`, `IDENTITY_ISSUER`,
 `IDENTITY_AUDIENCE`, `IDENTITY_CLIENT_ID`, `IDENTITY_CLIENT_SECRET`, and
-`IDENTITY_SCOPE`; the demo values live in `infra/docker-compose.yml`.
+`IDENTITY_SCOPE`; AppHost injects the demo values when Aspire runs the stack.
 
 `pyproject.toml` and `uv.lock` are the single dependency source for local
-development, CI, and the Python 3.12 container image. Do not add a separate
-hand-maintained `requirements.txt`.
+development, CI, and Aspire. Do not add a separate hand-maintained
+`requirements.txt`.

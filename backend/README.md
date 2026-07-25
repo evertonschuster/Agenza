@@ -39,7 +39,7 @@ The 80% line-coverage gate for `*.Tests` projects (Domain + Application
 scope) is configured in `Directory.Build.props`, so local `dotnet test`
 enforces exactly what CI enforces. `ServicesService.PersistenceTests`
 (docs/adr/0019) adds Docker-free EF coverage for automatic tenant
-assignment and tenant query filtering. The Compose API-contract job applies
+assignment and tenant query filtering. The Aspire API-contract job applies
 the migration chain to a fresh PostgreSQL database and exercises the real
 OIDC boundary; there is no dedicated Testcontainers or in-process HTTP test
 project (docs/adr/0026). See `../docs/QUALITY.md`.

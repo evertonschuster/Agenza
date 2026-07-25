@@ -22,7 +22,7 @@ enabled only by `appsettings.Development.json` or an explicit environment
 override. When enabled, bootstrap is serialized with a PostgreSQL advisory
 lock held for the complete migration/seed window.
 
-The demo Compose stack may opt in explicitly. A future deployment must run
+The Development environment may opt in explicitly. A future deployment must run
 the same migration chain as a one-shot bootstrap using an appropriately
 privileged identity before starting replicas; designing that deployment is
 outside this ADR and outside the current demo scope.
@@ -34,8 +34,8 @@ through the existing check-then-insert sequence.
 ## Fitness functions
 
 - A configuration test proves base settings do not enable migration or seed.
-- Development settings and the demo Compose stack opt in deliberately.
-- The Compose API-contract job starts from a fresh PostgreSQL database and
+- Development settings opt in deliberately.
+- The Aspire API-contract job starts from a fresh PostgreSQL database and
   therefore exercises the complete migration chain during service startup.
 - The architecture guard rejects a base configuration that silently turns
   automatic bootstrap back on.

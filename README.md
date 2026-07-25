@@ -10,7 +10,7 @@ monorepo: React frontend, .NET backend microservices, Python AI services.
 | `apps/admin-frontend` | Vite + React 19 + TS (strict) | The admin panel UI                              |
 | `backend`             | .NET 10 (ASP.NET Core)        | Business microservices, one per bounded context |
 | `ai-services`         | Python 3.12 (FastAPI)         | AI/ML services                                  |
-| `infra`               | Docker Compose                | Local multi-stack orchestration                 |
+| `infra`               | PostgreSQL init scripts       | Local database roles and schema grants          |
 
 See [docs/MONOREPO.md](docs/MONOREPO.md) for conventions, and each stack's own
 `CLAUDE.md`/`README.md` for stack-specific guidance.
@@ -37,21 +37,21 @@ pip install uv==0.11.15
 uv sync --frozen --extra dev
 uv run uvicorn app.main:app --reload --port 8001
 
-# Everything together
-docker compose -f infra/docker-compose.yml up
+# Everything together (frontend, backend, PostgreSQL, and AI service)
+dotnet run --project backend/AppHost --launch-profile http
 ```
 
 ## Versions
 
-| Stack  | Minimum supported (CI-gated)                                 | Recommended local/runtime                   |
-| ------ | ------------------------------------------------------------ | ------------------------------------------- |
-| Node   | 22.22.1 (`.nvmrc`, `engines.node`)                           | Same — `nvm use` picks it up automatically  |
-| npm    | 10.9.3 (`packageManager`)                                    | Same                                        |
-| .NET   | 10.0.302 (`backend/global.json`, `rollForward: latestPatch`) | Same                                        |
-| Python | 3.12 (`requires-python`, CI)                                 | 3.12 (`.python-version`, Docker, `uv.lock`) |
-| Docker | 29.5                                                         | Same                                        |
+| Stack  | Minimum supported (CI-gated)                                 | Recommended local/runtime                    |
+| ------ | ------------------------------------------------------------ | -------------------------------------------- |
+| Node   | 22.22.1 (`.nvmrc`, `engines.node`)                           | Same — `nvm use` picks it up automatically   |
+| npm    | 10.9.3 (`packageManager`)                                    | Same                                         |
+| .NET   | 10.0.302 (`backend/global.json`, `rollForward: latestPatch`) | Same                                         |
+| Python | 3.12 (`requires-python`, CI)                                 | 3.12 (`.python-version`, `uv.lock`)          |
+| Docker | 29.5                                                         | Same (container runtime for Aspire Postgres) |
 
 Node was previously documented as 22.18 while `react-router`/`lint-staged`
 already required >=22.22 — `.nvmrc`/`engines.node` now enforce the real
-floor everywhere (local, Docker, CI) instead of letting them silently
+floor everywhere (local and CI) instead of letting them silently
 disagree.

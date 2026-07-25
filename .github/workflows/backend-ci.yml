@@ -67,9 +67,6 @@ jobs:
       - name: Build
         run: dotnet build backend/AdminBackend.slnx -c Release --no-restore
 
-      - name: Build backend runtime images
-        run: docker compose -f infra/docker-compose.yml build identity-service services-service
-
       - name: Test (unit coverage + EF tenant persistence tier)
         # The 80% Domain + Application coverage gate applies to *.Tests.
         # PersistenceTests adds Docker-free coverage for tenant assignment

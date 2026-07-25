@@ -8,14 +8,14 @@ requires a paid plan.
 | Workflow               | Triggers on                   | What it gates                                                                                           |
 | ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `frontend-ci.yml`      | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
-| `backend-ci.yml`       | `backend/**`                  | warning-free build, both runtime images, unit coverage, and Docker-free EF tenant persistence tests     |
-| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python 3.12 deps, Ruff, pytest coverage, runtime image build, and `/health` smoke                |
+| `backend-ci.yml`       | `backend/**`                  | warning-free build, unit coverage, and Docker-free EF tenant persistence tests                          |
+| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python 3.12 deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke           |
 | `codeql.yml`           | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
 | `sonar.yml`            | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
 | `agent-governance.yml` | all PRs/pushes                | AI agent governance framework consistency — see [docs/AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md)         |
 
 Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for npm,
-NuGet, pip, Docker base images, and the workflows' actions.
+NuGet, pip, and the workflows' actions.
 
 ## What each coverage gate actually measures — read before trusting a number
 
@@ -34,9 +34,10 @@ NuGet, pip, Docker base images, and the workflows' actions.
   (docs/adr/0005). `ServicesService.PersistenceTests` covers EF tenant
   assignment and filtering in memory (docs/adr/0019). There is no
   Testcontainers/`WebApplicationFactory` project. The frontend
-  API-contract workflow starts a disposable PostgreSQL + identity +
-  services stack, applies the migration chain, and runs the real OIDC
-  smoke defined in `scripts/smoke_oidc_contract.py` (docs/adr/0026).
+  API-contract workflow starts the AppHost resource graph, applies the
+  migration chain to Aspire's PostgreSQL resource, and runs the real OIDC
+  smoke defined in `scripts/smoke_oidc_contract.py` (docs/adr/0026,
+  docs/adr/0029).
 - **AI services**: `--cov=app` in `pyproject.toml` measures the whole
   package, gate at 80% (`--cov-fail-under=80`).
 

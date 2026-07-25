@@ -19,7 +19,8 @@ another service's schema — cross-context data flows through APIs.
 
 ## Consequences
 
-- Single `postgres` container locally (docker-compose and Aspire).
+- Single `postgres` container locally, owned by the Aspire AppHost
+  resource graph (docs/adr/0029).
 - Migrations can't collide across services — this held for entity
   tables from the start, but `HasDefaultSchema` alone didn't cover EF
   Core's own `__EFMigrationsHistory` bookkeeping table; see docs/adr/0017

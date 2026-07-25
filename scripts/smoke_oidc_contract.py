@@ -1,7 +1,7 @@
 """Exercise the real development OIDC boundary across both backend services.
 
 This intentionally uses only the Python standard library so the same command
-can run in CI immediately after Docker Compose starts the development stack.
+can run in CI immediately after Aspire starts the development stack.
 """
 
 from __future__ import annotations

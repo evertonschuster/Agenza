@@ -11,10 +11,10 @@ service-role setup, an in-process API factory, and a test authentication
 handler.
 
 For the current demo, that additional test runtime and maintenance surface
-is not justified. The repository already has a Compose API-contract job that
-starts PostgreSQL, identity, and services as real processes. It can retain
-the highest-value system smoke without keeping a second runtime harness
-inside the backend solution.
+is not justified. The repository already has an API-contract job that
+starts the real application resource graph. It can retain the highest-value
+system smoke without keeping a second runtime harness inside the backend
+solution.
 
 ## Decision
 
@@ -27,7 +27,7 @@ Keep these automated checks:
 - `*.Tests` projects enforce 80% Domain + Application line coverage;
 - `ServicesService.PersistenceTests` verifies automatic tenant assignment,
   soft deletion, and tenant query filtering with EF InMemory;
-- the API-contract Compose job starts from a fresh PostgreSQL database,
+- the API-contract Aspire job starts from a fresh PostgreSQL database,
   applies the full migration chain, checks readiness, and runs
   `scripts/smoke_oidc_contract.py`;
 - the OIDC smoke checks client credentials, wrong-scope denial, missing
@@ -46,14 +46,15 @@ exit criteria.
 - central package management contains no `Testcontainers.PostgreSql` or
   `Microsoft.AspNetCore.Mvc.Testing` dependency.
 - backend CI runs unit and Docker-free EF persistence tests.
-- the API-contract CI job runs the disposable Compose stack and the real
+- the API-contract CI job runs the AppHost graph and the real
   OIDC smoke.
 
 ## Consequences
 
 The backend solution is simpler and its test phase does not start a database
-container or in-process web host. Docker remains in CI for runtime image
-builds and the separate Compose API-contract smoke.
+container or in-process web host. The separate API-contract job exercises
+Aspire's PostgreSQL, identity, and services resources. ADR 0029 later removed
+the parallel Compose graph and application image builds.
 
 The following behaviors no longer have a direct automated proof:
 

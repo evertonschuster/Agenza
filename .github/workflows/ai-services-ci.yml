@@ -78,18 +78,16 @@ jobs:
       - name: Test (coverage gate configured in pyproject.toml, 80%)
         run: uv run pytest
 
-      - name: Build runtime image from the same lock
-        run: docker build --tag agenza-assistant-service:ci .
-
-      - name: Smoke runtime image
+      - name: Smoke the Aspire runtime command
         run: |
-          docker run --detach --name assistant-service-ci --publish 8001:8001 agenza-assistant-service:ci
-          trap 'docker rm --force assistant-service-ci' EXIT
+          uv run uvicorn app.main:app --host 127.0.0.1 --port 8001 > "$RUNNER_TEMP/assistant-service.log" 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
           for _ in $(seq 1 20); do
             if curl --fail --silent http://localhost:8001/health > /dev/null; then
               exit 0
             fi
             sleep 1
           done
-          docker logs assistant-service-ci
+          cat "$RUNNER_TEMP/assistant-service.log"
           exit 1

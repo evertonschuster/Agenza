@@ -30,12 +30,3 @@ updates:
     directory: /
     schedule:
       interval: weekly
-
-  - package-ecosystem: docker
-    directories:
-      - /apps/admin-frontend
-      - /backend/services/identity-service/IdentityService.Api
-      - /backend/services/services-service/ServicesService.Api
-      - /ai-services/assistant-service
-    schedule:
-      interval: weekly

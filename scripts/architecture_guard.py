@@ -267,7 +267,7 @@ def check_ai_tenant_boundaries() -> list[Finding]:
 
 
 def check_ai_dependency_parity() -> list[Finding]:
-    """Local development, CI, and the image share Python 3.12 + uv.lock."""
+    """Local development, CI, and Aspire share Python 3.12 + uv.lock."""
     service_dir = REPO_ROOT / "ai-services" / "assistant-service"
     if not service_dir.is_dir():
         return []
@@ -275,7 +275,6 @@ def check_ai_dependency_parity() -> list[Finding]:
     findings: list[Finding] = []
     lock_path = service_dir / "uv.lock"
     requirements_path = service_dir / "requirements.txt"
-    dockerfile = service_dir / "Dockerfile"
     workflow = REPO_ROOT / ".github" / "workflows" / "ai-services-ci.yml"
 
     if not lock_path.is_file():
@@ -285,7 +284,7 @@ def check_ai_dependency_parity() -> list[Finding]:
                 "blocking",
                 _rel(lock_path),
                 1,
-                "AI service has no uv.lock shared by local development, CI, and Docker.",
+                "AI service has no uv.lock shared by local development, CI, and Aspire.",
             )
         )
     if requirements_path.exists():
@@ -300,12 +299,11 @@ def check_ai_dependency_parity() -> list[Finding]:
         )
 
     expected_fragments = {
-        dockerfile: ["FROM python:3.12", "uv sync --frozen"],
         workflow: [
             'python-version: "3.12"',
             "uv sync --frozen",
-            "docker build",
-            "docker run",
+            "uv run pytest",
+            "uv run uvicorn",
             "/health",
         ],
     }
@@ -326,62 +324,99 @@ def check_ai_dependency_parity() -> list[Finding]:
     return findings
 
 
-def check_backend_container_parity() -> list[Finding]:
-    """Backend image contexts and CI must exercise both runtime artifacts."""
-    dockerfiles = [
-        REPO_ROOT
-        / "backend/services/identity-service/IdentityService.Api/Dockerfile",
-        REPO_ROOT
-        / "backend/services/services-service/ServicesService.Api/Dockerfile",
-    ]
-    if not any(path.is_file() for path in dockerfiles):
-        return []
-
+def check_aspire_local_orchestration() -> list[Finding]:
+    """Aspire is the only application orchestrator until deployment is designed."""
     findings: list[Finding] = []
-    ignore_path = REPO_ROOT / "backend" / ".dockerignore"
-    if not ignore_path.is_file():
+    forbidden_paths = [
+        REPO_ROOT / "infra/docker-compose.yml",
+        REPO_ROOT / "infra/docker-compose.yaml",
+        REPO_ROOT / "compose.yml",
+        REPO_ROOT / "compose.yaml",
+    ]
+    for application_root in (
+        REPO_ROOT / "apps",
+        REPO_ROOT / "ai-services",
+        REPO_ROOT / "backend/services",
+    ):
+        if application_root.is_dir():
+            forbidden_paths.extend(application_root.rglob("Dockerfile"))
+
+    for path in forbidden_paths:
+        if not path.exists():
+            continue
         findings.append(
             Finding(
-                "backend-container-context-drift",
+                "parallel-local-orchestrator",
                 "blocking",
-                _rel(ignore_path),
+                _rel(path),
                 1,
-                "Backend Docker context has no .dockerignore.",
+                "Application Docker/Compose orchestration conflicts with the "
+                "Aspire-only local runtime decision (docs/adr/0029).",
             )
         )
 
-    for dockerfile in dockerfiles:
-        text = (
-            dockerfile.read_text(encoding="utf-8", errors="replace")
-            if dockerfile.is_file()
-            else ""
-        )
-        for fragment in ['COPY ["NuGet.Config", "."]', "--no-restore"]:
-            if fragment not in text:
-                findings.append(
-                    Finding(
-                        "backend-container-restore-drift",
-                        "blocking",
-                        _rel(dockerfile),
-                        1,
-                        f"Missing '{fragment}' required for reproducible image restore/build.",
-                    )
+    apphost = REPO_ROOT / "backend/AppHost/AppHost.cs"
+    apphost_text = (
+        apphost.read_text(encoding="utf-8", errors="replace")
+        if apphost.is_file()
+        else ""
+    )
+    required_apphost_fragments = [
+        'AddPostgres("postgres"',
+        ".WithHostPort(5432)",
+        '.WithEnvironment("POSTGRES_DB", "appdb")',
+        '.WithEnvironment("IDENTITY_DB_PASSWORD"',
+        '.WithEnvironment("SERVICES_DB_PASSWORD"',
+        '.WithDataVolume("agenza-postgres-data")',
+        ".WithInitFiles(",
+        "AddProject<Projects.IdentityService_Api>",
+        "AddProject<Projects.ServicesService_Api>",
+        "AddUvicornApp(",
+        '.WithUv(args: ["sync", "--frozen", "--extra", "dev"])',
+        "AddViteApp(",
+        '"VITE_OIDC_AUTHORITY"',
+        '"VITE_OIDC_CLIENT_ID"',
+        '"VITE_OIDC_REDIRECT_URI"',
+        '"VITE_OIDC_POST_LOGOUT_REDIRECT_URI"',
+        '"VITE_OIDC_SCOPE"',
+        '"VITE_API_BASE_URL"',
+    ]
+    for fragment in required_apphost_fragments:
+        if fragment not in apphost_text:
+            findings.append(
+                Finding(
+                    "incomplete-aspire-orchestration",
+                    "blocking",
+                    _rel(apphost),
+                    1,
+                    f"Missing '{fragment}' required by the Aspire-only local runtime.",
                 )
+            )
 
-    workflow = REPO_ROOT / ".github" / "workflows" / "backend-ci.yml"
+    workflow = REPO_ROOT / ".github" / "workflows" / "frontend-ci.yml"
     workflow_text = (
         workflow.read_text(encoding="utf-8", errors="replace")
         if workflow.is_file()
         else ""
     )
-    if "build identity-service services-service" not in workflow_text:
+    if "dotnet run --project backend/AppHost" not in workflow_text:
         findings.append(
             Finding(
-                "backend-images-not-built-in-ci",
+                "aspire-runtime-not-exercised",
                 "blocking",
                 _rel(workflow),
                 1,
-                "Backend CI does not build both runtime service images.",
+                "The API-contract job does not start the application through Aspire.",
+            )
+        )
+    if "docker compose" in workflow_text:
+        findings.append(
+            Finding(
+                "parallel-local-orchestrator",
+                "blocking",
+                _rel(workflow),
+                1,
+                "The API-contract job still starts the application through Docker Compose.",
             )
         )
 
@@ -637,18 +672,18 @@ def check_database_boundary_configuration() -> list[Finding]:
                     )
                 )
 
-    compose_path = REPO_ROOT / "infra" / "docker-compose.yml"
-    if compose_path.is_file():
+    apphost_path = REPO_ROOT / "backend/AppHost/AppHost.cs"
+    if apphost_path.is_file():
         for line_number, line in enumerate(
-            compose_path.read_text(encoding="utf-8", errors="replace").splitlines(),
+            apphost_path.read_text(encoding="utf-8", errors="replace").splitlines(),
             start=1,
         ):
-            if "ConnectionStrings__Default=" in line and "Username=postgres" in line:
+            if "Username=postgres" in line:
                 findings.append(
                     Finding(
                         "service-uses-database-superuser",
                         "blocking",
-                        _rel(compose_path),
+                        _rel(apphost_path),
                         line_number,
                         "Application service connects as the PostgreSQL superuser "
                         "(docs/adr/0024).",
@@ -1049,7 +1084,7 @@ CHECKS = [
     check_dangling_null_forgiving_after_lookup,
     check_ai_tenant_boundaries,
     check_ai_dependency_parity,
-    check_backend_container_parity,
+    check_aspire_local_orchestration,
     check_dotnet_project_reference_boundaries,
     check_dedicated_runtime_test_tier_absent,
     check_ignore_tenant_attribute_allowlist,

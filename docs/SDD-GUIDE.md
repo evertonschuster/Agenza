@@ -29,7 +29,7 @@ What you must do is **keep it true** (see "Your responsibilities" below).
 
 ## The loop
 
-1. **Spec** — write down what you want *before* prompting: entities,
+1. **Spec** — write down what you want _before_ prompting: entities,
    endpoints, shapes, error cases. For a REST feature that means the API
    contract; for a domain change, the invariants. If the spec lives only
    in your head, the agent will invent the missing parts.
@@ -85,8 +85,8 @@ gate still green.
 > no real SMTP yet.
 
 Expect: five projects wired per the skill, own Postgres schema
-(`notification`), auth via `Admin.Identity.Client`, docker-compose +
-Aspire entries, and a new scope seeded in identity-service.
+(`notification`), auth via `Admin.Identity.Client`, an Aspire resource
+entry, and a new scope seeded in identity-service.
 
 ### 4. Fix a bug
 
@@ -94,7 +94,7 @@ Aspire entries, and a new scope seeded in identity-service.
 > error. Reproduce it with a failing test first, then fix. Suspects:
 > silent-renewal flow (see frontend ADR 004).
 
-Expect: a failing test that captures the bug *before* the fix — that's
+Expect: a failing test that captures the bug _before_ the fix — that's
 the project's TDD convention, and it's what stops regressions.
 
 ### 5. Make an architecture decision
@@ -103,19 +103,19 @@ the project's TDD convention, and it's what stops regressions.
 > Postgres bytea for our scale, propose one, and write it as
 > docs/adr/0005. Don't implement yet.
 
-Decisions get an ADR *before* implementation; the next agent (or you,
+Decisions get an ADR _before_ implementation; the next agent (or you,
 in six months) reads why, not just what.
 
 ---
 
 ## Prompt patterns that work here
 
-| Weak prompt                      | Strong prompt                                                              |
-| -------------------------------- | --------------------------------------------------------------------------- |
-| "add a services page"            | Names the vertical + full API contract + points at the skill (example 1)   |
-| "make the backend better"        | One concrete outcome: "add integration tests for the userinfo endpoint"    |
-| "fix the login bug"              | Symptom + repro steps + where you suspect it lives + "failing test first"  |
-| "write docs"                     | "Flip the STATUS rows for Services and add an ADR for the polling choice"  |
+| Weak prompt               | Strong prompt                                                             |
+| ------------------------- | ------------------------------------------------------------------------- |
+| "add a services page"     | Names the vertical + full API contract + points at the skill (example 1)  |
+| "make the backend better" | One concrete outcome: "add integration tests for the userinfo endpoint"   |
+| "fix the login bug"       | Symptom + repro steps + where you suspect it lives + "failing test first" |
+| "write docs"              | "Flip the STATUS rows for Services and add an ADR for the polling choice" |
 
 Two more habits that pay off:
 
@@ -135,7 +135,7 @@ Two more habits that pay off:
 - **Doc truthfulness.** Stale docs are worse than no docs — an agent
   trusts STATUS.md more than it trusts the code. If you hand-change
   behavior, update the docs in the same commit.
-- **Review.** Gates catch broken; you catch *wrong*. Tenant scoping and
+- **Review.** Gates catch broken; you catch _wrong_. Tenant scoping and
   security-sensitive diffs (`Admin.Identity.Client`, OpenIddict config,
   anything touching tokens) deserve a human read, always.
 - **Decisions.** Agents propose, ADRs record, you decide.

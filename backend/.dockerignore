@@ -1,9 +1,0 @@
-.git
-.vs
-**/bin
-**/obj
-**/TestResults
-**/coverage
-**/coverage.*
-**/*.user
-**/*.suo

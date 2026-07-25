@@ -598,41 +598,61 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(ag.check_ai_tenant_boundaries(), [])
 
-    def test_backend_container_context_requires_dockerignore(self) -> None:
-        for path in [
-            "backend/services/identity-service/IdentityService.Api/Dockerfile",
-            "backend/services/services-service/ServicesService.Api/Dockerfile",
-        ]:
-            self._write(
-                path,
-                'COPY ["NuGet.Config", "."]\nRUN dotnet build Api.csproj --no-restore\n',
-            )
-        self._write(
-            ".github/workflows/backend-ci.yml",
-            "run: docker compose build identity-service services-service\n",
+    def test_compose_is_blocking_when_aspire_is_the_local_orchestrator(self) -> None:
+        self._write("infra/docker-compose.yml", "services: {}\n")
+
+        findings = ag.check_aspire_local_orchestration()
+
+        self.assertTrue(
+            any(finding.category == "parallel-local-orchestrator" for finding in findings)
         )
 
-        findings = ag.check_backend_container_parity()
+    def test_incomplete_aspire_graph_is_blocking(self) -> None:
+        self._write("backend/AppHost/AppHost.cs", 'builder.AddPostgres("postgres");\n')
+        self._write(
+            ".github/workflows/frontend-ci.yml",
+            "run: dotnet run --project backend/AppHost\n",
+        )
 
-        self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0].category, "backend-container-context-drift")
+        findings = ag.check_aspire_local_orchestration()
 
-    def test_backend_ci_must_build_both_runtime_images(self) -> None:
-        self._write("backend/.dockerignore", "**/bin\n")
-        for path in [
-            "backend/services/identity-service/IdentityService.Api/Dockerfile",
-            "backend/services/services-service/ServicesService.Api/Dockerfile",
-        ]:
-            self._write(
-                path,
-                'COPY ["NuGet.Config", "."]\nRUN dotnet build Api.csproj --no-restore\n',
-            )
-        self._write(".github/workflows/backend-ci.yml", "run: dotnet build\n")
+        self.assertTrue(
+            any(finding.category == "incomplete-aspire-orchestration" for finding in findings)
+        )
 
-        findings = ag.check_backend_container_parity()
+    def test_complete_aspire_only_orchestration_is_clean(self) -> None:
+        self._write(
+            "backend/AppHost/AppHost.cs",
+            "\n".join(
+                [
+                    'builder.AddPostgres("postgres")',
+                    "    .WithHostPort(5432)",
+                    '    .WithEnvironment("POSTGRES_DB", "appdb")',
+                    '    .WithEnvironment("IDENTITY_DB_PASSWORD", identityPassword)',
+                    '    .WithEnvironment("SERVICES_DB_PASSWORD", servicesPassword)',
+                    '    .WithDataVolume("agenza-postgres-data")',
+                    '    .WithInitFiles("../../infra/postgres/init");',
+                    "builder.AddProject<Projects.IdentityService_Api>();",
+                    "builder.AddProject<Projects.ServicesService_Api>();",
+                    "builder.AddUvicornApp();",
+                    '.WithUv(args: ["sync", "--frozen", "--extra", "dev"]);',
+                    "builder.AddViteApp();",
+                    'builder.WithEnvironment("VITE_OIDC_AUTHORITY", identity);',
+                    'builder.WithEnvironment("VITE_OIDC_CLIENT_ID", "admin-panel");',
+                    'builder.WithEnvironment("VITE_OIDC_REDIRECT_URI", redirect);',
+                    'builder.WithEnvironment("VITE_OIDC_POST_LOGOUT_REDIRECT_URI", logout);',
+                    'builder.WithEnvironment("VITE_OIDC_SCOPE", scope);',
+                    'builder.WithEnvironment("VITE_API_BASE_URL", services);',
+                    "",
+                ]
+            ),
+        )
+        self._write(
+            ".github/workflows/frontend-ci.yml",
+            "run: dotnet run --project backend/AppHost\n",
+        )
 
-        self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0].category, "backend-images-not-built-in-ci")
+        self.assertEqual(ag.check_aspire_local_orchestration(), [])
 
     def test_domain_project_reference_is_blocking(self) -> None:
         self._write(
@@ -748,8 +768,8 @@ class ArchitectureGuardTests(unittest.TestCase):
 
     def test_superuser_application_connection_is_blocking(self) -> None:
         self._write(
-            "infra/docker-compose.yml",
-            "- ConnectionStrings__Default=Host=postgres;Username=postgres;Password=postgres\n",
+            "backend/AppHost/AppHost.cs",
+            'var connection = "Host=postgres;Username=postgres;Password=postgres";\n',
         )
 
         findings = ag.check_database_boundary_configuration()
@@ -816,6 +836,36 @@ class ArchitectureGuardTests(unittest.TestCase):
         self._write(
             "apps/admin-frontend/src/features/catalog/domain/entities/Foo.ts",
             "export class Foo { private readonly name: string; constructor(name: string) { this.name = name } }\n",
+        )
+        self._write(
+            "backend/AppHost/AppHost.cs",
+            "\n".join(
+                [
+                    'builder.AddPostgres("postgres")',
+                    "    .WithHostPort(5432)",
+                    '    .WithEnvironment("POSTGRES_DB", "appdb")',
+                    '    .WithEnvironment("IDENTITY_DB_PASSWORD", identityPassword)',
+                    '    .WithEnvironment("SERVICES_DB_PASSWORD", servicesPassword)',
+                    '    .WithDataVolume("agenza-postgres-data")',
+                    '    .WithInitFiles("../../infra/postgres/init");',
+                    "builder.AddProject<Projects.IdentityService_Api>();",
+                    "builder.AddProject<Projects.ServicesService_Api>();",
+                    "builder.AddUvicornApp();",
+                    '.WithUv(args: ["sync", "--frozen", "--extra", "dev"]);',
+                    "builder.AddViteApp();",
+                    'builder.WithEnvironment("VITE_OIDC_AUTHORITY", identity);',
+                    'builder.WithEnvironment("VITE_OIDC_CLIENT_ID", "admin-panel");',
+                    'builder.WithEnvironment("VITE_OIDC_REDIRECT_URI", redirect);',
+                    'builder.WithEnvironment("VITE_OIDC_POST_LOGOUT_REDIRECT_URI", logout);',
+                    'builder.WithEnvironment("VITE_OIDC_SCOPE", scope);',
+                    'builder.WithEnvironment("VITE_API_BASE_URL", services);',
+                    "",
+                ]
+            ),
+        )
+        self._write(
+            ".github/workflows/frontend-ci.yml",
+            "run: dotnet run --project backend/AppHost\n",
         )
 
         findings = ag.run_all()

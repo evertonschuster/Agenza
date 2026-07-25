@@ -10,7 +10,7 @@ service from bootstrapping the database concurrently.
 
 The repository is a demo with no production deployment path and runs one
 instance of each service. Base configuration already disables startup
-bootstrap, while Development and the demo Compose stack opt in explicitly.
+bootstrap, while Development opts in explicitly.
 The lock therefore protects a multi-replica topology that does not exist,
 adds PostgreSQL-specific shared code, and holds a connection open for the
 complete bootstrap window.
@@ -33,18 +33,17 @@ startup bootstrap disabled.
 ## Fitness functions
 
 - base application settings keep `DatabaseBootstrap:RunOnStartup=false`;
-- Development and the demo Compose stack are the only intentional startup
-  opt-ins;
+- Development is the only intentional startup opt-in;
 - the architecture guard rejects reintroduction of
   `PostgresAdvisoryLock`/`pg_advisory_lock` without a new decision; and
-- the Compose API-contract job starts from an empty database and proves the
+- the Aspire API-contract job starts from an empty database and proves the
   single-instance bootstrap path still reaches readiness.
 
 ## Consequences
 
 Bootstrap code is smaller and no longer depends on a session-level
-distributed lock. Local development and the demo Compose flow retain their
-existing migration and seed behavior.
+distributed lock. Local development through Aspire retains its migration and
+seed behavior.
 
 If two bootstrap-enabled instances of the same service start concurrently,
 EF migrations or check-then-insert seed operations may conflict. This is an

@@ -77,8 +77,7 @@ builder.Services.AddOpenIddict()
         // Resource servers verify the JWT themselves, so it can't use OpenIddict's default encrypted token format.
         options.DisableAccessTokenEncryption();
 
-        // Without a fixed issuer, OpenIddict infers "iss" per-request, which breaks validation across the docker network
-        // (SPA reaches this via localhost:5081, other containers via identity-service:8080 - two different "iss" values).
+        // Without a fixed issuer, OpenIddict infers "iss" per request, which breaks validation when callers use different service-discovery addresses.
         if (!string.IsNullOrEmpty(publicIssuer))
         {
             options.SetIssuer(new Uri(publicIssuer));

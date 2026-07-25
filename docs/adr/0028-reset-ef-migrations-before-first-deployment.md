@@ -32,7 +32,8 @@ deleted histories.
 PostgreSQL roles and schema grants remain in
 `infra/postgres/init/001-service-roles.sh`, because database identities and
 privileges are environment bootstrap concerns rather than EF model state.
-Compose now uses a named data volume and publishes a configurable local port.
+Aspire owns a stable named data volume and publishes PostgreSQL on the local
+port documented in `docs/MONOREPO.md` (docs/adr/0029).
 
 This is a one-time pre-deployment exception to the repository rule against
 rewriting applied migrations. After this baseline, every schema change is a
@@ -46,7 +47,7 @@ new additive migration; existing migration files must not be edited.
 - the resulting database has separate schema-scoped history tables;
 - architecture guards reject destructive `Up` operations without an
   explicit migration-safety review marker; and
-- the Compose API-contract job rebuilds the empty database and reaches
+- the Aspire API-contract job starts the resource graph and reaches
   service readiness.
 
 ## Consequences

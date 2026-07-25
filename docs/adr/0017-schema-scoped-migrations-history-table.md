@@ -25,10 +25,9 @@ in the exact same `public.__EFMigrationsHistory` table.
 
 Both services also call `Database.MigrateAsync()` from a startup
 `IHostedService` (`DatabaseSeeder`/`DatabaseMigrator`, guarded by
-`Migrations:RunOnStartup`, default `true` — see docs/MONOREPO.md's
-"Known gaps"), and both `docker-compose` and the Aspire `AppHost`
-(`.WithDataVolume()` on the Postgres resource) start both services
-against the same database at once. On a fresh database this is
+`DatabaseBootstrap:RunOnStartup`) and the Aspire `AppHost`
+(`.WithDataVolume()` on the Postgres resource) starts both services
+against the same database. On a fresh database this is
 survivable — Npgsql creates the shared history table once, then each
 service inserts its own rows keyed by its own migration ids, no
 migration id in the repo currently collides across services (verified
@@ -45,7 +44,7 @@ keep services independent at the data layer:
 - Nothing prevents a future migration-id collision (e.g. two migrations
   scaffolded in the same minute in two different terminals).
 - Both services perform DDL (`CREATE TABLE IF NOT EXISTS
-  "__EFMigrationsHistory"` on first run, then `INSERT`) against the same
+"__EFMigrationsHistory"` on first run, then `INSERT`) against the same
   table around the same time at every concurrent startup — a needless,
   avoidable point of contention layered on top of the already-tracked
   `Migrations:RunOnStartup` concurrency gap.
@@ -90,8 +89,8 @@ ids.
 
 **Risk this creates, and why it's not applied automatically**: on any
 Postgres instance that already has migration history recorded in
-`public.__EFMigrationsHistory` — which is the *normal* state of any
-local dev environment that has already run `docker compose up` or
+`public.__EFMigrationsHistory` — which is the _normal_ state of any
+local dev environment that has run
 `dotnet run --project backend/AppHost` at least once, since Aspire's
 Postgres resource uses `.WithDataVolume()` (a persistent named volume)
 — the next `MigrateAsync()` call per service will look for its history

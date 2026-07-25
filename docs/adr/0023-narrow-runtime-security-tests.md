@@ -1,6 +1,7 @@
 # ADR 0023 — Narrow runtime security tests for irreversible boundaries
 
-Status: superseded by ADR 0026 (2026-07)
+Status: superseded by ADR 0026 (2026-07); ADR 0029 later moved the retained
+system smoke from Compose to Aspire
 
 ## Context
 
