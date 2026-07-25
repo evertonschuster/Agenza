@@ -1,6 +1,7 @@
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services.ListServices;
 using ServicesService.Domain.Entities;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Services.ListServices;
 
@@ -20,7 +21,7 @@ public class ListServicesQueryHandlerTests
     public async Task Handle_ReturnsServicesFromTheRepository()
     {
         var handler = CreateHandler(out var serviceRepository, out _);
-        var service = Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1).Value;
+        var service = Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service> { service }, 1));
@@ -54,7 +55,7 @@ public class ListServicesQueryHandlerTests
     {
         var handler = CreateHandler(out var serviceRepository, out var categoryRepository);
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        var service = Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, 1).Value;
+        var service = Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, category.Id, 1).Value;
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((new List<Service> { service }, 1));
@@ -73,9 +74,9 @@ public class ListServicesQueryHandlerTests
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         var services = new List<Service>
         {
-            Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, 1).Value,
-            Service.Create(Guid.NewGuid(), "Trim", null, 30, 15, 60, 45.50m, 10m, category.Id, 2).Value,
-            Service.Create(Guid.NewGuid(), "Manicure", null, 30, 15, 60, 45.50m, 10m, null, 3).Value,
+            Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, category.Id, 1).Value,
+            Service.Create(Guid.NewGuid(), "Trim", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, category.Id, 2).Value,
+            Service.Create(Guid.NewGuid(), "Manicure", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 3).Value,
         };
         serviceRepository.ListAsync(
             Arg.Any<int>(), Arg.Any<int>(), Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
@@ -98,8 +99,8 @@ public class ListServicesQueryHandlerTests
         var handler = CreateHandler(out var serviceRepository, out _);
         var services = new List<Service>
         {
-            Service.Create(Guid.NewGuid(), "Haircut", null, 30, 15, 60, 45.50m, 10m, null, 1).Value,
-            Service.Create(Guid.NewGuid(), "Manicure", null, 30, 15, 60, 45.50m, 10m, null, 2).Value,
+            Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value,
+            Service.Create(Guid.NewGuid(), "Manicure", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 2).Value,
         };
         serviceRepository.ListAsync(1, 2, Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns((services, 3));

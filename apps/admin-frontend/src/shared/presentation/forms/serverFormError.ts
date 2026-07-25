@@ -6,30 +6,16 @@ export interface FieldError<TField extends string> {
 }
 
 export interface ServerFormError<TField extends string> {
-  // A readonly list, not Partial<Record<TField, string>> - Object.entries()
-  // on a Record always returns string keys, erasing TField, which is
-  // exactly what forced a `field as TagFormField`-style cast at every call
-  // site before. A list of {field, message} pairs preserves TField and
-  // first-error order without one.
+  // A list, not Partial<Record<TField, string>> - Object.entries() on a
+  // Record erases TField, forcing a cast at every call site.
   fieldErrors: readonly FieldError<TField>[]
   firstField: TField | null
   globalMessage: string | null
 }
 
-/**
- * Turns a caught mutation error into field-level messages a form can apply
- * via react-hook-form's setError, plus whatever couldn't be mapped to a
- * field. Differentiates by what the API actually sent instead of parsing
- * free text: a validation AppError (`rawFieldErrors`, from a 400 with a
- * structured `errors` map) maps each backend PascalCase property to the
- * form's field name via `fieldMap`; a Conflict/NotFound/Forbidden AppError
- * (`backendCode`) maps via `codeFieldMap` when the code names a specific
- * field (e.g. a duplicate-name conflict highlighting the name field),
- * otherwise it's a global message - never guessed from the message string
- * either way. Only ever depends on AppError (application) - ApiError/
- * ProblemDetails (infrastructure) are converted away before this runs
- * (see AuthenticatedHttpClient/mapErrorToAppError, docs/adr/007).
- */
+// Maps a validation AppError's rawFieldErrors via fieldMap, or a
+// Conflict/NotFound/Forbidden AppError's backendCode via codeFieldMap -
+// never guessed from the message string either way.
 export function mapApiErrorToForm<TField extends string>(
   error: unknown,
   fieldMap: Record<string, TField>,

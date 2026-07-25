@@ -1,10 +1,7 @@
 /// <reference types="vite/client" />
 
 interface ImportMetaEnv {
-  /**
-   * The IdentityServer issuer URL (e.g. https://identity.example.com).
-   * Placeholder until the backend is deployed - see .env.example.
-   */
+  /** The IdentityServer issuer URL - placeholder until the backend is deployed, see .env.example. */
   readonly VITE_OIDC_AUTHORITY: string
   /** The client_id registered for this admin app in IdentityServer. */
   readonly VITE_OIDC_CLIENT_ID: string

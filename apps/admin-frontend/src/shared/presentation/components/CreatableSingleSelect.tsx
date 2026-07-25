@@ -34,21 +34,10 @@ interface CreatableSingleSelectProps<T> {
   createActionLabel: string
   renderCreateForm: (helpers: CreatableSelectHelpers<T>) => ReactNode
   loadState: SelectLoadState
-  /**
-   * Forwarded to the trigger button - lets react-hook-form's setFocus(name)
-   * land here when this field is wired through Controller (whose `field`
-   * has no DOM node of its own to focus otherwise).
-   */
+  /** Forwarded to the trigger button so react-hook-form's setFocus(name) has a DOM node to land on. */
   ref?: Ref<HTMLButtonElement>
 }
 
-/**
- * Built on shadcn/ui's Command (cmdk) instead of a hand-rolled listbox -
- * cmdk supplies full ARIA-combobox keyboard behavior (ArrowUp/Down, Home,
- * End, Enter, active-descendant tracking) and ties it into aria-expanded/
- * aria-controls automatically, which a hand-rolled version would have to
- * reimplement from scratch with more code and more room for gaps.
- */
 export function CreatableSingleSelect<T>({
   id,
   label,

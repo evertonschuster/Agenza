@@ -25,11 +25,8 @@ export interface ServiceDialogProps {
   discardConfirmation: DiscardConfirmationViewModel
 }
 
-/**
- * The create/edit dialog and its dirty-tracking discard-confirmation - the
- * two are one interaction (closing a dirty form asks before discarding), so
- * they're one component rather than two wired together by the page.
- */
+// One component, not two: closing a dirty form asks before discarding, so
+// the dialog and its discard-confirmation are a single interaction.
 export function ServiceDialog({
   editor,
   categoryOptions,
@@ -57,11 +54,13 @@ export function ServiceDialog({
           {editor.content !== null && (
             <ServiceForm
               key={editor.content.kind === 'create' ? 'new' : editor.content.item.id}
-              code={editor.content.code}
-              initialValues={editor.content.initialValues}
+              content={{
+                code: editor.content.code,
+                initialValues: editor.content.initialValues,
+                submitLabel: editor.content.submitLabel,
+              }}
               categoryOptions={categoryOptions}
               tagOptions={tagOptions}
-              submitLabel={editor.content.submitLabel}
               isSubmitting={editor.isSubmitting}
               serverError={editor.serverError}
               onCancel={editor.onRequestClose}

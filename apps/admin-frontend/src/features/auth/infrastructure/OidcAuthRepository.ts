@@ -3,14 +3,6 @@ import type { AuthRepository } from '@/features/auth/application/repositories/Au
 import { Session } from '@/features/auth/domain/entities/Session'
 import { mapOidcUserToSession } from '@/features/auth/infrastructure/oidcUserToSessionMapper'
 
-/**
- * AuthRepository implementation backed by oidc-client-ts's UserManager -
- * the only place that drives its runtime behavior (other files reference
- * the package too, but only to build config or map its User type).
- *
- * getCurrentSession() owns the full "try silent renewal, log out on
- * failure" sequence: callers only ever see a valid Session or null.
- */
 export class OidcAuthRepository implements AuthRepository {
   private readonly userManager: UserManager
 
@@ -51,10 +43,7 @@ export class OidcAuthRepository implements AuthRepository {
 
       return mapOidcUserToSession(renewedOidcUser)
     } catch {
-      // Silent renewal failed (e.g. "login_required", network error, or
-      // the refresh token itself expired). Per product decision: clear
-      // the stale local session rather than leaving it half-valid, and
-      // report "no session" so callers redirect to login.
+      // Renewal failed - clear the stale session rather than leave it half-valid.
       await this.userManager.removeUser()
       return null
     }

@@ -41,6 +41,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0015-...md`                       | Integration tests removed — CI runs unit tests only, no database dependency |
 | `../docs/adr/0017-...md`                       | Schema-scoped `__EFMigrationsHistory` per service — read before touching either service's migrations or `DependencyInjection.cs` |
 | `../docs/adr/0018-...md`                       | `Admin.SharedKernel` vs `Admin.SharedKernel.AspNetCore` split — read before adding to either |
+| `../docs/adr/0019-...md`                       | `ServicesService.PersistenceTests` — narrow EF InMemory coverage for tenant assignment/scoping, outside the *.Tests boundary and its coverage gate |
 
 ## Critical constraints (non-negotiable)
 
@@ -373,7 +374,12 @@ guards, an unrecognized database error, transactional rollback cleanup.
   Api/Infrastructure (controllers, EF configurations/migrations,
   interceptors, exception handlers, auth/OIDC flows) have no automated
   coverage as a result — verify those manually (`dotnet run` + a real
-  HTTP client) before merging a change that touches them.
+  HTTP client) before merging a change that touches them. One narrow
+  exception (docs/adr/0019): `ServicesService.PersistenceTests` covers
+  automatic tenant assignment on save and the tenant-scoped query filter
+  with EF Core InMemory (no Postgres/Docker) — the two mechanisms behind
+  this file's tenant-scoping non-negotiable. Everything else Api/
+  Infrastructure still has no automated coverage.
 - New endpoint = a unit test per new handler/validator; manually
   exercise auth (401/403) and the happy path before merging.
 

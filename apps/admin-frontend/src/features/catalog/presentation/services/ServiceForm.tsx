@@ -21,12 +21,16 @@ import {
   type ServiceFormField,
 } from '@/features/catalog/presentation/services/ServiceForm.schema'
 
-interface ServiceFormProps {
+export interface ServiceFormContent {
   code: number | null
   initialValues: ServiceFormInput
+  submitLabel: string
+}
+
+interface ServiceFormProps {
+  content: ServiceFormContent
   categoryOptions: ServiceCategoryOptions
   tagOptions: ServiceTagOptions
-  submitLabel: string
   isSubmitting: boolean
   serverError: ServerFormError<ServiceFormField> | null
   onCancel: () => void
@@ -35,17 +39,16 @@ interface ServiceFormProps {
 }
 
 export function ServiceForm({
-  code,
-  initialValues,
+  content,
   categoryOptions,
   tagOptions,
-  submitLabel,
   isSubmitting,
   serverError,
   onCancel,
   onSubmit,
   onDirtyChange,
 }: ServiceFormProps): JSX.Element {
+  const { code, initialValues, submitLabel } = content
   const methods = useForm<ServiceFormInput, unknown, ServiceFormValues>({
     resolver: zodResolver(serviceFormSchema),
     defaultValues: initialValues,

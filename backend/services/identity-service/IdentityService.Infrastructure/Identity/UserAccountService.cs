@@ -21,7 +21,7 @@ public class UserAccountService : IUserAccountService
     {
         var user = new ApplicationUser
         {
-            Id = Guid.NewGuid(),
+            Id = Guid.CreateVersion7(),
             UserName = email,
             Email = email,
             TenantId = tenantId,

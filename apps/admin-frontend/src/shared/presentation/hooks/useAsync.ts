@@ -1,14 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toUiError, type UiError } from '@/shared/application/UiError'
 
-/**
- * Every reachable combination of "do we have data" / "is a request in
- * flight" / "did the last request fail" - each variant carries only the
- * fields valid for it, so a refresh failure can keep last known-good data
- * on screen (`refreshError`) without a component having to cross-check two
- * independent booleans to tell it apart from a blocking initial failure
- * (`initialError`, no data yet).
- */
+// Each variant carries only the fields valid for it, so a refresh failure
+// (refreshError, keeps last known-good data) can't be confused with a
+// blocking initial failure (initialError, no data yet).
 export type AsyncState<T, E = unknown> =
   | { status: 'idle'; data: null; error: null }
   | { status: 'loading'; data: null; error: null }
@@ -19,13 +14,9 @@ export type AsyncState<T, E = unknown> =
 
 export type AsyncStatus = AsyncState<unknown>['status']
 
-/**
- * Identifies which "era" a request belongs to: key is the resetKey it was
- * bound to, generation its call order within that key. A call is safe to
- * commit only if both still match the live values - key alone misses a
- * newer same-key call, generation alone misses a call whose closure predates
- * a resetKey change but is invoked (with a fresh generation) after it.
- */
+// A call is safe to commit only if BOTH key and generation still match the
+// live values - key alone misses a newer same-key call, generation alone
+// misses a call whose closure predates a resetKey change.
 interface RequestEra {
   key: unknown
   generation: number
@@ -63,16 +54,8 @@ function errorState<T>(current: AsyncState<T>, error: unknown): AsyncState<T> {
     : { status: 'initialError', data: null, error }
 }
 
-/**
- * Shared "call an async function, track loading/data/error" hook every
- * feature hook (useCategories, useServices, useTags) and AuthProvider build
- * on, instead of a server-state library. Ignores a response/mutate call once
- * it's no longer part of the current era (unmounted, superseded by a newer
- * call, or from before the last resetKey change) - see RequestEra. `error`
- * stays `unknown` here - this hook is generic and error-agnostic; a
- * feature-level caller converts it to a curated UiError via toUiAsyncState
- * before it reaches a component (see CollectionFeedback/ServicesList).
- */
+// Ignores a response/mutate call once it's no longer part of the current
+// era (unmounted, superseded, or from before the last resetKey change).
 export function useAsync<T>(
   asyncFn: () => Promise<T>,
   options: UseAsyncOptions = {},
@@ -164,12 +147,8 @@ export function useAsync<T>(
   return { ...state, execute, mutate, captureGeneration }
 }
 
-/**
- * Converts a generic AsyncState's `unknown` error into a curated UiError -
- * the hook/controller-boundary normalization every feature hook applies
- * before its state reaches a component (CollectionFeedback, ServicesList
- * never interpret an arbitrary exception themselves).
- */
+// Converts AsyncState's `unknown` error into a curated UiError - components
+// never interpret an arbitrary exception themselves.
 export function toUiAsyncState<T>(state: AsyncState<T>): AsyncState<T, UiError> {
   switch (state.status) {
     case 'initialError':

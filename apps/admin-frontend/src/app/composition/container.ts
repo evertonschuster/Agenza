@@ -33,14 +33,9 @@ import {
   DeleteService,
 } from '@/features/catalog'
 
-/**
- * What presentation depends on for auth - each entry is the *shape* of a
- * use case (via Pick<Class, 'execute'>, which is structural and drops the
- * class's private-field nominal typing), not the concrete class itself.
- * This is what makes a plain `{ execute: vi.fn(...) }` object a valid,
- * fully-typed test fake with no `as unknown as AppContainer` cast needed -
- * see src/test/fixtures/createFakeAppContainer.ts.
- */
+// Each entry is the *shape* of a use case (Pick<Class, 'execute'>), not the
+// concrete class - makes a plain `{ execute: vi.fn(...) }` a valid, fully
+// typed test fake with no cast needed (src/test/fixtures/createFakeAppContainer.ts).
 export interface AuthFacade {
   initiateLogin: Pick<InitiateLogin, 'execute'>
   handleAuthCallback: Pick<HandleAuthCallback, 'execute'>
@@ -66,29 +61,15 @@ export interface CatalogFacade {
   deleteService: Pick<DeleteService, 'execute'>
 }
 
-/**
- * What presentation is allowed to see - grouped application facades, never
- * a raw repository or HttpClient (those stay local to createAppContainer,
- * below). Presentation reaches a use case through `auth`/`catalog`; it has
- * no way to reach `AuthenticatedHttpClient`, `OidcAuthRepository`, or any
- * `Api*Repository` at all, by construction (docs/adr/008).
- */
+// What presentation is allowed to see - grouped facades, never a raw
+// repository or HttpClient, by construction (docs/adr/008).
 export interface AppContainer {
   auth: AuthFacade
   catalog: CatalogFacade
 }
 
-/**
- * Builds the application's dependency graph. This is the one place outside
- * of infrastructure/ itself that is allowed to know OidcAuthRepository,
- * AuthenticatedHttpClient, or any Api*Repository exists - everywhere else
- * (hooks, components) depends only on the auth/catalog facades returned
- * below.
- *
- * Takes no parameters and reads no config directly: createUserManager
- * already isolates environment variable access, so swapping how
- * configuration is sourced never requires touching this file.
- */
+// The one place outside infrastructure/ allowed to know OidcAuthRepository,
+// AuthenticatedHttpClient, or any Api*Repository exists.
 export function createAppContainer(): AppContainer {
   const userManager = createUserManager()
   const authRepository: AuthRepository = new OidcAuthRepository(userManager)

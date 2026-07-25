@@ -12,24 +12,14 @@ interface AppErrorInput {
   code: AppErrorCode
   message: string
   retryable: boolean
-  /**
-   * Raw backend field name -> first message, keyed by the API's own
-   * PascalCase property names (e.g. "Name"), not yet translated to any
-   * specific form's field name - see mapApiErrorToForm for that step.
-   */
+  /** Raw backend field name (PascalCase, e.g. "Name") -> first message; see mapApiErrorToForm. */
   rawFieldErrors?: Record<string, string>
   /** The backend's structured error code (e.g. "Tag.DuplicateName"), when present. */
   backendCode?: string
 }
 
-/**
- * The one error shape presentation ever needs to know about. Every
- * infrastructure failure (HTTP status, ProblemDetails, network/timeout
- * failure) is converted into this at the infrastructure boundary
- * (AuthenticatedHttpClient) before it reaches a repository, use case, or
- * component - presentation never imports ApiError/ProblemDetails/
- * NetworkError/TimeoutError directly (docs/adr/007).
- */
+// The one error shape presentation ever needs - every infrastructure failure
+// is converted into this at the boundary (AuthenticatedHttpClient, docs/adr/007).
 export class AppError extends Error {
   readonly code: AppErrorCode
   readonly retryable: boolean

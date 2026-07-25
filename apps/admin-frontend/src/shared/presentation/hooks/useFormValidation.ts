@@ -7,11 +7,8 @@ interface UseFormValidationResult<T> {
   validateForSubmit: (values: T) => string | null
 }
 
-/**
- * Errors stay hidden until the user has actually interacted with the form
- * (blurred a field or attempted a submit) - otherwise a fresh form would
- * show "informe o nome" before anyone has typed anything.
- */
+// Errors stay hidden until the user has interacted with the form - otherwise
+// a fresh form would show "informe o nome" before anyone has typed anything.
 export function useFormValidation<T>(
   validate: (values: T) => string | null,
 ): UseFormValidationResult<T> {

@@ -9,10 +9,8 @@ interface StatusMessageProps {
   id?: string
 }
 
-// This app's theme is the stock shadcn/ui Nova neutral palette, deliberately
-// unmodified (no custom brand color) - `destructive` is the only non-neutral
-// token available, so success/warning/info/loading differentiate through
-// `role`/`aria-live` and text weight rather than inventing new colors.
+// `destructive` is the only non-neutral token this theme has - other tones
+// differentiate via role/aria-live instead of inventing new colors.
 const TONE_CLASSES: Record<StatusMessageTone, string> = {
   muted: 'text-muted-foreground',
   error: 'text-destructive',

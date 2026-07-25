@@ -1,9 +1,6 @@
 import { InvalidServiceError } from '@/features/catalog/domain/errors/InvalidServiceError'
 
-// The generated ServiceResponse types every numeric field as `number | string`
-// (serviceMapper.ts narrows it back to `number` at the type level only) -
-// these guards are the actual runtime check that a value genuinely is the
-// finite number/integer the domain requires, rather than trusting the cast.
+// The real runtime check behind serviceMapper.ts's type-level `number` narrowing.
 function isFiniteNumber(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value)
 }
@@ -34,11 +31,7 @@ interface CreateServiceInput {
   tags: TagSummary[]
 }
 
-/**
- * A service the business offers that clients can book (docs/DOMAIN.md
- * "Service"). Bookable duration is a range (min/max) around a default
- * duration, and price can be discounted up to a per-service cap.
- */
+/** A service the business offers that clients can book (docs/DOMAIN.md "Service"). */
 export class Service {
   readonly id: string
   readonly code: number
@@ -75,10 +68,7 @@ export class Service {
     this.maxDurationMinutes = maxDurationMinutes
     this.price = price
     this.maxDiscountPercentage = maxDiscountPercentage
-    // Copied, not stored by reference: the caller's array (e.g. a mapper's
-    // freshly-built list) must not be able to mutate this entity from
-    // outside after construction.
-    this.tags = [...tags]
+    this.tags = [...tags] // defensive copy - never store the caller's array by reference
     if (description !== undefined) {
       this.description = description
     }
@@ -100,11 +90,6 @@ export class Service {
       throw new InvalidServiceError('O nome do serviço deve ter entre 1 e 80 caracteres')
     }
 
-    // The API's generated types widen every numeric field to `number | string`
-    // (serviceMapper.ts's ServiceDto narrows this back at the type level only)
-    // - these are the real runtime guards against NaN/Infinity/a string that
-    // slipped through, and against a fractional value where the backend's
-    // int32 fields require a whole number.
     if (!isFiniteInteger(input.code)) {
       throw new InvalidServiceError('O código do serviço deve ser um número inteiro válido')
     }

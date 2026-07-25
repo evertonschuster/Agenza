@@ -7,8 +7,7 @@
   },
   "packageManager": "npm@10.9.3",
   "workspaces": [
-    "apps/*",
-    "packages/*"
+    "apps/*"
   ],
   "overrides": {
     "typescript": "~5.9.3"

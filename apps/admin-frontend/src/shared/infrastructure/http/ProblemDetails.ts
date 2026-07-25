@@ -3,12 +3,8 @@ export interface FieldError {
   message: string
 }
 
-/**
- * RFC 7807 Problem Details, extended with this API's structured-error
- * fields (docs/adr/0012): `code` is present on every error response,
- * `errors` only on validation failures (400) - a per-property array of
- * `{code, message}` keyed by the backend's PascalCase property name.
- */
+// RFC 7807 + this API's structured-error fields (docs/adr/0012): `code` on
+// every error response, `errors` only on validation failures (400).
 export interface ProblemDetails {
   type?: string
   title?: string
@@ -37,11 +33,6 @@ function isFieldErrorMap(value: unknown): value is Record<string, FieldError[]> 
   return Object.values(value).every(isFieldErrorArray)
 }
 
-/**
- * Safe runtime parse of a response body as ProblemDetails - never trusts
- * the shape blindly (no `any`, no sniffing error kind from message text).
- * Returns null for anything that isn't at least a JSON object.
- */
 export function parseProblemDetails(raw: unknown): ProblemDetails | null {
   if (typeof raw !== 'object' || raw === null) {
     return null

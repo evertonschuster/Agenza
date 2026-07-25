@@ -12,8 +12,8 @@ import type {
   ServiceFormValues,
 } from '@/features/catalog/presentation/services/ServiceForm.schema'
 
-// Neutral module: useServiceEditor and ServiceDialog/ServiceForm both import
-// from here, never from each other, so neither side owns the shared shape.
+// Neutral module: useServiceEditor and ServiceDialog/ServiceForm import from
+// here, never from each other.
 
 /** A discriminant, not a sentinel value - unlike `'new' | Service`, this can never collide with a legitimate Service. */
 export type ServiceFormTarget = { kind: 'create' } | { kind: 'edit'; item: Service }

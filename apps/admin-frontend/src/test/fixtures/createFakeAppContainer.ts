@@ -39,13 +39,9 @@ interface CreateFakeAppContainerOverrides {
   catalog?: Partial<CatalogFacade>
 }
 
-/**
- * A complete, fully-typed AppContainer fake - no `as unknown as AppContainer`
- * cast needed, since AppContainer's facades are structural (Pick<Class,
- * 'execute'>), not the concrete use-case classes themselves (docs/adr/008).
- * Pass only the facade members a given test cares about; everything else
- * gets a safe default that rejects/resolves-empty if accidentally invoked.
- */
+// Fully-typed, no `as unknown as AppContainer` cast needed (docs/adr/008).
+// Pass only the members a test cares about; the rest default to a safe
+// reject/resolve-empty if accidentally invoked.
 export function createFakeAppContainer(
   overrides: CreateFakeAppContainerOverrides = {},
 ): AppContainer {

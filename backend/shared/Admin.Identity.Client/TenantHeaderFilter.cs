@@ -4,17 +4,8 @@ using Microsoft.AspNetCore.Mvc.Filters;
 
 namespace Admin.Identity.Client;
 
-/// <summary>
-/// Repo non-negotiable: every request needs a tenant id, and it's never
-/// trusted from the client without verifying it against the
-/// authenticated principal (root CLAUDE.md). The client sends its tenant
-/// in the X-Tenant-Id header by default; this filter rejects a request
-/// before it reaches the controller unless that header is present and
-/// equals the principal's tenant_id claim - so every action that needs a
-/// tenant can trust ITenantAccessor.TenantId without repeating that check
-/// itself. Actions that genuinely aren't tenant-scoped (M2M provisioning,
-/// OIDC protocol endpoints) opt out with [IgnoreTenant].
-/// </summary>
+// Fail-closed: a missing/unparseable header, missing claim, or mismatch all
+// Forbid - never falls through to trusting the header alone.
 public class TenantHeaderFilter : IAsyncActionFilter
 {
     public const string HeaderName = "X-Tenant-Id";

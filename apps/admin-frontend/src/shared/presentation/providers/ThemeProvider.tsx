@@ -16,11 +16,8 @@ interface ThemeProviderProps {
   children: ReactNode
 }
 
-/**
- * Defaults to the OS color-scheme preference. Once the user picks a theme
- * explicitly (setTheme), that choice is persisted and the OS preference is
- * no longer followed - matches "start with OS theme, remember an override".
- */
+// Starts with the OS theme; an explicit setTheme() call persists and stops
+// following OS changes.
 export function ThemeProvider({ children }: ThemeProviderProps): JSX.Element {
   const [theme, setThemeState] = useState<Theme>(getInitialTheme)
 

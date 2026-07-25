@@ -15,16 +15,8 @@ type TextAreaFieldProps = Omit<
   label: string
   hint?: string
   error?: string | undefined
-  /**
-   * Current character count for the counter. Required for an accurate
-   * counter when the field is used uncontrolled via react-hook-form's
-   * `{...register(...)}` - that spread never includes `value` (RHF is
-   * ref-based for uncontrolled fields), so deriving the count from a
-   * `value` prop would always read 0. Compute it with RHF's `useWatch`
-   * for just this field name so only its own changes re-render the
-   * counter, not the whole form. Falls back to `value`'s length (or 0)
-   * when omitted, which still works for a genuinely controlled textarea.
-   */
+  // Needed for an accurate counter under RHF's register() (ref-based, so
+  // `value` is never populated) - falls back to `value`'s length when omitted.
   currentLength?: number
 } &
   // showCount: true has nothing to render its counter against without a

@@ -1,5 +1,6 @@
 using ServicesService.Application.Services.CreateService;
 using ServicesService.Domain.Entities;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Services.CreateService;
 
@@ -47,7 +48,7 @@ public class CreateServiceCommandValidatorTests
     [Fact]
     public async Task Validate_WithMaxDurationOverAllowedLimit_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { MaxDurationMinutes = Service.MaxAllowedDurationMinutes + 1 }))
+        (await _validator.ValidateAsync(ValidCommand() with { MaxDurationMinutes = DurationRange.MaxAllowedMinutes + 1 }))
             .IsValid.Should().BeFalse();
     }
 
