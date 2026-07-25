@@ -225,8 +225,50 @@ def check_dangling_null_forgiving_after_lookup() -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
-# Security and operability fitness functions (docs/adr/0022-0027)
+# Security and operability fitness functions (docs/adr/0022-0030)
 # ---------------------------------------------------------------------------
+
+def check_razor_post_antiforgery() -> list[Finding]:
+    """Browser POST forms must explicitly activate Razor antiforgery.
+
+    A plain form can receive an implicit token, but adding a manual HTML
+    action prevents the Form Tag Helper from emitting it and makes every
+    submission fail with 400. Requiring the explicit attribute keeps the
+    security behavior stable across harmless-looking markup changes.
+    """
+    cshtml_files = _iter_files(REPO_ROOT / "backend", (".cshtml",))
+    form_pattern = re.compile(r"<form\b(?P<attributes>[^>]*)>", re.IGNORECASE | re.DOTALL)
+    post_pattern = re.compile(r"""\bmethod\s*=\s*["']post["']""", re.IGNORECASE)
+    antiforgery_pattern = re.compile(
+        r"""\basp-antiforgery\s*=\s*["']true["']""",
+        re.IGNORECASE,
+    )
+    findings: list[Finding] = []
+
+    for path in cshtml_files:
+        if _is_allowlisted(path):
+            continue
+
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for match in form_pattern.finditer(text):
+            attributes = match.group("attributes")
+            if not post_pattern.search(attributes) or antiforgery_pattern.search(attributes):
+                continue
+
+            findings.append(
+                Finding(
+                    "razor-post-without-antiforgery",
+                    "blocking",
+                    _rel(path),
+                    text.count("\n", 0, match.start()) + 1,
+                    "Razor POST form does not explicitly declare "
+                    'asp-antiforgery="true"; a manual action can otherwise '
+                    "suppress the token and make valid submissions fail with 400.",
+                )
+            )
+
+    return findings
+
 
 def check_ai_tenant_boundaries() -> list[Finding]:
     """Every non-health FastAPI route must consume the validated
@@ -1190,6 +1232,7 @@ CHECKS = [
     check_validator_repository_dependency,
     check_domain_entity_throws,
     check_dangling_null_forgiving_after_lookup,
+    check_razor_post_antiforgery,
     check_ai_tenant_boundaries,
     check_ai_dependency_parity,
     check_aspire_local_orchestration,

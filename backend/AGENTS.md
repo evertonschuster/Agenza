@@ -223,6 +223,11 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   persist the identity-origin preference. An explicit identity-page
   preference wins on later visits; otherwise, use the valid frontend request
   and then the operating-system theme.
+- Every Razor form that performs a `POST` explicitly declares
+  `asp-antiforgery="true"`. Do not rely on implicit token generation:
+  adding a manual HTML `action` can bypass the Form Tag Helper and turn every
+  valid submission into a 400 response. The architecture guard enforces this
+  for every backend `.cshtml` file.
 
 ### CQRS + vertical slices
 
