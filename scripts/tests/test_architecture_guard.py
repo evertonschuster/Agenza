@@ -693,19 +693,12 @@ class ArchitectureGuardTests(unittest.TestCase):
             )
         )
 
-    def test_missing_trunk_precommit_guard_is_blocking(self) -> None:
-        self._write(".husky/pre-commit", "npm run lint-staged\n")
-
-        findings = ag.check_trunk_precommit_guard()
-
-        self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0].category, "direct-main-commit-not-blocked")
-
-    def test_trunk_precommit_guard_is_clean(self) -> None:
+    def test_branch_specific_precommit_is_blocking(self) -> None:
         self._write(
             ".husky/pre-commit",
             "\n".join(
                 [
+                    "node ../../node_modules/lint-staged/bin/lint-staged.js",
                     "branch=$(git symbolic-ref --short HEAD 2>/dev/null)",
                     'if [ "$branch" = "main" ]; then',
                     "  exit 1",
@@ -715,7 +708,47 @@ class ArchitectureGuardTests(unittest.TestCase):
             ),
         )
 
-        self.assertEqual(ag.check_trunk_precommit_guard(), [])
+        findings = ag.check_branch_agnostic_precommit()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "branch-specific-precommit")
+
+    def test_non_main_branch_specific_precommit_is_blocking(self) -> None:
+        self._write(
+            ".husky/pre-commit",
+            "\n".join(
+                [
+                    "node ../../node_modules/lint-staged/bin/lint-staged.js",
+                    "branch=$(git branch --show-current)",
+                    'if [ "$branch" = "develop" ]; then',
+                    "  exit 1",
+                    "fi",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_branch_agnostic_precommit()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "branch-specific-precommit")
+
+    def test_missing_precommit_quality_check_is_blocking(self) -> None:
+        self._write(".husky/pre-commit", "echo lint-staged\n")
+
+        findings = ag.check_branch_agnostic_precommit()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "precommit-quality-check-missing")
+
+    def test_branch_agnostic_precommit_is_clean(self) -> None:
+        self._write(
+            ".husky/pre-commit",
+            "cd apps/admin-frontend && "
+            "node ../../node_modules/lint-staged/bin/lint-staged.js\n",
+        )
+
+        self.assertEqual(ag.check_branch_agnostic_precommit(), [])
 
     def test_domain_project_reference_is_blocking(self) -> None:
         self._write(
@@ -940,15 +973,8 @@ class ArchitectureGuardTests(unittest.TestCase):
         )
         self._write(
             ".husky/pre-commit",
-            "\n".join(
-                [
-                    "branch=$(git symbolic-ref --short HEAD 2>/dev/null)",
-                    'if [ "$branch" = "main" ]; then',
-                    "  exit 1",
-                    "fi",
-                    "",
-                ]
-            ),
+            "cd apps/admin-frontend && "
+            "node ../../node_modules/lint-staged/bin/lint-staged.js\n",
         )
 
         findings = ag.run_all()
