@@ -88,7 +88,7 @@ public class LoginModel : PageModel
 
     private void SetRequestContext(string? returnUrl)
     {
-        ReturnUrl = returnUrl;
+        ReturnUrl = Url.IsLocalUrl(returnUrl) ? returnUrl : null;
         Theme = ResolveTheme(returnUrl);
     }
 
