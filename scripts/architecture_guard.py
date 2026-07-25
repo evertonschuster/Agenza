@@ -423,6 +423,32 @@ def check_aspire_local_orchestration() -> list[Finding]:
     return findings
 
 
+def check_trunk_precommit_guard() -> list[Finding]:
+    """The documented trunk policy must remain mechanically enforced."""
+    hook = REPO_ROOT / ".husky/pre-commit"
+    text = hook.read_text(encoding="utf-8", errors="replace") if hook.is_file() else ""
+    required = [
+        "git symbolic-ref --short HEAD",
+        'if [ "$branch" = "main" ]',
+        "exit 1",
+    ]
+    missing = [fragment for fragment in required if fragment not in text]
+    if not missing:
+        return []
+
+    return [
+        Finding(
+            "direct-main-commit-not-blocked",
+            "blocking",
+            _rel(hook),
+            1,
+            "The pre-commit hook no longer enforces docs/adr/0021; missing "
+            + ", ".join(repr(fragment) for fragment in missing)
+            + ".",
+        )
+    ]
+
+
 def check_dotnet_project_reference_boundaries() -> list[Finding]:
     """Enforce the accepted service-layer graph using resolved project paths."""
     services_root = REPO_ROOT / "backend" / "services"
@@ -1085,6 +1111,7 @@ CHECKS = [
     check_ai_tenant_boundaries,
     check_ai_dependency_parity,
     check_aspire_local_orchestration,
+    check_trunk_precommit_guard,
     check_dotnet_project_reference_boundaries,
     check_dedicated_runtime_test_tier_absent,
     check_ignore_tenant_attribute_allowlist,

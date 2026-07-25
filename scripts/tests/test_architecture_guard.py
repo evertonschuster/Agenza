@@ -654,6 +654,30 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(ag.check_aspire_local_orchestration(), [])
 
+    def test_missing_trunk_precommit_guard_is_blocking(self) -> None:
+        self._write(".husky/pre-commit", "npm run lint-staged\n")
+
+        findings = ag.check_trunk_precommit_guard()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "direct-main-commit-not-blocked")
+
+    def test_trunk_precommit_guard_is_clean(self) -> None:
+        self._write(
+            ".husky/pre-commit",
+            "\n".join(
+                [
+                    "branch=$(git symbolic-ref --short HEAD 2>/dev/null)",
+                    'if [ "$branch" = "main" ]; then',
+                    "  exit 1",
+                    "fi",
+                    "",
+                ]
+            ),
+        )
+
+        self.assertEqual(ag.check_trunk_precommit_guard(), [])
+
     def test_domain_project_reference_is_blocking(self) -> None:
         self._write(
             "backend/services/catalog/Catalog.Domain/Catalog.Domain.csproj",
@@ -866,6 +890,18 @@ class ArchitectureGuardTests(unittest.TestCase):
         self._write(
             ".github/workflows/frontend-ci.yml",
             "run: dotnet run --project backend/AppHost\n",
+        )
+        self._write(
+            ".husky/pre-commit",
+            "\n".join(
+                [
+                    "branch=$(git symbolic-ref --short HEAD 2>/dev/null)",
+                    'if [ "$branch" = "main" ]; then',
+                    "  exit 1",
+                    "fi",
+                    "",
+                ]
+            ),
         )
 
         findings = ag.run_all()
