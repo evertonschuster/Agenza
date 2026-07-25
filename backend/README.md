@@ -37,9 +37,11 @@ dotnet run --project services/services-service/ServicesService.Api
 The 80% line-coverage gate for `*.Tests` projects (Domain + Application
 scope) is configured in `Directory.Build.props`, so local `dotnet test`
 enforces exactly what CI enforces. There are no integration tests
-(docs/adr/0015) — Api/Infrastructure have no automated coverage; verify
-those manually (`dotnet run` + a real HTTP client) — see
-`../docs/QUALITY.md`.
+(docs/adr/0015) — Api/Infrastructure have no automated coverage, with one
+narrow exception (docs/adr/0019): `ServicesService.PersistenceTests` covers
+automatic tenant assignment and the tenant-scoped query filter via EF
+InMemory. Everything else still needs manual verification (`dotnet run` +
+a real HTTP client) — see `../docs/QUALITY.md`.
 
 ## Known gaps
 

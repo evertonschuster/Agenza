@@ -33,7 +33,10 @@ NuGet, pip, Docker base images, and the workflows' actions.
   counting it twice would let one hide behind the other's number
   (docs/adr/0005). There are no integration tests (docs/adr/0015) — CI
   never needs Docker or a database; Api/Infrastructure have no
-  automated coverage.
+  automated coverage, except `ServicesService.PersistenceTests`
+  (docs/adr/0019) — a narrow EF-InMemory project deliberately named
+  outside the `*.Tests` coverage-gate convention that covers automatic
+  tenant assignment and the tenant-scoped query filter.
 - **AI services**: `--cov=app` in `pyproject.toml` measures the whole
   package, gate at 80% (`--cov-fail-under=80`).
 
@@ -65,6 +68,6 @@ Until step 4 happens, `sonar.yml` skips itself — it never blocks a PR.
 ## Branch protection recommendation
 
 Require these checks on `main`: `frontend-build-and-test`,
-`backend-build-and-test`, `ai-services-build-and-test`, the CodeQL
-languages, and (after setup) the Sonar quality gate. All jobs already
-have stable, unique names for this purpose.
+`backend-build-and-test`, `ai-services-build-and-test`, `agent-governance`,
+the CodeQL languages, and (after setup) the Sonar quality gate. All jobs
+already have stable, unique names for this purpose.

@@ -6,7 +6,9 @@ shown below was deleted)
 
 ## Context
 
-Once `ServiceOffering` existed alongside `Tag`, both entities carried
+Once `Service` existed alongside `Tag` (renamed from `ServiceOffering`,
+see migration `20260711172110_RenameServiceOfferingToServiceAndExtend`),
+both entities carried
 identical boilerplate for their `ITenantOwned` implementation: the same
 `TenantId` property, and an `AssignTenant` method with the same
 `Guid.Empty` guard. With one entity this was fine (docs/adr/0008); with
@@ -17,6 +19,12 @@ repeat verbatim.
 
 Each service's `Domain/Common/` gains a `TenantOwnedEntity` abstract
 class combining `BaseEntity` and `ITenantOwned`:
+
+> **2026-07 update:** `AssignTenant` now throws plain
+> `InvalidOperationException` — `InvalidTenantException` (shown in the
+> code block below) was deleted by docs/adr/0014. The code block and the
+> paragraph after it are kept for historical context only — do not
+> follow the exception type shown for new code.
 
 ```csharp
 public abstract class TenantOwnedEntity : BaseEntity, ITenantOwned
@@ -37,14 +45,14 @@ public abstract class TenantOwnedEntity : BaseEntity, ITenantOwned
 }
 ```
 
-`Tag` and `ServiceOffering` inherit `TenantOwnedEntity` instead of
+`Tag` and `Service` inherit `TenantOwnedEntity` instead of
 `BaseEntity`/`ITenantOwned` directly, and add nothing else for the
 tenant concern — no `TenantId` property, no `AssignTenant` override.
 
 A missing tenant on `AssignTenant` always raises the same
 `InvalidTenantException` (`{Service}.Domain/Exceptions/InvalidTenantException.cs`),
 regardless of which entity. This is a deliberate departure from the
-per-entity `Tag.Invalid`/`ServiceOffering.Invalid` codes every other
+per-entity `Tag.Invalid`/`Service.Invalid` codes every other
 domain invariant uses: a tag with a bad name and a service offering
 with a bad name are different mistakes a caller can make, but "no
 tenant was available to assign" is the same scoping bug no matter which

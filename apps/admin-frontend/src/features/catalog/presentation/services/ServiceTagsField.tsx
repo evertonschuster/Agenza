@@ -70,6 +70,7 @@ export function ServiceTagsField({ options }: ServiceTagsFieldProps): JSX.Elemen
             createActionLabel="Nova etiqueta"
             loadState={options.loadState}
             onCreatePopoverClose={createTag.reset}
+            isCreating={createTag.isCreatingNow}
             renderCreateForm={({ close, onCreated }) => (
               <TagForm
                 initialValues={EMPTY_TAG_FORM_VALUES}

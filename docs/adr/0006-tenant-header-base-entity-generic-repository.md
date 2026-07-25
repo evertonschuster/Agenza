@@ -275,6 +275,13 @@ filter is defense in depth on top of that, not the primary control.
 
 ### GenericExceptionHandler: a shared, logging catch-all after BusinessExceptionHandler
 
+> **2026-07 update:** moved to `Admin.SharedKernel.AspNetCore`
+> (docs/adr/0018) and is now the *only* global exception handler in
+> either service — `BusinessExceptionHandler` was deleted outright by
+> docs/adr/0014, so there's nothing left for it to run "after." This
+> subsection is kept for historical context only — do not follow it for
+> new code.
+
 `Admin.SharedKernel.GenericExceptionHandler` (shared - no Domain
 dependency, so no reason to duplicate per service) is registered after
 `BusinessExceptionHandler` (`IExceptionHandler`s run in registration

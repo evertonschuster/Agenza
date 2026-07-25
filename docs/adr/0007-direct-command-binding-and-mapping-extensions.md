@@ -111,5 +111,11 @@ methods, it doesn't add new domain logic.
   above is what this decision looked like at the time — it's since
   lost the `tenantId` parameter entirely (docs/adr/0008), and `Tag`'s
   constructor lost its own `tenantId` parameter too
-  (docs/adr/0008, docs/adr/0009). The `ToModel`/`ApplyTo` extension
-  pattern itself is unchanged; only the tenant plumbing moved.
+  (docs/adr/0008, docs/adr/0009). docs/adr/0014 changed the exact syntax
+  further: `TagColor.From` was renamed `TagColor.Create` (now returning
+  `DomainResult<TagColor>`), `Tag`'s constructor is private behind a
+  `DomainResult<Tag>`-returning `Create` factory, and `ApplyTo`/`Update`
+  return `DomainResult` instead of `void` — see the real, current
+  `CreateTagCommandExtensions.cs` rather than the code block above. The
+  `ToModel`/`ApplyTo` extension-method *pattern* itself is unchanged;
+  the exact signatures shown above are not.

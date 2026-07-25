@@ -46,7 +46,7 @@ export function useDeleteConfirmation<T>({
   }
 
   const onConfirm = useCallback(async (): Promise<void> => {
-    if (target === null) {
+    if (target === null || isDeleting) {
       return
     }
     const generation = generationRef.current
@@ -69,7 +69,7 @@ export function useDeleteConfirmation<T>({
         setIsDeleting(false)
       }
     }
-  }, [target, onDelete, fallbackMessage])
+  }, [target, isDeleting, onDelete, fallbackMessage])
 
   return { target, error, isDeleting, onRequestDelete, onCancel, onConfirm }
 }

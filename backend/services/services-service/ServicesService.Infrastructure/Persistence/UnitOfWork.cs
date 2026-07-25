@@ -44,6 +44,15 @@ public class UnitOfWork : IUnitOfWork
         }
     }
 
+    public async Task RollbackAsync(CancellationToken cancellationToken)
+    {
+        var ambientTransaction = _dbContext.Database.CurrentTransaction;
+        if (ambientTransaction is not null)
+        {
+            await ambientTransaction.RollbackAsync(cancellationToken);
+        }
+    }
+
     // A race between two concurrent requests that both passed NameExistsAsync
     // before either committed surfaces here as a Postgres unique_violation -
     // the database is the final authority on case-insensitive uniqueness

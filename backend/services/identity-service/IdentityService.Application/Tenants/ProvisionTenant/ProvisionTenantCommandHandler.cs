@@ -42,7 +42,11 @@ public sealed class ProvisionTenantCommandHandler : ICommandHandler<ProvisionTen
 
             var tenant = tenantResult.Value;
 
-            await _tenantRepository.AddAsync(tenant, ct);
+            if (!await _tenantRepository.AddAsync(tenant, ct))
+            {
+                return Result.Failure<ProvisionTenantResponse>(
+                    Error.Conflict("Tenant.DuplicateName", $"Já existe um tenant chamado '{command.TenantName}'."));
+            }
 
             var ownerResult = await _userAccountService.CreateOwnerAsync(
                 tenant.Id,

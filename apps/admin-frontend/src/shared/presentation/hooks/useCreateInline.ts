@@ -9,6 +9,8 @@ interface UseCreateInlineResult<TItem, TInput, TField extends string> {
   serverError: ServerFormError<TField> | null
   create: (input: TInput, onCreated: (item: TItem) => void) => Promise<void>
   reset: () => void
+  /** Ref-backed, synchronous read of isCreating - unlike the isCreating boolean above, has zero lag against a same-tick DOM event (e.g. a disabled-button blur) fired before React re-renders. */
+  isCreatingNow: () => boolean
 }
 
 // Shared state machine behind every inline "create without leaving this
@@ -20,12 +22,18 @@ export function useCreateInline<TItem, TInput, TField extends string>(
   codeFieldMap: Record<string, TField>,
   fallbackMessage: string,
 ): UseCreateInlineResult<TItem, TInput, TField> {
-  const [isCreating, setIsCreating] = useState(false)
+  const [isCreating, setIsCreatingState] = useState(false)
   const [serverError, setServerError] = useState<ServerFormError<TField> | null>(null)
   // Guards unmount AND a "Cancelar" click while createFn is still in flight -
   // reset() bumps the generation so a stale create() skips onCreated/serverError.
   const isMountedRef = useRef(true)
   const generationRef = useRef(0)
+  const isCreatingRef = useRef(false)
+
+  const setIsCreating = useCallback((value: boolean): void => {
+    isCreatingRef.current = value
+    setIsCreatingState(value)
+  }, [])
 
   useEffect(() => {
     isMountedRef.current = true
@@ -57,14 +65,16 @@ export function useCreateInline<TItem, TInput, TField extends string>(
         }
       }
     },
-    [createFn, fieldMap, codeFieldMap, fallbackMessage],
+    [createFn, fieldMap, codeFieldMap, fallbackMessage, setIsCreating],
   )
 
   const reset = useCallback((): void => {
     generationRef.current += 1
     setServerError(null)
     setIsCreating(false)
-  }, [])
+  }, [setIsCreating])
 
-  return { isCreating, serverError, create, reset }
+  const isCreatingNow = useCallback((): boolean => isCreatingRef.current, [])
+
+  return { isCreating, serverError, create, reset, isCreatingNow }
 }

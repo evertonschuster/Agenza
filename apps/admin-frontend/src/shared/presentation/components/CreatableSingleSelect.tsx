@@ -36,6 +36,8 @@ interface CreatableSingleSelectProps<T> {
   loadState: SelectLoadState
   /** Called whenever the popover closes (Escape, outside click, or the create form's own Cancelar) - reset any in-flight/stale inline-create state here. */
   onCreatePopoverClose?: () => void
+  /** Synchronous (ref-backed, not React state) read of whether the create form's submit is in flight - blocks the focus-outside auto-dismiss so a disabled submit button losing focus can't close the popover mid-request. A plain boolean prop would lag one render behind the same-tick blur this guards against. */
+  isCreating?: () => boolean
   /** Forwarded to the trigger button so react-hook-form's setFocus(name) has a DOM node to land on. */
   ref?: Ref<HTMLButtonElement>
 }
@@ -55,6 +57,7 @@ export function CreatableSingleSelect<T>({
   renderCreateForm,
   loadState,
   onCreatePopoverClose,
+  isCreating,
   ref,
 }: CreatableSingleSelectProps<T>): JSX.Element {
   const contentId = useId()
@@ -108,7 +111,9 @@ export function CreatableSingleSelect<T>({
         className="w-72 p-0"
         // Submitting disables the focused button, which blurs it - Radix reads that as focus-outside and would close this mid-request.
         onFocusOutside={event => {
-          event.preventDefault()
+          if (isCreating?.() === true) {
+            event.preventDefault()
+          }
         }}
       >
         {mode === 'create' ? (

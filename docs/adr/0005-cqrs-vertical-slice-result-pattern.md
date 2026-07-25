@@ -9,7 +9,9 @@ only) further superseded by docs/adr/0011, reinstated by docs/adr/0012,
 and finally superseded by docs/adr/0014 (Domain returns DomainResult
 instead of throwing); the `IdentityService.IntegrationTests`-verified
 claim in "UnitOfWork shapes" superseded by docs/adr/0015 (integration
-tests removed, unit tests only in CI)
+tests removed, unit tests only in CI); API's `ResultExtensions` moved out
+of `Admin.SharedKernel` into the sibling `Admin.SharedKernel.AspNetCore`
+by docs/adr/0018
 
 ## Context
 
@@ -147,11 +149,11 @@ OpenIddict's own configuration; versioning them would break discovery.
   plus a controller action that builds a command/query and dispatches
   it — no DI registration line to remember (assembly scanning covers
   handlers and validators).
-- `Admin.SharedKernel` (Result, CQRS contracts, Dispatcher, API's
-  `ResultExtensions`) and `Admin.SharedKernel.Tests` are shared
-  infrastructure, same category as `Admin.Identity.Client` — not
-  business logic, safe to share across services (ADR 0001 still holds
-  for business logic itself).
+- `Admin.SharedKernel` (Result, CQRS contracts, Dispatcher — API's
+  `ResultExtensions` moved to `Admin.SharedKernel.AspNetCore`, docs/adr/0018)
+  and `Admin.SharedKernel.Tests` are shared infrastructure, same category
+  as `Admin.Identity.Client` — not business logic, safe to share across
+  services (ADR 0001 still holds for business logic itself).
 - Coverage gates: `Admin.SharedKernel` is excluded from every
   *consuming* service's `*.Tests` coverage count (`Directory.Build.targets`)
   since it has its own dedicated gate in `Admin.SharedKernel.Tests` —
