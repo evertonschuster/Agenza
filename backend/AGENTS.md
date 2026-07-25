@@ -42,9 +42,11 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0017-...md`                       | Schema-scoped `__EFMigrationsHistory` per service — read before touching either service's migrations or `DependencyInjection.cs` |
 | `../docs/adr/0018-...md`                       | `Admin.SharedKernel` vs `Admin.SharedKernel.AspNetCore` split — read before adding to either |
 | `../docs/adr/0019-...md`                       | `ServicesService.PersistenceTests` — narrow EF InMemory coverage for tenant assignment/scoping, outside the *.Tests boundary and its coverage gate |
-| `../docs/adr/0023-...md`                       | Narrow PostgreSQL/HTTP runtime tests for irreversible security boundaries |
+| `../docs/adr/0023-...md`                       | Historical bounded runtime-test decision, superseded by ADR 0026 |
 | `../docs/adr/0024-...md`                       | Per-service database roles and composite tenant relationships |
-| `../docs/adr/0025-...md`                       | Explicit, serialized database bootstrap |
+| `../docs/adr/0025-...md`                       | Historical explicit/serialized bootstrap decision, narrowed by ADR 0027 |
+| `../docs/adr/0026-...md`                       | Removal of the dedicated runtime-test project; retained Compose smokes and known gaps |
+| `../docs/adr/0027-...md`                       | Single-instance demo bootstrap without a distributed advisory lock |
 
 ## Critical constraints (non-negotiable)
 
@@ -56,7 +58,7 @@ Application     → Domain, Admin.SharedKernel. Ports live in Abstractions/
 Infrastructure  → Application, Admin.Identity.Client, Admin.SharedKernel.EntityFrameworkCore
 Api             → Application + Infrastructure + Admin.SharedKernel.AspNetCore. Controllers stay thin
 Tests           → Application + Domain (unit tests)
-RuntimeTests    → Api + Infrastructure (narrow PostgreSQL/HTTP invariants only, docs/adr/0023)
+PersistenceTests → Infrastructure (narrow Docker-free EF tenant mechanisms only, docs/adr/0019)
 ```
 
 `backend/shared/Admin.SharedKernel` is cross-cutting CQRS/Result
@@ -376,20 +378,19 @@ guards, an unrecognized database error, transactional rollback cleanup.
 - ADR 0015 still prevents restoring a broad, flaky endpoint suite.
   `ServicesService.PersistenceTests` covers automatic tenant assignment
   and query filtering with EF InMemory (docs/adr/0019).
-  `ServicesService.RuntimeTests` is the narrow exception defined by
-  docs/adr/0023: one PostgreSQL container per assembly, shared fixture,
-  and tests only for invariants a unit/in-memory provider cannot prove
-  (migration chain, schema privileges, database tenant constraints,
-  401/403 tenant boundary, and cross-tenant HTTP isolation).
+  There is no Testcontainers/`WebApplicationFactory` project. The Compose
+  API-contract job applies migrations to a fresh PostgreSQL database and
+  exercises real OIDC authentication, scope denial, tenant fail-closed
+  behavior, and authorized provisioning (docs/adr/0026).
 - New endpoint = a unit test per new handler/validator. Add a runtime
-  test only when a cheaper test cannot prove a security/data invariant;
-  state that reason in the test or its ADR.
+  test tier only when concrete failure evidence justifies its maintenance
+  cost, and record the boundary and exit criteria in an ADR.
 
 ## Both must pass before every commit
 
 ```bash
 dotnet build backend/AdminBackend.slnx
-dotnet test backend/AdminBackend.slnx   # unit coverage + narrow runtime security tier
+dotnet test backend/AdminBackend.slnx   # unit coverage + EF tenant persistence tier
 ```
 
 Also run the repo-wide governance checks from [../AGENTS.md](../AGENTS.md)

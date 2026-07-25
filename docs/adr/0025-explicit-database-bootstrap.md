@@ -1,6 +1,7 @@
 # ADR 0025 — Explicit and serialized database bootstrap
 
-Status: accepted (2026-07)
+Status: superseded in part by ADR 0027 (2026-07); bootstrap remains explicit
+and disabled by default, but is no longer serialized by an advisory lock
 
 ## Context
 
@@ -34,8 +35,8 @@ through the existing check-then-insert sequence.
 
 - A configuration test proves base settings do not enable migration or seed.
 - Development settings and the demo Compose stack opt in deliberately.
-- Runtime tests exercise bootstrap against PostgreSQL and prove a second
-  replica cannot acquire the same advisory lock until the first releases it.
+- The Compose API-contract job starts from a fresh PostgreSQL database and
+  therefore exercises the complete migration chain during service startup.
 - The architecture guard rejects a base configuration that silently turns
   automatic bootstrap back on.
 
@@ -43,5 +44,7 @@ through the existing check-then-insert sequence.
 
 Local development behavior remains automatic. Running an API with only base
 configuration now requires the database to have been bootstrapped explicitly.
+ADR 0027 later removes advisory-lock serialization for the single-instance
+demo and intentionally leaves concurrent startup unsupported.
 This change does not create certificates, deployment automation, or a
 production frontend image.

@@ -225,7 +225,7 @@ def check_dangling_null_forgiving_after_lookup() -> list[Finding]:
 
 
 # ---------------------------------------------------------------------------
-# Security and operability fitness functions (docs/adr/0022-0025)
+# Security and operability fitness functions (docs/adr/0022-0027)
 # ---------------------------------------------------------------------------
 
 def check_ai_tenant_boundaries() -> list[Finding]:
@@ -469,6 +469,71 @@ def check_dotnet_project_reference_boundaries() -> list[Finding]:
     return findings
 
 
+def check_dedicated_runtime_test_tier_absent() -> list[Finding]:
+    """ADR 0026 removed the Testcontainers/WebApplicationFactory tier.
+    Reintroducing it requires an explicit architecture decision."""
+    findings: list[Finding] = []
+    backend_root = REPO_ROOT / "backend"
+
+    for project in _iter_files(backend_root, (".csproj",)):
+        if "RuntimeTests" not in project.stem:
+            continue
+        findings.append(
+            Finding(
+                "dedicated-runtime-test-tier",
+                "blocking",
+                _rel(project),
+                1,
+                "A RuntimeTests project reintroduces the tier removed by docs/adr/0026; "
+                "record concrete failure evidence and a new ADR before restoring it.",
+            )
+        )
+
+    solution = backend_root / "AdminBackend.slnx"
+    if solution.is_file():
+        for line_number, line in enumerate(
+            solution.read_text(encoding="utf-8", errors="replace").splitlines(),
+            start=1,
+        ):
+            if "RuntimeTests" in line:
+                findings.append(
+                    Finding(
+                        "dedicated-runtime-test-tier",
+                        "blocking",
+                        _rel(solution),
+                        line_number,
+                        "AdminBackend.slnx references a RuntimeTests project removed by "
+                        "docs/adr/0026.",
+                    )
+                )
+
+    packages = backend_root / "Directory.Packages.props"
+    if packages.is_file():
+        forbidden_packages = (
+            "Testcontainers.PostgreSql",
+            "Microsoft.AspNetCore.Mvc.Testing",
+        )
+        for line_number, line in enumerate(
+            packages.read_text(encoding="utf-8", errors="replace").splitlines(),
+            start=1,
+        ):
+            for package in forbidden_packages:
+                if f'Include="{package}"' not in line:
+                    continue
+                findings.append(
+                    Finding(
+                        "dedicated-runtime-test-tier",
+                        "blocking",
+                        _rel(packages),
+                        line_number,
+                        f"{package} belongs to the runtime-test tier removed by "
+                        "docs/adr/0026.",
+                    )
+                )
+
+    return findings
+
+
 def check_ignore_tenant_attribute_allowlist() -> list[Finding]:
     """A tenant opt-out is security-sensitive and requires an explicit file allowlist."""
     findings: list[Finding] = []
@@ -526,6 +591,20 @@ def check_database_bootstrap_defaults() -> list[Finding]:
             )
 
     return findings
+
+
+def check_bootstrap_advisory_lock_absent() -> list[Finding]:
+    """ADR 0027 keeps the demo bootstrap single-instance and rejects a
+    speculative distributed lock until a deployment driver exists."""
+    cs_files = _iter_files(REPO_ROOT / "backend", (".cs",))
+    return _findings_for_pattern(
+        cs_files,
+        re.compile(r"\bPostgresAdvisoryLock\b|\bpg_advisory_(?:lock|unlock)\b"),
+        "bootstrap-advisory-lock",
+        "blocking",
+        "PostgreSQL advisory bootstrap locking was removed by docs/adr/0027; "
+        "use a one-shot deployment bootstrap when multiple replicas become real.",
+    )
 
 
 def check_database_boundary_configuration() -> list[Finding]:
@@ -981,8 +1060,10 @@ CHECKS = [
     check_ai_dependency_parity,
     check_backend_container_parity,
     check_dotnet_project_reference_boundaries,
+    check_dedicated_runtime_test_tier_absent,
     check_ignore_tenant_attribute_allowlist,
     check_database_bootstrap_defaults,
+    check_bootstrap_advisory_lock_absent,
     check_database_boundary_configuration,
     check_destructive_migration_safety,
     check_stale_patterns_in_doc_code_blocks,

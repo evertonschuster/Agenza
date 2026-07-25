@@ -1,7 +1,6 @@
 # ADR 0023 — Narrow runtime security tests for irreversible boundaries
 
-Status: accepted (2026-07); supersedes the blanket prohibition in ADR 0015
-for the cases listed below
+Status: superseded by ADR 0026 (2026-07)
 
 ## Context
 

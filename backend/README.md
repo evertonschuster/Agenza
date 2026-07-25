@@ -31,17 +31,18 @@ hand-rolling token handling.
 ```bash
 dotnet tool restore
 dotnet build AdminBackend.slnx
-dotnet test AdminBackend.slnx    # unit + narrow PostgreSQL runtime security tests
+dotnet test AdminBackend.slnx    # unit + EF InMemory tenant persistence tests
 dotnet run --project services/services-service/ServicesService.Api
 ```
 
 The 80% line-coverage gate for `*.Tests` projects (Domain + Application
 scope) is configured in `Directory.Build.props`, so local `dotnet test`
-enforces exactly what CI enforces. `ServicesService.RuntimeTests`
-(docs/adr/0023) adds one shared PostgreSQL container for the migration
-chain, database ownership, composite tenant constraints, and the HTTP
-tenant boundary. It is intentionally not a broad endpoint suite; ordinary
-behavior remains in unit tests. See `../docs/QUALITY.md`.
+enforces exactly what CI enforces. `ServicesService.PersistenceTests`
+(docs/adr/0019) adds Docker-free EF coverage for automatic tenant
+assignment and tenant query filtering. The Compose API-contract job applies
+the migration chain to a fresh PostgreSQL database and exercises the real
+OIDC boundary; there is no dedicated Testcontainers or in-process HTTP test
+project (docs/adr/0026). See `../docs/QUALITY.md`.
 
 ## Known gaps
 

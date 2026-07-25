@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Admin.SharedKernel.EntityFrameworkCore;
 using IdentityService.Application.Tenants.ProvisionTenant;
 using IdentityService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
@@ -7,7 +6,6 @@ using OpenIddict.Abstractions;
 
 namespace IdentityService.Api.Seed;
 
-// Dev-time bootstrap: migrates, then idempotently seeds OpenIddict clients/scopes and a demo Tenant+owner. Safe to run on every startup.
 public class DatabaseSeeder : IHostedService
 {
     private readonly IServiceProvider _serviceProvider;
@@ -32,11 +30,6 @@ public class DatabaseSeeder : IHostedService
         var services = scope.ServiceProvider;
 
         var dbContext = services.GetRequiredService<IdentityDataContext>();
-
-        await using var bootstrapLock = await PostgresAdvisoryLock.AcquireAsync(
-            dbContext,
-            "agenza:identity-service:database-bootstrap",
-            cancellationToken);
 
         await dbContext.Database.MigrateAsync(cancellationToken);
 

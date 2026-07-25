@@ -70,9 +70,8 @@ jobs:
       - name: Build backend runtime images
         run: docker compose -f infra/docker-compose.yml build identity-service services-service
 
-      - name: Test (unit coverage + narrow PostgreSQL security tier)
-        # The runtime project shares one bounded Testcontainers PostgreSQL
-        # instance and only covers invariants an in-memory provider cannot
-        # prove. The 80% Domain + Application coverage gate still applies
-        # to the ordinary *.Tests projects.
+      - name: Test (unit coverage + EF tenant persistence tier)
+        # The 80% Domain + Application coverage gate applies to *.Tests.
+        # PersistenceTests adds Docker-free coverage for tenant assignment
+        # and EF query filtering.
         run: dotnet test backend/AdminBackend.slnx -c Release --no-build --logger trx

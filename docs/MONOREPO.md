@@ -92,12 +92,12 @@ workspace gains a lint-staged config.
   regenerate rather than trust it.
 - Database bootstrap is opt-in through
   `DatabaseBootstrap:RunOnStartup` (base configuration is `false`;
-  Development and the demo Compose stack explicitly enable it). When
-  enabled, each service holds a PostgreSQL advisory lock across its
-  migration/seed window. A future multi-replica deployment should still
-  run the same chain as a one-shot bootstrap before starting replicas;
-  the repository intentionally has no production deployment design yet
-  (docs/adr/0025).
+  Development and the demo Compose stack explicitly enable it). The demo
+  assumes at most one bootstrap-enabled instance of each service. A future
+  multi-replica deployment must run the migration/seed chain as a one-shot
+  bootstrap before starting replicas with startup bootstrap disabled; the
+  repository intentionally has no production deployment design yet
+  (docs/adr/0025, docs/adr/0027).
 - If you already ran `docker compose up` or `dotnet run --project
 backend/AppHost` before docs/adr/0017 landed, your local Postgres
   volume has migration history recorded in `public.__EFMigrationsHistory`

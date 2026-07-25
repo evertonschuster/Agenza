@@ -8,7 +8,7 @@ requires a paid plan.
 | Workflow               | Triggers on                   | What it gates                                                                                           |
 | ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `frontend-ci.yml`      | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
-| `backend-ci.yml`       | `backend/**`                  | warning-free build, both runtime images, unit coverage, and narrow PostgreSQL security tests            |
+| `backend-ci.yml`       | `backend/**`                  | warning-free build, both runtime images, unit coverage, and Docker-free EF tenant persistence tests     |
 | `ai-services-ci.yml`   | `ai-services/**`              | Locked Python 3.12 deps, Ruff, pytest coverage, runtime image build, and `/health` smoke                |
 | `codeql.yml`           | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
 | `sonar.yml`            | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
@@ -32,12 +32,11 @@ NuGet, pip, Docker base images, and the workflows' actions.
   has its own dedicated project (`Admin.SharedKernel.Tests`) and gate —
   counting it twice would let one hide behind the other's number
   (docs/adr/0005). `ServicesService.PersistenceTests` covers EF tenant
-  filtering in memory (docs/adr/0019). `ServicesService.RuntimeTests`
-  uses one PostgreSQL container to prove the migration chain, per-service
-  schema privileges, composite tenant foreign keys, serialized bootstrap,
-  database/identity readiness, 401/403 behavior, and cross-tenant HTTP
-  read/write isolation (docs/adr/0023). It has no coverage percentage
-  target because its gate is the listed invariants.
+  assignment and filtering in memory (docs/adr/0019). There is no
+  Testcontainers/`WebApplicationFactory` project. The frontend
+  API-contract workflow starts a disposable PostgreSQL + identity +
+  services stack, applies the migration chain, and runs the real OIDC
+  smoke defined in `scripts/smoke_oidc_contract.py` (docs/adr/0026).
 - **AI services**: `--cov=app` in `pyproject.toml` measures the whole
   package, gate at 80% (`--cov-fail-under=80`).
 

@@ -23,7 +23,6 @@
     <PackageVersion Include="Asp.Versioning.Mvc" Version="10.0.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="10.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.OpenApi" Version="10.0.10" />
-    <PackageVersion Include="Microsoft.AspNetCore.Mvc.Testing" Version="10.0.10" />
     <PackageVersion Include="Microsoft.OpenApi" Version="2.11.0" />
 
     <!-- EF Core / Postgres -->
@@ -33,7 +32,6 @@
     <PackageVersion Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="10.0.10" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="10.0.10" />
     <PackageVersion Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
-    <PackageVersion Include="Npgsql" Version="10.0.3" />
 
     <!-- Identity / OpenIddict -->
     <PackageVersion Include="OpenIddict.AspNetCore" Version="7.6.0" />
@@ -56,7 +54,6 @@
     <PackageVersion Include="NSubstitute" Version="6.0.0" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <PackageVersion Include="Testcontainers.PostgreSql" Version="4.13.0" />
 
     <!-- ServicesService.PersistenceTests only (docs/adr/0019) - EF Core
          InMemory, no Postgres/Docker, deliberately outside the *.Tests

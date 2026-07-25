@@ -670,6 +670,41 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(ag.check_dotnet_project_reference_boundaries(), [])
 
+    def test_runtime_test_project_is_blocking(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.RuntimeTests/Catalog.RuntimeTests.csproj",
+            "<Project />",
+        )
+
+        findings = ag.check_dedicated_runtime_test_tier_absent()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "dedicated-runtime-test-tier")
+
+    def test_runtime_test_packages_are_blocking(self) -> None:
+        self._write(
+            "backend/Directory.Packages.props",
+            '<Project><PackageVersion Include="Testcontainers.PostgreSql" '
+            'Version="4.13.0" /></Project>',
+        )
+
+        findings = ag.check_dedicated_runtime_test_tier_absent()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "dedicated-runtime-test-tier")
+
+    def test_backend_without_runtime_test_tier_is_clean(self) -> None:
+        self._write(
+            "backend/Directory.Packages.props",
+            '<Project><PackageVersion Include="xunit" Version="2.9.3" /></Project>',
+        )
+        self._write(
+            "backend/AdminBackend.slnx",
+            '<Solution><Project Path="services/catalog/Catalog.Tests.csproj" /></Solution>',
+        )
+
+        self.assertEqual(ag.check_dedicated_runtime_test_tier_absent(), [])
+
     def test_ignore_tenant_requires_an_explicit_allowlist_entry(self) -> None:
         self._write(
             "backend/services/catalog/Catalog.Api/Controllers/PublicController.cs",
@@ -691,6 +726,25 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(len(findings), 1)
         self.assertEqual(findings[0].category, "unsafe-database-bootstrap-default")
+
+    def test_bootstrap_advisory_lock_is_blocking(self) -> None:
+        self._write(
+            "backend/shared/Database/PostgresAdvisoryLock.cs",
+            'await command.ExecuteAsync("SELECT pg_advisory_lock(42);");\n',
+        )
+
+        findings = ag.check_bootstrap_advisory_lock_absent()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "bootstrap-advisory-lock")
+
+    def test_bootstrap_without_advisory_lock_is_clean(self) -> None:
+        self._write(
+            "backend/services/catalog/Catalog.Api/DatabaseMigrator.cs",
+            "await dbContext.Database.MigrateAsync(cancellationToken);\n",
+        )
+
+        self.assertEqual(ag.check_bootstrap_advisory_lock_absent(), [])
 
     def test_superuser_application_connection_is_blocking(self) -> None:
         self._write(
