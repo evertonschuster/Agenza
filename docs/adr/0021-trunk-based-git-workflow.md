@@ -1,6 +1,12 @@
 # ADR 0021 — Trunk-based git workflow, single long-lived branch
 
-Status: accepted (2026-07)
+Status: accepted (2026-07); direct-`main` commit prohibition and local-hook
+enforcement superseded by docs/adr/0030
+
+> **2026-07 update:** docs/adr/0030 allows direct local commits to `main`
+> and makes `.husky/pre-commit` branch-agnostic. The single-long-lived-branch,
+> non-stacking, rebase, squash-merge, and concurrent-worktree decisions in
+> this ADR remain current.
 
 ## Context
 

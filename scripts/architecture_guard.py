@@ -486,30 +486,37 @@ def check_aspire_local_orchestration() -> list[Finding]:
     return findings
 
 
-def check_trunk_precommit_guard() -> list[Finding]:
-    """The documented trunk policy must remain mechanically enforced."""
+def check_branch_agnostic_precommit() -> list[Finding]:
+    """Pre-commit keeps staged-file quality checks, never branch policy."""
     hook = REPO_ROOT / ".husky/pre-commit"
     text = hook.read_text(encoding="utf-8", errors="replace") if hook.is_file() else ""
-    required = [
-        "git symbolic-ref --short HEAD",
-        'if [ "$branch" = "main" ]',
-        "exit 1",
-    ]
-    missing = [fragment for fragment in required if fragment not in text]
-    if not missing:
-        return []
+    if "lint-staged" not in text:
+        return [
+            Finding(
+                "precommit-quality-check-missing",
+                "blocking",
+                _rel(hook),
+                1,
+                "The pre-commit hook must keep the lint-staged quality check "
+                "required by ADR 0030.",
+            )
+        ]
 
-    return [
-        Finding(
-            "direct-main-commit-not-blocked",
-            "blocking",
-            _rel(hook),
-            1,
-            "The pre-commit hook no longer enforces docs/adr/0021; missing "
-            + ", ".join(repr(fragment) for fragment in missing)
-            + ".",
-        )
-    ]
+    for line_number, line in enumerate(text.splitlines(), start=1):
+        if re.search(r"\b(?:main|master)\b", line, re.IGNORECASE):
+            return [
+                Finding(
+                    "branch-specific-precommit",
+                    "blocking",
+                    _rel(hook),
+                    line_number,
+                    "The pre-commit hook contains branch-specific policy. "
+                    "ADR 0030 keeps pre-commit branch-agnostic; remote GitHub "
+                    "protection governs delivery to main.",
+                )
+            ]
+
+    return []
 
 
 def check_dotnet_project_reference_boundaries() -> list[Finding]:
@@ -1174,7 +1181,7 @@ CHECKS = [
     check_ai_tenant_boundaries,
     check_ai_dependency_parity,
     check_aspire_local_orchestration,
-    check_trunk_precommit_guard,
+    check_branch_agnostic_precommit,
     check_dotnet_project_reference_boundaries,
     check_dedicated_runtime_test_tier_absent,
     check_ignore_tenant_attribute_allowlist,

@@ -124,15 +124,18 @@ that were never stated or implied by the spec/ADRs/code.
 ## Git workflow
 
 Trunk-based, single long-lived branch (`main`) — no permanent `develop`/
-staging branch. Full rationale: docs/adr/0021.
+staging branch. Full rationale: docs/adr/0021 and docs/adr/0030.
 
-- **Never commit directly to `main`.** Every task — including a "quick"
-  fix — starts on its own branch cut from an up-to-date `main`:
-  `git fetch origin && git checkout -b <type>/<slug> origin/main`, with
-  `<type>` one of `feat`, `fix`, `chore`, `docs`, `refactor`. This is
-  enforced mechanically by `.husky/pre-commit` (rejects a commit made on
-  `main`), not just documented — don't rely on remembering the rule.
-- **One task, one branch.** Don't stack a branch on top of another
+- **Direct local commits to `main` are allowed.** `.husky/pre-commit` is
+  branch-agnostic and runs staged-file quality checks only; GitHub branch
+  protection is the authority for whether a commit may be delivered to
+  `origin/main`. Synchronize with `origin/main` before direct work and never
+  rewrite published history.
+- **When a task uses a branch, use one task per branch.** Cut it from an
+  up-to-date `main` with
+  `git fetch origin && git checkout -b <type>/<slug> origin/main`, where
+  `<type>` is `feat`, `fix`, `chore`, `docs`, or `refactor`. Don't stack a
+  branch on top of another
   unmerged feature branch (merging B into unmerged A, then A into `main`
   later) — that's what turned a small, current diff into a large,
   stale-conflict one here before this ADR. If work genuinely depends on
@@ -148,8 +151,10 @@ staging branch. Full rationale: docs/adr/0021.
   GitHub Desktop / IDE commits) use isolated working trees** — `git
 worktree add ../agenza-<slug> <branch>`, or the Agent tool's
   `isolation: "worktree"` — never share one working directory across
-  simultaneous tasks. Uncommitted changes belong to a task's own branch,
-  never left sitting on `main` or on another task's branch.
+  simultaneous tasks. Uncommitted changes stay in the worktree that owns
+  them; a concurrent task must not reuse a worktree whose branch or files
+  belong to another task.
+
 ## Rule persistence policy
 
 A correction to an agent, a recurring bug, or a new architectural decision
