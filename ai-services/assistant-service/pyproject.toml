@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Tenant-aware AI assistant service boundary (FastAPI)"
 requires-python = ">=3.12,<3.13"
 dependencies = [
-    "fastapi==0.139.2",
+    "fastapi==0.140.0",
     "uvicorn[standard]==0.51.0",
     "httpx==0.28.1",
     "pyjwt[crypto]==2.13.0",
@@ -14,8 +14,8 @@ dependencies = [
 dev = [
     "pytest==9.1.1",
     "pytest-asyncio==1.4.0",
-    "pytest-cov==7.0.0",
-    "ruff==0.15.17",
+    "pytest-cov==7.1.0",
+    "ruff==0.16.0",
 ]
 
 [build-system]
