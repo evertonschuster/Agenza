@@ -18,11 +18,16 @@ public abstract class RepositoryBase<TEntity>
     protected Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken) =>
         Set.FirstOrDefaultAsync(predicate, cancellationToken);
 
+    // asNoTracking is opt-in (defaults false) - only safe for a caller that
+    // never attaches the returned entities to another aggregate being saved
+    // in the same request (e.g. Category/Tag rows reused to build a
+    // Service's response). A caller that does must keep tracking on.
     protected async Task<IReadOnlyList<TEntity>> ListAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? order,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool asNoTracking = false)
     {
-        IQueryable<TEntity> query = Set;
+        IQueryable<TEntity> query = asNoTracking ? Set.AsNoTracking() : Set;
         if (order is not null)
         {
             query = order(query);
@@ -34,9 +39,10 @@ public abstract class RepositoryBase<TEntity>
     protected async Task<IReadOnlyList<TEntity>> ListAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? order,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool asNoTracking = false)
     {
-        var query = Set.Where(predicate);
+        var query = (asNoTracking ? Set.AsNoTracking() : Set).Where(predicate);
         if (order is not null)
         {
             query = order(query);
@@ -49,9 +55,10 @@ public abstract class RepositoryBase<TEntity>
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? order,
         int page,
         int pageSize,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        bool asNoTracking = false)
     {
-        IQueryable<TEntity> query = Set;
+        IQueryable<TEntity> query = asNoTracking ? Set.AsNoTracking() : Set;
         if (order is not null)
         {
             query = order(query);

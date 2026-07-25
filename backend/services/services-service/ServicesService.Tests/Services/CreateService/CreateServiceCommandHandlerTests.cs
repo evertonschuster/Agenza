@@ -166,6 +166,24 @@ public class CreateServiceCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WhenDomainRejectsAfterCodeGeneration_RollsBackTheAmbientTransactionAndDoesNotSave()
+    {
+        // Empty name only reaches Domain by bypassing CreateServiceCommandValidator, same trick as
+        // ProvisionTenantCommandHandlerTests.Handle_WithBlankTenantName_ReturnsFailure - unit tests call
+        // the handler directly and never run FluentValidation.
+        var result = await _handler.Handle(
+            new CreateServiceCommand("", null, 30, 15, 60, 45.50m, 10m, null, null),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.Invalid");
+        await _serviceCodeGenerator.Received(1).GetNextCodeAsync(Arg.Any<CancellationToken>());
+        await _unitOfWork.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        _serviceRepository.DidNotReceive().Add(Arg.Any<Service>());
+    }
+
+    [Fact]
     public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
     {
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())

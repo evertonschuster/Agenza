@@ -34,6 +34,14 @@ Revisiting both decisions surfaced three concrete problems:
 
 ## Decision
 
+> **2026-07 update:** the "Domain throws again" / `DuplicateEntityException`
+> mechanism described below was itself superseded by docs/adr/0014 —
+> Domain returns `DomainResult` instead of throwing, and persistence
+> conflicts return `PersistenceResult`. The handler-vs-validator split this
+> ADR establishes (cross-aggregate checks in handlers, shape-only
+> validators) is still current; only *how* Domain signals a violation
+> changed.
+
 Cross-aggregate rules that need a repository round-trip (existence,
 uniqueness, in-use) move back into the six Create/Update/Delete handlers
 across Tags, Categories, and Services. Validators go back to pure shape

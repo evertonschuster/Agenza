@@ -43,11 +43,11 @@ what's blocked, and what order to build things in.
 | `Session` entity              | `done` |                                                                                                                        |
 | `AuthRepository` interface    | `done` |                                                                                                                        |
 | `InitiateLogin` use case      | `done` |                                                                                                                        |
-| `HandleAuthCallback` use case | `done` | errors propagated unwrapped (see DECISIONS.md)                                                                         |
+| `HandleAuthCallback` use case | `done` | OIDC failures arrive as classified `AuthFlowError` values (see ADR 007)                                                |
 | `GetCurrentSession` use case  | `done` |                                                                                                                        |
 | `Logout` use case             | `done` |                                                                                                                        |
 | `mapOidcUserToSession` mapper | `done` | tenant_id claim name unverified                                                                                        |
-| `OidcAuthRepository`          | `done` |                                                                                                                        |
+| `OidcAuthRepository`          | `done` | 60s single-flight renewal; rejects renewed user/tenant claim changes                                                   |
 | `createUserManager` factory   | `done` | env vars are placeholders                                                                                              |
 | `createAppContainer`          | `done` |                                                                                                                        |
 | `AppProviders`                | `done` |                                                                                                                        |
@@ -55,8 +55,8 @@ what's blocked, and what order to build things in.
 | `useAuth` hook                | `done` |                                                                                                                        |
 | `useAppContainer` hook        | `done` |                                                                                                                        |
 | `ProtectedRoute`              | `done` |                                                                                                                        |
-| `LoginPage`                   | `done` |                                                                                                                        |
-| `CallbackPage`                | `done` |                                                                                                                        |
+| `LoginPage`                   | `done` | automatic OIDC redirect with progress, classified recovery, and support codes                                          |
+| `CallbackPage`                | `done` | restores the interrupted route; classified recovery and support codes                                                  |
 | `AdminLayout` + sidebar       | `done` | Collapsible icon rail (desktop, persisted) + off-canvas drawer (mobile, below `md`); theme toggle + sign-out in footer |
 | Router                        | `done` |                                                                                                                        |
 
@@ -216,9 +216,10 @@ create/edit form's pickers, both already built.
 | Lint hardening to zero warnings, `test:coverage` thresholds raised (branches/functions added), Playwright E2E suite added                 | 24                                     | 426 (verified via `npm run test:coverage`) |
 | jest-axe broadened from TagForm to LoginPage and ServicesPage's create-service dialog                                                     | 2                                      | 428 (verified via `npm run test:coverage`) |
 | Architectural refactor: atomic session snapshot, `useAsync` simplification, Services/Tags/Categories decomposition, ADR 009 physical move | 23                                     | 451 (verified via `npm run test:coverage`) |
+| Automatic OIDC transition, actionable auth feedback, and renewed-identity isolation                                                       | not logged incrementally               | 550 (verified via `npm run test:coverage`) |
 
 Update the test count row whenever a feature vertical is completed. The
-451 above is Vitest only — see "End-to-end tests" below for the separate
+550 above is Vitest only — see "End-to-end tests" below for the separate
 Playwright suite (9 specs), which isn't counted in this table or in the
 coverage gate.
 
@@ -245,8 +246,13 @@ session is needed, writes an oidc-client-ts user record straight into
 localStorage (`e2e/support/session.ts`) — no identity-service,
 services-service, or Postgres needs to be running. Covered so far:
 
-- Unauthenticated access to a protected route or `/` redirects to `/login`.
-- `LoginPage` renders correctly in dark mode and at a 375px viewport.
+- Unauthenticated access to a protected route or `/` automatically opens
+  the OIDC provider.
+- The automatic login-transition screen explains the redirect, renders
+  correctly in dark mode, forwards the active theme to the OIDC provider,
+  and has no horizontal overflow at 375px. The identity credential page
+  applies that theme before paint and provides its own accessible,
+  persisted theme toggle.
 - The authenticated shell: index → `/dashboard` redirect, sidebar
   navigation, and logout (mocking the OIDC discovery document + end-session
   redirect, not just a REST endpoint, so the real `OidcAuthRepository` runs
@@ -277,27 +283,23 @@ follow-up, deferred rather than added speculatively.
 
 ## Bundle size baseline
 
-First recorded 2026-07-21; re-measured 2026-07-23 after the architectural
-refactor (Services/Tags/Categories decomposition, shared
-`CollectionFeedback`/`DeleteConfirmationDialog`, ADR 009 physical move) —
-captured from `npm run build --workspace=apps/admin-frontend` (Vite 8,
-production build).
+First recorded 2026-07-21; re-measured 2026-07-24 after the automatic
+authentication transition and feedback work — captured from
+`npm run build --workspace=apps/admin-frontend` (Vite 8, production build).
 
-| Chunk                                                   | Raw       | Gzip      |
-| ------------------------------------------------------- | --------- | --------- |
-| `index-*.js` (main entry)                               | 457.72 kB | 140.24 kB |
-| `DeleteConfirmationDialog-*.js` (shared table + dialog) | 105.01 kB | 31.34 kB  |
-| `ServicesPage-*.js`                                     | 96.02 kB  | 30.45 kB  |
-| `index-*.css`                                           | 64.32 kB  | 10.88 kB  |
+| Chunk                                                   | Raw       | Gzip     |
+| ------------------------------------------------------- | --------- | -------- |
+| `index-*.js` (main entry)                               | 227.55 kB | 71.67 kB |
+| `auth-*.js` (OIDC/auth route dependencies)              | 229.03 kB | 69.80 kB |
+| `DeleteConfirmationDialog-*.js` (shared table + dialog) | 105.65 kB | 31.59 kB |
+| `ServicesPage-*.js`                                     | 96.24 kB  | 30.57 kB |
+| `index-*.css`                                           | 65.11 kB  | 10.99 kB |
 
-All other route chunks (Categories/Tags pages and forms, stub pages)
-are under 7 kB raw each — lazy-loaded per route, not part of the
-initial load. The modest increase over the 2026-07-21 baseline
-(main entry +9.9 kB raw) is the new shared abstractions
-(`useDialogTarget`, `useDeleteConfirmation`, `CollectionFeedback`,
-`DeleteConfirmationDialog`, the feature `index.ts` barrels) - not
-duplication; per-route code-splitting is unchanged (confirmed: each
-lazy route still gets its own chunk).
+All other route chunks (Categories/Tags pages and forms, stub pages) are
+under 10 kB raw each. Vite now emits the OIDC/auth dependency graph as its
+own shared chunk; `index` + `auth` remain approximately the same combined
+size as the previous monolithic main entry. The feedback UI added no heavy
+dependency.
 
 No pathological duplication was found (e.g. no repeated Radix/shadcn
 tree across chunks), so no bundle-splitting work was done against this

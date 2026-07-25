@@ -23,9 +23,13 @@ Rules that keep the boundaries real:
 - Each service: own Clean Architecture stack, own DB schema, own API.
 - Cross-service calls: HTTP + M2M JWT (later: events). Never shared
   tables or in-process references across services.
-- Shared code is limited to security-critical cross-cutting
-  infrastructure (`backend/shared/Admin.Identity.Client`) — never business
-  logic.
+- Shared code is limited to cross-cutting infrastructure — never business
+  logic. Beyond `backend/shared/Admin.Identity.Client` (security-critical,
+  auth), this later grew to include `Admin.SharedKernel` (CQRS/Result/
+  Dispatcher, docs/adr/0005), `Admin.SharedKernel.AspNetCore` (MVC glue,
+  docs/adr/0018), and `Admin.SharedKernel.EntityFrameworkCore` (generic
+  repository, docs/adr/0006) — none of the latter three are
+  security-related, but all stay infrastructure, never business rules.
 
 ## Consequences
 

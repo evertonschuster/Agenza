@@ -18,6 +18,14 @@ public class ServiceCodeGenerator : IServiceCodeGenerator
     {
         var tenantId = _currentTenantProvider.TenantId;
 
+        // Shares the ambient transaction with the caller's later SaveChangesAsync
+        // (UnitOfWork commits/rolls back both together) so a rejected create
+        // doesn't permanently burn a code from the tenant's sequence.
+        if (_dbContext.Database.CurrentTransaction is null)
+        {
+            await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        }
+
         var lastValues = await _dbContext.Database
             .SqlQuery<int>(
                 $"""

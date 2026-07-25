@@ -2,9 +2,14 @@ import type { UserManager } from 'oidc-client-ts'
 import type {
   AuthCallbackResult,
   AuthRepository,
+  LoginTheme,
 } from '@/features/auth/application/repositories/AuthRepository'
 import { Session } from '@/features/auth/domain/entities/Session'
 import { mapOidcUserToSession } from '@/features/auth/infrastructure/oidcUserToSessionMapper'
+import {
+  mapCallbackError,
+  mapLoginStartError,
+} from '@/features/auth/infrastructure/mapOidcErrorToAuthFlowError'
 
 const RENEWAL_WINDOW_MS = 60_000
 
@@ -16,16 +21,27 @@ export class OidcAuthRepository implements AuthRepository {
     this.userManager = userManager
   }
 
-  async initiateLogin(returnTo: string): Promise<void> {
-    await this.userManager.signinRedirect({ state: returnTo })
+  async initiateLogin(returnTo: string, theme: LoginTheme): Promise<void> {
+    try {
+      await this.userManager.signinRedirect({
+        state: returnTo,
+        extraQueryParams: { theme },
+      })
+    } catch (error) {
+      throw mapLoginStartError(error)
+    }
   }
 
   async handleCallback(callbackUrl: string): Promise<AuthCallbackResult> {
-    const oidcUser = await this.userManager.signinRedirectCallback(callbackUrl)
+    try {
+      const oidcUser = await this.userManager.signinRedirectCallback(callbackUrl)
 
-    return {
-      session: mapOidcUserToSession(oidcUser),
-      returnTo: typeof oidcUser.state === 'string' ? oidcUser.state : null,
+      return {
+        session: mapOidcUserToSession(oidcUser),
+        returnTo: typeof oidcUser.state === 'string' ? oidcUser.state : null,
+      }
+    } catch (error) {
+      throw mapCallbackError(error)
     }
   }
 
@@ -43,14 +59,14 @@ export class OidcAuthRepository implements AuthRepository {
       return cachedSession
     }
 
-    this.renewalInFlight ??= this.renewSession().finally(() => {
+    this.renewalInFlight ??= this.renewSession(cachedSession).finally(() => {
       this.renewalInFlight = null
     })
 
     return this.renewalInFlight
   }
 
-  private async renewSession(): Promise<Session | null> {
+  private async renewSession(cachedSession: Session): Promise<Session | null> {
     try {
       const renewedOidcUser = await this.userManager.signinSilent()
 
@@ -59,7 +75,17 @@ export class OidcAuthRepository implements AuthRepository {
         return null
       }
 
-      return mapOidcUserToSession(renewedOidcUser)
+      const renewedSession = mapOidcUserToSession(renewedOidcUser)
+      const identityChanged =
+        renewedSession.user.id !== cachedSession.user.id ||
+        renewedSession.user.tenant.id !== cachedSession.user.tenant.id
+
+      if (identityChanged) {
+        await this.userManager.removeUser()
+        return null
+      }
+
+      return renewedSession
     } catch {
       // Renewal failed - clear the stale session rather than leave it half-valid.
       await this.userManager.removeUser()

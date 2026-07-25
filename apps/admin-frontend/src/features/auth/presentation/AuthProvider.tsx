@@ -3,6 +3,7 @@ import { AuthContext, type AuthContextValue } from '@/features/auth/presentation
 import { useAppContainer } from '@/app/providers/useAppContainer'
 import { useAsync } from '@/shared/presentation/hooks/useAsync'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
+import type { LoginTheme } from '@/features/auth/application/repositories/AuthRepository'
 
 interface AuthProviderProps {
   children: ReactNode
@@ -28,8 +29,8 @@ export function AuthProvider({ children }: AuthProviderProps): JSX.Element {
   }, [auth, mutate])
 
   const login = useCallback(
-    async (returnTo?: string): Promise<void> => {
-      await auth.initiateLogin.execute(returnTo)
+    async (returnTo: string | undefined, theme: LoginTheme): Promise<void> => {
+      await auth.initiateLogin.execute(returnTo, theme)
     },
     [auth],
   )

@@ -4,4 +4,7 @@ namespace ServicesService.Application.Abstractions;
 public interface IUnitOfWork
 {
     Task<PersistenceResult<int>> SaveChangesAsync(CancellationToken cancellationToken);
+
+    // For a handler that returns early after IServiceCodeGenerator already opened an ambient transaction - closes it without a save.
+    Task RollbackAsync(CancellationToken cancellationToken);
 }

@@ -13,14 +13,27 @@ writing specs, reviewing diffs, and keeping the docs truthful.
 ## The instruction stack (what the agent reads, in order)
 
 ```
-CLAUDE.md (root)                      repo-wide non-negotiables (tenant scoping, layering)
-├── apps/admin-frontend/CLAUDE.md     TS strictness, testing strategy, design language
-│   ├── .skills/*/SKILL.md            step-by-step how-tos (feature vertical, TDD, API contract)
+AGENTS.md (root, canonical)           repo-wide non-negotiables (tenant scoping, layering)
+├── CLAUDE.md (root)                  thin `@AGENTS.md` import — Claude Code loads this automatically
+├── agent-skills/*/SKILL.md           canonical, tool-portable skills (frontend feature, backend
+│                                      use case, exception audit, migration safety, tenant
+│                                      isolation, rule persistence, architecture review, API
+│                                      contract review) — synced verbatim into .claude/skills/
+│                                      and .agents/skills/ by scripts/sync_agent_skills.py
+├── apps/admin-frontend/AGENTS.md     TS strictness, testing strategy, design language, comments
+│   ├── CLAUDE.md                     thin `@AGENTS.md` import
+│   ├── .skills/*/SKILL.md            admin-api-contract, admin-tdd-conventions (still local —
+│   │                                 admin-feature-vertical is an obsolete redirect stub)
 │   └── docs/ STATUS · DOMAIN · API · DECISIONS · adr/
-├── backend/CLAUDE.md                 layering, rich domain, tenant scoping, test tiers
-│   └── .skills/*/SKILL.md            backend-use-case · backend-new-microservice
-└── docs/ VISION · MONOREPO · QUALITY · adr/
+├── backend/AGENTS.md                 layering, rich domain, tenant scoping, test tiers, comments
+│   ├── CLAUDE.md                     thin `@AGENTS.md` import
+│   └── .skills/backend-new-microservice/SKILL.md  still local (backend-use-case is an
+│                                     obsolete redirect stub — see agent-skills/agenza-backend-use-case)
+└── docs/ VISION · MONOREPO · QUALITY · AGENT-GOVERNANCE · adr/
 ```
+
+See [AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md) for why AGENTS.md is the
+canonical file (not CLAUDE.md) and how the skill sync works.
 
 You rarely need to paste any of this into a prompt — agents discover it.
 What you must do is **keep it true** (see "Your responsibilities" below).
@@ -56,7 +69,7 @@ What you must do is **keep it true** (see "Your responsibilities" below).
 > `GET/POST /api/services`, `PUT/DELETE /api/services/{id}`.
 > Service = { id: uuid, name: string (1..80), durationMinutes: int > 0,
 > priceCents: int >= 0, active: bool }. Errors: 400 validation,
-> 404 unknown id. Follow the admin-feature-vertical skill.
+> 404 unknown id. Follow the agenza-frontend-feature skill.
 
 What should happen (and what to check): the agent reads the skill +
 STATUS.md, builds domain entity → use cases → repository → hook → page
@@ -68,14 +81,14 @@ incomplete — fix the spec, not the diff.
 
 > In identity-service, add a "rename tenant" operation:
 > PUT /internal/v1/tenants/{id} with { name }, guarded by the
-> identity-admin scope. Follow the backend-use-case skill.
+> identity-admin scope. Follow the agenza-backend-use-case skill.
 
 Expect: a `RenameTenant` command slice (Command/Handler/Validator) under
 `Application/Tenants/`, a behavior method on the `Tenant` entity (not a
 public setter), the handler returning `Result` instead of throwing for
 a not-found tenant, unit tests with fakes asserting on the `Result`,
-an integration test hitting 401/403/400/happy-path, and the coverage
-gate still green.
+manual verification of 401/403/400/happy-path (no integration-test tier,
+docs/adr/0015), and the coverage gate still green.
 
 ### 3. Stand up a new microservice
 

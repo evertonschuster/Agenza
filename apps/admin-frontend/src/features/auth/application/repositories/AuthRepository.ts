@@ -5,8 +5,10 @@ export interface AuthCallbackResult {
   returnTo: string | null
 }
 
+export type LoginTheme = 'light' | 'dark'
+
 export interface AuthRepository {
-  initiateLogin(returnTo: string): Promise<void>
+  initiateLogin(returnTo: string, theme: LoginTheme): Promise<void>
 
   // callbackUrl is the full redirect-back URL (query/fragment included),
   // kept as a plain string so this port has no routing-library dependency.

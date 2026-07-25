@@ -8,8 +8,11 @@ describe('InitiateLogin', () => {
     const authRepository = createFakeAuthRepository({ initiateLogin: initiateLoginSpy })
 
     const initiateLogin = new InitiateLogin(authRepository)
-    await initiateLogin.execute('/services?search=massagem#editor')
+    await initiateLogin.execute('/services?search=massagem#editor', 'dark')
 
-    expect(initiateLoginSpy).toHaveBeenCalledExactlyOnceWith('/services?search=massagem#editor')
+    expect(initiateLoginSpy).toHaveBeenCalledExactlyOnceWith(
+      '/services?search=massagem#editor',
+      'dark',
+    )
   })
 })

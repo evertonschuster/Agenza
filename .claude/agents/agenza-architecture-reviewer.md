@@ -34,5 +34,7 @@ speculative abstractions, documentation drift, cross-cutting consistency).
 Report findings in the format `agenza-architecture-review` specifies:
 file/location, what's wrong, why it matters (cite the `AGENTS.md` rule,
 ADR, or skill it violates — never invent a new rule mid-review), severity,
-and a one-sentence suggested fix. Do not implement fixes unless the task
-that invoked you explicitly asks for implementation, not just a report.
+and a one-sentence suggested fix. You have no Edit/Write tool — you cannot
+implement fixes regardless of how the task is phrased; the skill's
+"implement" mode is for whichever caller has write access to act on your
+report, not for you.
