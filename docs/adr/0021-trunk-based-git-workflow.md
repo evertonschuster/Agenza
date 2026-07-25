@@ -43,13 +43,14 @@ branch (`develop`) or direct commits to `main` from happening anyway.
 `ai-services-build-and-test`, `enforce_admins`, no force-push, no
 deletion) already assumes this and is unchanged by this ADR.
 
-**All work happens on short-lived branches cut from an up-to-date
-`main`**, named `<type>/<slug>` (`feat/`, `fix/`, `chore/`, `docs/`,
-`refactor/`) — one task per branch, never chained into a parent feature
-branch (the stacked-PR pattern above is what turned a small conflict
-into a large one; a branch that must build on unmerged work should still
-target `main` directly once ready, rebasing to pick up the dependency
-rather than merging into it).
+**When work uses a short-lived branch, cut it from an up-to-date `main`**,
+named `<type>/<slug>` (`feat/`, `fix/`, `chore/`, `docs/`, `refactor/`) —
+one task per branch, never chained into a parent feature branch (the
+stacked-PR pattern above is what turned a small conflict into a large one;
+a branch that must build on unmerged work should still target `main`
+directly once ready, rebasing to pick up the dependency rather than merging
+into it). ADR 0030 permits direct local commits to `main`; it supersedes
+only this ADR's former short-lived-branch-only requirement.
 
 **Rebase onto `origin/main` before opening or updating a PR**, and again
 before merging if `main` moved meanwhile — resolving a handful of
@@ -70,24 +71,23 @@ task instead of sharing one working directory, so uncommitted changes
 from one task are never sitting on the branch another task expects to be
 clean.
 
-**Enforcement is mechanical, not just documented.** `.husky/pre-commit`
-rejects any commit made directly on `main` — every agent and every human
-hits the same check regardless of whether they've read this ADR or
-`AGENTS.md`, which is the point: the convention has to survive without
-being re-explained in every session.
+**Delivery enforcement is remote.** GitHub branch protection and rulesets
+govern updates to `origin/main`. Per ADR 0030, `.husky/pre-commit` is
+branch-agnostic and enforces staged-file quality checks only.
 
 ## Consequences
 
 **Benefits**: one branch to keep synchronized instead of two (no repeat
 of the `main`/`develop` divergence this ADR responds to); every PR target
 is already covered by existing CI and branch protection, so no workflow
-files needed new `branches:` triggers; the local-hook check catches a
-direct-`main` commit at the moment it happens instead of at PR time.
+files needed new `branches:` triggers; `lint-staged` remains active without
+duplicating remote delivery policy in a local hook.
 
 **Costs**: no separate "integration" branch means a half-finished
-multi-day effort has nowhere to live except its own feature branch kept
-alive across sessions — acceptable here since branches are meant to be
-short-lived and rebased, not because multi-day work is disallowed.
+multi-day effort should normally stay on its own feature branch across
+sessions instead of accumulating on local `main` — acceptable here since
+branches are meant to be short-lived and rebased, not because multi-day
+work is disallowed.
 `origin/develop` and the stacked `feat/*` branches that predate this ADR
 are not deleted by it; they hold real unmerged work (including
 security-relevant auth/session-timing fixes) and need a reviewed PR into

@@ -34,9 +34,11 @@ merge decisions from ADR 0021 still apply.
 
 `scripts/architecture_guard.py` reverses its old check: instead of requiring
 the direct-`main` rejection, it reports a blocking finding when the
-repository-owned pre-commit hook contains branch-specific `main` or `master`
-policy. Its regression tests and the existing Agent Governance workflow keep
-that decision enforced in CI.
+repository-owned pre-commit hook inspects the current branch through the
+supported Git branch-query commands. This rejects branch-dependent policy
+for `main`, `master`, `develop`, feature branches, or any other branch name.
+Its regression tests and the existing Agent Governance workflow keep that
+decision enforced in CI.
 
 ## Consequences
 

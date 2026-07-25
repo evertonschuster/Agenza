@@ -490,7 +490,14 @@ def check_branch_agnostic_precommit() -> list[Finding]:
     """Pre-commit keeps staged-file quality checks, never branch policy."""
     hook = REPO_ROOT / ".husky/pre-commit"
     text = hook.read_text(encoding="utf-8", errors="replace") if hook.is_file() else ""
-    if "lint-staged" not in text:
+    lines = text.splitlines()
+    lint_staged_invocation = re.compile(
+        r"(?:^|&&)\s*node\s+\.\./\.\./node_modules/lint-staged/bin/lint-staged\.js(?:\s|$)"
+    )
+    if not any(
+        not line.lstrip().startswith("#") and lint_staged_invocation.search(line)
+        for line in lines
+    ):
         return [
             Finding(
                 "precommit-quality-check-missing",
@@ -502,17 +509,22 @@ def check_branch_agnostic_precommit() -> list[Finding]:
             )
         ]
 
-    for line_number, line in enumerate(text.splitlines(), start=1):
-        if re.search(r"\b(?:main|master)\b", line, re.IGNORECASE):
+    branch_queries = [
+        re.compile(r"\bgit\s+symbolic-ref(?:\s+--short)?\s+HEAD\b"),
+        re.compile(r"\bgit\s+branch\s+--show-current\b"),
+        re.compile(r"\bgit\s+rev-parse\s+--abbrev-ref(?:=\S+)?\s+HEAD\b"),
+    ]
+    for line_number, line in enumerate(lines, start=1):
+        if any(pattern.search(line) for pattern in branch_queries):
             return [
                 Finding(
                     "branch-specific-precommit",
                     "blocking",
                     _rel(hook),
                     line_number,
-                    "The pre-commit hook contains branch-specific policy. "
-                    "ADR 0030 keeps pre-commit branch-agnostic; remote GitHub "
-                    "protection governs delivery to main.",
+                    "The pre-commit hook inspects the current branch. ADR 0030 "
+                    "keeps pre-commit branch-agnostic; remote GitHub protection "
+                    "governs delivery.",
                 )
             ]
 
