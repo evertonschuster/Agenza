@@ -658,18 +658,9 @@ def check_database_boundary_configuration() -> list[Finding]:
     return findings
 
 
-_KNOWN_DESTRUCTIVE_UP_MIGRATIONS = {
-    (
-        "backend/services/services-service/ServicesService.Infrastructure/"
-        "Persistence/Migrations/"
-        "20260711172110_RenameServiceOfferingToServiceAndExtend.cs"
-    )
-}
-
-
 def check_destructive_migration_safety() -> list[Finding]:
     """A new destructive Up migration needs an explicit reviewed safety
-    marker. The one historical exception remains visible in a fixed inventory."""
+    marker."""
     migration_files = [
         path
         for path in _iter_files(REPO_ROOT / "backend" / "services", (".cs",))
@@ -694,7 +685,7 @@ def check_destructive_migration_safety() -> list[Finding]:
             continue
 
         destructive = destructive_pattern.search(up_match.group(1))
-        if not destructive or _rel(path) in _KNOWN_DESTRUCTIVE_UP_MIGRATIONS:
+        if not destructive:
             continue
         if "migration-safety:" in up_match.group(1):
             continue

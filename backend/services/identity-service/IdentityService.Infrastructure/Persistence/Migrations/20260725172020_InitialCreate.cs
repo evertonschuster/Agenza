@@ -110,7 +110,13 @@ namespace IdentityService.Infrastructure.Persistence.Migrations
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "uuid", nullable: false),
-                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false)
+                    Name = table.Column<string>(type: "character varying(200)", maxLength: 200, nullable: false),
+                    CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
+                    CreatedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    UpdatedBy = table.Column<Guid>(type: "uuid", nullable: true),
+                    DeletedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
+                    DeletedBy = table.Column<Guid>(type: "uuid", nullable: true)
                 },
                 constraints: table =>
                 {
@@ -334,6 +340,12 @@ namespace IdentityService.Infrastructure.Persistence.Migrations
                 column: "NormalizedEmail");
 
             migrationBuilder.CreateIndex(
+                name: "IX_AspNetUsers_TenantId",
+                schema: "identity",
+                table: "AspNetUsers",
+                column: "TenantId");
+
+            migrationBuilder.CreateIndex(
                 name: "UserNameIndex",
                 schema: "identity",
                 table: "AspNetUsers",
@@ -378,6 +390,20 @@ namespace IdentityService.Infrastructure.Persistence.Migrations
                 table: "OpenIddictTokens",
                 column: "ReferenceId",
                 unique: true);
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tenants_DeletedAt",
+                schema: "identity",
+                table: "Tenants",
+                column: "DeletedAt");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_Tenants_Name",
+                schema: "identity",
+                table: "Tenants",
+                column: "Name",
+                unique: true,
+                filter: "\"DeletedAt\" IS NULL");
         }
 
         /// <inheritdoc />

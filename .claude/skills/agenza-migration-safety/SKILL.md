@@ -28,8 +28,9 @@ description: >
    local, uncommitted dev iteration. Once a migration has shipped (merged
    to `main`, or plausibly already applied to any shared/deployed
    database), a schema fix is a **new** migration, never an edit to the
-   old file — see docs/adr/0012's `20260721121859_AddCaseInsensitiveUniquenessAndCategoryLimits`
-   for the pattern of a new, additive migration rather than a rewrite.
+   old file. ADR 0028 records the one pre-deployment history reset; after
+   its `InitialCreate` baselines, another squash is prohibited once either
+   baseline has been applied anywhere that matters.
 
 ## Required for any migration that touches existing data
 

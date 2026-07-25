@@ -56,6 +56,31 @@ Postgres) together locally:
   reach for if you don't have the SDKs installed, or want production-like
   container builds.
 
+### Connect a local database client
+
+Start only PostgreSQL when the application stack is not needed:
+
+```bash
+docker compose -f infra/docker-compose.yml up -d postgres
+```
+
+Use these settings in DBeaver, DataGrip, pgAdmin, TablePlus, or another
+PostgreSQL client:
+
+| Setting  | Value                                      |
+| -------- | ------------------------------------------ |
+| Host     | `localhost`                                |
+| Port     | `5432`                                     |
+| Database | `appdb`                                    |
+| User     | `postgres`                                 |
+| Password | `postgres`                                 |
+| SSL      | disabled for local development             |
+
+Set `POSTGRES_PORT` before starting Compose to use another host port, for
+example `$env:POSTGRES_PORT=55432` in PowerShell. The administrative
+credentials above are local-demo credentials only. Application containers
+continue to use the restricted `identity_app` and `services_app` roles.
+
 Aspire is local-dev tooling only here — it doesn't change how any service is
 built, tested, or deployed; `AppHost`/`ServiceDefaults` are not referenced by
 any `*.Tests.csproj` and aren't part of the CI or Docker image build paths.
@@ -98,13 +123,12 @@ workspace gains a lint-staged config.
   bootstrap before starting replicas with startup bootstrap disabled; the
   repository intentionally has no production deployment design yet
   (docs/adr/0025, docs/adr/0027).
-- If you already ran `docker compose up` or `dotnet run --project
-backend/AppHost` before docs/adr/0017 landed, your local Postgres
-  volume has migration history recorded in `public.__EFMigrationsHistory`
-  shared by both services. The next startup will try to re-apply every
-  migration against the new schema-scoped history tables and fail loudly
-  (`relation already exists`) until you follow the one-time runbook in
-  docs/adr/0017 (drop the local dev volume, or manually split the table).
+- ADR 0028 replaced both EF histories with clean initial baselines. Any local
+  database created before that reset is intentionally incompatible. Recreate
+  the Compose database once with
+  `docker compose -f infra/docker-compose.yml down --volumes`, then start the
+  stack again. Back up anything worth keeping first; the demo has no data
+  migration path from the deleted histories.
 - Compose and Aspire initialize separate non-superuser roles:
   `identity_app` owns only the `identity` schema and `services_app` owns
   only the `services` schema. Existing local volumes created before

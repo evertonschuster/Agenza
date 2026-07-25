@@ -47,6 +47,7 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0025-...md`                       | Historical explicit/serialized bootstrap decision, narrowed by ADR 0027 |
 | `../docs/adr/0026-...md`                       | Removal of the dedicated runtime-test project; retained Compose smokes and known gaps |
 | `../docs/adr/0027-...md`                       | Single-instance demo bootstrap without a distributed advisory lock |
+| `../docs/adr/0028-...md`                       | One-time EF migration baseline reset before the first deployment |
 
 ## Critical constraints (non-negotiable)
 

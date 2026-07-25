@@ -90,7 +90,9 @@ directly. `NameExistsAsync` remains as a cheap pre-check for the common case
 (no round trip wasted persisting an entity that's obviously a duplicate); the
 database index is what actually guarantees uniqueness under concurrency.
 
-Migration: `20260721121859_AddCaseInsensitiveUniquenessAndCategoryLimits`.
+The original migration was
+`20260721121859_AddCaseInsensitiveUniquenessAndCategoryLimits`; ADR 0028
+later folded its final schema into the new `InitialCreate` baseline.
 
 ### Structured validation errors (section 9 of the review brief)
 

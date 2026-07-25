@@ -12,8 +12,8 @@ using ServicesService.Infrastructure.Persistence;
 namespace ServicesService.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ServicesDataContext))]
-    [Migration("20260725152400_EnforceTenantScopedRelationships")]
-    partial class EnforceTenantScopedRelationships
+    [Migration("20260725172036_InitialCreate")]
+    partial class InitialCreate
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
