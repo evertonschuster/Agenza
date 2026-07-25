@@ -2,10 +2,10 @@ import type { JSX } from 'react'
 import { PageHeader } from '@/shared/presentation/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useCategoriesPage } from '@/features/catalog/presentation/categories/useCategoriesPage'
-import { CategoriesTable } from '@/features/catalog/presentation/categories/CategoriesTable'
-import { CategoryEditorDialog } from '@/features/catalog/presentation/categories/CategoryEditorDialog'
-import { CategoryDeleteDialog } from '@/features/catalog/presentation/categories/CategoryDeleteDialog'
+import { useCategoriesPage } from '@/features/catalog/presentation/categories/hooks/useCategoriesPage'
+import { CategoriesTable } from '@/features/catalog/presentation/categories/components/CategoriesTable'
+import { CategoryEditorDialog } from '@/features/catalog/presentation/categories/components/CategoryEditorDialog'
+import { CategoryDeleteDialog } from '@/features/catalog/presentation/categories/components/CategoryDeleteDialog'
 
 export function CategoriesPage(): JSX.Element {
   const {

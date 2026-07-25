@@ -2,10 +2,10 @@ import type { JSX } from 'react'
 import { PageHeader } from '@/shared/presentation/components/PageHeader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { useTagsPage } from '@/features/catalog/presentation/tags/useTagsPage'
-import { TagsTable } from '@/features/catalog/presentation/tags/TagsTable'
-import { TagEditorDialog } from '@/features/catalog/presentation/tags/TagEditorDialog'
-import { TagDeleteDialog } from '@/features/catalog/presentation/tags/TagDeleteDialog'
+import { useTagsPage } from '@/features/catalog/presentation/tags/hooks/useTagsPage'
+import { TagsTable } from '@/features/catalog/presentation/tags/components/TagsTable'
+import { TagEditorDialog } from '@/features/catalog/presentation/tags/components/TagEditorDialog'
+import { TagDeleteDialog } from '@/features/catalog/presentation/tags/components/TagDeleteDialog'
 
 export function TagsPage(): JSX.Element {
   const {
