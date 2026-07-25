@@ -43,6 +43,7 @@ Z" statements over "it should work.">
 - agenza-frontend-feature
 - agenza-exception-flow-audit
 - agenza-architecture-review
+- evolve-modular-architecture
 - agenza-rule-persistence
 - agenza-api-contract-review
 - agenza-tenant-isolation-review

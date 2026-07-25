@@ -31,6 +31,7 @@ concern (exceptions / contracts / tenancy / migrations).>
 <Pick based on scope — don't run every skill on every review:>
 
 - agenza-architecture-review (general sweep / orchestrates the rest)
+- evolve-modular-architecture (future-state, decomposition, or extraction decisions)
 - agenza-exception-flow-audit (backend error handling)
 - agenza-tenant-isolation-review (multi-tenancy)
 - agenza-api-contract-review (backend/frontend contract drift)

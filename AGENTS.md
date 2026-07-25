@@ -174,6 +174,14 @@ synced — never hand-copied — into `.agents/skills/` (Codex) and
 `python scripts/sync_agent_skills.py --check` after editing anything under
 `agent-skills/`; run it without `--check` to actually sync.
 
+Use `agent-skills/agenza-architecture-review` to audit whether the current
+monorepo follows its established rules. Use
+`agent-skills/evolve-modular-architecture` when deciding how the
+architecture should evolve: defining or repairing module boundaries,
+choosing between a modular monolith and selective service extraction,
+planning an incremental migration, writing the ADR, or defining fitness
+functions for the new boundary.
+
 ## Mandatory commands before calling anything done
 
 ```bash
