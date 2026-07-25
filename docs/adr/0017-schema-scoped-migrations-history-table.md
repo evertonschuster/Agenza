@@ -124,7 +124,12 @@ setups; the seeded users/tenants are throwaway dev fixtures anyway):**
 **Option B — you have local data you want to keep:**
 
 Run this once against the shared database (`psql`, pgAdmin, or any
-Postgres client), *before* deploying this change's code:
+Postgres client), *before* deploying this change's code. The `WHERE`
+clauses below split rows by each service's own migration-id prefixes —
+see `IdentityService.Infrastructure/Persistence/Migrations/` and
+`ServicesService.Infrastructure/Persistence/Migrations/` for the current,
+authoritative list, and update the `IN (...)` values if new migrations
+were added since this ADR was written:
 
 ```sql
 CREATE SCHEMA IF NOT EXISTS identity;
@@ -133,11 +138,7 @@ CREATE SCHEMA IF NOT EXISTS services;
 CREATE TABLE identity."__EFMigrationsHistory" (LIKE public."__EFMigrationsHistory" INCLUDING ALL);
 CREATE TABLE services."__EFMigrationsHistory" (LIKE public."__EFMigrationsHistory" INCLUDING ALL);
 
--- Copy each service's own rows by its known migration-id prefixes
--- (see IdentityService.Infrastructure/Persistence/Migrations/ and
--- ServicesService.Infrastructure/Persistence/Migrations/ for the
--- current, authoritative list - update this WHERE clause if new
--- migrations were added since this ADR was written).
+-- Copy each service's own rows by migration id (see below).
 INSERT INTO identity."__EFMigrationsHistory"
 SELECT * FROM public."__EFMigrationsHistory"
 WHERE "MigrationId" IN (

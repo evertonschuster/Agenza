@@ -19,7 +19,8 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
                 ? query
                 : query.Where(t => EF.Functions.ILike(t.Name, $"%{search.Trim()}%")))
                 .OrderBy(t => t.Name),
-            cancellationToken);
+            cancellationToken,
+            asNoTracking: true);
 
     public Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken) =>
         FindAsync(t => t.Id == tagId, cancellationToken);

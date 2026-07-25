@@ -49,6 +49,8 @@ public sealed class CreateServiceCommandHandler : ICommandHandler<CreateServiceC
         var serviceResult = command.ToModel(code, relationships.Tags);
         if (serviceResult.IsFailure)
         {
+            // GetNextCodeAsync may have already opened an ambient transaction - close it since SaveChangesAsync never runs on this branch.
+            await _unitOfWork.RollbackAsync(cancellationToken);
             return Result.Failure<ServiceResponse>(serviceResult.Error.ToApplicationError());
         }
 

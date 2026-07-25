@@ -12,7 +12,11 @@ every section; delete this instruction line before sending.
 ## Scope
 
 - Feature folder(s): `domain/entities/`, `application/use-cases/`,
-  `infrastructure/repositories/`, `presentation/{hooks,forms,pages}/`
+  `infrastructure/repositories/`, `presentation/<entity>/` (page, dialogs,
+  table, filters, and that entity's own hooks all colocated there — see
+  `presentation/services/` for the pattern; only a piece genuinely reused
+  *across* entities, like `presentation/forms/`'s `CategoryForm.tsx`/
+  `TagForm.tsx`, gets its own shared folder instead)
 - Stub page being replaced (if any): `<PageName>`
 
 ## API spec (search before asking — see root `AGENTS.md`'s question policy)

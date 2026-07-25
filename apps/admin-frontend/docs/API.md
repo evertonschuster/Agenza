@@ -128,13 +128,11 @@ its own backend-property → field-name map (e.g. `DurationMinutes` →
 
 ## Pagination
 
-**To be confirmed with API spec for each resource.** Likely options:
-
-- Cursor-based: `{ data: T[], nextCursor: string | null }`
-- Offset-based: `{ data: T[], total: number, page: number, perPage: number }`
-
-For v1, implement whatever the API returns. Don't build a pagination
-abstraction before seeing the actual shape.
+**Confirmed** (Services, the first paginated resource): offset-based,
+`PagedResult<T>` — `{ items: T[], totalCount: number, page: number, pageSize: number }`
+(see the Services section below). Any future paginated resource
+(Appointments, Clients) should follow this same field naming unless its
+real spec says otherwise — don't invent a different shape.
 
 ---
 
@@ -158,7 +156,7 @@ explicitly.
 `GET` accepts an optional `search` query param (case-insensitive name
 match), e.g. `GET /api/v1/tags?search=vip`.
 
-`DELETE` fails with `400` (`Tag.InUse`) if the tag is still referenced by
+`DELETE` fails with `409` (`Tag.InUse`) if the tag is still referenced by
 one or more Services.
 
 `TagDto`:
@@ -208,7 +206,7 @@ explicitly.
 `GET` accepts an optional `search` query param (case-insensitive name
 match), e.g. `GET /api/v1/categories?search=massa`.
 
-`DELETE` fails with `400` (`Category.InUse`) if the category is still
+`DELETE` fails with `409` (`Category.InUse`) if the category is still
 referenced by one or more Services.
 
 `CategoryDto`:
@@ -224,7 +222,9 @@ Request body for `POST`/`PUT` is the same shape minus `id`: `{ "name": "Massagen
 
 Validation rules (server-enforced, mirror them client-side):
 
-- `name`: required, trimmed, non-empty → `400`
+- `name`: required, trimmed, non-empty, **unique per tenant**
+  (case-insensitive) → violations: `400` (shape) / `409` (duplicate,
+  `Category.DuplicateName`)
 - Unknown `{id}` within the tenant → `404`
 
 ### Services
@@ -307,12 +307,14 @@ is optional (defaults to an empty list server-side if omitted).
 
 Validation rules (server-enforced, mirror them client-side):
 
-- `name`: required, trimmed, non-empty → `400`
+- `name`: required, trimmed, non-empty, **unique per tenant**
+  (case-insensitive) → violations: `400` (shape) / `409` (duplicate,
+  `Service.DuplicateName`)
 - `1 <= minDurationMinutes <= durationMinutes <= maxDurationMinutes <= 1440` → `400`
 - `0 <= maxDiscountPercentage <= 100` → `400`
 - `price >= 0` → `400`
-- `categoryId`, if set, must reference a Category owned by the same tenant → `400`
-- `tagIds`, if set, must each reference a Tag owned by the same tenant → `400`
+- `categoryId`, if set, must reference a Category owned by the same tenant → `404` (`Category.NotFound`)
+- `tagIds`, if set, must each reference a Tag owned by the same tenant → `404` (`Tag.NotFound`)
 - Unknown `{id}` within the tenant → `404`
 
 ### Appointments

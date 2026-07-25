@@ -172,6 +172,12 @@ alongside the existing `AwesomeAssertions` using.
 
 ### BusinessException hierarchy + one global exception handler, not a try/catch per handler
 
+> **2026-07 update:** deleted outright by docs/adr/0014.
+> `BusinessException`/`BusinessExceptionHandler` no longer exist — Domain
+> returns `DomainResult`, persistence conflicts return `PersistenceResult`.
+> This subsection is kept for historical context only — do not follow it
+> for new code.
+
 Every exception a Domain entity/value object throws for its own
 invariant violations now inherits `{Service}.Domain.Exceptions.BusinessException`
 (abstract, `Code` + `Message` - `InvalidTagException`/
@@ -268,6 +274,13 @@ already been validated against the JWT claim. The `DbContext`-level
 filter is defense in depth on top of that, not the primary control.
 
 ### GenericExceptionHandler: a shared, logging catch-all after BusinessExceptionHandler
+
+> **2026-07 update:** moved to `Admin.SharedKernel.AspNetCore`
+> (docs/adr/0018) and is now the *only* global exception handler in
+> either service — `BusinessExceptionHandler` was deleted outright by
+> docs/adr/0014, so there's nothing left for it to run "after." This
+> subsection is kept for historical context only — do not follow it for
+> new code.
 
 `Admin.SharedKernel.GenericExceptionHandler` (shared - no Domain
 dependency, so no reason to duplicate per service) is registered after

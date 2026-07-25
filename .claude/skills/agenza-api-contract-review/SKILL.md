@@ -37,9 +37,10 @@ description: >
 3. **Field limit drift.** A `MaximumLength`/`.PrecisionScale(...)` on the
    backend validator or EF column vs. a `maxLength`/`max()` in the
    matching Zod schema (`agent-skills/agenza-frontend-feature`'s form
-   section) or hand-written DTO comment — these must match exactly (see
-   docs/adr/0012's `Category.NameMaxLength`/`Service.NameMaxLength`
-   alignment for the kind of drift this catches).
+   section) — these must match exactly (see docs/adr/0012's
+   `Category.NameMaxLength`/`Service.NameMaxLength` alignment for the kind
+   of drift this catches). A limit encoded only in a comment, never a
+   type/schema/const, is itself a finding — flag it for a real check.
 4. **Enum drift.** A backend enum/palette (e.g. `TagColor.Palette`) vs.
    its frontend mirror (e.g. `TAG_COLOR_PALETTE`) — every value present on
    both sides, in the same casing/format the wire actually uses.

@@ -17,7 +17,7 @@ Replace the per-call-site `useAuth()` (each call independently ran its own
   application state. The callback validates that state as an internal,
   non-auth-entry path before restoring it; missing or unsafe state falls
   back to `/dashboard`.
-- `SessionEventBus` (`application/ports/SessionEventBus.ts`), a framework-
+- `SessionEventBus` (`shared/application/SessionEventBus.ts`), a framework-
   agnostic pub/sub port. `AuthenticatedHttpClient` publishes to it (no
   React import needed) on a 401 or a missing token; `AuthProvider`
   subscribes and clears the shared session via the same `useAsync.mutate`
@@ -40,6 +40,10 @@ Replace the per-call-site `useAuth()` (each call independently ran its own
   without `expectedGeneration` is authoritative: it starts a new generation
   so an older in-flight read cannot overwrite a login, logout, or session
   invalidation.
+- `/login` as an automatic transition route: after `AuthProvider` resolves,
+  it redirects unauthenticated users to the OIDC provider once, redirects an
+  already-authenticated user to the validated return path, and remains visible
+  only to explain progress or offer recovery from a classified failure.
 
 ## Rationale
 
@@ -90,9 +94,13 @@ of duplicated per hook call.
   new authenticated tenant context has been committed. `TenantBoundary`
   then remounts the page subtree for the new `${user.id}:${tenant.id}` key,
   so state from the previous session cannot be reused.
+- The intermediate login route no longer asks for a redundant second click.
+  Progress text explains the automatic provider redirect and callback. A
+  failed start or callback shows a stable support code, a curated cause, and
+  an explicit retry/new-login action.
 - Absolute URLs, scheme-relative URLs, malformed destinations, `/login`,
   and `/callback` are rejected as return destinations to prevent open
   redirects and authentication loops; `/dashboard` is the safe fallback.
 - This ADR does not yet address the composition-root/`AppContainer`
   reshaping (raw repositories/`httpClient` still exposed to presentation)
-  — that's a separate, later decision.
+  — that's a separate, later decision (resolved by docs/adr/008).

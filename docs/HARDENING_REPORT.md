@@ -1,5 +1,15 @@
 # Hardening and architectural finalization — final report
 
+> **Historical, point-in-time report — not a living reference.** The
+> `*.IntegrationTests` projects this report counts in its test totals
+> (`IdentityService.IntegrationTests`, `ServicesService.IntegrationTests`)
+> were later deleted outright by docs/adr/0015 (CI runs unit tests only,
+> no Docker/Postgres) and do not exist in the current repo. A narrow
+> exception, `ServicesService.PersistenceTests` (EF InMemory only, no
+> Docker), was added later still by docs/adr/0019. For the current test
+> layout and gates, see `docs/QUALITY.md` and `backend/AGENTS.md`, not
+> this report.
+
 Date: 2026-07-21
 Scope: `backend/services/services-service` (Categories/Services/Tags verticals), `backend/services/identity-service`, `backend/shared/*`, `apps/admin-frontend`.
 

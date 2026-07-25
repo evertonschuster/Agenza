@@ -1,77 +1,148 @@
-import { describe, it, expect } from 'vitest'
+import { StrictMode } from 'react'
+import { describe, expect, it, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
 import { axe } from 'jest-axe'
-import { LoginPage } from '@/features/auth/presentation/LoginPage/LoginPage'
+import { MemoryRouter, Route, Routes } from 'react-router'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
-import { AuthProvider } from '@/features/auth/presentation/AuthProvider'
 import type { AppContainer } from '@/app/composition/container'
+import { AuthFlowError } from '@/features/auth/application/errors/AuthFlowError'
+import type { TenantContext } from '@/features/auth/application/context/TenantContext'
+import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
+import { User } from '@/features/auth/domain/entities/User'
+import { AuthProvider } from '@/features/auth/presentation/AuthProvider'
+import { LoginPage } from '@/features/auth/presentation/LoginPage/LoginPage'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
-import { vi } from 'vitest'
+import { ThemeProvider } from '@/shared/presentation/providers/ThemeProvider'
 
-function buildContainer(loginFn = vi.fn(() => Promise.resolve())): AppContainer {
-  return createFakeAppContainer({ auth: { initiateLogin: { execute: loginFn } } })
+function buildContainer(
+  loginFn = vi.fn(() => Promise.resolve()),
+  getCurrentSessionFn: () => Promise<TenantContext | null> = () => Promise.resolve(null),
+): AppContainer {
+  return createFakeAppContainer({
+    auth: {
+      initiateLogin: { execute: loginFn },
+      getCurrentSession: { execute: vi.fn(getCurrentSessionFn) },
+    },
+  })
 }
 
-function renderLoginPage(container: AppContainer, returnTo?: string): HTMLElement {
-  return render(
+function renderLoginPage(
+  container: AppContainer,
+  options: { returnTo?: string; strict?: boolean; theme?: 'light' | 'dark' } = {},
+): HTMLElement {
+  localStorage.setItem('admin-theme', options.theme ?? 'light')
+
+  const routes = (
     <AppContainerContext.Provider value={container}>
       <AuthProvider>
-        <MemoryRouter
-          initialEntries={
-            returnTo === undefined ? ['/login'] : [{ pathname: '/login', state: { returnTo } }]
-          }
-        >
-          <LoginPage />
-        </MemoryRouter>
+        <ThemeProvider>
+          <MemoryRouter
+            initialEntries={
+              options.returnTo === undefined
+                ? ['/login']
+                : [{ pathname: '/login', state: { returnTo: options.returnTo } }]
+            }
+          >
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/dashboard" element={<div>Dashboard page</div>} />
+              <Route path="/services" element={<div>Services page</div>} />
+            </Routes>
+          </MemoryRouter>
+        </ThemeProvider>
       </AuthProvider>
-    </AppContainerContext.Provider>,
-  ).container
+    </AppContainerContext.Provider>
+  )
+
+  return render(options.strict === true ? <StrictMode>{routes}</StrictMode> : routes).container
 }
 
 describe('LoginPage', () => {
-  it('renders the sign-in button', async () => {
-    renderLoginPage(buildContainer())
+  it('explains the session check before starting the redirect', () => {
+    const neverResolves = (): Promise<TenantContext | null> =>
+      new Promise<TenantContext | null>(() => undefined)
 
-    // useAuth()'s session load resolves after this test's own assertions -
-    // wait for it to settle so its state update is captured inside act()
-    // instead of warning after the test body has already returned.
-    expect(await screen.findByRole('button', { name: /entrar/i })).toBeInTheDocument()
+    renderLoginPage(
+      buildContainer(
+        vi.fn(() => Promise.resolve()),
+        neverResolves,
+      ),
+    )
+
+    expect(screen.getByRole('heading', { name: /verificando sua sessão/i })).toBeInTheDocument()
+    expect(screen.getByText(/redirecionamento automático em andamento/i)).toBeInTheDocument()
   })
 
-  it('calls login when the sign-in button is clicked', async () => {
+  it('starts login automatically and carries the protected page through the redirect', async () => {
     const loginSpy = vi.fn(() => Promise.resolve())
-    renderLoginPage(buildContainer(loginSpy))
+    renderLoginPage(buildContainer(loginSpy), {
+      returnTo: '/services?search=massagem#editor',
+      theme: 'dark',
+    })
 
-    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
+    expect(
+      await screen.findByRole('heading', { name: /redirecionando para o login/i }),
+    ).toBeInTheDocument()
+    expect(loginSpy).toHaveBeenCalledExactlyOnceWith('/services?search=massagem#editor', 'dark')
+  })
+
+  it('starts only one redirect under React.StrictMode', async () => {
+    const loginSpy = vi.fn(() => Promise.resolve())
+    renderLoginPage(buildContainer(loginSpy), { strict: true })
+
+    await screen.findByRole('heading', { name: /redirecionando para o login/i })
 
     expect(loginSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('carries the protected page through the external login redirect', async () => {
+  it('returns an already authenticated user to the requested page without opening login again', async () => {
+    const tenant = Tenant.create('tenant-123')
+    const tenantContext: TenantContext = {
+      tenant,
+      user: User.create({ id: 'user-1', tenant }),
+    }
     const loginSpy = vi.fn(() => Promise.resolve())
-    renderLoginPage(buildContainer(loginSpy), '/services?search=massagem#editor')
+    renderLoginPage(
+      buildContainer(loginSpy, () => Promise.resolve(tenantContext)),
+      {
+        returnTo: '/services?search=massagem',
+      },
+    )
 
-    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
-
-    expect(loginSpy).toHaveBeenCalledExactlyOnceWith('/services?search=massagem#editor')
+    expect(await screen.findByText('Services page')).toBeInTheDocument()
+    expect(loginSpy).not.toHaveBeenCalled()
   })
 
-  it('disables the button while the login redirect is in progress', async () => {
-    // login never resolves — simulates waiting for the browser redirect
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    const loginFn = vi.fn(() => new Promise<void>(() => {}))
-    renderLoginPage(buildContainer(loginFn))
+  it('shows a specific failure, support code, and successful retry action', async () => {
+    const loginSpy = vi
+      .fn<() => Promise<void>>()
+      .mockRejectedValueOnce(
+        new AuthFlowError({
+          code: 'network',
+          flowCode: 'AUTH_LOGIN_UNAVAILABLE',
+          message:
+            'Não foi possível conectar ao serviço de login. Verifique sua conexão e tente novamente.',
+          retryable: true,
+        }),
+      )
+      .mockResolvedValueOnce()
+    renderLoginPage(buildContainer(loginSpy))
 
-    await userEvent.click(screen.getByRole('button', { name: /entrar/i }))
+    expect(
+      await screen.findByRole('heading', { name: /serviço de login indisponível/i }),
+    ).toBeInTheDocument()
+    expect(screen.getByText('AUTH_LOGIN_UNAVAILABLE')).toBeInTheDocument()
+    expect(screen.getByText(/envie este código e o horário da tentativa/i)).toBeInTheDocument()
 
-    expect(screen.getByRole('button', { name: /entrando/i })).toBeDisabled()
+    await userEvent.click(screen.getByRole('button', { name: /tentar entrar novamente/i }))
+
+    expect(loginSpy).toHaveBeenCalledTimes(2)
   })
 
-  it('has no axe violations in its default state', async () => {
+  it('has no axe violations in the automatic redirect state', async () => {
     const container = renderLoginPage(buildContainer())
-    await screen.findByRole('button', { name: /entrar/i })
+    await screen.findByRole('heading', { name: /redirecionando para o login/i })
 
     expect(await axe(container)).toHaveNoViolations()
   })

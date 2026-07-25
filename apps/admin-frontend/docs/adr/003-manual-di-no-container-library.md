@@ -15,7 +15,8 @@ without meaningful benefit at this project's scale.
 
 ## Consequences
 
-- `composition/container.ts` is the only file that imports concrete
-  implementations — every other file depends on interfaces
+- `app/composition/container.ts` (moved from `composition/container.ts` by
+  docs/adr/009's feature-based reorg) is the only file that imports
+  concrete implementations — every other file depends on interfaces
 - Adding a new use case means manually wiring it in the container
 - Scaling beyond ~10 repositories would warrant reconsidering

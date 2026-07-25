@@ -19,13 +19,17 @@ public class CategoryRepository : RepositoryBase<Category>, ICategoryRepository
                 ? query
                 : query.Where(c => EF.Functions.ILike(c.Name, $"%{search.Trim()}%")))
                 .OrderBy(c => c.Name),
-            cancellationToken);
+            cancellationToken,
+            asNoTracking: true);
 
     public Task<Category?> GetByIdAsync(Guid categoryId, CancellationToken cancellationToken) =>
         FindAsync(c => c.Id == categoryId, cancellationToken);
 
+    // Read-only: only ever called from ListServicesQueryHandler to resolve
+    // display names, never to attach these rows to another aggregate being
+    // saved (unlike TagRepository.GetByIdsAsync, kept tracked for that reason).
     public Task<IReadOnlyList<Category>> GetByIdsAsync(IReadOnlyCollection<Guid> categoryIds, CancellationToken cancellationToken) =>
-        ListAsync(c => categoryIds.Contains(c.Id), order: null, cancellationToken);
+        ListAsync(c => categoryIds.Contains(c.Id), order: null, cancellationToken, asNoTracking: true);
 
     public Task<bool> NameExistsAsync(string name, Guid? excludeCategoryId, CancellationToken cancellationToken)
     {

@@ -117,6 +117,23 @@ state, UI, and completion criteria.
 4. **Identify which use cases the current page actually needs.** Don't
    build every possible use case upfront.
 
+For authentication work, preserve the repo's fail-closed flow:
+
+- `/login` automatically starts the OIDC redirect once authentication state
+  is known; it is an informative transition/recovery screen, not a second
+  “Entrar” confirmation. Pass the current `light` or `dark` theme through
+  the OIDC authorization request so the identity credential page can apply
+  it before rendering.
+- Map provider failures inside auth infrastructure to `AuthFlowError`.
+  Presentation shows a stable support code, a specific curated pt-BR
+  explanation, the next recovery action, and tells the user what context to
+  send when requesting help without exposing raw technical details or asking
+  them to share a password. A generic “contacte o administrador” fallback is
+  not sufficient for an authentication failure.
+- A silent renewal may update tokens and expiry only. If `user.id` or
+  `tenant.id` differs from the cached session, clear the OIDC user and require
+  a full login before any request can use the new identity.
+
 ---
 
 ## Comments — minimum of the minimum, by default zero

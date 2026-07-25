@@ -2,8 +2,10 @@
 
 Status: accepted (2026-07); the `ServicesService.IntegrationTests`-based
 regression test referenced below no longer exists — superseded by
-docs/adr/0015 (integration tests removed, unit tests only in CI); the
-mechanism itself is unchanged
+docs/adr/0015 (integration tests removed, unit tests only in CI); an
+equivalent test (same class name, same coverage) was later reintroduced
+in `ServicesService.PersistenceTests` by docs/adr/0019, so this mechanism
+is not actually uncovered today; the mechanism itself is unchanged
 
 ## Context
 
