@@ -561,6 +561,48 @@ class ArchitectureGuardTests(unittest.TestCase):
         self.assertEqual(len(findings), 1)
         self.assertIn("src/application/**", findings[0].message)
 
+    # -- Razor POST antiforgery -----------------------------------------------
+
+    def test_razor_post_form_without_explicit_antiforgery_is_blocking(self) -> None:
+        self._write(
+            "backend/services/x/X.Api/Pages/Account/Login.cshtml",
+            '<form method="post" action="/Account/Login">\n</form>\n',
+        )
+
+        findings = ag.check_razor_post_antiforgery()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "blocking")
+        self.assertEqual(findings[0].category, "razor-post-without-antiforgery")
+
+    def test_razor_post_form_with_explicit_antiforgery_is_clean(self) -> None:
+        self._write(
+            "backend/services/x/X.Api/Pages/Account/Login.cshtml",
+            "\n".join(
+                [
+                    '<form method="post"',
+                    '      action="/Account/Login"',
+                    '      asp-antiforgery="true">',
+                    "</form>",
+                    "",
+                ]
+            ),
+        )
+
+        findings = ag.check_razor_post_antiforgery()
+
+        self.assertEqual(findings, [])
+
+    def test_razor_get_form_does_not_require_antiforgery(self) -> None:
+        self._write(
+            "backend/services/x/X.Api/Pages/Search.cshtml",
+            '<form method="get" action="/search">\n</form>\n',
+        )
+
+        findings = ag.check_razor_post_antiforgery()
+
+        self.assertEqual(findings, [])
+
     # -- evolutionary architecture fitness functions -------------------------
 
     def test_tenant_owned_ai_route_requires_tenant_context(self) -> None:

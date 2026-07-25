@@ -114,7 +114,11 @@
                     </div>
                 }
 
-                <form method="post" action="@Url.Page(null, new { returnUrl = Model.ReturnUrl })" data-login-form>
+                <form
+                    method="post"
+                    action="@Url.Page(null, new { returnUrl = Model.ReturnUrl })"
+                    asp-antiforgery="true"
+                    data-login-form>
                     <div class="field">
                         <label asp-for="Email">E-mail</label>
                         <div class="field__control">
