@@ -241,19 +241,23 @@ each.
 a wide table usable at 375px — don't add a second scroll wrapper around
 it.
 
-### Form pattern: always a `Dialog` modal
+### Form pattern: one URL-driven `Dialog` editor for Categories
 
-**Decision:** A create/edit form always opens in a `Dialog`
-(`src/components/ui/dialog.tsx`) over the list. Never inline in the
-page, never its own route.
-**Reason:** The project owner chose this explicitly over a dedicated
-page/route, for one consistent pattern across every feature vertical —
-simpler to build and to maintain than deciding per-vertical.
-**Impact:** The list stays mounted and visible behind the dialog (no
-navigation, no lost scroll position). `TagsPage` is the reference: a
-single `Dialog` instance whose content switches between create/edit
-based on which record (if any) triggered it, rather than one dialog per
-row.
+**Decision:** A create/edit form opens in a `Dialog`
+(`src/components/ui/dialog.tsx`) over the list by default. Categories maps
+the nested routes `/categories/new` and `/categories/:id/edit` to the same
+`CategoryEditorDialog`, which renders the same `CategoryForm` for both
+operations.
+**Reason:** Both workflows edit the same single-field shape. Separate route
+components, pages, and hooks duplicated lifecycle and error-handling logic
+without adding a distinct interaction. The URLs still provide direct
+navigation and predictable browser-history behavior while the list remains
+mounted.
+**Impact:** `TagsPage` remains the reference for the modal CRUD pattern.
+Categories follows docs/adr/012: its parent list passes the single
+`useCategories` source through outlet context; `useCategoryEditor` selects
+create or update from the route and resolves edit ids only inside that
+tenant-scoped source.
 
 ### Destructive-action confirmation: `AlertDialog`, not `window.confirm`
 

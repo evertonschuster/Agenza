@@ -27,7 +27,11 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
     if (tenantContext === null) {
       return []
     }
-    return catalog.listTags.execute(tenantContext, { search })
+    const result = await catalog.listTags.execute(tenantContext, { search })
+    if (!result.success) {
+      throw result.error
+    }
+    return result.value
   }, [tenantContext, catalog, search])
 
   const asyncState = useAsync(listTags, { resetKey: tenantContext?.tenant.id })
@@ -42,7 +46,11 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
       // request is in flight, the mutate below must not insert tenant A's
       // newly created tag into what is now tenant B's list.
       const generation = captureGeneration()
-      const tag = await catalog.createTag.execute(tenantContext, input)
+      const createResult = await catalog.createTag.execute(tenantContext, input)
+      if (!createResult.success) {
+        throw createResult.error
+      }
+      const tag = createResult.value
       // Insert immediately so the new tag is selectable and shows up as
       // soon as the POST succeeds - the mutation's success never depends
       // on the background refetch below. If that refetch fails, this
@@ -62,9 +70,12 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
           'Não é possível atualizar uma etiqueta sem um contexto de tenant autenticado',
         )
       }
-      const tag = await catalog.updateTag.execute(tenantContext, id, input)
+      const updateResult = await catalog.updateTag.execute(tenantContext, id, input)
+      if (!updateResult.success) {
+        throw updateResult.error
+      }
       await execute()
-      return tag
+      return updateResult.value
     },
     [tenantContext, catalog, execute],
   )
@@ -74,7 +85,10 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
       if (tenantContext === null) {
         throw new Error('Não é possível excluir uma etiqueta sem um contexto de tenant autenticado')
       }
-      await catalog.deleteTag.execute(tenantContext, id)
+      const deleteResult = await catalog.deleteTag.execute(tenantContext, id)
+      if (!deleteResult.success) {
+        throw deleteResult.error
+      }
       await execute()
     },
     [tenantContext, catalog, execute],

@@ -1,6 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
 import { TagsPage } from '@/features/catalog/presentation/tags/TagsPage'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { AuthProvider } from '@/features/auth'
@@ -36,11 +37,13 @@ function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
 
 function renderTagsPage(container: AppContainer): void {
   render(
-    <AppContainerContext.Provider value={container}>
-      <AuthProvider>
-        <TagsPage />
-      </AuthProvider>
-    </AppContainerContext.Provider>,
+    <MemoryRouter initialEntries={['/tags']}>
+      <AppContainerContext.Provider value={container}>
+        <AuthProvider>
+          <TagsPage />
+        </AuthProvider>
+      </AppContainerContext.Provider>
+    </MemoryRouter>,
   )
 }
 

@@ -16,7 +16,7 @@ dependency rule: `domain` ← `application` ← `infrastructure` +
 
 ESLint `no-restricted-imports` rules prevent `domain/` and `application/`
 from importing React, react-router, or any outer-layer module. Violations
-fail the pre-commit hook and CI.
+fail the explicit lint command and CI.
 
 ## Consequences
 

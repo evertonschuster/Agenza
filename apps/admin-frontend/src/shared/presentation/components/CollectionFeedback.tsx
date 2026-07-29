@@ -6,15 +6,12 @@ import type { UiError } from '@/shared/application/UiError'
 export interface CollectionFeedbackProps<T> {
   state: AsyncState<readonly T[], UiError>
   loadingMessage: string
-  /** Shown when the initial load fails and there's nothing to display yet. */
   loadErrorMessage: string
-  /** Shown when a refresh fails but the last known-good list is still visible. */
   refreshErrorMessage: string
   emptyMessage: string
   onRetry: () => void
 }
 
-/** Shared loading/error/empty/last-known-good states for a tenant-scoped list - Tags/Categories' reference pattern. */
 export function CollectionFeedback<T>({
   state,
   loadingMessage,
@@ -34,8 +31,6 @@ export function CollectionFeedback<T>({
         </StatusMessage>
       )
 
-    // A refresh failing after items were already loaded keeps showing the
-    // last known-good list instead of a blocking error.
     case 'refreshError':
       return (
         <StatusMessage tone="error">

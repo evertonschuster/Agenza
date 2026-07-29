@@ -14,9 +14,9 @@ function flattenFieldErrors(errors: ProblemDetails['errors']): Record<string, st
 
   const flattened: Record<string, string> = {}
   for (const [field, fieldErrors] of Object.entries(errors)) {
-    const message = fieldErrors[0]?.message
-    if (message !== undefined) {
-      flattened[field] = message
+    const messages = fieldErrors.map(fieldError => fieldError.message)
+    if (messages.length > 0) {
+      flattened[field] = messages.join(' ')
     }
   }
 

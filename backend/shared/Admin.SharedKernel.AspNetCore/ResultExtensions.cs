@@ -1,12 +1,11 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Primitives;
 
 namespace Admin.SharedKernel.AspNetCore;
 
 public static class ResultExtensions
 {
-    private const string ValidationProblemType = "https://agenza/errors/validation";
-
     public static int ToHttpStatusCode(this ErrorType type) => type switch
     {
         ErrorType.Validation => StatusCodes.Status400BadRequest,
@@ -22,7 +21,7 @@ public static class ResultExtensions
         ControllerBase controller,
         Func<IActionResult> onSuccess)
     {
-        return result.IsSuccess ? onSuccess() : ToProblemResult(result.Error);
+        return result.IsSuccess ? onSuccess() : ToProblemResult(controller, result.Error);
     }
 
     public static IActionResult ToActionResult<TValue>(
@@ -30,33 +29,52 @@ public static class ResultExtensions
         ControllerBase controller,
         Func<TValue, IActionResult> onSuccess)
     {
-        return result.IsSuccess ? onSuccess(result.Value) : ToProblemResult(result.Error);
-    }
-
-    private static IActionResult ToProblemResult(Error error)
-    {
-        if (error.Type == ErrorType.Validation && error.FieldErrors is not null)
+        if (!result.IsSuccess)
         {
-            var validationProblem = new ApiProblemDetails
-            {
-                Type = ValidationProblemType,
-                Title = "Ocorreram erros de validação.",
-                Status = StatusCodes.Status400BadRequest,
-                Code = error.Code,
-                Errors = error.FieldErrors,
-            };
-
-            return new ObjectResult(validationProblem) { StatusCode = validationProblem.Status };
+            return ToProblemResult(controller, result.Error);
         }
 
-        var problem = new ApiProblemDetails
+        var httpContext = controller.HttpContext;
+        var envelope = new ApiResponse<TValue>
         {
-            Type = "https://agenza/errors/application",
-            Title = error.Message,
-            Status = error.Type.ToHttpStatusCode(),
-            Code = error.Code,
+            Data = result.Value,
+            TraceId = httpContext.TraceIdentifier,
+            CorrelationId = ResolveCorrelationId(httpContext),
         };
 
+        var actionResult = onSuccess(result.Value);
+
+        if (actionResult is ObjectResult objectResult)
+        {
+            objectResult.Value = envelope;
+        }
+
+        return actionResult;
+    }
+
+    private static IActionResult ToProblemResult(ControllerBase controller, Error error)
+    {
+        var httpContext = controller.HttpContext;
+
+        if (error.Type == ErrorType.Validation)
+        {
+            return new ObjectResult(ApiProblemDetailsFactory.CreateValidationProblem(error, httpContext))
+            {
+                StatusCode = StatusCodes.Status400BadRequest,
+            };
+        }
+
+        var problem = ApiProblemDetailsFactory.CreateApplicationProblem(error, httpContext);
         return new ObjectResult(problem) { StatusCode = problem.Status };
+    }
+
+    private static string? ResolveCorrelationId(HttpContext httpContext)
+    {
+        if (httpContext.Request.Headers.TryGetValue("X-Correlation-Id", out var correlationId) && !StringValues.IsNullOrEmpty(correlationId))
+        {
+            return correlationId.ToString();
+        }
+
+        return httpContext.TraceIdentifier;
     }
 }

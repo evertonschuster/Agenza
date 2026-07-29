@@ -9,5 +9,9 @@ public sealed class ApiProblemDetails : ProblemDetails
 {
     public string? Code { get; init; }
 
+    public string? TraceId { get; init; }
+
+    public string? CorrelationId { get; init; }
+
     public IReadOnlyDictionary<string, IReadOnlyList<FieldError>>? Errors { get; init; }
 }

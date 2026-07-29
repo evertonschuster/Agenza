@@ -10,7 +10,6 @@ import {
   Tenant,
   User,
 } from '@/features/auth'
-import { ListTags } from '@/features/catalog'
 
 function stubOidcEnv(): void {
   vi.stubEnv('VITE_OIDC_AUTHORITY', 'https://identity.example.com')
@@ -40,10 +39,10 @@ describe('createAppContainer', () => {
     expect(container.auth.sessionEvents).toBeInstanceOf(InMemorySessionEventBus)
   })
 
-  it('wires the catalog facade from concrete use cases', () => {
+  it('wires the catalog facade to the concrete repository', () => {
     const container = createAppContainer()
 
-    expect(container.catalog.listTags).toBeInstanceOf(ListTags)
+    expect(container.catalog.listTags.execute).toBeTypeOf('function')
   })
 
   it('does not expose a repository or an HttpClient on the container', () => {

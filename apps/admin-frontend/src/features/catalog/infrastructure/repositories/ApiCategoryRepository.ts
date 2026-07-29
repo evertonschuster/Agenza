@@ -6,7 +6,8 @@ import type {
   UpdateCategoryInput,
 } from '@/features/catalog/application/repositories/CategoryRepository'
 import type { HttpClient } from '@/shared/application/HttpClient'
-import type { TenantContext } from '@/features/auth'
+import type { AppError } from '@/shared/application/AppError'
+import { mapResult, type Result } from '@/shared/application/Result'
 import {
   mapCategoryDtoToDomain,
   decodeCategoryDto,
@@ -22,8 +23,8 @@ const CATEGORIES_URL = '/api/v1/categories'
 type CreateCategoryRequestBody = components['schemas']['CreateCategoryCommand']
 type UpdateCategoryRequestBody = components['schemas']['UpdateCategoryCommand']
 
-// tenantContext is accepted for structural enforcement only - tenant scope
-// travels in the X-Tenant-Id header the HttpClient attaches.
+// Tenant scope travels in the X-Tenant-Id header the HttpClient attaches -
+// no tenantContext parameter here, matching CategoryRepository's contract.
 export class ApiCategoryRepository implements CategoryRepository {
   private readonly httpClient: HttpClient
 
@@ -31,36 +32,29 @@ export class ApiCategoryRepository implements CategoryRepository {
     this.httpClient = httpClient
   }
 
-  async listAll(
-    _tenantContext: TenantContext,
-    options: ListAllCategoriesOptions = {},
-  ): Promise<Category[]> {
+  async listAll(options: ListAllCategoriesOptions = {}): Promise<Result<Category[], AppError>> {
     const query = new URLSearchParams()
     if (options.search !== undefined && options.search.trim() !== '') {
       query.set('search', options.search.trim())
     }
     const suffix = query.toString() === '' ? '' : `?${query.toString()}`
-    const dtos = await this.httpClient.get(`${CATEGORIES_URL}${suffix}`, decodeCategoryDtoArray)
-    return dtos.map(mapCategoryDtoToDomain)
+    const result = await this.httpClient.get(`${CATEGORIES_URL}${suffix}`, decodeCategoryDtoArray)
+    return mapResult(result, dtos => dtos.map(mapCategoryDtoToDomain))
   }
 
-  async create(_tenantContext: TenantContext, input: CreateCategoryInput): Promise<Category> {
+  async create(input: CreateCategoryInput): Promise<Result<Category, AppError>> {
     const body = { name: input.name } satisfies CreateCategoryRequestBody
-    const dto = await this.httpClient.post(CATEGORIES_URL, body, decodeCategoryDto)
-    return mapCategoryDtoToDomain(dto)
+    const result = await this.httpClient.post(CATEGORIES_URL, body, decodeCategoryDto)
+    return mapResult(result, mapCategoryDtoToDomain)
   }
 
-  async update(
-    _tenantContext: TenantContext,
-    id: string,
-    input: UpdateCategoryInput,
-  ): Promise<Category> {
+  async update(id: string, input: UpdateCategoryInput): Promise<Result<Category, AppError>> {
     const body: UpdateCategoryRequestBody = { categoryId: id, name: input.name }
-    const dto = await this.httpClient.put(`${CATEGORIES_URL}/${id}`, body, decodeCategoryDto)
-    return mapCategoryDtoToDomain(dto)
+    const result = await this.httpClient.put(`${CATEGORIES_URL}/${id}`, body, decodeCategoryDto)
+    return mapResult(result, mapCategoryDtoToDomain)
   }
 
-  async delete(_tenantContext: TenantContext, id: string): Promise<void> {
-    await this.httpClient.delete(`${CATEGORIES_URL}/${id}`)
+  async delete(id: string): Promise<Result<void, AppError>> {
+    return this.httpClient.delete(`${CATEGORIES_URL}/${id}`)
   }
 }

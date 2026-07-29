@@ -49,8 +49,8 @@ src/
                         shares the same internal shape - location alone
                         tells you a file's role:
         <entity>/
-          <Entity>Page.tsx   composition shell (stays at entity root - see
-                             "Componentization" below for why)
+          <Entity>Page.tsx   composition shell (stays at entity root by
+                             default; Categories uses pages/, ADR 012)
           hooks/             data hook (useTags/useCategories/useServices)
                              + controller hook (useXPage) + any sub-hooks
                              (useServiceEditor, useServiceDeletion, ...)
@@ -203,10 +203,10 @@ one class per use case, explicit constructor body (no shorthand):
 
 ```typescript
 export class ListServices {
-  private readonly serviceRepository: ServiceRepository
+  private readonly serviceRepository: ServiceRepository;
 
   constructor(serviceRepository: ServiceRepository) {
-    this.serviceRepository = serviceRepository
+    this.serviceRepository = serviceRepository;
   }
 }
 ```
@@ -284,22 +284,29 @@ frame (multi-tenancy — see root `AGENTS.md`).
 
 Replace the stub. **`TagsPage` is the reference for behavior and design**
 (search → table → dialog create/edit → `AlertDialog` delete-confirm,
-loading/error/empty states) — **not for anatomy**. Copy the *pattern*, not
+loading/error/empty states) — **not for anatomy**. Copy the _pattern_, not
 the file count: a feature with more independent workflows legitimately
 needs more files than Tags does. See "Componentization" below for when
 and how to split a page's controller hook, form, and dialog.
 
-#### List = `Table`, form = `Dialog` — always
+#### List = `Table`; form = `Dialog` by default
 
 A page listing records renders a `Table` (`src/components/ui/table.tsx`):
 one row per record, actions (Edit/Delete) as buttons in the last column —
-not stacked `Card`s. A create/edit form always opens in a `Dialog`
-(`src/components/ui/dialog.tsx`) over the list — never inline in the page,
-never its own route. One `Dialog` instance whose content switches between
-create/edit based on which record (if any) triggered it (`TagsPage`'s
-dialog-target state), not a dialog per row. The form component itself stays
-dialog-agnostic — the page (or its dialog wrapper) wires it into the
-`Dialog`.
+not stacked `Card`s. A create/edit form opens in a `Dialog`
+(`src/components/ui/dialog.tsx`) over the list by default. One `Dialog`
+instance switches between create/edit based on which record triggered it
+(`TagsPage`'s dialog-target state), not a dialog per row. The form component
+stays dialog-agnostic.
+
+Categories maps `/categories/new` and `/categories/:id/edit` to the same
+nested editor `Dialog` over the still-mounted `/categories` list
+(docs/adr/012). `CategoryEditorDialog` renders one `CategoryForm` and
+`useCategoryEditor` selects create or update from the route. The parent
+list owns one `useCategories` source for rows and every mutation and passes
+it through outlet context; edit ids are resolved only from that
+tenant-scoped collection. Its smartphone table uses labelled icon actions
+with larger touch targets and reveals action text from `sm` upward.
 
 A destructive action (delete) is confirmed with the shared
 `DeleteConfirmationDialog` (`shared/presentation/components/`, built on
@@ -318,7 +325,7 @@ machine behind it.
 - A controller hook (`useXPage`) follows the same single-responsibility
   bar as any other code: when it accumulates more than one real workflow
   (search/filter state, an editor with dirty-tracking, a deletion
-  confirmation are three *different* concerns), split it into focused
+  confirmation are three _different_ concerns), split it into focused
   hooks (`useXFilters`, `useXEditor`, `useXDeletion`) that the page's
   composer hook assembles — see `features/catalog/presentation/services/hooks/`
   for the reference (`useServicesPage` composing `useServiceFilters` +
@@ -326,7 +333,7 @@ machine behind it.
 - Extract a component or hook on its **first** use if it's already a
   distinct concern (a field group, a delete dialog) — keep it
   feature-local (e.g. `features/catalog/presentation/services/components/
-  ServiceCategoryField.tsx`). Only **promote** something to `shared/`
+ServiceCategoryField.tsx`). Only **promote** something to `shared/`
   once a **second**, genuinely-identical use appears across features —
   the "second use" rule gates promotion, not the initial extraction.
 - Break a type cycle between a controller and the component(s) it feeds
@@ -357,16 +364,22 @@ Any form beyond a single trivial field uses `react-hook-form` +
 const tagFormSchema = z.object({
   name: z.string().trim().min(1, NAME_MESSAGE).max(40, NAME_MESSAGE),
   color: z.enum(TAG_COLOR_PALETTE, { message: COLOR_MESSAGE }),
-})
-export type TagFormValues = z.infer<typeof tagFormSchema>
+});
+export type TagFormValues = z.infer<typeof tagFormSchema>;
 
-const { register, control, handleSubmit, setError, setFocus, formState: { errors } } =
-  useForm<TagFormValues>({
-    resolver: zodResolver(tagFormSchema),
-    defaultValues: initialValues,
-    mode: 'onTouched',
-    reValidateMode: 'onChange',
-  })
+const {
+  register,
+  control,
+  handleSubmit,
+  setError,
+  setFocus,
+  formState: { errors },
+} = useForm<TagFormValues>({
+  resolver: zodResolver(tagFormSchema),
+  defaultValues: initialValues,
+  mode: "onTouched",
+  reValidateMode: "onChange",
+});
 ```
 
 - `<form onSubmit={e => void handleSubmit(onSubmit)(e)} noValidate ...>` —
@@ -396,7 +409,7 @@ const { register, control, handleSubmit, setError, setFocus, formState: { errors
   first invalid field instead of losing their position — see `TagForm`'s
   `serverError` effect.
 - Don't reach for Formik or Yup without an explicit ADR — React Hook Form
-  + Zod is the established, working pattern here (`docs/DECISIONS.md`).
+  - Zod is the established, working pattern here (`docs/DECISIONS.md`).
 
 #### Inline creation (a select that can create its own options)
 
@@ -431,16 +444,16 @@ wants it." Do it at the call site instead (a conditional `<Spinner />` in
 Shared composites live in `shared/presentation/components/` — reuse
 before writing a new one:
 
-| Component                        | Use for                                                         |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `PageHeader`                     | Title + primary action row at the top of every page             |
-| `StatusMessage`                  | Loading / empty / error text (`tone="error"` for errors)        |
-| `CollectionFeedback`             | Loading/error/empty/last-known-good states for a tenant-scoped list |
-| `DeleteConfirmationDialog`       | Destructive-action `AlertDialog`, wired to `useDeleteConfirmation` |
-| `TextField` / `TextAreaField`    | Labeled form inputs (wraps shadcn `Label` + `Input`/`Textarea`) |
-| `CenteredScreen`                 | Full-page centered content (pre-auth screens only)              |
-| `FullScreenSpinner`              | Full-page loading state                                         |
-| `ThemeToggle`                    | Already in `AdminLayout` — don't add another one                |
+| Component                     | Use for                                                             |
+| ----------------------------- | ------------------------------------------------------------------- |
+| `PageHeader`                  | Title + primary action row at the top of every page                 |
+| `StatusMessage`               | Loading / empty / error text (`tone="error"` for errors)            |
+| `CollectionFeedback`          | Loading/error/empty/last-known-good states for a tenant-scoped list |
+| `DeleteConfirmationDialog`    | Destructive-action `AlertDialog`, wired to `useDeleteConfirmation`  |
+| `TextField` / `TextAreaField` | Labeled form inputs (wraps shadcn `Label` + `Input`/`Textarea`)     |
+| `CenteredScreen`              | Full-page centered content (pre-auth screens only)                  |
+| `FullScreenSpinner`           | Full-page loading state                                             |
+| `ThemeToggle`                 | Already in `AdminLayout` — don't add another one                    |
 
 Only promote a one-off to `shared/` once a second, genuinely identical
 use appears (see "Componentization" above) — until then it stays
@@ -455,13 +468,13 @@ it's a fixed light-mode color that breaks the moment a user switches to
 dark.
 
 | Instead of (stale, don't use)       | Use                           | For                           |
-| -------------------------------------- | -------------------------------- | -------------------------------- |
-| `bg-slate-50`                        | `bg-background`               | Page background               |
-| `bg-white`                           | `bg-card`                     | Card/surface background       |
-| `border-slate-200`                   | `border-border`               | Card and divider borders      |
-| `text-slate-800`                     | `text-foreground`             | Headings, primary text        |
+| ----------------------------------- | ----------------------------- | ----------------------------- |
+| `bg-slate-50`                       | `bg-background`               | Page background               |
+| `bg-white`                          | `bg-card`                     | Card/surface background       |
+| `border-slate-200`                  | `border-border`               | Card and divider borders      |
+| `text-slate-800`                    | `text-foreground`             | Headings, primary text        |
 | `text-slate-600` / `text-slate-400` | `text-muted-foreground`       | Secondary/muted text          |
-| `text-red-600`                       | `text-destructive`            | Error text                    |
+| `text-red-600`                      | `text-destructive`            | Error text                    |
 | `bg-teal-600` / `text-teal-700`     | `text-primary` / `bg-primary` | Brand accent, primary buttons |
 
 There is no brand color to special-case — the app uses the stock
@@ -548,13 +561,13 @@ built.
 
 ```typescript
 // shared/application/HttpClient.ts
-export type Decoder<T> = (payload: unknown) => T
+export type Decoder<T> = (payload: unknown) => T;
 
 export interface HttpClient {
-  get<T>(path: string, decode: Decoder<T>): Promise<T>
-  post<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>
-  put<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>
-  delete(path: string): Promise<void>
+  get<T>(path: string, decode: Decoder<T>): Promise<T>;
+  post<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>;
+  put<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>;
+  delete(path: string): Promise<void>;
 }
 ```
 
@@ -601,8 +614,8 @@ read.
       than one
 - [ ] Page: handles loading/error/success, built from shadcn/ui primitives
       and shared composites (not hand-rolled markup)
-- [ ] List uses `Table`, form opens in a `Dialog` — not stacked `Card`s
-      or an inline/routed form
+- [ ] List uses `Table`; form uses the feature's documented interaction
+      (`Dialog` by default, routed editor only where an ADR establishes it)
 - [ ] Destructive actions confirmed with `DeleteConfirmationDialog` — not
       `window.confirm` or a hand-rolled `AlertDialog`
 - [ ] No prop/variant added to a `src/components/ui/*` file unless this

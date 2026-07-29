@@ -1,7 +1,10 @@
 # ADR 0030 — Branch-agnostic pre-commit
 
-Status: accepted (2026-07); supersedes the direct-`main` commit prohibition
-and local-hook enforcement portions of docs/adr/0021
+Status: superseded in part by ADR 0031 (2026-07); permission for direct local
+commits to `main` remains current, while the local-hook decision is historical
+
+> **2026-07 update:** ADR 0031 removes repository-owned local Git hooks.
+> This ADR still governs permission for direct local commits to `main`.
 
 ## Context
 

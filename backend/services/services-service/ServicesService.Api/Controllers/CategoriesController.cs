@@ -23,7 +23,8 @@ public class CategoriesController : AgenzaControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType<IReadOnlyList<CategoryResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse<IReadOnlyList<CategoryResponse>>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> List([FromQuery] ListCategoriesQuery query, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Query(query, cancellationToken);
@@ -31,7 +32,9 @@ public class CategoriesController : AgenzaControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType<CategoryResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ApiResponse<CategoryResponse>>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(CreateCategoryCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command, cancellationToken);
@@ -39,7 +42,10 @@ public class CategoriesController : AgenzaControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [ProducesResponseType<CategoryResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse<CategoryResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(Guid id, UpdateCategoryCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command with { CategoryId = id }, cancellationToken);
@@ -48,6 +54,8 @@ public class CategoriesController : AgenzaControllerBase
 
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(new DeleteCategoryCommand(id), cancellationToken);

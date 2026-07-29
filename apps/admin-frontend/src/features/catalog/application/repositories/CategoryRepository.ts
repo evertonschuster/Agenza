@@ -1,5 +1,6 @@
 import type { Category } from '@/features/catalog/domain/entities/Category'
-import type { TenantContext } from '@/features/auth'
+import type { AppError } from '@/shared/application/AppError'
+import type { Result } from '@/shared/application/Result'
 
 export interface CreateCategoryInput {
   name: string
@@ -14,8 +15,8 @@ export interface ListAllCategoriesOptions {
 }
 
 export interface CategoryRepository {
-  listAll(tenantContext: TenantContext, options?: ListAllCategoriesOptions): Promise<Category[]>
-  create(tenantContext: TenantContext, input: CreateCategoryInput): Promise<Category>
-  update(tenantContext: TenantContext, id: string, input: UpdateCategoryInput): Promise<Category>
-  delete(tenantContext: TenantContext, id: string): Promise<void>
+  listAll(options?: ListAllCategoriesOptions): Promise<Result<Category[], AppError>>
+  create(input: CreateCategoryInput): Promise<Result<Category, AppError>>
+  update(id: string, input: UpdateCategoryInput): Promise<Result<Category, AppError>>
+  delete(id: string): Promise<Result<void, AppError>>
 }
