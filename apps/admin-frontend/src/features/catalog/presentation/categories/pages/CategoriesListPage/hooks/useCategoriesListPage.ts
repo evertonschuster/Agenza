@@ -1,42 +1,17 @@
-import { useCallback, useEffect, useState } from 'react'
-import { useAppContainer } from '@/app/providers/useAppContainer'
+import { useCategories } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategories'
 import { useCategoryDeletion } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoryDeletion'
-import type {
-  CategoriesListState,
-  UseCategoriesListPageResult,
-} from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage.types'
+import type { UseCategoriesListPageResult } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage.types'
 
 export function useCategoriesListPage(search: string): UseCategoriesListPageResult {
-  const { catalog } = useAppContainer()
-  const [state, setState] = useState<CategoriesListState>({ status: 'loading' })
+  const categoriesSource = useCategories(search)
+  const { categories, listState, refetch, deleteCategory } = categoriesSource
 
-  const fetchCategories = useCallback(async (): Promise<void> => {
-    setState({ status: 'loading' })
-    const result = await catalog.listCategories.execute({ search })
-    setState(
-      result.success
-        ? { status: 'success', categories: result.value }
-        : { status: 'error', message: result.error.message },
-    )
-  }, [catalog, search])
-
-  useEffect(() => {
-    void fetchCategories()
-  }, [fetchCategories])
-
-  const deletion = useCategoryDeletion({
-    onDelete: async id => {
-      const result = await catalog.deleteCategory.execute(id)
-      if (!result.success) {
-        throw result.error
-      }
-      await fetchCategories()
-    },
-  })
+  const deletion = useCategoryDeletion({ onDelete: deleteCategory })
 
   return {
-    state,
-    onRetry: () => void fetchCategories(),
+    categories,
+    listState,
+    onRetry: () => void refetch(),
     onDelete: deletion.onRequestDelete,
     deleteDialog: {
       target: deletion.target,
@@ -45,5 +20,6 @@ export function useCategoriesListPage(search: string): UseCategoriesListPageResu
       onCancel: deletion.onCancel,
       onConfirm: () => void deletion.onConfirm(),
     },
+    editorContext: categoriesSource,
   }
 }

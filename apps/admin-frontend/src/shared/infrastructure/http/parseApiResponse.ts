@@ -8,7 +8,7 @@ import { parseProblemDetails } from '@/shared/infrastructure/http/ProblemDetails
 // directly, instead of the envelope around it.
 function unwrapData(rawBody: unknown): unknown {
   if (typeof rawBody === 'object' && rawBody !== null && 'data' in rawBody) {
-    return (rawBody as { data: unknown }).data
+    return rawBody.data
   }
   return rawBody
 }

@@ -17,14 +17,10 @@ import type { components } from '@/features/catalog/infrastructure/generated/ser
 
 const CATEGORIES_URL = '/api/v1/categories'
 
-// The route id is always keyed into the PUT body too (docs/adr/010) so the
-// two are structurally incapable of diverging, even though the backend
-// controller only ever trusts the route id.
 type CreateCategoryRequestBody = components['schemas']['CreateCategoryCommand']
 type UpdateCategoryRequestBody = components['schemas']['UpdateCategoryCommand']
 
-// Tenant scope travels in the X-Tenant-Id header the HttpClient attaches -
-// no tenantContext parameter here, matching CategoryRepository's contract.
+
 export class ApiCategoryRepository implements CategoryRepository {
   private readonly httpClient: HttpClient
 

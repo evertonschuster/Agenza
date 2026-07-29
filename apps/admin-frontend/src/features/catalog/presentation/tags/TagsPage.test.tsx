@@ -1,8 +1,9 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen, within, fireEvent, act } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
+import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-router'
 import { TagsPage } from '@/features/catalog/presentation/tags/TagsPage'
+import { TagEditorDialog } from '@/features/catalog/presentation/tags/pages/TagEditorDialog'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { AuthProvider } from '@/features/auth'
 import type { AppContainer, CatalogFacade } from '@/app/composition/container'
@@ -12,6 +13,7 @@ import { User } from '@/features/auth'
 import { MALICIOUS_PAYLOADS } from '@/test/fixtures/maliciousPayloads'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import { AppError } from '@/shared/application/AppError'
+import { success, failure } from '@/shared/application/Result'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
@@ -26,24 +28,34 @@ function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
   return createFakeAppContainer({
     auth: { getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) } },
     catalog: {
-      listTags: { execute: vi.fn(() => Promise.resolve([vipTag])) },
-      createTag: { execute: vi.fn(() => Promise.resolve(vipTag)) },
-      updateTag: { execute: vi.fn(() => Promise.resolve(vipTag)) },
-      deleteTag: { execute: vi.fn(() => Promise.resolve()) },
+      listTags: { execute: vi.fn(() => Promise.resolve(success([vipTag]))) },
+      createTag: { execute: vi.fn(() => Promise.resolve(success(vipTag))) },
+      updateTag: { execute: vi.fn(() => Promise.resolve(success(vipTag))) },
+      deleteTag: { execute: vi.fn(() => Promise.resolve(success(undefined))) },
       ...overrides,
     },
   })
 }
 
 function renderTagsPage(container: AppContainer): void {
+  const routes: RouteObject[] = [
+    {
+      path: '/tags',
+      element: <TagsPage />,
+      children: [
+        { path: 'new', element: <TagEditorDialog /> },
+        { path: ':id/edit', element: <TagEditorDialog /> },
+      ],
+    },
+  ]
+  const router = createMemoryRouter(routes, { initialEntries: ['/tags'] })
+
   render(
-    <MemoryRouter initialEntries={['/tags']}>
-      <AppContainerContext.Provider value={container}>
-        <AuthProvider>
-          <TagsPage />
-        </AuthProvider>
-      </AppContainerContext.Provider>
-    </MemoryRouter>,
+    <AppContainerContext.Provider value={container}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </AppContainerContext.Provider>,
   )
 }
 
@@ -56,7 +68,7 @@ describe('TagsPage', () => {
   })
 
   it('shows an empty state when there are no tags', async () => {
-    renderTagsPage(buildContainer({ listTags: { execute: vi.fn(() => Promise.resolve([])) } }))
+    renderTagsPage(buildContainer({ listTags: { execute: vi.fn(() => Promise.resolve(success([]))) } }))
 
     expect(await screen.findByText(/nenhuma etiqueta ainda/i)).toBeInTheDocument()
   })
@@ -66,8 +78,8 @@ describe('TagsPage', () => {
       buildContainer({
         listTags: {
           execute: vi.fn(() =>
-            Promise.reject(
-              new AppError({ code: 'network', message: 'network down', retryable: true }),
+            Promise.resolve(
+              failure(new AppError({ code: 'network', message: 'network down', retryable: true })),
             ),
           ),
         },
@@ -83,7 +95,15 @@ describe('TagsPage', () => {
     renderTagsPage(
       buildContainer({
         listTags: {
-          execute: vi.fn(() => Promise.reject(new Error('undefined.trim is not a function'))),
+          // A repository always resolves Result<T, AppError>, but toUiError's
+          // fallback branch (for anything that isn't an AppError instance) is
+          // still defense-in-depth worth covering here - the cast simulates
+          // that contract being violated internally.
+          execute: vi.fn(() =>
+            Promise.resolve(
+              failure(new Error('undefined.trim is not a function') as unknown as AppError),
+            ),
+          ),
         },
       }),
     )
@@ -97,8 +117,8 @@ describe('TagsPage', () => {
   })
 
   it('creates a tag through the form and refreshes the list', async () => {
-    const createTagSpy = vi.fn(() => Promise.resolve(vipTag))
-    const listTagsSpy = vi.fn(() => Promise.resolve([vipTag]))
+    const createTagSpy = vi.fn(() => Promise.resolve(success(vipTag)))
+    const listTagsSpy = vi.fn(() => Promise.resolve(success([vipTag])))
     renderTagsPage(
       buildContainer({ createTag: { execute: createTagSpy }, listTags: { execute: listTagsSpy } }),
     )
@@ -110,7 +130,7 @@ describe('TagsPage', () => {
     await userEvent.click(screen.getByRole('radio', { name: 'Cor #ef4444' }))
     await userEvent.click(screen.getByRole('button', { name: /criar etiqueta/i }))
 
-    expect(createTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
+    expect(createTagSpy).toHaveBeenCalledExactlyOnceWith({
       name: 'Returning',
       color: '#ef4444',
     })
@@ -121,7 +141,7 @@ describe('TagsPage', () => {
   })
 
   it('shows a validation error and does not submit when the name is blank', async () => {
-    const createTagSpy = vi.fn(() => Promise.resolve(vipTag))
+    const createTagSpy = vi.fn(() => Promise.resolve(success(vipTag)))
     renderTagsPage(buildContainer({ createTag: { execute: createTagSpy } }))
     await screen.findByText('VIP')
 
@@ -159,7 +179,11 @@ describe('TagsPage', () => {
     renderTagsPage(
       buildContainer({
         createTag: {
-          execute: vi.fn(() => Promise.reject(new Error('Tag name is already in use.'))),
+          execute: vi.fn(() =>
+            Promise.resolve(
+              failure(new Error('Tag name is already in use.') as unknown as AppError),
+            ),
+          ),
         },
       }),
     )
@@ -185,7 +209,9 @@ describe('TagsPage', () => {
         },
       })
       renderTagsPage(
-        buildContainer({ createTag: { execute: vi.fn(() => Promise.reject(validationError)) } }),
+        buildContainer({
+          createTag: { execute: vi.fn(() => Promise.resolve(failure(validationError))) },
+        }),
       )
       await screen.findByText('VIP')
 
@@ -210,7 +236,9 @@ describe('TagsPage', () => {
         backendCode: 'Tag.DuplicateName',
       })
       renderTagsPage(
-        buildContainer({ createTag: { execute: vi.fn(() => Promise.reject(conflictError)) } }),
+        buildContainer({
+          createTag: { execute: vi.fn(() => Promise.resolve(failure(conflictError))) },
+        }),
       )
       await screen.findByText('VIP')
 
@@ -225,7 +253,7 @@ describe('TagsPage', () => {
   })
 
   it('edits a tag through the inline form', async () => {
-    const updateTagSpy = vi.fn(() => Promise.resolve(vipTag))
+    const updateTagSpy = vi.fn(() => Promise.resolve(success(vipTag)))
     renderTagsPage(buildContainer({ updateTag: { execute: updateTagSpy } }))
     await screen.findByText('VIP')
 
@@ -235,7 +263,7 @@ describe('TagsPage', () => {
     await userEvent.type(nameInput, 'Renamed')
     await userEvent.click(screen.getByRole('button', { name: /salvar alterações/i }))
 
-    expect(updateTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'tag-1', {
+    expect(updateTagSpy).toHaveBeenCalledExactlyOnceWith('tag-1', {
       name: 'Renamed',
       color: '#0d9488',
       description: 'High-value client',
@@ -255,7 +283,7 @@ describe('TagsPage', () => {
     })
 
     it('deletes the tag when the confirmation is accepted', async () => {
-      const deleteTagSpy = vi.fn(() => Promise.resolve())
+      const deleteTagSpy = vi.fn(() => Promise.resolve(success(undefined)))
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
@@ -263,14 +291,14 @@ describe('TagsPage', () => {
       const alertDialog = await screen.findByRole('alertdialog')
       await userEvent.click(within(alertDialog).getByRole('button', { name: 'Excluir' }))
 
-      expect(deleteTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'tag-1')
+      expect(deleteTagSpy).toHaveBeenCalledExactlyOnceWith('tag-1')
       await vi.waitFor(() => {
         expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
       })
     })
 
     it('does not delete the tag when the confirmation is cancelled', async () => {
-      const deleteTagSpy = vi.fn(() => Promise.resolve())
+      const deleteTagSpy = vi.fn(() => Promise.resolve(success(undefined)))
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
@@ -285,7 +313,9 @@ describe('TagsPage', () => {
     })
 
     it('shows an error and keeps the dialog open when deletion fails', async () => {
-      const deleteTagSpy = vi.fn(() => Promise.reject(new Error('Tag is in use.')))
+      const deleteTagSpy = vi.fn(() =>
+        Promise.resolve(failure(new Error('Tag is in use.') as unknown as AppError)),
+      )
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
 
@@ -300,7 +330,7 @@ describe('TagsPage', () => {
 
   describe('search', () => {
     it('refetches with the debounced search term after the user stops typing', async () => {
-      const listTagsSpy = vi.fn(() => Promise.resolve([vipTag]))
+      const listTagsSpy = vi.fn(() => Promise.resolve(success([vipTag])))
       renderTagsPage(buildContainer({ listTags: { execute: listTagsSpy } }))
       await screen.findByText('VIP')
       listTagsSpy.mockClear()
@@ -316,7 +346,7 @@ describe('TagsPage', () => {
           await vi.advanceTimersByTimeAsync(300)
         })
 
-        expect(listTagsSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, { search: 'vip' })
+        expect(listTagsSpy).toHaveBeenCalledExactlyOnceWith({ search: 'vip' })
       } finally {
         vi.useRealTimers()
       }
@@ -327,7 +357,9 @@ describe('TagsPage', () => {
     it.each(MALICIOUS_PAYLOADS)('renders "%s" as inert text, not markup', async payload => {
       const maliciousTag = Tag.create({ id: 'malicious-1', name: payload, color: '#0d9488' })
       renderTagsPage(
-        buildContainer({ listTags: { execute: vi.fn(() => Promise.resolve([maliciousTag])) } }),
+        buildContainer({
+          listTags: { execute: vi.fn(() => Promise.resolve(success([maliciousTag]))) },
+        }),
       )
 
       expect(await screen.findByText(payload)).toBeInTheDocument()

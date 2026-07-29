@@ -1,8 +1,10 @@
 import type { Category } from '@/features/catalog/domain/entities/Category'
-import type { CategoriesListState } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage.types'
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
 
 export interface CategoriesTableProps {
-  state: CategoriesListState
+  categories: readonly Category[]
+  listState: AsyncState<readonly Category[], UiError>
   hasActiveSearch: boolean
   onRetry: () => void
   onEdit: (category: Category) => void

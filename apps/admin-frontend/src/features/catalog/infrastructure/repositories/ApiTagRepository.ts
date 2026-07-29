@@ -6,7 +6,6 @@ import type {
   UpdateTagInput,
 } from '@/features/catalog/application/repositories/TagRepository'
 import type { HttpClient } from '@/shared/application/HttpClient'
-import type { TenantContext } from '@/features/auth'
 import type { AppError } from '@/shared/application/AppError'
 import { mapResult, type Result } from '@/shared/application/Result'
 import {
@@ -23,8 +22,8 @@ type UpdateTagRequestBody = components['schemas']['UpdateTagCommand']
 
 const TAGS_URL = '/api/v1/tags'
 
-// tenantContext is accepted for structural enforcement only - tenant scope
-// travels in the X-Tenant-Id header the HttpClient attaches.
+// Tenant scope travels in the X-Tenant-Id header the HttpClient attaches -
+// no tenantContext parameter here, matching TagRepository's contract.
 export class ApiTagRepository implements TagRepository {
   private readonly httpClient: HttpClient
 
@@ -32,10 +31,7 @@ export class ApiTagRepository implements TagRepository {
     this.httpClient = httpClient
   }
 
-  async listAll(
-    _tenantContext: TenantContext,
-    options: ListAllTagsOptions = {},
-  ): Promise<Result<Tag[], AppError>> {
+  async listAll(options: ListAllTagsOptions = {}): Promise<Result<Tag[], AppError>> {
     const query = new URLSearchParams()
     if (options.search !== undefined && options.search.trim() !== '') {
       query.set('search', options.search.trim())
@@ -45,10 +41,7 @@ export class ApiTagRepository implements TagRepository {
     return mapResult(result, dtos => dtos.map(mapTagDtoToDomain))
   }
 
-  async create(
-    _tenantContext: TenantContext,
-    input: CreateTagInput,
-  ): Promise<Result<Tag, AppError>> {
+  async create(input: CreateTagInput): Promise<Result<Tag, AppError>> {
     const body = {
       name: input.name,
       color: input.color,
@@ -58,11 +51,7 @@ export class ApiTagRepository implements TagRepository {
     return mapResult(result, mapTagDtoToDomain)
   }
 
-  async update(
-    _tenantContext: TenantContext,
-    id: string,
-    input: UpdateTagInput,
-  ): Promise<Result<Tag, AppError>> {
+  async update(id: string, input: UpdateTagInput): Promise<Result<Tag, AppError>> {
     const body: UpdateTagRequestBody = {
       tagId: id,
       name: input.name,
@@ -73,7 +62,7 @@ export class ApiTagRepository implements TagRepository {
     return mapResult(result, mapTagDtoToDomain)
   }
 
-  async delete(_tenantContext: TenantContext, id: string): Promise<Result<void, AppError>> {
+  async delete(id: string): Promise<Result<void, AppError>> {
     return this.httpClient.delete(`${TAGS_URL}/${id}`)
   }
 }

@@ -4,9 +4,6 @@ import { server } from '@/test/mocks/server'
 import { ApiCategoryRepository } from '@/features/catalog/infrastructure/repositories/ApiCategoryRepository'
 import { AuthenticatedHttpClient } from '@/shared/infrastructure/http/AuthenticatedHttpClient'
 import { categoryFixture } from '@/test/mocks/handlers/categoryHandlers'
-import { Tenant } from '@/features/auth'
-import { User } from '@/features/auth'
-import type { TenantContext } from '@/features/auth'
 
 const baseUrl = 'https://api.test'
 
@@ -17,20 +14,17 @@ function buildRepository(): ApiCategoryRepository {
   return new ApiCategoryRepository(httpClient)
 }
 
-function buildTenantContext(): TenantContext {
-  const tenant = Tenant.create('tenant-123')
-  return { tenant, user: User.create({ id: 'user-1', tenant }) }
-}
-
 describe('ApiCategoryRepository', () => {
   it('lists categories mapped to domain entities', async () => {
     const repository = buildRepository()
 
-    const categories = await repository.listAll(buildTenantContext())
+    const result = await repository.listAll()
 
-    expect(categories).toHaveLength(1)
-    expect(categories[0]?.id).toBe(categoryFixture.id)
-    expect(categories[0]?.name).toBe(categoryFixture.name)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value).toHaveLength(1)
+    expect(result.value[0]?.id).toBe(categoryFixture.id)
+    expect(result.value[0]?.name).toBe(categoryFixture.name)
   })
 
   it('sends the search term as a query parameter', async () => {
@@ -42,7 +36,7 @@ describe('ApiCategoryRepository', () => {
     )
     const repository = buildRepository()
 
-    await repository.listAll(buildTenantContext(), { search: 'massa' })
+    await repository.listAll({ search: 'massa' })
   })
 
   it('omits the search query parameter when the search term is blank', async () => {
@@ -54,7 +48,7 @@ describe('ApiCategoryRepository', () => {
     )
     const repository = buildRepository()
 
-    await repository.listAll(buildTenantContext(), { search: '   ' })
+    await repository.listAll({ search: '   ' })
   })
 
   it('creates a category and returns the mapped result', async () => {
@@ -66,9 +60,11 @@ describe('ApiCategoryRepository', () => {
     )
     const repository = buildRepository()
 
-    const category = await repository.create(buildTenantContext(), { name: 'Massagens' })
+    const result = await repository.create({ name: 'Massagens' })
 
-    expect(category.id).toBe(categoryFixture.id)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.id).toBe(categoryFixture.id)
   })
 
   it('updates a category at the correct path', async () => {
@@ -83,11 +79,11 @@ describe('ApiCategoryRepository', () => {
     )
     const repository = buildRepository()
 
-    const category = await repository.update(buildTenantContext(), 'category-1', {
-      name: 'Renamed',
-    })
+    const result = await repository.update('category-1', { name: 'Renamed' })
 
-    expect(category.name).toBe('Renamed')
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.name).toBe('Renamed')
   })
 
   it('deletes a category at the correct path', async () => {
@@ -100,7 +96,7 @@ describe('ApiCategoryRepository', () => {
     )
     const repository = buildRepository()
 
-    await repository.delete(buildTenantContext(), 'category-1')
+    await repository.delete('category-1')
 
     expect(deleteWasCalled).toBe(true)
   })
@@ -113,8 +109,10 @@ describe('ApiCategoryRepository', () => {
     )
     const repository = buildRepository()
 
-    await expect(repository.listAll(buildTenantContext())).rejects.toThrow(
-      'Não foi possível concluir a operação. Tente novamente.',
-    )
+    const result = await repository.listAll()
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error.message).toBe('Não foi possível concluir a operação. Tente novamente.')
   })
 })

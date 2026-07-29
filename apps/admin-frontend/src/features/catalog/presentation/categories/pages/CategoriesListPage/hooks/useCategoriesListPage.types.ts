@@ -1,12 +1,11 @@
 import type { Category } from '@/features/catalog/domain/entities/Category'
-
-export type CategoriesListState =
-  | { status: 'loading' }
-  | { status: 'error'; message: string }
-  | { status: 'success'; categories: readonly Category[] }
+import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
+import type { UiError } from '@/shared/application/UiError'
+import type { UseCategoriesResult } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategories'
 
 export interface UseCategoriesListPageResult {
-  state: CategoriesListState
+  categories: readonly Category[]
+  listState: AsyncState<readonly Category[], UiError>
   onRetry: () => void
   onDelete: (category: Category) => void
   deleteDialog: {
@@ -16,4 +15,5 @@ export interface UseCategoriesListPageResult {
     onCancel: () => void
     onConfirm: () => void
   }
+  editorContext: UseCategoriesResult
 }

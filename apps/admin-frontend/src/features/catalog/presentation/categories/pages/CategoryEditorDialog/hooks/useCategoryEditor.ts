@@ -1,6 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { useNavigate, useParams } from 'react-router'
-import { useAppContainer } from '@/app/providers/useAppContainer'
+import { useState } from 'react'
+import { useNavigate, useOutletContext, useParams } from 'react-router'
 import type {
   CategoryFormField,
   CategoryFormValues,
@@ -9,9 +8,9 @@ import {
   categoryCodeFieldMap,
   categoryFieldMap,
 } from '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/forms/categoryFieldMaps'
+import type { UseCategoriesResult } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategories'
 import { mapApiErrorToForm, type ServerFormError } from '@/shared/presentation/forms/serverFormError'
 import type {
-  CategoriesLoadState,
   CategoryEditorContent,
   UseCategoryEditorResult,
 } from '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/hooks/useCategoryEditor.types'
@@ -21,30 +20,11 @@ const EMPTY_FORM_VALUES: CategoryFormValues = { name: '' }
 export function useCategoryEditor(): UseCategoryEditorResult {
   const { id: categoryId } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { catalog } = useAppContainer()
-  const [loadState, setLoadState] = useState<CategoriesLoadState>({ status: 'loading' })
-  const latestRequestRef = useRef(0)
+  const { categories, listState, refetch, createCategory, updateCategory } =
+    useOutletContext<UseCategoriesResult>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [serverError, setServerError] = useState<ServerFormError<CategoryFormField> | null>(null)
   const isEditing = categoryId !== undefined
-
-  const fetchCategories = useCallback(async (): Promise<void> => {
-    const requestId = ++latestRequestRef.current
-    setLoadState({ status: 'loading' })
-    const result = await catalog.listCategories.execute()
-    if (requestId !== latestRequestRef.current) {
-      return
-    }
-    setLoadState(
-      result.success
-        ? { status: 'success', categories: result.value }
-        : { status: 'error', message: result.error.message },
-    )
-  }, [catalog])
-
-  useEffect(() => {
-    void fetchCategories()
-  }, [fetchCategories])
 
   function closeEditor(): void {
     void navigate('..', { replace: true })
@@ -53,18 +33,17 @@ export function useCategoryEditor(): UseCategoryEditorResult {
   async function onSubmit(values: CategoryFormValues): Promise<void> {
     setIsSubmitting(true)
     setServerError(null)
-
-    const result =
-      categoryId === undefined
-        ? await catalog.createCategory.execute({ name: values.name })
-        : await catalog.updateCategory.execute(categoryId, { name: values.name })
-
-    if (result.success) {
+    try {
+      if (categoryId === undefined) {
+        await createCategory({ name: values.name })
+      } else {
+        await updateCategory(categoryId, { name: values.name })
+      }
       closeEditor()
-    } else {
+    } catch (caughtError) {
       setServerError(
         mapApiErrorToForm(
-          result.error,
+          caughtError,
           categoryFieldMap,
           categoryCodeFieldMap,
           isEditing
@@ -72,23 +51,24 @@ export function useCategoryEditor(): UseCategoryEditorResult {
             : 'Não foi possível criar a categoria.',
         ),
       )
+    } finally {
+      setIsSubmitting(false)
     }
-    setIsSubmitting(false)
   }
 
   let content: CategoryEditorContent
   if (!isEditing) {
     content = { status: 'ready', initialValues: EMPTY_FORM_VALUES }
-  } else if (loadState.status === 'loading') {
+  } else if (listState.status === 'idle' || listState.status === 'loading') {
     content = { status: 'loading' }
-  } else if (loadState.status === 'error') {
+  } else if (listState.status === 'initialError') {
     content = {
       status: 'loadError',
-      message: loadState.message,
-      onRetry: () => void fetchCategories(),
+      message: listState.error.message,
+      onRetry: () => void refetch(),
     }
   } else {
-    const category = loadState.categories.find(item => item.id === categoryId)
+    const category = categories.find(item => item.id === categoryId)
     content =
       category === undefined
         ? { status: 'notFound' }

@@ -10,6 +10,7 @@ import { Category } from '@/features/catalog/domain/entities/Category'
 import { CategoryEditorDialog } from '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/CategoryEditorDialog'
 import { CategoriesListPage } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/CategoriesListPage'
 import { AppError } from '@/shared/application/AppError'
+import { success, failure } from '@/shared/application/Result'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import { MALICIOUS_PAYLOADS } from '@/test/fixtures/maliciousPayloads'
 
@@ -19,12 +20,14 @@ const categoryFixture = Category.create({ id: 'category-1', name: 'Massagens' })
 
 function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
   return createFakeAppContainer({
+    // AuthProvider hydrates its own session/tenant state on mount regardless
+    // of whether the catalog facade below needs tenantContext.
     auth: { getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) } },
     catalog: {
-      listCategories: { execute: vi.fn(() => Promise.resolve([categoryFixture])) },
-      createCategory: { execute: vi.fn(() => Promise.resolve(categoryFixture)) },
-      updateCategory: { execute: vi.fn(() => Promise.resolve(categoryFixture)) },
-      deleteCategory: { execute: vi.fn(() => Promise.resolve()) },
+      listCategories: { execute: vi.fn(() => Promise.resolve(success([categoryFixture]))) },
+      createCategory: { execute: vi.fn(() => Promise.resolve(success(categoryFixture))) },
+      updateCategory: { execute: vi.fn(() => Promise.resolve(success(categoryFixture))) },
+      deleteCategory: { execute: vi.fn(() => Promise.resolve(success(undefined))) },
       ...overrides,
     },
   })
@@ -88,8 +91,8 @@ describe('Categories routes', () => {
   })
 
   it('creates a category through the dialog and keeps the listing route mounted', async () => {
-    const listCategoriesSpy = vi.fn(() => Promise.resolve([categoryFixture]))
-    const createCategorySpy = vi.fn(() => Promise.resolve(categoryFixture))
+    const listCategoriesSpy = vi.fn(() => Promise.resolve(success([categoryFixture])))
+    const createCategorySpy = vi.fn(() => Promise.resolve(success(categoryFixture)))
     renderCategoryRoute(
       '/categories',
       buildContainer({
@@ -105,13 +108,15 @@ describe('Categories routes', () => {
     await userEvent.type(screen.getByLabelText('Nome'), 'Estética')
     await userEvent.click(screen.getByRole('button', { name: /criar categoria/i }))
 
-    expect(createCategorySpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
+    expect(createCategorySpy).toHaveBeenCalledExactlyOnceWith({
       name: 'Estética',
     })
     await vi.waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
     expect(screen.getByRole('heading', { name: 'Categorias' })).toBeInTheDocument()
+    // The list and the editor now share one useCategories source (docs/adr/012)
+    // - creating refreshes the same visible list, not just the editor's own copy.
     await vi.waitFor(() => {
       expect(listCategoriesSpy).toHaveBeenCalledTimes(1)
     })
@@ -130,7 +135,7 @@ describe('Categories routes', () => {
   })
 
   it('loads the category identified by the edit route and updates it', async () => {
-    const updateCategorySpy = vi.fn(() => Promise.resolve(categoryFixture))
+    const updateCategorySpy = vi.fn(() => Promise.resolve(success(categoryFixture)))
     renderCategoryRoute(
       '/categories/category-1/edit',
       buildContainer({ updateCategory: { execute: updateCategorySpy } }),
@@ -142,7 +147,7 @@ describe('Categories routes', () => {
     await userEvent.type(nameInput, 'Terapias')
     await userEvent.click(screen.getByRole('button', { name: /salvar alterações/i }))
 
-    expect(updateCategorySpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'category-1', {
+    expect(updateCategorySpy).toHaveBeenCalledExactlyOnceWith('category-1', {
       name: 'Terapias',
     })
     expect(await screen.findByRole('heading', { name: 'Categorias' })).toBeInTheDocument()
@@ -151,7 +156,7 @@ describe('Categories routes', () => {
   it('shows a not-found state when the edit route id is not in the tenant list', async () => {
     renderCategoryRoute(
       '/categories/missing/edit',
-      buildContainer({ listCategories: { execute: vi.fn(() => Promise.resolve([])) } }),
+      buildContainer({ listCategories: { execute: vi.fn(() => Promise.resolve(success([]))) } }),
     )
 
     expect(await screen.findByText('Categoria não encontrada.')).toBeInTheDocument()
@@ -160,15 +165,17 @@ describe('Categories routes', () => {
 
   it('retries when loading the category for editing fails', async () => {
     const listCategoriesSpy = vi
-      .fn<() => Promise<Category[]>>()
-      .mockRejectedValueOnce(
-        new AppError({
-          code: 'network',
-          message: 'Não foi possível acessar o serviço.',
-          retryable: true,
-        }),
+      .fn()
+      .mockResolvedValueOnce(
+        failure(
+          new AppError({
+            code: 'network',
+            message: 'Não foi possível acessar o serviço.',
+            retryable: true,
+          }),
+        ),
       )
-      .mockResolvedValueOnce([categoryFixture])
+      .mockResolvedValueOnce(success([categoryFixture]))
     renderCategoryRoute(
       '/categories/category-1/edit',
       buildContainer({ listCategories: { execute: listCategoriesSpy } }),
@@ -195,7 +202,7 @@ describe('Categories routes', () => {
     renderCategoryRoute(
       '/categories',
       buildContainer({
-        createCategory: { execute: vi.fn(() => Promise.reject(conflictError)) },
+        createCategory: { execute: vi.fn(() => Promise.resolve(failure(conflictError))) },
       }),
     )
 
@@ -214,10 +221,10 @@ describe('Categories routes', () => {
 
   it('confirms deletion from the list and refreshes the visible data source', async () => {
     const listCategoriesSpy = vi
-      .fn<() => Promise<Category[]>>()
-      .mockResolvedValueOnce([categoryFixture])
-      .mockResolvedValueOnce([])
-    const deleteCategorySpy = vi.fn(() => Promise.resolve())
+      .fn()
+      .mockResolvedValueOnce(success([categoryFixture]))
+      .mockResolvedValueOnce(success([]))
+    const deleteCategorySpy = vi.fn(() => Promise.resolve(success(undefined)))
     renderCategoryRoute(
       '/categories',
       buildContainer({
@@ -232,13 +239,13 @@ describe('Categories routes', () => {
     expect(within(alertDialog).getByText(/"Massagens"/)).toBeInTheDocument()
     await userEvent.click(within(alertDialog).getByRole('button', { name: 'Excluir' }))
 
-    expect(deleteCategorySpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'category-1')
+    expect(deleteCategorySpy).toHaveBeenCalledExactlyOnceWith('category-1')
     expect(await screen.findByText(/nenhuma categoria ainda/i)).toBeInTheDocument()
     expect(screen.queryByText('Massagens')).not.toBeInTheDocument()
   })
 
   it('debounces searches on the list route', async () => {
-    const listCategoriesSpy = vi.fn(() => Promise.resolve([categoryFixture]))
+    const listCategoriesSpy = vi.fn(() => Promise.resolve(success([categoryFixture])))
     renderCategoryRoute(
       '/categories',
       buildContainer({ listCategories: { execute: listCategoriesSpy } }),
@@ -257,7 +264,7 @@ describe('Categories routes', () => {
         await vi.advanceTimersByTimeAsync(300)
       })
 
-      expect(listCategoriesSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
+      expect(listCategoriesSpy).toHaveBeenCalledExactlyOnceWith({
         search: 'massa',
       })
     } finally {
@@ -270,7 +277,7 @@ describe('Categories routes', () => {
     renderCategoryRoute(
       '/categories',
       buildContainer({
-        listCategories: { execute: vi.fn(() => Promise.resolve([category])) },
+        listCategories: { execute: vi.fn(() => Promise.resolve(success([category]))) },
       }),
     )
 

@@ -4,9 +4,6 @@ import { server } from '@/test/mocks/server'
 import { ApiTagRepository } from '@/features/catalog/infrastructure/repositories/ApiTagRepository'
 import { AuthenticatedHttpClient } from '@/shared/infrastructure/http/AuthenticatedHttpClient'
 import { tagFixture } from '@/test/mocks/handlers/tagHandlers'
-import { Tenant } from '@/features/auth'
-import { User } from '@/features/auth'
-import type { TenantContext } from '@/features/auth'
 
 const baseUrl = 'https://api.test'
 
@@ -17,20 +14,17 @@ function buildRepository(): ApiTagRepository {
   return new ApiTagRepository(httpClient)
 }
 
-function buildTenantContext(): TenantContext {
-  const tenant = Tenant.create('tenant-123')
-  return { tenant, user: User.create({ id: 'user-1', tenant }) }
-}
-
 describe('ApiTagRepository', () => {
   it('lists tags mapped to domain entities', async () => {
     const repository = buildRepository()
 
-    const tags = await repository.listAll(buildTenantContext())
+    const result = await repository.listAll()
 
-    expect(tags).toHaveLength(1)
-    expect(tags[0]?.id).toBe(tagFixture.id)
-    expect(tags[0]?.name).toBe(tagFixture.name)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value).toHaveLength(1)
+    expect(result.value[0]?.id).toBe(tagFixture.id)
+    expect(result.value[0]?.name).toBe(tagFixture.name)
   })
 
   it('sends the search term as a query parameter', async () => {
@@ -42,7 +36,7 @@ describe('ApiTagRepository', () => {
     )
     const repository = buildRepository()
 
-    await repository.listAll(buildTenantContext(), { search: 'vip' })
+    await repository.listAll({ search: 'vip' })
   })
 
   it('creates a tag, sending an omitted description as explicit null', async () => {
@@ -61,9 +55,11 @@ describe('ApiTagRepository', () => {
     )
     const repository = buildRepository()
 
-    const tag = await repository.create(buildTenantContext(), { name: 'VIP', color: '#0d9488' })
+    const result = await repository.create({ name: 'VIP', color: '#0d9488' })
 
-    expect(tag.id).toBe(tagFixture.id)
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.id).toBe(tagFixture.id)
   })
 
   it('creates a tag, sending a provided description as-is', async () => {
@@ -79,7 +75,7 @@ describe('ApiTagRepository', () => {
     )
     const repository = buildRepository()
 
-    await repository.create(buildTenantContext(), {
+    await repository.create({
       name: 'VIP',
       color: '#0d9488',
       description: 'High-value returning client',
@@ -103,12 +99,14 @@ describe('ApiTagRepository', () => {
     )
     const repository = buildRepository()
 
-    const tag = await repository.update(buildTenantContext(), 'tag-1', {
+    const result = await repository.update('tag-1', {
       name: 'Renamed',
       color: '#ef4444',
     })
 
-    expect(tag.name).toBe('Renamed')
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.name).toBe('Renamed')
   })
 
   it('deletes a tag at the correct path', async () => {
@@ -121,7 +119,7 @@ describe('ApiTagRepository', () => {
     )
     const repository = buildRepository()
 
-    await repository.delete(buildTenantContext(), 'tag-1')
+    await repository.delete('tag-1')
 
     expect(deleteWasCalled).toBe(true)
   })
@@ -134,8 +132,10 @@ describe('ApiTagRepository', () => {
     )
     const repository = buildRepository()
 
-    await expect(repository.listAll(buildTenantContext())).rejects.toThrow(
-      'Não foi possível concluir a operação. Tente novamente.',
-    )
+    const result = await repository.listAll()
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error.message).toBe('Não foi possível concluir a operação. Tente novamente.')
   })
 })

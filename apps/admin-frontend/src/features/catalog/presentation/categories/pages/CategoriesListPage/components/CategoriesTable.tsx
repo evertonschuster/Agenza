@@ -9,48 +9,31 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
+import { CollectionFeedback } from '@/shared/presentation/components/CollectionFeedback'
 import type { CategoriesTableProps } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/components/CategoriesTable.types'
 
 export function CategoriesTable({
-  state,
+  categories,
+  listState,
   hasActiveSearch,
   onRetry,
   onEdit,
   onDelete,
 }: CategoriesTableProps): JSX.Element {
-  if (state.status === 'loading') {
-    return (
-      <div className="mt-6">
-        <StatusMessage>Carregando categorias…</StatusMessage>
-      </div>
-    )
-  }
-
-  if (state.status === 'error') {
-    return (
-      <div className="mt-6 space-y-3">
-        <StatusMessage tone="error">
-          Não foi possível carregar as categorias: {state.message}
-        </StatusMessage>
-        <Button type="button" variant="outline" onClick={onRetry}>
-          Tentar novamente
-        </Button>
-      </div>
-    )
-  }
-
-  const { categories } = state
-
   return (
     <div className="mt-6">
-      {categories.length === 0 && (
-        <StatusMessage>
-          {hasActiveSearch
+      <CollectionFeedback
+        state={listState}
+        loadingMessage="Carregando categorias…"
+        loadErrorMessage="Não foi possível carregar as categorias"
+        refreshErrorMessage="Não foi possível atualizar a lista de categorias"
+        emptyMessage={
+          hasActiveSearch
             ? 'Nenhuma categoria encontrada para essa busca.'
-            : 'Nenhuma categoria ainda. Crie uma para começar.'}
-        </StatusMessage>
-      )}
+            : 'Nenhuma categoria ainda. Crie uma para começar.'
+        }
+        onRetry={onRetry}
+      />
 
       {categories.length > 0 && (
         <div className="rounded-lg border">

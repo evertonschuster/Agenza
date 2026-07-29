@@ -90,14 +90,10 @@ export function createAppContainer(): AppContainer {
       sessionEvents,
     },
     catalog: {
-      listTags: {
-        execute: (tenantContext, options) => tagRepository.listAll(tenantContext, options),
-      },
-      createTag: { execute: (tenantContext, input) => tagRepository.create(tenantContext, input) },
-      updateTag: {
-        execute: (tenantContext, id, input) => tagRepository.update(tenantContext, id, input),
-      },
-      deleteTag: { execute: (tenantContext, id) => tagRepository.delete(tenantContext, id) },
+      listTags: { execute: options => tagRepository.listAll(options) },
+      createTag: { execute: input => tagRepository.create(input) },
+      updateTag: { execute: (id, input) => tagRepository.update(id, input) },
+      deleteTag: { execute: id => tagRepository.delete(id) },
       listCategories: { execute: options => categoryRepository.listAll(options) },
       createCategory: { execute: input => categoryRepository.create(input) },
       updateCategory: { execute: (id, input) => categoryRepository.update(id, input) },

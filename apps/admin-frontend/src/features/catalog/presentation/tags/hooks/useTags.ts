@@ -27,7 +27,7 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
     if (tenantContext === null) {
       return []
     }
-    const result = await catalog.listTags.execute(tenantContext, { search })
+    const result = await catalog.listTags.execute({ search })
     if (!result.success) {
       throw result.error
     }
@@ -46,7 +46,7 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
       // request is in flight, the mutate below must not insert tenant A's
       // newly created tag into what is now tenant B's list.
       const generation = captureGeneration()
-      const createResult = await catalog.createTag.execute(tenantContext, input)
+      const createResult = await catalog.createTag.execute(input)
       if (!createResult.success) {
         throw createResult.error
       }
@@ -70,7 +70,7 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
           'Não é possível atualizar uma etiqueta sem um contexto de tenant autenticado',
         )
       }
-      const updateResult = await catalog.updateTag.execute(tenantContext, id, input)
+      const updateResult = await catalog.updateTag.execute(id, input)
       if (!updateResult.success) {
         throw updateResult.error
       }
@@ -85,7 +85,7 @@ export function useTags(tenantContext: TenantContext | null, search = ''): UseTa
       if (tenantContext === null) {
         throw new Error('Não é possível excluir uma etiqueta sem um contexto de tenant autenticado')
       }
-      const deleteResult = await catalog.deleteTag.execute(tenantContext, id)
+      const deleteResult = await catalog.deleteTag.execute(id)
       if (!deleteResult.success) {
         throw deleteResult.error
       }

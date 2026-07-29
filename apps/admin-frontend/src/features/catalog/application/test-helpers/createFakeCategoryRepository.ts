@@ -1,13 +1,21 @@
 import type { CategoryRepository } from '@/features/catalog/application/repositories/CategoryRepository'
+import { AppError } from '@/shared/application/AppError'
+import { failure, success } from '@/shared/application/Result'
+
+const NOT_IMPLEMENTED = new AppError({
+  code: 'unexpected',
+  message: 'not implemented in this fake',
+  retryable: false,
+})
 
 export function createFakeCategoryRepository(
   overrides: Partial<CategoryRepository> = {},
 ): CategoryRepository {
   return {
-    listAll: () => Promise.resolve([]),
-    create: () => Promise.reject(new Error('not implemented in this fake')),
-    update: () => Promise.reject(new Error('not implemented in this fake')),
-    delete: () => Promise.resolve(),
+    listAll: () => Promise.resolve(success([])),
+    create: () => Promise.resolve(failure(NOT_IMPLEMENTED)),
+    update: () => Promise.resolve(failure(NOT_IMPLEMENTED)),
+    delete: () => Promise.resolve(success(undefined)),
     ...overrides,
   }
 }
