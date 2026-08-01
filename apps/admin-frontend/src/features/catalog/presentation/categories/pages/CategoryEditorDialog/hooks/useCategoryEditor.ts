@@ -57,10 +57,20 @@ export function useCategoryEditor(): UseCategoryEditorResult {
         categoryId === undefined
           ? await catalog.createCategory.execute({ name: values.name })
           : await catalog.updateCategory.execute(categoryId, { name: values.name })
-      if (!result.success) {
-        throw result.error
+      if (result.success) {
+        closeEditor()
+      } else {
+        setServerError(
+          mapApiErrorToForm(
+            result.error,
+            categoryFieldMap,
+            categoryCodeFieldMap,
+            isEditing
+              ? 'Não foi possível salvar a categoria.'
+              : 'Não foi possível criar a categoria.',
+          ),
+        )
       }
-      closeEditor()
     } catch (caughtError) {
       setServerError(
         mapApiErrorToForm(
