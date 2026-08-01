@@ -20,7 +20,6 @@ const CATEGORIES_URL = '/api/v1/categories'
 type CreateCategoryRequestBody = components['schemas']['CreateCategoryCommand']
 type UpdateCategoryRequestBody = components['schemas']['UpdateCategoryCommand']
 
-
 export class ApiCategoryRepository implements CategoryRepository {
   private readonly httpClient: HttpClient
 
@@ -36,6 +35,11 @@ export class ApiCategoryRepository implements CategoryRepository {
     const suffix = query.toString() === '' ? '' : `?${query.toString()}`
     const result = await this.httpClient.get(`${CATEGORIES_URL}${suffix}`, decodeCategoryDtoArray)
     return mapResult(result, dtos => dtos.map(mapCategoryDtoToDomain))
+  }
+
+  async getById(id: string): Promise<Result<Category, AppError>> {
+    const result = await this.httpClient.get(`${CATEGORIES_URL}/${id}`, decodeCategoryDto)
+    return mapResult(result, mapCategoryDtoToDomain)
   }
 
   async create(input: CreateCategoryInput): Promise<Result<Category, AppError>> {

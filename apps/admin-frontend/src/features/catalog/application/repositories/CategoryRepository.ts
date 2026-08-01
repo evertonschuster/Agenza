@@ -16,6 +16,7 @@ export interface ListAllCategoriesOptions {
 
 export interface CategoryRepository {
   listAll(options?: ListAllCategoriesOptions): Promise<Result<Category[], AppError>>
+  getById(id: string): Promise<Result<Category, AppError>>
   create(input: CreateCategoryInput): Promise<Result<Category, AppError>>
   update(id: string, input: UpdateCategoryInput): Promise<Result<Category, AppError>>
   delete(id: string): Promise<Result<void, AppError>>

@@ -13,6 +13,7 @@ export function createFakeCategoryRepository(
 ): CategoryRepository {
   return {
     listAll: () => Promise.resolve(success([])),
+    getById: () => Promise.resolve(failure(NOT_IMPLEMENTED)),
     create: () => Promise.resolve(failure(NOT_IMPLEMENTED)),
     update: () => Promise.resolve(failure(NOT_IMPLEMENTED)),
     delete: () => Promise.resolve(success(undefined)),

@@ -254,10 +254,11 @@ without adding a distinct interaction. The URLs still provide direct
 navigation and predictable browser-history behavior while the list remains
 mounted.
 **Impact:** `TagsPage` remains the reference for the modal CRUD pattern.
-Categories follows docs/adr/012: its parent list passes the single
-`useCategories` source through outlet context; `useCategoryEditor` selects
-create or update from the route and resolves edit ids only inside that
-tenant-scoped source.
+Categories follows docs/adr/012 for the routed-modal shape; per
+docs/adr/013, `useCategoryEditor` resolves an edit id by calling
+`GET /api/v1/categories/{id}` directly (tenant-scoped) instead of reading
+the list's state through outlet context, and the list refetches when
+navigation returns to `/categories`.
 
 ### Destructive-action confirmation: `AlertDialog`, not `window.confirm`
 

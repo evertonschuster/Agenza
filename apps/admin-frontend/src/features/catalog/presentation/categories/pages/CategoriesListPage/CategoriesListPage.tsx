@@ -14,7 +14,7 @@ export function CategoriesListPage(): JSX.Element {
   const [searchInput, setSearchInput] = useState('')
   const debouncedSearch = useDebouncedValue(searchInput, 300)
   const hasActiveSearch = debouncedSearch.trim() !== ''
-  const { categories, listState, onRetry, onDelete, deleteDialog, editorContext } =
+  const { categories, listState, onRetry, onDelete, deleteDialog } =
     useCategoriesListPage(debouncedSearch)
 
   function handleEdit(category: Category): void {
@@ -59,7 +59,7 @@ export function CategoriesListPage(): JSX.Element {
         />
       </div>
 
-      <Outlet context={editorContext} />
+      <Outlet />
 
       <DeleteConfirmationDialog
         isOpen={deleteDialog.target !== null}

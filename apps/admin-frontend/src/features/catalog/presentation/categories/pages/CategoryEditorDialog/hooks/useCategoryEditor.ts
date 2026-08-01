@@ -1,5 +1,10 @@
-import { useState } from 'react'
-import { useNavigate, useOutletContext, useParams } from 'react-router'
+import { useCallback, useState } from 'react'
+import { useNavigate, useParams } from 'react-router'
+import { useAppContainer } from '@/app/providers/useAppContainer'
+import { useAsync } from '@/shared/presentation/hooks/useAsync'
+import { AppError } from '@/shared/application/AppError'
+import { toUiError } from '@/shared/application/UiError'
+import type { Category } from '@/features/catalog/domain/entities/Category'
 import type {
   CategoryFormField,
   CategoryFormValues,
@@ -8,8 +13,10 @@ import {
   categoryCodeFieldMap,
   categoryFieldMap,
 } from '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/forms/categoryFieldMaps'
-import type { CategoriesEditorContext } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage.types'
-import { mapApiErrorToForm, type ServerFormError } from '@/shared/presentation/forms/serverFormError'
+import {
+  mapApiErrorToForm,
+  type ServerFormError,
+} from '@/shared/presentation/forms/serverFormError'
 import type {
   CategoryEditorContent,
   UseCategoryEditorResult,
@@ -20,11 +27,23 @@ const EMPTY_FORM_VALUES: CategoryFormValues = { name: '' }
 export function useCategoryEditor(): UseCategoryEditorResult {
   const { id: categoryId } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { categories, listState, refetch, createCategory, updateCategory } =
-    useOutletContext<CategoriesEditorContext>()
+  const { catalog } = useAppContainer()
+  const isEditing = categoryId !== undefined
+
+  const fetchCategory = useCallback(async (): Promise<Category> => {
+    if (categoryId === undefined) {
+      throw new Error('fetchCategory requires a categoryId')
+    }
+    const result = await catalog.getCategory.execute(categoryId)
+    if (!result.success) {
+      throw result.error
+    }
+    return result.value
+  }, [catalog, categoryId])
+
+  const categoryState = useAsync(fetchCategory, { immediate: isEditing })
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [serverError, setServerError] = useState<ServerFormError<CategoryFormField> | null>(null)
-  const isEditing = categoryId !== undefined
 
   function closeEditor(): void {
     void navigate('..', { replace: true })
@@ -34,10 +53,12 @@ export function useCategoryEditor(): UseCategoryEditorResult {
     setIsSubmitting(true)
     setServerError(null)
     try {
-      if (categoryId === undefined) {
-        await createCategory({ name: values.name })
-      } else {
-        await updateCategory(categoryId, { name: values.name })
+      const result =
+        categoryId === undefined
+          ? await catalog.createCategory.execute({ name: values.name })
+          : await catalog.updateCategory.execute(categoryId, { name: values.name })
+      if (!result.success) {
+        throw result.error
       }
       closeEditor()
     } catch (caughtError) {
@@ -59,20 +80,20 @@ export function useCategoryEditor(): UseCategoryEditorResult {
   let content: CategoryEditorContent
   if (!isEditing) {
     content = { status: 'ready', initialValues: EMPTY_FORM_VALUES }
-  } else if (listState.status === 'idle' || listState.status === 'loading') {
+  } else if (categoryState.status === 'idle' || categoryState.status === 'loading') {
     content = { status: 'loading' }
-  } else if (listState.status === 'initialError') {
-    content = {
-      status: 'loadError',
-      message: listState.error.message,
-      onRetry: () => void refetch(),
-    }
-  } else {
-    const category = categories.find(item => item.id === categoryId)
+  } else if (categoryState.status === 'initialError') {
+    const error = categoryState.error
     content =
-      category === undefined
+      error instanceof AppError && error.code === 'notFound'
         ? { status: 'notFound' }
-        : { status: 'ready', initialValues: { name: category.name } }
+        : {
+            status: 'loadError',
+            message: toUiError(error).message,
+            onRetry: () => void categoryState.execute(),
+          }
+  } else {
+    content = { status: 'ready', initialValues: { name: categoryState.data.name } }
   }
 
   return {

@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using ServicesService.Application.Categories;
 using ServicesService.Application.Categories.CreateCategory;
 using ServicesService.Application.Categories.DeleteCategory;
+using ServicesService.Application.Categories.GetCategoryById;
 using ServicesService.Application.Categories.ListCategories;
 using ServicesService.Application.Categories.UpdateCategory;
 
@@ -39,6 +40,15 @@ public class CategoriesController : AgenzaControllerBase
     {
         var result = await _dispatcher.Send(command, cancellationToken);
         return result.ToActionResult(this, category => Created($"/api/v1/categories/{category.Id}", category));
+    }
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<ApiResponse<CategoryResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Query(new GetCategoryByIdQuery(id), cancellationToken);
+        return result.ToActionResult(this, category => Ok(category));
     }
 
     [HttpPut("{id:guid}")]

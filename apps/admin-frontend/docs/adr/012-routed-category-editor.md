@@ -1,6 +1,8 @@
 # ADR 012 — Categories uses one URL-driven modal editor
 
-**Status:** Accepted
+**Status:** Accepted. The outlet-context sharing described below is
+superseded by docs/adr/013 - the routed modal editor itself (one Dialog,
+two nested routes) is still accurate.
 
 ## Decision
 

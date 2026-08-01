@@ -67,6 +67,35 @@ describe('ApiCategoryRepository', () => {
     expect(result.value.id).toBe(categoryFixture.id)
   })
 
+  it('gets a category by id', async () => {
+    server.use(
+      http.get(`${baseUrl}/api/v1/categories/category-1`, () => HttpResponse.json(categoryFixture)),
+    )
+    const repository = buildRepository()
+
+    const result = await repository.getById('category-1')
+
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.id).toBe(categoryFixture.id)
+    expect(result.value.name).toBe(categoryFixture.name)
+  })
+
+  it('maps a missing category to a notFound AppError', async () => {
+    server.use(
+      http.get(`${baseUrl}/api/v1/categories/missing`, () =>
+        HttpResponse.json({ title: "Categoria 'missing' não foi encontrada." }, { status: 404 }),
+      ),
+    )
+    const repository = buildRepository()
+
+    const result = await repository.getById('missing')
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error.code).toBe('notFound')
+  })
+
   it('updates a category at the correct path', async () => {
     server.use(
       http.put(`${baseUrl}/api/v1/categories/category-1`, async ({ request }) => {

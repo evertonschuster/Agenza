@@ -25,6 +25,7 @@ function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
     auth: { getCurrentSession: { execute: vi.fn(() => Promise.resolve(tenantContext)) } },
     catalog: {
       listCategories: { execute: vi.fn(() => Promise.resolve(success([categoryFixture]))) },
+      getCategory: { execute: vi.fn(() => Promise.resolve(success(categoryFixture))) },
       createCategory: { execute: vi.fn(() => Promise.resolve(success(categoryFixture))) },
       updateCategory: { execute: vi.fn(() => Promise.resolve(success(categoryFixture))) },
       deleteCategory: { execute: vi.fn(() => Promise.resolve(success(undefined))) },
@@ -115,8 +116,9 @@ describe('Categories routes', () => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
     expect(screen.getByRole('heading', { name: 'Categorias' })).toBeInTheDocument()
-    // The list and the editor now share one useCategories source (docs/adr/012)
-    // - creating refreshes the same visible list, not just the editor's own copy.
+    // The editor writes directly to the backend and navigates back to the
+    // base /categories route; the list refetches on that route transition
+    // (docs/adr/013) instead of sharing mutation state with the editor.
     await vi.waitFor(() => {
       expect(listCategoriesSpy).toHaveBeenCalledTimes(1)
     })
@@ -156,7 +158,22 @@ describe('Categories routes', () => {
   it('shows a not-found state when the edit route id is not in the tenant list', async () => {
     renderCategoryRoute(
       '/categories/missing/edit',
-      buildContainer({ listCategories: { execute: vi.fn(() => Promise.resolve(success([]))) } }),
+      buildContainer({
+        getCategory: {
+          execute: vi.fn(() =>
+            Promise.resolve(
+              failure(
+                new AppError({
+                  code: 'notFound',
+                  message: "Categoria 'missing' não foi encontrada.",
+                  retryable: false,
+                  backendCode: 'Category.NotFound',
+                }),
+              ),
+            ),
+          ),
+        },
+      }),
     )
 
     expect(await screen.findByText('Categoria não encontrada.')).toBeInTheDocument()
@@ -164,7 +181,7 @@ describe('Categories routes', () => {
   })
 
   it('retries when loading the category for editing fails', async () => {
-    const listCategoriesSpy = vi
+    const getCategorySpy = vi
       .fn()
       .mockResolvedValueOnce(
         failure(
@@ -175,10 +192,10 @@ describe('Categories routes', () => {
           }),
         ),
       )
-      .mockResolvedValueOnce(success([categoryFixture]))
+      .mockResolvedValueOnce(success(categoryFixture))
     renderCategoryRoute(
       '/categories/category-1/edit',
-      buildContainer({ listCategories: { execute: listCategoriesSpy } }),
+      buildContainer({ getCategory: { execute: getCategorySpy } }),
     )
 
     expect(
@@ -189,7 +206,7 @@ describe('Categories routes', () => {
     await userEvent.click(screen.getByRole('button', { name: /tentar novamente/i }))
 
     expect(await screen.findByLabelText('Nome')).toHaveValue('Massagens')
-    expect(listCategoriesSpy).toHaveBeenCalledTimes(2)
+    expect(getCategorySpy).toHaveBeenCalledTimes(2)
   })
 
   it('maps a structured creation error to the name field and keeps the route open', async () => {

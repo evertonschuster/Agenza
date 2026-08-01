@@ -35,6 +35,7 @@ function defaultCatalogFacade(): CatalogFacade {
     updateTag: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
     deleteTag: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
     listCategories: { execute: vi.fn(() => Promise.resolve(success([]))) },
+    getCategory: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
     createCategory: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
     updateCategory: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
     deleteCategory: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },

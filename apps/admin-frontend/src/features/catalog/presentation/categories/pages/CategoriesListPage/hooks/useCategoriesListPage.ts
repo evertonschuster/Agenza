@@ -1,12 +1,9 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect, useRef } from 'react'
+import { useLocation, useResolvedPath } from 'react-router'
 import { useAppContainer } from '@/app/providers/useAppContainer'
 import { useAsync, toUiAsyncState } from '@/shared/presentation/hooks/useAsync'
 import { useCategoryDeletion } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoryDeletion'
 import type { Category } from '@/features/catalog/domain/entities/Category'
-import type {
-  CreateCategoryInput,
-  UpdateCategoryInput,
-} from '@/features/catalog/application/repositories/CategoryRepository'
 import type { UseCategoriesListPageResult } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage.types'
 
 export function useCategoriesListPage(search: string): UseCategoriesListPageResult {
@@ -21,39 +18,9 @@ export function useCategoriesListPage(search: string): UseCategoriesListPageResu
   }, [catalog, search])
 
   const asyncState = useAsync(listCategories)
-  const { data, execute, mutate, captureGeneration } = asyncState
+  const { data, execute } = asyncState
   const categories = data ?? []
   const listState = toUiAsyncState(asyncState)
-
-  const createCategory = useCallback(
-    async (input: CreateCategoryInput): Promise<Category> => {
-      // Captured before the POST starts, mirroring useTags: if a background
-      // refetch from a stale request lands after this one, the mutate below
-      // must not apply on top of it.
-      const generation = captureGeneration()
-      const createResult = await catalog.createCategory.execute(input)
-      if (!createResult.success) {
-        throw createResult.error
-      }
-      const category = createResult.value
-      mutate(current => [...(current ?? []), category], generation)
-      void execute()
-      return category
-    },
-    [catalog, execute, mutate, captureGeneration],
-  )
-
-  const updateCategory = useCallback(
-    async (id: string, input: UpdateCategoryInput): Promise<Category> => {
-      const updateResult = await catalog.updateCategory.execute(id, input)
-      if (!updateResult.success) {
-        throw updateResult.error
-      }
-      await execute()
-      return updateResult.value
-    },
-    [catalog, execute],
-  )
 
   const deleteCategory = useCallback(
     async (id: string): Promise<void> => {
@@ -68,6 +35,21 @@ export function useCategoriesListPage(search: string): UseCategoriesListPageResu
 
   const deletion = useCategoryDeletion({ onDelete: deleteCategory })
 
+  const basePath = useResolvedPath('.').pathname
+  const location = useLocation()
+  const wasOnChildRoute = useRef(false)
+  useEffect(() => {
+    const onChildRoute = location.pathname !== basePath
+    if (wasOnChildRoute.current && !onChildRoute) {
+      void execute()
+    }
+    wasOnChildRoute.current = onChildRoute
+    // Only the route transition matters here - execute()'s identity also
+    // changes on every `search` update, which would refire this effect on
+    // each keystroke if listed as a dependency.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname, basePath])
+
   return {
     categories,
     listState,
@@ -79,15 +61,6 @@ export function useCategoriesListPage(search: string): UseCategoriesListPageResu
       isDeleting: deletion.isDeleting,
       onCancel: deletion.onCancel,
       onConfirm: () => void deletion.onConfirm(),
-    },
-    editorContext: {
-      categories,
-      listState,
-      refetch: async () => {
-        await execute()
-      },
-      createCategory,
-      updateCategory,
     },
   }
 }

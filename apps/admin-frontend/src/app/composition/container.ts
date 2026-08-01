@@ -41,6 +41,7 @@ export interface CatalogFacade {
   updateTag: { execute: TagRepository['update'] }
   deleteTag: { execute: TagRepository['delete'] }
   listCategories: { execute: CategoryRepository['listAll'] }
+  getCategory: { execute: CategoryRepository['getById'] }
   createCategory: { execute: CategoryRepository['create'] }
   updateCategory: { execute: CategoryRepository['update'] }
   deleteCategory: { execute: CategoryRepository['delete'] }
@@ -95,6 +96,7 @@ export function createAppContainer(): AppContainer {
       updateTag: { execute: (id, input) => tagRepository.update(id, input) },
       deleteTag: { execute: id => tagRepository.delete(id) },
       listCategories: { execute: options => categoryRepository.listAll(options) },
+      getCategory: { execute: id => categoryRepository.getById(id) },
       createCategory: { execute: input => categoryRepository.create(input) },
       updateCategory: { execute: (id, input) => categoryRepository.update(id, input) },
       deleteCategory: { execute: id => categoryRepository.delete(id) },
