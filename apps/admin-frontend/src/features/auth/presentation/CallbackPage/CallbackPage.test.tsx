@@ -8,14 +8,13 @@ import { ProtectedRoute } from '@/features/auth/presentation/ProtectedRoute'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { HandleAuthCallback } from '@/features/auth/application/use-cases/HandleAuthCallback'
 import { createFakeAuthRepository } from '@/features/auth/application/test-helpers/createFakeAuthRepository'
-import { Session } from '@/features/auth/domain/entities/Session'
-import { User } from '@/features/auth/domain/entities/User'
-import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
+import { Session, Tenant, User } from '@/test/fixtures/authEntityFixtures'
 import type { AppContainer } from '@/app/composition/container'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
 import type { CompletedAuthCallback } from '@/features/auth/application/use-cases/HandleAuthCallback'
 import { AuthFlowError } from '@/features/auth/application/errors/AuthFlowError'
+import { success, failure, type Result } from '@/shared/application/Result'
 import { vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
 
@@ -29,7 +28,7 @@ const dashboardCallbackResult: CompletedAuthCallback = {
 }
 
 function buildContainer(
-  handleCallbackFn: (url: string) => Promise<CompletedAuthCallback>,
+  handleCallbackFn: (url: string) => Promise<Result<CompletedAuthCallback, AuthFlowError>>,
 ): AppContainer {
   return createFakeAppContainer({ auth: { handleAuthCallback: { execute: handleCallbackFn } } })
 }
@@ -54,8 +53,10 @@ function renderCallbackPage(container: AppContainer): void {
 describe('CallbackPage', () => {
   it('shows a processing state while the callback is being handled', () => {
     // never resolves — simulates an in-flight token exchange
-    // eslint-disable-next-line @typescript-eslint/no-empty-function
-    const handleCallback = vi.fn(() => new Promise<CompletedAuthCallback>(() => {}))
+    const handleCallback = vi.fn(() => {
+      // eslint-disable-next-line @typescript-eslint/no-empty-function
+      return new Promise<Result<CompletedAuthCallback, AuthFlowError>>(() => {})
+    })
     renderCallbackPage(buildContainer(handleCallback))
 
     expect(screen.getByRole('heading', { name: /concluindo seu login/i })).toBeInTheDocument()
@@ -65,7 +66,7 @@ describe('CallbackPage', () => {
   })
 
   it('passes the full current URL to the callback use case', async () => {
-    const handleCallback = vi.fn(() => Promise.resolve(dashboardCallbackResult))
+    const handleCallback = vi.fn(() => Promise.resolve(success(dashboardCallbackResult)))
     renderCallbackPage(buildContainer(handleCallback))
 
     await screen.findByText('Dashboard page')
@@ -74,7 +75,9 @@ describe('CallbackPage', () => {
   })
 
   it('navigates to the dashboard when the callback succeeds', async () => {
-    renderCallbackPage(buildContainer(vi.fn(() => Promise.resolve(dashboardCallbackResult))))
+    renderCallbackPage(
+      buildContainer(vi.fn(() => Promise.resolve(success(dashboardCallbackResult)))),
+    )
 
     expect(await screen.findByText('Dashboard page')).toBeInTheDocument()
   })
@@ -83,10 +86,12 @@ describe('CallbackPage', () => {
     renderCallbackPage(
       buildContainer(
         vi.fn(() =>
-          Promise.resolve({
-            tenantContext: fakeTenantContext,
-            returnTo: '/services?search=massagem#editor',
-          }),
+          Promise.resolve(
+            success({
+              tenantContext: fakeTenantContext,
+              returnTo: '/services?search=massagem#editor',
+            }),
+          ),
         ),
       ),
     )
@@ -95,7 +100,7 @@ describe('CallbackPage', () => {
   })
 
   it('updates the shared auth session before entering a protected route', async () => {
-    const container = buildContainer(vi.fn(() => Promise.resolve(dashboardCallbackResult)))
+    const container = buildContainer(vi.fn(() => Promise.resolve(success(dashboardCallbackResult))))
 
     render(
       <AppContainerContext.Provider value={container}>
@@ -121,14 +126,16 @@ describe('CallbackPage', () => {
     renderCallbackPage(
       buildContainer(
         vi.fn(() =>
-          Promise.reject(
-            new AuthFlowError({
-              code: 'unauthenticated',
-              flowCode: 'AUTH_ATTEMPT_EXPIRED',
-              message:
-                'Esta tentativa de login expirou ou já foi utilizada. Inicie uma nova tentativa para entrar.',
-              retryable: true,
-            }),
+          Promise.resolve(
+            failure(
+              new AuthFlowError({
+                code: 'unauthenticated',
+                flowCode: 'AUTH_ATTEMPT_EXPIRED',
+                message:
+                  'Esta tentativa de login expirou ou já foi utilizada. Inicie uma nova tentativa para entrar.',
+                retryable: true,
+              }),
+            ),
           ),
         ),
       ),
@@ -160,7 +167,7 @@ describe('CallbackPage', () => {
     const authRepository = createFakeAuthRepository({
       handleCallback: () => {
         handleCallbackCount += 1
-        return Promise.resolve({ session, returnTo: null })
+        return Promise.resolve(success({ session, returnTo: null }))
       },
     })
     const container = createFakeAppContainer({

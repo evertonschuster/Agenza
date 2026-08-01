@@ -9,8 +9,8 @@ import { createFakeSessionEventBus } from '@/test/fixtures/fakeSessionEventBus'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import type { SessionEventBus } from '@/shared/application/SessionEventBus'
 import type { AppContainer, AuthFacade } from '@/app/composition/container'
-import { User } from '@/features/auth/domain/entities/User'
-import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
+import { success } from '@/shared/application/Result'
 
 function createFakeContainer(
   overrides: Partial<AuthFacade> = {},
@@ -91,7 +91,7 @@ describe('AuthProvider', () => {
   })
 
   it('calls initiateLogin when login is invoked', async () => {
-    const initiateLoginSpy = vi.fn(() => Promise.resolve())
+    const initiateLoginSpy = vi.fn(() => Promise.resolve(success(undefined)))
 
     function LoginConsumer(): JSX.Element {
       const { login } = useAuth()
@@ -111,7 +111,7 @@ describe('AuthProvider', () => {
   it('calls logout and clears the session when logout is invoked', async () => {
     const tenant = Tenant.create('tenant-123')
     const user = User.create({ id: 'user-1', tenant })
-    const logoutSpy = vi.fn(() => Promise.resolve())
+    const logoutSpy = vi.fn(() => Promise.resolve(success(undefined)))
 
     function LogoutConsumer(): JSX.Element {
       const { status, logout } = useAuth()

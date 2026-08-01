@@ -7,7 +7,7 @@ import type {
 } from '@/features/catalog/application/repositories/TagRepository'
 import type { HttpClient } from '@/shared/application/HttpClient'
 import type { AppError } from '@/shared/application/AppError'
-import { mapResult, type Result } from '@/shared/application/Result'
+import { flatMapResult, combineResults, type Result } from '@/shared/application/Result'
 import {
   mapTagDtoToDomain,
   decodeTagDto,
@@ -38,7 +38,7 @@ export class ApiTagRepository implements TagRepository {
     }
     const suffix = query.toString() === '' ? '' : `?${query.toString()}`
     const result = await this.httpClient.get(`${TAGS_URL}${suffix}`, decodeTagDtoArray)
-    return mapResult(result, dtos => dtos.map(mapTagDtoToDomain))
+    return flatMapResult(result, dtos => combineResults(dtos.map(mapTagDtoToDomain)))
   }
 
   async create(input: CreateTagInput): Promise<Result<Tag, AppError>> {
@@ -48,7 +48,7 @@ export class ApiTagRepository implements TagRepository {
       description: input.description ?? null,
     } satisfies CreateTagRequestBody
     const result = await this.httpClient.post(TAGS_URL, body, decodeTagDto)
-    return mapResult(result, mapTagDtoToDomain)
+    return flatMapResult(result, mapTagDtoToDomain)
   }
 
   async update(id: string, input: UpdateTagInput): Promise<Result<Tag, AppError>> {
@@ -59,7 +59,7 @@ export class ApiTagRepository implements TagRepository {
       description: input.description ?? null,
     }
     const result = await this.httpClient.put(`${TAGS_URL}/${id}`, body, decodeTagDto)
-    return mapResult(result, mapTagDtoToDomain)
+    return flatMapResult(result, mapTagDtoToDomain)
   }
 
   async delete(id: string): Promise<Result<void, AppError>> {

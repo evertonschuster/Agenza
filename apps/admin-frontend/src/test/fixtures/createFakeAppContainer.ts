@@ -2,14 +2,22 @@ import { vi } from 'vitest'
 import type { AppContainer, AuthFacade, CatalogFacade } from '@/app/composition/container'
 import { createFakeSessionEventBus } from '@/test/fixtures/fakeSessionEventBus'
 import { AppError } from '@/shared/application/AppError'
+import { AuthFlowError } from '@/features/auth/application/errors/AuthFlowError'
 import { failure, success, type Result } from '@/shared/application/Result'
 
-const NOT_USED_IN_THIS_FAKE = (): Promise<never> =>
-  Promise.reject(new Error('not used in this fake'))
+// auth/catalog execute() never rejects (it returns Result), so each "should
+// not be called" default must resolve to a failure - a raw rejection here
+// would surface as an unhandled promise rejection instead of a normal
+// error state.
+const AUTH_NOT_USED_ERROR = new AuthFlowError({
+  code: 'unexpected',
+  flowCode: 'AUTH_LOGIN_FAILED',
+  message: 'not used in this fake',
+  retryable: false,
+})
+const AUTH_NOT_USED_IN_THIS_FAKE = (): Promise<Result<never, AuthFlowError>> =>
+  Promise.resolve(failure(AUTH_NOT_USED_ERROR))
 
-// catalog execute() never rejects (it returns Result), so its "should not be
-// called" default must resolve to a failure - a raw rejection here would
-// surface as an unhandled promise rejection instead of a normal error state.
 const CATALOG_NOT_USED_ERROR = new AppError({
   code: 'unexpected',
   message: 'not used in this fake',
@@ -20,10 +28,10 @@ const CATALOG_NOT_USED_IN_THIS_FAKE = (): Promise<Result<never, AppError>> =>
 
 function defaultAuthFacade(): AuthFacade {
   return {
-    initiateLogin: { execute: vi.fn(() => Promise.resolve()) },
-    handleAuthCallback: { execute: vi.fn(NOT_USED_IN_THIS_FAKE) },
+    initiateLogin: { execute: vi.fn(() => Promise.resolve(success(undefined))) },
+    handleAuthCallback: { execute: vi.fn(AUTH_NOT_USED_IN_THIS_FAKE) },
     getCurrentSession: { execute: vi.fn(() => Promise.resolve(null)) },
-    logout: { execute: vi.fn(() => Promise.resolve()) },
+    logout: { execute: vi.fn(() => Promise.resolve(success(undefined))) },
     sessionEvents: createFakeSessionEventBus(),
   }
 }

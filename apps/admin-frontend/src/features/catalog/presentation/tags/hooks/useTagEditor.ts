@@ -54,8 +54,7 @@ function toTagInput(values: TagFormValues): {
 export function useTagEditor(): UseTagEditorResult {
   const { id: tagId } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const { tags, listState, refetch, createTag, updateTag } =
-    useOutletContext<UseTagsResult>()
+  const { tags, listState, refetch, createTag, updateTag } = useOutletContext<UseTagsResult>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [serverError, setServerError] = useState<ServerFormError<TagFormField> | null>(null)
   const isEditing = tagId !== undefined
@@ -67,27 +66,23 @@ export function useTagEditor(): UseTagEditorResult {
   async function onSubmit(values: TagFormValues): Promise<void> {
     setIsSubmitting(true)
     setServerError(null)
-    try {
-      if (tagId === undefined) {
-        await createTag(toTagInput(values))
-      } else {
-        await updateTag(tagId, toTagInput(values))
-      }
+    const result =
+      tagId === undefined
+        ? await createTag(toTagInput(values))
+        : await updateTag(tagId, toTagInput(values))
+    if (result.success) {
       closeEditor()
-    } catch (caughtError) {
+    } else {
       setServerError(
         mapApiErrorToForm(
-          caughtError,
+          result.error,
           tagFieldMap,
           tagCodeFieldMap,
-          isEditing
-            ? 'Não foi possível salvar a etiqueta.'
-            : 'Não foi possível criar a etiqueta.',
+          isEditing ? 'Não foi possível salvar a etiqueta.' : 'Não foi possível criar a etiqueta.',
         ),
       )
-    } finally {
-      setIsSubmitting(false)
     }
+    setIsSubmitting(false)
   }
 
   let content: TagEditorContent

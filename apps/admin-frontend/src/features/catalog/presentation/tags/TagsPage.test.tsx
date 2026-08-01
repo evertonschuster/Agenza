@@ -8,21 +8,23 @@ import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { AuthProvider } from '@/features/auth'
 import type { AppContainer, CatalogFacade } from '@/app/composition/container'
 import { Tag } from '@/features/catalog/domain/entities/Tag'
-import { Tenant } from '@/features/auth'
-import { User } from '@/features/auth'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
 import { MALICIOUS_PAYLOADS } from '@/test/fixtures/maliciousPayloads'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import { AppError } from '@/shared/application/AppError'
 import { success, failure } from '@/shared/application/Result'
+import { unwrapResult } from '@/test/fixtures/unwrapResult'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
-const vipTag = Tag.create({
-  id: 'tag-1',
-  name: 'VIP',
-  color: '#0d9488',
-  description: 'High-value client',
-})
+const vipTag = unwrapResult(
+  Tag.create({
+    id: 'tag-1',
+    name: 'VIP',
+    color: '#0d9488',
+    description: 'High-value client',
+  }),
+)
 
 function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
   return createFakeAppContainer({
@@ -68,7 +70,9 @@ describe('TagsPage', () => {
   })
 
   it('shows an empty state when there are no tags', async () => {
-    renderTagsPage(buildContainer({ listTags: { execute: vi.fn(() => Promise.resolve(success([]))) } }))
+    renderTagsPage(
+      buildContainer({ listTags: { execute: vi.fn(() => Promise.resolve(success([]))) } }),
+    )
 
     expect(await screen.findByText(/nenhuma etiqueta ainda/i)).toBeInTheDocument()
   })
@@ -314,7 +318,9 @@ describe('TagsPage', () => {
 
     it('shows an error and keeps the dialog open when deletion fails', async () => {
       const deleteTagSpy = vi.fn(() =>
-        Promise.resolve(failure(new Error('Tag is in use.') as unknown as AppError)),
+        Promise.resolve(
+          failure(new AppError({ code: 'conflict', message: 'Tag is in use.', retryable: false })),
+        ),
       )
       renderTagsPage(buildContainer({ deleteTag: { execute: deleteTagSpy } }))
       await screen.findByText('VIP')
@@ -355,7 +361,9 @@ describe('TagsPage', () => {
 
   describe('security', () => {
     it.each(MALICIOUS_PAYLOADS)('renders "%s" as inert text, not markup', async payload => {
-      const maliciousTag = Tag.create({ id: 'malicious-1', name: payload, color: '#0d9488' })
+      const maliciousTag = unwrapResult(
+        Tag.create({ id: 'malicious-1', name: payload, color: '#0d9488' }),
+      )
       renderTagsPage(
         buildContainer({
           listTags: { execute: vi.fn(() => Promise.resolve(success([maliciousTag]))) },

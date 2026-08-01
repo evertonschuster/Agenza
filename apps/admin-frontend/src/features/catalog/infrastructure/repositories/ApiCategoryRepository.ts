@@ -7,7 +7,7 @@ import type {
 } from '@/features/catalog/application/repositories/CategoryRepository'
 import type { HttpClient } from '@/shared/application/HttpClient'
 import type { AppError } from '@/shared/application/AppError'
-import { mapResult, type Result } from '@/shared/application/Result'
+import { flatMapResult, combineResults, type Result } from '@/shared/application/Result'
 import {
   mapCategoryDtoToDomain,
   decodeCategoryDto,
@@ -34,24 +34,24 @@ export class ApiCategoryRepository implements CategoryRepository {
     }
     const suffix = query.toString() === '' ? '' : `?${query.toString()}`
     const result = await this.httpClient.get(`${CATEGORIES_URL}${suffix}`, decodeCategoryDtoArray)
-    return mapResult(result, dtos => dtos.map(mapCategoryDtoToDomain))
+    return flatMapResult(result, dtos => combineResults(dtos.map(mapCategoryDtoToDomain)))
   }
 
   async getById(id: string): Promise<Result<Category, AppError>> {
     const result = await this.httpClient.get(`${CATEGORIES_URL}/${id}`, decodeCategoryDto)
-    return mapResult(result, mapCategoryDtoToDomain)
+    return flatMapResult(result, mapCategoryDtoToDomain)
   }
 
   async create(input: CreateCategoryInput): Promise<Result<Category, AppError>> {
     const body = { name: input.name } satisfies CreateCategoryRequestBody
     const result = await this.httpClient.post(CATEGORIES_URL, body, decodeCategoryDto)
-    return mapResult(result, mapCategoryDtoToDomain)
+    return flatMapResult(result, mapCategoryDtoToDomain)
   }
 
   async update(id: string, input: UpdateCategoryInput): Promise<Result<Category, AppError>> {
     const body: UpdateCategoryRequestBody = { categoryId: id, name: input.name }
     const result = await this.httpClient.put(`${CATEGORIES_URL}/${id}`, body, decodeCategoryDto)
-    return mapResult(result, mapCategoryDtoToDomain)
+    return flatMapResult(result, mapCategoryDtoToDomain)
   }
 
   async delete(id: string): Promise<Result<void, AppError>> {

@@ -106,3 +106,30 @@ export function mapCallbackError(error: unknown): AuthFlowError {
     retryable: true,
   })
 }
+
+export function mapLogoutError(error: unknown): AuthFlowError {
+  if (error instanceof ErrorTimeout) {
+    return new AuthFlowError({
+      code: 'timeout',
+      flowCode: 'AUTH_LOGOUT_FAILED',
+      message: 'O serviço de login demorou para confirmar a saída. Tente novamente.',
+      retryable: true,
+    })
+  }
+
+  if (error instanceof TypeError) {
+    return new AuthFlowError({
+      code: 'network',
+      flowCode: 'AUTH_LOGOUT_FAILED',
+      message: 'Não foi possível conectar ao serviço de login para concluir a saída.',
+      retryable: true,
+    })
+  }
+
+  return new AuthFlowError({
+    code: 'unexpected',
+    flowCode: 'AUTH_LOGOUT_FAILED',
+    message: 'Não foi possível concluir a saída. Tente novamente.',
+    retryable: true,
+  })
+}

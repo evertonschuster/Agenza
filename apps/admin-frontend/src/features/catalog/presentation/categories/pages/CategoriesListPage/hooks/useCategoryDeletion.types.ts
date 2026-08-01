@@ -1,7 +1,9 @@
 import type { Category } from '@/features/catalog/domain/entities/Category'
+import type { AppError } from '@/shared/application/AppError'
+import type { Result } from '@/shared/application/Result'
 
 export interface UseCategoryDeletionParams {
-  onDelete: (id: string) => Promise<void>
+  onDelete: (id: string) => Promise<Result<void, AppError>>
 }
 
 export interface UseCategoryDeletionResult {

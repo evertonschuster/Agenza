@@ -173,20 +173,38 @@ as `apps/admin-frontend/AGENTS.md` and `backend/AGENTS.md`.
 React, that feature's own `application/`, `infrastructure/`, or
 `presentation/`, and zero imports from another feature. Private
 constructor + static `create(input)` factory that validates invariants
-and throws a named error subclassing `shared/domain/DomainError.ts` — see
-`Category.ts`/`Service.ts` (`features/catalog/domain/entities/`) for the
-existing pattern (`InvalidCategoryError`/`InvalidServiceError`). This is
-the frontend's own, already-established exception-and-catch convention
-for validation failures, distinct from the .NET backend's Result/
-DomainResult pattern (docs/adr/0014, `backend/AGENTS.md`) — that ADR
-governs the backend only; every caller here already expects a throw
-(`useAsync`'s `catch`, `mapApiErrorToForm`). No constructor parameter
-property shorthand (`erasableSyntaxOnly`) — explicit field declarations +
-assignment in the constructor body. Optional fields: `if (value !==
-undefined) { this.field = value }`, never a direct assignment of a
-possibly-`undefined` value (`exactOptionalPropertyTypes`). `strict: true`
-— never `any`; if a value's shape is genuinely unknown at a boundary,
-type it `unknown` and narrow it, never widen with `any`.
+and returns `Result<EntityName, InvalidEntityNameError>`
+(`shared/application/Result.ts`) instead of throwing (docs/adr/014,
+docs/adr/015 — both Catalog's `Category.ts`/`Tag.ts` and Auth's
+`Session.ts`/`User.ts`/`Tenant.ts` follow this). Every caller composes
+with `flatMapResult`/`combineResults`, or plain early-return `Result`
+branching for a short sequential chain with heterogeneous error types
+(see `mapOidcUserToSession`, `features/auth/infrastructure/`) — never
+`try/catch`. A mapper that turns a domain validation failure arising from
+an untrusted API response into a curated `AppError` uses
+`shared/infrastructure/http/malformedResponseError.ts`, not its own
+message. `useAsync` (`shared/presentation/hooks/useAsync.ts`) takes
+`() => Promise<Result<T, E>>`, not a throwing `() => Promise<T>`.
+
+A test fixture that needs a known-valid entity (most test files touching
+auth or catalog do) imports `Tenant`/`User`/`Session`/`Category`/`Tag`
+from `src/test/fixtures/{authEntityFixtures,unwrapResult}.ts` instead of
+the real `domain/entities/` path — those re-export the same `create()`
+call shape already unwrapped, so call sites read exactly like before
+without every test wrapping every call in `unwrapResult(...)`. Only each
+entity's own `*.test.ts` imports the real class directly, since it
+specifically asserts on both the success and failure `Result` shapes.
+
+Every feature vertical (Catalog now, Auth now, a future one like
+Services) follows this same Result convention — there is no throwing
+variant left to mirror.
+
+No constructor parameter property shorthand (`erasableSyntaxOnly`) —
+explicit field declarations + assignment in the constructor body. Optional
+fields: `if (value !== undefined) { this.field = value }`, never a direct
+assignment of a possibly-`undefined` value (`exactOptionalPropertyTypes`).
+`strict: true` — never `any`; if a value's shape is genuinely unknown at a
+boundary, type it `unknown` and narrow it, never widen with `any`.
 
 ### 2. Repository interface (no test needed)
 

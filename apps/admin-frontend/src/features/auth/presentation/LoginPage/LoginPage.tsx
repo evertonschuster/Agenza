@@ -20,10 +20,9 @@ export function LoginPage(): JSX.Element {
 
   const startLogin = useCallback(async (): Promise<void> => {
     setFeedback(null)
-    try {
-      await login(returnTo, theme)
-    } catch (error) {
-      setFeedback(toAuthFlowFeedback(error))
+    const result = await login(returnTo, theme)
+    if (!result.success) {
+      setFeedback(toAuthFlowFeedback(result.error))
     }
   }, [login, returnTo, theme])
 

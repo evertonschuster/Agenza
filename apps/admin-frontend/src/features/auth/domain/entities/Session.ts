@@ -1,6 +1,7 @@
 import { User } from '@/features/auth/domain/entities/User'
 import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
 import { InvalidSessionError } from '@/features/auth/domain/errors/InvalidSessionError'
+import { failure, success, type Result } from '@/shared/application/Result'
 
 interface CreateSessionInput {
   user: User
@@ -19,12 +20,12 @@ export class Session {
     this.expiresAt = expiresAt
   }
 
-  static create(input: CreateSessionInput): Session {
+  static create(input: CreateSessionInput): Result<Session, InvalidSessionError> {
     if (input.accessToken.trim().length === 0) {
-      throw new InvalidSessionError('Session access token must not be empty')
+      return failure(new InvalidSessionError('Session access token must not be empty'))
     }
 
-    return new Session(input.user, input.accessToken, input.expiresAt)
+    return success(new Session(input.user, input.accessToken, input.expiresAt))
   }
 
   isExpiredAt(now: Date): boolean {

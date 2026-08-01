@@ -1,4 +1,4 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react'
+import { Component, type ReactNode } from 'react'
 import { ErrorScreen } from '@/shared/presentation/components/ErrorScreen'
 import { isChunkLoadError } from '@/shared/presentation/components/isChunkLoadError'
 
@@ -12,16 +12,15 @@ interface ErrorBoundaryState {
 }
 
 // Catches render/lifecycle errors only - not a pre-render crash or errors
-// from event handlers/async code. RouteErrorElement covers router-level errors.
+// from event handlers/async code (main.tsx's window listeners cover those).
+// RouteErrorElement covers router-level errors. Reporting for everything
+// this boundary catches happens once, centrally, via createRoot's
+// onCaughtError in main.tsx - not duplicated here in componentDidCatch.
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   override state: ErrorBoundaryState = { hasError: false, isChunkLoadError: false }
 
   static getDerivedStateFromError(error: unknown): ErrorBoundaryState {
     return { hasError: true, isChunkLoadError: isChunkLoadError(error) }
-  }
-
-  override componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    console.error('Unhandled UI error caught by ErrorBoundary', error, errorInfo)
   }
 
   private handleRetry = (): void => {

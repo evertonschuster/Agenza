@@ -7,8 +7,7 @@ import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { AuthProvider } from '@/features/auth/presentation/AuthProvider'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import type { AppContainer } from '@/app/composition/container'
-import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
-import { User } from '@/features/auth/domain/entities/User'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
 import { vi } from 'vitest'
 
 function buildContainer(

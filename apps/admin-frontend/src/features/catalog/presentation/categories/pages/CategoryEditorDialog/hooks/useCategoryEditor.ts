@@ -4,6 +4,7 @@ import { useAppContainer } from '@/app/providers/useAppContainer'
 import { useAsync } from '@/shared/presentation/hooks/useAsync'
 import { AppError } from '@/shared/application/AppError'
 import { toUiError } from '@/shared/application/UiError'
+import { failure, type Result } from '@/shared/application/Result'
 import type { Category } from '@/features/catalog/domain/entities/Category'
 import type {
   CategoryFormField,
@@ -24,21 +25,25 @@ import type {
 
 const EMPTY_FORM_VALUES: CategoryFormValues = { name: '' }
 
+// immediate: isEditing keeps this unreachable in practice - it only exists
+// to satisfy useAsync's Result-returning contract without a throw.
+const MISSING_CATEGORY_ID_ERROR = new AppError({
+  code: 'unexpected',
+  message: 'Categoria não informada.',
+  retryable: false,
+})
+
 export function useCategoryEditor(): UseCategoryEditorResult {
   const { id: categoryId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { catalog } = useAppContainer()
   const isEditing = categoryId !== undefined
 
-  const fetchCategory = useCallback(async (): Promise<Category> => {
+  const fetchCategory = useCallback((): Promise<Result<Category, AppError>> => {
     if (categoryId === undefined) {
-      throw new Error('fetchCategory requires a categoryId')
+      return Promise.resolve(failure(MISSING_CATEGORY_ID_ERROR))
     }
-    const result = await catalog.getCategory.execute(categoryId)
-    if (!result.success) {
-      throw result.error
-    }
-    return result.value
+    return catalog.getCategory.execute(categoryId)
   }, [catalog, categoryId])
 
   const categoryState = useAsync(fetchCategory, { immediate: isEditing })
@@ -52,29 +57,16 @@ export function useCategoryEditor(): UseCategoryEditorResult {
   async function onSubmit(values: CategoryFormValues): Promise<void> {
     setIsSubmitting(true)
     setServerError(null)
-    try {
-      const result =
-        categoryId === undefined
-          ? await catalog.createCategory.execute({ name: values.name })
-          : await catalog.updateCategory.execute(categoryId, { name: values.name })
-      if (result.success) {
-        closeEditor()
-      } else {
-        setServerError(
-          mapApiErrorToForm(
-            result.error,
-            categoryFieldMap,
-            categoryCodeFieldMap,
-            isEditing
-              ? 'Não foi possível salvar a categoria.'
-              : 'Não foi possível criar a categoria.',
-          ),
-        )
-      }
-    } catch (caughtError) {
+    const result =
+      categoryId === undefined
+        ? await catalog.createCategory.execute({ name: values.name })
+        : await catalog.updateCategory.execute(categoryId, { name: values.name })
+    if (result.success) {
+      closeEditor()
+    } else {
       setServerError(
         mapApiErrorToForm(
-          caughtError,
+          result.error,
           categoryFieldMap,
           categoryCodeFieldMap,
           isEditing
@@ -82,9 +74,8 @@ export function useCategoryEditor(): UseCategoryEditorResult {
             : 'Não foi possível criar a categoria.',
         ),
       )
-    } finally {
-      setIsSubmitting(false)
     }
+    setIsSubmitting(false)
   }
 
   let content: CategoryEditorContent
@@ -95,7 +86,7 @@ export function useCategoryEditor(): UseCategoryEditorResult {
   } else if (categoryState.status === 'initialError') {
     const error = categoryState.error
     content =
-      error instanceof AppError && error.code === 'notFound'
+      error.code === 'notFound'
         ? { status: 'notFound' }
         : {
             status: 'loadError',

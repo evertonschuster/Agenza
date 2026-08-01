@@ -4,18 +4,17 @@ import { useAppContainer } from '@/app/providers/useAppContainer'
 import { useAsync, toUiAsyncState } from '@/shared/presentation/hooks/useAsync'
 import { useCategoryDeletion } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoryDeletion'
 import type { Category } from '@/features/catalog/domain/entities/Category'
+import type { AppError } from '@/shared/application/AppError'
+import type { Result } from '@/shared/application/Result'
 import type { UseCategoriesListPageResult } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage.types'
 
 export function useCategoriesListPage(search: string): UseCategoriesListPageResult {
   const { catalog } = useAppContainer()
 
-  const listCategories = useCallback(async (): Promise<Category[]> => {
-    const result = await catalog.listCategories.execute({ search })
-    if (!result.success) {
-      throw result.error
-    }
-    return result.value
-  }, [catalog, search])
+  const listCategories = useCallback(
+    (): Promise<Result<Category[], AppError>> => catalog.listCategories.execute({ search }),
+    [catalog, search],
+  )
 
   const asyncState = useAsync(listCategories)
   const { data, execute } = asyncState
@@ -23,12 +22,12 @@ export function useCategoriesListPage(search: string): UseCategoriesListPageResu
   const listState = toUiAsyncState(asyncState)
 
   const deleteCategory = useCallback(
-    async (id: string): Promise<void> => {
+    async (id: string): Promise<Result<void, AppError>> => {
       const deleteResult = await catalog.deleteCategory.execute(id)
-      if (!deleteResult.success) {
-        throw deleteResult.error
+      if (deleteResult.success) {
+        await execute()
       }
-      await execute()
+      return deleteResult
     },
     [catalog, execute],
   )

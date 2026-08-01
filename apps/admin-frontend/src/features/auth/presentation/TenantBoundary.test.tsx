@@ -3,15 +3,15 @@ import { render, screen, fireEvent } from '@testing-library/react'
 import { useState, type JSX } from 'react'
 import { TenantBoundary } from '@/features/auth/presentation/TenantBoundary'
 import { AuthContext, type AuthContextValue } from '@/features/auth/presentation/AuthContext'
-import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
-import { User } from '@/features/auth/domain/entities/User'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
+import { success } from '@/shared/application/Result'
 
 function buildAuthValue(tenantContext: TenantContext | null): AuthContextValue {
   const actions = {
-    login: () => Promise.resolve(),
-    completeLogin: () => Promise.resolve('/dashboard'),
-    logout: () => Promise.resolve(),
+    login: () => Promise.resolve(success(undefined)),
+    completeLogin: () => Promise.resolve(success('/dashboard')),
+    logout: () => Promise.resolve(success(undefined)),
   }
   return tenantContext !== null
     ? { status: 'authenticated', tenantContext, ...actions }

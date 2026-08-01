@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { User as OidcUser } from 'oidc-client-ts'
 import { mapOidcUserToSession } from '@/features/auth/infrastructure/oidcUserToSessionMapper'
 import { MissingTenantClaimError } from '@/features/auth/infrastructure/MissingTenantClaimError'
+import { MissingExpiryClaimError } from '@/features/auth/infrastructure/MissingExpiryClaimError'
 
 function createFakeOidcUser(overrides: Partial<OidcUser> = {}): OidcUser {
   return {
@@ -23,12 +24,14 @@ describe('mapOidcUserToSession', () => {
   it('maps a valid oidc-client-ts User into a domain Session', () => {
     const oidcUser = createFakeOidcUser()
 
-    const session = mapOidcUserToSession(oidcUser)
+    const result = mapOidcUserToSession(oidcUser)
 
-    expect(session.accessToken).toBe('access-token-value')
-    expect(session.user.id).toBe('user-1')
-    expect(session.user.tenant.id).toBe('tenant-123')
-    expect(session.expiresAt).toEqual(new Date(1_800_000_000 * 1000))
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.accessToken).toBe('access-token-value')
+    expect(result.value.user.id).toBe('user-1')
+    expect(result.value.user.tenant.id).toBe('tenant-123')
+    expect(result.value.expiresAt).toEqual(new Date(1_800_000_000 * 1000))
   })
 
   it('maps optional email and name claims onto the domain User when present', () => {
@@ -45,13 +48,15 @@ describe('mapOidcUserToSession', () => {
       },
     })
 
-    const session = mapOidcUserToSession(oidcUser)
+    const result = mapOidcUserToSession(oidcUser)
 
-    expect(session.user.email).toBe('owner@clinic.com')
-    expect(session.user.name).toBe('Dr. Owner')
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.user.email).toBe('owner@clinic.com')
+    expect(result.value.user.name).toBe('Dr. Owner')
   })
 
-  it('throws MissingTenantClaimError when tenant_id is absent from the claims', () => {
+  it('fails with MissingTenantClaimError when tenant_id is absent from the claims', () => {
     const oidcUser = createFakeOidcUser({
       profile: {
         sub: 'user-1',
@@ -62,10 +67,14 @@ describe('mapOidcUserToSession', () => {
       },
     })
 
-    expect(() => mapOidcUserToSession(oidcUser)).toThrow(MissingTenantClaimError)
+    const result = mapOidcUserToSession(oidcUser)
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toBeInstanceOf(MissingTenantClaimError)
   })
 
-  it('throws MissingTenantClaimError when tenant_id is an empty string', () => {
+  it('fails with MissingTenantClaimError when tenant_id is an empty string', () => {
     const oidcUser = createFakeOidcUser({
       profile: {
         sub: 'user-1',
@@ -77,13 +86,21 @@ describe('mapOidcUserToSession', () => {
       },
     })
 
-    expect(() => mapOidcUserToSession(oidcUser)).toThrow(MissingTenantClaimError)
+    const result = mapOidcUserToSession(oidcUser)
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toBeInstanceOf(MissingTenantClaimError)
   })
 
-  it('throws when expires_at is missing, since session validity cannot be determined', () => {
+  it('fails with MissingExpiryClaimError when expires_at is missing', () => {
     const { expires_at, ...oidcUserWithoutExpiry } = createFakeOidcUser()
     void expires_at // intentionally discarded - this test asserts behavior when it's absent
 
-    expect(() => mapOidcUserToSession(oidcUserWithoutExpiry as OidcUser)).toThrow()
+    const result = mapOidcUserToSession(oidcUserWithoutExpiry as OidcUser)
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toBeInstanceOf(MissingExpiryClaimError)
   })
 })

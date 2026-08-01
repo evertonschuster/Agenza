@@ -5,7 +5,8 @@ import { createMemoryRouter, RouterProvider, type RouteObject } from 'react-rout
 import { describe, expect, it, vi } from 'vitest'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import type { AppContainer, CatalogFacade } from '@/app/composition/container'
-import { AuthProvider, Tenant, User } from '@/features/auth'
+import { AuthProvider } from '@/features/auth'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
 import { Category } from '@/features/catalog/domain/entities/Category'
 import { CategoryEditorDialog } from '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/CategoryEditorDialog'
 import { CategoriesListPage } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/CategoriesListPage'
@@ -13,10 +14,11 @@ import { AppError } from '@/shared/application/AppError'
 import { success, failure } from '@/shared/application/Result'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import { MALICIOUS_PAYLOADS } from '@/test/fixtures/maliciousPayloads'
+import { unwrapResult } from '@/test/fixtures/unwrapResult'
 
 const tenant = Tenant.create('tenant-123')
 const tenantContext = { tenant, user: User.create({ id: 'user-1', tenant }) }
-const categoryFixture = Category.create({ id: 'category-1', name: 'Massagens' })
+const categoryFixture = unwrapResult(Category.create({ id: 'category-1', name: 'Massagens' }))
 
 function buildContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
   return createFakeAppContainer({
@@ -290,7 +292,7 @@ describe('Categories routes', () => {
   })
 
   it.each(MALICIOUS_PAYLOADS)('renders the category name "%s" as inert text', async payload => {
-    const category = Category.create({ id: 'malicious-1', name: payload })
+    const category = unwrapResult(Category.create({ id: 'malicious-1', name: payload }))
     renderCategoryRoute(
       '/categories',
       buildContainer({

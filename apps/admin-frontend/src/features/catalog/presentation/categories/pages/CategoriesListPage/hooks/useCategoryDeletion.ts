@@ -10,6 +10,5 @@ export function useCategoryDeletion({
 }: UseCategoryDeletionParams): UseCategoryDeletionResult {
   return useDeleteConfirmation<Category>({
     onDelete: category => onDelete(category.id),
-    fallbackMessage: 'Não foi possível excluir a categoria.',
   })
 }

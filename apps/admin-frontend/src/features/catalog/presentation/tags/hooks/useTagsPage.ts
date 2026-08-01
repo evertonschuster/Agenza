@@ -34,7 +34,6 @@ export function useTagsPage(): UseTagsPageResult {
   const { tags, listState, refetch, deleteTag } = tagsSource
   const deletion = useDeleteConfirmation<Tag>({
     onDelete: tag => deleteTag(tag.id),
-    fallbackMessage: 'Não foi possível excluir a etiqueta.',
   })
 
   return {
