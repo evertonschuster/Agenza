@@ -40,18 +40,22 @@ src/
       index.ts         public API - everything outside this feature imports
                         through here, never a deep path into the above
 
-    catalog/           Tags, Categories, Services - one feature, they
-                        collaborate in the same business context
-      domain/          Tag, Category, Service entities + their errors
+    catalog/           Categories, Services - one feature, they
+                        collaborate in the same business context. Tags
+                        was removed from the frontend (docs/adr/016 in
+                        this app's ADRs) - the backend Tag domain/API
+                        is intentionally retained, unrelated to this
+                        feature's current frontend shape
+      domain/          Category, Service entities + their errors
       application/     3 repository ports, 12 use cases
       infrastructure/  Api*Repository, mappers, generated/ (OpenAPI types)
-      presentation/    every entity folder (tags/, categories/, services/)
+      presentation/    every entity folder (categories/, services/)
                         shares the same internal shape - location alone
                         tells you a file's role:
         <entity>/
           <Entity>Page.tsx   composition shell (stays at entity root by
                              default; Categories uses pages/, ADR 012)
-          hooks/             data hook (useTags/useCategories/useServices)
+          hooks/             data hook (useCategories/useServices)
                              + controller hook (useXPage) + any sub-hooks
                              (useServiceEditor, useServiceDeletion, ...)
           components/        presentational pieces: tables, dialogs,
@@ -61,8 +65,8 @@ src/
                              across entities - see "Forms" below)
           models/            services/ only - pure, non-React view-model/
                              formatting logic (servicePresentationModels,
-                             serviceFormatters); tags/categories have no
-                             equivalent, so no models/ for them
+                             serviceFormatters); categories has no
+                             equivalent, so no models/ for it
       index.ts         public API
 
   shared/
@@ -122,10 +126,10 @@ state, UI, and completion criteria.
    REST repository depends on it; it already exists for every current
    feature.
 3. **Decide whether this is a new feature or belongs in an existing
-   one.** A resource that collaborates closely with Tags/Categories/
-   Services (shares forms, cross-references, or the same backend service)
-   belongs in `features/catalog/`; a genuinely independent domain gets its
-   own `features/<name>/` following the same four-layer shape.
+   one.** A resource that collaborates closely with Categories/Services
+   (shares forms, cross-references, or the same backend service) belongs
+   in `features/catalog/`; a genuinely independent domain gets its own
+   `features/<name>/` following the same four-layer shape.
 4. **Identify which use cases the current page actually needs.** Don't
    build every possible use case upfront.
 
@@ -175,7 +179,7 @@ React, that feature's own `application/`, `infrastructure/`, or
 constructor + static `create(input)` factory that validates invariants
 and returns `Result<EntityName, InvalidEntityNameError>`
 (`shared/application/Result.ts`) instead of throwing (docs/adr/014,
-docs/adr/015 — both Catalog's `Category.ts`/`Tag.ts` and Auth's
+docs/adr/015 — both Catalog's `Category.ts` and Auth's
 `Session.ts`/`User.ts`/`Tenant.ts` follow this). Every caller composes
 with `flatMapResult`/`combineResults`, or plain early-return `Result`
 branching for a short sequential chain with heterogeneous error types
@@ -187,7 +191,7 @@ message. `useAsync` (`shared/presentation/hooks/useAsync.ts`) takes
 `() => Promise<Result<T, E>>`, not a throwing `() => Promise<T>`.
 
 A test fixture that needs a known-valid entity (most test files touching
-auth or catalog do) imports `Tenant`/`User`/`Session`/`Category`/`Tag`
+auth or catalog do) imports `Tenant`/`User`/`Session`/`Category`
 from `src/test/fixtures/{authEntityFixtures,unwrapResult}.ts` instead of
 the real `domain/entities/` path — those re-export the same `create()`
 call shape already unwrapped, so call sites read exactly like before
@@ -258,8 +262,8 @@ field pattern). Tests use MSW handlers in
 `src/test/mocks/handlers/index.ts`. `onUnhandledRequest: 'error'` is
 global — any call without a registered handler fails loudly. A test mock
 handler typing a fixture against a feature's internal DTO type
-(`import type { TagDto } from '@/features/catalog/infrastructure/
-mappers/tagMapper'`) is the one place allowed to import a feature's
+(`import type { CategoryDto } from '@/features/catalog/infrastructure/
+mappers/categoryMapper'`) is the one place allowed to import a feature's
 internals directly from outside it — `src/test/**` is exempt from the
 public-API-only rule (ESLint + `architecture_guard.py` both carve this
 out explicitly).
@@ -268,7 +272,7 @@ out explicitly).
 
 `shared/presentation/hooks/useAsync.ts` is the one shared "call an async
 function, track loading/data/error" primitive — every feature hook
-(`useCategories`, `useServices`, `useTags` — and `AuthProvider` for the
+(`useCategories`, `useServices` — and `AuthProvider` for the
 shared session) builds on it instead of a bespoke `useState`/`useEffect`
 pair or a server-state library (see "Prohibited" below). It already
 handles the two things that are easy to get wrong by hand:
@@ -281,7 +285,7 @@ handles the two things that are easy to get wrong by hand:
 - **Unmounted-component writes**: guarded internally; you don't need your
   own `isMounted` ref.
 
-For a mutation (`createTag`, `updateTag`, `deleteTag` in `useTags.ts`),
+For a mutation (create/update/delete on a feature's data hook),
 **a create's success must not depend on the follow-up refetch succeeding**:
 call `mutate(current => [...(current ?? []), created])` to insert the new
 item into the hook's state immediately after the write succeeds, then
@@ -300,12 +304,14 @@ frame (multi-tenancy — see root `AGENTS.md`).
 
 ### 8. Page component
 
-Replace the stub. **`TagsPage` is the reference for behavior and design**
-(search → table → dialog create/edit → `AlertDialog` delete-confirm,
-loading/error/empty states) — **not for anatomy**. Copy the _pattern_, not
-the file count: a feature with more independent workflows legitimately
-needs more files than Tags does. See "Componentization" below for when
-and how to split a page's controller hook, form, and dialog.
+Replace the stub. **`CategoriesListPage`/`CategoryEditorDialog`
+(`features/catalog/presentation/categories/`) is the reference for
+behavior and design** (search → table → dialog create/edit →
+`AlertDialog` delete-confirm, loading/error/empty states) — **not for
+anatomy**. Copy the _pattern_, not the file count: a feature with more
+independent workflows legitimately needs more files than Categories does.
+See "Componentization" below for when and how to split a page's
+controller hook, form, and dialog.
 
 #### List = `Table`; form = `Dialog` by default
 
@@ -313,18 +319,22 @@ A page listing records renders a `Table` (`src/components/ui/table.tsx`):
 one row per record, actions (Edit/Delete) as buttons in the last column —
 not stacked `Card`s. A create/edit form opens in a `Dialog`
 (`src/components/ui/dialog.tsx`) over the list by default. One `Dialog`
-instance switches between create/edit based on which record triggered it
-(`TagsPage`'s dialog-target state), not a dialog per row. The form component
-stays dialog-agnostic.
+instance switches between create/edit based on which record triggered it,
+not a dialog per row. The form component stays dialog-agnostic.
 
 Categories maps `/categories/new` and `/categories/:id/edit` to the same
 nested editor `Dialog` over the still-mounted `/categories` list
 (docs/adr/012). `CategoryEditorDialog` renders one `CategoryForm` and
-`useCategoryEditor` selects create or update from the route. The parent
-list owns one `useCategories` source for rows and every mutation and passes
-it through outlet context; edit ids are resolved only from that
-tenant-scoped collection. Its smartphone table uses labelled icon actions
-with larger touch targets and reveals action text from `sm` upward.
+`useCategoryEditor` selects create or update from the route. In edit mode
+`useCategoryEditor` fetches its own category directly via
+`GET /api/v1/categories/{id}` — it does **not** read the list's data
+through outlet context (docs/adr/013 superseded that shape; a
+`useOutletContext<T>()` cast has no runtime guarantee an ancestor route
+actually supplied a value). `useCategoriesListPage` refetches the list
+unconditionally whenever navigation returns from the editor route back to
+the bare `/categories` route, whether the editor closed via cancel or a
+successful save. Its smartphone table uses labelled icon actions with
+larger touch targets and reveals action text from `sm` upward.
 
 A destructive action (delete) is confirmed with the shared
 `DeleteConfirmationDialog` (`shared/presentation/components/`, built on
@@ -375,30 +385,34 @@ ServiceCategoryField.tsx`). Only **promote** something to `shared/`
 #### Forms: React Hook Form + Zod
 
 Any form beyond a single trivial field uses `react-hook-form` +
-`@hookform/resolvers/zod` — see `TagForm.tsx`
-(`features/catalog/presentation/tags/forms/`) for the exact shape:
+`@hookform/resolvers/zod` — see `CategoryForm.tsx`
+(`features/catalog/presentation/categories/pages/CategoryEditorDialog/forms/`)
+for the exact shape:
 
 ```typescript
-const tagFormSchema = z.object({
-  name: z.string().trim().min(1, NAME_MESSAGE).max(40, NAME_MESSAGE),
-  color: z.enum(TAG_COLOR_PALETTE, { message: COLOR_MESSAGE }),
+const categoryFormSchema = z.object({
+  name: z.string().trim().min(1, NAME_MESSAGE).max(60, NAME_MESSAGE),
 });
-export type TagFormValues = z.infer<typeof tagFormSchema>;
+export type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
 const {
   register,
-  control,
   handleSubmit,
   setError,
   setFocus,
   formState: { errors },
-} = useForm<TagFormValues>({
-  resolver: zodResolver(tagFormSchema),
+} = useForm<CategoryFormValues>({
+  resolver: zodResolver(categoryFormSchema),
   defaultValues: initialValues,
   mode: "onTouched",
   reValidateMode: "onChange",
 });
 ```
+
+(A field wired through `Controller` instead of `register` — e.g. a
+`Select`, a color swatch group, a multi-value picker — also destructures
+`control` from `useForm`; `CategoryForm` doesn't need one since its only
+field is a plain text input.)
 
 - `<form onSubmit={e => void handleSubmit(onSubmit)(e)} noValidate ...>` —
   `noValidate` because native browser constraint validation would
@@ -424,8 +438,8 @@ const {
   result with `setError(field, { type: 'server', message })` in a
   `useEffect` keyed on the server-error object, and
   `setFocus(firstField)` so a screen-reader/keyboard user lands on the
-  first invalid field instead of losing their position — see `TagForm`'s
-  `serverError` effect.
+  first invalid field instead of losing their position — see
+  `CategoryForm`'s `serverError` effect.
 - Don't reach for Formik or Yup without an explicit ADR — React Hook Form
   - Zod is the established, working pattern here (`docs/DECISIONS.md`).
 
@@ -518,7 +532,7 @@ non-token color.
 - `Dialog` is responsive by default (`max-w-[calc(100%-2rem)]` below its
   `sm:` breakpoint).
 - Any `flex` row inside a form that could get tight still needs
-  `flex-wrap` — see `TagForm`'s color swatches and button row.
+  `flex-wrap` — see `CategoryForm`'s button row.
 - Never use a fixed pixel width wider than ~300px without a responsive
   override. Prefer `w-full` + `max-w-*`.
 - `AdminLayout` already handles the page shell (off-canvas sidebar below
@@ -536,12 +550,13 @@ last-known-good-after-a-failed-refresh states).
 Every string a user reads or a screen reader announces — headings, button
 labels, `PageHeader`/`StatusMessage` text, form labels/hints,
 `aria-label`s, confirm prompts, error-message fallbacks — is pt-BR. See
-`TagsPage`/`TagForm` for the pattern (e.g. "Nova etiqueta", `aria-label="Cor
-${paletteColor}"`). Code stays in English: identifiers, comments, commit
+`CategoriesListPage`/`CategoryEditorDialog` for the pattern (e.g. "Nova
+categoria", `aria-label={\`Excluir categoria ${category.name}\`}`). Code
+stays in English: identifiers, comments, commit
 messages, this skill's own prose.
 
 Nav labels (source of truth: `AdminLayout.tsx`'s `NAV_ITEMS`) are Painel,
-Agendamentos, Serviços, Clientes, Caixa de entrada, Etiquetas,
+Agendamentos, Serviços, Categorias, Clientes, Caixa de entrada,
 Configurações — reuse the exact same word for a stub page's
 `PlaceholderPage title` and for that vertical's `PageHeader title` once
 built.
@@ -593,8 +608,8 @@ Every `get`/`post`/`put` call takes a `decode` function alongside its `T` -
 a generic type parameter alone validates nothing at runtime, so the
 decoder is what actually stands between an untrusted response body and a
 value the rest of the app treats as `T` (docs/adr/011). A feature's mapper
-owns its own decoder next to its DTO type (e.g. `tagMapper.ts`'s
-`decodeTagDto`/`decodeTagDtoArray`) - hand-rolled `typeof`/`Array.isArray`
+owns its own decoder next to its DTO type (e.g. `categoryMapper.ts`'s
+`decodeCategoryDto`/`decodeCategoryDtoArray`) - hand-rolled `typeof`/`Array.isArray`
 guards matching `shared/infrastructure/http/ProblemDetails.ts`'s existing
 style, not a schema library. A decoder that throws is caught by the same
 place every other infrastructure failure already is (see below) - never

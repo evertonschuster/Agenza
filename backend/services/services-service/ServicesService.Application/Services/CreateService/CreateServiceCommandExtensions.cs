@@ -8,7 +8,7 @@ public static class CreateServiceCommandExtensions
 {
     // TenantId is intentionally Guid.Empty - AuditableEntitySaveChangesInterceptor
     // assigns it on save (docs/adr/0008).
-    public static DomainResult<Service> ToModel(this CreateServiceCommand command, int code)
+    public static DomainResult<Service> ToModel(this CreateServiceCommand command, int code, IReadOnlyCollection<Tag> tags)
     {
         var durationResult = DurationRange.Create(command.MinDurationMinutes, command.DurationMinutes, command.MaxDurationMinutes);
         if (durationResult.IsFailure)
@@ -16,7 +16,7 @@ public static class CreateServiceCommandExtensions
             return DomainResult.Failure<Service>(durationResult.Error);
         }
 
-        return Service.Create(
+        var serviceResult = Service.Create(
             Guid.CreateVersion7(),
             command.Name,
             command.Description,
@@ -25,5 +25,14 @@ public static class CreateServiceCommandExtensions
             command.MaxDiscountPercentage,
             command.CategoryId,
             code);
+
+        if (serviceResult.IsFailure)
+        {
+            return serviceResult;
+        }
+
+        serviceResult.Value.SetTags(tags);
+
+        return serviceResult;
     }
 }

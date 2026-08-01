@@ -38,10 +38,6 @@ function defaultAuthFacade(): AuthFacade {
 
 function defaultCatalogFacade(): CatalogFacade {
   return {
-    listTags: { execute: vi.fn(() => Promise.resolve(success([]))) },
-    createTag: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
-    updateTag: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
-    deleteTag: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
     listCategories: { execute: vi.fn(() => Promise.resolve(success([]))) },
     getCategory: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },
     createCategory: { execute: vi.fn(CATALOG_NOT_USED_IN_THIS_FAKE) },

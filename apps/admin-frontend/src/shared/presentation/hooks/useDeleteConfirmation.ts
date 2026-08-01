@@ -16,7 +16,7 @@ export interface UseDeleteConfirmationResult<T> {
   onConfirm: () => Promise<void>
 }
 
-/** Shared target/progress/error state behind every delete-with-confirm flow (Tags/Categories/Services). */
+/** Shared target/progress/error state behind every delete-with-confirm flow (Categories/Services). */
 export function useDeleteConfirmation<T>({
   onDelete,
 }: UseDeleteConfirmationParams<T>): UseDeleteConfirmationResult<T> {

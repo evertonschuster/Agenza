@@ -27,7 +27,7 @@ what's blocked, and what order to build things in.
 | Local Git hooks                                    | `removed` | Quality gates run explicitly during development and in required CI checks                          |
 | `HttpClient` interface + `AuthenticatedHttpClient` | `done`    | Single per-request session read (token + tenant id together); converts every failure to `AppError` |
 | MSW handlers (auth)                                | `stub`    | Auth uses OIDC not REST — no handlers needed                                                       |
-| MSW handlers (Tags/Categories/Services)            | `done`    | `tagHandlers.ts`/`categoryHandlers.ts`/`serviceHandlers.ts`                                        |
+| MSW handlers (Categories/Services)                 | `done`    | `categoryHandlers.ts`/`serviceHandlers.ts`                                                         |
 | MSW handlers (remaining REST features)             | `stub`    | Add per-feature as specs arrive (Clients, Appointments, Inbox, Settings)                           |
 | shadcn/ui design system (`src/components/ui/`)     | `done`    | Radix-based, stock "Nova"/neutral theme, unmodified; see ADR 005                                   |
 | `ThemeProvider` / `useTheme` / `ThemeToggle`       | `done`    | Light/dark, defaults to OS preference, persists an override                                        |
@@ -66,17 +66,10 @@ what's blocked, and what order to build things in.
 
 ### Tags
 
-| Piece                                    | Status | Notes                                                    |
-| ---------------------------------------- | ------ | -------------------------------------------------------- |
-| `Tag` entity                             | `done` |                                                          |
-| `TagRepository` interface                | `done` |                                                          |
-| Use cases (List, Create, Update, Delete) | `done` |                                                          |
-| `ApiTagRepository` + `tagMapper`         | `done` |                                                          |
-| `useTags` hook                           | `done` |                                                          |
-| `TagsPage` + nav entry                   | `done` | Table list, dialog create/edit form, delete with confirm |
-| Backend (services-service `/api/tags`)   | `done` | First real vertical in services-service                  |
-
-**Dependency:** none. First REST vertical built end-to-end (backend + frontend).
+Removed from the frontend — see `docs/adr/016-remove-tags-frontend.md`. The
+backend `Tag` domain entity and `/api/v1/tags` endpoints are intentionally
+retained (project-owner decision), just no longer surfaced or consumed by
+this app.
 
 ---
 
@@ -92,8 +85,11 @@ what's blocked, and what order to build things in.
 | `ServicesPage` + `ServiceForm` + nav entry    | `done` | Table list, dialog create/edit form (category `Select`, tag toggle grid), delete with confirm |
 | Backend (services-service `/api/v1/services`) | `done` | Search/filter/pagination added; see docs/adr/0012 for the latest validation/handler shape     |
 
-**Dependency:** none structurally — depends on Categories and Tags for the
-create/edit form's pickers, both already built.
+**Dependency:** none structurally — depends on Categories for the create/edit
+form's category picker. The backend `ServiceDto` still has `tags`/`tagIds`
+(docs/API.md) since the backend Tag domain was kept; the frontend has no
+Tag entity or picker anymore (docs/adr/016), so a tag-selection UI needs to
+be designed when this form is actually built.
 
 ---
 
@@ -185,15 +181,17 @@ create/edit form's pickers, both already built.
 
 ```
 1. HttpClient (unblocks all REST features)          [done]
-2. Tags        (no dependencies, first REST vertical) [done]
-3. Categories  (no dependencies, simplest CRUD)      [done]
-4. Services    (depends on Categories + Tags for its form pickers) [done]
-5. Clients     (simple CRUD)
-6. Appointments (depends on Services for create form)
-7. Inbox       (depends on Clients)
-8. Dashboard   (depends on Appointments + Inbox for overview data)
-9. Settings    (independent, can be done any time after HttpClient)
+2. Categories  (no dependencies, simplest CRUD)      [done]
+3. Services    (depends on Categories for its form pickers) [done]
+4. Clients     (simple CRUD)
+5. Appointments (depends on Services for create form)
+6. Inbox       (depends on Clients)
+7. Dashboard   (depends on Appointments + Inbox for overview data)
+8. Settings    (independent, can be done any time after HttpClient)
 ```
+
+Tags was previously vertical #2 here (first REST vertical, no dependencies)
+but was removed from the frontend — see `docs/adr/016-remove-tags-frontend.md`.
 
 ---
 
@@ -257,21 +255,19 @@ services-service, or Postgres needs to be running. Covered so far:
   navigation, and logout (mocking the OIDC discovery document + end-session
   redirect, not just a REST endpoint, so the real `OidcAuthRepository` runs
   unmodified).
-- Tags: full create → edit → delete flow through the real
-  `HttpClient`/repository/mapper stack (not a faked `AppContainer`, unlike
-  the unit tests).
-- Tags list: a failed refetch keeps showing the last known-good data with a
-  retry action, and retry recovers.
-
-**Deliberately not duplicated here** (already covered at the unit level,
-listed so the gap is explicit rather than silent): the OIDC callback's
-idempotency under `StrictMode` (`CallbackPage.test.tsx`,
-`HandleAuthCallback.test.ts`), tenant-switch races in `useAsync`/
-`useCreateInline` (their own dedicated test files), and cross-tenant/
-cross-session visual bleed (`TenantBoundary.test.tsx`). Categories/Services
-CRUD aren't E2E-tested separately — Tags is the reference flow and the
-other two verticals share the same `useAsync`/repository/mapper
-machinery already exercised there and at the unit level.
+  **Deliberately not duplicated here** (already covered at the unit level,
+  listed so the gap is explicit rather than silent): the OIDC callback's
+  idempotency under `StrictMode` (`CallbackPage.test.tsx`,
+  `HandleAuthCallback.test.ts`), tenant-switch races in `useAsync`/
+  `useCreateInline` (their own dedicated test files), and cross-tenant/
+  cross-session visual bleed (`TenantBoundary.test.tsx`). Categories/Services
+  CRUD aren't E2E-tested separately — they share the same `useAsync`/
+  repository/mapper machinery already exercised at the unit level. A full
+  create → edit → delete E2E flow (previously `tags-crud.spec.ts`) and a
+  failed-refetch-retry flow (previously `tags-list-retry.spec.ts`) existed
+  for Tags and were removed along with the vertical
+  (docs/adr/016-remove-tags-frontend.md) — no other vertical has picked up
+  that full-CRUD E2E coverage yet.
 
 **Not yet wired into CI** (`.github/workflows/frontend-ci.yml`): doing so
 would need `npx playwright install --with-deps chromium` added as a step
@@ -295,7 +291,7 @@ authentication transition and feedback work — captured from
 | `ServicesPage-*.js`                                     | 96.24 kB  | 30.57 kB |
 | `index-*.css`                                           | 65.11 kB  | 10.99 kB |
 
-All other route chunks (Categories/Tags pages and forms, stub pages) are
+All other route chunks (Categories pages and forms, stub pages) are
 under 10 kB raw each. Vite now emits the OIDC/auth dependency graph as its
 own shared chunk; `index` + `auth` remain approximately the same combined
 size as the previous monolithic main entry. The feedback UI added no heavy

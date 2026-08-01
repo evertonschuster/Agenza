@@ -34,9 +34,9 @@ const CategoriesListPage = lazy(() =>
   ),
 )
 const CategoryEditorDialog = lazy(() =>
-  import(
-    '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/CategoryEditorDialog'
-  ).then(m => ({ default: m.CategoryEditorDialog })),
+  import('@/features/catalog/presentation/categories/pages/CategoryEditorDialog/CategoryEditorDialog').then(
+    m => ({ default: m.CategoryEditorDialog }),
+  ),
 )
 function withSuspense(element: ReactElement): ReactElement {
   return <Suspense fallback={<FullScreenSpinner />}>{element}</Suspense>
