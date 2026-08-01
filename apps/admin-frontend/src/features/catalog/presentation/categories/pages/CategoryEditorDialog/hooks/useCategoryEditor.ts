@@ -8,7 +8,7 @@ import {
   categoryCodeFieldMap,
   categoryFieldMap,
 } from '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/forms/categoryFieldMaps'
-import type { UseCategoriesResult } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategories'
+import type { CategoriesEditorContext } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage.types'
 import { mapApiErrorToForm, type ServerFormError } from '@/shared/presentation/forms/serverFormError'
 import type {
   CategoryEditorContent,
@@ -21,7 +21,7 @@ export function useCategoryEditor(): UseCategoryEditorResult {
   const { id: categoryId } = useParams<{ id: string }>()
   const navigate = useNavigate()
   const { categories, listState, refetch, createCategory, updateCategory } =
-    useOutletContext<UseCategoriesResult>()
+    useOutletContext<CategoriesEditorContext>()
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [serverError, setServerError] = useState<ServerFormError<CategoryFormField> | null>(null)
   const isEditing = categoryId !== undefined

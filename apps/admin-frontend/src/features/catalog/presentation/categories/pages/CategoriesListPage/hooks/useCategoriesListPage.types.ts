@@ -1,7 +1,20 @@
 import type { Category } from '@/features/catalog/domain/entities/Category'
 import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
 import type { UiError } from '@/shared/application/UiError'
-import type { UseCategoriesResult } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategories'
+import type {
+  CreateCategoryInput,
+  UpdateCategoryInput,
+} from '@/features/catalog/application/repositories/CategoryRepository'
+
+/** What the nested CategoryEditorDialog route reads via useOutletContext - the
+ * page hook's own list state and mutations, not a separate useCategories hook. */
+export interface CategoriesEditorContext {
+  categories: readonly Category[]
+  listState: AsyncState<readonly Category[], UiError>
+  refetch: () => Promise<void>
+  createCategory: (input: CreateCategoryInput) => Promise<Category>
+  updateCategory: (id: string, input: UpdateCategoryInput) => Promise<Category>
+}
 
 export interface UseCategoriesListPageResult {
   categories: readonly Category[]
@@ -15,5 +28,5 @@ export interface UseCategoriesListPageResult {
     onCancel: () => void
     onConfirm: () => void
   }
-  editorContext: UseCategoriesResult
+  editorContext: CategoriesEditorContext
 }
