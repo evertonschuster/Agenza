@@ -34,7 +34,7 @@ describe('createAppContainer', () => {
   it('wires the catalog facade to the concrete repository', () => {
     const container = createAppContainer()
 
-    expect(container.catalog.listTags.execute).toBeTypeOf('function')
+    expect(container.catalog.listCategories.execute).toBeTypeOf('function')
   })
 
   it('does not expose a repository or an HttpClient on the container', () => {
@@ -44,7 +44,7 @@ describe('createAppContainer', () => {
     // guards against a future change accidentally re-adding one.
     expect(container).not.toHaveProperty('httpClient')
     expect(container).not.toHaveProperty('authRepository')
-    expect(container).not.toHaveProperty('tagRepository')
+    expect(container).not.toHaveProperty('categoryRepository')
   })
 
   it('wires the same sessionEvents instance into the http client, so a 401/no-token reaches subscribers', async () => {
@@ -56,7 +56,7 @@ describe('createAppContainer', () => {
     // access token - it goes through the private httpClient built with this
     // exact sessionEvents instance as its notifier, proving they're wired
     // together end to end rather than just both present on the container.
-    await container.catalog.listTags.execute({})
+    await container.catalog.listCategories.execute({})
 
     expect(listener).toHaveBeenCalledTimes(1)
   })

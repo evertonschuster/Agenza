@@ -10,5 +10,4 @@ public sealed record CreateServiceCommand(
     int MaxDurationMinutes,
     decimal Price,
     decimal MaxDiscountPercentage,
-    Guid? CategoryId,
-    IReadOnlyList<Guid>? TagIds) : ICommand<ServiceResponse>;
+    Guid? CategoryId) : ICommand<ServiceResponse>;
