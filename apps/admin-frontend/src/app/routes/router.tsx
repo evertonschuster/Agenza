@@ -17,9 +17,7 @@ const AppointmentsPage = lazy(() =>
   })),
 )
 const ServicesPage = lazy(() =>
-  import('@/features/catalog/presentation/services/ServicesPage').then(m => ({
-    default: m.ServicesPage,
-  })),
+  import('@/app/pages/ServicesPage/ServicesPage').then(m => ({ default: m.ServicesPage })),
 )
 const ClientsPage = lazy(() =>
   import('@/app/pages/ClientsPage/ClientsPage').then(m => ({ default: m.ClientsPage })),
@@ -30,12 +28,22 @@ const InboxPage = lazy(() =>
 const SettingsPage = lazy(() =>
   import('@/app/pages/SettingsPage/SettingsPage').then(m => ({ default: m.SettingsPage })),
 )
+const CategoriesListPage = lazy(() =>
+  import('@/features/catalog/presentation/categories/pages/CategoriesListPage/CategoriesListPage').then(
+    m => ({ default: m.CategoriesListPage }),
+  ),
+)
+const CategoryEditorDialog = lazy(() =>
+  import('@/features/catalog/presentation/categories/pages/CategoryEditorDialog/CategoryEditorDialog').then(
+    m => ({ default: m.CategoryEditorDialog }),
+  ),
+)
 const TagsPage = lazy(() =>
   import('@/features/catalog/presentation/tags/TagsPage').then(m => ({ default: m.TagsPage })),
 )
-const CategoriesPage = lazy(() =>
-  import('@/features/catalog/presentation/categories/CategoriesPage').then(m => ({
-    default: m.CategoriesPage,
+const TagEditorDialog = lazy(() =>
+  import('@/features/catalog/presentation/tags/pages/TagEditorDialog').then(m => ({
+    default: m.TagEditorDialog,
   })),
 )
 
@@ -69,11 +77,25 @@ export const router = createBrowserRouter([
               { index: true, element: <Navigate to="/dashboard" replace /> },
               { path: 'dashboard', element: withSuspense(<DashboardPage />) },
               { path: 'appointments', element: withSuspense(<AppointmentsPage />) },
-              { path: 'services', element: withSuspense(<ServicesPage />) },
-              { path: 'categories', element: withSuspense(<CategoriesPage />) },
+              {
+                path: 'categories',
+                element: withSuspense(<CategoriesListPage />),
+                children: [
+                  { path: 'new', element: withSuspense(<CategoryEditorDialog />) },
+                  { path: ':id/edit', element: withSuspense(<CategoryEditorDialog />) },
+                ],
+              },
               { path: 'clients', element: withSuspense(<ClientsPage />) },
               { path: 'inbox', element: withSuspense(<InboxPage />) },
-              { path: 'tags', element: withSuspense(<TagsPage />) },
+              {
+                path: 'tags',
+                element: withSuspense(<TagsPage />),
+                children: [
+                  { path: 'new', element: withSuspense(<TagEditorDialog />) },
+                  { path: ':id/edit', element: withSuspense(<TagEditorDialog />) },
+                ],
+              },
+              { path: 'services', element: withSuspense(<ServicesPage />) },
               { path: 'settings', element: withSuspense(<SettingsPage />) },
             ],
           },

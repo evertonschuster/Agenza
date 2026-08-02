@@ -19,18 +19,18 @@ what's blocked, and what order to build things in.
 
 ## Infrastructure
 
-| Piece                                              | Status | Notes                                                                                              |
-| -------------------------------------------------- | ------ | -------------------------------------------------------------------------------------------------- |
-| TypeScript strict config                           | `done` |                                                                                                    |
-| ESLint + Prettier                                  | `done` |                                                                                                    |
-| Vitest + RTL + MSW                                 | `done` |                                                                                                    |
-| Husky + lint-staged                                | `done` |                                                                                                    |
-| `HttpClient` interface + `AuthenticatedHttpClient` | `done` | Single per-request session read (token + tenant id together); converts every failure to `AppError` |
-| MSW handlers (auth)                                | `stub` | Auth uses OIDC not REST — no handlers needed                                                       |
-| MSW handlers (Tags/Categories/Services)            | `done` | `tagHandlers.ts`/`categoryHandlers.ts`/`serviceHandlers.ts`                                        |
-| MSW handlers (remaining REST features)             | `stub` | Add per-feature as specs arrive (Clients, Appointments, Inbox, Settings)                           |
-| shadcn/ui design system (`src/components/ui/`)     | `done` | Radix-based, stock "Nova"/neutral theme, unmodified; see ADR 005                                   |
-| `ThemeProvider` / `useTheme` / `ThemeToggle`       | `done` | Light/dark, defaults to OS preference, persists an override                                        |
+| Piece                                              | Status    | Notes                                                                                              |
+| -------------------------------------------------- | --------- | -------------------------------------------------------------------------------------------------- |
+| TypeScript strict config                           | `done`    |                                                                                                    |
+| ESLint + Prettier                                  | `done`    |                                                                                                    |
+| Vitest + RTL + MSW                                 | `done`    |                                                                                                    |
+| Local Git hooks                                    | `removed` | Quality gates run explicitly during development and in required CI checks                          |
+| `HttpClient` interface + `AuthenticatedHttpClient` | `done`    | Single per-request session read (token + tenant id together); converts every failure to `AppError` |
+| MSW handlers (auth)                                | `stub`    | Auth uses OIDC not REST — no handlers needed                                                       |
+| MSW handlers (Tags/Categories/Services)            | `done`    | `tagHandlers.ts`/`categoryHandlers.ts`/`serviceHandlers.ts`                                        |
+| MSW handlers (remaining REST features)             | `stub`    | Add per-feature as specs arrive (Clients, Appointments, Inbox, Settings)                           |
+| shadcn/ui design system (`src/components/ui/`)     | `done`    | Radix-based, stock "Nova"/neutral theme, unmodified; see ADR 005                                   |
+| `ThemeProvider` / `useTheme` / `ThemeToggle`       | `done`    | Light/dark, defaults to OS preference, persists an override                                        |
 
 ---
 
@@ -106,7 +106,7 @@ create/edit form's pickers, both already built.
 | Use cases (List, Create, Update, Delete)        | `done` |                                                                                |
 | `ApiCategoryRepository` + `categoryMapper`      | `done` |                                                                                |
 | `useCategories` hook                            | `done` |                                                                                |
-| `CategoriesPage` + nav entry                    | `done` | Table list, dialog create/edit form, delete with confirm                       |
+| Categories responsive list/editor + nav entry   | `done` | Mobile-ready table; shared URL-driven create/edit modal; delete with confirm   |
 | Backend (services-service `/api/v1/categories`) | `done` | Search/filter added; see docs/adr/0012 for the latest validation/handler shape |
 
 **Dependency:** none. Referenced by Services (optional `categoryId`).

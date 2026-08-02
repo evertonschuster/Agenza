@@ -231,7 +231,6 @@ run the repo-wide governance checks from
 - React Router 8
 - oidc-client-ts (Auth Code + PKCE)
 - Vitest + React Testing Library + MSW
-- Husky + lint-staged
 
 ## Design language
 
@@ -254,8 +253,12 @@ page). The short version:
   Tailwind palette classes. Tokens are what make dark mode work; raw
   classes silently break it.
 - A list of records is a `Table` (`src/components/ui/table.tsx`), not
-  stacked `Card`s. A create/edit form always opens in a `Dialog`
-  modal, never inline or as its own route.
+  stacked `Card`s. Create/edit forms open in a `Dialog` by default.
+  Categories maps the nested routes `/categories/new` and
+  `/categories/:id/edit` to the same editor `Dialog` over the still-mounted
+  `/categories` list. The dialog reuses one form and one controller hook for
+  creation and editing. Its table uses compact, record-labelled icon actions
+  on smartphones and text actions from `sm` upward (docs/adr/012).
 - Build pages from `src/components/ui/` (shadcn/ui) and the shared
   composites in `shared/presentation/components/` (`PageHeader`,
   `StatusMessage`, `TextField`/`TextAreaField`, `CenteredScreen`,
