@@ -85,7 +85,7 @@ jobs:
         run: npm run test:coverage --workspace=apps/admin-frontend
 
       - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
+        run: npm exec --workspace=apps/admin-frontend -- playwright install --with-deps chromium
 
       - name: Browser tests
         run: npm run test:e2e --workspace=apps/admin-frontend
