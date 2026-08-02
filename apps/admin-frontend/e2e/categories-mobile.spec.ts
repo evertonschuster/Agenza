@@ -22,7 +22,21 @@ test.describe('categories on smartphones', () => {
         const request = route.request()
 
         if (request.method() === 'GET') {
-          await route.fulfill({ json: categories })
+          const segments = new URL(request.url()).pathname.split('/')
+          const categoryId = segments.at(-1) === 'categories' ? null : segments.at(-1)
+
+          if (categoryId === null) {
+            await route.fulfill({ json: categories })
+            return
+          }
+
+          const category = categories.find(candidate => candidate.id === categoryId)
+          if (category === undefined) {
+            await route.fulfill({ status: 404 })
+            return
+          }
+
+          await route.fulfill({ json: category })
           return
         }
 
