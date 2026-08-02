@@ -997,6 +997,7 @@ class ArchitectureGuardTests(unittest.TestCase):
             "infra/postgres/init/001-service-roles.sh",
             ': "${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}"\n',
         )
+
         findings = ag.run_all()
         blocking = [f for f in findings if f.severity == "blocking"]
 

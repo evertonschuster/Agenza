@@ -4,33 +4,48 @@ import {
   decodeTagDto,
   decodeTagDtoArray,
 } from '@/features/catalog/infrastructure/mappers/tagMapper'
-import { InvalidTagError } from '@/features/catalog/domain/errors/InvalidTagError'
 
 describe('mapTagDtoToDomain', () => {
   it('maps every field from the DTO', () => {
-    const tag = mapTagDtoToDomain({
+    const result = mapTagDtoToDomain({
       id: 'tag-1',
       name: 'VIP',
       color: '#0d9488',
       description: 'High-value client',
     })
 
-    expect(tag.id).toBe('tag-1')
-    expect(tag.name).toBe('VIP')
-    expect(tag.color).toBe('#0d9488')
-    expect(tag.description).toBe('High-value client')
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.id).toBe('tag-1')
+    expect(result.value.name).toBe('VIP')
+    expect(result.value.color).toBe('#0d9488')
+    expect(result.value.description).toBe('High-value client')
   })
 
   it('maps a null description to undefined', () => {
-    const tag = mapTagDtoToDomain({ id: 'tag-1', name: 'VIP', color: '#0d9488', description: null })
+    const result = mapTagDtoToDomain({
+      id: 'tag-1',
+      name: 'VIP',
+      color: '#0d9488',
+      description: null,
+    })
 
-    expect(tag.description).toBeUndefined()
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.description).toBeUndefined()
   })
 
-  it('propagates the domain validation failure for an invalid color', () => {
-    expect(() =>
-      mapTagDtoToDomain({ id: 'tag-1', name: 'VIP', color: '#123456', description: null }),
-    ).toThrow(InvalidTagError)
+  it('maps the domain validation failure for an invalid color to a curated AppError', () => {
+    const result = mapTagDtoToDomain({
+      id: 'tag-1',
+      name: 'VIP',
+      color: '#123456',
+      description: null,
+    })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error.code).toBe('unexpected')
   })
 })
 

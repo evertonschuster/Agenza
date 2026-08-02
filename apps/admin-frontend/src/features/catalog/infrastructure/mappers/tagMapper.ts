@@ -1,5 +1,8 @@
 import { Tag } from '@/features/catalog/domain/entities/Tag'
 import type { components } from '@/features/catalog/infrastructure/generated/services-api'
+import type { AppError } from '@/shared/application/AppError'
+import { failure, type Result } from '@/shared/application/Result'
+import { malformedResponseError } from '@/shared/infrastructure/http/malformedResponseError'
 
 /** The TagDto shape - generated from the live OpenAPI contract, not
  * hand-maintained (see src/features/catalog/infrastructure/generated/services-api.d.ts). */
@@ -34,11 +37,12 @@ export function decodeTagDtoArray(payload: unknown): TagDto[] {
   return payload
 }
 
-export function mapTagDtoToDomain(dto: TagDto): Tag {
-  return Tag.create({
+export function mapTagDtoToDomain(dto: TagDto): Result<Tag, AppError> {
+  const result = Tag.create({
     id: dto.id,
     name: dto.name,
     color: dto.color,
     ...(dto.description !== null ? { description: dto.description } : {}),
   })
+  return result.success ? result : failure(malformedResponseError())
 }

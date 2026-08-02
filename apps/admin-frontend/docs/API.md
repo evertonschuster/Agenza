@@ -196,15 +196,16 @@ claim. Routes are versioned (`Asp.Versioning.Mvc`, docs/adr/0005) —
 omitting the segment falls back to v1, but the frontend always sends it
 explicitly.
 
-| Method   | Path                      | Success                       |
-| -------- | ------------------------- | ----------------------------- |
-| `GET`    | `/api/v1/categories`      | `200` — `CategoryDto[]`       |
-| `POST`   | `/api/v1/categories`      | `201` — created `CategoryDto` |
-| `PUT`    | `/api/v1/categories/{id}` | `200` — updated `CategoryDto` |
-| `DELETE` | `/api/v1/categories/{id}` | `204` — no body               |
+| Method   | Path                      | Success                                                                 |
+| -------- | ------------------------- | ----------------------------------------------------------------------- |
+| `GET`    | `/api/v1/categories`      | `200` — `CategoryDto[]`                                                 |
+| `GET`    | `/api/v1/categories/{id}` | `200` — `CategoryDto`, `404` if not found (tenant-scoped, docs/adr/013) |
+| `POST`   | `/api/v1/categories`      | `201` — created `CategoryDto`                                           |
+| `PUT`    | `/api/v1/categories/{id}` | `200` — updated `CategoryDto`                                           |
+| `DELETE` | `/api/v1/categories/{id}` | `204` — no body                                                         |
 
-`GET` accepts an optional `search` query param (case-insensitive name
-match), e.g. `GET /api/v1/categories?search=massa`.
+`GET` (collection) accepts an optional `search` query param
+(case-insensitive name match), e.g. `GET /api/v1/categories?search=massa`.
 
 `DELETE` fails with `409` (`Category.InUse`) if the category is still
 referenced by one or more Services.

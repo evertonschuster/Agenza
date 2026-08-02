@@ -15,22 +15,8 @@ import {
 import {
   ApiTagRepository,
   ApiCategoryRepository,
-  ApiServiceRepository,
   type TagRepository,
   type CategoryRepository,
-  type ServiceRepository,
-  ListTags,
-  CreateTag,
-  UpdateTag,
-  DeleteTag,
-  ListCategories,
-  CreateCategory,
-  UpdateCategory,
-  DeleteCategory,
-  ListServices,
-  CreateService,
-  UpdateService,
-  DeleteService,
 } from '@/features/catalog'
 
 // Each entry is the *shape* of a use case (Pick<Class, 'execute'>), not the
@@ -45,20 +31,20 @@ export interface AuthFacade {
   sessionEvents: SessionEventBus
 }
 
-/** Tags, Categories, and Services collaborate in the same business context. */
+/** Tags and Categories collaborate in the same business context. Each entry's
+ * execute signature mirrors the matching repository method directly - there's
+ * no orchestration between the facade and the repository, so no intermediate
+ * use-case class is worth the indirection. */
 export interface CatalogFacade {
-  listTags: Pick<ListTags, 'execute'>
-  createTag: Pick<CreateTag, 'execute'>
-  updateTag: Pick<UpdateTag, 'execute'>
-  deleteTag: Pick<DeleteTag, 'execute'>
-  listCategories: Pick<ListCategories, 'execute'>
-  createCategory: Pick<CreateCategory, 'execute'>
-  updateCategory: Pick<UpdateCategory, 'execute'>
-  deleteCategory: Pick<DeleteCategory, 'execute'>
-  listServices: Pick<ListServices, 'execute'>
-  createService: Pick<CreateService, 'execute'>
-  updateService: Pick<UpdateService, 'execute'>
-  deleteService: Pick<DeleteService, 'execute'>
+  listTags: { execute: TagRepository['listAll'] }
+  createTag: { execute: TagRepository['create'] }
+  updateTag: { execute: TagRepository['update'] }
+  deleteTag: { execute: TagRepository['delete'] }
+  listCategories: { execute: CategoryRepository['listAll'] }
+  getCategory: { execute: CategoryRepository['getById'] }
+  createCategory: { execute: CategoryRepository['create'] }
+  updateCategory: { execute: CategoryRepository['update'] }
+  deleteCategory: { execute: CategoryRepository['delete'] }
 }
 
 // What presentation is allowed to see - grouped facades, never a raw
@@ -95,7 +81,6 @@ export function createAppContainer(): AppContainer {
 
   const tagRepository: TagRepository = new ApiTagRepository(httpClient)
   const categoryRepository: CategoryRepository = new ApiCategoryRepository(httpClient)
-  const serviceRepository: ServiceRepository = new ApiServiceRepository(httpClient)
 
   return {
     auth: {
@@ -106,18 +91,15 @@ export function createAppContainer(): AppContainer {
       sessionEvents,
     },
     catalog: {
-      listTags: new ListTags(tagRepository),
-      createTag: new CreateTag(tagRepository),
-      updateTag: new UpdateTag(tagRepository),
-      deleteTag: new DeleteTag(tagRepository),
-      listCategories: new ListCategories(categoryRepository),
-      createCategory: new CreateCategory(categoryRepository),
-      updateCategory: new UpdateCategory(categoryRepository),
-      deleteCategory: new DeleteCategory(categoryRepository),
-      listServices: new ListServices(serviceRepository),
-      createService: new CreateService(serviceRepository),
-      updateService: new UpdateService(serviceRepository),
-      deleteService: new DeleteService(serviceRepository),
+      listTags: { execute: options => tagRepository.listAll(options) },
+      createTag: { execute: input => tagRepository.create(input) },
+      updateTag: { execute: (id, input) => tagRepository.update(id, input) },
+      deleteTag: { execute: id => tagRepository.delete(id) },
+      listCategories: { execute: options => categoryRepository.listAll(options) },
+      getCategory: { execute: id => categoryRepository.getById(id) },
+      createCategory: { execute: input => categoryRepository.create(input) },
+      updateCategory: { execute: (id, input) => categoryRepository.update(id, input) },
+      deleteCategory: { execute: id => categoryRepository.delete(id) },
     },
   }
 }

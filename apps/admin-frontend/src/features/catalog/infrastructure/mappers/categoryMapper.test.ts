@@ -4,20 +4,23 @@ import {
   decodeCategoryDto,
   decodeCategoryDtoArray,
 } from '@/features/catalog/infrastructure/mappers/categoryMapper'
-import { InvalidCategoryError } from '@/features/catalog/domain/errors/InvalidCategoryError'
 
 describe('mapCategoryDtoToDomain', () => {
   it('maps every field from the DTO', () => {
-    const category = mapCategoryDtoToDomain({ id: 'category-1', name: 'Massagens' })
+    const result = mapCategoryDtoToDomain({ id: 'category-1', name: 'Massagens' })
 
-    expect(category.id).toBe('category-1')
-    expect(category.name).toBe('Massagens')
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.id).toBe('category-1')
+    expect(result.value.name).toBe('Massagens')
   })
 
-  it('propagates the domain validation failure for an empty name', () => {
-    expect(() => mapCategoryDtoToDomain({ id: 'category-1', name: '  ' })).toThrow(
-      InvalidCategoryError,
-    )
+  it('maps the domain validation failure for an empty name to a curated AppError', () => {
+    const result = mapCategoryDtoToDomain({ id: 'category-1', name: '  ' })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error.code).toBe('unexpected')
   })
 })
 
