@@ -16,7 +16,7 @@ builder.Services.AddControllers(options =>
     // A verified X-Tenant-Id header is required unless [IgnoreTenant].
     options.Filters.Add<TenantHeaderFilter>();
 });
-builder.Services.AddOpenApi();
+builder.Services.AddApiDocumentation(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -61,10 +61,7 @@ app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
 {
-    // The generated contract is a development/CI artifact, not tenant-owned
-    // business data. Keep it readable without a bearer token so the contract
-    // drift gate can regenerate types from the running service.
-    app.MapOpenApi().AllowAnonymous();
+    app.MapApiDocumentation();
 }
 
 app.UseHttpsRedirection();
@@ -77,4 +74,4 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapDefaultEndpoints();
 
-app.Run();
+await app.RunAsync();

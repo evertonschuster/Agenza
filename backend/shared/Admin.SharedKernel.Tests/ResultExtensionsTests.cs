@@ -45,8 +45,11 @@ public class ResultExtensionsTests
 
         var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(StatusCodes.Status404NotFound);
-        objectResult.Value.Should().BeOfType<ApiProblemDetails>()
-            .Which.Title.Should().Be("not found");
+        var problemDetails = objectResult.Value.Should().BeOfType<ApiProblemDetails>().Subject;
+        problemDetails.Title.Should().Be("not found");
+        problemDetails.TraceId.Should().NotBeNullOrWhiteSpace();
+        problemDetails.CorrelationId.Should().NotBeNullOrWhiteSpace();
+        problemDetails.Errors.Should().ContainKey(string.Empty);
     }
 
     [Fact]
@@ -57,7 +60,10 @@ public class ResultExtensionsTests
         var actionResult = Result.Success(42).ToActionResult(controller, value => controller.Ok(value));
 
         var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
-        okResult.Value.Should().Be(42);
+        var response = okResult.Value.Should().BeOfType<ApiResponse<int>>().Subject;
+        response.Data.Should().Be(42);
+        response.Success.Should().BeTrue();
+        response.Timestamp.Should().BeCloseTo(DateTimeOffset.UtcNow, TimeSpan.FromSeconds(1));
     }
 
     [Fact]
@@ -82,7 +88,11 @@ public class ResultExtensionsTests
 
         var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
         objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
-        objectResult.Value.Should().BeOfType<ApiProblemDetails>().Which.Title.Should().Be("bad input");
+        var problemDetails = objectResult.Value.Should().BeOfType<ApiProblemDetails>().Subject;
+        problemDetails.Title.Should().Be("Ocorreram erros de validação.");
+        problemDetails.TraceId.Should().NotBeNullOrWhiteSpace();
+        problemDetails.CorrelationId.Should().NotBeNullOrWhiteSpace();
+        problemDetails.Errors.Should().BeEmpty();
     }
 
     [Fact]
@@ -102,6 +112,37 @@ public class ResultExtensionsTests
         var problemDetails = objectResult.Value.Should().BeOfType<ApiProblemDetails>().Subject;
         problemDetails.Title.Should().Be("Ocorreram erros de validação.");
         problemDetails.Code.Should().Be("Validation.Failed");
+        problemDetails.TraceId.Should().NotBeNullOrWhiteSpace();
+        problemDetails.CorrelationId.Should().NotBeNullOrWhiteSpace();
         problemDetails.Errors.Should().BeSameAs(fieldErrors);
+    }
+
+    [Fact]
+    public void ToActionResult_Generic_OnSuccess_WithCreated_WrapsInEnvelope()
+    {
+        var controller = new TestController();
+
+        var actionResult = Result.Success("new-id").ToActionResult(controller, id => controller.Created($"/api/items/{id}", id));
+
+        var createdResult = actionResult.Should().BeOfType<CreatedResult>().Subject;
+        var response = createdResult.Value.Should().BeOfType<ApiResponse<string>>().Subject;
+        response.Data.Should().Be("new-id");
+        response.Success.Should().BeTrue();
+        response.TraceId.Should().NotBeNullOrWhiteSpace();
+        response.CorrelationId.Should().NotBeNullOrWhiteSpace();
+    }
+
+    [Fact]
+    public void ToActionResult_Generic_OnSuccess_WithComplexObject_WrapsInEnvelope()
+    {
+        var controller = new TestController();
+        var complexObject = new { Name = "Test", Count = 10 };
+
+        var actionResult = Result.Success(complexObject).ToActionResult(controller, obj => controller.Ok(obj));
+
+        var okResult = actionResult.Should().BeOfType<OkObjectResult>().Subject;
+        var response = okResult.Value.Should().NotBeNull();
+        // Response should be wrapped in ApiResponse
+        response.Should().NotBeSameAs(complexObject);
     }
 }

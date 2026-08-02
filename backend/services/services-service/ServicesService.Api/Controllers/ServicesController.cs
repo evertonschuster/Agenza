@@ -23,7 +23,8 @@ public class ServicesController : AgenzaControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType<PagedResult<ServiceResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse<PagedResult<ServiceResponse>>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> List([FromQuery] ListServicesQuery query, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Query(query, cancellationToken);
@@ -31,7 +32,9 @@ public class ServicesController : AgenzaControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType<ServiceResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ApiResponse<ServiceResponse>>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(CreateServiceCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command, cancellationToken);
@@ -39,7 +42,10 @@ public class ServicesController : AgenzaControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [ProducesResponseType<ServiceResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse<ServiceResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(Guid id, UpdateServiceCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command with { ServiceId = id }, cancellationToken);
@@ -48,6 +54,8 @@ public class ServicesController : AgenzaControllerBase
 
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(new DeleteServiceCommand(id), cancellationToken);

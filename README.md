@@ -51,7 +51,6 @@ dotnet run --project backend/AppHost --launch-profile http
 | Python | 3.12 (`requires-python`, CI)                                 | 3.12 (`.python-version`, `uv.lock`)          |
 | Docker | 29.5                                                         | Same (container runtime for Aspire Postgres) |
 
-Node was previously documented as 22.18 while `react-router`/`lint-staged`
-already required >=22.22 — `.nvmrc`/`engines.node` now enforce the real
-floor everywhere (local and CI) instead of letting them silently
-disagree.
+Node was previously documented as 22.18 while the frontend toolchain already
+required >=22.22 — `.nvmrc`/`engines.node` now enforce the real floor
+everywhere (local and CI) instead of letting them silently disagree.

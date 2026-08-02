@@ -112,12 +112,12 @@ Root `package.json` declares `apps/*` and `packages/*` as npm workspaces. Only t
 JS/TS side is workspace-managed; .NET and Python projects are self-contained and use
 their own native tooling (`dotnet`, `pip`/venv).
 
-## Git hooks
+## Quality gates
 
-Husky lives at the repo root (`.husky/`, installed by the root `prepare`
-script). The pre-commit hook runs each workspace's lint-staged from
-inside that workspace — add a line to `.husky/pre-commit` when a new
-workspace gains a lint-staged config.
+The repository installs no local Git hooks. Contributors run the applicable
+format, lint, build, and test commands explicitly before committing; required
+GitHub Actions checks remain the integration gate for `origin/main`. See
+`AGENTS.md` and `docs/QUALITY.md` for the commands and coverage requirements.
 
 ## Known gaps (tracked, not blocking)
 

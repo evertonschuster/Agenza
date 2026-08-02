@@ -124,11 +124,12 @@ that were never stated or implied by the spec/ADRs/code.
 ## Git workflow
 
 Trunk-based, single long-lived branch (`main`) — no permanent `develop`/
-staging branch. Full rationale: docs/adr/0021 and docs/adr/0030.
+staging branch. Full rationale: docs/adr/0021, docs/adr/0030, and
+docs/adr/0031.
 
-- **Direct local commits to `main` are allowed.** `.husky/pre-commit` is
-  branch-agnostic and runs staged-file quality checks only; GitHub branch
-  protection is the authority for whether a commit may be delivered to
+- **Direct local commits to `main` are allowed.** The repository installs no
+  local Git hooks; contributors run the applicable quality commands
+  explicitly, and required GitHub checks are the delivery gate for
   `origin/main`. Synchronize with `origin/main` before direct work and never
   rewrite published history.
 - **When a task uses a branch, use one task per branch.** Cut it from an
