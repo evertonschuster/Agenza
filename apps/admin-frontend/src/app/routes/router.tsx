@@ -38,15 +38,6 @@ const CategoryEditorDialog = lazy(() =>
     m => ({ default: m.CategoryEditorDialog }),
   ),
 )
-const TagsPage = lazy(() =>
-  import('@/features/catalog/presentation/tags/TagsPage').then(m => ({ default: m.TagsPage })),
-)
-const TagEditorDialog = lazy(() =>
-  import('@/features/catalog/presentation/tags/pages/TagEditorDialog').then(m => ({
-    default: m.TagEditorDialog,
-  })),
-)
-
 function withSuspense(element: ReactElement): ReactElement {
   return <Suspense fallback={<FullScreenSpinner />}>{element}</Suspense>
 }
@@ -87,14 +78,6 @@ export const router = createBrowserRouter([
               },
               { path: 'clients', element: withSuspense(<ClientsPage />) },
               { path: 'inbox', element: withSuspense(<InboxPage />) },
-              {
-                path: 'tags',
-                element: withSuspense(<TagsPage />),
-                children: [
-                  { path: 'new', element: withSuspense(<TagEditorDialog />) },
-                  { path: ':id/edit', element: withSuspense(<TagEditorDialog />) },
-                ],
-              },
               { path: 'services', element: withSuspense(<ServicesPage />) },
               { path: 'settings', element: withSuspense(<SettingsPage />) },
             ],

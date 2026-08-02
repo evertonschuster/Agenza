@@ -23,7 +23,7 @@ export interface DeleteConfirmationDialogProps {
   onConfirm: () => void
 }
 
-/** Shared delete AlertDialog behind Tags/Categories/Services - generates default title/description from entity info. */
+/** Shared delete AlertDialog behind Categories/Services - generates default title/description from entity info. */
 export function DeleteConfirmationDialog({
   isOpen,
   entityName,

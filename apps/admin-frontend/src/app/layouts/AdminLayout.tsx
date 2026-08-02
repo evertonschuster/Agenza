@@ -12,7 +12,6 @@ import {
   Menu,
   Settings as SettingsIcon,
   Sparkles,
-  Tag as TagIcon,
   Users,
 } from 'lucide-react'
 import { useAuth, useAuthenticatedTenant, TenantBoundary } from '@/features/auth'
@@ -33,7 +32,6 @@ const NAV_ITEMS: readonly NavItem[] = [
   { label: 'Categorias', to: '/categories', icon: LayoutGrid },
   { label: 'Clientes', to: '/clients', icon: Users },
   { label: 'Caixa de entrada', to: '/inbox', icon: InboxIcon },
-  { label: 'Etiquetas', to: '/tags', icon: TagIcon },
   { label: 'Configurações', to: '/settings', icon: SettingsIcon },
 ]
 

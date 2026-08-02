@@ -75,9 +75,9 @@ Problem Details, always carrying a machine-readable `code`
 ```json
 {
   "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-  "title": "Já existe uma etiqueta chamada 'VIP'.",
+  "title": "Já existe uma categoria chamada 'Massagens'.",
   "status": 409,
-  "code": "Tag.DuplicateName"
+  "code": "Category.DuplicateName"
 }
 ```
 
@@ -119,7 +119,7 @@ into application or presentation (docs/adr/007).
 `shared/presentation/forms/serverFormError.ts`'s `mapApiErrorToForm` turns
 a caught `AppError` into field-level messages a form applies via
 react-hook-form's `setError`, reading `AppError.rawFieldErrors`/
-`backendCode` — each form (`ServiceForm`/`CategoryForm`/`TagForm`) exports
+`backendCode` — each form (`ServiceForm`/`CategoryForm`) exports
 its own backend-property → field-name map (e.g. `DurationMinutes` →
 `durationMinutes`) and a conflict-`code` → field map (e.g.
 `Service.DuplicateName` → `name`).
@@ -140,53 +140,11 @@ real spec says otherwise — don't invent a different shape.
 
 ### Tags
 
-Served by **services-service** (`VITE_API_BASE_URL`). Tenant scope comes
-from the `X-Tenant-Id` header, verified against the JWT's `tenant_id`
-claim. Routes are versioned (`Asp.Versioning.Mvc`, docs/adr/0005) —
-omitting the segment falls back to v1, but the frontend always sends it
-explicitly.
-
-| Method   | Path                | Success                                     |
-| -------- | ------------------- | ------------------------------------------- |
-| `GET`    | `/api/v1/tags`      | `200` — `TagDto[]`, ordered by name (asc)   |
-| `POST`   | `/api/v1/tags`      | `201` — created `TagDto`, `Location` header |
-| `PUT`    | `/api/v1/tags/{id}` | `200` — updated `TagDto`                    |
-| `DELETE` | `/api/v1/tags/{id}` | `204` — no body                             |
-
-`GET` accepts an optional `search` query param (case-insensitive name
-match), e.g. `GET /api/v1/tags?search=vip`.
-
-`DELETE` fails with `409` (`Tag.InUse`) if the tag is still referenced by
-one or more Services.
-
-`TagDto`:
-
-```json
-{
-  "id": "0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e",
-  "name": "VIP",
-  "color": "#0d9488",
-  "description": "High-value returning client"
-}
-```
-
-`description` is `null` when unset. Request body for `POST`/`PUT` is the
-same shape minus `id` (`description` optional).
-
-Validation rules (server-enforced, mirror them client-side):
-
-- `name`: required, trimmed, 1–40 chars, **unique per tenant**
-  (case-insensitive) → violations: `400` (shape) / `409` (duplicate)
-- `color`: required, must be one of the fixed palette below → `400`
-- `description`: optional, trimmed, max 200 chars → `400`
-- Unknown `{id}` within the tenant → `404`
-
-Fixed color palette (the only accepted `color` values):
-
-```
-#0d9488 (teal)   #0ea5e9 (sky)    #8b5cf6 (violet) #ec4899 (pink)
-#ef4444 (red)    #f59e0b (amber)  #22c55e (green)  #64748b (slate)
-```
+Removed from the frontend — see `docs/adr/016-remove-tags-frontend.md`.
+The backend still serves `/api/v1/tags` (`TagDto` with `id`/`name`/
+`color`/`description`, an 8-color fixed palette, `409 Tag.InUse` on
+in-use delete) and `ServiceDto` still embeds a `tags`/`tagIds` field (see
+Services below) — this app just no longer builds against any of it.
 
 ### Categories
 
@@ -259,7 +217,10 @@ Response envelope (`PagedResult<ServiceDto>`):
 }
 ```
 
-`TagSummaryDto` (embedded on a `ServiceDto`, a slice of the full Tag):
+`TagSummaryDto` (embedded on a `ServiceDto`, a slice of the full Tag) —
+still part of the real backend contract even though the frontend Tags
+vertical was removed (docs/adr/016-remove-tags-frontend.md); a future
+Services UI needs to decide how to handle it:
 
 ```json
 { "id": "0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e", "name": "VIP", "color": "#0d9488" }
