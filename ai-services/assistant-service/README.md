@@ -9,7 +9,7 @@ an AI use case is defined.
 ```bash
 python -m venv .venv
 .venv\Scripts\Activate.ps1   # Windows
-pip install uv==0.11.15
+pip install uv==0.11.32
 uv sync --frozen --extra dev
 uv run uvicorn app.main:app --reload --port 8001
 uv run pytest

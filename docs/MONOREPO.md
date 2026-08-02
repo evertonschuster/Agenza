@@ -41,7 +41,7 @@ The full stack has one local orchestration path:
   `agenza-postgres-data` volume.
 
   Docker is required only as Aspire's container runtime for PostgreSQL. Node,
-  Python 3.12, and `uv` must be installed; AppHost runs the npm and locked
+  Python 3.14, and `uv` must be installed; AppHost runs the npm and locked
   `uv sync` setup resources before starting Vite and Uvicorn.
 
   A single local-development password is shared by PostgreSQL, the restricted

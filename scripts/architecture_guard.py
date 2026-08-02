@@ -309,7 +309,7 @@ def check_ai_tenant_boundaries() -> list[Finding]:
 
 
 def check_ai_dependency_parity() -> list[Finding]:
-    """Local development, CI, and Aspire share Python 3.12 + uv.lock."""
+    """Local development, CI, and Aspire share Python 3.14 + uv.lock."""
     service_dir = REPO_ROOT / "ai-services" / "assistant-service"
     if not service_dir.is_dir():
         return []
@@ -342,7 +342,7 @@ def check_ai_dependency_parity() -> list[Finding]:
 
     expected_fragments = {
         workflow: [
-            'python-version: "3.12"',
+            'python-version: "3.14.6"',
             "uv sync --frozen",
             "uv run pytest",
             "uv run uvicorn",
