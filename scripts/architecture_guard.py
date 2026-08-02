@@ -528,49 +528,60 @@ def check_aspire_local_orchestration() -> list[Finding]:
     return findings
 
 
-def check_branch_agnostic_precommit() -> list[Finding]:
-    """Pre-commit keeps staged-file quality checks, never branch policy."""
-    hook = REPO_ROOT / ".husky/pre-commit"
-    text = hook.read_text(encoding="utf-8", errors="replace") if hook.is_file() else ""
-    lines = text.splitlines()
-    lint_staged_invocation = re.compile(
-        r"(?:^|&&)\s*node\s+\.\./\.\./node_modules/lint-staged/bin/lint-staged\.js(?:\s|$)"
-    )
-    if not any(
-        not line.lstrip().startswith("#") and lint_staged_invocation.search(line)
-        for line in lines
-    ):
-        return [
-            Finding(
-                "precommit-quality-check-missing",
-                "blocking",
-                _rel(hook),
-                1,
-                "The pre-commit hook must keep the lint-staged quality check "
-                "required by ADR 0030.",
-            )
-        ]
-
-    branch_queries = [
-        re.compile(r"\bgit\s+symbolic-ref(?:\s+--short)?\s+HEAD\b"),
-        re.compile(r"\bgit\s+branch\s+--show-current\b"),
-        re.compile(r"\bgit\s+rev-parse\s+--abbrev-ref(?:=\S+)?\s+HEAD\b"),
+def check_local_git_hooks_absent() -> list[Finding]:
+    """Repository-owned hooks stay removed; explicit checks and CI own quality."""
+    findings: list[Finding] = []
+    removed_files = [
+        REPO_ROOT / ".husky" / "pre-commit",
+        REPO_ROOT / "apps" / "admin-frontend" / ".lintstagedrc.json",
     ]
-    for line_number, line in enumerate(lines, start=1):
-        if any(pattern.search(line) for pattern in branch_queries):
-            return [
+    for path in removed_files:
+        if path.is_file():
+            findings.append(
                 Finding(
-                    "branch-specific-precommit",
+                    "local-git-hook-reintroduced",
                     "blocking",
-                    _rel(hook),
-                    line_number,
-                    "The pre-commit hook inspects the current branch. ADR 0030 "
-                    "keeps pre-commit branch-agnostic; remote GitHub protection "
-                    "governs delivery.",
+                    _rel(path),
+                    1,
+                    "ADR 0031 removes repository-owned Git hooks and lint-staged "
+                    "configuration; run quality commands explicitly and in CI.",
                 )
-            ]
+            )
 
-    return []
+    package_path = REPO_ROOT / "package.json"
+    try:
+        package = json.loads(package_path.read_text(encoding="utf-8"))
+    except (FileNotFoundError, json.JSONDecodeError, TypeError):
+        return findings
+
+    scripts = package.get("scripts", {})
+    dependencies = {
+        **package.get("dependencies", {}),
+        **package.get("devDependencies", {}),
+    }
+    if "husky" in dependencies or "lint-staged" in dependencies:
+        findings.append(
+            Finding(
+                "local-git-hook-dependency-reintroduced",
+                "blocking",
+                _rel(package_path),
+                1,
+                "ADR 0031 removes Husky and lint-staged from repository "
+                "dependencies.",
+            )
+        )
+    if isinstance(scripts, dict) and "husky" in str(scripts.get("prepare", "")):
+        findings.append(
+            Finding(
+                "local-git-hook-install-reintroduced",
+                "blocking",
+                _rel(package_path),
+                1,
+                "ADR 0031 removes the Husky installation script.",
+            )
+        )
+
+    return findings
 
 
 def check_dotnet_project_reference_boundaries() -> list[Finding]:
@@ -1236,7 +1247,7 @@ CHECKS = [
     check_ai_tenant_boundaries,
     check_ai_dependency_parity,
     check_aspire_local_orchestration,
-    check_branch_agnostic_precommit,
+    check_local_git_hooks_absent,
     check_dotnet_project_reference_boundaries,
     check_dedicated_runtime_test_tier_absent,
     check_ignore_tenant_attribute_allowlist,

@@ -1,3 +1,4 @@
+import json
 import sys
 import tempfile
 import unittest
@@ -735,62 +736,45 @@ class ArchitectureGuardTests(unittest.TestCase):
             )
         )
 
-    def test_branch_specific_precommit_is_blocking(self) -> None:
+    def test_repository_owned_precommit_is_blocking(self) -> None:
+        self._write(".husky/pre-commit", "npm run lint\n")
+
+        findings = ag.check_local_git_hooks_absent()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].category, "local-git-hook-reintroduced")
+
+    def test_husky_tooling_configuration_is_blocking(self) -> None:
         self._write(
-            ".husky/pre-commit",
-            "\n".join(
-                [
-                    "node ../../node_modules/lint-staged/bin/lint-staged.js",
-                    "branch=$(git symbolic-ref --short HEAD 2>/dev/null)",
-                    'if [ "$branch" = "main" ]; then',
-                    "  exit 1",
-                    "fi",
-                    "",
-                ]
+            "package.json",
+            json.dumps(
+                {
+                    "scripts": {"prepare": "husky"},
+                    "devDependencies": {
+                        "husky": "^9.1.7",
+                        "lint-staged": "^17.1.0",
+                    },
+                }
             ),
         )
+        self._write("apps/admin-frontend/.lintstagedrc.json", "{}\n")
 
-        findings = ag.check_branch_agnostic_precommit()
+        findings = ag.check_local_git_hooks_absent()
 
-        self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0].category, "branch-specific-precommit")
-
-    def test_non_main_branch_specific_precommit_is_blocking(self) -> None:
-        self._write(
-            ".husky/pre-commit",
-            "\n".join(
-                [
-                    "node ../../node_modules/lint-staged/bin/lint-staged.js",
-                    "branch=$(git branch --show-current)",
-                    'if [ "$branch" = "develop" ]; then',
-                    "  exit 1",
-                    "fi",
-                    "",
-                ]
-            ),
+        self.assertEqual(len(findings), 3)
+        self.assertEqual(
+            self._categories(findings),
+            {
+                "local-git-hook-reintroduced",
+                "local-git-hook-dependency-reintroduced",
+                "local-git-hook-install-reintroduced",
+            },
         )
 
-        findings = ag.check_branch_agnostic_precommit()
+    def test_absent_local_git_hook_tooling_is_clean(self) -> None:
+        self._write("package.json", '{"scripts": {}}\n')
 
-        self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0].category, "branch-specific-precommit")
-
-    def test_missing_precommit_quality_check_is_blocking(self) -> None:
-        self._write(".husky/pre-commit", "echo lint-staged\n")
-
-        findings = ag.check_branch_agnostic_precommit()
-
-        self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0].category, "precommit-quality-check-missing")
-
-    def test_branch_agnostic_precommit_is_clean(self) -> None:
-        self._write(
-            ".husky/pre-commit",
-            "cd apps/admin-frontend && "
-            "node ../../node_modules/lint-staged/bin/lint-staged.js\n",
-        )
-
-        self.assertEqual(ag.check_branch_agnostic_precommit(), [])
+        self.assertEqual(ag.check_local_git_hooks_absent(), [])
 
     def test_domain_project_reference_is_blocking(self) -> None:
         self._write(
@@ -1012,11 +996,6 @@ class ArchitectureGuardTests(unittest.TestCase):
         self._write(
             "infra/postgres/init/001-service-roles.sh",
             ': "${APP_DB_PASSWORD:?APP_DB_PASSWORD is required}"\n',
-        )
-        self._write(
-            ".husky/pre-commit",
-            "cd apps/admin-frontend && "
-            "node ../../node_modules/lint-staged/bin/lint-staged.js\n",
         )
 
         findings = ag.run_all()
