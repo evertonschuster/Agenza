@@ -1,4 +1,6 @@
 import { Session } from '@/features/auth/domain/entities/Session'
+import type { AuthFlowError } from '@/features/auth/application/errors/AuthFlowError'
+import type { Result } from '@/shared/application/Result'
 
 export interface AuthCallbackResult {
   session: Session
@@ -8,15 +10,16 @@ export interface AuthCallbackResult {
 export type LoginTheme = 'light' | 'dark'
 
 export interface AuthRepository {
-  initiateLogin(returnTo: string, theme: LoginTheme): Promise<void>
+  initiateLogin(returnTo: string, theme: LoginTheme): Promise<Result<void, AuthFlowError>>
 
   // callbackUrl is the full redirect-back URL (query/fragment included),
   // kept as a plain string so this port has no routing-library dependency.
-  handleCallback(callbackUrl: string): Promise<AuthCallbackResult>
+  handleCallback(callbackUrl: string): Promise<Result<AuthCallbackResult, AuthFlowError>>
 
-  // Attempts a silent renewal first if the token is expired/near-expiry;
-  // null if there's no session or renewal failed (stale state is cleared).
+  // Never fails in a way a caller needs to distinguish - null already means
+  // "no usable session" whether that's because none exists, renewal
+  // failed, or the cached data was malformed. See docs/adr/014.
   getCurrentSession(): Promise<Session | null>
 
-  logout(): Promise<void>
+  logout(): Promise<Result<void, AuthFlowError>>
 }

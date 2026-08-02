@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import { useAppContainer } from '@/app/providers/useAppContainer'
 import { useAsync, type AsyncState } from '@/shared/presentation/hooks/useAsync'
+import { success, failure, type Result } from '@/shared/application/Result'
 import { toUiError, type UiError } from '@/shared/application/UiError'
 import type { Service } from '@/features/catalog/domain/entities/Service'
 import type { TenantContext } from '@/features/auth'
@@ -65,17 +66,23 @@ export function useServices(
   const [page, setPage] = useState(1)
   const { search, categoryId, tagId } = filters
 
-  const listServices = useCallback(async (): Promise<PagedServices> => {
+  const listServices = useCallback(async (): Promise<Result<PagedServices, unknown>> => {
     if (tenantContext === null) {
-      return EMPTY_PAGE
+      return success(EMPTY_PAGE)
     }
-    return catalog.listServices.execute(tenantContext, {
-      page,
-      pageSize: DEFAULT_PAGE_SIZE,
-      ...(search !== undefined ? { search } : {}),
-      ...(categoryId !== undefined ? { categoryId } : {}),
-      ...(tagId !== undefined ? { tagId } : {}),
-    })
+    try {
+      return success(
+        await catalog.listServices.execute(tenantContext, {
+          page,
+          pageSize: DEFAULT_PAGE_SIZE,
+          ...(search !== undefined ? { search } : {}),
+          ...(categoryId !== undefined ? { categoryId } : {}),
+          ...(tagId !== undefined ? { tagId } : {}),
+        }),
+      )
+    } catch (error) {
+      return failure(error)
+    }
   }, [tenantContext, catalog, page, search, categoryId, tagId])
 
   const asyncState = useAsync(listServices, { resetKey: tenantContext?.tenant.id })

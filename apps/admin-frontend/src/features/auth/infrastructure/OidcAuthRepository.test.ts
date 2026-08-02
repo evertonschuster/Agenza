@@ -51,8 +51,9 @@ describe('OidcAuthRepository', () => {
       const userManager = createFakeUserManager()
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      await repository.initiateLogin('/services?search=massagem#editor', 'dark')
+      const result = await repository.initiateLogin('/services?search=massagem#editor', 'dark')
 
+      expect(result.success).toBe(true)
       expect(userManager.signinRedirect).toHaveBeenCalledExactlyOnceWith({
         state: '/services?search=massagem#editor',
         extraQueryParams: { theme: 'dark' },
@@ -81,10 +82,12 @@ describe('OidcAuthRepository', () => {
       })
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      const result = repository.initiateLogin('/dashboard', 'light')
+      const result = await repository.initiateLogin('/dashboard', 'light')
 
-      await expect(result).rejects.toMatchObject({ flowCode })
-      await expect(result).rejects.toThrow(message)
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error).toMatchObject({ flowCode })
+      expect(result.error.message).toMatch(message)
     })
   })
 
@@ -98,8 +101,10 @@ describe('OidcAuthRepository', () => {
       expect(userManager.signinRedirectCallback).toHaveBeenCalledWith(
         'https://admin.example.com/callback?code=abc',
       )
-      expect(result.session.user.tenant.id).toBe('tenant-123')
-      expect(result.returnTo).toBeNull()
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.value.session.user.tenant.id).toBe('tenant-123')
+      expect(result.value.returnTo).toBeNull()
     })
 
     it('returns the string application state that was carried through the provider', async () => {
@@ -114,10 +119,12 @@ describe('OidcAuthRepository', () => {
         'https://admin.example.com/callback?code=abc&state=oidc-state',
       )
 
-      expect(result.returnTo).toBe('/services?search=massagem#editor')
+      expect(result.success).toBe(true)
+      if (!result.success) return
+      expect(result.value.returnTo).toBe('/services?search=massagem#editor')
     })
 
-    it('propagates MissingTenantClaimError when the token has no tenant_id', async () => {
+    it('fails with AUTH_ACCOUNT_WITHOUT_TENANT when the token has no tenant_id', async () => {
       const userManager = createFakeUserManager({
         signinRedirectCallback: vi.fn(() =>
           Promise.resolve(
@@ -135,12 +142,12 @@ describe('OidcAuthRepository', () => {
       })
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      const result = repository.handleCallback('https://admin.example.com/callback?code=abc')
+      const result = await repository.handleCallback('https://admin.example.com/callback?code=abc')
 
-      await expect(result).rejects.toMatchObject({
-        flowCode: 'AUTH_ACCOUNT_WITHOUT_TENANT',
-      })
-      await expect(result).rejects.toThrow(/não está vinculada a uma empresa/i)
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error).toMatchObject({ flowCode: 'AUTH_ACCOUNT_WITHOUT_TENANT' })
+      expect(result.error.message).toMatch(/não está vinculada a uma empresa/i)
     })
 
     it.each([
@@ -170,10 +177,12 @@ describe('OidcAuthRepository', () => {
       })
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      const result = repository.handleCallback('https://admin.example.com/callback?code=abc')
+      const result = await repository.handleCallback('https://admin.example.com/callback?code=abc')
 
-      await expect(result).rejects.toMatchObject({ flowCode })
-      await expect(result).rejects.toThrow(message)
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error).toMatchObject({ flowCode })
+      expect(result.error.message).toMatch(message)
     })
   })
 
@@ -197,6 +206,31 @@ describe('OidcAuthRepository', () => {
       const session = await repository.getCurrentSession()
 
       expect(session).toBeNull()
+    })
+
+    it('clears the session and returns null when the cached user no longer maps to a valid session', async () => {
+      const userManager = createFakeUserManager({
+        getUser: vi.fn(() =>
+          Promise.resolve(
+            createFakeOidcUser({
+              expires_at: 9_999_999_999,
+              profile: {
+                sub: 'user-1',
+                iss: 'https://identity.example.com',
+                aud: 'admin-panel',
+                exp: 9_999_999_999,
+                iat: 1_799_996_400,
+              },
+            }),
+          ),
+        ),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const session = await repository.getCurrentSession()
+
+      expect(session).toBeNull()
+      expect(userManager.removeUser).toHaveBeenCalledTimes(1)
     })
 
     it('attempts silent renewal when the cached user is expired, and returns the renewed session on success', async () => {
@@ -312,10 +346,33 @@ describe('OidcAuthRepository', () => {
       const userManager = createFakeUserManager()
       const repository = new OidcAuthRepository(userManager as unknown as UserManager)
 
-      await repository.logout()
+      const result = await repository.logout()
 
+      expect(result.success).toBe(true)
       expect(userManager.removeUser).toHaveBeenCalledTimes(1)
       expect(userManager.signoutRedirect).toHaveBeenCalledTimes(1)
+    })
+
+    it.each([
+      {
+        error: new TypeError('Failed to fetch'),
+        flowCode: 'AUTH_LOGOUT_FAILED',
+      },
+      {
+        error: new ErrorTimeout('Network timed out'),
+        flowCode: 'AUTH_LOGOUT_FAILED',
+      },
+    ] as const)('maps a signoutRedirect failure to $flowCode', async ({ error, flowCode }) => {
+      const userManager = createFakeUserManager({
+        signoutRedirect: vi.fn(() => Promise.reject(error)),
+      })
+      const repository = new OidcAuthRepository(userManager as unknown as UserManager)
+
+      const result = await repository.logout()
+
+      expect(result.success).toBe(false)
+      if (result.success) return
+      expect(result.error).toMatchObject({ flowCode })
     })
   })
 })

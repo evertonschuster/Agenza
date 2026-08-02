@@ -7,9 +7,8 @@ import {
   GetCurrentSession,
   Logout,
   toTenantContext,
-  Tenant,
-  User,
 } from '@/features/auth'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
 import { ListTags } from '@/features/catalog'
 
 function stubOidcEnv(): void {

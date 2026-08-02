@@ -14,11 +14,11 @@ export function CallbackPage(): JSX.Element {
 
   useEffect(() => {
     async function finishCallback(): Promise<void> {
-      try {
-        const returnTo = await completeLogin(window.location.href)
-        await navigate(returnTo, { replace: true })
-      } catch (error) {
-        setFeedback(toAuthFlowFeedback(error))
+      const result = await completeLogin(window.location.href)
+      if (result.success) {
+        await navigate(result.value, { replace: true })
+      } else {
+        setFeedback(toAuthFlowFeedback(result.error))
       }
     }
 

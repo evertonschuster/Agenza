@@ -3,13 +3,13 @@ import { renderHook } from '@testing-library/react'
 import type { ReactNode, JSX } from 'react'
 import { useAuthenticatedTenant } from '@/features/auth/presentation/useAuthenticatedTenant'
 import { AuthContext, type AuthContextValue } from '@/features/auth/presentation/AuthContext'
-import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
-import { User } from '@/features/auth/domain/entities/User'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
+import { success } from '@/shared/application/Result'
 
 const noopActions = {
-  login: () => Promise.resolve(),
-  completeLogin: () => Promise.resolve('/dashboard'),
-  logout: () => Promise.resolve(),
+  login: () => Promise.resolve(success(undefined)),
+  completeLogin: () => Promise.resolve(success('/dashboard')),
+  logout: () => Promise.resolve(success(undefined)),
 }
 
 function buildWrapper(value: AuthContextValue): (props: { children: ReactNode }) => JSX.Element {

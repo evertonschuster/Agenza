@@ -4,10 +4,12 @@ import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router'
 import { AdminLayout } from '@/app/layouts/AdminLayout'
 import { AppContainerContext } from '@/app/providers/AppContainerContext'
-import { AuthProvider, ProtectedRoute, Tenant, User, type TenantContext } from '@/features/auth'
+import { AuthProvider, ProtectedRoute, type TenantContext } from '@/features/auth'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
 import { ThemeProvider } from '@/shared/presentation/providers/ThemeProvider'
 import type { AppContainer } from '@/app/composition/container'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
+import { success } from '@/shared/application/Result'
 import { vi } from 'vitest'
 
 function buildTenantContext(): TenantContext {
@@ -24,7 +26,7 @@ function buildTenantContextWithoutName(): TenantContext {
 
 function buildContainer(
   tenantContext: TenantContext | null,
-  logoutFn = vi.fn(() => Promise.resolve()),
+  logoutFn = vi.fn(() => Promise.resolve(success(undefined))),
 ): AppContainer {
   return createFakeAppContainer({
     auth: {
@@ -95,7 +97,7 @@ describe('AdminLayout', () => {
   })
 
   it('calls the logout use case when the sign out button is clicked', async () => {
-    const logoutSpy = vi.fn(() => Promise.resolve())
+    const logoutSpy = vi.fn(() => Promise.resolve(success(undefined)))
     renderLayout(buildContainer(buildTenantContext(), logoutSpy))
 
     await userEvent.click(await screen.findByRole('button', { name: /sair/i }))

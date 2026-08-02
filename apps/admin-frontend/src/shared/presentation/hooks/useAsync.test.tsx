@@ -2,11 +2,12 @@ import { describe, it, expect, vi } from 'vitest'
 import { renderHook, waitFor, act } from '@testing-library/react'
 import { useCallback } from 'react'
 import { useAsync, toUiAsyncState, type AsyncState } from '@/shared/presentation/hooks/useAsync'
+import { success, failure, type Result } from '@/shared/application/Result'
 import { AppError } from '@/shared/application/AppError'
 
 describe('useAsync', () => {
   it('starts in a loading state and resolves to data on success', async () => {
-    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const asyncFn = vi.fn(() => Promise.resolve(success('result')))
 
     const { result } = renderHook(() => useAsync(asyncFn))
 
@@ -19,8 +20,8 @@ describe('useAsync', () => {
     expect(result.current.data).toBe('result')
   })
 
-  it('resolves to an initialError state (no data yet) when the async function rejects', async () => {
-    const asyncFn = vi.fn(() => Promise.reject(new Error('boom')))
+  it('resolves to an initialError state (no data yet) when the async function resolves to a Failure', async () => {
+    const asyncFn = vi.fn(() => Promise.resolve(failure(new Error('boom'))))
 
     const { result } = renderHook(() => useAsync(asyncFn))
 
@@ -30,11 +31,13 @@ describe('useAsync', () => {
 
     expect(result.current.data).toBeNull()
     expect(result.current.error).toBeInstanceOf(Error)
-    expect((result.current.error as Error).message).toBe('boom')
+    if (result.current.error instanceof Error) {
+      expect(result.current.error.message).toBe('boom')
+    }
   })
 
   it('re-runs the async function when execute is called again', async () => {
-    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const asyncFn = vi.fn(() => Promise.resolve(success('result')))
 
     const { result } = renderHook(() => useAsync(asyncFn))
 
@@ -52,7 +55,7 @@ describe('useAsync', () => {
   })
 
   it('does not auto-run when immediate is false, only on explicit execute', async () => {
-    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const asyncFn = vi.fn(() => Promise.resolve(success('result')))
 
     const { result } = renderHook(() => useAsync(asyncFn, { immediate: false }))
 
@@ -71,12 +74,12 @@ describe('useAsync', () => {
     // (e.g. "massa"), a second one fires before it resolves (e.g. "corte"),
     // and the second one resolves first. The stale first response must not
     // overwrite the newer one.
-    let resolveFirst: ((value: string) => void) | undefined
-    let resolveSecond: ((value: string) => void) | undefined
+    let resolveFirst: ((value: Result<string, unknown>) => void) | undefined
+    let resolveSecond: ((value: Result<string, unknown>) => void) | undefined
     const asyncFn = vi
-      .fn<() => Promise<string>>()
-      .mockImplementationOnce(() => new Promise<string>(resolve => (resolveFirst = resolve)))
-      .mockImplementationOnce(() => new Promise<string>(resolve => (resolveSecond = resolve)))
+      .fn<() => Promise<Result<string, unknown>>>()
+      .mockImplementationOnce(() => new Promise(resolve => (resolveFirst = resolve)))
+      .mockImplementationOnce(() => new Promise(resolve => (resolveSecond = resolve)))
 
     const { result } = renderHook(() => useAsync(asyncFn, { immediate: false }))
 
@@ -91,7 +94,7 @@ describe('useAsync', () => {
 
     // The newer request resolves first...
     await act(async () => {
-      resolveSecond?.('newer')
+      resolveSecond?.(success('newer'))
       await secondCall
     })
     expect(result.current.status).toBe('success')
@@ -100,7 +103,7 @@ describe('useAsync', () => {
     // ...then the stale older request resolves - it must be ignored, not
     // overwrite the already-applied newer result.
     await act(async () => {
-      resolveFirst?.('stale')
+      resolveFirst?.(success('stale'))
       await firstCall
     })
     expect(result.current.status).toBe('success')
@@ -112,14 +115,14 @@ describe('useAsync', () => {
     // 2. Switch to tenant B - its fetch is deliberately left pending.
     // 3. No tenant-A rows remain visible during that window.
     // 4. A stale, late-resolving response for tenant A must be ignored.
-    let resolveB: ((value: string[]) => void) | undefined
+    let resolveB: ((value: Result<string[], unknown>) => void) | undefined
     // A fresh closure per tenantId, like a real listCategories useCallback
     // whose deps include tenantContext - resetKey and asyncFn identity
     // change together on a real tenant switch.
     const fetchForTenant = vi.fn((tenantId: string) =>
       tenantId === 'tenant-a'
-        ? Promise.resolve(['a-row-1', 'a-row-2'])
-        : new Promise<string[]>(resolve => (resolveB = resolve)),
+        ? Promise.resolve(success(['a-row-1', 'a-row-2']))
+        : new Promise<Result<string[], unknown>>(resolve => (resolveB = resolve)),
     )
 
     const { result, rerender } = renderHook(
@@ -151,7 +154,7 @@ describe('useAsync', () => {
       expect(resolveB).toBeDefined()
     })
     act(() => {
-      resolveB?.(['b-row-1'])
+      resolveB?.(success(['b-row-1']))
     })
     await waitFor(() => {
       expect(result.current.status).toBe('success')
@@ -160,12 +163,12 @@ describe('useAsync', () => {
   })
 
   it('ignores a stale execute() left over from before a resetKey change', async () => {
-    let resolveStale: ((value: string) => void) | undefined
-    let resolveCurrent: ((value: string) => void) | undefined
+    let resolveStale: ((value: Result<string, unknown>) => void) | undefined
+    let resolveCurrent: ((value: Result<string, unknown>) => void) | undefined
     const fetchForTenant = vi.fn((tenantId: string) =>
       tenantId === 'tenant-a'
-        ? new Promise<string>(resolve => (resolveStale = resolve))
-        : new Promise<string>(resolve => (resolveCurrent = resolve)),
+        ? new Promise<Result<string, unknown>>(resolve => (resolveStale = resolve))
+        : new Promise<Result<string, unknown>>(resolve => (resolveCurrent = resolve)),
     )
 
     const { result, rerender } = renderHook(
@@ -183,7 +186,7 @@ describe('useAsync', () => {
     expect(result.current.data).toBeNull()
 
     await act(async () => {
-      resolveCurrent?.('tenant-b-rows')
+      resolveCurrent?.(success('tenant-b-rows'))
       await Promise.resolve()
     })
     expect(result.current.data).toBe('tenant-b-rows')
@@ -191,7 +194,7 @@ describe('useAsync', () => {
     // The stale tenant-A request finally resolves - must not overwrite
     // tenant B's already-applied result.
     await act(async () => {
-      resolveStale?.('stale-tenant-a-rows')
+      resolveStale?.(success('stale-tenant-a-rows'))
       await Promise.resolve()
     })
     expect(result.current.data).toBe('tenant-b-rows')
@@ -206,9 +209,9 @@ describe('useAsync', () => {
     // can catch it.
     const fetchForTenant = vi.fn((tenantId: string) =>
       tenantId === 'tenant-a'
-        ? Promise.resolve('a-initial')
+        ? Promise.resolve(success('a-initial'))
         : // eslint-disable-next-line @typescript-eslint/no-empty-function
-          new Promise<string>(() => {}),
+          new Promise<Result<string, unknown>>(() => {}),
     )
 
     const { result, rerender } = renderHook(
@@ -241,7 +244,7 @@ describe('useAsync', () => {
 
 describe('useAsync mutate generation guard', () => {
   it('applies a mutate when no expectedGeneration is passed (always-apply, e.g. session invalidation)', async () => {
-    const asyncFn = vi.fn(() => Promise.resolve(['a1']))
+    const asyncFn = vi.fn(() => Promise.resolve(success(['a1'])))
     const { result } = renderHook(() => useAsync(asyncFn))
 
     await waitFor(() => {
@@ -256,8 +259,10 @@ describe('useAsync mutate generation guard', () => {
   })
 
   it('prevents an in-flight request from overwriting an authoritative mutate', async () => {
-    let resolveRequest: ((value: string) => void) | undefined
-    const asyncFn = vi.fn(() => new Promise<string>(resolve => (resolveRequest = resolve)))
+    let resolveRequest: ((value: Result<string, unknown>) => void) | undefined
+    const asyncFn = vi.fn(
+      () => new Promise<Result<string, unknown>>(resolve => (resolveRequest = resolve)),
+    )
     const { result } = renderHook(() => useAsync(asyncFn))
 
     await waitFor(() => {
@@ -269,7 +274,7 @@ describe('useAsync mutate generation guard', () => {
     })
 
     await act(async () => {
-      resolveRequest?.('stale')
+      resolveRequest?.(success('stale'))
       await Promise.resolve()
     })
 
@@ -277,7 +282,7 @@ describe('useAsync mutate generation guard', () => {
   })
 
   it('applies a mutate whose captured generation still matches the current one', async () => {
-    const asyncFn = vi.fn(() => Promise.resolve(['a1']))
+    const asyncFn = vi.fn(() => Promise.resolve(success(['a1'])))
     const { result } = renderHook(() => useAsync(asyncFn))
 
     await waitFor(() => {
@@ -295,9 +300,9 @@ describe('useAsync mutate generation guard', () => {
   it('ignores a mutate whose captured generation predates a tenant switch', async () => {
     const fetchForTenant = vi.fn((tenantId: string) =>
       tenantId === 'tenant-a'
-        ? Promise.resolve(['a1'])
+        ? Promise.resolve(success(['a1']))
         : // eslint-disable-next-line @typescript-eslint/no-empty-function
-          new Promise<string[]>(() => {}),
+          new Promise<Result<string[], unknown>>(() => {}),
     )
 
     const { result, rerender } = renderHook(
@@ -328,25 +333,25 @@ describe('useAsync mutate generation guard', () => {
 
 describe('useAsync state table', () => {
   it('starts idle with no data/error when immediate is false', () => {
-    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const asyncFn = vi.fn(() => Promise.resolve(success('result')))
     const { result } = renderHook(() => useAsync(asyncFn, { immediate: false }))
 
     expect(result.current).toMatchObject({ status: 'idle', data: null, error: null })
   })
 
   it('starts loading with no data/error on an initial load', () => {
-    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const asyncFn = vi.fn(() => Promise.resolve(success('result')))
     const { result } = renderHook(() => useAsync(asyncFn))
 
     expect(result.current).toMatchObject({ status: 'loading', data: null, error: null })
   })
 
   it('moves to refreshing (keeps last known-good data, clears error) once a re-execute starts', async () => {
-    let resolveSecond: ((value: string) => void) | undefined
+    let resolveSecond: ((value: Result<string, unknown>) => void) | undefined
     const asyncFn = vi
-      .fn<() => Promise<string>>()
-      .mockResolvedValueOnce('first')
-      .mockImplementationOnce(() => new Promise<string>(resolve => (resolveSecond = resolve)))
+      .fn<() => Promise<Result<string, unknown>>>()
+      .mockResolvedValueOnce(success('first'))
+      .mockImplementationOnce(() => new Promise(resolve => (resolveSecond = resolve)))
 
     const { result } = renderHook(() => useAsync(asyncFn))
 
@@ -361,7 +366,7 @@ describe('useAsync state table', () => {
     expect(result.current).toMatchObject({ status: 'refreshing', data: 'first', error: null })
 
     await act(async () => {
-      resolveSecond?.('second')
+      resolveSecond?.(success('second'))
       await Promise.resolve()
     })
 
@@ -370,9 +375,9 @@ describe('useAsync state table', () => {
 
   it('moves to refreshError (keeps last known-good data, carries the new error) when a refresh fails', async () => {
     const asyncFn = vi
-      .fn<() => Promise<string>>()
-      .mockResolvedValueOnce('first')
-      .mockRejectedValueOnce(new Error('refresh failed'))
+      .fn<() => Promise<Result<string, unknown>>>()
+      .mockResolvedValueOnce(success('first'))
+      .mockResolvedValueOnce(failure(new Error('refresh failed')))
 
     const { result } = renderHook(() => useAsync(asyncFn))
 
@@ -391,10 +396,10 @@ describe('useAsync state table', () => {
 
   it('a subsequent successful refetch clears a refreshError back to success', async () => {
     const asyncFn = vi
-      .fn<() => Promise<string>>()
-      .mockResolvedValueOnce('first')
-      .mockRejectedValueOnce(new Error('refresh failed'))
-      .mockResolvedValueOnce('recovered')
+      .fn<() => Promise<Result<string, unknown>>>()
+      .mockResolvedValueOnce(success('first'))
+      .mockResolvedValueOnce(failure(new Error('refresh failed')))
+      .mockResolvedValueOnce(success('recovered'))
 
     const { result } = renderHook(() => useAsync(asyncFn))
 
@@ -414,7 +419,9 @@ describe('useAsync state table', () => {
   })
 
   it('mutate with a non-null result sets status to success, clearing any prior error', async () => {
-    const asyncFn = vi.fn<() => Promise<string>>(() => Promise.reject(new Error('boom')))
+    const asyncFn = vi.fn<() => Promise<Result<string, unknown>>>(() =>
+      Promise.resolve(failure(new Error('boom'))),
+    )
     const { result } = renderHook(() => useAsync(asyncFn))
 
     await waitFor(() => {
@@ -429,7 +436,7 @@ describe('useAsync state table', () => {
   })
 
   it('mutate with a null result sets status to idle', async () => {
-    const asyncFn = vi.fn(() => Promise.resolve('result'))
+    const asyncFn = vi.fn(() => Promise.resolve(success('result')))
     const { result } = renderHook(() => useAsync(asyncFn))
 
     await waitFor(() => {

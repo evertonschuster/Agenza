@@ -1,4 +1,5 @@
 import { InvalidTenantError } from '@/features/auth/domain/errors/InvalidTenantError'
+import { failure, success, type Result } from '@/shared/application/Result'
 
 export class Tenant {
   readonly id: string
@@ -7,14 +8,14 @@ export class Tenant {
     this.id = id
   }
 
-  static create(id: string): Tenant {
+  static create(id: string): Result<Tenant, InvalidTenantError> {
     const trimmedId = id.trim()
 
     if (trimmedId.length === 0) {
-      throw new InvalidTenantError('Tenant id must not be empty')
+      return failure(new InvalidTenantError('Tenant id must not be empty'))
     }
 
-    return new Tenant(trimmedId)
+    return success(new Tenant(trimmedId))
   }
 
   equals(other: Tenant): boolean {

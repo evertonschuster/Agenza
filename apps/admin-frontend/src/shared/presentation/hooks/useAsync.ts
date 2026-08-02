@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { toUiError, type UiError } from '@/shared/application/UiError'
+import type { Result } from '@/shared/application/Result'
 
 // Each variant carries only the fields valid for it, so a refresh failure
 // (refreshError, keeps last known-good data) can't be confused with a
@@ -22,7 +23,7 @@ interface RequestEra {
   generation: number
 }
 
-type UseAsyncResult<T> = AsyncState<T> & {
+type UseAsyncResult<T, E> = AsyncState<T, E> & {
   execute: () => Promise<T | undefined>
   /** Local, synchronous update to `data`; without expectedGeneration it supersedes in-flight requests, while a captured generation only applies if still current. */
   mutate: (updater: (current: T | null) => T | null, expectedGeneration?: number) => void
@@ -36,19 +37,19 @@ interface UseAsyncOptions {
   resetKey?: unknown
 }
 
-function idleOrLoading<T>(immediate: boolean): AsyncState<T> {
+function idleOrLoading<T, E>(immediate: boolean): AsyncState<T, E> {
   return immediate
     ? { status: 'loading', data: null, error: null }
     : { status: 'idle', data: null, error: null }
 }
 
-function startState<T>(current: AsyncState<T>): AsyncState<T> {
+function startState<T, E>(current: AsyncState<T, E>): AsyncState<T, E> {
   return current.data !== null
     ? { status: 'refreshing', data: current.data, error: null }
     : { status: 'loading', data: null, error: null }
 }
 
-function errorState<T>(current: AsyncState<T>, error: unknown): AsyncState<T> {
+function errorState<T, E>(current: AsyncState<T, E>, error: E): AsyncState<T, E> {
   return current.data !== null
     ? { status: 'refreshError', data: current.data, error }
     : { status: 'initialError', data: null, error }
@@ -56,12 +57,15 @@ function errorState<T>(current: AsyncState<T>, error: unknown): AsyncState<T> {
 
 // Ignores a response/mutate call once it's no longer part of the current
 // era (unmounted, superseded, or from before the last resetKey change).
-export function useAsync<T>(
-  asyncFn: () => Promise<T>,
+// asyncFn returns a Result rather than rejecting - every expected failure
+// (validation, conflict, not-found, network) flows through Result.Failure,
+// never a throw, all the way from the repository up through this hook.
+export function useAsync<T, E = unknown>(
+  asyncFn: () => Promise<Result<T, E>>,
   options: UseAsyncOptions = {},
-): UseAsyncResult<T> {
+): UseAsyncResult<T, E> {
   const { immediate = true, resetKey } = options
-  const [state, setState] = useState<AsyncState<T>>(() => idleOrLoading<T>(immediate))
+  const [state, setState] = useState<AsyncState<T, E>>(() => idleOrLoading<T, E>(immediate))
   // React's sanctioned "reset state when a prop changes" pattern - state,
   // not a ref, so the previous era's data never paints for even one frame.
   const [previousResetKey, setPreviousResetKey] = useState(resetKey)
@@ -71,7 +75,7 @@ export function useAsync<T>(
 
   if (previousResetKey !== resetKey) {
     setPreviousResetKey(resetKey)
-    setState(idleOrLoading<T>(immediate))
+    setState(idleOrLoading<T, E>(immediate))
   }
 
   useEffect(() => {
@@ -104,18 +108,17 @@ export function useAsync<T>(
       )
     }
 
-    try {
-      const result = await asyncFn()
+    const result = await asyncFn()
+    if (result.success) {
       if (isCurrent()) {
-        setState({ status: 'success', data: result, error: null })
+        setState({ status: 'success', data: result.value, error: null })
       }
-      return result
-    } catch (caughtError) {
-      if (isCurrent()) {
-        setState(current => errorState(current, caughtError))
-      }
-      return undefined
+      return result.value
     }
+    if (isCurrent()) {
+      setState(current => errorState(current, result.error))
+    }
+    return undefined
   }, [asyncFn, resetKey])
 
   const mutate = useCallback(
@@ -140,6 +143,11 @@ export function useAsync<T>(
 
   useEffect(() => {
     if (immediate) {
+      // Deliberately kicks off the async fetch on mount - this is what a
+      // data-fetching effect is for; the "you might not need an effect"
+      // concern behind this rule is about syncing derived React state, not
+      // about starting a real async operation.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       void execute()
     }
     // immediate only gates the initial mount call, not a value execute()
@@ -150,9 +158,9 @@ export function useAsync<T>(
   return { ...state, execute, mutate, captureGeneration }
 }
 
-// Converts AsyncState's `unknown` error into a curated UiError - components
-// never interpret an arbitrary exception themselves.
-export function toUiAsyncState<T>(state: AsyncState<T>): AsyncState<T, UiError> {
+// Converts AsyncState's error into a curated UiError - components never
+// interpret an arbitrary AppError (or other error value) themselves.
+export function toUiAsyncState<T, E>(state: AsyncState<T, E>): AsyncState<T, UiError> {
   switch (state.status) {
     case 'initialError':
       return { status: 'initialError', data: null, error: toUiError(state.error) }

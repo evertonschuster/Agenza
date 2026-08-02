@@ -1,5 +1,6 @@
 import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
 import { InvalidUserError } from '@/features/auth/domain/errors/InvalidUserError'
+import { failure, success, type Result } from '@/shared/application/Result'
 
 interface CreateUserInput {
   id: string
@@ -27,12 +28,12 @@ export class User {
     }
   }
 
-  static create(input: CreateUserInput): User {
+  static create(input: CreateUserInput): Result<User, InvalidUserError> {
     if (input.id.trim().length === 0) {
-      throw new InvalidUserError('User id must not be empty')
+      return failure(new InvalidUserError('User id must not be empty'))
     }
 
-    return new User(input.id, input.tenant, input.email, input.name)
+    return success(new User(input.id, input.tenant, input.email, input.name))
   }
 
   belongsToTenant(tenant: Tenant): boolean {
