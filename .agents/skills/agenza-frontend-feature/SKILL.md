@@ -40,18 +40,22 @@ src/
       index.ts         public API - everything outside this feature imports
                         through here, never a deep path into the above
 
-    catalog/           Tags, Categories, Services - one feature, they
-                        collaborate in the same business context
-      domain/          Tag, Category, Service entities + their errors
+    catalog/           Categories, Services - one feature, they
+                        collaborate in the same business context. Tags
+                        was removed from the frontend (docs/adr/016 in
+                        this app's ADRs) - the backend Tag domain/API
+                        is intentionally retained, unrelated to this
+                        feature's current frontend shape
+      domain/          Category, Service entities + their errors
       application/     3 repository ports, 12 use cases
       infrastructure/  Api*Repository, mappers, generated/ (OpenAPI types)
-      presentation/    every entity folder (tags/, categories/, services/)
+      presentation/    every entity folder (categories/, services/)
                         shares the same internal shape - location alone
                         tells you a file's role:
         <entity>/
-          <Entity>Page.tsx   composition shell (stays at entity root - see
-                             "Componentization" below for why)
-          hooks/             data hook (useTags/useCategories/useServices)
+          <Entity>Page.tsx   composition shell (stays at entity root by
+                             default; Categories uses pages/, ADR 012)
+          hooks/             data hook (useCategories/useServices)
                              + controller hook (useXPage) + any sub-hooks
                              (useServiceEditor, useServiceDeletion, ...)
           components/        presentational pieces: tables, dialogs,
@@ -61,8 +65,8 @@ src/
                              across entities - see "Forms" below)
           models/            services/ only - pure, non-React view-model/
                              formatting logic (servicePresentationModels,
-                             serviceFormatters); tags/categories have no
-                             equivalent, so no models/ for them
+                             serviceFormatters); categories has no
+                             equivalent, so no models/ for it
       index.ts         public API
 
   shared/
@@ -122,10 +126,10 @@ state, UI, and completion criteria.
    REST repository depends on it; it already exists for every current
    feature.
 3. **Decide whether this is a new feature or belongs in an existing
-   one.** A resource that collaborates closely with Tags/Categories/
-   Services (shares forms, cross-references, or the same backend service)
-   belongs in `features/catalog/`; a genuinely independent domain gets its
-   own `features/<name>/` following the same four-layer shape.
+   one.** A resource that collaborates closely with Categories/Services
+   (shares forms, cross-references, or the same backend service) belongs
+   in `features/catalog/`; a genuinely independent domain gets its own
+   `features/<name>/` following the same four-layer shape.
 4. **Identify which use cases the current page actually needs.** Don't
    build every possible use case upfront.
 
@@ -173,20 +177,38 @@ as `apps/admin-frontend/AGENTS.md` and `backend/AGENTS.md`.
 React, that feature's own `application/`, `infrastructure/`, or
 `presentation/`, and zero imports from another feature. Private
 constructor + static `create(input)` factory that validates invariants
-and throws a named error subclassing `shared/domain/DomainError.ts` — see
-`Category.ts`/`Service.ts` (`features/catalog/domain/entities/`) for the
-existing pattern (`InvalidCategoryError`/`InvalidServiceError`). This is
-the frontend's own, already-established exception-and-catch convention
-for validation failures, distinct from the .NET backend's Result/
-DomainResult pattern (docs/adr/0014, `backend/AGENTS.md`) — that ADR
-governs the backend only; every caller here already expects a throw
-(`useAsync`'s `catch`, `mapApiErrorToForm`). No constructor parameter
-property shorthand (`erasableSyntaxOnly`) — explicit field declarations +
-assignment in the constructor body. Optional fields: `if (value !==
-undefined) { this.field = value }`, never a direct assignment of a
-possibly-`undefined` value (`exactOptionalPropertyTypes`). `strict: true`
-— never `any`; if a value's shape is genuinely unknown at a boundary,
-type it `unknown` and narrow it, never widen with `any`.
+and returns `Result<EntityName, InvalidEntityNameError>`
+(`shared/application/Result.ts`) instead of throwing (docs/adr/014,
+docs/adr/015 — both Catalog's `Category.ts` and Auth's
+`Session.ts`/`User.ts`/`Tenant.ts` follow this). Every caller composes
+with `flatMapResult`/`combineResults`, or plain early-return `Result`
+branching for a short sequential chain with heterogeneous error types
+(see `mapOidcUserToSession`, `features/auth/infrastructure/`) — never
+`try/catch`. A mapper that turns a domain validation failure arising from
+an untrusted API response into a curated `AppError` uses
+`shared/infrastructure/http/malformedResponseError.ts`, not its own
+message. `useAsync` (`shared/presentation/hooks/useAsync.ts`) takes
+`() => Promise<Result<T, E>>`, not a throwing `() => Promise<T>`.
+
+A test fixture that needs a known-valid entity (most test files touching
+auth or catalog do) imports `Tenant`/`User`/`Session`/`Category`
+from `src/test/fixtures/{authEntityFixtures,unwrapResult}.ts` instead of
+the real `domain/entities/` path — those re-export the same `create()`
+call shape already unwrapped, so call sites read exactly like before
+without every test wrapping every call in `unwrapResult(...)`. Only each
+entity's own `*.test.ts` imports the real class directly, since it
+specifically asserts on both the success and failure `Result` shapes.
+
+Every feature vertical (Catalog now, Auth now, a future one like
+Services) follows this same Result convention — there is no throwing
+variant left to mirror.
+
+No constructor parameter property shorthand (`erasableSyntaxOnly`) —
+explicit field declarations + assignment in the constructor body. Optional
+fields: `if (value !== undefined) { this.field = value }`, never a direct
+assignment of a possibly-`undefined` value (`exactOptionalPropertyTypes`).
+`strict: true` — never `any`; if a value's shape is genuinely unknown at a
+boundary, type it `unknown` and narrow it, never widen with `any`.
 
 ### 2. Repository interface (no test needed)
 
@@ -203,10 +225,10 @@ one class per use case, explicit constructor body (no shorthand):
 
 ```typescript
 export class ListServices {
-  private readonly serviceRepository: ServiceRepository
+  private readonly serviceRepository: ServiceRepository;
 
   constructor(serviceRepository: ServiceRepository) {
-    this.serviceRepository = serviceRepository
+    this.serviceRepository = serviceRepository;
   }
 }
 ```
@@ -240,8 +262,8 @@ field pattern). Tests use MSW handlers in
 `src/test/mocks/handlers/index.ts`. `onUnhandledRequest: 'error'` is
 global — any call without a registered handler fails loudly. A test mock
 handler typing a fixture against a feature's internal DTO type
-(`import type { TagDto } from '@/features/catalog/infrastructure/
-mappers/tagMapper'`) is the one place allowed to import a feature's
+(`import type { CategoryDto } from '@/features/catalog/infrastructure/
+mappers/categoryMapper'`) is the one place allowed to import a feature's
 internals directly from outside it — `src/test/**` is exempt from the
 public-API-only rule (ESLint + `architecture_guard.py` both carve this
 out explicitly).
@@ -250,7 +272,7 @@ out explicitly).
 
 `shared/presentation/hooks/useAsync.ts` is the one shared "call an async
 function, track loading/data/error" primitive — every feature hook
-(`useCategories`, `useServices`, `useTags` — and `AuthProvider` for the
+(`useCategories`, `useServices` — and `AuthProvider` for the
 shared session) builds on it instead of a bespoke `useState`/`useEffect`
 pair or a server-state library (see "Prohibited" below). It already
 handles the two things that are easy to get wrong by hand:
@@ -263,7 +285,7 @@ handles the two things that are easy to get wrong by hand:
 - **Unmounted-component writes**: guarded internally; you don't need your
   own `isMounted` ref.
 
-For a mutation (`createTag`, `updateTag`, `deleteTag` in `useTags.ts`),
+For a mutation (create/update/delete on a feature's data hook),
 **a create's success must not depend on the follow-up refetch succeeding**:
 call `mutate(current => [...(current ?? []), created])` to insert the new
 item into the hook's state immediately after the write succeeds, then
@@ -282,24 +304,37 @@ frame (multi-tenancy — see root `AGENTS.md`).
 
 ### 8. Page component
 
-Replace the stub. **`TagsPage` is the reference for behavior and design**
-(search → table → dialog create/edit → `AlertDialog` delete-confirm,
-loading/error/empty states) — **not for anatomy**. Copy the *pattern*, not
-the file count: a feature with more independent workflows legitimately
-needs more files than Tags does. See "Componentization" below for when
-and how to split a page's controller hook, form, and dialog.
+Replace the stub. **`CategoriesListPage`/`CategoryEditorDialog`
+(`features/catalog/presentation/categories/`) is the reference for
+behavior and design** (search → table → dialog create/edit →
+`AlertDialog` delete-confirm, loading/error/empty states) — **not for
+anatomy**. Copy the _pattern_, not the file count: a feature with more
+independent workflows legitimately needs more files than Categories does.
+See "Componentization" below for when and how to split a page's
+controller hook, form, and dialog.
 
-#### List = `Table`, form = `Dialog` — always
+#### List = `Table`; form = `Dialog` by default
 
 A page listing records renders a `Table` (`src/components/ui/table.tsx`):
 one row per record, actions (Edit/Delete) as buttons in the last column —
-not stacked `Card`s. A create/edit form always opens in a `Dialog`
-(`src/components/ui/dialog.tsx`) over the list — never inline in the page,
-never its own route. One `Dialog` instance whose content switches between
-create/edit based on which record (if any) triggered it (`TagsPage`'s
-dialog-target state), not a dialog per row. The form component itself stays
-dialog-agnostic — the page (or its dialog wrapper) wires it into the
-`Dialog`.
+not stacked `Card`s. A create/edit form opens in a `Dialog`
+(`src/components/ui/dialog.tsx`) over the list by default. One `Dialog`
+instance switches between create/edit based on which record triggered it,
+not a dialog per row. The form component stays dialog-agnostic.
+
+Categories maps `/categories/new` and `/categories/:id/edit` to the same
+nested editor `Dialog` over the still-mounted `/categories` list
+(docs/adr/012). `CategoryEditorDialog` renders one `CategoryForm` and
+`useCategoryEditor` selects create or update from the route. In edit mode
+`useCategoryEditor` fetches its own category directly via
+`GET /api/v1/categories/{id}` — it does **not** read the list's data
+through outlet context (docs/adr/013 superseded that shape; a
+`useOutletContext<T>()` cast has no runtime guarantee an ancestor route
+actually supplied a value). `useCategoriesListPage` refetches the list
+unconditionally whenever navigation returns from the editor route back to
+the bare `/categories` route, whether the editor closed via cancel or a
+successful save. Its smartphone table uses labelled icon actions with
+larger touch targets and reveals action text from `sm` upward.
 
 A destructive action (delete) is confirmed with the shared
 `DeleteConfirmationDialog` (`shared/presentation/components/`, built on
@@ -318,7 +353,7 @@ machine behind it.
 - A controller hook (`useXPage`) follows the same single-responsibility
   bar as any other code: when it accumulates more than one real workflow
   (search/filter state, an editor with dirty-tracking, a deletion
-  confirmation are three *different* concerns), split it into focused
+  confirmation are three _different_ concerns), split it into focused
   hooks (`useXFilters`, `useXEditor`, `useXDeletion`) that the page's
   composer hook assembles — see `features/catalog/presentation/services/hooks/`
   for the reference (`useServicesPage` composing `useServiceFilters` +
@@ -326,7 +361,7 @@ machine behind it.
 - Extract a component or hook on its **first** use if it's already a
   distinct concern (a field group, a delete dialog) — keep it
   feature-local (e.g. `features/catalog/presentation/services/components/
-  ServiceCategoryField.tsx`). Only **promote** something to `shared/`
+ServiceCategoryField.tsx`). Only **promote** something to `shared/`
   once a **second**, genuinely-identical use appears across features —
   the "second use" rule gates promotion, not the initial extraction.
 - Break a type cycle between a controller and the component(s) it feeds
@@ -350,24 +385,34 @@ machine behind it.
 #### Forms: React Hook Form + Zod
 
 Any form beyond a single trivial field uses `react-hook-form` +
-`@hookform/resolvers/zod` — see `TagForm.tsx`
-(`features/catalog/presentation/tags/forms/`) for the exact shape:
+`@hookform/resolvers/zod` — see `CategoryForm.tsx`
+(`features/catalog/presentation/categories/pages/CategoryEditorDialog/forms/`)
+for the exact shape:
 
 ```typescript
-const tagFormSchema = z.object({
-  name: z.string().trim().min(1, NAME_MESSAGE).max(40, NAME_MESSAGE),
-  color: z.enum(TAG_COLOR_PALETTE, { message: COLOR_MESSAGE }),
-})
-export type TagFormValues = z.infer<typeof tagFormSchema>
+const categoryFormSchema = z.object({
+  name: z.string().trim().min(1, NAME_MESSAGE).max(60, NAME_MESSAGE),
+});
+export type CategoryFormValues = z.infer<typeof categoryFormSchema>;
 
-const { register, control, handleSubmit, setError, setFocus, formState: { errors } } =
-  useForm<TagFormValues>({
-    resolver: zodResolver(tagFormSchema),
-    defaultValues: initialValues,
-    mode: 'onTouched',
-    reValidateMode: 'onChange',
-  })
+const {
+  register,
+  handleSubmit,
+  setError,
+  setFocus,
+  formState: { errors },
+} = useForm<CategoryFormValues>({
+  resolver: zodResolver(categoryFormSchema),
+  defaultValues: initialValues,
+  mode: "onTouched",
+  reValidateMode: "onChange",
+});
 ```
+
+(A field wired through `Controller` instead of `register` — e.g. a
+`Select`, a color swatch group, a multi-value picker — also destructures
+`control` from `useForm`; `CategoryForm` doesn't need one since its only
+field is a plain text input.)
 
 - `<form onSubmit={e => void handleSubmit(onSubmit)(e)} noValidate ...>` —
   `noValidate` because native browser constraint validation would
@@ -393,10 +438,10 @@ const { register, control, handleSubmit, setError, setFocus, formState: { errors
   result with `setError(field, { type: 'server', message })` in a
   `useEffect` keyed on the server-error object, and
   `setFocus(firstField)` so a screen-reader/keyboard user lands on the
-  first invalid field instead of losing their position — see `TagForm`'s
-  `serverError` effect.
+  first invalid field instead of losing their position — see
+  `CategoryForm`'s `serverError` effect.
 - Don't reach for Formik or Yup without an explicit ADR — React Hook Form
-  + Zod is the established, working pattern here (`docs/DECISIONS.md`).
+  - Zod is the established, working pattern here (`docs/DECISIONS.md`).
 
 #### Inline creation (a select that can create its own options)
 
@@ -431,16 +476,16 @@ wants it." Do it at the call site instead (a conditional `<Spinner />` in
 Shared composites live in `shared/presentation/components/` — reuse
 before writing a new one:
 
-| Component                        | Use for                                                         |
-| --------------------------------- | ------------------------------------------------------------------ |
-| `PageHeader`                     | Title + primary action row at the top of every page             |
-| `StatusMessage`                  | Loading / empty / error text (`tone="error"` for errors)        |
-| `CollectionFeedback`             | Loading/error/empty/last-known-good states for a tenant-scoped list |
-| `DeleteConfirmationDialog`       | Destructive-action `AlertDialog`, wired to `useDeleteConfirmation` |
-| `TextField` / `TextAreaField`    | Labeled form inputs (wraps shadcn `Label` + `Input`/`Textarea`) |
-| `CenteredScreen`                 | Full-page centered content (pre-auth screens only)              |
-| `FullScreenSpinner`              | Full-page loading state                                         |
-| `ThemeToggle`                    | Already in `AdminLayout` — don't add another one                |
+| Component                     | Use for                                                             |
+| ----------------------------- | ------------------------------------------------------------------- |
+| `PageHeader`                  | Title + primary action row at the top of every page                 |
+| `StatusMessage`               | Loading / empty / error text (`tone="error"` for errors)            |
+| `CollectionFeedback`          | Loading/error/empty/last-known-good states for a tenant-scoped list |
+| `DeleteConfirmationDialog`    | Destructive-action `AlertDialog`, wired to `useDeleteConfirmation`  |
+| `TextField` / `TextAreaField` | Labeled form inputs (wraps shadcn `Label` + `Input`/`Textarea`)     |
+| `CenteredScreen`              | Full-page centered content (pre-auth screens only)                  |
+| `FullScreenSpinner`           | Full-page loading state                                             |
+| `ThemeToggle`                 | Already in `AdminLayout` — don't add another one                    |
 
 Only promote a one-off to `shared/` once a second, genuinely identical
 use appears (see "Componentization" above) — until then it stays
@@ -455,13 +500,13 @@ it's a fixed light-mode color that breaks the moment a user switches to
 dark.
 
 | Instead of (stale, don't use)       | Use                           | For                           |
-| -------------------------------------- | -------------------------------- | -------------------------------- |
-| `bg-slate-50`                        | `bg-background`               | Page background               |
-| `bg-white`                           | `bg-card`                     | Card/surface background       |
-| `border-slate-200`                   | `border-border`               | Card and divider borders      |
-| `text-slate-800`                     | `text-foreground`             | Headings, primary text        |
+| ----------------------------------- | ----------------------------- | ----------------------------- |
+| `bg-slate-50`                       | `bg-background`               | Page background               |
+| `bg-white`                          | `bg-card`                     | Card/surface background       |
+| `border-slate-200`                  | `border-border`               | Card and divider borders      |
+| `text-slate-800`                    | `text-foreground`             | Headings, primary text        |
 | `text-slate-600` / `text-slate-400` | `text-muted-foreground`       | Secondary/muted text          |
-| `text-red-600`                       | `text-destructive`            | Error text                    |
+| `text-red-600`                      | `text-destructive`            | Error text                    |
 | `bg-teal-600` / `text-teal-700`     | `text-primary` / `bg-primary` | Brand accent, primary buttons |
 
 There is no brand color to special-case — the app uses the stock
@@ -487,7 +532,7 @@ non-token color.
 - `Dialog` is responsive by default (`max-w-[calc(100%-2rem)]` below its
   `sm:` breakpoint).
 - Any `flex` row inside a form that could get tight still needs
-  `flex-wrap` — see `TagForm`'s color swatches and button row.
+  `flex-wrap` — see `CategoryForm`'s button row.
 - Never use a fixed pixel width wider than ~300px without a responsive
   override. Prefer `w-full` + `max-w-*`.
 - `AdminLayout` already handles the page shell (off-canvas sidebar below
@@ -505,12 +550,13 @@ last-known-good-after-a-failed-refresh states).
 Every string a user reads or a screen reader announces — headings, button
 labels, `PageHeader`/`StatusMessage` text, form labels/hints,
 `aria-label`s, confirm prompts, error-message fallbacks — is pt-BR. See
-`TagsPage`/`TagForm` for the pattern (e.g. "Nova etiqueta", `aria-label="Cor
-${paletteColor}"`). Code stays in English: identifiers, comments, commit
+`CategoriesListPage`/`CategoryEditorDialog` for the pattern (e.g. "Nova
+categoria", `aria-label={\`Excluir categoria ${category.name}\`}`). Code
+stays in English: identifiers, comments, commit
 messages, this skill's own prose.
 
 Nav labels (source of truth: `AdminLayout.tsx`'s `NAV_ITEMS`) are Painel,
-Agendamentos, Serviços, Clientes, Caixa de entrada, Etiquetas,
+Agendamentos, Serviços, Categorias, Clientes, Caixa de entrada,
 Configurações — reuse the exact same word for a stub page's
 `PlaceholderPage title` and for that vertical's `PageHeader title` once
 built.
@@ -548,13 +594,13 @@ built.
 
 ```typescript
 // shared/application/HttpClient.ts
-export type Decoder<T> = (payload: unknown) => T
+export type Decoder<T> = (payload: unknown) => T;
 
 export interface HttpClient {
-  get<T>(path: string, decode: Decoder<T>): Promise<T>
-  post<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>
-  put<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>
-  delete(path: string): Promise<void>
+  get<T>(path: string, decode: Decoder<T>): Promise<T>;
+  post<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>;
+  put<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T>;
+  delete(path: string): Promise<void>;
 }
 ```
 
@@ -562,8 +608,8 @@ Every `get`/`post`/`put` call takes a `decode` function alongside its `T` -
 a generic type parameter alone validates nothing at runtime, so the
 decoder is what actually stands between an untrusted response body and a
 value the rest of the app treats as `T` (docs/adr/011). A feature's mapper
-owns its own decoder next to its DTO type (e.g. `tagMapper.ts`'s
-`decodeTagDto`/`decodeTagDtoArray`) - hand-rolled `typeof`/`Array.isArray`
+owns its own decoder next to its DTO type (e.g. `categoryMapper.ts`'s
+`decodeCategoryDto`/`decodeCategoryDtoArray`) - hand-rolled `typeof`/`Array.isArray`
 guards matching `shared/infrastructure/http/ProblemDetails.ts`'s existing
 style, not a schema library. A decoder that throws is caught by the same
 place every other infrastructure failure already is (see below) - never
@@ -601,8 +647,8 @@ read.
       than one
 - [ ] Page: handles loading/error/success, built from shadcn/ui primitives
       and shared composites (not hand-rolled markup)
-- [ ] List uses `Table`, form opens in a `Dialog` — not stacked `Card`s
-      or an inline/routed form
+- [ ] List uses `Table`; form uses the feature's documented interaction
+      (`Dialog` by default, routed editor only where an ADR establishes it)
 - [ ] Destructive actions confirmed with `DeleteConfirmationDialog` — not
       `window.confirm` or a hand-rolled `AlertDialog`
 - [ ] No prop/variant added to a `src/components/ui/*` file unless this
