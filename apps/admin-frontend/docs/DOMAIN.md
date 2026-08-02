@@ -87,9 +87,12 @@ Key fields (confirmed, docs/API.md):
   booking time (`0–100`)
 - `categoryId` / `categoryName` — optional Category this service
   belongs to (`null` when uncategorized)
-- `tags` — `TagSummary[]` (`id`/`name`/`color`), a read-only slice of
-  the Tag catalog attached to this service; managing which tags exist
-  is the Tags vertical's job, this is just the attachment
+- `tags` — the backend still returns a `TagSummary[]` slice (`id`/`name`/
+  `color`) on this field, since the backend `Tag` domain was intentionally
+  kept (docs/adr/016-remove-tags-frontend.md in this app's ADRs). The
+  frontend has no `Tag` entity or Tags vertical anymore — a future Services
+  UI needs to decide how to handle this field (e.g. reintroducing a minimal
+  read-only tag type, or dropping it from the form entirely)
 
 Services are **tenant-scoped**. The AI references this list when
 answering client questions about what's available.
@@ -137,21 +140,10 @@ Client history = their list of Appointments under this Business.
 
 ## Tag
 
-A tenant-scoped label the business defines to organize its records —
-"VIP", "New client", "Allergic to X". In v1 the Tags vertical manages
-the tag _catalog_ only; attaching tags to Clients/Conversations ships
-with those verticals.
-
-Key fields:
-
-- `id`
-- `name` — 1–40 chars, trimmed, unique per Business (case-insensitive)
-- `color` — one hex value from the fixed 8-color palette (see API.md);
-  free-form colors are not allowed
-- `description` — optional, max 200 chars, guidance on when to use the tag
-
-Tags are **tenant-scoped**: two businesses can both have a "VIP" tag;
-they are unrelated records.
+Removed from the frontend domain model — see
+`docs/adr/016-remove-tags-frontend.md`. The backend still owns a `Tag`
+entity and `/api/v1/tags` endpoints (project-owner decision to retain
+them), but this app no longer models or surfaces Tags.
 
 ---
 

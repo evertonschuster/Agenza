@@ -12,12 +12,7 @@ import {
   GetCurrentSession,
   Logout,
 } from '@/features/auth'
-import {
-  ApiTagRepository,
-  ApiCategoryRepository,
-  type TagRepository,
-  type CategoryRepository,
-} from '@/features/catalog'
+import { ApiCategoryRepository, type CategoryRepository } from '@/features/catalog'
 
 // Each entry is the *shape* of a use case (Pick<Class, 'execute'>), not the
 // concrete class - makes a plain `{ execute: vi.fn(...) }` a valid, fully
@@ -31,15 +26,10 @@ export interface AuthFacade {
   sessionEvents: SessionEventBus
 }
 
-/** Tags and Categories collaborate in the same business context. Each entry's
- * execute signature mirrors the matching repository method directly - there's
- * no orchestration between the facade and the repository, so no intermediate
- * use-case class is worth the indirection. */
+/** Each entry's execute signature mirrors the matching repository method
+ * directly - there's no orchestration between the facade and the repository,
+ * so no intermediate use-case class is worth the indirection. */
 export interface CatalogFacade {
-  listTags: { execute: TagRepository['listAll'] }
-  createTag: { execute: TagRepository['create'] }
-  updateTag: { execute: TagRepository['update'] }
-  deleteTag: { execute: TagRepository['delete'] }
   listCategories: { execute: CategoryRepository['listAll'] }
   getCategory: { execute: CategoryRepository['getById'] }
   createCategory: { execute: CategoryRepository['create'] }
@@ -79,7 +69,6 @@ export function createAppContainer(): AppContainer {
     sessionEvents,
   )
 
-  const tagRepository: TagRepository = new ApiTagRepository(httpClient)
   const categoryRepository: CategoryRepository = new ApiCategoryRepository(httpClient)
 
   return {
@@ -91,10 +80,6 @@ export function createAppContainer(): AppContainer {
       sessionEvents,
     },
     catalog: {
-      listTags: { execute: options => tagRepository.listAll(options) },
-      createTag: { execute: input => tagRepository.create(input) },
-      updateTag: { execute: (id, input) => tagRepository.update(id, input) },
-      deleteTag: { execute: id => tagRepository.delete(id) },
       listCategories: { execute: options => categoryRepository.listAll(options) },
       getCategory: { execute: id => categoryRepository.getById(id) },
       createCategory: { execute: input => categoryRepository.create(input) },

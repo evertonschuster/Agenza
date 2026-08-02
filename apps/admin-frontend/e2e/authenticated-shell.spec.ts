@@ -11,21 +11,21 @@ test.describe('authenticated shell', () => {
 
     await expect(page).toHaveURL(/\/dashboard$/)
     await expect(page.getByRole('heading', { name: 'Painel' })).toBeVisible()
-    await expect(page.getByRole('link', { name: 'Etiquetas' })).toBeVisible()
+    await expect(page.getByRole('link', { name: 'Categorias' })).toBeVisible()
     await expect(page.getByText('Clínica Bem-Estar')).toBeVisible()
   })
 
   test('navigates to a catalog page via the sidebar', async ({ page }) => {
     await page.route(
-      url => url.pathname.startsWith('/api/v1/tags'),
+      url => url.pathname.startsWith('/api/v1/categories'),
       route => route.fulfill({ json: [] }),
     )
 
     await page.goto('/dashboard')
-    await page.getByRole('link', { name: 'Etiquetas' }).click()
+    await page.getByRole('link', { name: 'Categorias' }).click()
 
-    await expect(page).toHaveURL(/\/tags$/)
-    await expect(page.getByRole('heading', { name: 'Etiquetas' })).toBeVisible()
+    await expect(page).toHaveURL(/\/categories$/)
+    await expect(page.getByRole('heading', { name: 'Categorias' })).toBeVisible()
   })
 
   test('logs out and automatically opens a fresh login', async ({ page }) => {
