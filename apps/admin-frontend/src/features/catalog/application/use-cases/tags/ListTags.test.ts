@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { ListTags } from '@/features/catalog/application/use-cases/tags/ListTags'
 import { createFakeTagRepository } from '@/features/catalog/application/test-helpers/createFakeTagRepository'
 import { Tag } from '@/features/catalog/domain/entities/Tag'
-import { Tenant } from '@/features/auth'
-import { User } from '@/features/auth'
+import { Tenant } from '@/test/fixtures/authEntityFixtures'
+import { User } from '@/test/fixtures/authEntityFixtures'
 import type { TenantContext } from '@/features/auth'
 
 function buildTenantContext(): TenantContext {

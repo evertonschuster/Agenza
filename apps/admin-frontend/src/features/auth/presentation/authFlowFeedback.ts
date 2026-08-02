@@ -14,6 +14,7 @@ const TITLES: Record<AuthFlowError['flowCode'], string> = {
   AUTH_ATTEMPT_EXPIRED: 'Tentativa de login expirada',
   AUTH_RESPONSE_INVALID: 'Resposta de login inválida',
   AUTH_ACCOUNT_WITHOUT_TENANT: 'Conta sem empresa vinculada',
+  AUTH_LOGOUT_FAILED: 'Não foi possível sair',
 }
 
 export function toAuthFlowFeedback(error: unknown): AuthFlowFeedback {

@@ -1,9 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { GetCurrentSession } from '@/features/auth/application/use-cases/GetCurrentSession'
 import { createFakeAuthRepository } from '@/features/auth/application/test-helpers/createFakeAuthRepository'
-import { Session } from '@/features/auth/domain/entities/Session'
-import { User } from '@/features/auth/domain/entities/User'
-import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
+import { Session, Tenant, User } from '@/test/fixtures/authEntityFixtures'
 
 describe('GetCurrentSession', () => {
   it('returns the tenant context when a valid session exists', async () => {

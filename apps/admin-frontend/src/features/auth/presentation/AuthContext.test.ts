@@ -1,8 +1,7 @@
 import { describe, it, expectTypeOf } from 'vitest'
 import type { AuthSessionState } from '@/features/auth/presentation/AuthContext'
 import type { TenantContext } from '@/features/auth/application/context/TenantContext'
-import { Tenant } from '@/features/auth/domain/value-objects/Tenant'
-import { User } from '@/features/auth/domain/entities/User'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
 
 describe('AuthSessionState', () => {
   it('never carries a tenant context while loading', () => {

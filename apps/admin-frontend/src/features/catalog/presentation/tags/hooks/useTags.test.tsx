@@ -5,8 +5,8 @@ import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import type { AppContainer, CatalogFacade } from '@/app/composition/container'
 import { Tag } from '@/features/catalog/domain/entities/Tag'
-import { Tenant } from '@/features/auth'
-import { User } from '@/features/auth'
+import { Tenant } from '@/test/fixtures/authEntityFixtures'
+import { User } from '@/test/fixtures/authEntityFixtures'
 import type { TenantContext } from '@/features/auth'
 
 const tagFixture = Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488' })

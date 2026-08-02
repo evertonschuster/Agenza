@@ -8,8 +8,8 @@ import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import type { AppContainer, CatalogFacade } from '@/app/composition/container'
 import { Category } from '@/features/catalog/domain/entities/Category'
-import { Tenant } from '@/features/auth'
-import { User } from '@/features/auth'
+import { Tenant } from '@/test/fixtures/authEntityFixtures'
+import { User } from '@/test/fixtures/authEntityFixtures'
 import type { TenantContext } from '@/features/auth'
 
 const categoryFixture = Category.create({ id: 'category-1', name: 'Massagens' })

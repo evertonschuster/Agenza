@@ -8,6 +8,7 @@ export type AuthFlowErrorCode =
   | 'AUTH_ATTEMPT_EXPIRED'
   | 'AUTH_RESPONSE_INVALID'
   | 'AUTH_ACCOUNT_WITHOUT_TENANT'
+  | 'AUTH_LOGOUT_FAILED'
 
 interface AuthFlowErrorInput {
   code: AppErrorCode

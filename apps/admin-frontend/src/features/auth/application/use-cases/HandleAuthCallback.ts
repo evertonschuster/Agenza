@@ -1,9 +1,11 @@
 import type { AuthRepository } from '@/features/auth/application/repositories/AuthRepository'
+import type { AuthFlowError } from '@/features/auth/application/errors/AuthFlowError'
 import {
   toTenantContext,
   type TenantContext,
 } from '@/features/auth/application/context/TenantContext'
 import { resolvePostLoginPath } from '@/features/auth/application/navigation/postLoginPath'
+import { success, type Result } from '@/shared/application/Result'
 
 export interface CompletedAuthCallback {
   tenantContext: TenantContext
@@ -12,7 +14,7 @@ export interface CompletedAuthCallback {
 
 interface CachedCallback {
   url: string
-  promise: Promise<CompletedAuthCallback>
+  promise: Promise<Result<CompletedAuthCallback, AuthFlowError>>
 }
 
 // Single-flight per callback URL: an OAuth code is single-use, and
@@ -26,7 +28,7 @@ export class HandleAuthCallback {
     this.authRepository = authRepository
   }
 
-  async execute(callbackUrl: string): Promise<CompletedAuthCallback> {
+  async execute(callbackUrl: string): Promise<Result<CompletedAuthCallback, AuthFlowError>> {
     if (this.cached?.url !== callbackUrl) {
       this.cached = { url: callbackUrl, promise: this.performCallback(callbackUrl) }
     }
@@ -34,12 +36,17 @@ export class HandleAuthCallback {
     return this.cached.promise
   }
 
-  private async performCallback(callbackUrl: string): Promise<CompletedAuthCallback> {
-    const { session, returnTo } = await this.authRepository.handleCallback(callbackUrl)
-
-    return {
-      tenantContext: toTenantContext(session.user),
-      returnTo: resolvePostLoginPath(returnTo),
+  private async performCallback(
+    callbackUrl: string,
+  ): Promise<Result<CompletedAuthCallback, AuthFlowError>> {
+    const result = await this.authRepository.handleCallback(callbackUrl)
+    if (!result.success) {
+      return result
     }
+
+    return success({
+      tenantContext: toTenantContext(result.value.session.user),
+      returnTo: resolvePostLoginPath(result.value.returnTo),
+    })
   }
 }

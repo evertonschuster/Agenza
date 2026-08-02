@@ -1,6 +1,7 @@
 import { useCallback } from 'react'
 import { useAppContainer } from '@/app/providers/useAppContainer'
 import { useAsync, toUiAsyncState, type AsyncState } from '@/shared/presentation/hooks/useAsync'
+import { success, failure, type Result } from '@/shared/application/Result'
 import type { UiError } from '@/shared/application/UiError'
 import type { Tag } from '@/features/catalog/domain/entities/Tag'
 import type { TenantContext } from '@/features/auth'
@@ -23,11 +24,15 @@ export interface UseTagsResult {
 export function useTags(tenantContext: TenantContext | null, search = ''): UseTagsResult {
   const { catalog } = useAppContainer()
 
-  const listTags = useCallback(async (): Promise<Tag[]> => {
+  const listTags = useCallback(async (): Promise<Result<Tag[], unknown>> => {
     if (tenantContext === null) {
-      return []
+      return success([])
     }
-    return catalog.listTags.execute(tenantContext, { search })
+    try {
+      return success(await catalog.listTags.execute(tenantContext, { search }))
+    } catch (error) {
+      return failure(error)
+    }
   }, [tenantContext, catalog, search])
 
   const asyncState = useAsync(listTags, { resetKey: tenantContext?.tenant.id })

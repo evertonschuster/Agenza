@@ -1,16 +1,17 @@
 import { vi } from 'vitest'
 import type { AppContainer, AuthFacade, CatalogFacade } from '@/app/composition/container'
 import { createFakeSessionEventBus } from '@/test/fixtures/fakeSessionEventBus'
+import { success } from '@/shared/application/Result'
 
 const NOT_USED_IN_THIS_FAKE = (): Promise<never> =>
   Promise.reject(new Error('not used in this fake'))
 
 function defaultAuthFacade(): AuthFacade {
   return {
-    initiateLogin: { execute: vi.fn(() => Promise.resolve()) },
+    initiateLogin: { execute: vi.fn(() => Promise.resolve(success(undefined))) },
     handleAuthCallback: { execute: vi.fn(NOT_USED_IN_THIS_FAKE) },
     getCurrentSession: { execute: vi.fn(() => Promise.resolve(null)) },
-    logout: { execute: vi.fn(() => Promise.resolve()) },
+    logout: { execute: vi.fn(() => Promise.resolve(success(undefined))) },
     sessionEvents: createFakeSessionEventBus(),
   }
 }

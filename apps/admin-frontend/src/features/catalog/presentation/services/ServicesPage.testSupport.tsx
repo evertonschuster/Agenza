@@ -7,8 +7,8 @@ import type { AppContainer, CatalogFacade } from '@/app/composition/container'
 import { Service } from '@/features/catalog/domain/entities/Service'
 import { Category } from '@/features/catalog/domain/entities/Category'
 import { Tag } from '@/features/catalog/domain/entities/Tag'
-import { Tenant } from '@/features/auth'
-import { User } from '@/features/auth'
+import { Tenant } from '@/test/fixtures/authEntityFixtures'
+import { User } from '@/test/fixtures/authEntityFixtures'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 
 export const tenant = Tenant.create('tenant-123')
