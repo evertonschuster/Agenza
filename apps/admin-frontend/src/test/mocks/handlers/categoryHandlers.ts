@@ -19,6 +19,8 @@ export const categoryHandlers = [
     }),
   ),
 
+  http.get(`${API_BASE_URL}/api/v1/categories/:id`, () => HttpResponse.json(categoryFixture)),
+
   http.put(`${API_BASE_URL}/api/v1/categories/:id`, () => HttpResponse.json(categoryFixture)),
 
   http.delete(

@@ -4,51 +4,71 @@ import { InvalidTagError } from '@/features/catalog/domain/errors/InvalidTagErro
 
 describe('Tag', () => {
   it('creates a tag with valid values', () => {
-    const tag = Tag.create({
+    const result = Tag.create({
       id: 'tag-1',
       name: 'VIP',
       color: '#0d9488',
       description: 'High-value client',
     })
 
-    expect(tag.id).toBe('tag-1')
-    expect(tag.name).toBe('VIP')
-    expect(tag.color).toBe('#0d9488')
-    expect(tag.description).toBe('High-value client')
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.id).toBe('tag-1')
+    expect(result.value.name).toBe('VIP')
+    expect(result.value.color).toBe('#0d9488')
+    expect(result.value.description).toBe('High-value client')
   })
 
   it('creates a tag without a description', () => {
-    const tag = Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488' })
+    const result = Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488' })
 
-    expect(tag.description).toBeUndefined()
+    expect(result.success).toBe(true)
+    if (!result.success) return
+    expect(result.value.description).toBeUndefined()
   })
 
-  it('throws when the id is empty', () => {
-    expect(() => Tag.create({ id: '', name: 'VIP', color: '#0d9488' })).toThrow(InvalidTagError)
+  it('fails when the id is empty', () => {
+    const result = Tag.create({ id: '', name: 'VIP', color: '#0d9488' })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toBeInstanceOf(InvalidTagError)
   })
 
-  it('throws when the name is empty', () => {
-    expect(() => Tag.create({ id: 'tag-1', name: '  ', color: '#0d9488' })).toThrow(InvalidTagError)
+  it('fails when the name is empty', () => {
+    const result = Tag.create({ id: 'tag-1', name: '  ', color: '#0d9488' })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toBeInstanceOf(InvalidTagError)
   })
 
-  it('throws when the name is over 40 characters', () => {
+  it('fails when the name is over 40 characters', () => {
     const name = 'x'.repeat(41)
 
-    expect(() => Tag.create({ id: 'tag-1', name, color: '#0d9488' })).toThrow(InvalidTagError)
+    const result = Tag.create({ id: 'tag-1', name, color: '#0d9488' })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toBeInstanceOf(InvalidTagError)
   })
 
-  it('throws when the color is not in the fixed palette', () => {
-    expect(() => Tag.create({ id: 'tag-1', name: 'VIP', color: '#123456' })).toThrow(
-      InvalidTagError,
-    )
+  it('fails when the color is not in the fixed palette', () => {
+    const result = Tag.create({ id: 'tag-1', name: 'VIP', color: '#123456' })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toBeInstanceOf(InvalidTagError)
   })
 
-  it('throws when the description is over 200 characters', () => {
+  it('fails when the description is over 200 characters', () => {
     const description = 'x'.repeat(201)
 
-    expect(() => Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488', description })).toThrow(
-      InvalidTagError,
-    )
+    const result = Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488', description })
+
+    expect(result.success).toBe(false)
+    if (result.success) return
+    expect(result.error).toBeInstanceOf(InvalidTagError)
   })
 
   it('exposes the fixed color palette', () => {

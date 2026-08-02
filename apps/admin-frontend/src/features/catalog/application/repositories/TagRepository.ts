@@ -1,5 +1,6 @@
 import type { Tag } from '@/features/catalog/domain/entities/Tag'
-import type { TenantContext } from '@/features/auth'
+import type { AppError } from '@/shared/application/AppError'
+import type { Result } from '@/shared/application/Result'
 
 export interface CreateTagInput {
   name: string
@@ -18,8 +19,8 @@ export interface ListAllTagsOptions {
 }
 
 export interface TagRepository {
-  listAll(tenantContext: TenantContext, options?: ListAllTagsOptions): Promise<Tag[]>
-  create(tenantContext: TenantContext, input: CreateTagInput): Promise<Tag>
-  update(tenantContext: TenantContext, id: string, input: UpdateTagInput): Promise<Tag>
-  delete(tenantContext: TenantContext, id: string): Promise<void>
+  listAll(options?: ListAllTagsOptions): Promise<Result<Tag[], AppError>>
+  create(input: CreateTagInput): Promise<Result<Tag, AppError>>
+  update(id: string, input: UpdateTagInput): Promise<Result<Tag, AppError>>
+  delete(id: string): Promise<Result<void, AppError>>
 }

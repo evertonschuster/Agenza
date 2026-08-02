@@ -1,4 +1,5 @@
 import { InvalidTagError } from '@/features/catalog/domain/errors/InvalidTagError'
+import { failure, success, type Result } from '@/shared/application/Result'
 
 /** The only accepted `color` values (docs/API.md) - keeps tags visually consistent. */
 export const TAG_COLOR_PALETTE = [
@@ -37,28 +38,34 @@ export class Tag {
     }
   }
 
-  static create(input: CreateTagInput): Tag {
+  static create(input: CreateTagInput): Result<Tag, InvalidTagError> {
     if (input.id.trim().length === 0) {
-      throw new InvalidTagError('O id da etiqueta não pode estar vazio')
+      return failure(new InvalidTagError('O id da etiqueta não pode estar vazio'))
     }
 
     const name = input.name.trim()
     if (name.length === 0 || name.length > 40) {
-      throw new InvalidTagError('O nome da etiqueta deve ter entre 1 e 40 caracteres')
+      return failure(new InvalidTagError('O nome da etiqueta deve ter entre 1 e 40 caracteres'))
     }
 
     if (!isTagColor(input.color)) {
-      throw new InvalidTagError(
-        `A cor da etiqueta deve ser uma das seguintes: ${TAG_COLOR_PALETTE.join(', ')}`,
+      return failure(
+        new InvalidTagError(
+          `A cor da etiqueta deve ser uma das seguintes: ${TAG_COLOR_PALETTE.join(', ')}`,
+        ),
       )
     }
 
     const description = input.description?.trim()
     if (description !== undefined && description.length > 200) {
-      throw new InvalidTagError('A descrição da etiqueta deve ter no máximo 200 caracteres')
+      return failure(
+        new InvalidTagError('A descrição da etiqueta deve ter no máximo 200 caracteres'),
+      )
     }
 
-    return new Tag(input.id, name, input.color, description !== '' ? description : undefined)
+    return success(
+      new Tag(input.id, name, input.color, description !== '' ? description : undefined),
+    )
   }
 }
 

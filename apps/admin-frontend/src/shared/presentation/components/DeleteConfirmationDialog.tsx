@@ -13,17 +13,21 @@ import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
 
 export interface DeleteConfirmationDialogProps {
   isOpen: boolean
-  title: string
-  description: ReactNode
+  entityName: string
+  entityType: string
+  title?: string
+  description?: ReactNode
   error: string | null
   isDeleting: boolean
   onCancel: () => void
   onConfirm: () => void
 }
 
-/** Shared delete AlertDialog behind Tags/Categories/Services - callers own the entity-specific title/description. */
+/** Shared delete AlertDialog behind Tags/Categories/Services - generates default title/description from entity info. */
 export function DeleteConfirmationDialog({
   isOpen,
+  entityName,
+  entityType,
   title,
   description,
   error,
@@ -31,6 +35,14 @@ export function DeleteConfirmationDialog({
   onCancel,
   onConfirm,
 }: DeleteConfirmationDialogProps): JSX.Element {
+  const entityLabel = entityType.split(' ').pop() ?? entityType
+  const defaultTitle = `Excluir ${entityLabel}`
+  const defaultDescription = (
+    <>
+      Tem certeza que deseja excluir {entityType} "{entityName}"? Essa ação não pode ser desfeita.
+    </>
+  )
+
   return (
     <AlertDialog
       open={isOpen}
@@ -40,8 +52,8 @@ export function DeleteConfirmationDialog({
     >
       <AlertDialogContent>
         <AlertDialogHeader>
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription>{description}</AlertDialogDescription>
+          <AlertDialogTitle>{title ?? defaultTitle}</AlertDialogTitle>
+          <AlertDialogDescription>{description ?? defaultDescription}</AlertDialogDescription>
         </AlertDialogHeader>
         {error !== null && <StatusMessage tone="error">{error}</StatusMessage>}
         <AlertDialogFooter>

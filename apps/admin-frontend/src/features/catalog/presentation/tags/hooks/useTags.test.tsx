@@ -5,19 +5,21 @@ import { AppContainerContext } from '@/app/providers/AppContainerContext'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
 import type { AppContainer, CatalogFacade } from '@/app/composition/container'
 import { Tag } from '@/features/catalog/domain/entities/Tag'
-import { Tenant } from '@/test/fixtures/authEntityFixtures'
-import { User } from '@/test/fixtures/authEntityFixtures'
 import type { TenantContext } from '@/features/auth'
+import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
+import { success, failure, type Result } from '@/shared/application/Result'
+import { AppError } from '@/shared/application/AppError'
+import { unwrapResult } from '@/test/fixtures/unwrapResult'
 
-const tagFixture = Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488' })
+const tagFixture = unwrapResult(Tag.create({ id: 'tag-1', name: 'VIP', color: '#0d9488' }))
 
 function createFakeContainer(overrides: Partial<CatalogFacade> = {}): AppContainer {
   return createFakeAppContainer({
     catalog: {
-      listTags: { execute: vi.fn(() => Promise.resolve([tagFixture])) },
-      createTag: { execute: vi.fn(() => Promise.resolve(tagFixture)) },
-      updateTag: { execute: vi.fn(() => Promise.resolve(tagFixture)) },
-      deleteTag: { execute: vi.fn(() => Promise.resolve()) },
+      listTags: { execute: vi.fn(() => Promise.resolve(success([tagFixture]))) },
+      createTag: { execute: vi.fn(() => Promise.resolve(success(tagFixture))) },
+      updateTag: { execute: vi.fn(() => Promise.resolve(success(tagFixture))) },
+      deleteTag: { execute: vi.fn(() => Promise.resolve(success(undefined))) },
       ...overrides,
     },
   })
@@ -51,7 +53,7 @@ describe('useTags', () => {
   })
 
   it('returns an empty list without calling the use case when tenantContext is null', async () => {
-    const listTagsSpy = vi.fn(() => Promise.resolve([tagFixture]))
+    const listTagsSpy = vi.fn(() => Promise.resolve(success([tagFixture])))
     const { result } = renderUseTags(
       createFakeContainer({ listTags: { execute: listTagsSpy } }),
       null,
@@ -66,8 +68,8 @@ describe('useTags', () => {
   })
 
   it('creates a tag then refetches the list', async () => {
-    const listTagsSpy = vi.fn(() => Promise.resolve([tagFixture]))
-    const createTagSpy = vi.fn(() => Promise.resolve(tagFixture))
+    const listTagsSpy = vi.fn(() => Promise.resolve(success([tagFixture])))
+    const createTagSpy = vi.fn(() => Promise.resolve(success(tagFixture)))
     const tenantContext = buildTenantContext()
     const { result } = renderUseTags(
       createFakeContainer({
@@ -85,7 +87,7 @@ describe('useTags', () => {
       await result.current.createTag({ name: 'VIP', color: '#0d9488' })
     })
 
-    expect(createTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, {
+    expect(createTagSpy).toHaveBeenCalledExactlyOnceWith({
       name: 'VIP',
       color: '#0d9488',
     })
@@ -97,12 +99,14 @@ describe('useTags', () => {
   })
 
   it('keeps the created tag visible even if the background refetch fails', async () => {
-    const newTag = Tag.create({ id: 'tag-2', name: 'Returning', color: '#ef4444' })
+    const newTag = unwrapResult(Tag.create({ id: 'tag-2', name: 'Returning', color: '#ef4444' }))
     const listTagsSpy = vi
-      .fn<() => Promise<Tag[]>>()
-      .mockResolvedValueOnce([tagFixture])
-      .mockRejectedValueOnce(new Error('network down'))
-    const createTagSpy = vi.fn(() => Promise.resolve(newTag))
+      .fn<() => Promise<Result<Tag[], AppError>>>()
+      .mockResolvedValueOnce(success([tagFixture]))
+      .mockResolvedValueOnce(
+        failure(new AppError({ code: 'network', message: 'network down', retryable: true })),
+      )
+    const createTagSpy = vi.fn(() => Promise.resolve(success(newTag)))
     const tenantContext = buildTenantContext()
     const { result } = renderUseTags(
       createFakeContainer({
@@ -118,7 +122,7 @@ describe('useTags', () => {
     await act(async () => {
       await expect(
         result.current.createTag({ name: 'Returning', color: '#ef4444' }),
-      ).resolves.toEqual(newTag)
+      ).resolves.toEqual(success(newTag))
     })
 
     // The optimistic insert survives the refetch failure below.
@@ -133,8 +137,8 @@ describe('useTags', () => {
   })
 
   it('deletes a tag then refetches the list', async () => {
-    const listTagsSpy = vi.fn(() => Promise.resolve([tagFixture]))
-    const deleteTagSpy = vi.fn(() => Promise.resolve())
+    const listTagsSpy = vi.fn(() => Promise.resolve(success([tagFixture])))
+    const deleteTagSpy = vi.fn(() => Promise.resolve(success(undefined)))
     const tenantContext = buildTenantContext()
     const { result } = renderUseTags(
       createFakeContainer({
@@ -152,17 +156,19 @@ describe('useTags', () => {
       await result.current.deleteTag('tag-1')
     })
 
-    expect(deleteTagSpy).toHaveBeenCalledExactlyOnceWith(tenantContext, 'tag-1')
+    expect(deleteTagSpy).toHaveBeenCalledExactlyOnceWith('tag-1')
     expect(listTagsSpy).toHaveBeenCalledTimes(1)
   })
 
-  it('rejects mutations when tenantContext is null', async () => {
+  it('resolves to a Failure when tenantContext is null', async () => {
     const { result } = renderUseTags(createFakeContainer(), null)
     await waitFor(() => {
       expect(result.current.listState.status).toBe('success')
     })
 
-    await expect(result.current.createTag({ name: 'VIP', color: '#0d9488' })).rejects.toThrow()
+    const outcome = await result.current.createTag({ name: 'VIP', color: '#0d9488' })
+
+    expect(outcome.success).toBe(false)
   })
 
   it('does not let a create started against the previous tenant leak into the new tenant after a switch', async () => {
@@ -176,15 +182,17 @@ describe('useTags', () => {
     let resolveCreate: ((tag: Tag) => void) | undefined
     const createTagSpy = vi.fn(
       () =>
-        new Promise<Tag>(resolve => {
-          resolveCreate = resolve
+        new Promise<Result<Tag, AppError>>(resolve => {
+          resolveCreate = tag => {
+            resolve(success(tag))
+          }
         }),
     )
     const listTagsSpy = vi
-      .fn<() => Promise<Tag[]>>()
-      .mockResolvedValueOnce([tagFixture]) // tenant A's initial load
-      .mockResolvedValueOnce([]) // tenant B's auto-fetch right after the switch
-      .mockResolvedValue([tagFixture]) // any further stale tenant-A refetch
+      .fn<() => Promise<Result<Tag[], AppError>>>()
+      .mockResolvedValueOnce(success([tagFixture])) // tenant A's initial load
+      .mockResolvedValueOnce(success([])) // tenant B's auto-fetch right after the switch
+      .mockResolvedValue(success([tagFixture])) // any further stale tenant-A refetch
 
     const container = createFakeContainer({
       listTags: { execute: listTagsSpy },
@@ -207,7 +215,7 @@ describe('useTags', () => {
     expect(result.current.tags).toEqual([tagFixture])
 
     // Start a create against tenant A - deliberately left pending.
-    let createPromise: Promise<Tag> | undefined
+    let createPromise: Promise<Result<Tag, AppError>> | undefined
     act(() => {
       createPromise = result.current.createTag({ name: 'VIP', color: '#0d9488' })
     })

@@ -1,4 +1,5 @@
 import { InvalidCategoryError } from '@/features/catalog/domain/errors/InvalidCategoryError'
+import { failure, success, type Result } from '@/shared/application/Result'
 
 interface CreateCategoryInput {
   id: string
@@ -15,16 +16,18 @@ export class Category {
     this.name = name
   }
 
-  static create(input: CreateCategoryInput): Category {
+  static create(input: CreateCategoryInput): Result<Category, InvalidCategoryError> {
     if (input.id.trim().length === 0) {
-      throw new InvalidCategoryError('O id da categoria não pode estar vazio')
+      return failure(new InvalidCategoryError('O id da categoria não pode estar vazio'))
     }
 
     const name = input.name.trim()
     if (name.length === 0 || name.length > 60) {
-      throw new InvalidCategoryError('O nome da categoria deve ter entre 1 e 60 caracteres')
+      return failure(
+        new InvalidCategoryError('O nome da categoria deve ter entre 1 e 60 caracteres'),
+      )
     }
 
-    return new Category(input.id, name)
+    return success(new Category(input.id, name))
   }
 }

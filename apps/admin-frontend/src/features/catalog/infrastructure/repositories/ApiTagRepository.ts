@@ -6,7 +6,8 @@ import type {
   UpdateTagInput,
 } from '@/features/catalog/application/repositories/TagRepository'
 import type { HttpClient } from '@/shared/application/HttpClient'
-import type { TenantContext } from '@/features/auth'
+import type { AppError } from '@/shared/application/AppError'
+import { flatMapResult, combineResults, type Result } from '@/shared/application/Result'
 import {
   mapTagDtoToDomain,
   decodeTagDto,
@@ -21,8 +22,8 @@ type UpdateTagRequestBody = components['schemas']['UpdateTagCommand']
 
 const TAGS_URL = '/api/v1/tags'
 
-// tenantContext is accepted for structural enforcement only - tenant scope
-// travels in the X-Tenant-Id header the HttpClient attaches.
+// Tenant scope travels in the X-Tenant-Id header the HttpClient attaches -
+// no tenantContext parameter here, matching TagRepository's contract.
 export class ApiTagRepository implements TagRepository {
   private readonly httpClient: HttpClient
 
@@ -30,38 +31,38 @@ export class ApiTagRepository implements TagRepository {
     this.httpClient = httpClient
   }
 
-  async listAll(_tenantContext: TenantContext, options: ListAllTagsOptions = {}): Promise<Tag[]> {
+  async listAll(options: ListAllTagsOptions = {}): Promise<Result<Tag[], AppError>> {
     const query = new URLSearchParams()
     if (options.search !== undefined && options.search.trim() !== '') {
       query.set('search', options.search.trim())
     }
     const suffix = query.toString() === '' ? '' : `?${query.toString()}`
-    const dtos = await this.httpClient.get(`${TAGS_URL}${suffix}`, decodeTagDtoArray)
-    return dtos.map(mapTagDtoToDomain)
+    const result = await this.httpClient.get(`${TAGS_URL}${suffix}`, decodeTagDtoArray)
+    return flatMapResult(result, dtos => combineResults(dtos.map(mapTagDtoToDomain)))
   }
 
-  async create(_tenantContext: TenantContext, input: CreateTagInput): Promise<Tag> {
+  async create(input: CreateTagInput): Promise<Result<Tag, AppError>> {
     const body = {
       name: input.name,
       color: input.color,
       description: input.description ?? null,
     } satisfies CreateTagRequestBody
-    const dto = await this.httpClient.post(TAGS_URL, body, decodeTagDto)
-    return mapTagDtoToDomain(dto)
+    const result = await this.httpClient.post(TAGS_URL, body, decodeTagDto)
+    return flatMapResult(result, mapTagDtoToDomain)
   }
 
-  async update(_tenantContext: TenantContext, id: string, input: UpdateTagInput): Promise<Tag> {
+  async update(id: string, input: UpdateTagInput): Promise<Result<Tag, AppError>> {
     const body: UpdateTagRequestBody = {
       tagId: id,
       name: input.name,
       color: input.color,
       description: input.description ?? null,
     }
-    const dto = await this.httpClient.put(`${TAGS_URL}/${id}`, body, decodeTagDto)
-    return mapTagDtoToDomain(dto)
+    const result = await this.httpClient.put(`${TAGS_URL}/${id}`, body, decodeTagDto)
+    return flatMapResult(result, mapTagDtoToDomain)
   }
 
-  async delete(_tenantContext: TenantContext, id: string): Promise<void> {
-    await this.httpClient.delete(`${TAGS_URL}/${id}`)
+  async delete(id: string): Promise<Result<void, AppError>> {
+    return this.httpClient.delete(`${TAGS_URL}/${id}`)
   }
 }

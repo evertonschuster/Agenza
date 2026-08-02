@@ -1,17 +1,16 @@
 import type { Decoder, HttpClient } from '@/shared/application/HttpClient'
 import type { SessionInvalidationNotifier } from '@/shared/application/SessionEventBus'
 import type { GetRequestSession } from '@/shared/application/RequestSession'
-import { ApiError } from '@/shared/infrastructure/http/ApiError'
-import { parseProblemDetails } from '@/shared/infrastructure/http/ProblemDetails'
+import type { AppError } from '@/shared/application/AppError'
+import { type Result, success, failure } from '@/shared/application/Result'
 import { UnauthenticatedError } from '@/shared/infrastructure/http/UnauthenticatedError'
 import { NetworkError } from '@/shared/infrastructure/http/NetworkError'
 import { TimeoutError } from '@/shared/infrastructure/http/TimeoutError'
 import { mapErrorToAppError } from '@/shared/infrastructure/http/mapErrorToAppError'
+import { parseApiResponse } from '@/shared/infrastructure/http/parseApiResponse'
 
 const NOOP_SESSION_NOTIFIER: SessionInvalidationNotifier = {
-  notifyUnauthenticated: () => {
-    /* no-op default so tests that don't care about session invalidation don't need to pass one */
-  },
+  notifyUnauthenticated: () => void 0,
 }
 
 /** The only HttpClient implementation (docs/API.md) - every REST repository depends on the port, not this class. */
@@ -30,31 +29,33 @@ export class AuthenticatedHttpClient implements HttpClient {
     this.sessionInvalidationNotifier = sessionInvalidationNotifier
   }
 
-  async get<T>(path: string, decode: Decoder<T>): Promise<T> {
+  async get<T>(path: string, decode: Decoder<T>): Promise<Result<T, AppError>> {
     return this.request(decode, 'GET', path)
   }
 
-  async post<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T> {
+  async post<T>(path: string, body: unknown, decode: Decoder<T>): Promise<Result<T, AppError>> {
     return this.request(decode, 'POST', path, body)
   }
 
-  async put<T>(path: string, body: unknown, decode: Decoder<T>): Promise<T> {
+  async put<T>(path: string, body: unknown, decode: Decoder<T>): Promise<Result<T, AppError>> {
     return this.request(decode, 'PUT', path, body)
   }
 
-  async delete(path: string): Promise<void> {
-    await this.request<undefined>(() => undefined, 'DELETE', path)
+  async delete(path: string): Promise<Result<void, AppError>> {
+    return this.request<undefined>(() => undefined, 'DELETE', path)
   }
 
-  // Every failure path below is converted to AppError by the catch at the
-  // bottom - callers never see ApiError/UnauthenticatedError/NetworkError/
-  // TimeoutError directly (docs/adr/007, docs/adr/011).
+  // Attaches the bearer token and tenant header, makes the request, and
+  // reacts to session-level failures (missing session, 401, timeout,
+  // network). Response-body parsing is delegated to parseApiResponse -
+  // this class only knows the JWT/session side. Never rejects - every
+  // failure comes back as Result.failure(AppError) instead.
   private async request<T>(
     decode: Decoder<T>,
     method: string,
     path: string,
     body?: unknown,
-  ): Promise<T> {
+  ): Promise<Result<T, AppError>> {
     try {
       const requestSession = await this.getRequestSession()
       if (requestSession === null) {
@@ -94,25 +95,15 @@ export class AuthenticatedHttpClient implements HttpClient {
           : new NetworkError()
       }
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          this.sessionInvalidationNotifier.notifyUnauthenticated()
-          throw new UnauthenticatedError()
-        }
-        const rawPayload: unknown = await response.json().catch(() => null)
-        const payload = parseProblemDetails(rawPayload)
-        const message = payload?.title ?? payload?.detail ?? response.statusText
-        throw new ApiError(response.status, message, payload ?? undefined)
+      if (response.status === 401) {
+        this.sessionInvalidationNotifier.notifyUnauthenticated()
+        throw new UnauthenticatedError()
       }
 
-      if (response.status === 204) {
-        return decode(undefined)
-      }
-
-      const rawBody: unknown = await response.json()
-      return decode(rawBody)
+      const value = await parseApiResponse(response, decode)
+      return success(value)
     } catch (error) {
-      throw mapErrorToAppError(error)
+      return failure(mapErrorToAppError(error))
     }
   }
 }

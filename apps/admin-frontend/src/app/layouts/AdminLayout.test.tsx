@@ -9,8 +9,8 @@ import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
 import { ThemeProvider } from '@/shared/presentation/providers/ThemeProvider'
 import type { AppContainer } from '@/app/composition/container'
 import { createFakeAppContainer } from '@/test/fixtures/createFakeAppContainer'
-import { success } from '@/shared/application/Result'
 import { vi } from 'vitest'
+import { success } from '@/shared/application/Result'
 
 function buildTenantContext(): TenantContext {
   const tenant = Tenant.create('tenant-123')

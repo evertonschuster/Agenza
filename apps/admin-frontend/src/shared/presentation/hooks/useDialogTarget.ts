@@ -12,7 +12,7 @@ export interface UseDialogTargetResult<T> {
   close: () => void
 }
 
-/** Shared "which record (if any) opened the create/edit dialog" state - TagsPage/CategoriesPage's reference pattern. */
+/** Shared "which record (if any) opened the create/edit dialog" state. */
 export function useDialogTarget<T>(): UseDialogTargetResult<T> {
   const [formTarget, setFormTarget] = useState<DialogTarget<T> | null>(null)
   const [displayTarget, setDisplayTarget] = useState<DialogTarget<T> | null>(null)

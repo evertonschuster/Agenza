@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import type { AppError } from '@/shared/application/AppError'
+import type { Result } from '@/shared/application/Result'
+import { toUiError } from '@/shared/application/UiError'
 
 interface UseDeleteConfirmationParams<T> {
-  onDelete: (item: T) => Promise<void>
-  fallbackMessage: string
+  onDelete: (item: T) => Promise<Result<void, AppError>>
 }
 
 export interface UseDeleteConfirmationResult<T> {
@@ -17,7 +19,6 @@ export interface UseDeleteConfirmationResult<T> {
 /** Shared target/progress/error state behind every delete-with-confirm flow (Tags/Categories/Services). */
 export function useDeleteConfirmation<T>({
   onDelete,
-  fallbackMessage,
 }: UseDeleteConfirmationParams<T>): UseDeleteConfirmationResult<T> {
   const [target, setTarget] = useState<T | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -55,21 +56,18 @@ export function useDeleteConfirmation<T>({
 
     setIsDeleting(true)
     setError(null)
-    try {
-      await onDelete(target)
+    const result = await onDelete(target)
+    if (result.success) {
       if (isStillWanted()) {
         setTarget(null)
       }
-    } catch (caughtError) {
-      if (isStillWanted()) {
-        setError(caughtError instanceof Error ? caughtError.message : fallbackMessage)
-      }
-    } finally {
-      if (isStillWanted()) {
-        setIsDeleting(false)
-      }
+    } else if (isStillWanted()) {
+      setError(toUiError(result.error).message)
     }
-  }, [target, isDeleting, onDelete, fallbackMessage])
+    if (isStillWanted()) {
+      setIsDeleting(false)
+    }
+  }, [target, isDeleting, onDelete])
 
   return { target, error, isDeleting, onRequestDelete, onCancel, onConfirm }
 }

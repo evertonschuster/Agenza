@@ -1,15 +1,7 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { createAppContainer } from '@/app/composition/container'
 import { InMemorySessionEventBus } from '@/shared/infrastructure/InMemorySessionEventBus'
-import {
-  InitiateLogin,
-  HandleAuthCallback,
-  GetCurrentSession,
-  Logout,
-  toTenantContext,
-} from '@/features/auth'
-import { Tenant, User } from '@/test/fixtures/authEntityFixtures'
-import { ListTags } from '@/features/catalog'
+import { InitiateLogin, HandleAuthCallback, GetCurrentSession, Logout } from '@/features/auth'
 
 function stubOidcEnv(): void {
   vi.stubEnv('VITE_OIDC_AUTHORITY', 'https://identity.example.com')
@@ -39,10 +31,10 @@ describe('createAppContainer', () => {
     expect(container.auth.sessionEvents).toBeInstanceOf(InMemorySessionEventBus)
   })
 
-  it('wires the catalog facade from concrete use cases', () => {
+  it('wires the catalog facade to the concrete repository', () => {
     const container = createAppContainer()
 
-    expect(container.catalog.listTags).toBeInstanceOf(ListTags)
+    expect(container.catalog.listTags.execute).toBeTypeOf('function')
   })
 
   it('does not expose a repository or an HttpClient on the container', () => {
@@ -60,14 +52,11 @@ describe('createAppContainer', () => {
     const listener = vi.fn()
     container.auth.sessionEvents.subscribe(listener)
 
-    const tenant = Tenant.create('tenant-1')
-    const tenantContext = toTenantContext(User.create({ id: 'user-1', tenant }))
-
     // No stored OIDC session in this test environment, so this call has no
     // access token - it goes through the private httpClient built with this
     // exact sessionEvents instance as its notifier, proving they're wired
     // together end to end rather than just both present on the container.
-    await container.catalog.listTags.execute(tenantContext, {}).catch(() => undefined)
+    await container.catalog.listTags.execute({})
 
     expect(listener).toHaveBeenCalledTimes(1)
   })
