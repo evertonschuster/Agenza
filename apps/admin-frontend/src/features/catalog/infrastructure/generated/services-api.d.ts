@@ -16,7 +16,10 @@ export interface paths {
         query?: {
           Search?: string
         }
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           version: string
         }
@@ -30,9 +33,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['CategoryResponse'][]
-            'application/json': components['schemas']['CategoryResponse'][]
-            'text/json': components['schemas']['CategoryResponse'][]
+            'text/plain': components['schemas']['ApiResponseOfIReadOnlyListOfCategoryResponse']
+            'application/json': components['schemas']['ApiResponseOfIReadOnlyListOfCategoryResponse']
+            'text/json': components['schemas']['ApiResponseOfIReadOnlyListOfCategoryResponse']
           }
         }
         /** @description Bad Request */
@@ -41,7 +44,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Unauthorized */
@@ -95,7 +100,10 @@ export interface paths {
     post: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           version: string
         }
@@ -115,9 +123,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['CategoryResponse']
-            'application/json': components['schemas']['CategoryResponse']
-            'text/json': components['schemas']['CategoryResponse']
+            'text/plain': components['schemas']['ApiResponseOfCategoryResponse']
+            'application/json': components['schemas']['ApiResponseOfCategoryResponse']
+            'text/json': components['schemas']['ApiResponseOfCategoryResponse']
           }
         }
         /** @description Bad Request */
@@ -126,7 +134,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Unauthorized */
@@ -162,7 +172,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Internal Server Error */
@@ -189,24 +201,20 @@ export interface paths {
       path?: never
       cookie?: never
     }
-    get?: never
-    put: {
+    get: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           id: string
           version: string
         }
         cookie?: never
       }
-      requestBody: {
-        content: {
-          'application/json': components['schemas']['UpdateCategoryCommand']
-          'text/json': components['schemas']['UpdateCategoryCommand']
-          'application/*+json': components['schemas']['UpdateCategoryCommand']
-        }
-      }
+      requestBody?: never
       responses: {
         /** @description OK */
         200: {
@@ -214,9 +222,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['CategoryResponse']
-            'application/json': components['schemas']['CategoryResponse']
-            'text/json': components['schemas']['CategoryResponse']
+            'text/plain': components['schemas']['ApiResponseOfCategoryResponse']
+            'application/json': components['schemas']['ApiResponseOfCategoryResponse']
+            'text/json': components['schemas']['ApiResponseOfCategoryResponse']
           }
         }
         /** @description Bad Request */
@@ -252,7 +260,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Conflict */
@@ -275,11 +285,108 @@ export interface paths {
         }
       }
     }
+    put: {
+      parameters: {
+        query?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
+        path: {
+          id: string
+          version: string
+        }
+        cookie?: never
+      }
+      requestBody: {
+        content: {
+          'application/json': components['schemas']['UpdateCategoryCommand']
+          'text/json': components['schemas']['UpdateCategoryCommand']
+          'application/*+json': components['schemas']['UpdateCategoryCommand']
+        }
+      }
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'text/plain': components['schemas']['ApiResponseOfCategoryResponse']
+            'application/json': components['schemas']['ApiResponseOfCategoryResponse']
+            'text/json': components['schemas']['ApiResponseOfCategoryResponse']
+          }
+        }
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
+          }
+        }
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails']
+          }
+        }
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails']
+          }
+        }
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
+          }
+        }
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
+          }
+        }
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown
+          }
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails']
+          }
+        }
+      }
+    }
     post?: never
     delete: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           id: string
           version: string
@@ -328,7 +435,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Conflict */
@@ -337,7 +446,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Internal Server Error */
@@ -372,7 +483,10 @@ export interface paths {
           CategoryId?: string
           TagId?: string
         }
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           version: string
         }
@@ -386,9 +500,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['PagedResultOfServiceResponse']
-            'application/json': components['schemas']['PagedResultOfServiceResponse']
-            'text/json': components['schemas']['PagedResultOfServiceResponse']
+            'text/plain': components['schemas']['ApiResponseOfPagedResultOfServiceResponse']
+            'application/json': components['schemas']['ApiResponseOfPagedResultOfServiceResponse']
+            'text/json': components['schemas']['ApiResponseOfPagedResultOfServiceResponse']
           }
         }
         /** @description Bad Request */
@@ -397,7 +511,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Unauthorized */
@@ -451,7 +567,10 @@ export interface paths {
     post: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           version: string
         }
@@ -471,9 +590,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['ServiceResponse']
-            'application/json': components['schemas']['ServiceResponse']
-            'text/json': components['schemas']['ServiceResponse']
+            'text/plain': components['schemas']['ApiResponseOfServiceResponse']
+            'application/json': components['schemas']['ApiResponseOfServiceResponse']
+            'text/json': components['schemas']['ApiResponseOfServiceResponse']
           }
         }
         /** @description Bad Request */
@@ -482,7 +601,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Unauthorized */
@@ -518,7 +639,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Internal Server Error */
@@ -549,7 +672,10 @@ export interface paths {
     put: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           id: string
           version: string
@@ -570,9 +696,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['ServiceResponse']
-            'application/json': components['schemas']['ServiceResponse']
-            'text/json': components['schemas']['ServiceResponse']
+            'text/plain': components['schemas']['ApiResponseOfServiceResponse']
+            'application/json': components['schemas']['ApiResponseOfServiceResponse']
+            'text/json': components['schemas']['ApiResponseOfServiceResponse']
           }
         }
         /** @description Bad Request */
@@ -581,7 +707,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Unauthorized */
@@ -608,7 +736,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Conflict */
@@ -617,7 +747,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Internal Server Error */
@@ -635,7 +767,10 @@ export interface paths {
     delete: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           id: string
           version: string
@@ -684,7 +819,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Conflict */
@@ -693,7 +830,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Internal Server Error */
@@ -724,7 +863,10 @@ export interface paths {
         query?: {
           Search?: string
         }
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           version: string
         }
@@ -738,9 +880,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['TagResponse'][]
-            'application/json': components['schemas']['TagResponse'][]
-            'text/json': components['schemas']['TagResponse'][]
+            'text/plain': components['schemas']['ApiResponseOfIReadOnlyListOfTagResponse']
+            'application/json': components['schemas']['ApiResponseOfIReadOnlyListOfTagResponse']
+            'text/json': components['schemas']['ApiResponseOfIReadOnlyListOfTagResponse']
           }
         }
         /** @description Bad Request */
@@ -749,7 +891,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Unauthorized */
@@ -803,7 +947,10 @@ export interface paths {
     post: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           version: string
         }
@@ -823,9 +970,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['TagResponse']
-            'application/json': components['schemas']['TagResponse']
-            'text/json': components['schemas']['TagResponse']
+            'text/plain': components['schemas']['ApiResponseOfTagResponse']
+            'application/json': components['schemas']['ApiResponseOfTagResponse']
+            'text/json': components['schemas']['ApiResponseOfTagResponse']
           }
         }
         /** @description Bad Request */
@@ -834,7 +981,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Unauthorized */
@@ -870,7 +1019,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Internal Server Error */
@@ -901,7 +1052,10 @@ export interface paths {
     put: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           id: string
           version: string
@@ -922,9 +1076,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'text/plain': components['schemas']['TagResponse']
-            'application/json': components['schemas']['TagResponse']
-            'text/json': components['schemas']['TagResponse']
+            'text/plain': components['schemas']['ApiResponseOfTagResponse']
+            'application/json': components['schemas']['ApiResponseOfTagResponse']
+            'text/json': components['schemas']['ApiResponseOfTagResponse']
           }
         }
         /** @description Bad Request */
@@ -933,7 +1087,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Unauthorized */
@@ -960,7 +1116,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Conflict */
@@ -969,7 +1127,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Internal Server Error */
@@ -987,7 +1147,10 @@ export interface paths {
     delete: {
       parameters: {
         query?: never
-        header?: never
+        header: {
+          /** @description Tenant ativo usado pelas requisições da documentação. */
+          'X-Tenant-Id': string
+        }
         path: {
           id: string
           version: string
@@ -1036,7 +1199,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Conflict */
@@ -1045,7 +1210,9 @@ export interface paths {
             [name: string]: unknown
           }
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails']
+            'text/plain': components['schemas']['ApiProblemDetails']
+            'application/json': components['schemas']['ApiProblemDetails']
+            'text/json': components['schemas']['ApiProblemDetails']
           }
         }
         /** @description Internal Server Error */
@@ -1076,9 +1243,59 @@ export interface components {
       detail?: null | string
       instance?: null | string
       code?: null | string
+      traceId?: null | string
+      correlationId?: null | string
       errors?: null | {
         [key: string]: components['schemas']['FieldError'][]
       }
+    }
+    ApiResponseOfCategoryResponse: {
+      data: null | components['schemas']['CategoryResponse']
+      success?: boolean
+      /** Format: date-time */
+      timestamp?: string
+      traceId?: null | string
+      correlationId?: null | string
+    }
+    ApiResponseOfIReadOnlyListOfCategoryResponse: {
+      data: null | components['schemas']['CategoryResponse'][]
+      success?: boolean
+      /** Format: date-time */
+      timestamp?: string
+      traceId?: null | string
+      correlationId?: null | string
+    }
+    ApiResponseOfIReadOnlyListOfTagResponse: {
+      data: null | components['schemas']['TagResponse'][]
+      success?: boolean
+      /** Format: date-time */
+      timestamp?: string
+      traceId?: null | string
+      correlationId?: null | string
+    }
+    ApiResponseOfPagedResultOfServiceResponse: {
+      data: null | components['schemas']['PagedResultOfServiceResponse']
+      success?: boolean
+      /** Format: date-time */
+      timestamp?: string
+      traceId?: null | string
+      correlationId?: null | string
+    }
+    ApiResponseOfServiceResponse: {
+      data: null | components['schemas']['ServiceResponse']
+      success?: boolean
+      /** Format: date-time */
+      timestamp?: string
+      traceId?: null | string
+      correlationId?: null | string
+    }
+    ApiResponseOfTagResponse: {
+      data: null | components['schemas']['TagResponse']
+      success?: boolean
+      /** Format: date-time */
+      timestamp?: string
+      traceId?: null | string
+      correlationId?: null | string
     }
     CategoryResponse: {
       /** Format: uuid */

@@ -40,7 +40,7 @@ var servicesService = builder.AddProject<Projects.ServicesService_Api>("services
     .WithReference(identityService)
     .WaitFor(identityService);
 
-var assistantService = builder.AddUvicornApp(
+builder.AddUvicornApp(
         "assistant-service",
         "../../ai-services/assistant-service",
         "app.main:app")
@@ -56,7 +56,7 @@ var assistantService = builder.AddUvicornApp(
     .WithEnvironment("IDENTITY_SCOPE", "services-api")
     .WaitFor(identityService);
 
-var frontend = builder.AddViteApp("admin-frontend", "../../apps/admin-frontend")
+builder.AddViteApp("admin-frontend", "../../apps/admin-frontend")
     .WithHttpEndpoint(port: 5173)
     .WithReference(servicesService)
     .WithReference(identityService)
@@ -68,4 +68,4 @@ var frontend = builder.AddViteApp("admin-frontend", "../../apps/admin-frontend")
     .WithEnvironment("VITE_OIDC_SCOPE", "openid profile tenant_id services-api offline_access")
     .WaitFor(servicesService);
 
-builder.Build().Run();
+await builder.Build().RunAsync();

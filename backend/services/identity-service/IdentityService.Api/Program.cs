@@ -2,6 +2,7 @@ using Admin.SharedKernel;
 using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
 using IdentityService.Api.Seed;
+using IdentityService.Api.Setup;
 using IdentityService.Application;
 using IdentityService.Infrastructure;
 using OpenIddict.Abstractions;
@@ -12,9 +13,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
+var publicIssuer = builder.Configuration["Identity:PublicIssuer"]
+    ?? builder.Configuration["Identity:Authority"]
+    ?? throw new InvalidOperationException("Missing 'Identity:PublicIssuer' configuration.");
+
 builder.Services.AddControllers();
 builder.Services.AddRazorPages();
-builder.Services.AddOpenApi();
+builder.Services.AddApiDocumentation(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();
 builder.Services.AddProblemDetails();
@@ -34,16 +39,7 @@ builder.Services.AddSharedKernel();
 builder.Services.AddIdentityApplication();
 builder.Services.AddHostedService<DatabaseSeeder>();
 
-var publicIssuer = builder.Configuration["Identity:PublicIssuer"];
-
-var spaOrigin = builder.Configuration["Cors:SpaOrigin"] ?? "http://localhost:5173";
-builder.Services.AddCors(options =>
-{
-    options.AddPolicy("spa", policy => policy
-        .WithOrigins(spaOrigin)
-        .AllowAnyHeader()
-        .AllowAnyMethod());
-});
+builder.Services.AddIdentityCors(builder.Configuration);
 
 builder.Services.AddOpenIddict()
     .AddServer(options =>
@@ -116,7 +112,7 @@ if (string.IsNullOrEmpty(publicIssuer) && !app.Environment.IsDevelopment())
 
 if (app.Environment.IsDevelopment())
 {
-    app.MapOpenApi();
+    app.MapApiDocumentation();
 }
 
 app.UseHttpsRedirection();
@@ -131,4 +127,4 @@ app.MapControllers();
 app.MapRazorPages();
 app.MapDefaultEndpoints();
 
-app.Run();
+await app.RunAsync();

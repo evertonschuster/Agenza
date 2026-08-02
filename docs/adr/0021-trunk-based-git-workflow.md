@@ -1,12 +1,12 @@
 # ADR 0021 — Trunk-based git workflow, single long-lived branch
 
-Status: accepted (2026-07); direct-`main` commit prohibition and local-hook
-enforcement superseded by docs/adr/0030
+Status: accepted (2026-07); direct-`main` commit prohibition superseded by
+docs/adr/0030; local-hook enforcement superseded by docs/adr/0031
 
 > **2026-07 update:** docs/adr/0030 allows direct local commits to `main`
-> and makes `.husky/pre-commit` branch-agnostic. The single-long-lived-branch,
-> non-stacking, rebase, squash-merge, and concurrent-worktree decisions in
-> this ADR remain current.
+> and docs/adr/0031 removes repository-owned local Git hooks. The
+> single-long-lived-branch, non-stacking, rebase, squash-merge, and
+> concurrent-worktree decisions in this ADR remain current.
 
 ## Context
 
@@ -20,7 +20,7 @@ other. Separately, a chain of stacked feature branches
 (`feat/backend-hardening-and-comment-cleanup` ←
 `feat/login-redesign-and-auth-flow` ←
 `feat/auth-transition-and-race-hardening`, mirrored onto an ad hoc
-`develop` branch) had each been merged into its *parent feature branch*
+`develop` branch) had each been merged into its _parent feature branch_
 rather than into `main`, so the stack's real integration into `main` kept
 getting deferred — by the time anyone tried, `main` had moved through
 several unrelated PRs and dependency bumps, producing large conflicts.
@@ -72,16 +72,16 @@ from one task are never sitting on the branch another task expects to be
 clean.
 
 **Delivery enforcement is remote.** GitHub branch protection and rulesets
-govern updates to `origin/main`. Per ADR 0030, `.husky/pre-commit` is
-branch-agnostic and enforces staged-file quality checks only.
+govern updates to `origin/main`. Per ADR 0031, the repository installs no
+local Git hooks; contributors and agents run quality checks explicitly before
+committing.
 
 ## Consequences
 
 **Benefits**: one branch to keep synchronized instead of two (no repeat
 of the `main`/`develop` divergence this ADR responds to); every PR target
 is already covered by existing CI and branch protection, so no workflow
-files needed new `branches:` triggers; `lint-staged` remains active without
-duplicating remote delivery policy in a local hook.
+files needed new `branches:` triggers.
 
 **Costs**: no separate "integration" branch means a half-finished
 multi-day effort should normally stay on its own feature branch across

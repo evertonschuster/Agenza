@@ -188,7 +188,7 @@ def main() -> None:
         },
     )
     require_status(provisioned, 201, "identity-admin tenant provisioning")
-    if not provisioned.body.get("tenantId"):
+    if not provisioned.body.get("data", {}).get("tenantId"):
         raise AssertionError("tenant provisioning response has no tenantId")
 
     print(

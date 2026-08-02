@@ -23,7 +23,8 @@ public class TagsController : AgenzaControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType<IReadOnlyList<TagResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse<IReadOnlyList<TagResponse>>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> List([FromQuery] ListTagsQuery query, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Query(query, cancellationToken);
@@ -31,7 +32,9 @@ public class TagsController : AgenzaControllerBase
     }
 
     [HttpPost]
-    [ProducesResponseType<TagResponse>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ApiResponse<TagResponse>>(StatusCodes.Status201Created)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Create(CreateTagCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command, cancellationToken);
@@ -39,7 +42,10 @@ public class TagsController : AgenzaControllerBase
     }
 
     [HttpPut("{id:guid}")]
-    [ProducesResponseType<TagResponse>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse<TagResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(Guid id, UpdateTagCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command with { TagId = id }, cancellationToken);
@@ -48,6 +54,8 @@ public class TagsController : AgenzaControllerBase
 
     [HttpDelete("{id:guid}")]
     [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(new DeleteTagCommand(id), cancellationToken);

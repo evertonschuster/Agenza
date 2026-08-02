@@ -78,76 +78,140 @@ public class DatabaseSeeder : IHostedService
     {
         var applicationManager = services.GetRequiredService<IOpenIddictApplicationManager>();
 
-        if (await applicationManager.FindByClientIdAsync("admin-panel", cancellationToken) is null)
+        await EnsureAdminPanelClientAsync(applicationManager, _configuration, cancellationToken);
+        await EnsureClientWorkerAsync(applicationManager, cancellationToken);
+        await EnsureTenantProvisioningClientAsync(applicationManager, cancellationToken);
+    }
+
+    private static async Task EnsureAdminPanelClientAsync(
+        IOpenIddictApplicationManager applicationManager,
+        IConfiguration configuration,
+        CancellationToken cancellationToken)
+    {
+        var adminPanel = await applicationManager.FindByClientIdAsync("admin-panel", cancellationToken);
+        var redirectUris = GetConfiguredUris(configuration, "IdentityClients:AdminPanel:RedirectUris");
+        var postLogoutRedirectUris = GetConfiguredUris(configuration, "IdentityClients:AdminPanel:PostLogoutRedirectUris");
+
+        var descriptor = CreateAdminPanelDescriptor();
+        MergeUris(descriptor.RedirectUris, redirectUris);
+        MergeUris(descriptor.PostLogoutRedirectUris, postLogoutRedirectUris);
+
+        if (adminPanel is null)
         {
-            await applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
-            {
-                ClientId = "admin-panel",
-                DisplayName = "Admin Panel SPA",
-                ClientType = OpenIddictConstants.ClientTypes.Public,
-                ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
-                RedirectUris = { new Uri("http://localhost:5173/callback") },
-                PostLogoutRedirectUris = { new Uri("http://localhost:5173/login") },
-                Permissions =
-                {
-                    OpenIddictConstants.Permissions.Endpoints.Authorization,
-                    OpenIddictConstants.Permissions.Endpoints.Token,
-                    OpenIddictConstants.Permissions.Endpoints.EndSession,
-                    OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
-                    OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
-                    OpenIddictConstants.Permissions.ResponseTypes.Code,
-                    OpenIddictConstants.Permissions.Scopes.Profile,
-                    OpenIddictConstants.Permissions.Scopes.Email,
-                    OpenIddictConstants.Permissions.Prefixes.Scope + "tenant_id",
-                    OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
-                    OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.OfflineAccess,
-                },
-                Requirements =
-                {
-                    OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange,
-                },
-            }, cancellationToken);
+            await applicationManager.CreateAsync(descriptor, cancellationToken);
+            return;
         }
 
-        if (await applicationManager.FindByClientIdAsync("assistant-service-worker", cancellationToken) is null)
-        {
-            var workerSecret = _configuration["IdentityClients:AssistantServiceWorker:Secret"]
-                ?? throw new InvalidOperationException(
-                    "Missing 'IdentityClients:AssistantServiceWorker:Secret' configuration.");
+        await applicationManager.PopulateAsync(adminPanel, descriptor, cancellationToken);
+        MergeUris(descriptor.RedirectUris, redirectUris);
+        MergeUris(descriptor.PostLogoutRedirectUris, postLogoutRedirectUris);
 
-            await applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
-            {
-                ClientId = "assistant-service-worker",
-                ClientSecret = workerSecret,
-                DisplayName = "Assistant Service (AI worker, M2M)",
-                Permissions =
-                {
-                    OpenIddictConstants.Permissions.Endpoints.Token,
-                    OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-                    OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
-                },
-            }, cancellationToken);
+        await applicationManager.UpdateAsync(adminPanel, descriptor, cancellationToken);
+    }
+
+    private static OpenIddictApplicationDescriptor CreateAdminPanelDescriptor() => new()
+    {
+        ClientId = "admin-panel",
+        DisplayName = "Admin Panel SPA",
+        ClientType = OpenIddictConstants.ClientTypes.Public,
+        ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+        Permissions =
+        {
+            OpenIddictConstants.Permissions.Endpoints.Authorization,
+            OpenIddictConstants.Permissions.Endpoints.Token,
+            OpenIddictConstants.Permissions.Endpoints.EndSession,
+            OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+            OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+            OpenIddictConstants.Permissions.ResponseTypes.Code,
+            OpenIddictConstants.Permissions.Scopes.Profile,
+            OpenIddictConstants.Permissions.Scopes.Email,
+            OpenIddictConstants.Permissions.Prefixes.Scope + "tenant_id",
+            OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
+            OpenIddictConstants.Permissions.Prefixes.Scope + OpenIddictConstants.Scopes.OfflineAccess,
+        },
+        Requirements =
+        {
+            OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange,
+        },
+    };
+
+    private static IReadOnlyCollection<Uri> GetConfiguredUris(IConfiguration configuration, string path)
+    {
+        var values = configuration.GetSection(path).GetChildren().Select(child => child.Value).Where(value => !string.IsNullOrWhiteSpace(value)).ToArray();
+
+        if (values.Length == 0)
+        {
+            throw new InvalidOperationException($"Missing '{path}' configuration.");
         }
 
-        if (await applicationManager.FindByClientIdAsync("tenant-provisioning-cli", cancellationToken) is null)
-        {
-            var provisioningSecret = _configuration["IdentityClients:TenantProvisioning:Secret"]
-                ?? throw new InvalidOperationException(
-                    "Missing 'IdentityClients:TenantProvisioning:Secret' configuration.");
+        return values.Select(value => new Uri(value!)).ToArray();
+    }
 
-            await applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
+    private static void MergeUris(ICollection<Uri> target, IReadOnlyCollection<Uri> values)
+    {
+        foreach (var value in values)
+        {
+            if (target.Any(existing => string.Equals(existing.ToString(), value.ToString(), StringComparison.OrdinalIgnoreCase)))
             {
-                ClientId = "tenant-provisioning-cli",
-                ClientSecret = provisioningSecret,
-                DisplayName = "Tenant Provisioning (ops M2M)",
-                Permissions =
-                {
-                    OpenIddictConstants.Permissions.Endpoints.Token,
-                    OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
-                    OpenIddictConstants.Permissions.Prefixes.Scope + "identity-admin",
-                },
-            }, cancellationToken);
+                continue;
+            }
+
+            target.Add(value);
         }
+    }
+
+    private async Task EnsureClientWorkerAsync(
+        IOpenIddictApplicationManager applicationManager,
+        CancellationToken cancellationToken)
+    {
+        if (await applicationManager.FindByClientIdAsync("assistant-service-worker", cancellationToken) is not null)
+        {
+            return;
+        }
+
+        var workerSecret = _configuration["IdentityClients:AssistantServiceWorker:Secret"]
+            ?? throw new InvalidOperationException(
+                "Missing 'IdentityClients:AssistantServiceWorker:Secret' configuration.");
+
+        await applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "assistant-service-worker",
+            ClientSecret = workerSecret,
+            DisplayName = "Assistant Service (AI worker, M2M)",
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Token,
+                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
+            },
+        }, cancellationToken);
+    }
+
+    private async Task EnsureTenantProvisioningClientAsync(
+        IOpenIddictApplicationManager applicationManager,
+        CancellationToken cancellationToken)
+    {
+        if (await applicationManager.FindByClientIdAsync("tenant-provisioning-cli", cancellationToken) is not null)
+        {
+            return;
+        }
+
+        var provisioningSecret = _configuration["IdentityClients:TenantProvisioning:Secret"]
+            ?? throw new InvalidOperationException(
+                "Missing 'IdentityClients:TenantProvisioning:Secret' configuration.");
+
+        await applicationManager.CreateAsync(new OpenIddictApplicationDescriptor
+        {
+            ClientId = "tenant-provisioning-cli",
+            ClientSecret = provisioningSecret,
+            DisplayName = "Tenant Provisioning (ops M2M)",
+            Permissions =
+            {
+                OpenIddictConstants.Permissions.Endpoints.Token,
+                OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+                OpenIddictConstants.Permissions.Prefixes.Scope + "identity-admin",
+            },
+        }, cancellationToken);
     }
 
     private async Task SeedDemoTenantAsync(IServiceProvider services, CancellationToken cancellationToken)

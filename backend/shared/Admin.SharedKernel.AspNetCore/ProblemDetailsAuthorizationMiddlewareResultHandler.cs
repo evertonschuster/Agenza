@@ -26,13 +26,7 @@ public sealed class ProblemDetailsAuthorizationMiddlewareResultHandler
 
         context.Response.StatusCode = status;
         await context.Response.WriteAsJsonAsync(
-            new ApiProblemDetails
-            {
-                Type = "https://agenza/errors/authorization",
-                Title = forbidden ? "Acesso negado." : "Autenticação obrigatória.",
-                Status = status,
-                Code = forbidden ? "Authorization.Forbidden" : "Authorization.Unauthorized",
-            },
+            ApiProblemDetailsFactory.CreateAuthorizationProblem(forbidden, context),
             options: null,
             contentType: "application/problem+json",
             context.RequestAborted);
