@@ -9,8 +9,10 @@ covers what's specific to `apps/admin-frontend/`.
 A multi-tenant SaaS admin panel for small healthcare/wellness businesses.
 Built with Clean Architecture, TDD, and strict TypeScript, organized by
 feature (ADR 009: `app/`, `features/{auth,catalog}/`, `shared/`). The Auth,
-Tags, Categories, and Services verticals are complete end-to-end (frontend +
-backend). The remaining feature verticals (Appointments, Clients, Inbox,
+Categories, and Services verticals are complete end-to-end (frontend +
+backend). Tags was removed from the frontend (docs/adr/016) — the backend
+`Tag` domain/`/api/v1/tags` endpoints are intentionally retained. The
+remaining feature verticals (Appointments, Clients, Inbox,
 Dashboard, Settings) are stubs awaiting implementation, under `app/pages/`
 until each graduates into its own feature.
 
@@ -67,7 +69,7 @@ infrastructure/presentation`. ESLint (`no-restricted-imports`) and
   (MSW fixtures need a feature's internal DTOs) and `app/routes/router.tsx`
   lazy-loading catalog's pages by their own path (code-splitting — see
   docs/adr/009's "Execution" section for why).
-- Tags, Categories, and Services share one `features/catalog/` feature
+- Categories and Services share one `features/catalog/` feature
   (not one each) — they collaborate in the same business context and
   cross-reference each other (a Service has a `categoryId` and `tags`).
 - `app/composition/container.ts` is the ONLY place allowed to construct
@@ -147,11 +149,16 @@ default zero" — the same bar, applied here too.
   feature-local. Only _promote_ something to `shared/` on its _second_,
   genuinely-identical use across features — the "wait for the second use"
   rule gates promotion to `shared/`, not the initial extraction.
-- `TagsPage` is the reference for _behavior and design_ (search → table →
-  dialog create/edit → `AlertDialog` delete-confirm, loading/error/empty
-  states) — not for _anatomy_. A feature with more workflows (Services:
+- `CategoriesListPage`/`CategoryEditorDialog` (`features/catalog/presentation/categories/`)
+  is the reference for _behavior and design_ (search → table → dialog
+  create/edit → `AlertDialog` delete-confirm, loading/error/empty states) —
+  not for _anatomy_. Categories' create/edit dialog is routed
+  (`/categories/new`, `/categories/:id/edit`, docs/adr/012) rather than
+  toggled by local state; that routing detail is Categories-specific, not a
+  requirement for every feature. A feature with more workflows (Services:
   filters + pagination + dirty-tracking + inline-create) needs more files
-  than Tags does; that's a correctly-sized decomposition, not a deviation.
+  than Categories does; that's a correctly-sized decomposition, not a
+  deviation.
 - Decomposition triggers: multiple independent workflows in one
   hook/component, several dialogs, distinct state clusters, a prop list a
   reader can't hold in their head, a type cycle between a controller and
@@ -160,7 +167,7 @@ default zero" — the same bar, applied here too.
   a trigger, and splitting a genuinely cohesive 150-line component to hit
   a number is not the goal.
 - `GenericCrudPage` (or any generic entity-agnostic CRUD abstraction) is
-  prohibited. Tags/Categories/Services each keep their own page, form, and
+  prohibited. Categories/Services each keep their own page, form, and
   table — share only behavior that's proven identical (`useDialogTarget`,
   `useDeleteConfirmation`, `DeleteConfirmationDialog`,
   `CollectionFeedback`, all in `shared/`), never a config-driven generic
@@ -181,7 +188,7 @@ default zero" — the same bar, applied here too.
   is available for accessibility assertions — the matcher is registered
   globally in `src/test/setup.ts`. Add it to any new or changed form/page
   that a screen-reader or keyboard-only user would rely on; see
-  `TagForm.test.tsx` for the pattern.
+  `CategoriesRoutes.test.tsx` for the pattern.
 - A form field wired through `Controller` (not `register()`) needs its
   rendered component to forward a `ref` to a real, focusable DOM node
   (`CreatableSingleSelect`/`CreatableMultiSelect` both do) - otherwise
@@ -264,9 +271,9 @@ page). The short version:
   `StatusMessage`, `TextField`/`TextAreaField`, `CenteredScreen`,
   `FullScreenSpinner`, `CollectionFeedback`, `DeleteConfirmationDialog`)
   — don't hand-roll markup shadcn or an existing composite already covers.
-- `TagsPage`/`TagForm` (`features/catalog/presentation/tags/`) is the
-  reference implementation for a CRUD list+form page (table + dialog) —
-  see "Componentization" above for what "reference" means here.
+- `CategoriesListPage`/`CategoryEditorDialog` (`features/catalog/presentation/categories/`)
+  is the reference implementation for a CRUD list+form page (table + dialog)
+  — see "Componentization" above for what "reference" means here.
   `AdminLayout` (`app/layouts/`) is the reference for the page shell,
   including its off-canvas mobile sidebar — new pages don't need their
   own mobile nav handling.
@@ -289,6 +296,7 @@ Copy `.env.example` to `.env.local`. Never commit `.env.local`.
 - ✅ Tooling, Auth vertical, composition root, presentation shell
 - ✅ `HttpClient` (`AuthenticatedHttpClient`) — REST features are unblocked
 - ✅ shadcn/ui design system, dark mode, mobile-responsive `AdminLayout`
-- ✅ Tags, Categories, Services (frontend + backend, search/filtering, pagination)
+- ✅ Categories, Services (frontend + backend, search/filtering, pagination)
+- Tags removed from the frontend (docs/adr/016); backend `Tag`/`/api/v1/tags` retained
 - ✅ Feature-based physical layout (`app/`, `features/{auth,catalog}/`, `shared/` — ADR 009)
 - 🔲 Clients → Appointments → Inbox → Dashboard → Settings

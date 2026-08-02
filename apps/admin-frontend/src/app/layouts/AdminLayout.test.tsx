@@ -75,7 +75,6 @@ describe('AdminLayout', () => {
       'Serviços',
       'Clientes',
       'Caixa de entrada',
-      'Etiquetas',
       'Configurações',
     ]) {
       expect(screen.getByRole('link', { name: label })).toBeInTheDocument()
