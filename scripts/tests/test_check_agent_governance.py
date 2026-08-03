@@ -195,6 +195,52 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertEqual(problems, [])
 
+    # -- legacy/stale instruction layers --------------------------------------
+
+    def test_local_skill_directory_is_reported(self) -> None:
+        self._write("backend/.skills/legacy/SKILL.md", "legacy\n")
+
+        with self._patch():
+            problems = cag.check_no_legacy_instruction_layers()
+
+        self.assertTrue(any("backend/.skills" in problem for problem in problems))
+
+    def test_standalone_agent_file_is_reported(self) -> None:
+        self._write("apps/admin-frontend/.agent.md", "duplicate rules\n")
+
+        with self._patch():
+            problems = cag.check_no_legacy_instruction_layers()
+
+        self.assertTrue(any(".agent.md" in problem for problem in problems))
+
+    def test_stale_phrase_in_skill_reference_is_reported(self) -> None:
+        self._write(
+            "agent-skills/foo/references/testing.md",
+            "Automatic tenant assignment has no automated regression test\n",
+        )
+
+        with self._patch():
+            problems = cag.check_no_known_stale_teaching()
+
+        self.assertTrue(any("no automated regression" in problem for problem in problems))
+
+    def test_versioned_package_reference_in_new_service_skill_is_reported(self) -> None:
+        self._write(
+            "agent-skills/agenza-backend-new-service/SKILL.md",
+            '<PackageReference Include="Example" Version="1.0.0" />\n',
+        )
+
+        with self._patch():
+            problems = cag.check_no_known_stale_teaching()
+
+        self.assertTrue(any("versioned PackageReference" in problem for problem in problems))
+
+    def test_legacy_instruction_layers_absent_passes(self) -> None:
+        with self._patch():
+            problems = cag.check_no_legacy_instruction_layers()
+
+        self.assertEqual(problems, [])
+
     # -- ADR references ----------------------------------------------------
 
     def test_dangling_adr_reference_is_reported(self) -> None:

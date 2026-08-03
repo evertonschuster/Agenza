@@ -44,7 +44,7 @@ simply not needed right now.
 ## Consequences
 
 - `apps/admin-frontend/AGENTS.md`, `docs/STATUS.md`, `docs/DOMAIN.md`,
-  `docs/API.md`, `.agent.md`, `eslint.config.js`, and `.env.example` are
+  `docs/API.md`, `eslint.config.js`, and `.env.example` are
   updated to stop describing Tags as a built frontend feature, and to
   flag that the backend still returns `tags`/`tagIds` on `ServiceDto`
   even though the frontend has no `Tag` type to represent it.

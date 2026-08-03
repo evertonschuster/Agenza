@@ -52,7 +52,7 @@ The repo is optimized for AI-assisted delivery — the developer-facing
 walkthrough with worked example prompts is [SDD-GUIDE.md](SDD-GUIDE.md):
 
 1. **Instructions are layered**: root `CLAUDE.md` → per-area `CLAUDE.md`
-   (frontend, backend) → `.skills/` how-to guides → `docs/` references
+   (frontend, backend) → canonical `agent-skills/` workflows → routed `docs/` references
    (STATUS, DOMAIN, API, ADRs). An agent reads the layer it needs; specs
    live in docs, not in chat history.
 2. **State is machine-readable**: `STATUS.md` files say what's done,

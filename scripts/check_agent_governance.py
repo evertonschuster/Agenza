@@ -17,6 +17,8 @@ governance *meta-files themselves* are present, consistent, and in sync:
 - Every scripts/*.py reference mentioned in a governance file exists.
 - Documented npm scripts actually exist in the relevant package.json.
 - .codex/skills is not used as a skill distribution directory.
+- Legacy local .skills/ and standalone .agent.md instruction layers are absent.
+- Known reverted teaching phrases and versioned new-service templates are absent.
 
 Usage:
     python scripts/check_agent_governance.py
@@ -71,6 +73,28 @@ ADR_REF_PATTERN = re.compile(r"docs/adr/(\d{4})")
 SKILL_REF_PATTERN = re.compile(r"agent-skills/([\w-]+)")
 SCRIPT_REF_PATTERN = re.compile(r"scripts/([\w-]+\.py)")
 NPM_RUN_PATTERN = re.compile(r"npm run ([\w:.-]+)")
+
+LEGACY_INSTRUCTION_PATHS = [
+    "backend/.skills",
+    "apps/admin-frontend/.skills",
+    "apps/admin-frontend/.agent.md",
+]
+
+STALE_TEACHING_PHRASES = {
+    "Every repository interface method takes `TenantContext`": (
+        "frontend repositories obtain tenant identity through GetRequestSession"
+    ),
+    "Repository methods still take `TenantContext`": (
+        "frontend repositories obtain tenant identity through GetRequestSession"
+    ),
+    "JWT claim (most likely": "X-Tenant-Id is an established, required boundary",
+    "Automatic tenant assignment has no automated regression test": (
+        "ServicesService.PersistenceTests covers tenant assignment and query isolation"
+    ),
+    "Promise.reject(new Error('not implemented in this fake'))": (
+        "expected frontend fake failures resolve Result.failure"
+    ),
+}
 
 
 def check_agents_md_exists() -> list[str]:
@@ -194,6 +218,17 @@ def check_no_codex_skills_dir() -> list[str]:
     return []
 
 
+def check_no_legacy_instruction_layers() -> list[str]:
+    problems = []
+    for rel in LEGACY_INSTRUCTION_PATHS:
+        path = REPO_ROOT / rel
+        if path.exists():
+            problems.append(
+                f"{rel} exists - use AGENTS.md and canonical agent-skills/ only"
+            )
+    return problems
+
+
 def _governance_adjacent_files() -> list[Path]:
     """Every file that might reasonably cite a docs/adr/NNNN or scripts/*.py
     reference: the fixed governance docs/CLAUDE.md files, plus every
@@ -206,11 +241,49 @@ def _governance_adjacent_files() -> list[Path]:
         + ["CLAUDE.md", "backend/CLAUDE.md", "apps/admin-frontend/CLAUDE.md"]
     ]
     globbed = (
-        sorted((REPO_ROOT / "agent-skills").glob("*/SKILL.md"))
+        sorted((REPO_ROOT / "agent-skills").rglob("*.md"))
         + sorted((REPO_ROOT / ".claude" / "agents").glob("*.md"))
         + sorted((REPO_ROOT / "prompts").glob("*.md"))
     )
     return fixed + globbed
+
+
+def check_no_known_stale_teaching() -> list[str]:
+    problems = []
+    for doc_path in _governance_adjacent_files():
+        if not doc_path.is_file():
+            continue
+        text = doc_path.read_text(encoding="utf-8")
+        for phrase, current_rule in STALE_TEACHING_PHRASES.items():
+            if phrase in text:
+                problems.append(
+                    f"{_rel(doc_path)} teaches stale phrase {phrase!r} - {current_rule}"
+                )
+
+    new_service_dir = REPO_ROOT / "agent-skills" / "agenza-backend-new-service"
+    versioned_reference = re.compile(r"<PackageReference\b[^>]*\bVersion=")
+    if new_service_dir.is_dir():
+        for path in new_service_dir.rglob("*.md"):
+            if versioned_reference.search(path.read_text(encoding="utf-8")):
+                problems.append(
+                    f"{_rel(path)} copies a versioned PackageReference - use "
+                    "backend/Directory.Packages.props and live project files"
+                )
+
+    copied_backend_template = (
+        REPO_ROOT
+        / "agent-skills"
+        / "agenza-backend-use-case"
+        / "references"
+        / "templates.md"
+    )
+    if copied_backend_template.exists():
+        problems.append(
+            f"{_rel(copied_backend_template)} exists - use the live Tags vertical "
+            "instead of copied implementation templates"
+        )
+
+    return problems
 
 
 def check_adr_references() -> list[str]:
@@ -317,6 +390,8 @@ CHECKS = [
     ("canonical skill frontmatter valid", check_skill_frontmatter),
     ("skills synced to .agents/ and .claude/", check_skills_synced),
     ("no .codex/skills distribution dir", check_no_codex_skills_dir),
+    ("no legacy local instruction layers", check_no_legacy_instruction_layers),
+    ("no known stale teaching patterns", check_no_known_stale_teaching),
     ("ADR references resolve", check_adr_references),
     ("referenced skills exist", check_referenced_skills_exist),
     ("referenced scripts exist", check_referenced_scripts_exist),

@@ -1,6 +1,8 @@
 # ADR 011 — `HttpClient` takes a decoder instead of a caller-chosen generic
 
-**Status:** Accepted
+**Status:** Accepted for the decoder boundary. ADR 014 supersedes the
+Promise-only signatures below: current `HttpClient` methods return
+`Promise<Result<T, AppError>>` while still requiring a decoder.
 
 ## Decision
 

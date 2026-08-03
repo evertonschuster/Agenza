@@ -65,9 +65,8 @@ reintroduced because something else still teaches the old pattern. Check:
 
 - Other `CLAUDE.md`/`AGENTS.md` files that might restate the rule locally
   and now disagree with the update.
-- Older skills (including ones outside `agent-skills/`, like
-  `backend/.skills/`/`apps/admin-frontend/.skills/`) that predate the
-  change.
+- Any forbidden legacy instruction layer (`.skills/`, `.agent.md`) or generated
+  artifact that still teaches the old behavior.
 - Comments in code that assert the old rationale.
 - `prompts/` templates and worked examples in `docs/SDD-GUIDE.md`.
 - Test files whose names or comments describe the old behavior as

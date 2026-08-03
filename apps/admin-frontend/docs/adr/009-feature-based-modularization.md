@@ -1,7 +1,9 @@
 # ADR 009 — Feature-based modularization (`features/`, `app/`, `shared/`)
 
-**Status:** Accepted — executed 2026-07-23 (see "Execution" below for what
-actually happened, including two deviations from the original plan).
+**Status:** Accepted — executed 2026-07-23. The file inventory below is the
+historical execution snapshot; ADR 016 later removed Tags and current
+`docs/STATUS.md` records Services as a stub. The feature-boundary decision
+remains current.
 
 ## Decision
 

@@ -1,98 +1,47 @@
-# Frontend feature template (tool-neutral)
+# Frontend feature template
 
-For a new or changed page/form/hook in `apps/admin-frontend`. Fill in
-every section; delete this instruction line before sending.
+## Outcome
 
----
-
-## Objective
-
-<E.g. "Build the Clients list + create/edit page.">
+<What usable behavior should exist when this task is complete?>
 
 ## Scope
 
-- Feature folder(s): `domain/entities/`, `application/use-cases/`,
-  `infrastructure/repositories/`, `presentation/<entity>/` (page, dialogs,
-  table, filters, and that entity's own hooks all colocated there — see
-  `presentation/services/` for the pattern; only a piece genuinely reused
-  *across* entities, like `presentation/forms/`'s `CategoryForm.tsx`/
-  `TagForm.tsx`, gets its own shared folder instead)
-- Stub page being replaced (if any): `<PageName>`
+- Feature/capability: `<...>`
+- Existing route or placeholder: `<...>`
+- Explicitly out of scope: `<...>`
 
-## API spec (search before asking — see root `AGENTS.md`'s question policy)
+## Contract and business rules
 
-Before asking the user for any of this, check
-`src/features/catalog/infrastructure/generated/services-api.d.ts`, the backend controller/
-DTOs under `backend/services/services-service/`, `docs/API.md`, and
-`docs/adr/` — only ask what's still genuinely missing after that search.
+Before asking, inspect generated OpenAPI types, backend controllers/DTOs, tests,
+`docs/API.md`, and the ADR index.
 
-- Base path: `<...>`
-- Methods + shapes (request/response) per operation: `<...>`
-- Error codes/shapes: `<...>`
-- Tenant scoping mechanism (JWT claim / header / path / query): `<...>`
-
-## Business rules / field constraints
-
-<Field name, type, required?, min/max length or range, matching backend
-Domain constant if known — this must match the backend exactly; if
-unsure, use `agenza-api-contract-review` to check instead of guessing.>
+- Endpoints and methods: `<...>`
+- Request/response/error shapes: `<...>`
+- Field constraints and invariants: `<...>`
+- Auth/tenant behavior: `<normally the established bearer + X-Tenant-Id boundary>`
 
 ## Acceptance criteria
 
-- [ ] Domain entity + use case tests (fakes)
-- [ ] Mapper tests (all fields + failure paths)
-- [ ] Infrastructure repository tests (MSW)
-- [ ] Hook test (fake container), tenant-scoped via `resetKey`
-- [ ] Page: loading/error/success states, dark mode, 375px width, keyboard
-      operable, pt-BR text
-- [ ] Form (if any): React Hook Form + Zod, server errors mapped to fields
+- [ ] Expected failures use `Result` values and curated UI errors
+- [ ] Server data clears synchronously on tenant switch
+- [ ] Mapper/repository/hook/UI tests match the affected boundaries
+- [ ] Page/form is keyboard accessible, pt-BR, theme-safe, and works at 375 px
+- [ ] Current feature status is updated if the placeholder state changed
 
-## Read these first
+## Read/use
 
 - `apps/admin-frontend/AGENTS.md`
-- `docs/STATUS.md`, `docs/DOMAIN.md`, `docs/API.md`
-
-## Skills to use
-
-- agenza-frontend-feature (primary)
-- `apps/admin-frontend/.skills/admin-api-contract/SKILL.md` (translating
-  the API spec above into DTOs/mappers/MSW handlers)
-- `apps/admin-frontend/.skills/admin-tdd-conventions/SKILL.md` (test
-  patterns, TS-strict test gotchas)
-- agenza-api-contract-review (if anything about the API spec above is
-  uncertain against the real backend)
-
-## Allowed files / directories
-
-`apps/admin-frontend/src/**` for the feature in scope, plus
-`apps/admin-frontend/src/test/mocks/handlers/` for MSW handlers.
-
-## Mandatory commands
-
-```bash
-python scripts/sync_agent_skills.py --check
-python scripts/check_agent_governance.py
-npm run format:check --workspace=apps/admin-frontend
-npm run lint --workspace=apps/admin-frontend
-npm run build --workspace=apps/admin-frontend
-npm run test:coverage --workspace=apps/admin-frontend
-python scripts/architecture_guard.py
-```
+- `agent-skills/agenza-frontend-feature`
+- `agenza-api-contract-review` only when contract drift is in scope
+- Only the conditional API/testing/UI reference routed by the frontend skill
 
 ## Restrictions
 
-- No `any`, anywhere, including tests and fakes.
-- No cross-feature import (a page importing another page's `domain/`/
-  `application/`/`infrastructure/`).
-- No raw Tailwind palette classes (`slate-*`, `teal-*`, etc.) — semantic
-  tokens only.
-- No new global client-state store (Redux/Zustand) used as a server cache.
-- No Formik/Yup without an explicit ADR.
-- No hand-duplicated DTO for something already in
-  `src/features/catalog/infrastructure/generated/services-api.d.ts`.
+No `any`, deep cross-feature imports, raw infrastructure imports from
+presentation, hand-duplicated generated DTOs, raw palette colors, speculative
+global state, or generic CRUD page abstractions.
 
-## Report format
+## Required evidence
 
-Same as `agent-task-template.md`'s report format, plus: screenshots or a
-description of the page in both light/dark mode if a UI change was made
-and a browser preview was available.
+Report changed behavior, tests added/updated, documentation changes, and actual
+results of every frontend and governance gate.

@@ -46,8 +46,8 @@ Check, across whichever of these areas are in scope for the request:
   sample a few recently-changed pages rather than the whole app unless
   asked for a full sweep.
 - **Tests**: coverage gate status, mock-strategy-per-layer discipline
-  (frontend), no integration-test reintroduction without an ADR reverting
-  docs/adr/0015 (backend).
+  (frontend), narrow persistence/runtime boundaries matching the current ADR
+  index instead of treating historical ADR 0015 as the final state.
 - **Migrations**: `agent-skills/agenza-migration-safety`.
 - **Documentation**: `AGENTS.md`/`CLAUDE.md` files still accurate and in
   sync (`scripts/check_agent_governance.py` covers the mechanical half of

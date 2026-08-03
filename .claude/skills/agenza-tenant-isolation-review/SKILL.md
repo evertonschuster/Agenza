@@ -81,9 +81,7 @@ as blocking.
 ## Output format
 
 `surface (endpoint/query/cache/index) | mechanism relied on | verified? |
-finding (if any) | severity | fix`. For anything not directly verifiable
-by reading code (e.g. actual runtime behavior of a query filter), say so
-explicitly and recommend the manual two-tenant verification step already
-called out in `agent-skills/agenza-backend-use-case` ("Automatic tenant
-assignment has no automated regression test") rather than asserting it's
-safe from static reading alone.
+finding (if any) | severity | fix`. For behavior not provable statically,
+inspect the narrow persistence tests and recommend a two-tenant runtime smoke
+when it adds coverage; never claim automatic tenant assignment lacks automated
+coverage while `ServicesService.PersistenceTests` exists.

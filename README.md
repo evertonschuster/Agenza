@@ -41,17 +41,10 @@ uv run uvicorn app.main:app --reload --port 8001
 dotnet run --project backend/AppHost --launch-profile http
 ```
 
-## Versions
+## Tool versions
 
-| Stack  | Minimum supported (CI-gated)                                 | Recommended local/runtime                    |
-| ------ | ------------------------------------------------------------ | -------------------------------------------- |
-| Node   | 26.5.1 (`.nvmrc`, `engines.node`)                            | Same — `nvm use` picks it up automatically   |
-| npm    | 12.0.2 (`packageManager`)                                    | Same                                         |
-| .NET   | 10.0.302 (`backend/global.json`, `rollForward: latestPatch`) | Same                                         |
-| Python | 3.14.6 (`requires-python`, CI)                               | 3.14.6 (`.python-version`, `uv.lock`)        |
-| Docker | 29.5                                                         | Same (container runtime for Aspire Postgres) |
-
-Runtime and package-manager pins are aligned across local development and CI.
-TypeScript and Microsoft.OpenApi intentionally remain on their latest
-compatible stable lines; [ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibility-pins.md)
-records the upgrade conditions.
+Use the repository pins instead of copying versions from documentation:
+`.nvmrc`/`packageManager`, `backend/global.json`, `.python-version`/`uv.lock`,
+and the CI setup actions are the executable sources. Compatibility exceptions
+and upgrade conditions are recorded in
+[ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibility-pins.md).

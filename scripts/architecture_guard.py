@@ -977,7 +977,7 @@ def check_stale_patterns_in_doc_code_blocks() -> list[Finding]:
 def check_dangling_adr_references() -> list[Finding]:
     """A source comment citing docs/adr/NNNN where NNNN doesn't exist - this
     exact class of bug (14 references to a non-existent ADR 0013) was found
-    and fixed in this repo once already (see docs/HARDENING_REPORT.md)."""
+    and fixed in this repo once already (see docs/adr/0016)."""
     adr_dir = REPO_ROOT / "docs" / "adr"
     existing = set()
     if adr_dir.is_dir():

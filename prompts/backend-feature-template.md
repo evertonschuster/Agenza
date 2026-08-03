@@ -14,7 +14,7 @@ section; delete this instruction line before sending.
 - Service: `<identity-service | services-service | new: name>`
 - Feature: `Application/<Feature>/`
 - New service? Only if this is a genuinely new bounded context — see
-  `.skills/backend-new-microservice/SKILL.md` before assuming yes.
+  `agenza-backend-new-service` before assuming yes.
 
 ## Business rules / spec
 

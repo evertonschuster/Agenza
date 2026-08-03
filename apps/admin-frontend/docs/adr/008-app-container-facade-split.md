@@ -1,6 +1,7 @@
 # ADR 008 — AppContainer facade split (auth/catalog), composition root as pure DI
 
-**Status:** Accepted
+**Status:** Accepted; facade-member typing amended 2026-08-03 after Catalog
+removed pass-through use-case classes that owned no orchestration.
 
 ## Decision
 
@@ -11,13 +12,11 @@
    inside `createAppContainer()` and are never returned — presentation has
    no path to reach a repository or the HTTP client directly, by
    construction, not by convention.
-2. **Each facade member's type is `Pick<ConcreteUseCase, 'execute'>`**, not
-   the concrete class. `Pick` produces a plain structural type - it drops
-   the class's private-field nominal branding - so a hand-written object
-   literal (`{ execute: vi.fn(...) }`) satisfies the type directly. This is
-   what eliminates every `as unknown as AppContainer` cast across the test
-   suite: `src/test/fixtures/createFakeAppContainer.ts` returns a fully
-   real `AppContainer` value, typo-checked like any other object.
+2. **Each facade member exposes a structural `execute` shape**, not a concrete
+   repository or class. Use `Pick<ConcreteUseCase, 'execute'>` when a real use
+   case owns orchestration (Auth), and `{ execute: Repository['method'] }` when
+   the facade is intentionally a pure pass-through (Catalog). Both shapes let a
+   typed object literal satisfy test fakes without `as unknown as AppContainer`.
 3. **`AppProviders` no longer constructs the container.** It takes one as a
    `container` prop and only wires it into `AppContainerContext`. The one
    call to `createAppContainer()` now lives in `main.tsx` - the

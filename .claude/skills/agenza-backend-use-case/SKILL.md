@@ -71,16 +71,16 @@ even where the guard can't catch them syntactically.
 - A brand-new project/folder split for a feature that fits inside an
   existing service's `Application/<Feature>/<Operation>/` shape. Only
   create a new microservice for a genuinely new bounded context — see
-  `.skills/backend-new-microservice/SKILL.md`.
+  `agent-skills/agenza-backend-new-service`.
 - Wiring MediatR, or any DI registration for a handler/validator by hand —
   `AddXApplication()` assembly-scans for both; a new slice needs no
   registration at all.
 
 ## Build order (TDD — test first at each step)
 
-Read [references/templates.md](references/templates.md) before writing any
-new command, query, entity, controller, or test — it has full copy-paste
-code for every shape below.
+Open the live Tags vertical listed above before writing a new slice. Its
+compiled code is the template; this skill intentionally does not duplicate
+full source files that would drift after the next refactor.
 
 ### 1. Domain entity or value object
 

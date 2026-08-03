@@ -1,308 +1,62 @@
-# API Integration Guide
-
-How this admin panel talks to the backend REST API. Read this before
-building any infrastructure repository.
-
----
-
-## Base URL
-
-```
-VITE_API_BASE_URL=https://api.example.com
-```
-
-Set in `.env.local`. The `AuthenticatedHttpClient` prepends this to
-every request path. Never hardcode URLs in repository files.
-
----
-
-## Authentication
-
-Every request to the backend API requires:
-
-```
-Authorization: Bearer <access_token>
-```
-
-The access token comes from `oidc-client-ts` via `OidcAuthRepository`
-(`features/auth/infrastructure/`). `AuthenticatedHttpClient`
-(`shared/infrastructure/http/`) reads the token and tenant id together,
-from a single `GetRequestSession` call per request
-(`shared/application/RequestSession.ts`) — never two independent reads,
-so they can't end up from different moments of a session transition:
-
-```typescript
-export interface RequestSession {
-  readonly accessToken: string
-  readonly tenantId: string | null
-}
-export type GetRequestSession = () => Promise<RequestSession | null>
-```
-
-If `getRequestSession()` returns `null`, the session has expired — throw
-an `UnauthenticatedError` rather than making a request without one.
-
----
-
-## Tenant scoping
-
-The client sends the tenant id explicitly in the `X-Tenant-Id` header on
-every request (`AuthenticatedHttpClient` attaches it automatically from
-the current session's `user.tenant.id`) — the backend verifies it
-against the `tenant_id` claim inside the JWT access token and rejects
-the request with `403` on any mismatch or if the header is missing
-(docs/adr/0006 in the backend repo). The bearer token alone is no longer
-sufficient; the header is required by default for every tenant-scoped
-endpoint.
-
-This means:
-
-- Repository methods still take `TenantContext` as first param (structural
-  enforcement in application layer)
-- `AuthenticatedHttpClient` attaches `X-Tenant-Id` whenever the same
-  per-request session read returned a tenant id (omitted only for
-  pre-session calls, e.g. before login) — individual repositories never
-  set this header themselves
-
----
-
-## Error shape
-
-**Confirmed** (services-service, ASP.NET Core): errors are RFC 7807
-Problem Details, always carrying a machine-readable `code`
-(docs/adr/0012) — a plain conflict/not-found/forbidden/business error:
-
-```json
-{
-  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
-  "title": "Já existe uma categoria chamada 'Massagens'.",
-  "status": 409,
-  "code": "Category.DuplicateName"
-}
-```
-
-A validation error (400) additionally carries a per-field `errors` map,
-keyed by the backend's PascalCase property name, each entry an array of
-`{code, message}`:
-
-```json
-{
-  "type": "https://agenza/errors/validation",
-  "title": "Ocorreram erros de validação.",
-  "status": 400,
-  "code": "Validation.Failed",
-  "errors": {
-    "Name": [
-      { "code": "Service.NameTooLong", "message": "O nome deve possuir no máximo 80 caracteres." }
-    ]
-  }
-}
-```
-
-HTTP status codes:
-
-- `400` — validation error (bad request body)
-- `401` — unauthenticated (expired/missing token)
-- `403` — forbidden (authenticated but not allowed)
-- `404` — resource not found
-- `409` — conflict (e.g. duplicate)
-- `500` — server error
-
-`shared/infrastructure/http/ProblemDetails.ts` defines the typed contract
-(`ProblemDetails`, `FieldError`) and `parseProblemDetails`, a safe runtime
-parser (no `any`, no sniffing error kind from message text). Infrastructure
-first builds an `ApiError` (`status`, `message` from `title` falling back
-to `detail`, `details: ProblemDetails | undefined`) and immediately
-converts it to an `AppError` (`shared/application/AppError.ts`) before it
-leaves `AuthenticatedHttpClient` — `ApiError`/`ProblemDetails` never cross
-into application or presentation (docs/adr/007).
-`shared/presentation/forms/serverFormError.ts`'s `mapApiErrorToForm` turns
-a caught `AppError` into field-level messages a form applies via
-react-hook-form's `setError`, reading `AppError.rawFieldErrors`/
-`backendCode` — each form (`ServiceForm`/`CategoryForm`) exports
-its own backend-property → field-name map (e.g. `DurationMinutes` →
-`durationMinutes`) and a conflict-`code` → field map (e.g.
-`Service.DuplicateName` → `name`).
-
----
-
-## Pagination
-
-**Confirmed** (Services, the first paginated resource): offset-based,
-`PagedResult<T>` — `{ items: T[], totalCount: number, page: number, pageSize: number }`
-(see the Services section below). Any future paginated resource
-(Appointments, Clients) should follow this same field naming unless its
-real spec says otherwise — don't invent a different shape.
-
----
-
-## Resource endpoints (fill in as each vertical is built)
-
-### Tags
-
-Removed from the frontend — see `docs/adr/016-remove-tags-frontend.md`.
-The backend still serves `/api/v1/tags` (`TagDto` with `id`/`name`/
-`color`/`description`, an 8-color fixed palette, `409 Tag.InUse` on
-in-use delete) and `ServiceDto` still embeds a `tags`/`tagIds` field (see
-Services below) — this app just no longer builds against any of it.
-
-### Categories
-
-Served by **services-service** (`VITE_API_BASE_URL`). Tenant scope comes
-from the `X-Tenant-Id` header, verified against the JWT's `tenant_id`
-claim. Routes are versioned (`Asp.Versioning.Mvc`, docs/adr/0005) —
-omitting the segment falls back to v1, but the frontend always sends it
-explicitly.
-
-| Method   | Path                      | Success                                                                 |
-| -------- | ------------------------- | ----------------------------------------------------------------------- |
-| `GET`    | `/api/v1/categories`      | `200` — `CategoryDto[]`                                                 |
-| `GET`    | `/api/v1/categories/{id}` | `200` — `CategoryDto`, `404` if not found (tenant-scoped, docs/adr/013) |
-| `POST`   | `/api/v1/categories`      | `201` — created `CategoryDto`                                           |
-| `PUT`    | `/api/v1/categories/{id}` | `200` — updated `CategoryDto`                                           |
-| `DELETE` | `/api/v1/categories/{id}` | `204` — no body                                                         |
-
-`GET` (collection) accepts an optional `search` query param
-(case-insensitive name match), e.g. `GET /api/v1/categories?search=massa`.
-
-`DELETE` fails with `409` (`Category.InUse`) if the category is still
-referenced by one or more Services.
-
-`CategoryDto`:
-
-```json
-{
-  "id": "3f2b6a10-9c3e-4a1e-8b0a-2a1c3d4e5f60",
-  "name": "Massagens"
-}
-```
-
-Request body for `POST`/`PUT` is the same shape minus `id`: `{ "name": "Massagens" }`.
-
-Validation rules (server-enforced, mirror them client-side):
-
-- `name`: required, trimmed, non-empty, **unique per tenant**
-  (case-insensitive) → violations: `400` (shape) / `409` (duplicate,
-  `Category.DuplicateName`)
-- Unknown `{id}` within the tenant → `404`
-
-### Services
-
-Served by **services-service** (`VITE_API_BASE_URL`). Tenant scope comes
-from the `X-Tenant-Id` header, verified against the JWT's `tenant_id`
-claim. Routes are versioned (`Asp.Versioning.Mvc`, docs/adr/0005) —
-omitting the segment falls back to v1, but the frontend always sends it
-explicitly.
-
-| Method   | Path                    | Success                           |
-| -------- | ----------------------- | --------------------------------- |
-| `GET`    | `/api/v1/services`      | `200` — `PagedResult<ServiceDto>` |
-| `POST`   | `/api/v1/services`      | `201` — created `ServiceDto`      |
-| `PUT`    | `/api/v1/services/{id}` | `200` — updated `ServiceDto`      |
-| `DELETE` | `/api/v1/services/{id}` | `204` — no body                   |
-
-`GET` accepts `page` (1-based, default `1`) and `pageSize` (default `20`,
-max `100`) query params, e.g. `GET /api/v1/services?page=2&pageSize=20`.
-It also accepts optional `search` (case-insensitive name match),
-`categoryId`, and `tagId` filters, e.g.
-`GET /api/v1/services?search=corte&categoryId={id}&tagId={id}`.
-Response envelope (`PagedResult<ServiceDto>`):
-
-```json
-{
-  "items": [/* ServiceDto[] */],
-  "totalCount": 45,
-  "page": 2,
-  "pageSize": 20
-}
-```
-
-`TagSummaryDto` (embedded on a `ServiceDto`, a slice of the full Tag) —
-still part of the real backend contract even though the frontend Tags
-vertical was removed (docs/adr/016-remove-tags-frontend.md); a future
-Services UI needs to decide how to handle it:
-
-```json
-{ "id": "0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e", "name": "VIP", "color": "#0d9488" }
-```
-
-`ServiceDto`:
-
-```json
-{
-  "id": "7a1b2c3d-4e5f-4061-9a2b-3c4d5e6f7081",
-  "code": 1001,
-  "name": "Massagem relaxante",
-  "description": "Uma massagem relaxante de corpo inteiro",
-  "durationMinutes": 60,
-  "minDurationMinutes": 30,
-  "maxDurationMinutes": 90,
-  "price": 150,
-  "maxDiscountPercentage": 10,
-  "categoryId": "3f2b6a10-9c3e-4a1e-8b0a-2a1c3d4e5f60",
-  "categoryName": "Massagens",
-  "tags": [{ "id": "0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e", "name": "VIP", "color": "#0d9488" }]
-}
-```
-
-`description`, `categoryId`, and `categoryName` are `null` when unset.
-`code` is server-assigned and immutable — never sent in a request body.
-
-Request body for `POST`/`PUT` (`PUT` omits `code`, which never changes):
-
-```json
-{
-  "name": "Massagem relaxante",
-  "description": "Uma massagem relaxante de corpo inteiro",
-  "durationMinutes": 60,
-  "minDurationMinutes": 30,
-  "maxDurationMinutes": 90,
-  "price": 150,
-  "maxDiscountPercentage": 10,
-  "categoryId": "3f2b6a10-9c3e-4a1e-8b0a-2a1c3d4e5f60",
-  "tagIds": ["0b6e5b3c-8f4e-4a52-9d0e-1c2a3b4c5d6e"]
-}
-```
-
-`description` and `categoryId` are optional (`string | null`); `tagIds`
-is optional (defaults to an empty list server-side if omitted).
-
-Validation rules (server-enforced, mirror them client-side):
-
-- `name`: required, trimmed, non-empty, **unique per tenant**
-  (case-insensitive) → violations: `400` (shape) / `409` (duplicate,
-  `Service.DuplicateName`)
-- `1 <= minDurationMinutes <= durationMinutes <= maxDurationMinutes <= 1440` → `400`
-- `0 <= maxDiscountPercentage <= 100` → `400`
-- `price >= 0` → `400`
-- `categoryId`, if set, must reference a Category owned by the same tenant → `404` (`Category.NotFound`)
-- `tagIds`, if set, must each reference a Tag owned by the same tenant → `404` (`Tag.NotFound`)
-- Unknown `{id}` within the tenant → `404`
-
-### Appointments
-
-> Spec not yet received. Do not implement until provided by project owner.
-
-### Clients
-
-> Spec not yet received. Do not implement until provided by project owner.
-
-### Conversations
-
-> Spec not yet received. Do not implement until provided by project owner.
-
-### Business Settings
-
-> Spec not yet received. Do not implement until provided by project owner.
-
----
-
-## How to add a new resource
-
-1. Get the spec from the project owner (do not invent endpoint shapes)
-2. Read `.skills/admin-api-contract/SKILL.md`
-3. Define the DTO interface in the mapper file
-4. Write mapper tests first
-5. Write MSW handlers that match the real endpoint paths
-6. Implement the repository
-7. Update this doc with the confirmed endpoint shapes
+# Frontend API integration
+
+This document records stable integration policy and which backend contracts the
+frontend currently consumes. Exact schemas come from generated OpenAPI types and
+backend source; do not copy field inventories here.
+
+## Request boundary
+
+- `VITE_API_BASE_URL` supplies the base URL from local environment config.
+- `AuthenticatedHttpClient` obtains one `GetRequestSession` snapshot per request
+  and attaches `Authorization: Bearer <token>` plus `X-Tenant-Id`.
+- The backend verifies the tenant header against the authenticated `tenant_id`
+  claim. Feature repositories never accept, select, or attach tenant identity.
+- A missing/invalid session, 401, network failure, timeout, non-success response,
+  or decoder rejection leaves the HTTP boundary as `Result.failure(AppError)`.
+  Repositories and presentation do not parse raw exceptions.
+
+## Contract sources
+
+For services-service, the checked-in generated contract is:
+
+`src/features/catalog/infrastructure/generated/services-api.d.ts`
+
+It is generated from the live OpenAPI document and verified in CI. Use the
+generated schema for request/response types, the backend controller/command/
+response for intent, and the canonical API-contract-review skill to detect
+drift. Never edit the generated file or create a hand-written shadow DTO.
+
+A feature-local decoder still validates `unknown` runtime payloads. Static
+TypeScript types do not make external JSON trustworthy.
+
+## Error contract
+
+Backend failures use RFC 7807 Problem Details with a stable machine-readable
+`code`. Validation errors may also expose structured per-field errors.
+`AuthenticatedHttpClient` converts these into `AppError`; forms map structured
+field/code values through their feature-local maps and use a curated global
+fallback. User-facing code never parses a free-text backend message.
+
+## Current consumption
+
+| Backend resource                               | Frontend state                                                                |
+| ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| Categories                                     | Implemented in Catalog; collection and by-id operations consumed              |
+| Services                                       | Backend contract generated; frontend route is currently a stub                |
+| Tags                                           | Backend API retained; intentionally not modeled or surfaced in frontend       |
+| Clients, Appointments, Conversations, Settings | No confirmed frontend vertical; inspect backend/OpenAPI before implementation |
+
+`docs/STATUS.md` is the source for feature progress. The generated contract may
+contain resources the current UI does not expose.
+
+## Adding or changing integration
+
+1. Inspect generated types, backend source, tests, and the ADR index before
+   asking for missing information.
+2. If the backend contract changed, update the backend first and regenerate; do
+   not hand-edit generated TypeScript.
+3. Add/update decoder and mapper tests for success, malformed data, and domain
+   validation failures.
+4. Add/update repository tests through MSW using the real HTTP boundary.
+5. Update feature status only when usable behavior changed; update this document
+   only when stable integration policy or consumption changed.
