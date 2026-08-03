@@ -1,15 +1,15 @@
-import type { Category } from '@/features/catalog/domain/entities/Category'
 import type { AppError } from '@/shared/application/AppError'
 import type { Result } from '@/shared/application/Result'
 
+export interface UseDeleteConfirmationParams<T> {
+  onDelete: (item: T) => Promise<Result<void, AppError>>
+}
 
-export interface UseCategoryDeletionResult {
-  isOpen: boolean
-  entityName: string
-  entityType: string
+export interface UseDeleteConfirmationResult<T> {
+  target: T | null
   error: string | null
   isDeleting: boolean
-  onRequestDelete: (category: Category) => void
+  onRequestDelete: (item: T) => void
   onCancel: () => void
   onConfirm: () => Promise<Result<void, AppError>>
 }

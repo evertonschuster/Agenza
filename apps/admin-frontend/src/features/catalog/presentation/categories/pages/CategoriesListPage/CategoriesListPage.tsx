@@ -62,8 +62,6 @@ export function CategoriesListPage(): JSX.Element {
         isOpen={deletion.isOpen}
         entityName={deletion.entityName}
         entityType={deletion.entityType}
-        error={deletion.error}
-        isDeleting={deletion.isDeleting}
         onCancel={deletion.onCancel}
         onConfirm={deletion.onConfirm}
       />

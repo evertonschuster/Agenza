@@ -1,4 +1,4 @@
-import type { JSX, ReactNode } from 'react'
+import { useState, type JSX, type ReactNode } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -10,6 +10,8 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
 import { StatusMessage } from '@/shared/presentation/components/feedback/StatusMessage'
+import type { Result } from '@/shared/application/Result'
+import type { AppError } from '@/shared/application/AppError'
 
 export interface DeleteConfirmationDialogProps {
   isOpen: boolean
@@ -17,10 +19,8 @@ export interface DeleteConfirmationDialogProps {
   entityType: string
   title?: string
   description?: ReactNode
-  error: string | null
-  isDeleting: boolean
   onCancel: () => void
-  onConfirm: () => Promise<void>
+  onConfirm: () => Promise<Result<void, AppError>>
 }
 
 export function DeleteConfirmationDialog({
@@ -29,11 +29,13 @@ export function DeleteConfirmationDialog({
   entityType,
   title,
   description,
-  error,
-  isDeleting,
   onCancel,
   onConfirm,
 }: DeleteConfirmationDialogProps): JSX.Element {
+
+  const [isProcessing, setIsProcessing] = useState(false)
+  const [error] = useState<string | null>(null)
+
   const entityLabel = entityType.split(' ').pop() ?? entityType
   const defaultTitle = `Excluir ${entityLabel}`
   const defaultDescription = (
@@ -56,16 +58,26 @@ export function DeleteConfirmationDialog({
         </AlertDialogHeader>
         {error !== null && <StatusMessage tone="error">{error}</StatusMessage>}
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+          <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
           <AlertDialogAction
             variant="destructive"
-            disabled={isDeleting}
+            disabled={isProcessing}
             onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
               event.preventDefault()
-              void onConfirm()
+              void (async () => {
+                setIsProcessing(true)
+                try {
+                 const result = await onConfirm()
+                 console.log('Deletion result:', result)
+                } catch (error) {
+                  console.error('Error during deletion:', error)
+                } finally {
+                  setIsProcessing(false)
+                }
+              })()
             }}
           >
-            {isDeleting ? 'Excluindo…' : 'Excluir'}
+            {isProcessing ? 'Excluindo…' : 'Excluir'}
           </AlertDialogAction>
         </AlertDialogFooter>
       </AlertDialogContent>

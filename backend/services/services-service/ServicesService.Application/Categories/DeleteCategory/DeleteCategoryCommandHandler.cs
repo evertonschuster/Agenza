@@ -25,30 +25,33 @@ public sealed class DeleteCategoryCommandHandler : ICommandHandler<DeleteCategor
 
     public async Task<Result> Handle(DeleteCategoryCommand command, CancellationToken cancellationToken)
     {
-        var category = await _categoryRepository.GetByIdAsync(command.CategoryId, cancellationToken);
-        if (category is null)
-        {
-            return Result.Failure(
+        return Result.Failure(
                 Error.NotFound("Category.NotFound", $"Categoria '{command.CategoryId}' não foi encontrada."));
-        }
 
-        var usageCount = await _serviceRepository.CountByCategoryIdAsync(command.CategoryId, cancellationToken);
-        if (usageCount > 0)
-        {
-            return Result.Failure(
-                Error.Conflict(
-                    "Category.InUse",
-                    $"Esta categoria está em uso por {usageCount} serviço(s) e não pode ser excluída."));
-        }
+        //var category = await _categoryRepository.GetByIdAsync(command.CategoryId, cancellationToken);
+        //if (category is null)
+        //{
+        //    return Result.Failure(
+        //        Error.NotFound("Category.NotFound", $"Categoria '{command.CategoryId}' não foi encontrada."));
+        //}
 
-        _categoryRepository.Remove(category);
+        //var usageCount = await _serviceRepository.CountByCategoryIdAsync(command.CategoryId, cancellationToken);
+        //if (usageCount > 0)
+        //{
+        //    return Result.Failure(
+        //        Error.Conflict(
+        //            "Category.InUse",
+        //            $"Esta categoria está em uso por {usageCount} serviço(s) e não pode ser excluída."));
+        //}
 
-        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
-        if (saveResult.IsFailure)
-        {
-            return Result.Failure(CategoryPersistenceErrorMapper.Map(saveResult.Error, category.Name, _logger));
-        }
+        //_categoryRepository.Remove(category);
 
-        return Result.Success();
+        //var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        //if (saveResult.IsFailure)
+        //{
+        //    return Result.Failure(CategoryPersistenceErrorMapper.Map(saveResult.Error, category.Name, _logger));
+        //}
+
+        //return Result.Success();
     }
 }

@@ -1,22 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { toUiError } from '@/shared/application/UiError'
+import type { UseDeleteConfirmationParams, UseDeleteConfirmationResult } from './useDeleteConfirmation.types'
 import type { AppError } from '@/shared/application/AppError'
 import type { Result } from '@/shared/application/Result'
-import { toUiError } from '@/shared/application/UiError'
 
-interface UseDeleteConfirmationParams<T> {
-  onDelete: (item: T) => Promise<Result<void, AppError>>
-}
-
-export interface UseDeleteConfirmationResult<T> {
-  target: T | null
-  error: string | null
-  isDeleting: boolean
-  onRequestDelete: (item: T) => void
-  onCancel: () => void
-  onConfirm: () => Promise<void>
-}
-
-/** Shared target/progress/error state behind every delete-with-confirm flow (Categories/Services). */
 export function useDeleteConfirmation<T>({
   onDelete,
 }: UseDeleteConfirmationParams<T>): UseDeleteConfirmationResult<T> {
@@ -46,9 +33,9 @@ export function useDeleteConfirmation<T>({
     setIsDeleting(false)
   }
 
-  const onConfirm = useCallback(async (): Promise<void> => {
+  const onConfirm = useCallback(async (): Promise<Result<void, AppError>> => {
     if (target === null || isDeleting) {
-      return
+      return { success: false, error: new Error('No target selected') as AppError }
     }
     const generation = generationRef.current
     const isStillWanted = (): boolean =>
