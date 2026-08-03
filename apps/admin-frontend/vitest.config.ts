@@ -2,6 +2,15 @@ import { fileURLToPath } from 'node:url'
 import { defineConfig, configDefaults } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
+// Node 26 exposes an experimental global localStorage that shadows jsdom's
+// implementation unless its web-storage experiment is disabled in workers.
+const disableNativeWebStorage = '--no-experimental-webstorage'
+if (!process.env.NODE_OPTIONS?.includes(disableNativeWebStorage)) {
+  process.env.NODE_OPTIONS = [process.env.NODE_OPTIONS, disableNativeWebStorage]
+    .filter(Boolean)
+    .join(' ')
+}
+
 export default defineConfig({
   plugins: [react()],
   resolve: {

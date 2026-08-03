@@ -29,7 +29,7 @@ def test_validate_returns_claims_for_a_valid_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     validator = TokenValidator(_config())
-    validator._jwk_client = _FakeJwkClient()  # noqa: SLF001
+    validator._jwk_client = _FakeJwkClient()
 
     monkeypatch.setattr(
         jwt,
@@ -49,7 +49,7 @@ def test_validate_raises_401_for_an_invalid_token(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     validator = TokenValidator(_config())
-    validator._jwk_client = _FakeJwkClient()  # noqa: SLF001
+    validator._jwk_client = _FakeJwkClient()
 
     def raise_invalid(*args, **kwargs):  # type: ignore[no-untyped-def]
         raise jwt.InvalidTokenError("signature verification failed")

@@ -9,7 +9,7 @@ requires a paid plan.
 | ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `frontend-ci.yml`      | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
 | `backend-ci.yml`       | `backend/**`                  | warning-free build, unit coverage, and Docker-free EF tenant persistence tests                          |
-| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python 3.12 deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke           |
+| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python 3.14 deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke           |
 | `codeql.yml`           | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
 | `sonar.yml`            | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
 | `agent-governance.yml` | all PRs/pushes                | AI agent governance framework consistency — see [docs/AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md)         |

@@ -9,7 +9,7 @@ monorepo: React frontend, .NET backend microservices, Python AI services.
 | --------------------- | ----------------------------- | ----------------------------------------------- |
 | `apps/admin-frontend` | Vite + React 19 + TS (strict) | The admin panel UI                              |
 | `backend`             | .NET 10 (ASP.NET Core)        | Business microservices, one per bounded context |
-| `ai-services`         | Python 3.12 (FastAPI)         | AI/ML services                                  |
+| `ai-services`         | Python 3.14 (FastAPI)         | AI/ML services                                  |
 | `infra`               | PostgreSQL init scripts       | Local database roles and schema grants          |
 
 See [docs/MONOREPO.md](docs/MONOREPO.md) for conventions, and each stack's own
@@ -33,7 +33,7 @@ dotnet run --project backend/services/services-service/ServicesService.Api
 
 # AI services (Python)
 cd ai-services/assistant-service
-pip install uv==0.11.15
+pip install uv==0.11.32
 uv sync --frozen --extra dev
 uv run uvicorn app.main:app --reload --port 8001
 
@@ -45,12 +45,13 @@ dotnet run --project backend/AppHost --launch-profile http
 
 | Stack  | Minimum supported (CI-gated)                                 | Recommended local/runtime                    |
 | ------ | ------------------------------------------------------------ | -------------------------------------------- |
-| Node   | 22.22.1 (`.nvmrc`, `engines.node`)                           | Same — `nvm use` picks it up automatically   |
-| npm    | 10.9.3 (`packageManager`)                                    | Same                                         |
+| Node   | 26.5.1 (`.nvmrc`, `engines.node`)                            | Same — `nvm use` picks it up automatically   |
+| npm    | 12.0.2 (`packageManager`)                                    | Same                                         |
 | .NET   | 10.0.302 (`backend/global.json`, `rollForward: latestPatch`) | Same                                         |
-| Python | 3.12 (`requires-python`, CI)                                 | 3.12 (`.python-version`, `uv.lock`)          |
+| Python | 3.14.6 (`requires-python`, CI)                               | 3.14.6 (`.python-version`, `uv.lock`)        |
 | Docker | 29.5                                                         | Same (container runtime for Aspire Postgres) |
 
-Node was previously documented as 22.18 while the frontend toolchain already
-required >=22.22 — `.nvmrc`/`engines.node` now enforce the real floor
-everywhere (local and CI) instead of letting them silently disagree.
+Runtime and package-manager pins are aligned across local development and CI.
+TypeScript and Microsoft.OpenApi intentionally remain on their latest
+compatible stable lines; [ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibility-pins.md)
+records the upgrade conditions.
