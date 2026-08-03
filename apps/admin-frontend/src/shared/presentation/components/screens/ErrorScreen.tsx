@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { CenteredScreen } from '@/shared/presentation/components/CenteredScreen'
+import { CenteredScreen } from '@/shared/presentation/components/screens/CenteredScreen'
 import { Card, CardContent } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 

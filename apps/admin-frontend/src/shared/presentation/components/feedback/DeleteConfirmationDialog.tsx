@@ -9,7 +9,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog'
-import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
+import { StatusMessage } from '@/shared/presentation/components/feedback/StatusMessage'
 
 export interface DeleteConfirmationDialogProps {
   isOpen: boolean

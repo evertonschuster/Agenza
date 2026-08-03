@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { LayoutDashboard } from 'lucide-react'
-import { PlaceholderPage } from '@/shared/presentation/components/PlaceholderPage'
+import { PlaceholderPage } from '@/shared/presentation/components/screens/PlaceholderPage'
 
 describe('PlaceholderPage', () => {
   it('renders the given title and an under-construction message', () => {

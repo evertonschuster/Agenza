@@ -11,8 +11,8 @@ import {
 } from '@/components/ui/command'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
-import type { SelectLoadState } from '@/shared/presentation/components/SelectLoadState'
+import { StatusMessage } from '@/shared/presentation/components/feedback/StatusMessage'
+import type { SelectLoadState } from '@/shared/presentation/components/selects/SelectLoadState'
 import { cn } from '@/lib/utils'
 
 interface CreatableSelectHelpers<T> {

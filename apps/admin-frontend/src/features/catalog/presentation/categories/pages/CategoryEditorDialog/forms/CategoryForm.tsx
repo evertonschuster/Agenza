@@ -1,10 +1,10 @@
 import { useEffect, type JSX } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { TextField } from '@/shared/presentation/components/TextField'
+import { TextField } from '@/shared/presentation/components/fields/TextField'
 import { Button } from '@/components/ui/button'
 import { Spinner } from '@/components/ui/spinner'
-import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
+import { StatusMessage } from '@/shared/presentation/components/feedback/StatusMessage'
 import {
   categoryFormSchema,
   type CategoryFormValues,

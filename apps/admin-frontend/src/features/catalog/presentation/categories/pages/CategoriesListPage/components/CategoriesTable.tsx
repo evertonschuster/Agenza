@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { CollectionFeedback } from '@/shared/presentation/components/CollectionFeedback'
+import { CollectionFeedback } from '@/shared/presentation/components/feedback/CollectionFeedback'
 import type { CategoriesTableProps } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/components/CategoriesTable.types'
 
 export function CategoriesTable({

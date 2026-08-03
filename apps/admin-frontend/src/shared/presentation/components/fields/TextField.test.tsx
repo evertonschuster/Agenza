@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type JSX } from 'react'
-import { TextField } from '@/shared/presentation/components/TextField'
+import { TextField } from '@/shared/presentation/components/fields/TextField'
 
 function ControlledTextField(): JSX.Element {
   const [value, setValue] = useState('')

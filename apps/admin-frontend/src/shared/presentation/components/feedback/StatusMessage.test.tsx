@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { render, screen } from '@testing-library/react'
-import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
+import { StatusMessage } from '@/shared/presentation/components/feedback/StatusMessage'
 
 describe('StatusMessage', () => {
   it('renders an error message with role="alert"', () => {

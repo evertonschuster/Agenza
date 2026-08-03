@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { JSX } from 'react'
-import { ErrorBoundary } from '@/shared/presentation/components/ErrorBoundary'
+import { ErrorBoundary } from '@/shared/presentation/components/error/ErrorBoundary'
 
 // A plain mutable flag, not a counter that flips itself after N renders:
 // React 19 retries a thrown render synchronously once before surfacing the

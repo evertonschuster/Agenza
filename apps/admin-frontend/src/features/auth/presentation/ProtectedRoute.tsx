@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { Navigate, Outlet, useLocation } from 'react-router'
 import { useAuth } from '@/features/auth/presentation/useAuth'
-import { FullScreenSpinner } from '@/shared/presentation/components/FullScreenSpinner'
+import { FullScreenSpinner } from '@/shared/presentation/components/screens/FullScreenSpinner'
 
 export function ProtectedRoute(): JSX.Element {
   const { status } = useAuth()

@@ -3,7 +3,7 @@ import { ArrowRight, CircleAlert, ShieldCheck } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { Spinner } from '@/components/ui/spinner'
-import { CenteredScreen } from '@/shared/presentation/components/CenteredScreen'
+import { CenteredScreen } from '@/shared/presentation/components/screens/CenteredScreen'
 
 interface AuthFlowScreenProps {
   state: 'progress' | 'error'

@@ -1,18 +1,16 @@
 import { useState, type JSX } from 'react'
 import { Outlet, useNavigate } from 'react-router'
-import { PageHeader } from '@/shared/presentation/components/PageHeader'
+import { PageHeader } from '@/shared/presentation/components/screens/PageHeader'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { DeleteConfirmationDialog } from '@/shared/presentation/components/DeleteConfirmationDialog'
-import { useDebouncedValue } from '@/shared/presentation/hooks/useDebouncedValue'
+import { DebouncedSearchInput } from '@/shared/presentation/components/search/DebouncedSearchInput'
+import { DeleteConfirmationDialog } from '@/shared/presentation/components/feedback/DeleteConfirmationDialog'
 import { useCategoriesListPage } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage'
 import { CategoriesTable } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/components/CategoriesTable'
 import type { Category } from '@/features/catalog/domain/entities/Category'
 
 export function CategoriesListPage(): JSX.Element {
   const navigate = useNavigate()
-  const [searchInput, setSearchInput] = useState('')
-  const debouncedSearch = useDebouncedValue(searchInput, 300)
+  const [debouncedSearch, setDebouncedSearch] = useState('')
   const hasActiveSearch = debouncedSearch.trim() !== ''
   const { categories, listState, onRetry, onDelete, deleteDialog } =
     useCategoriesListPage(debouncedSearch)
@@ -38,21 +36,18 @@ export function CategoriesListPage(): JSX.Element {
         />
 
         <div className="mt-4 max-w-sm">
-          <Input
+          <DebouncedSearchInput
             type="search"
             aria-label="Buscar categoria por nome"
             placeholder="Buscar por nome…"
-            value={searchInput}
-            onChange={event => {
-              setSearchInput(event.target.value)
-            }}
+            onDebouncedChange={setDebouncedSearch}
           />
         </div>
 
         <CategoriesTable
           categories={categories}
           listState={listState}
-          hasActiveSearch={hasActiveSearch}
+          hasActiveSearch={hasActiveSearch} 
           onRetry={onRetry}
           onEdit={handleEdit}
           onDelete={onDelete}

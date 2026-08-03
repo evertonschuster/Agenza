@@ -1,6 +1,6 @@
 import type { JSX } from 'react'
 import { Users } from 'lucide-react'
-import { PlaceholderPage } from '@/shared/presentation/components/PlaceholderPage'
+import { PlaceholderPage } from '@/shared/presentation/components/screens/PlaceholderPage'
 
 export function ClientsPage(): JSX.Element {
   return <PlaceholderPage title="Clientes" icon={Users} />

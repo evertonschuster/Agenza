@@ -3,7 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog'
 import { CategoryForm } from '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/forms/CategoryForm'
 import { useCategoryEditor } from '@/features/catalog/presentation/categories/pages/CategoryEditorDialog/hooks/useCategoryEditor'
-import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
+import { StatusMessage } from '@/shared/presentation/components/feedback/StatusMessage'
 
 export function CategoryEditorDialog(): JSX.Element {
   const editor = useCategoryEditor()

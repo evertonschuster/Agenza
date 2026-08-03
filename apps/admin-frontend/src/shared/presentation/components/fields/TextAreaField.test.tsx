@@ -3,7 +3,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useEffect, useState, type JSX } from 'react'
 import { useForm, useWatch } from 'react-hook-form'
-import { TextAreaField } from '@/shared/presentation/components/TextAreaField'
+import { TextAreaField } from '@/shared/presentation/components/fields/TextAreaField'
 
 function ControlledTextAreaField(): JSX.Element {
   const [value, setValue] = useState('')

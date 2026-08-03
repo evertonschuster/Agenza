@@ -3,7 +3,7 @@ import { createBrowserRouter, Navigate } from 'react-router'
 import { ProtectedRoute, LoginPage, CallbackPage } from '@/features/auth'
 import { RouteErrorElement } from '@/app/routes/RouteErrorElement'
 import { AdminLayout } from '@/app/layouts/AdminLayout'
-import { FullScreenSpinner } from '@/shared/presentation/components/FullScreenSpinner'
+import { FullScreenSpinner } from '@/shared/presentation/components/screens/FullScreenSpinner'
 
 // LoginPage/CallbackPage stay eager - they're needed before/during auth
 // resolution. Every other page is lazy so `vite build` gives each route

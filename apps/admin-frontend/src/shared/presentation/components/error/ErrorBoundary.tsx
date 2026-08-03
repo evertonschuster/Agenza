@@ -1,6 +1,6 @@
 import { Component, type ReactNode } from 'react'
-import { ErrorScreen } from '@/shared/presentation/components/ErrorScreen'
-import { isChunkLoadError } from '@/shared/presentation/components/isChunkLoadError'
+import { ErrorScreen } from '@/shared/presentation/components/screens/ErrorScreen'
+import { isChunkLoadError } from '@/shared/presentation/components/error/isChunkLoadError'
 
 interface ErrorBoundaryProps {
   children: ReactNode

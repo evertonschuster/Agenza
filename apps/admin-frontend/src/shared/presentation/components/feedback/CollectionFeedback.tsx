@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { StatusMessage } from '@/shared/presentation/components/StatusMessage'
+import { StatusMessage } from '@/shared/presentation/components/feedback/StatusMessage'
 import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
 import type { UiError } from '@/shared/application/UiError'
 

@@ -1,7 +1,7 @@
 import type { JSX } from 'react'
 import { isRouteErrorResponse, useNavigate, useRouteError } from 'react-router'
-import { ErrorScreen } from '@/shared/presentation/components/ErrorScreen'
-import { isChunkLoadError } from '@/shared/presentation/components/isChunkLoadError'
+import { ErrorScreen } from '@/shared/presentation/components/screens/ErrorScreen'
+import { isChunkLoadError } from '@/shared/presentation/components/error/isChunkLoadError'
 
 // The router's errorElement (router.tsx) - distinct from ErrorBoundary,
 // which covers everything outside the routed tree.

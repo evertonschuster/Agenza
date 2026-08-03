@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { isChunkLoadError } from '@/shared/presentation/components/isChunkLoadError'
+import { isChunkLoadError } from '@/shared/presentation/components/error/isChunkLoadError'
 
 describe('isChunkLoadError', () => {
   it('returns false for a non-Error value', () => {

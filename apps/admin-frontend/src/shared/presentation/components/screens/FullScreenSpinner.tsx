@@ -1,5 +1,5 @@
 import type { JSX } from 'react'
-import { CenteredScreen } from '@/shared/presentation/components/CenteredScreen'
+import { CenteredScreen } from '@/shared/presentation/components/screens/CenteredScreen'
 import { Spinner } from '@/components/ui/spinner'
 
 interface FullScreenSpinnerProps {

@@ -2,8 +2,8 @@ import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useState, type JSX } from 'react'
-import { CreatableMultiSelect } from '@/shared/presentation/components/CreatableMultiSelect'
-import type { SelectLoadState } from '@/shared/presentation/components/SelectLoadState'
+import { CreatableMultiSelect } from '@/shared/presentation/components/selects/CreatableMultiSelect'
+import type { SelectLoadState } from '@/shared/presentation/components/selects/SelectLoadState'
 
 interface Item {
   id: string
