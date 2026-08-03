@@ -20,7 +20,7 @@ export interface DeleteConfirmationDialogProps {
   error: string | null
   isDeleting: boolean
   onCancel: () => void
-  onConfirm: () => void
+  onConfirm: () => Promise<void>
 }
 
 /** Shared delete AlertDialog behind Categories/Services - generates default title/description from entity info. */

@@ -1,9 +1,9 @@
 import type { Category } from '@/features/catalog/domain/entities/Category'
-import type { AsyncState } from '@/shared/presentation/hooks/useAsync'
-import type { UiError } from '@/shared/application/UiError'
+import type { AppError } from '@/shared/application/AppError';
 
 export interface UseCategoriesListPageResult {
-  categories: readonly Category[]
-  listState: AsyncState<readonly Category[], UiError>
-  onRetry: () => void
+  categories: Category[];
+  loading: boolean;
+  error: AppError | null;
+  load: (search: string) => Promise<void>;
 }

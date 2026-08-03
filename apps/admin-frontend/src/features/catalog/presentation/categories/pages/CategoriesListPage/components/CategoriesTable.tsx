@@ -9,31 +9,15 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { CollectionFeedback } from '@/shared/presentation/components/feedback/CollectionFeedback'
 import type { CategoriesTableProps } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/components/CategoriesTable.types'
 
 export function CategoriesTable({
   categories,
-  listState,
-  hasActiveSearch,
-  onRetry,
   onEdit,
   onDelete,
 }: CategoriesTableProps): JSX.Element {
   return (
     <div className="mt-6">
-      <CollectionFeedback
-        state={listState}
-        loadingMessage="Carregando categorias…"
-        loadErrorMessage="Não foi possível carregar as categorias"
-        refreshErrorMessage="Não foi possível atualizar a lista de categorias"
-        emptyMessage={
-          hasActiveSearch
-            ? 'Nenhuma categoria encontrada para essa busca.'
-            : 'Nenhuma categoria ainda. Crie uma para começar.'
-        }
-        onRetry={onRetry}
-      />
 
       {categories.length > 0 && (
         <div className="rounded-lg border">

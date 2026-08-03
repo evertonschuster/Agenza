@@ -1,4 +1,4 @@
-import { useState, type JSX } from 'react'
+import { useEffect, useState, type JSX } from 'react'
 import { Outlet, useNavigate } from 'react-router'
 import { PageHeader } from '@/shared/presentation/components/screens/PageHeader'
 import { Button } from '@/components/ui/button'
@@ -14,9 +14,11 @@ export function CategoriesListPage(): JSX.Element {
   const [search, setSearch] = useState('')
   const navigate = useNavigate()
   const deletion = useCategoryDeletion()
-  const { categories, loading, error, onRetry } = useCategoriesListPage(search)
+  const { categories,  load } = useCategoriesListPage()
 
-
+  useEffect(() => {
+    void load(search)
+  }, [search])
 
   function handleEdit(category: Category): void {
     void navigate(`/categories/${category.id}/edit`)
@@ -49,15 +51,6 @@ export function CategoriesListPage(): JSX.Element {
 
         <CategoriesTable
           categories={categories}
-          listState={
-            loading
-              ? { status: 'loading', data: null, error: null }
-              : error
-                ? { status: 'initialError', data: null, error }
-                : { status: 'success', data: categories as readonly Category[], error: null }
-          }
-          hasActiveSearch={hasActiveSearch}
-          onRetry={onRetry}
           onEdit={handleEdit}
           onDelete={deletion.onRequestDelete}
         />

@@ -1,33 +1,28 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useState } from 'react'
 import { useAppContainer } from '@/app/providers/useAppContainer'
-import { toUiError, type UiError } from '@/shared/application/UiError'
 import type { Category } from '@/features/catalog/domain/entities/Category'
+import type { AppError } from '@/shared/application/AppError'
+import type { UseCategoriesListPageResult } from './useCategoriesListPage.types'
 
-export function useCategoriesListPage(search: string) {
+export function useCategoriesListPage(): UseCategoriesListPageResult {
   const { catalog } = useAppContainer()
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState<UiError | null>(null)
+  const [error, setError] = useState<AppError | null>(null)
 
 
-  const load = useCallback(async (): Promise<void> => {
+  const load = useCallback(async (search: string): Promise<void> => {
     setLoading(true)
     setError(null)
     const result = await catalog.listCategories.execute({ search })
     if (result.success) {
       setCategories(result.value)
-      setError(null)
     } else {
-      setError(toUiError(result.error))
+      setError(result.error)
     }
     setLoading(false)
-  }, [catalog, search])
+  }, [catalog])
 
-  useEffect(() => {
-    void load().then(() => {
-      // no-op
-    })
-  }, [load])
 
-  return { categories, loading, error, onRetry: load }
+  return { categories, loading, error, load }
 }
