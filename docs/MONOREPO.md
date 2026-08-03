@@ -3,9 +3,9 @@
 ```
 admin/
 ├── apps/
-│   └── admin-frontend/     Vite + React 19 + TypeScript admin panel (see its own docs/)
+│   └── admin-frontend/     Vite + React + TypeScript admin panel (see its own docs/)
 ├── backend/
-│   ├── AdminBackend.slnx   .NET solution (dotnet 10 uses .slnx, not .sln)
+│   ├── AdminBackend.slnx   .NET solution
 │   ├── AppHost/            .NET Aspire orchestrator — local dev only, see below
 │   ├── ServiceDefaults/    shared OpenTelemetry/health-check/service-discovery wiring
 │   ├── shared/
@@ -41,7 +41,7 @@ The full stack has one local orchestration path:
   `agenza-postgres-data` volume.
 
   Docker is required only as Aspire's container runtime for PostgreSQL. Node,
-  Python 3.14, and `uv` must be installed; AppHost runs the npm and locked
+  Python, and `uv` must be installed; AppHost runs the npm and locked
   `uv sync` setup resources before starting Vite and Uvicorn.
 
   A single local-development password is shared by PostgreSQL, the restricted
@@ -95,11 +95,10 @@ the OpenAPI/OIDC runtime smoke instead of maintaining a parallel Compose graph.
 
 ## Adding a new backend microservice
 
-Follow `backend/.skills/backend-new-microservice/SKILL.md` — it covers the
-full checklist (layout, solution wiring, auth via Admin.Identity.Client,
-shared-Postgres schema convention, Aspire, CI, docs). The short
-version: copy the five-project layout, mirror identity-service's patterns,
-one schema per service in the shared Postgres.
+Follow `.agents/skills/agenza-backend-new-service`. Create the five base projects
+and add a PersistenceTests project whenever tenant-scoped EF behavior needs
+security coverage. Use the live services, central package file, solution, and
+AppHost as executable references; do not copy versioned project templates.
 
 ## Adding a new AI service
 
@@ -121,8 +120,6 @@ GitHub Actions checks remain the integration gate for `origin/main`. See
 
 ## Known gaps (tracked, not blocking)
 
-- `apps/admin-frontend/graphify-out/` is stale (generated before the restructure) —
-  regenerate rather than trust it.
 - Database bootstrap is opt-in through
   `DatabaseBootstrap:RunOnStartup` (base configuration is `false`;
   Development explicitly enables it). The demo

@@ -44,12 +44,12 @@ simply not needed right now.
 ## Consequences
 
 - `apps/admin-frontend/AGENTS.md`, `docs/STATUS.md`, `docs/DOMAIN.md`,
-  `docs/API.md`, `.agent.md`, `eslint.config.js`, and `.env.example` are
+  `docs/API.md`, `eslint.config.js`, and `.env.example` are
   updated to stop describing Tags as a built frontend feature, and to
   flag that the backend still returns `tags`/`tagIds` on `ServiceDto`
   even though the frontend has no `Tag` type to represent it.
-- `agent-skills/agenza-frontend-feature` (canonical, synced to
-  `.claude/skills/`/`.agents/skills/`) no longer uses `TagsPage`/`TagForm`
+- `.agents/skills/agenza-frontend-feature` (canonical, synced to
+  `.claude/skills/`) no longer uses `TagsPage`/`TagForm`
   as its worked example; it uses Categories instead.
 - Historical ADRs (007–011, 014) that used Tags as a worked example when
   documenting an already-made decision are left as-is — they describe

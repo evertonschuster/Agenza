@@ -58,7 +58,7 @@ A table, one row per occurrence:
 | --- | --- | --- | --- | --- | --- | --- |
 
 For every row classified **Expected outcome**, describe the fix in terms of
-`agent-skills/agenza-backend-use-case`'s decision tree (which layer's
+`.agents/skills/agenza-backend-use-case`'s decision tree (which layer's
 `Result` type should carry this instead, and where the check belongs —
 validator vs. handler vs. persistence).
 
@@ -72,4 +72,4 @@ validator vs. handler vs. persistence).
   explicitly-allowed pattern (docs/adr/0014), not a violation.
 - If a finding would change how an error is reported to a caller (e.g.
   changing an HTTP status code), that's a contract change — flag it for
-  `agent-skills/agenza-api-contract-review` too, don't fix it silently.
+  `.agents/skills/agenza-api-contract-review` too, don't fix it silently.

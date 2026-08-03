@@ -96,7 +96,7 @@ own architecture.
 
 ## Consequences
 
-- `agent-skills/agenza-frontend-feature`'s "frontend's own,
+- `.agents/skills/agenza-frontend-feature`'s "frontend's own,
   already-established exception-and-catch convention" (describing domain
   entity factories) now applies to Auth only - Catalog's domain entities
   return `Result`. The skill is updated to say so explicitly.

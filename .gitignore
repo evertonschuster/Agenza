@@ -39,3 +39,6 @@ build/
 .env.local
 .env.*.local
 *.log
+
+# Tool-local agent state
+**/.claude/settings.local.json

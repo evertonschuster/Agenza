@@ -110,7 +110,8 @@ Domain on every request.
   `identity-service`'s `Tenant` specifically, not a blanket rule, and
   `services-service`'s `Tag`/`Category`/`Service` are called out as the
   exception (pun intended) to that default.
-- `.skills/backend-use-case/SKILL.md`'s Widget template still shows
+- The former local backend-use-case skill's Widget template (deleted; retained
+  in Git history) still showed
   Domain throwing on invalid input as the **default recommendation for a
   brand-new service** — a new service's entity may still want
   Domain-level defense-in-depth before it has a full validator suite

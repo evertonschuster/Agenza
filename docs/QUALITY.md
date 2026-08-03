@@ -1,7 +1,8 @@
 # Quality gates & CI
 
-Every tool in this stack is free for public repositories. Nothing here
-requires a paid plan.
+This document describes executable quality gates. Provider plans, pricing, and
+optional review assistants are deliberately excluded because they change
+independently of repository correctness.
 
 ## Workflows (`.github/workflows/`)
 
@@ -9,7 +10,7 @@ requires a paid plan.
 | ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
 | `frontend-ci.yml`      | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
 | `backend-ci.yml`       | `backend/**`                  | warning-free build, unit coverage, and Docker-free EF tenant persistence tests                          |
-| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python 3.14 deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke           |
+| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke                |
 | `codeql.yml`           | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
 | `sonar.yml`            | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
 | `agent-governance.yml` | all PRs/pushes                | AI agent governance framework consistency — see [docs/AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md)         |
@@ -57,14 +58,14 @@ NuGet, pip, and the workflows' actions.
 
 Until step 4 happens, `sonar.yml` skips itself — it never blocks a PR.
 
-## AI code review (free options)
+## Agent compatibility
 
-- **CodeRabbit** — already reviewing PRs here; the Pro plan is free for
-  public/open-source repositories.
-- **CodeQL** — security-focused review on every PR (already enabled).
-- **Claude Code** (`/install-github-app`) — adds `@claude` mention-driven
-  review/fix on PRs; usage is billed against an Anthropic API key, so
-  keep it for high-value reviews if the budget is tight.
+Repository correctness does not depend on which coding agent produced a
+change. Codex, GitHub Copilot, and Claude Code share the rules in `AGENTS.md`,
+the portable workflows in `.agents/skills/`, and the same GitHub Actions gates.
+Tool-specific bridges and local hooks are convenience layers; CI remains the
+independent acceptance boundary. See
+[AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md) for discovery paths and sync rules.
 
 ## Branch protection recommendation
 

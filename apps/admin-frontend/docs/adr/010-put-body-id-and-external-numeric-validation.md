@@ -1,6 +1,7 @@
 # ADR 010 — PUT body id kept, sent explicitly; runtime validation for widened numeric fields
 
-**Status:** Accepted
+**Status:** Accepted. Tag/Service file examples are historical after later
+frontend removals; the PUT-body and runtime-validation rules remain current.
 
 ## Decision
 

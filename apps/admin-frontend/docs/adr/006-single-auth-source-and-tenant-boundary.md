@@ -61,7 +61,7 @@ multi-tenant, session-can-change nature:
 
 Reusing `useAsync` inside `AuthProvider` (rather than inventing a new
 state-management primitive) keeps the "no server-state library, no global
-store" constraint from ADR 002/docs/DECISIONS.md — `useAsync`'s existing
+store" constraint from ADR 002 — `useAsync`'s existing
 out-of-order/unmount guarding, extended with the resetKey/generation
 checks above, is sufficient once it's shared through one provider instead
 of duplicated per hook call.

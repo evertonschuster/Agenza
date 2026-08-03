@@ -99,7 +99,7 @@ re-apply every migration from scratch, including `CREATE TABLE`
 statements for tables that already exist. This fails loudly
 (`42P07 relation already exists`) rather than silently corrupting data,
 but it does break local dev startup until handled. This is exactly the
-kind of change `agent-skills/agenza-migration-safety` and root
+kind of change `.agents/skills/agenza-migration-safety` and root
 `AGENTS.md`'s question policy require flagging rather than executing
 unattended — no docker/psql command was run as part of this change.
 

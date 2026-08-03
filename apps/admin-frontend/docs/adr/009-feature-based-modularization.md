@@ -1,7 +1,9 @@
 # ADR 009 — Feature-based modularization (`features/`, `app/`, `shared/`)
 
-**Status:** Accepted — executed 2026-07-23 (see "Execution" below for what
-actually happened, including two deviations from the original plan).
+**Status:** Accepted — executed 2026-07-23. The file inventory below is the
+historical execution snapshot; ADR 016 later removed Tags and current
+`docs/STATUS.md` records Services as a stub. The feature-boundary decision
+remains current.
 
 ## Decision
 
@@ -191,7 +193,7 @@ for review attention against unrelated behavioral changes.
    mirroring the existing `domain/`/`application/` blocks) and
    `scripts/architecture_guard.py` (a new check alongside
    `check_cross_page_imports`). Update
-   `agent-skills/agenza-frontend-feature` and
+   `.agents/skills/agenza-frontend-feature` and
    `apps/admin-frontend/AGENTS.md` to teach the new structure - at the
    time this ADR was drafted, the then-current versions still described
    and enforced the horizontal layout (since done — both now document the

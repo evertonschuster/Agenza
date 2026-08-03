@@ -62,8 +62,8 @@ team building six more feature verticals.
   record lists this project has today; pairs with a separate library
   (e.g. TanStack Table) if a future vertical needs those behaviors.
 - The whole component set depends on the CSS-variable tokens in
-  `src/index.css` for both theming and dark mode — see the "Design
-  language" and "UI component library" entries in `docs/DECISIONS.md`.
+  `src/index.css` for both theming and dark mode. Current usage conventions
+  live in `apps/admin-frontend/AGENTS.md` and the frontend feature skill.
   To regenerate those tokens from scratch (e.g. after a manual edit
   drifted from the registry), run
   `npx shadcn@latest init -y -f -b radix -p nova --no-reinstall -c apps/admin-frontend`
