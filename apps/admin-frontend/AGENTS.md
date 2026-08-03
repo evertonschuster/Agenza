@@ -138,40 +138,14 @@ default zero" — the same bar, applied here too.
 
 ### Componentization
 
-- A page (`XPage.tsx`) is a composition shell: it wires a controller hook's
-  view models into presentational components and renders nothing else. A
-  controller hook (`useXPage`) follows the same single-responsibility bar —
-  when it grows more than one real workflow (filters, editor, deletion,
-  dirty-tracking are each their own concern), split it into focused hooks
-  the page's controller composes, not one hook doing everything.
-- Extract a component or hook on its _first_ use if it's already a distinct
-  concern (a field group, a delete-confirmation dialog); keep it
-  feature-local. Only _promote_ something to `shared/` on its _second_,
-  genuinely-identical use across features — the "wait for the second use"
-  rule gates promotion to `shared/`, not the initial extraction.
-- `CategoriesListPage`/`CategoryEditorDialog` (`features/catalog/presentation/categories/`)
-  is the reference for _behavior and design_ (search → table → dialog
-  create/edit → `AlertDialog` delete-confirm, loading/error/empty states) —
-  not for _anatomy_. Categories' create/edit dialog is routed
-  (`/categories/new`, `/categories/:id/edit`, docs/adr/012) rather than
-  toggled by local state; that routing detail is Categories-specific, not a
-  requirement for every feature. A feature with more workflows (Services:
-  filters + pagination + dirty-tracking + inline-create) needs more files
-  than Categories does; that's a correctly-sized decomposition, not a
-  deviation.
-- Decomposition triggers: multiple independent workflows in one
-  hook/component, several dialogs, distinct state clusters, a prop list a
-  reader can't hold in their head, a type cycle between a controller and
-  the component it feeds, or a page test file so large it's hard to find
-  the right assertion. There is no hard line-count cap — size alone is not
-  a trigger, and splitting a genuinely cohesive 150-line component to hit
-  a number is not the goal.
-- `GenericCrudPage` (or any generic entity-agnostic CRUD abstraction) is
-  prohibited. Categories/Services each keep their own page, form, and
-  table — share only behavior that's proven identical (`useDialogTarget`,
-  `useDeleteConfirmation`, `DeleteConfirmationDialog`,
-  `CollectionFeedback`, all in `shared/`), never a config-driven generic
-  page.
+A page is a composition shell over a controller hook, split into focused
+hooks once it grows more than one real workflow; extract a component/hook
+on first use, promote to `shared/` only on a second identical use across
+features; `GenericCrudPage` (or any config-driven, entity-agnostic CRUD
+abstraction) is prohibited. Full detail — decomposition triggers, the
+`CategoriesListPage`/`CategoryEditorDialog` reference, the promotion
+rule's exact wording — lives in `agent-skills/agenza-frontend-feature`
+(read it before building any page).
 
 ### Testing
 

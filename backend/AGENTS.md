@@ -38,17 +38,16 @@ why MediatR/FluentAssertions specifically are NOT used here).
 | `../docs/adr/0009-...md`                      | TenantOwnedEntity base class (BaseEntity + ITenantOwned combined)                                                                                  |
 | `../docs/adr/0012-...md`                      | Cross-aggregate checks live in handlers, not validators — validators take no repository dependencies                                               |
 | `../docs/adr/0014-...md`                      | Result pattern end-to-end — Domain/persistence no longer throw for expected outcomes                                                               |
-| `../docs/adr/0015-...md`                      | Historical removal of the old broad/flaky integration suites                                                                                       |
 | `../docs/adr/0017-...md`                      | Schema-scoped `__EFMigrationsHistory` per service — read before touching either service's migrations or `DependencyInjection.cs`                   |
 | `../docs/adr/0018-...md`                      | `Admin.SharedKernel` vs `Admin.SharedKernel.AspNetCore` split — read before adding to either                                                       |
 | `../docs/adr/0019-...md`                      | `ServicesService.PersistenceTests` — narrow EF InMemory coverage for tenant assignment/scoping, outside the *.Tests boundary and its coverage gate |
-| `../docs/adr/0023-...md`                      | Historical bounded runtime-test decision, superseded by ADR 0026                                                                                   |
 | `../docs/adr/0024-...md`                      | Per-service database roles and composite tenant relationships                                                                                      |
-| `../docs/adr/0025-...md`                      | Historical explicit/serialized bootstrap decision, narrowed by ADR 0027                                                                            |
 | `../docs/adr/0026-...md`                      | Removal of the dedicated runtime-test project; retained runtime smokes and known gaps                                                              |
 | `../docs/adr/0027-...md`                      | Single-instance demo bootstrap without a distributed advisory lock                                                                                 |
 | `../docs/adr/0028-...md`                      | One-time EF migration baseline reset before the first deployment                                                                                   |
 | `../docs/adr/0029-...md`                      | Aspire as the single local application orchestrator                                                                                                |
+
+Superseded/historical, read only for archaeology (not current behavior): 0015 (old broad/flaky integration suites, removed), 0023 (bounded runtime-test decision, superseded by 0026), 0025 (explicit/serialized bootstrap, narrowed by 0027).
 
 ## Critical constraints (non-negotiable)
 
@@ -93,23 +92,16 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
 
 ### Rich domain model — no anemic entities
 
-- Entities validate their invariants in a `private` constructor plus a
-  `public static DomainResult<T> Create(...)` factory, and return
+- Entities validate invariants in a `private` constructor plus a
+  `public static DomainResult<T> Create(...)` factory, returning
   `DomainResult`/`DomainResult<T>` on violation instead of throwing — see
-  `Tenant` in identity-service (name required) and `Tag`/`Category`/
-  `Service`/`TagColor` in services-service (name/description length,
-  duration range/ordering, price, discount range, palette membership),
-  and `DomainResult`/`DomainError` (`{Service}.Domain/Common/`) — this is
-  still defense-in-depth on top of FluentValidation, not a replacement
-  for it (docs/adr/0012, docs/adr/0014): a handler that reaches Domain
-  with invalid data means a validator/domain mismatch bug, but per the
-  repo-wide no-exceptions-for-expected-outcomes directive (docs/adr/0014)
-  that bug now surfaces as a `DomainResult.Failure` mapped to
-  `Error.Validation` (400), not a thrown exception. `Update` methods
-  return plain `DomainResult` (no value to return); both `Create` and
-  `Update` validate every new value into a local before assigning/
-  returning, so a later validation failure can never leave the entity
-  partially mutated.
+  `Tenant` in identity-service and `Tag`/`Category`/`Service`/`TagColor`
+  in services-service, and `DomainResult`/`DomainError`
+  (`{Service}.Domain/Common/`). Defense-in-depth on top of
+  FluentValidation, not a replacement for it (docs/adr/0012, docs/adr/0014).
+  `Update` methods return plain `DomainResult` (no value); both `Create`
+  and `Update` validate every new value into a local before assigning, so
+  a failure never leaves the entity partially mutated.
 - No public setters. `private set` + behavior methods that keep the
   entity valid. A `private` parameterless constructor exists only for EF.
 - New value concepts with rules (email, time range, money) become value
@@ -121,45 +113,39 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   Gives `Id`, `CreatedAt`/`CreatedBy`, `UpdatedAt`/`UpdatedBy`,
   `DeletedAt`/`DeletedBy`, `IsDeleted`, set only via `MarkCreated`/
   `MarkUpdated`/`MarkDeleted` — never public setters. Delete is a real
-  soft delete: each service's `AuditableEntitySaveChangesInterceptor`
-  turns a tracked `Deleted` entry into `Modified` and calls
-  `MarkDeleted`. The query filter that hides soft-deleted rows from
-  ordinary reads, and a supporting `DeletedAt` index, are applied
-  **automatically** to every `BaseEntity` type by
+  soft delete via each service's `AuditableEntitySaveChangesInterceptor`
+  (turns a tracked `Deleted` entry into `Modified`, calls `MarkDeleted`).
+  The soft-delete query filter and `DeletedAt` index apply
+  **automatically** to every `BaseEntity` via
   `Admin.SharedKernel.EntityFrameworkCore`'s `ApplyAuditableConventions`
-  (called once from each `DbContext.OnModelCreating`) — don't add
-  `HasQueryFilter` by hand in an `IEntityTypeConfiguration` (see
-  docs/adr/0006).
-- New entity ids come from `Guid.CreateVersion7()` directly (UUID v7),
-  not `Guid.NewGuid()`.
+  (called once from `DbContext.OnModelCreating`) — don't add
+  `HasQueryFilter` by hand (docs/adr/0006).
+- New entity ids come from `Guid.CreateVersion7()` (UUID v7), not
+  `Guid.NewGuid()`.
 - A domain `DomainError` (`Code` + `Message`) maps to
-  `Admin.SharedKernel.Error` via an explicit, tested per-service
+  `Admin.SharedKernel.Error` via a tested per-service
   `DomainErrorMapper.ToApplicationError()` extension
   (`{Service}.Application/Abstractions/DomainErrorMapper.cs`) — always
-  `Error.Validation(code, message)` (400), never a raw
-  `Exception`/`ArgumentException` or an HTTP type leaking into Domain.
-  `Code` values are the same stable strings the old `BusinessException`
-  subtypes used (`"Tag.Invalid"`, `"Service.Invalid"`, etc.).
+  `Error.Validation(code, message)` (400), never a raw exception or an
+  HTTP type leaking into Domain. `Code` values keep the same stable
+  strings the old `BusinessException` subtypes used (`"Tag.Invalid"`,
+  `"Service.Invalid"`, etc.).
 - A tenant-owned aggregate root inherits `TenantOwnedEntity`
-  (`{Service}.Domain/Common/TenantOwnedEntity.cs` — `BaseEntity` +
-  `ITenantOwned` combined, see `Tag`/`Service`) instead of
-  `BaseEntity` directly, and needs no `ITenantOwned`/`AssignTenant`
-  boilerplate of its own. Its constructor never takes a `tenantId`
-  parameter at all — `TenantId` starts `Guid.Empty` and only
-  `AssignTenant(Guid tenantId)` (inherited, not overridden) can set it.
-  Unlike entity validation, `AssignTenant` still **throws** a plain
-  `InvalidOperationException` on an empty guid (not a `DomainResult`) —
-  `TenantHeaderFilter` already rejects any request with a missing/
-  mismatched tenant header with 403 before any handler/interceptor runs,
-  so this can only happen via an internal bug, never directly from a
-  request (docs/adr/0014); it is not a business outcome, so it is exempt
-  from the no-exceptions-for-expected-outcomes rule below.
+  (`{Service}.Domain/Common/TenantOwnedEntity.cs`) instead of
+  `BaseEntity` directly — no `ITenantOwned`/`AssignTenant` boilerplate of
+  its own, and its constructor never takes a `tenantId` parameter.
+  `TenantId` starts `Guid.Empty`; only the inherited
+  `AssignTenant(Guid tenantId)` can set it, and it still **throws**
+  `InvalidOperationException` on an empty guid rather than returning a
+  `DomainResult` — the one exception to the no-exceptions rule below,
+  because `TenantHeaderFilter` already rejects any request with a
+  missing/mismatched tenant header before a handler runs, so this path is
+  only reachable via an internal bug (docs/adr/0014).
   `AuditableEntitySaveChangesInterceptor` calls `AssignTenant`
-  automatically for a newly added entity whose `TenantId` is still
-  `Guid.Empty` — mirrors `MarkCreated` exactly, just for a
-  security-relevant field instead of an audit one. A mapping extension
-  (`ToModel()`, see CQRS section below) is therefore parameterless too —
-  it never threads a tenant id through.
+  automatically on save for a newly added entity whose `TenantId` is
+  still `Guid.Empty`, mirroring `MarkCreated` — so a mapping extension
+  (`ToModel()`, see CQRS below) is parameterless too and never threads a
+  tenant id through.
 
 ### Tenant scoping (repo-wide non-negotiable)
 
@@ -200,10 +186,9 @@ vs. MediatR, Result vs. exceptions, schema-per-service) belongs in
   available. A cross-tenant read/write is still a security bug, not a
   code-style issue — the automatic filter and automatic assignment are
   defense in depth on top of `TenantHeaderFilter`, not a replacement for
-  it.
-- See docs/adr/0006 for why the header filter is wired into
-  services-service's `Program.cs` only, not identity-service's, and for
-  the automatic tenant-scoping mechanism in full.
+  it. The header filter is wired into services-service's `Program.cs`
+  only, not identity-service's — see docs/adr/0006 for why and for the
+  automatic tenant-scoping mechanism in full.
 
 ### Identity login feedback
 
@@ -290,14 +275,12 @@ guards, an unrecognized database error, transactional rollback cleanup.
   live in the handler itself and return `Result.Failure` directly
   (docs/adr/0012); role/scope checks return `Forbid()`.
   `IUnitOfWork.SaveChangesAsync` (services-service) returns
-  `PersistenceResult<int>` instead of throwing when a database
-  unique-constraint race loses to a concurrent request — the handler
-  checks `saveResult.IsFailure` and maps it via a per-entity
-  `{Entity}PersistenceErrorMapper` (feature root, e.g.
-  `Tags/TagPersistenceErrorMapper.cs`) to `Error.Conflict`, same outcome
-  as the pre-emptive `NameExistsAsync` check. Delete handlers check this
-  result too, even though nothing used to be caught there — discarding it
-  would silently swallow a real conflict and report success.
+  `PersistenceResult<int>` instead of throwing when a unique-constraint
+  race loses to a concurrent request — the handler checks
+  `saveResult.IsFailure` and maps it via a per-entity
+  `{Entity}PersistenceErrorMapper` (e.g. `Tags/TagPersistenceErrorMapper.cs`)
+  to `Error.Conflict`. Delete handlers check this result too — discarding
+  it would silently swallow a real conflict and report success.
   `identity-service`'s `IUnitOfWork.ExecuteInTransactionAsync` is already
   `Result`-aware; its `try/catch` exists only for transactional rollback
   on a genuinely unexpected failure, not to convert a business outcome —
