@@ -5,15 +5,18 @@ import { Button } from '@/components/ui/button'
 import { DebouncedSearchInput } from '@/shared/presentation/components/search/DebouncedSearchInput'
 import { DeleteConfirmationDialog } from '@/shared/presentation/components/feedback/DeleteConfirmationDialog'
 import { useCategoriesListPage } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage'
+import { useCategoryDeletion } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoryDeletion'
 import { CategoriesTable } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/components/CategoriesTable'
 import type { Category } from '@/features/catalog/domain/entities/Category'
 
 export function CategoriesListPage(): JSX.Element {
+
+  const [search, setSearch] = useState('')
   const navigate = useNavigate()
-  const [debouncedSearch, setDebouncedSearch] = useState('')
-  const hasActiveSearch = debouncedSearch.trim() !== ''
-  const { categories, listState, onRetry, onDelete, deleteDialog } =
-    useCategoriesListPage(debouncedSearch)
+  const deletion = useCategoryDeletion()
+  const { categories, loading, error, onRetry } = useCategoriesListPage(search)
+
+
 
   function handleEdit(category: Category): void {
     void navigate(`/categories/${category.id}/edit`)
@@ -40,30 +43,36 @@ export function CategoriesListPage(): JSX.Element {
             type="search"
             aria-label="Buscar categoria por nome"
             placeholder="Buscar por nome…"
-            onDebouncedChange={setDebouncedSearch}
+            onDebouncedChange={setSearch}
           />
         </div>
 
         <CategoriesTable
           categories={categories}
-          listState={listState}
-          hasActiveSearch={hasActiveSearch} 
+          listState={
+            loading
+              ? { status: 'loading', data: null, error: null }
+              : error
+                ? { status: 'initialError', data: null, error }
+                : { status: 'success', data: categories as readonly Category[], error: null }
+          }
+          hasActiveSearch={hasActiveSearch}
           onRetry={onRetry}
           onEdit={handleEdit}
-          onDelete={onDelete}
+          onDelete={deletion.onRequestDelete}
         />
       </div>
 
       <Outlet />
 
       <DeleteConfirmationDialog
-        isOpen={deleteDialog.target !== null}
-        entityName={deleteDialog.target?.name ?? ''}
-        entityType="a categoria"
-        error={deleteDialog.error}
-        isDeleting={deleteDialog.isDeleting}
-        onCancel={deleteDialog.onCancel}
-        onConfirm={deleteDialog.onConfirm}
+        isOpen={deletion.isOpen}
+        entityName={deletion.entityName}
+        entityType={deletion.entityType}
+        error={deletion.error}
+        isDeleting={deletion.isDeleting}
+        onCancel={deletion.onCancel}
+        onConfirm={deletion.onConfirm}
       />
     </>
   )

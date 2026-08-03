@@ -1,65 +1,33 @@
-import { useCallback, useEffect, useRef } from 'react'
-import { useLocation, useResolvedPath } from 'react-router'
+import { useCallback, useEffect, useState } from 'react'
 import { useAppContainer } from '@/app/providers/useAppContainer'
-import { useAsync, toUiAsyncState } from '@/shared/presentation/hooks/useAsync'
-import { useCategoryDeletion } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoryDeletion'
+import { toUiError, type UiError } from '@/shared/application/UiError'
 import type { Category } from '@/features/catalog/domain/entities/Category'
-import type { AppError } from '@/shared/application/AppError'
-import type { Result } from '@/shared/application/Result'
-import type { UseCategoriesListPageResult } from '@/features/catalog/presentation/categories/pages/CategoriesListPage/hooks/useCategoriesListPage.types'
 
-export function useCategoriesListPage(search: string): UseCategoriesListPageResult {
+export function useCategoriesListPage(search: string) {
   const { catalog } = useAppContainer()
+  const [categories, setCategories] = useState<Category[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<UiError | null>(null)
 
-  const listCategories = useCallback(
-    (): Promise<Result<Category[], AppError>> => catalog.listCategories.execute({ search }),
-    [catalog, search],
-  )
 
-  const asyncState = useAsync(listCategories)
-  const { data, execute } = asyncState
-  const categories = data ?? []
-  const listState = toUiAsyncState(asyncState)
-
-  const deleteCategory = useCallback(
-    async (id: string): Promise<Result<void, AppError>> => {
-      const deleteResult = await catalog.deleteCategory.execute(id)
-      if (deleteResult.success) {
-        await execute()
-      }
-      return deleteResult
-    },
-    [catalog, execute],
-  )
-
-  const deletion = useCategoryDeletion({ onDelete: deleteCategory })
-
-  const basePath = useResolvedPath('.').pathname
-  const location = useLocation()
-  const wasOnChildRoute = useRef(false)
-  useEffect(() => {
-    const onChildRoute = location.pathname !== basePath
-    if (wasOnChildRoute.current && !onChildRoute) {
-      void execute()
+  const load = useCallback(async (): Promise<void> => {
+    setLoading(true)
+    setError(null)
+    const result = await catalog.listCategories.execute({ search })
+    if (result.success) {
+      setCategories(result.value)
+      setError(null)
+    } else {
+      setError(toUiError(result.error))
     }
-    wasOnChildRoute.current = onChildRoute
-    // Only the route transition matters here - execute()'s identity also
-    // changes on every `search` update, which would refire this effect on
-    // each keystroke if listed as a dependency.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [location.pathname, basePath])
+    setLoading(false)
+  }, [catalog, search])
 
-  return {
-    categories,
-    listState,
-    onRetry: () => void execute(),
-    onDelete: deletion.onRequestDelete,
-    deleteDialog: {
-      target: deletion.target,
-      error: deletion.error,
-      isDeleting: deletion.isDeleting,
-      onCancel: deletion.onCancel,
-      onConfirm: () => void deletion.onConfirm(),
-    },
-  }
+  useEffect(() => {
+    void load().then(() => {
+      // no-op
+    })
+  }, [load])
+
+  return { categories, loading, error, onRetry: load }
 }
