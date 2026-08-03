@@ -1,6 +1,6 @@
 ---
 name: evolve-modular-architecture
-description: Assess, design, review, and incrementally evolve modular software architecture from repository and business evidence. Use when Codex needs to define or repair module boundaries, decompose a monolith, choose between a simple monolith, modular monolith, and microservices, select architecture per module, introduce tactical DDD only where justified, plan a safe extraction or migration, write ADRs, or create automated architectural fitness functions that prevent structural drift.
+description: Assess, design, review, and incrementally evolve modular software architecture from repository and business evidence. Use when defining or repairing module boundaries, decomposing a monolith, choosing between a simple monolith, modular monolith, and microservices, selecting architecture per module, introducing tactical DDD only where justified, planning a safe extraction or migration, writing ADRs, or creating automated architectural fitness functions that prevent structural drift.
 ---
 
 # Evolve Modular Architecture

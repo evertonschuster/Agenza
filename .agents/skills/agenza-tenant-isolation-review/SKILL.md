@@ -39,8 +39,7 @@ is in scope.
   entity's repository takes an explicit `tenantId` parameter (the
   DbContext scopes it) — a parameter like that is a sign someone hand-
   rolled scoping instead of relying on the automatic mechanism, which is
-  itself worth flagging even if the value passed happens to be correct
-  today.
+  itself worth flagging even if the value passed happens to be correct.
 - **New-entity assignment**: `AuditableEntitySaveChangesInterceptor` calls
   `AssignTenant` on save for any newly added `ITenantOwned` entity with
   `TenantId == Guid.Empty`, sourcing it from `ICurrentTenantProvider` — it
@@ -49,7 +48,7 @@ is in scope.
 - **Frontend cache/query keys**: any client-side cache (`useAsync`'s
   `resetKey`, a memoized list, browser storage) keyed in a way that
   includes the tenant id or is cleared synchronously on tenant switch —
-  see `agent-skills/agenza-frontend-feature`'s `useAsync` section for the
+  see `.agents/skills/agenza-frontend-feature`'s `useAsync` section for the
   `resetKey` mechanism. A cache that survives a tenant switch and can
   render the previous tenant's data for even one frame is a finding, not
   a nit.
@@ -58,7 +57,7 @@ is in scope.
   unique index on a business field is itself a cross-tenant leak (tenant
   A can't reuse a name tenant B already used). A composite FK crossing
   tenant boundaries (referencing another tenant's row) is a finding.
-- **Migrations**: hand off to `agent-skills/agenza-migration-safety` for
+- **Migrations**: hand off to `.agents/skills/agenza-migration-safety` for
   the migration-safety half; this skill only confirms the resulting
   schema still enforces tenant scoping (index/FK shape above).
 - **Logs**: a log statement that includes another tenant's data alongside
@@ -82,6 +81,6 @@ as blocking.
 
 `surface (endpoint/query/cache/index) | mechanism relied on | verified? |
 finding (if any) | severity | fix`. For behavior not provable statically,
-inspect the narrow persistence tests and recommend a two-tenant runtime smoke
-when it adds coverage; never claim automatic tenant assignment lacks automated
-coverage while `ServicesService.PersistenceTests` exists.
+inspect the current `*PersistenceTests` projects and recommend a two-tenant
+runtime smoke only when it adds coverage. Never infer a missing test tier from
+an older ADR or instruction; inspect the solution and CI first.

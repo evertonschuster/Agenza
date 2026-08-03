@@ -36,8 +36,9 @@ description: >
    `services-api.d.ts` for the same resource — flag for consolidation.
 3. **Field limit drift.** A `MaximumLength`/`.PrecisionScale(...)` on the
    backend validator or EF column vs. a `maxLength`/`max()` in the
-   matching Zod schema (`agent-skills/agenza-frontend-feature`'s form
-   section) — these must match exactly (see docs/adr/0012's
+   matching Zod schema (see
+   `.agents/skills/agenza-frontend-feature/references/page-ui-conventions.md`)
+   — these must match exactly (see docs/adr/0012's
    `Category.NameMaxLength`/`Service.NameMaxLength` alignment for the kind
    of drift this catches). A limit encoded only in a comment, never a
    type/schema/const, is itself a finding — flag it for a real check.
@@ -50,8 +51,8 @@ description: >
 6. **Unhandled API error shape.** A backend error `code` introduced
    (`Error.Conflict("Entity.SomeCode", ...)`) with no corresponding entry
    in the matching frontend `codeFieldMap` (see
-   `agent-skills/agenza-frontend-feature`'s "Structured API errors"
-   section) — it will still work (falls back to a global message) but
+   `.agents/skills/agenza-frontend-feature/references/api-integration.md`) —
+   it will still work (falls back to a global message) but
    loses field-level precision; flag it, don't treat it as broken.
 7. **Structured vs. free-text errors.** Confirm a new validation failure
    path returns through `Error.FieldErrors` (structured, docs/adr/0012),

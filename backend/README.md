@@ -20,7 +20,7 @@ services/<service-name>/
 Both `identity-service` and `services-service` are real, fully-built
 services — mirror either's patterns for a new service's project
 structure. Conventions and how-to guides live in [CLAUDE.md](CLAUDE.md)
-and the canonical workflows under [../agent-skills/](../agent-skills/).
+and the canonical workflows under [../.agents/skills/](../.agents/skills/).
 
 There is also `shared/Admin.Identity.Client` — the JWT-validation +
 `ITenantAccessor` library every resource service references instead of

@@ -7,12 +7,13 @@ scripts/architecture_guard.py's job. This script only checks that the
 governance *meta-files themselves* are present, consistent, and in sync:
 
 - AGENTS.md exists at every required location.
-- Every CLAUDE.md that should import AGENTS.md does.
-- Every canonical skill under agent-skills/ has valid, portable frontmatter.
-- .agents/skills/ and .claude/skills/ are byte-identical to agent-skills/.
+- Every CLAUDE.md is a thin AGENTS.md import.
+- GitHub Copilot has a thin bridge to the canonical instructions and skills.
+- Every canonical skill under .agents/skills/ has valid, portable frontmatter.
+- .claude/skills/ is byte-identical to .agents/skills/.
 - Every docs/adr/NNNN reference mentioned in a governance file resolves to
   a real ADR file.
-- Every agent-skills/<name> reference mentioned in a governance file
+- Every .agents/skills/<name> reference mentioned in a governance file
   resolves to a canonical skill.
 - Every scripts/*.py reference mentioned in a governance file exists.
 - Documented npm scripts actually exist in the relevant package.json.
@@ -30,6 +31,7 @@ problem is printed, not just the first).
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 from pathlib import Path
@@ -51,6 +53,9 @@ REQUIRED_CLAUDE_MD = [
     REPO_ROOT / "apps" / "admin-frontend" / "CLAUDE.md",
 ]
 
+REQUIRED_COPILOT_INSTRUCTIONS = REPO_ROOT / ".github" / "copilot-instructions.md"
+LOCAL_SETTINGS_IGNORE = "**/.claude/settings.local.json"
+
 FORBIDDEN_FRONTMATTER_KEYS = {
     "allowed-tools",
     "disallowed-tools",
@@ -70,14 +75,17 @@ GOVERNANCE_DOC_GLOBS = [
 ]
 
 ADR_REF_PATTERN = re.compile(r"docs/adr/(\d{4})")
-SKILL_REF_PATTERN = re.compile(r"agent-skills/([\w-]+)")
+SKILL_REF_PATTERN = re.compile(r"\.agents/skills/([\w-]+)")
 SCRIPT_REF_PATTERN = re.compile(r"scripts/([\w-]+\.py)")
 NPM_RUN_PATTERN = re.compile(r"npm run ([\w:.-]+)")
 
 LEGACY_INSTRUCTION_PATHS = [
+    "agent-skills",
     "backend/.skills",
     "apps/admin-frontend/.skills",
     "apps/admin-frontend/.agent.md",
+    ".claude/agents",
+    "prompts",
 ]
 
 STALE_TEACHING_PHRASES = {
@@ -94,6 +102,33 @@ STALE_TEACHING_PHRASES = {
     "Promise.reject(new Error('not implemented in this fake'))": (
         "expected frontend fake failures resolve Result.failure"
     ),
+    "Catalog currently implements Categories": (
+        "feature progress belongs in apps/admin-frontend/docs/STATUS.md"
+    ),
+    "Auth currently has real use cases": (
+        "durable instructions describe the architectural decision, not current examples"
+    ),
+    "There are no integration tests": (
+        "inspect current unit, persistence, contract, and runtime-smoke coverage"
+    ),
+    "README.md`'s Versions table": (
+        "runtime pins and docs/adr/0032 are the executable version sources"
+    ),
+}
+
+REMOVED_PRODUCT_TERMS = {
+    "graph" + "ify": "removed visualization tool must not return in repository content",
+}
+
+TEXT_SCAN_EXCLUDED_DIRS = {
+    ".git",
+    ".vs",
+    "bin",
+    "coverage",
+    "dist",
+    "node_modules",
+    "obj",
+    "worktrees",
 }
 
 
@@ -111,10 +146,36 @@ def check_claude_md_imports() -> list[str]:
         if not path.is_file():
             problems.append(f"missing required file: {_rel(path)}")
             continue
-        content = path.read_text(encoding="utf-8")
-        if "@AGENTS.md" not in content:
-            problems.append(f"{_rel(path)} does not import @AGENTS.md")
+        content = path.read_text(encoding="utf-8").strip()
+        if content != "@AGENTS.md":
+            problems.append(f"{_rel(path)} must contain only the @AGENTS.md import")
     return problems
+
+
+def check_copilot_bridge() -> list[str]:
+    if not REQUIRED_COPILOT_INSTRUCTIONS.is_file():
+        return [f"missing required file: {_rel(REQUIRED_COPILOT_INSTRUCTIONS)}"]
+    content = REQUIRED_COPILOT_INSTRUCTIONS.read_text(encoding="utf-8")
+    problems = []
+    if "root `AGENTS.md`" not in content or "nearest nested `AGENTS.md`" not in content:
+        problems.append(".github/copilot-instructions.md does not route to root and nested AGENTS.md")
+    if ".agents/skills/" not in content:
+        problems.append(".github/copilot-instructions.md does not route to .agents/skills/")
+    return problems
+
+
+def check_local_agent_state_ignored() -> list[str]:
+    gitignore = REPO_ROOT / ".gitignore"
+    if not gitignore.is_file():
+        return ["missing .gitignore"]
+    entries = {
+        line.strip()
+        for line in gitignore.read_text(encoding="utf-8").splitlines()
+        if line.strip() and not line.lstrip().startswith("#")
+    }
+    if LOCAL_SETTINGS_IGNORE not in entries:
+        return [f".gitignore must contain {LOCAL_SETTINGS_IGNORE}"]
+    return []
 
 
 def _parse_frontmatter(text: str) -> tuple[dict[str, str], str] | None:
@@ -146,7 +207,7 @@ def _parse_frontmatter(text: str) -> tuple[dict[str, str], str] | None:
 
 def check_skill_frontmatter() -> list[str]:
     problems = []
-    source_dir = REPO_ROOT / "agent-skills"
+    source_dir = REPO_ROOT / ".agents" / "skills"
     if not source_dir.is_dir():
         return [f"missing canonical skills source: {_rel(source_dir)}"]
 
@@ -191,7 +252,7 @@ def check_skill_frontmatter() -> list[str]:
 
 def check_skills_synced() -> list[str]:
     problems = []
-    source_dir = REPO_ROOT / "agent-skills"
+    source_dir = REPO_ROOT / ".agents" / "skills"
     if not source_dir.is_dir():
         return [f"missing canonical skills source: {_rel(source_dir)}"]
 
@@ -203,7 +264,7 @@ def check_skills_synced() -> list[str]:
         for rel in divergent:
             problems.append(f"{label}: divergent skill file {rel.as_posix()} (run sync_agent_skills.py)")
         for rel in extra:
-            problems.append(f"{label}: extra skill file {rel.as_posix()} not in agent-skills/ (manual copy?)")
+            problems.append(f"{label}: extra skill file {rel.as_posix()} not in .agents/skills/ (manual copy?)")
 
     return problems
 
@@ -222,9 +283,12 @@ def check_no_legacy_instruction_layers() -> list[str]:
     problems = []
     for rel in LEGACY_INSTRUCTION_PATHS:
         path = REPO_ROOT / rel
-        if path.exists():
+        has_content = path.is_file() or (
+            path.is_dir() and any(candidate.is_file() for candidate in path.rglob("*"))
+        )
+        if has_content:
             problems.append(
-                f"{rel} exists - use AGENTS.md and canonical agent-skills/ only"
+                f"{rel} exists - use AGENTS.md and canonical .agents/skills/ only"
             )
     return problems
 
@@ -232,18 +296,15 @@ def check_no_legacy_instruction_layers() -> list[str]:
 def _governance_adjacent_files() -> list[Path]:
     """Every file that might reasonably cite a docs/adr/NNNN or scripts/*.py
     reference: the fixed governance docs/CLAUDE.md files, plus every
-    canonical skill, Claude Code subagent, and tool-neutral prompt template
-    - all of which are exactly the kind of governance-adjacent content that
-    can go stale unnoticed if left out of this scan."""
+    canonical skill - all of which are exactly the kind of governance-adjacent
+    content that can go stale unnoticed if left out of this scan."""
     fixed = [
         REPO_ROOT / rel
         for rel in list(GOVERNANCE_DOC_GLOBS)
         + ["CLAUDE.md", "backend/CLAUDE.md", "apps/admin-frontend/CLAUDE.md"]
     ]
     globbed = (
-        sorted((REPO_ROOT / "agent-skills").rglob("*.md"))
-        + sorted((REPO_ROOT / ".claude" / "agents").glob("*.md"))
-        + sorted((REPO_ROOT / "prompts").glob("*.md"))
+        sorted((REPO_ROOT / ".agents" / "skills").rglob("*.md"))
     )
     return fixed + globbed
 
@@ -260,7 +321,7 @@ def check_no_known_stale_teaching() -> list[str]:
                     f"{_rel(doc_path)} teaches stale phrase {phrase!r} - {current_rule}"
                 )
 
-    new_service_dir = REPO_ROOT / "agent-skills" / "agenza-backend-new-service"
+    new_service_dir = REPO_ROOT / ".agents" / "skills" / "agenza-backend-new-service"
     versioned_reference = re.compile(r"<PackageReference\b[^>]*\bVersion=")
     if new_service_dir.is_dir():
         for path in new_service_dir.rglob("*.md"):
@@ -272,7 +333,8 @@ def check_no_known_stale_teaching() -> list[str]:
 
     copied_backend_template = (
         REPO_ROOT
-        / "agent-skills"
+        / ".agents"
+        / "skills"
         / "agenza-backend-use-case"
         / "references"
         / "templates.md"
@@ -283,6 +345,28 @@ def check_no_known_stale_teaching() -> list[str]:
             "instead of copied implementation templates"
         )
 
+    return problems
+
+
+def check_removed_product_terms_absent() -> list[str]:
+    problems = []
+    for root, directories, filenames in os.walk(REPO_ROOT):
+        directories[:] = [
+            directory
+            for directory in directories
+            if directory not in TEXT_SCAN_EXCLUDED_DIRS
+        ]
+        for filename in filenames:
+            path = Path(root) / filename
+            try:
+                if path.stat().st_size > 2_000_000:
+                    continue
+                text = path.read_text(encoding="utf-8").casefold()
+            except (OSError, UnicodeDecodeError):
+                continue
+            for term, rule in REMOVED_PRODUCT_TERMS.items():
+                if term in text:
+                    problems.append(f"{_rel(path)} contains removed term {term!r} - {rule}")
     return problems
 
 
@@ -344,10 +428,10 @@ def check_referenced_skills_exist() -> list[str]:
             seen.add(match.group(1))
 
     for skill_name in sorted(seen):
-        skill_file = REPO_ROOT / "agent-skills" / skill_name / "SKILL.md"
+        skill_file = REPO_ROOT / ".agents" / "skills" / skill_name / "SKILL.md"
         if not skill_file.is_file():
             problems.append(
-                f"referenced skill agent-skills/{skill_name} does not exist"
+                f"referenced skill .agents/skills/{skill_name} does not exist"
             )
 
     return problems
@@ -387,11 +471,14 @@ def _rel(path: Path) -> str:
 CHECKS = [
     ("AGENTS.md files present", check_agents_md_exists),
     ("CLAUDE.md files import @AGENTS.md", check_claude_md_imports),
+    ("Copilot instructions bridge present", check_copilot_bridge),
+    ("tool-local agent state ignored", check_local_agent_state_ignored),
     ("canonical skill frontmatter valid", check_skill_frontmatter),
-    ("skills synced to .agents/ and .claude/", check_skills_synced),
+    ("skills synced to .claude/", check_skills_synced),
     ("no .codex/skills distribution dir", check_no_codex_skills_dir),
     ("no legacy local instruction layers", check_no_legacy_instruction_layers),
     ("no known stale teaching patterns", check_no_known_stale_teaching),
+    ("removed product terms absent", check_removed_product_terms_absent),
     ("ADR references resolve", check_adr_references),
     ("referenced skills exist", check_referenced_skills_exist),
     ("referenced scripts exist", check_referenced_scripts_exist),

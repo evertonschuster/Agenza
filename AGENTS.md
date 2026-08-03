@@ -86,7 +86,7 @@ The repository is trunk-based with `main` as its only long-lived branch.
 ## Rule persistence
 
 When a correction, recurring bug, or review finding establishes a durable rule,
-use `agent-skills/agenza-rule-persistence`. Update every applicable layer:
+use `.agents/skills/agenza-rule-persistence`. Update every applicable layer:
 
 1. concrete code/documentation;
 2. the correct `AGENTS.md`;
@@ -96,16 +96,17 @@ use `agent-skills/agenza-rule-persistence`. Update every applicable layer:
 6. an automated guard when mechanically detectable;
 7. the CI path that runs it.
 
-Check prompts, examples, comments, and historical instruction layers for the
-superseded teaching. A conversation-only correction is not persisted.
+Check examples, comments, and historical instruction layers for the superseded
+teaching. A conversation-only correction is not persisted.
 
 ## Skills
 
-`agent-skills/` is the only editable repository skill source. The sync script
-copies it verbatim to `.agents/skills/` and `.claude/skills/`; never edit those
-distribution directories by hand. Repository-local `.skills/` directories and
-standalone `.agent.md` instruction files are prohibited because they create a
-second source of truth.
+`.agents/skills/` is the only editable repository skill source and is consumed
+directly by Codex and GitHub Copilot. The sync script copies it verbatim to
+`.claude/skills/` for Claude Code; never edit that distribution by hand.
+Repository-local `agent-skills/`, `prompts/`, `.claude/agents/`, `.skills/`, and
+standalone `.agent.md` instruction layers are prohibited because they create
+parallel workflows or tool-specific teaching.
 
 Run `python scripts/sync_agent_skills.py` after changing a canonical skill and
 `--check` to verify distributions.

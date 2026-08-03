@@ -1,262 +1,92 @@
 ---
 name: agenza-backend-use-case
 description: >
-  Use whenever adding or changing business logic in any .NET backend service
-  under backend/ — a new command, query, entity, value object, repository
-  method, or endpoint, or any change to an existing one. Trigger on "add
-  endpoint", "implement [operation]", "create [entity]", "command", "query",
-  "handler", "validator", "vertical slice". Encodes this repo's CQRS/
-  vertical-slice/Result-pattern conventions (docs/adr/0005, docs/adr/0012,
-  docs/adr/0014), layering, rich-domain, tenant-scoping, and testing rules.
-  Do NOT write backend business logic without reading it first — it also
-  documents patterns this codebase already tried and reverted, so an agent
-  that skips it is likely to reintroduce a fixed bug.
+  Use whenever adding or changing business logic in a .NET service under
+  backend/, including commands, queries, entities, value objects, repository
+  methods, endpoints, validators, or vertical slices. Trigger on "add
+  endpoint", "implement operation", "create entity", "command", "query",
+  "handler", or "validator". Enforces this repository's CQRS, Result flow,
+  rich-domain, tenant-safety, persistence, and test conventions and prevents
+  reintroducing the exception- and validator-based patterns reverted by ADRs
+  0012 and 0014.
 ---
 
-# Backend Use Case
+# Backend use case
 
-The reference implementation is `services-service`'s Tags vertical — open
-these files and mirror their shape exactly:
+Before writing code, inspect the closest production slice and its tests. Use
+compiled code, the current solution, and generated contracts as templates;
+never copy a full implementation from prose. Read `backend/AGENTS.md` and only
+the ADRs routed by `docs/adr/README.md` for the affected concern.
 
-- `ServicesService.Domain/Entities/Tag.cs`, `ValueObjects/TagColor.cs` — entity/VO with invariants
-- `ServicesService.Application/Tags/CreateTag/` — full command slice
-- `ServicesService.Application/Tags/UpdateTag/` — same, plus `UpdateTagCommandExtensions.ApplyTo`
-- `ServicesService.Application/Tags/TagPersistenceErrorMapper.cs` — persistence-conflict mapping
-- `ServicesService.Application/Tags/TagResponse.cs` — DTO shared across the feature's operations
-- `ServicesService.Application/Abstractions/` — ports (`ITagRepository`, `IUnitOfWork`)
-- `ServicesService.Api/Controllers/TagsController.cs` — direct command binding + Result → HTTP mapping (docs/adr/0007)
-- `ServicesService.Tests/Tags/CreateTag/` — handler + validator unit tests
+## Put each rule in one layer
 
-identity-service's `Tenants/ProvisionTenant/` slice is the second
-reference — read it when the operation needs a database transaction
-across more than one abstraction (see the UnitOfWork note in step 3 below).
+| Rule | Owner |
+| --- | --- |
+| Request shape, required fields, format, range, cross-field input comparison | Synchronous FluentValidation validator |
+| Existence, uniqueness pre-check, in-use state, another aggregate | Handler |
+| Permanent entity/value-object invariant | Domain factory or mutation returning `DomainResult` |
+| Race-safe uniqueness and relational integrity | Database constraint plus `PersistenceResult` mapping |
+| Unexpected or unrecoverable technical failure | Exception |
 
-## Decision tree — where does a given rule live?
+Expected validation, not-found, conflict, in-use, and authorization outcomes
+never throw. Do not inject repositories into validators, use repository-backed
+`MustAsync`/`CustomAsync`, add business-exception types or handlers, catch an
+expected outcome in a handler, or use `!` after a lookup that can be absent.
 
-| The rule is about...                                     | It lives in...                          |
-| ---------------------------------------------------------- | ------------------------------------------ |
-| Shape of the command's own data (required, length, format, numeric range, cross-field comparison within the same command) | **FluentValidation** validator, sync rules only |
-| Current state of the application (existence, uniqueness, in-use, another aggregate) | The **handler** — a plain `if (...) return Result.Failure(...)` before persisting |
-| A permanent invariant of the entity itself (a `Tag` can never have an empty name, a `Service`'s min duration can never exceed its max) | **`DomainResult`** from the entity's `Create`/`Update` |
-| Data integrity / concurrency at the database boundary (a unique index catching a race the pre-check missed) | The database + **`PersistenceResult`**, mapped by a per-entity `*PersistenceErrorMapper` |
-| A genuinely unexpected, unrecoverable technical failure (missing config, an unrecognized DB error, a framework guarantee) | **Exception** — the one case where throwing is still correct |
+## Build the smallest vertical slice
 
-## Hard prohibitions (these are reverted patterns — see docs/adr/0012, docs/adr/0014)
+1. **Domain.** Tenant-owned entities inherit the service's
+   `TenantOwnedEntity`; tenant-free entities inherit `BaseEntity`. Keep setters
+   private. Factories and state changes validate invariants before mutation and
+   return `DomainResult`; audit fields and tenant assignment remain framework
+   responsibilities.
+2. **Port.** Add a narrow intent-revealing interface under
+   `Application/Abstractions`. Repository methods do not accept a tenant id;
+   the live `DbContext` applies tenant filtering. `Add` and `Remove` stage work
+   and do not commit internally.
+3. **Slice.** Put the command/query, synchronous validator, handler, and any
+   operation-specific mapping under `Application/<Feature>/<Operation>/`.
+   Application depends only on ports and domain types. Use an operation mapping
+   extension when command-to-domain construction or mutation would otherwise
+   obscure the handler.
+4. **Handler.** Check not-found and conflicts before mutation, map domain
+   failures explicitly, stage persistence, commit through the service's
+   `IUnitOfWork`, and map recognized persistence conflicts to application
+   errors. Use a transaction only when multiple writes must succeed together.
+5. **Infrastructure.** Implement the port with the shared repository base and
+   auditable conventions. Do not add tenant or soft-delete query filters by
+   hand. Add tenant-scoped indexes and foreign keys where the business rule
+   requires them. Any schema change also triggers
+   `.agents/skills/agenza-migration-safety`.
+6. **API.** Keep controllers thin: authorize by default, bind the command or
+   query directly, merge route ids immediately before dispatch, and use the
+   shared Result-to-HTTP mapper. `[IgnoreTenant]` requires a genuinely
+   tenant-free operation. Do not add local body DTOs that duplicate the
+   command or catch business exceptions.
 
-Do **not** write any of the following. `scripts/architecture_guard.py`
-fails the build on several of these; the rest are still real regressions
-even where the guard can't catch them syntactically.
+Create a new service only for a justified business context and follow
+`.agents/skills/agenza-backend-new-service`; a new feature normally belongs in
+an existing service.
 
-- A repository (or any port) injected into a validator's constructor.
-- `MustAsync`/`CustomAsync` on a FluentValidation rule that queries a
-  repository or the database. Validators in this repo are pure, synchronous
-  shape checks — nothing in them ever awaits.
-- Throwing for an expected business outcome (validation failure, not-found,
-  conflict/duplicate, in-use, forbidden). Everything expected returns a
-  `Result`/`DomainResult`/`PersistenceResult`.
-- Conventional `try/catch` in a handler to convert a business outcome. The
-  only handler-level `try/catch` in this codebase is
-  `IUnitOfWork.ExecuteInTransactionAsync`'s rollback-on-unexpected-failure
-  wrapper (identity-service) — never a catch that maps to a `Result`.
-- `DuplicateEntityException` (deleted, docs/adr/0014 — a unique-constraint
-  race returns `PersistenceResult.Failure` instead).
-- `BusinessExceptionHandler` (deleted — `Admin.SharedKernel.GenericExceptionHandler`
-  is the only exception handler; it exists purely for unexpected 500s).
-- A null-forgiving `!` on a repository lookup that assumes some earlier
-  validator step already guaranteed existence. Validators here never do
-  existence checks (they take no repository dependency at all) — the
-  handler that needs the entity fetches it itself and returns
-  `Error.NotFound(...)` on a null, in the same method, before doing
-  anything else with it.
-- A brand-new project/folder split for a feature that fits inside an
-  existing service's `Application/<Feature>/<Operation>/` shape. Only
-  create a new microservice for a genuinely new bounded context — see
-  `agent-skills/agenza-backend-new-service`.
-- Wiring MediatR, or any DI registration for a handler/validator by hand —
-  `AddXApplication()` assembly-scans for both; a new slice needs no
-  registration at all.
+## Test the affected boundaries
 
-## Build order (TDD — test first at each step)
+- Domain tests cover factories, mutations, invariant failures, audit behavior,
+  and tenant assignment programming guards without mocks.
+- Handler tests use NSubstitute ports and cover success, not-found, conflict,
+  reachable domain failure, persistence failure, and required interactions.
+- Validator tests call synchronous `Validate` and need no repository fake.
+- Persistence behavior involving tenant assignment, global filters, indexes,
+  or foreign keys requires the narrow persistence-test tier established by the
+  current solution and ADR index.
+- Controller, OpenAPI, authentication, or runtime-boundary changes require the
+  applicable contract and smoke checks documented in `docs/QUALITY.md` and CI.
 
-Open the live Tags vertical listed above before writing a new slice. Its
-compiled code is the template; this skill intentionally does not duplicate
-full source files that would drift after the next refactor.
+Do not infer the available test tiers from a historical ADR. Inspect the
+solution, workflows, and existing test projects before deciding what applies.
 
-### 1. Domain entity or value object
+## Complete
 
-- If the entity does NOT belong to a tenant (rare — e.g. `Tenant` itself
-  in identity-service), inherit `{Service}.Domain.Common.BaseEntity`
-  directly — gives `Id`, `CreatedAt`/`CreatedBy`, `UpdatedAt`/
-  `UpdatedBy`, `DeletedAt`/`DeletedBy`, `IsDeleted` for free
-  (docs/adr/0006). Call `base(id)` from your constructor; never set the
-  audit fields yourself, the EF interceptor does that.
-- If the entity belongs to a tenant (the common case), inherit
-  `{Service}.Domain.Common.TenantOwnedEntity` instead — it already
-  inherits `BaseEntity` and implements `ITenantOwned` (`Guid TenantId
-  { get; }` + `void AssignTenant(Guid tenantId)`) for you, so don't
-  implement `ITenantOwned` or add an `AssignTenant` override on the
-  entity itself. The constructor never takes a `tenantId` parameter at
-  all — `TenantId` starts `Guid.Empty` and only `AssignTenant` (inherited)
-  can set it, throwing a plain `InvalidOperationException` on empty
-  (docs/adr/0009, docs/adr/0014) — the one entity-level path allowed to
-  throw instead of returning `DomainResult`, since it's only reachable via
-  an internal bug (`TenantHeaderFilter` already rejects a request with no/
-  mismatched tenant before any handler runs).
-- Public constructor becomes `private`; add a `public static
-  DomainResult<Widget> Create(...)` factory that validates every
-  invariant and returns `DomainResult.Failure<Widget>(new
-  DomainError("Widget.Invalid", message))` on the first invalid field
-  instead of throwing — never a raw `Exception`/`ArgumentException`
-  (docs/adr/0014). `DomainResult`/`DomainResult<T>`/`DomainError`
-  (`{Service}.Domain/Common/`) already exist per service — copy them
-  once, not per entity.
-- State-changing methods (`Update`, `Cancel`, `Reschedule`) return
-  `DomainResult` (not `void`) for the same reason — validate every new
-  value into a local before assigning any field, so a failure never
-  leaves the entity partially mutated.
-- No public setters. Add a `private` parameterless constructor ONLY if EF
-  needs it, and keep it private.
-- Tests: plain xUnit + AwesomeAssertions, no mocks needed — Domain has
-  zero dependencies. Cover `MarkCreated`/`MarkUpdated`/`MarkDeleted`
-  (inherited from `BaseEntity`) too — they count toward the coverage
-  gate. `AssignTenant` (if `ITenantOwned`) is the one exception to the
-  `DomainResult` rule — assert it throws `InvalidOperationException` on
-  an empty guid.
-
-### 2. Port (interface) in `Application/Abstractions/`
-
-- Narrow, intention-revealing methods (`Add`, `GetByIdAsync`,
-  `NameExistsAsync`) — not a generic interface. `Add`/`Remove` are
-  synchronous and only stage the change (no internal commit).
-- If the entity is `ITenantOwned`, its methods do NOT take a tenant id
-  parameter — the DbContext scopes the query automatically (step 5,
-  docs/adr/0006).
-- The **implementation** (step 5) extends
-  `Admin.SharedKernel.EntityFrameworkCore.RepositoryBase<TEntity>` for
-  the Add/Remove/Find/List boilerplate underneath this interface — the
-  port itself stays a plain, narrow interface.
-
-### 3. Command or query slice in `Application/<Feature>/<Operation>/`
-
-```
-Application/Tags/
-├── TagResponse.cs                     shared DTO (feature root)
-├── TagPersistenceErrorMapper.cs       shared persistence-conflict mapper (feature root)
-└── CreateTag/
-    ├── CreateTagCommand.cs            : ICommand<TagResponse>
-    ├── CreateTagCommandValidator.cs   AbstractValidator<CreateTagCommand> - shape only, parameterless
-    └── CreateTagCommandHandler.cs     : ICommandHandler<CreateTagCommand, TagResponse>
-```
-
-- A **command** mutates (`ICommand` if nothing to return,
-  `ICommand<TResponse>` otherwise); a **query** reads
-  (`IQuery<TResponse>`). Handler returns `Result` / `Result<TResponse>`
-  — never throws for an expected business outcome. Use
-  `Error.Validation/.NotFound/.Conflict/.Forbidden(code, message)`.
-- Validator: **shape rules only**, parameterless constructor, no
-  repository, no `MustAsync`/`CustomAsync` — see the prohibitions above.
-- Cross-aggregate rules needing a repository round-trip (existence,
-  uniqueness, in-use) live in the **handler**, checked in this order
-  before any mutation: not-found → duplicate/conflict → build/apply the
-  domain change → persist → map a persistence conflict. See
-  `Application/Services/ServiceRelationshipLoader.cs` for a
-  multi-dependency version that loads Category/Tags exactly once
-  and reuses the same instances for both construction and the response.
-- Constructor-injected ports only — no EF, no HttpClient, no ASP.NET
-  types in Application.
-- Multiple writes that must succeed together → wrap in `IUnitOfWork`,
-  shaped to the real need (docs/adr/0005): a single
-  `Task<PersistenceResult<int>> SaveChangesAsync(...)` if everything goes
-  through one `DbContext` (services-service's shape — lets Infrastructure
-  report a recognized unique-constraint violation without throwing), or a
-  Result-aware `ExecuteInTransactionAsync<TResult>` if the operation spans
-  more than one abstraction that each commit independently, e.g. an EF
-  repository AND `UserManager` (identity-service's shape).
-- Nothing to register by hand — each service's
-  `Application/DependencyInjection.cs` scans the assembly for handlers
-  and validators.
-- If the handler constructs or mutates a domain entity from the
-  command's fields, put that mapping in a `{Operation}CommandExtensions.cs`
-  extension method beside the command (`ToModel(...)` for construction,
-  `ApplyTo(entity)` for mutation) instead of inlining it in `Handle(...)`
-  (docs/adr/0007). Both return `DomainResult<Widget>`/`DomainResult`
-  respectively, so the handler checks `IsFailure` and maps via
-  `.Error.ToApplicationError()` before proceeding.
-
-### 4. Unit tests with NSubstitute
-
-- `Substitute.For<IPort>()` per port used by the handler — no hand-written
-  fake classes (docs/adr/0006). Configure return values with
-  `.Returns(...)`; assert interaction with `.Received(1).Method(...)` /
-  `.DidNotReceive().Method(...)`.
-- AwesomeAssertions, asserting on the `Result`: `result.IsSuccess`,
-  `result.Value.Xyz`, `result.Error.Type.Should().Be(ErrorType.Conflict)`.
-- Test the happy path, the not-found path, the duplicate/conflict path,
-  and any `DomainResult.Failure` path the handler can still hit — a
-  handler unit test calls `Handle(...)` directly, bypassing the
-  validator, so it exercises paths production traffic never reaches.
-- Validator tests use the synchronous `Validate(...)` (no `MustAsync`
-  rules exist to require `ValidateAsync`) and need no repository fakes at
-  all, since the validator takes none.
-
-### 5. Infrastructure adapter
-
-- Repository extends `Admin.SharedKernel.EntityFrameworkCore.RepositoryBase<TEntity>`
-  and implements the port (docs/adr/0006). `Add`/`Remove` only stage the
-  change — no `SaveChangesAsync` inside the repository (the handler
-  commits via `IUnitOfWork`).
-- EF configuration lives in `Infrastructure/Persistence/Configurations/`.
-  The soft-delete query filter and `DeletedAt` index apply automatically
-  to every `BaseEntity`, and (if `ITenantOwned`) the tenant filter +
-  `TenantId` index too — the `DbContext` calls
-  `ApplyAuditableConventions(this, typeof(BaseEntity), typeof(ITenantOwned))`
-  once. Never add `HasQueryFilter` by hand. If the entity has a
-  uniqueness rule, add a unique index on a normalized column (see
-  `IX_Tags_TenantId_NameNormalized`) filtered with
-  `.HasFilter("\"DeletedAt\" IS NULL")` so a soft-deleted row doesn't
-  block reusing its unique value — this index, not the handler's
-  pre-check, is what actually guarantees uniqueness under concurrency
-  (see `agent-skills/agenza-migration-safety` for the migration itself).
-- If the entity is tenant-owned, also pass `ICurrentTenantProvider` into
-  `AuditableEntitySaveChangesInterceptor`'s constructor so it can call
-  `AssignTenant` on a newly added entity automatically (docs/adr/0008).
-- New tables → `dotnet ef migrations add <Name>` from the Api project
-  directory.
-
-### 6. Controller (thin)
-
-- Constructor-inject `IDispatcher` (never a concrete handler type) —
-  nothing else. The global `TenantHeaderFilter` already rejected the
-  request with 403 before this action runs unless `X-Tenant-Id` matched
-  the token's `tenant_id` claim — mark the controller/action
-  `[IgnoreTenant]` instead if it genuinely isn't tenant-scoped.
-- `[ApiVersion("1.0")]` + `[Route("api/v{version:apiVersion}/...")]` (or
-  `internal/v{version:apiVersion}/...` for M2M-only routes).
-- **Bind the command/query directly as the action parameter — no local
-  `...Body` record** (docs/adr/0007). A route id binds into its own
-  `Guid id` parameter and gets merged into the command right before
-  dispatching: `command with { WidgetId = id }`.
-- `await _dispatcher.Send(...)` / `.Query(...)` →
-  `result.ToActionResult(this, value => Ok(value))` (or `Created`/
-  `NoContent`). No try/catch per exception type.
-- `[Authorize]` by default; scope checks (`User.HasScope(...)`) for
-  M2M-only endpoints.
-
-### 7. Manual verification of the new endpoint
-
-There are no integration tests (docs/adr/0015) — CI runs unit tests only.
-Before merging, run the service (`dotnet run --project services/<service>/{Service}.Api`)
-and manually exercise the new endpoint: unauthenticated → 401, wrong
-scope/tenant → 403, a validation failure → 400, duplicate name → 409,
-unknown id → 404, happy path → expected status + persisted effect.
-
-## Definition of done
-
-```bash
-dotnet build backend/AdminBackend.slnx
-dotnet test backend/AdminBackend.slnx   # unit tests only; coverage gate via Directory.Build.props/.targets
-python scripts/architecture_guard.py    # fails on any reverted pattern above
-```
-
-Both green, coverage gate passing, no new NU1903 (vulnerable package)
-warnings, architecture guard clean.
+Run every backend and governance command in `backend/AGENTS.md` and root
+`AGENTS.md`. Report the actual build, test, coverage, migration, contract, and
+smoke results that apply; do not call the task done while a required gate is
+red.

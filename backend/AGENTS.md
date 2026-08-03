@@ -9,12 +9,12 @@ routed through [../docs/adr/README.md](../docs/adr/README.md).
 
 | Task | Read |
 | --- | --- |
-| Command, query, entity, repository, endpoint | `agent-skills/agenza-backend-use-case` |
-| Brand-new business-context service | `agent-skills/agenza-backend-new-service` |
-| Exception/error-flow audit | `agent-skills/agenza-exception-flow-audit` |
-| Tenant-isolation audit | `agent-skills/agenza-tenant-isolation-review` |
-| Migration or schema change | `agent-skills/agenza-migration-safety` |
-| API contract drift | `agent-skills/agenza-api-contract-review` |
+| Command, query, entity, repository, endpoint | `.agents/skills/agenza-backend-use-case` |
+| Brand-new business-context service | `.agents/skills/agenza-backend-new-service` |
+| Exception/error-flow audit | `.agents/skills/agenza-exception-flow-audit` |
+| Tenant-isolation audit | `.agents/skills/agenza-tenant-isolation-review` |
+| Migration or schema change | `.agents/skills/agenza-migration-safety` |
+| API contract drift | `.agents/skills/agenza-api-contract-review` |
 | CI and coverage behavior | `docs/QUALITY.md` |
 | Rationale or superseded decisions | `docs/adr/README.md`, then only routed ADRs |
 
@@ -74,16 +74,16 @@ PersistenceTests -> Infrastructure security behavior where needed
   relationships involving tenant-owned data include the tenant boundary.
 - Each service owns its schema, migrations history, database role, and writes.
   Services never share tables or write another service's schema.
-- A migration uses `agenza-migration-safety`; never edit an applied migration or
-  silently destroy/transform existing data.
+- A migration uses `.agents/skills/agenza-migration-safety`; never edit an
+  applied migration or silently destroy/transform existing data.
 
 ## Testing and packages
 
 - Unit tests use xUnit, AwesomeAssertions, and NSubstitute, asserting returned
   `Result` behavior at Domain/Application boundaries.
-- `ServicesService.PersistenceTests` is the reference for narrow, Docker-free EF
-  tests proving tenant assignment and query isolation. Do not claim those
-  mechanisms lack automated coverage.
+- Inspect the current `*PersistenceTests` projects before assessing tenant EF
+  coverage. Add or extend the narrow persistence tier when a change affects
+  assignment, filters, tenant indexes, or tenant-aware relationships.
 - Do not restore broad Testcontainers/`WebApplicationFactory` suites without an
   ADR supported by concrete failure evidence. Runtime OIDC/contract smokes
   remain a separate CI boundary.

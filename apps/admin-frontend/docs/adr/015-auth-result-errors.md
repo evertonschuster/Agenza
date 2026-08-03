@@ -63,7 +63,7 @@ Result-based.
 
 ## Consequences
 
-- `agent-skills/agenza-frontend-feature` no longer describes Auth as an
+- `.agents/skills/agenza-frontend-feature` no longer describes Auth as an
   exception to Catalog's Result convention - both features follow the
   same shape now. Updated to say so.
 - Test fixtures across the suite that build a `Tenant`/`User`/`Session`

@@ -30,7 +30,7 @@ jobs:
         with:
           python-version: '3.14.6'
 
-      - name: Skill sync check (agent-skills/ -> .agents/skills/, .claude/skills/)
+      - name: Skill sync check (.agents/skills/ -> .claude/skills/)
         run: python scripts/sync_agent_skills.py --check
 
       # Each remaining step uses if: always() so one failing check doesn't

@@ -27,7 +27,7 @@ infer the current tree from an old example in prose.
 
 Do not open all three references for a narrow change.
 
-## Current architectural shape
+## Architectural shape
 
 - `src/app/`: bootstrap, routing, layouts, providers, composition.
 - `src/features/<feature>/`: domain, application, infrastructure, and
@@ -38,10 +38,6 @@ Do not open all three references for a narrow change.
   they intentionally stay outside `shared/`.
 - Unimplemented routes remain small placeholders in `src/app/pages/` until a
   real feature slice exists.
-
-Catalog currently implements Categories. Services is a placeholder and Tags
-is intentionally absent from the frontend; check `docs/STATUS.md` instead of
-assuming either vertical exists.
 
 ## Decision rules
 
@@ -64,7 +60,7 @@ assuming either vertical exists.
   the authenticated request-session boundary.
 - Add a use-case class when it performs orchestration, policy, or composition.
   If a facade operation is a pure repository pass-through, expose the method
-  shape directly as Catalog does today.
+  shape directly instead of adding an `execute` wrapper.
 - Construct concrete implementations only in `app/composition/container.ts`
   and expose grouped facades, never raw repositories or `HttpClient`.
 

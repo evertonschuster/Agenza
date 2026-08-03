@@ -1,6 +1,6 @@
 # ADR 0016 — Cross-tool AI agent governance framework
 
-Status: accepted (2026-07), amended 2026-08-03
+Status: accepted (2026-07), amended 2026-08-03 for portable multi-agent discovery
 
 ## Context
 
@@ -15,9 +15,15 @@ verified copies, not semantic truth.
 ## Decision
 
 - `AGENTS.md` is the durable, tool-independent entry point at root and per area.
-- `agent-skills/` is the only editable repository skill source and is copied to
-  `.agents/skills/` and `.claude/skills/` by `sync_agent_skills.py`.
-- Repository-local `.skills/` and standalone `.agent.md` files are prohibited.
+- `.agents/skills/` is the only editable repository skill source. Codex and
+  GitHub Copilot consume it directly; `sync_agent_skills.py` copies it to
+  `.claude/skills/` for Claude Code.
+- Import-only `CLAUDE.md` files and a thin
+  `.github/copilot-instructions.md` bridge route each tool to `AGENTS.md`
+  without restating repository rules.
+- Repository-local `agent-skills/`, `prompts/`, `.claude/agents/`, `.skills/`,
+  `.codex/skills/`, and standalone `.agent.md` instruction layers are
+  prohibited. `.claude/settings.local.json` is machine-local and ignored.
 - Skills use progressive disclosure: a short task workflow routes to API,
   testing, UI, migration, or other references only when the task touches them.
 - Copied implementation templates are avoided when live compiled code is a
@@ -30,15 +36,14 @@ verified copies, not semantic truth.
   absence of legacy instruction layers, and known mechanically detectable
   teaching regressions. CI runs the same checks and their tests.
 
-Thin `CLAUDE.md` files and Claude-specific reviewer definitions may remain, but
-they only point to canonical rules; they never own them.
-
 ## Consequences
 
 Agents load less unrelated context, current code outranks stale examples, and a
-rule change has one editable instructional source. The two committed skill
-distribution directories still duplicate bytes for tool discovery, but content
-hash checks make that duplication mechanical rather than cognitive.
+rule change has one editable instructional source. The Claude distribution
+still duplicates bytes required for tool discovery, but the previous third
+`agent-skills/` copy and tool-specific reviewer/prompt wrappers are gone.
+Content-hash checks keep the remaining distribution mechanical rather than
+cognitive.
 
 The framework does not make prose self-verifying. Periodic architecture reviews
 must still compare status, examples, and referenced symbols with the repository.

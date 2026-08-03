@@ -7,13 +7,13 @@ monorepo: React frontend, .NET backend microservices, Python AI services.
 
 | Path                  | Stack                         | Purpose                                         |
 | --------------------- | ----------------------------- | ----------------------------------------------- |
-| `apps/admin-frontend` | Vite + React 19 + TS (strict) | The admin panel UI                              |
-| `backend`             | .NET 10 (ASP.NET Core)        | Business microservices, one per bounded context |
-| `ai-services`         | Python 3.14 (FastAPI)         | AI/ML services                                  |
+| `apps/admin-frontend` | Vite + React + strict TypeScript | The admin panel UI                           |
+| `backend`             | ASP.NET Core                     | Context-aggregated business services          |
+| `ai-services`         | Python + FastAPI                  | AI/ML services                                |
 | `infra`               | PostgreSQL init scripts       | Local database roles and schema grants          |
 
 See [docs/MONOREPO.md](docs/MONOREPO.md) for conventions, and each stack's own
-`CLAUDE.md`/`README.md` for stack-specific guidance.
+`AGENTS.md`/`README.md` for stack-specific guidance.
 
 This repo is built AI-first: the docs are the spec, agents execute, CI
 verifies. **[docs/SDD-GUIDE.md](docs/SDD-GUIDE.md)** is the developer
@@ -33,7 +33,7 @@ dotnet run --project backend/services/services-service/ServicesService.Api
 
 # AI services (Python)
 cd ai-services/assistant-service
-pip install uv==0.11.32
+pip install uv
 uv sync --frozen --extra dev
 uv run uvicorn app.main:app --reload --port 8001
 

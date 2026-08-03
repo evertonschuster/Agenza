@@ -36,11 +36,11 @@ three months later:
 2. **Update `AGENTS.md`.** Root `AGENTS.md` if it applies everywhere;
    `backend/AGENTS.md`/`apps/admin-frontend/AGENTS.md` if it's area-local.
    State the rule, not a narrative of how it was discovered.
-3. **Update the skill.** If a skill in `agent-skills/` teaches the old
+3. **Update the skill.** If a skill in `.agents/skills/` teaches the old
    pattern (in prose *or* in a copy-paste template — templates rot
    silently because they're copied verbatim without re-reading the prose
    around them), fix it there. Run `python scripts/sync_agent_skills.py`
-   afterward so `.claude/skills/`/`.agents/skills/` pick up the change.
+   afterward so `.claude/skills/` picks up the change.
 4. **Add or update an ADR.** If this is a genuine architectural decision
    (not just a bug fix), it needs `docs/adr/NNNN-....md` explaining the
    context, the decision, and — if it reverses an earlier ADR — which one
@@ -63,12 +63,14 @@ three months later:
 A rule can be technically "fixed" in the places above and still get
 reintroduced because something else still teaches the old pattern. Check:
 
-- Other `CLAUDE.md`/`AGENTS.md` files that might restate the rule locally
-  and now disagree with the update.
-- Any forbidden legacy instruction layer (`.skills/`, `.agent.md`) or generated
-  artifact that still teaches the old behavior.
+- Other `CLAUDE.md`/`AGENTS.md` files or the Copilot bridge that might restate
+  the rule locally and now disagree with the update.
+- Any forbidden legacy instruction layer (`agent-skills/`, `prompts/`,
+  `.claude/agents/`, `.skills/`, `.agent.md`) or generated artifact that still
+  teaches the old behavior.
 - Comments in code that assert the old rationale.
-- `prompts/` templates and worked examples in `docs/SDD-GUIDE.md`.
+- Worked examples in `docs/SDD-GUIDE.md` and any task template outside the
+  canonical skill tree.
 - Test files whose names or comments describe the old behavior as
   correct, even if the assertions themselves were updated.
 
@@ -80,5 +82,5 @@ genuinely doesn't apply (e.g. no ADR is warranted for a pure typo fix),
 say so explicitly rather than leaving it silently incomplete. Run
 `python scripts/check_agent_governance.py` after this cycle — it flags
 skills not in sync, ADR references that don't exist, and
-`CLAUDE.md` files missing the `@AGENTS.md` import, three of the most
-common ways a "persisted" rule quietly isn't.
+`CLAUDE.md` files missing the `@AGENTS.md` import, and a missing Copilot bridge,
+four of the most common ways a "persisted" rule quietly isn't.

@@ -9,8 +9,9 @@ belongs in [docs/STATUS.md](docs/STATUS.md), package versions belong in
 
 | Task                                 | Read                                            |
 | ------------------------------------ | ----------------------------------------------- |
-| Any React/TypeScript feature change  | `agent-skills/agenza-frontend-feature`          |
-| Backend/frontend contract audit      | `agent-skills/agenza-api-contract-review`       |
+| Any React/TypeScript feature change  | `.agents/skills/agenza-frontend-feature`        |
+| Backend/frontend contract audit      | `.agents/skills/agenza-api-contract-review`     |
+| Exploratory screen/accessibility QA  | `.agents/skills/agenza-frontend-exploratory-qa` |
 | Current implementation status        | `docs/STATUS.md`                                |
 | Domain terminology or a new entity   | `docs/DOMAIN.md`                                |
 | REST endpoint or generated type work | `docs/API.md` and the generated OpenAPI types   |
@@ -32,8 +33,7 @@ infrastructure,presentation}`. Dependencies point inward. Domain and
   is the composition root.
 - A facade entry mirrors a repository method directly when it is only a
   pass-through. Introduce a use-case class when it owns orchestration or policy,
-  not merely to add an `execute` wrapper. Auth currently has real use cases;
-  Catalog currently delegates directly.
+  not merely to add an `execute` wrapper.
 - Repository methods do **not** accept `TenantContext`. The
   `AuthenticatedHttpClient` obtains the access token and tenant id atomically
   from `GetRequestSession` and attaches both `Authorization` and

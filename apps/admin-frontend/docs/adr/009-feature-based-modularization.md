@@ -193,7 +193,7 @@ for review attention against unrelated behavioral changes.
    mirroring the existing `domain/`/`application/` blocks) and
    `scripts/architecture_guard.py` (a new check alongside
    `check_cross_page_imports`). Update
-   `agent-skills/agenza-frontend-feature` and
+   `.agents/skills/agenza-frontend-feature` and
    `apps/admin-frontend/AGENTS.md` to teach the new structure - at the
    time this ADR was drafted, the then-current versions still described
    and enforced the horizontal layout (since done — both now document the

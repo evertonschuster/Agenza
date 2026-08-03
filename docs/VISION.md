@@ -28,7 +28,7 @@ its own domain model, its own schema, its own API.
 | Service            | Status   | Context it owns                                              |
 | ------------------ | -------- | ------------------------------------------------------------ |
 | `identity-service` | active   | Authentication (OIDC/OpenIddict), tenants, users, M2M tokens |
-| `services-service` | active   | The business's offering: Tags, Categories, and the Services catalog are done; appointments and clients belong here too unless they grow enough to justify their own context |
+| `services-service` | active   | The business's offerings context: Tags, Categories, and Services; appointments and clients belong here unless evidence justifies another context |
 | `notification-service` | planned | Email/SMS/push — one place for templates, delivery, retries |
 
 Cross-service communication: HTTP with M2M JWTs from identity-service
@@ -51,8 +51,8 @@ credentials. They never touch another service's database.
 The repo is optimized for AI-assisted delivery — the developer-facing
 walkthrough with worked example prompts is [SDD-GUIDE.md](SDD-GUIDE.md):
 
-1. **Instructions are layered**: root `CLAUDE.md` → per-area `CLAUDE.md`
-   (frontend, backend) → canonical `agent-skills/` workflows → routed `docs/` references
+1. **Instructions are layered**: root `AGENTS.md` → per-area `AGENTS.md`
+   (frontend, backend) → canonical `.agents/skills/` workflows → routed `docs/` references
    (STATUS, DOMAIN, API, ADRs). An agent reads the layer it needs; specs
    live in docs, not in chat history.
 2. **State is machine-readable**: `STATUS.md` files say what's done,

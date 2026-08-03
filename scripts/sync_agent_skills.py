@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
-"""Sync agent-skills/ (the single editable skill source) into the two
-tool-specific distribution directories: .agents/skills/ (OpenAI Codex) and
-.claude/skills/ (Claude Code).
+"""Sync .agents/skills/ (the portable editable skill source used by Codex and
+GitHub Copilot) into .claude/skills/ for Claude Code.
 
 Comparison is by content hash, never by timestamp or file mtime, so a
 checkout/rebase that only touches mtimes never reports a false divergence.
@@ -24,9 +23,8 @@ import sys
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-SOURCE_DIR = REPO_ROOT / "agent-skills"
+SOURCE_DIR = REPO_ROOT / ".agents" / "skills"
 TARGET_DIRS = [
-    REPO_ROOT / ".agents" / "skills",
     REPO_ROOT / ".claude" / "skills",
 ]
 
@@ -102,14 +100,14 @@ def main(argv: list[str] | None = None) -> int:
         "--source",
         type=Path,
         default=SOURCE_DIR,
-        help="canonical skills source directory (default: agent-skills/)",
+        help="canonical skills source directory (default: .agents/skills/)",
     )
     parser.add_argument(
         "--targets",
         type=Path,
         nargs="*",
         default=None,
-        help="override the distribution target directories (default: .agents/skills, .claude/skills)",
+        help="override the distribution target directories (default: .claude/skills)",
     )
     args = parser.parse_args(argv)
 

@@ -26,38 +26,38 @@ Check, across whichever of these areas are in scope for the request:
   shape followed? Frontend feature folders self-contained, no cross-feature
   imports?
 - **Multi-tenancy**: delegate the deep pass to
-  `agent-skills/agenza-tenant-isolation-review` rather than duplicating it
+  `.agents/skills/agenza-tenant-isolation-review` rather than duplicating it
   here — this review only checks that tenant scoping is *present* where
   expected, not the full mechanism.
 - **Exceptions / Result pattern**: delegate the deep pass to
-  `agent-skills/agenza-exception-flow-audit`.
+  `.agents/skills/agenza-exception-flow-audit`.
 - **Domain model**: anemic entities (public setters, no invariant
   enforcement), missing `DomainResult` usage, entities bypassing
   `BaseEntity`/`TenantOwnedEntity` without a documented reason.
 - **Persistence**: query filters applied by hand instead of via
   `ApplyAuditableConventions`, missing indexes for a new uniqueness rule,
   a migration issue — delegate depth to
-  `agent-skills/agenza-migration-safety`.
-- **Contracts**: delegate to `agent-skills/agenza-api-contract-review`.
+  `.agents/skills/agenza-migration-safety`.
+- **Contracts**: delegate to `.agents/skills/agenza-api-contract-review`.
 - **Frontend**: layering (see above), `any` usage, design-system drift
   (raw palette classes instead of semantic tokens), reusable-component
-  discipline (`agent-skills/agenza-frontend-feature`).
+  discipline (`.agents/skills/agenza-frontend-feature`).
 - **Accessibility**: keyboard operability, accessible names, contrast —
   sample a few recently-changed pages rather than the whole app unless
   asked for a full sweep.
 - **Tests**: coverage gate status, mock-strategy-per-layer discipline
   (frontend), narrow persistence/runtime boundaries matching the current ADR
   index instead of treating historical ADR 0015 as the final state.
-- **Migrations**: `agent-skills/agenza-migration-safety`.
-- **Documentation**: `AGENTS.md`/`CLAUDE.md` files still accurate and in
-  sync (`scripts/check_agent_governance.py` covers the mechanical half of
+- **Migrations**: `.agents/skills/agenza-migration-safety`.
+- **Documentation**: `AGENTS.md`, import-only `CLAUDE.md`, and the Copilot
+  bridge still accurate and in sync (`scripts/check_agent_governance.py` covers the mechanical half of
   this), STATUS.md rows matching what's actually built, ADRs referenced
   by number actually existing.
 - **CI**: workflows still matching the commands documented in
   `docs/QUALITY.md`, coverage gates not silently loosened.
-- **Dependencies**: any package pinned for a documented reason
-  (`docs/QUALITY.md`, `README.md`'s Versions table) that a routine bump
-  would silently violate.
+- **Dependencies**: compare executable pins (`packageManager`, lockfiles,
+  `backend/global.json`, `backend/Directory.Packages.props`, `.python-version`,
+  CI actions) with `docs/adr/0032` before recommending a routine bump.
 
 ## Mode: review-only (default)
 
@@ -68,7 +68,7 @@ Produce a diagnosis, not a diff. For each finding:
 - **Why it matters** (tie back to a rule in `AGENTS.md`, an ADR, or a
   skill — don't invent a new rule mid-review; if there's genuinely no
   existing rule this violates, that's a finding for
-  `agent-skills/agenza-rule-persistence` to formalize, not a silent
+  `.agents/skills/agenza-rule-persistence` to formalize, not a silent
   judgment call)
 - **Severity**: blocks tenant isolation / security > breaks a build gate
   > architectural drift > style nit

@@ -30,6 +30,12 @@ class GovernanceCheckTests(unittest.TestCase):
         self._write("backend/CLAUDE.md", "@AGENTS.md\n")
         self._write("apps/admin-frontend/CLAUDE.md", "@AGENTS.md\n")
         self._write(
+            ".github/copilot-instructions.md",
+            "Read the root `AGENTS.md` and nearest nested `AGENTS.md`.\n"
+            "Use .agents/skills/ when relevant.\n",
+        )
+        self._write(".gitignore", "**/.claude/settings.local.json\n")
+        self._write(
             "apps/admin-frontend/package.json",
             json.dumps({"scripts": {"lint": "eslint .", "build": "tsc -b && vite build"}}),
         )
@@ -48,6 +54,7 @@ class GovernanceCheckTests(unittest.TestCase):
                 self.root / "backend" / "CLAUDE.md",
                 self.root / "apps" / "admin-frontend" / "CLAUDE.md",
             ],
+            REQUIRED_COPILOT_INSTRUCTIONS=self.root / ".github" / "copilot-instructions.md",
             GOVERNANCE_DOC_GLOBS=[
                 "AGENTS.md",
                 "backend/AGENTS.md",
@@ -78,7 +85,7 @@ class GovernanceCheckTests(unittest.TestCase):
         with self._patch():
             problems = cag.check_claude_md_imports()
 
-        self.assertTrue(any("does not import" in p for p in problems))
+        self.assertTrue(any("must contain only" in p for p in problems))
 
     def test_claude_md_with_import_passes(self) -> None:
         self._base_repo()
@@ -87,10 +94,61 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertEqual(problems, [])
 
+    def test_claude_md_with_duplicate_instructions_is_reported(self) -> None:
+        self._base_repo()
+        self._write("CLAUDE.md", "@AGENTS.md\n\nRun tests again.\n")
+
+        with self._patch():
+            problems = cag.check_claude_md_imports()
+
+        self.assertTrue(any("must contain only" in p for p in problems))
+
+    def test_missing_copilot_bridge_is_reported(self) -> None:
+        with self._patch():
+            problems = cag.check_copilot_bridge()
+
+        self.assertTrue(any("copilot-instructions.md" in p for p in problems))
+
+    def test_valid_copilot_bridge_passes(self) -> None:
+        self._base_repo()
+        with self._patch():
+            problems = cag.check_copilot_bridge()
+
+        self.assertEqual(problems, [])
+
+    def test_missing_local_settings_ignore_is_reported(self) -> None:
+        self._write(".gitignore", "node_modules/\n")
+        with self._patch():
+            problems = cag.check_local_agent_state_ignored()
+
+        self.assertTrue(any("settings.local.json" in p for p in problems))
+
+    def test_local_settings_ignore_passes(self) -> None:
+        self._base_repo()
+        with self._patch():
+            problems = cag.check_local_agent_state_ignored()
+
+        self.assertEqual(problems, [])
+
+    def test_removed_visualization_term_is_reported(self) -> None:
+        removed_term = "graph" + "ify"
+        self._write("apps/admin-frontend/.prettierignore", f"{removed_term}-out\n")
+        with self._patch():
+            problems = cag.check_removed_product_terms_absent()
+
+        self.assertTrue(any(removed_term in problem for problem in problems))
+
+    def test_removed_product_scan_ignores_local_caches(self) -> None:
+        self._write("backend/.vs/session.txt", "graph" + "ify\n")
+        with self._patch():
+            problems = cag.check_removed_product_terms_absent()
+
+        self.assertEqual(problems, [])
+
     # -- skill frontmatter -------------------------------------------------
 
     def test_skill_frontmatter_missing_description_is_reported(self) -> None:
-        self._write("agent-skills/foo/SKILL.md", "---\nname: foo\n---\n\n# Foo\n")
+        self._write(".agents/skills/foo/SKILL.md", "---\nname: foo\n---\n\n# Foo\n")
 
         with self._patch():
             problems = cag.check_skill_frontmatter()
@@ -98,7 +156,7 @@ class GovernanceCheckTests(unittest.TestCase):
         self.assertTrue(any("description" in p for p in problems))
 
     def test_skill_frontmatter_name_mismatch_is_reported(self) -> None:
-        self._write("agent-skills/foo/SKILL.md", "---\nname: bar\ndescription: does things\n---\n")
+        self._write(".agents/skills/foo/SKILL.md", "---\nname: bar\ndescription: does things\n---\n")
 
         with self._patch():
             problems = cag.check_skill_frontmatter()
@@ -107,7 +165,7 @@ class GovernanceCheckTests(unittest.TestCase):
 
     def test_skill_frontmatter_forbidden_key_is_reported(self) -> None:
         self._write(
-            "agent-skills/foo/SKILL.md",
+            ".agents/skills/foo/SKILL.md",
             "---\nname: foo\ndescription: does things\nallowed-tools: Read\n---\n",
         )
 
@@ -117,7 +175,7 @@ class GovernanceCheckTests(unittest.TestCase):
         self.assertTrue(any("allowed-tools" in p for p in problems))
 
     def test_skill_frontmatter_valid_passes(self) -> None:
-        self._write("agent-skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n\n# Foo\n")
+        self._write(".agents/skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n\n# Foo\n")
 
         with self._patch():
             problems = cag.check_skill_frontmatter()
@@ -134,7 +192,7 @@ class GovernanceCheckTests(unittest.TestCase):
         # even though _parse_frontmatter itself correctly folds it into the
         # description value.
         self._write(
-            "agent-skills/foo/SKILL.md",
+            ".agents/skills/foo/SKILL.md",
             "\n".join(
                 [
                     "---",
@@ -156,25 +214,21 @@ class GovernanceCheckTests(unittest.TestCase):
 
     # -- skill sync ----------------------------------------------------------
 
-    def test_unsynced_skills_are_reported_for_both_targets(self) -> None:
-        self._write("agent-skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n")
-        agents_target = self.root / ".agents" / "skills"
+    def test_unsynced_skills_are_reported_for_claude_target(self) -> None:
+        self._write(".agents/skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n")
         claude_target = self.root / ".claude" / "skills"
 
-        with self._patch(), mock.patch.object(sas, "TARGET_DIRS", [agents_target, claude_target]):
+        with self._patch(), mock.patch.object(sas, "TARGET_DIRS", [claude_target]):
             problems = cag.check_skills_synced()
 
-        self.assertTrue(any(".agents/skills" in p for p in problems))
         self.assertTrue(any(".claude/skills" in p for p in problems))
 
     def test_synced_skills_pass(self) -> None:
-        self._write("agent-skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n")
-        agents_target = self.root / ".agents" / "skills"
+        self._write(".agents/skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n")
         claude_target = self.root / ".claude" / "skills"
-        sas.sync_target(self.root / "agent-skills", agents_target)
-        sas.sync_target(self.root / "agent-skills", claude_target)
+        sas.sync_target(self.root / ".agents" / "skills", claude_target)
 
-        with self._patch(), mock.patch.object(sas, "TARGET_DIRS", [agents_target, claude_target]):
+        with self._patch(), mock.patch.object(sas, "TARGET_DIRS", [claude_target]):
             problems = cag.check_skills_synced()
 
         self.assertEqual(problems, [])
@@ -213,9 +267,33 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertTrue(any(".agent.md" in problem for problem in problems))
 
+    def test_old_canonical_skill_directory_is_reported(self) -> None:
+        self._write("agent-skills/legacy/SKILL.md", "legacy\n")
+
+        with self._patch():
+            problems = cag.check_no_legacy_instruction_layers()
+
+        self.assertTrue(any("agent-skills" in problem for problem in problems))
+
+    def test_tool_specific_agents_are_reported(self) -> None:
+        self._write(".claude/agents/reviewer.md", "duplicate workflow\n")
+
+        with self._patch():
+            problems = cag.check_no_legacy_instruction_layers()
+
+        self.assertTrue(any(".claude/agents" in problem for problem in problems))
+
+    def test_prompt_directory_is_reported(self) -> None:
+        self._write("prompts/task.md", "duplicate workflow\n")
+
+        with self._patch():
+            problems = cag.check_no_legacy_instruction_layers()
+
+        self.assertTrue(any("prompts" in problem for problem in problems))
+
     def test_stale_phrase_in_skill_reference_is_reported(self) -> None:
         self._write(
-            "agent-skills/foo/references/testing.md",
+            ".agents/skills/foo/references/testing.md",
             "Automatic tenant assignment has no automated regression test\n",
         )
 
@@ -226,7 +304,7 @@ class GovernanceCheckTests(unittest.TestCase):
 
     def test_versioned_package_reference_in_new_service_skill_is_reported(self) -> None:
         self._write(
-            "agent-skills/agenza-backend-new-service/SKILL.md",
+            ".agents/skills/agenza-backend-new-service/SKILL.md",
             '<PackageReference Include="Example" Version="1.0.0" />\n',
         )
 
@@ -264,20 +342,20 @@ class GovernanceCheckTests(unittest.TestCase):
     # -- referenced skills -------------------------------------------------
 
     def test_missing_referenced_skill_is_reported(self) -> None:
-        self._write("AGENTS.md", "Use agent-skills/missing-skill for this task.\n")
+        self._write("AGENTS.md", "Use .agents/skills/missing-skill for this task.\n")
 
         with self._patch():
             problems = cag.check_referenced_skills_exist()
 
         self.assertEqual(
             problems,
-            ["referenced skill agent-skills/missing-skill does not exist"],
+            ["referenced skill .agents/skills/missing-skill does not exist"],
         )
 
     def test_present_referenced_skill_passes(self) -> None:
-        self._write("AGENTS.md", "Use agent-skills/present-skill for this task.\n")
+        self._write("AGENTS.md", "Use .agents/skills/present-skill for this task.\n")
         self._write(
-            "agent-skills/present-skill/SKILL.md",
+            ".agents/skills/present-skill/SKILL.md",
             "---\nname: present-skill\ndescription: does things\n---\n",
         )
 
@@ -297,18 +375,24 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertTrue(any("does_not_exist.py" in p for p in problems))
 
-    def test_missing_referenced_script_in_subagent_file_is_reported(self) -> None:
+    def test_missing_referenced_script_in_skill_is_reported(self) -> None:
         self._base_repo()
-        self._write(".claude/agents/some-reviewer.md", "Run scripts/does_not_exist.py first.\n")
+        self._write(
+            ".agents/skills/some-reviewer/SKILL.md",
+            "---\nname: some-reviewer\ndescription: review\n---\nRun scripts/does_not_exist.py.\n",
+        )
 
         with self._patch():
             problems = cag.check_referenced_scripts_exist()
 
         self.assertTrue(any("does_not_exist.py" in p for p in problems))
 
-    def test_missing_adr_reference_in_prompt_template_is_reported(self) -> None:
+    def test_missing_adr_reference_in_skill_is_reported(self) -> None:
         self._write("docs/adr/0001-something.md", "# ADR\n")
-        self._write("prompts/some-template.md", "See docs/adr/0099 for context.\n")
+        self._write(
+            ".agents/skills/some-skill/SKILL.md",
+            "---\nname: some-skill\ndescription: test\n---\nSee docs/adr/0099.\n",
+        )
 
         with self._patch():
             problems = cag.check_adr_references()
@@ -349,14 +433,12 @@ class GovernanceCheckTests(unittest.TestCase):
 
     def test_run_checks_clean_repo_has_no_problems(self) -> None:
         self._base_repo()
-        self._write("agent-skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n")
+        self._write(".agents/skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n")
         self._write("docs/adr/0001-something.md", "# ADR\n")
-        agents_target = self.root / ".agents" / "skills"
         claude_target = self.root / ".claude" / "skills"
-        sas.sync_target(self.root / "agent-skills", agents_target)
-        sas.sync_target(self.root / "agent-skills", claude_target)
+        sas.sync_target(self.root / ".agents" / "skills", claude_target)
 
-        with self._patch(), mock.patch.object(sas, "TARGET_DIRS", [agents_target, claude_target]):
+        with self._patch(), mock.patch.object(sas, "TARGET_DIRS", [claude_target]):
             problems = cag.run_checks()
 
         self.assertEqual(problems, [])

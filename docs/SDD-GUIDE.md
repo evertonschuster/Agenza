@@ -40,8 +40,8 @@ Auth / tenant behavior:
 Acceptance criteria:
 ```
 
-The reusable files in `prompts/` provide fuller variants. They are templates,
-not a second instruction system.
+For a repeatable workflow, name the matching skill under `.agents/skills/`.
+Keep one-off detail in the task prompt rather than committing prompt templates.
 
 ## Useful examples
 
