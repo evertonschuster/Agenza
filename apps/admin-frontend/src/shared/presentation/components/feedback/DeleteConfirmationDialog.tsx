@@ -23,7 +23,6 @@ export interface DeleteConfirmationDialogProps {
   onConfirm: () => Promise<void>
 }
 
-/** Shared delete AlertDialog behind Categories/Services - generates default title/description from entity info. */
 export function DeleteConfirmationDialog({
   isOpen,
   entityName,
@@ -46,7 +45,7 @@ export function DeleteConfirmationDialog({
   return (
     <AlertDialog
       open={isOpen}
-      onOpenChange={open => {
+      onOpenChange={(open: boolean) => {
         if (!open) onCancel()
       }}
     >
@@ -61,9 +60,9 @@ export function DeleteConfirmationDialog({
           <AlertDialogAction
             variant="destructive"
             disabled={isDeleting}
-            onClick={event => {
+            onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
               event.preventDefault()
-              onConfirm()
+              void onConfirm()
             }}
           >
             {isDeleting ? 'Excluindo…' : 'Excluir'}
