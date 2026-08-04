@@ -1,50 +1,39 @@
-# Admin Panel — Monorepo
+# Agenza
 
-Multi-tenant SaaS admin panel for small healthcare/wellness businesses. Polyglot
-monorepo: React frontend, .NET backend microservices, Python AI services.
+Multi-tenant SaaS platform for service businesses. This polyglot monorepo
+contains a React admin frontend, context-aggregated .NET services, and a
+FastAPI boundary for AI capabilities.
 
-## Layout
+| Path | Purpose |
+| --- | --- |
+| `apps/admin-frontend` | Vite + React + strict TypeScript admin UI |
+| `backend` | ASP.NET Core services and the Aspire AppHost |
+| `ai-services` | Python/FastAPI AI service boundaries |
+| `infra` | PostgreSQL initialization for local orchestration |
+| `docs` | Current layout, quality, vision, and decision indexes |
 
-| Path                  | Stack                         | Purpose                                         |
-| --------------------- | ----------------------------- | ----------------------------------------------- |
-| `apps/admin-frontend` | Vite + React + strict TypeScript | The admin panel UI                           |
-| `backend`             | ASP.NET Core                     | Context-aggregated business services          |
-| `ai-services`         | Python + FastAPI                  | AI/ML services                                |
-| `infra`               | PostgreSQL init scripts       | Local database roles and schema grants          |
+## Run the full stack
 
-See [docs/MONOREPO.md](docs/MONOREPO.md) for conventions, and each stack's own
-`AGENTS.md`/`README.md` for stack-specific guidance.
-
-This repo is built AI-first: the docs are the spec, agents execute, CI
-verifies. **[docs/SDD-GUIDE.md](docs/SDD-GUIDE.md)** is the developer
-guide — the workflow, worked example prompts, and what stays human.
-
-## Quickstart
+Prerequisites come from the repository pins (`.nvmrc`, `packageManager`,
+`backend/global.json`, `.python-version`, and lock files).
 
 ```bash
-# Frontend
 npm install
-npm run dev:frontend
-
-# Backend (.NET)
 dotnet tool restore --tool-manifest backend/.config/dotnet-tools.json
-dotnet build backend/AdminBackend.slnx
-dotnet run --project backend/services/services-service/ServicesService.Api
-
-# AI services (Python)
-cd ai-services/assistant-service
-pip install uv
-uv sync --frozen --extra dev
-uv run uvicorn app.main:app --reload --port 8001
-
-# Everything together (frontend, backend, PostgreSQL, and AI service)
 dotnet run --project backend/AppHost --launch-profile http
 ```
 
-## Tool versions
+Aspire is the canonical local orchestration path. It starts PostgreSQL, the .NET
+services, the admin frontend, and the assistant service. Stack-specific commands
+remain in each area README.
 
-Use the repository pins instead of copying versions from documentation:
-`.nvmrc`/`packageManager`, `backend/global.json`, `.python-version`/`uv.lock`,
-and the CI setup actions are the executable sources. Compatibility exceptions
-and upgrade conditions are recorded in
-[ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibility-pins.md).
+## Where to look
+
+- Current structure and local configuration: [docs/MONOREPO.md](docs/MONOREPO.md)
+- Product/architecture direction: [docs/VISION.md](docs/VISION.md)
+- CI and coverage: [docs/QUALITY.md](docs/QUALITY.md)
+- Agent-assisted workflow: [docs/SDD-GUIDE.md](docs/SDD-GUIDE.md)
+- Repository instructions: [AGENTS.md](AGENTS.md)
+
+Do not infer versions, feature status, or contracts from this README. Their
+executable or living sources are routed by `AGENTS.md`.

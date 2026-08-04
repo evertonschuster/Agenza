@@ -55,6 +55,7 @@ class GovernanceCheckTests(unittest.TestCase):
                 self.root / "apps" / "admin-frontend" / "CLAUDE.md",
             ],
             REQUIRED_COPILOT_INSTRUCTIONS=self.root / ".github" / "copilot-instructions.md",
+            EXPECTED_SKILL_NAMES={"foo"},
             GOVERNANCE_DOC_GLOBS=[
                 "AGENTS.md",
                 "backend/AGENTS.md",
@@ -209,6 +210,42 @@ class GovernanceCheckTests(unittest.TestCase):
 
         with self._patch():
             problems = cag.check_skill_frontmatter()
+
+        self.assertEqual(problems, [])
+
+    # -- canonical skill catalogue -------------------------------------------
+
+    def test_missing_approved_skill_is_reported(self) -> None:
+        (self.root / ".agents" / "skills").mkdir(parents=True)
+
+        with self._patch():
+            problems = cag.check_canonical_skill_set()
+
+        self.assertEqual(problems, ["canonical skill missing: .agents/skills/foo"])
+
+    def test_unexpected_skill_is_reported(self) -> None:
+        self._write(
+            ".agents/skills/foo/SKILL.md",
+            "---\nname: foo\ndescription: approved\n---\n",
+        )
+        self._write(
+            ".agents/skills/generic-helper/SKILL.md",
+            "---\nname: generic-helper\ndescription: noisy\n---\n",
+        )
+
+        with self._patch():
+            problems = cag.check_canonical_skill_set()
+
+        self.assertTrue(any("generic-helper" in problem for problem in problems))
+
+    def test_approved_skill_set_passes(self) -> None:
+        self._write(
+            ".agents/skills/foo/SKILL.md",
+            "---\nname: foo\ndescription: approved\n---\n",
+        )
+
+        with self._patch():
+            problems = cag.check_canonical_skill_set()
 
         self.assertEqual(problems, [])
 

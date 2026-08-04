@@ -1,75 +1,47 @@
-# Quality gates & CI
+# Quality gates and CI
 
-This document describes executable quality gates. Provider plans, pricing, and
-optional review assistants are deliberately excluded because they change
-independently of repository correctness.
+Executable workflow files and package/project configuration are the source of
+truth. This document explains what the gates protect without copying volatile
+versions, test counts, or provider setup walkthroughs.
 
-## Workflows (`.github/workflows/`)
+## Workflows
 
-| Workflow               | Triggers on                   | What it gates                                                                                           |
-| ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `frontend-ci.yml`      | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
-| `backend-ci.yml`       | `backend/**`                  | warning-free build, unit coverage, and Docker-free EF tenant persistence tests                          |
-| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke                |
-| `codeql.yml`           | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
-| `sonar.yml`            | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
-| `agent-governance.yml` | all PRs/pushes                | AI agent governance framework consistency — see [docs/AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md)         |
+| Workflow | Primary coverage |
+| --- | --- |
+| `frontend-ci.yml` | format, lint, build, Vitest coverage, Playwright, generated OpenAPI drift, OIDC/API smoke |
+| `backend-ci.yml` | warning-free build, unit coverage, narrow EF tenant persistence tests |
+| `ai-services-ci.yml` | locked Python dependencies, Ruff, pytest coverage, health smoke |
+| `codeql.yml` | C#, TypeScript/JavaScript, and Python security analysis |
+| `sonar.yml` | optional SonarCloud analysis; skips until `SONAR_TOKEN` exists |
+| `agent-governance.yml` | skill sync, instruction consistency, architecture guards, guard tests |
 
-Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for npm,
-NuGet, pip, and the workflows' actions.
+Dependabot manages grouped npm, NuGet, pip, and GitHub Actions updates.
 
-## What each coverage gate actually measures — read before trusting a number
+## Coverage boundaries
 
-- **Frontend**: `coverage.include: ['src/**']` in `vitest.config.ts` means
-  every source file counts, including files no test imports. Excluded:
-  declarative wiring (`main.tsx`, `App.tsx`, the route table) and the
-  stub pages listed explicitly in the config — remove a stub from that
-  list when its feature vertical is implemented.
-- **Backend unit coverage**: `*.Tests`, configured in
-  `backend/Directory.Build.props` + `.targets`. Coverlet instruments the
-  assemblies each project references — **Domain + Application** —
-  gated at 80% line coverage. `Admin.SharedKernel` is excluded from
-  every _consuming_ service's gate (`Directory.Build.targets`) since it
-  has its own dedicated project (`Admin.SharedKernel.Tests`) and gate —
-  counting it twice would let one hide behind the other's number
-  (docs/adr/0005). `ServicesService.PersistenceTests` covers EF tenant
-  assignment and filtering in memory (docs/adr/0019). There is no
-  Testcontainers/`WebApplicationFactory` project. The frontend
-  API-contract workflow starts the AppHost resource graph, applies the
-  migration chain to Aspire's PostgreSQL resource, and runs the real OIDC
-  smoke defined in `scripts/smoke_oidc_contract.py` (docs/adr/0026,
-  docs/adr/0029).
-- **AI services**: `--cov=app` in `pyproject.toml` measures the whole
-  package, gate at 80% (`--cov-fail-under=80`).
+- **Frontend:** `vitest.config.ts` defines included/excluded source. Remove a
+  stub-page exclusion when that route becomes a real vertical.
+- **Backend:** `Directory.Build.props`/`.targets` define the 80% Domain and
+  Application unit gate. Shared-kernel code has its own test project. Narrow
+  PersistenceTests verify tenant-critical EF behavior; runtime OpenAPI/OIDC
+  smoke is a separate boundary.
+- **AI services:** `pyproject.toml` defines whole-`app` pytest coverage and the
+  threshold.
 
-## SonarQube Cloud setup (one-time, ~10 minutes)
+A clean-database contract smoke does not prove that a destructive migration is
+safe for existing data. Migration review follows the migration-safety skill.
 
-1. Sign in at <https://sonarcloud.io> with GitHub and import `Agenza`.
-2. Create three projects (monorepo mode): `agenza-frontend`,
-   `agenza-backend`, `agenza-ai-services` under organization
-   `evertonschuster`. If you choose different keys, update
-   `.github/workflows/sonar.yml`.
-3. For each project: **Administration → Analysis Method → disable
-   Automatic Analysis** (it conflicts with CI-based analysis).
-4. Generate a token (My Account → Security) and add it as the
-   `SONAR_TOKEN` repository secret on GitHub.
-5. Optional: set the quality gate to "Sonar way" and require it in
-   branch protection once it's been green for a few PRs.
+## Optional external analysis
 
-Until step 4 happens, `sonar.yml` skips itself — it never blocks a PR.
+SonarCloud project identifiers live in `.github/workflows/sonar.yml`; the token
+lives only in the GitHub repository secret `SONAR_TOKEN`. Provider account,
+organization, plan, and branch-protection settings are repository administration
+state, not agent instructions. Update the workflow only when the configured
+project keys change.
 
-## Agent compatibility
+## Acceptance
 
-Repository correctness does not depend on which coding agent produced a
-change. Codex, GitHub Copilot, and Claude Code share the rules in `AGENTS.md`,
-the portable workflows in `.agents/skills/`, and the same GitHub Actions gates.
-Tool-specific bridges and local hooks are convenience layers; CI remains the
-independent acceptance boundary. See
-[AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md) for discovery paths and sync rules.
-
-## Branch protection recommendation
-
-Require these checks on `main`: `frontend-build-and-test`,
-`backend-build-and-test`, `ai-services-build-and-test`, `agent-governance`,
-the CodeQL languages, and (after setup) the Sonar quality gate. All jobs
-already have stable, unique names for this purpose.
+Run the commands listed by the affected `AGENTS.md`. CI remains the independent
+integration boundary regardless of which coding agent or IDE produced a change.
+Do not lower coverage, disable a check, skip a test, or expand an allowlist merely
+to pass.

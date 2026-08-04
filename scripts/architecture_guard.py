@@ -1034,6 +1034,27 @@ def check_frontend_any() -> list[Finding]:
     )
 
 
+def check_frontend_environment_boundary() -> list[Finding]:
+    """Frontend environment access is centralized and validated once.
+
+    Direct `import.meta.env` reads previously spread OIDC/API configuration
+    across infrastructure and composition, allowing missing or inconsistent
+    keys to fail late. Only app/config/environment.ts may read Vite's raw
+    environment object; consumers receive typed validated values.
+    """
+    src_dir = REPO_ROOT / "apps" / "admin-frontend" / "src"
+    owner = src_dir / "app" / "config" / "environment.ts"
+    files = [path for path in _iter_files(src_dir, (".ts", ".tsx")) if path != owner]
+    return _findings_for_pattern(
+        files,
+        re.compile(r"\bimport\.meta\.env\b"),
+        "frontend-environment-boundary",
+        "blocking",
+        "Reads import.meta.env outside app/config/environment.ts - consume the validated "
+        "AppEnvironment from the composition root instead.",
+    )
+
+
 _FEATURE_INTERNAL_IMPORT_PATTERN = re.compile(
     r"""from\s+['"]@/features/(\w+)/(?:domain|application|infrastructure|presentation)/[^'"]*['"]"""
 )
@@ -1258,6 +1279,7 @@ CHECKS = [
     check_stale_patterns_in_doc_code_blocks,
     check_dangling_adr_references,
     check_frontend_any,
+    check_frontend_environment_boundary,
     check_cross_feature_internal_imports,
     check_stale_horizontal_layout,
     check_stale_openapi_generated_path,

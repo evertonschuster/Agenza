@@ -56,6 +56,19 @@ REQUIRED_CLAUDE_MD = [
 REQUIRED_COPILOT_INSTRUCTIONS = REPO_ROOT / ".github" / "copilot-instructions.md"
 LOCAL_SETTINGS_IGNORE = "**/.claude/settings.local.json"
 
+EXPECTED_SKILL_NAMES = {
+    "agenza-api-contract-review",
+    "agenza-architecture-review",
+    "agenza-backend-new-service",
+    "agenza-backend-use-case",
+    "agenza-exception-flow-audit",
+    "agenza-frontend-exploratory-qa",
+    "agenza-frontend-feature",
+    "agenza-migration-safety",
+    "agenza-rule-persistence",
+    "agenza-tenant-isolation-review",
+}
+
 FORBIDDEN_FRONTMATTER_KEYS = {
     "allowed-tools",
     "disallowed-tools",
@@ -247,6 +260,33 @@ def check_skill_frontmatter() -> list[str]:
                 f"{sorted(forbidden_present)} - keep those out of the canonical skill"
             )
 
+    return problems
+
+
+def check_canonical_skill_set() -> list[str]:
+    """Keep the canonical skill catalogue intentionally small.
+
+    Adding a directory under .agents/skills changes the context exposed to
+    every supported coding agent. New skills therefore require an explicit
+    governance decision instead of silently expanding the catalogue.
+    """
+    source_dir = REPO_ROOT / ".agents" / "skills"
+    if not source_dir.is_dir():
+        return [f"missing canonical skills source: {_rel(source_dir)}"]
+
+    actual = {
+        path.name
+        for path in source_dir.iterdir()
+        if path.is_dir() and (path / "SKILL.md").is_file()
+    }
+    problems = []
+    for name in sorted(EXPECTED_SKILL_NAMES - actual):
+        problems.append(f"canonical skill missing: .agents/skills/{name}")
+    for name in sorted(actual - EXPECTED_SKILL_NAMES):
+        problems.append(
+            f"unexpected canonical skill: .agents/skills/{name} - update the "
+            "approved skill set only when the workflow is project-specific"
+        )
     return problems
 
 
@@ -474,6 +514,7 @@ CHECKS = [
     ("Copilot instructions bridge present", check_copilot_bridge),
     ("tool-local agent state ignored", check_local_agent_state_ignored),
     ("canonical skill frontmatter valid", check_skill_frontmatter),
+    ("canonical skill set approved", check_canonical_skill_set),
     ("skills synced to .claude/", check_skills_synced),
     ("no .codex/skills distribution dir", check_no_codex_skills_dir),
     ("no legacy local instruction layers", check_no_legacy_instruction_layers),

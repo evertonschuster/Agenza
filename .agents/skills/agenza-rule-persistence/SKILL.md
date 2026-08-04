@@ -1,86 +1,41 @@
 ---
 name: agenza-rule-persistence
 description: >
-  Use whenever the user corrects an agent's approach, an architectural bug
-  repeats, a review surfaces a recurring pattern, an important rule
-  changes, or an exception needs to be formalized. Trigger on "remember
-  this", "don't do that again", "we already decided X", or after fixing
-  anything that looks like a repeat of a past mistake. Turns a one-off
-  correction into a durable rule across every place that needs to agree,
-  instead of a fix that only lives in this conversation.
+  Use when a correction or recurring defect establishes a reusable repository
+  rule. Persist durable architecture, business, or process constraints without
+  turning one-off task detail into permanent agent context.
 ---
 
-# Rule Persistence
+# Rule persistence
 
-A correction is not durable just because it was said once. Before treating
-anything as "handled," judge which of these it is:
+First classify the correction:
 
-- **One-off**: specific to this exact change, doesn't generalize. No
-  persistence needed beyond the fix itself.
-- **Durable architectural rule**: would apply to any future similar
-  change.
-- **New business constraint**: a product/domain rule, not a coding
-  pattern.
-- **Process improvement**: how work should be done (testing, review,
-  documentation), not what the code does.
+- one-off implementation detail: fix it, do not add agent rules;
+- durable area/repository constraint: update the smallest owning instruction;
+- business rule: encode in domain/spec/tests;
+- architectural decision: add or amend an ADR and its index.
 
-Only the last three need this skill's checklist.
+For a durable rule, apply only relevant layers:
 
-## The persistence cycle
+1. fix the concrete code/documentation;
+2. add a regression test;
+3. update the nearest `AGENTS.md` or one matching skill without duplicating the
+   rule across both unless routing requires it;
+4. add/update an ADR only for durable rationale or reversal;
+5. add an architecture/governance guard when mechanically detectable;
+6. confirm CI runs the test/guard;
+7. remove stale comments, examples, active docs, and generated skill copies.
 
-For a durable rule, work through every applicable step — skipping one
-without a reason is how a rule "gets fixed" once and quietly regresses
-three months later:
+Edit `.agents/skills/`, then sync `.claude/skills/`. Do not create a new skill
+for a one-off prompt or a rule already owned clearly elsewhere.
 
-1. **Fix the code.** The concrete instance that triggered this.
-2. **Update `AGENTS.md`.** Root `AGENTS.md` if it applies everywhere;
-   `backend/AGENTS.md`/`apps/admin-frontend/AGENTS.md` if it's area-local.
-   State the rule, not a narrative of how it was discovered.
-3. **Update the skill.** If a skill in `.agents/skills/` teaches the old
-   pattern (in prose *or* in a copy-paste template — templates rot
-   silently because they're copied verbatim without re-reading the prose
-   around them), fix it there. Run `python scripts/sync_agent_skills.py`
-   afterward so `.claude/skills/` picks up the change.
-4. **Add or update an ADR.** If this is a genuine architectural decision
-   (not just a bug fix), it needs `docs/adr/NNNN-....md` explaining the
-   context, the decision, and — if it reverses an earlier ADR — which one
-   and why (see docs/adr/0012, docs/adr/0014 for the citation style this
-   repo uses when one ADR supersedes another).
-5. **Add a regression test.** One that would have failed before the fix
-   and passes after. Without this, nothing stops the same bug from
-   reappearing in a different feature.
-6. **Add or update an automated guard.** If the pattern is mechanically
-   detectable, add it to `scripts/architecture_guard.py` (see that
-   script's own contribution notes for how to add a check without
-   widening its allowlist). If it isn't mechanically detectable, say so
-   explicitly in the ADR rather than silently skipping this step.
-7. **Wire it into CI.** Confirm the guard/test from steps 5–6 actually
-   runs in `.github/workflows/` — a local-only check that never runs in
-   CI isn't a gate, it's a suggestion.
+Run:
 
-## Also check for teaching debt
+```bash
+python scripts/sync_agent_skills.py
+python scripts/sync_agent_skills.py --check
+python scripts/check_agent_governance.py
+python scripts/architecture_guard.py
+```
 
-A rule can be technically "fixed" in the places above and still get
-reintroduced because something else still teaches the old pattern. Check:
-
-- Other `CLAUDE.md`/`AGENTS.md` files or the Copilot bridge that might restate
-  the rule locally and now disagree with the update.
-- Any forbidden legacy instruction layer (`agent-skills/`, `prompts/`,
-  `.claude/agents/`, `.skills/`, `.agent.md`) or generated artifact that still
-  teaches the old behavior.
-- Comments in code that assert the old rationale.
-- Worked examples in `docs/SDD-GUIDE.md` and any task template outside the
-  canonical skill tree.
-- Test files whose names or comments describe the old behavior as
-  correct, even if the assertions themselves were updated.
-
-## Definition of "persisted"
-
-A rule counts as persisted only when every applicable item in the cycle
-above is done — not when the immediate bug is fixed. If any step
-genuinely doesn't apply (e.g. no ADR is warranted for a pure typo fix),
-say so explicitly rather than leaving it silently incomplete. Run
-`python scripts/check_agent_governance.py` after this cycle — it flags
-skills not in sync, ADR references that don't exist, and
-`CLAUDE.md` files missing the `@AGENTS.md` import, and a missing Copilot bridge,
-four of the most common ways a "persisted" rule quietly isn't.
+Report any layer intentionally not changed and why.

@@ -1,120 +1,107 @@
 # Agenza monorepo — agent instructions
 
-This is the canonical, tool-independent entry point. Keep only durable,
-repo-wide rules here; area rules live in `backend/AGENTS.md` and
-`apps/admin-frontend/AGENTS.md`. Current state, versions, and historical
-rationale belong in code/config, STATUS docs, and indexed ADRs.
+This is the canonical tool-independent entry point. Keep repository-wide,
+durable rules here. Area-specific rules live in the nearest `AGENTS.md`.
 
-## Route context, do not preload it
+## Load the minimum context
 
-| Scope | Read next |
+For a normal task, read only:
+
+1. this file;
+2. the nearest area `AGENTS.md`;
+3. one matching skill under `.agents/skills/`;
+4. the live code, tests, config, migrations, or generated contract involved.
+
+Open a living document or ADR only when the task needs it. Never preload all
+skills, all docs, or all ADRs.
+
+When sources disagree, use this order:
+
+1. security and tenant-isolation rules in the nearest `AGENTS.md`;
+2. executable truth: code, tests, config, migrations, generated contracts;
+3. living docs such as `STATUS.md`, `API.md`, and `MONOREPO.md`;
+4. accepted ADRs routed by the relevant ADR index;
+5. superseded ADRs and historical examples, which are context only.
+
+| Need | Read |
 | --- | --- |
-| Backend | `backend/AGENTS.md` |
-| Admin frontend | `apps/admin-frontend/AGENTS.md` |
-| Python AI service | that service's README and config |
-| Current repo layout | `docs/MONOREPO.md` |
-| Target direction | `docs/VISION.md` |
+| Backend rules | `backend/AGENTS.md` |
+| Admin frontend rules | `apps/admin-frontend/AGENTS.md` |
+| Current layout | `docs/MONOREPO.md` |
+| Product direction | `docs/VISION.md` |
 | CI and coverage | `docs/QUALITY.md` |
-| Decision rationale | `docs/adr/README.md`, then only the relevant ADRs |
-| Human/agent workflow | `docs/SDD-GUIDE.md` |
-| Governance mechanics | `docs/AGENT-GOVERNANCE.md` |
-
-Do not read every linked document or ADR by default. Prefer executable truth
-(code, tests, generated contracts, migrations, config) over prose describing it.
+| Decisions | the relevant `docs/adr/README.md` index first |
+| Agent workflow | `docs/SDD-GUIDE.md` |
+| Governance | `docs/AGENT-GOVERNANCE.md` |
 
 ## Question policy
 
-Search code, tests, ADR indexes, instructions, skills, contracts, migrations,
-configuration, scripts, workflows, and history before asking the user.
+Search the repository before asking. Ask only when the missing answer would
+materially change a business rule, public contract, authentication or tenant
+behavior, production data migration, or an incompatible architectural choice.
+Do not invent requirements. Complete independent work while an answer is open.
 
-Ask only when the answer could materially change:
+## Non-negotiables
 
-- a business rule or public contract;
-- authentication, authorization, or tenant isolation;
-- data already represented by a production migration;
-- an architecturally incompatible strategy with no clear repository precedent.
-
-Finish independent, unambiguous work while one question remains open. Never
-invent requirements absent from the spec or repository evidence.
-
-## Repo-wide non-negotiables
-
-- **Tenant isolation:** every tenant-scoped operation is tied to the
-  authenticated principal. Client-supplied tenant identity is never trusted
-  alone. Any observable cross-tenant exposure is a security failure.
-- **Boundaries:** each app/service owns its Domain -> Application ->
-  Infrastructure/Presentation dependencies. Cross-service interaction uses
-  explicit HTTP/event contracts, never internal project references or shared
-  database writes.
-- **No shared mutable state across stacks:** frontend, .NET, and Python
-  communicate through service boundaries, not shared files or in-process calls.
-- **Aspire is the local orchestrator:** evolve the resource graph in
-  `backend/AppHost/AppHost.cs`. Do not add Docker Compose or application
-  Dockerfiles as a parallel local runtime without an accepted deployment ADR.
+- **Tenant isolation:** tenant-scoped behavior is bound to the authenticated
+  principal. Client-supplied tenant identity is never trusted alone. Any
+  observable cross-tenant exposure is a security failure.
+- **Service boundaries:** each app/service owns its domain and persistence.
+  Cross-service interaction uses explicit HTTP/event contracts, never internal
+  project references, shared table writes, or in-process shortcuts.
+- **Aspire is the local orchestrator:** evolve `backend/AppHost/AppHost.cs`.
+  Do not add a parallel Compose/Dockerfile runtime without a deployment ADR.
 - **Expected backend outcomes are values:** validation, not-found, conflict,
-  in-use, and tenant authorization flow through `Result`/`DomainResult`/
-  `PersistenceResult`. Exceptions remain for unexpected technical failures and
-  the narrow cases documented by backend rules.
+  in-use, and authorization use `Result`/`DomainResult`/`PersistenceResult`.
+  Exceptions are for unexpected technical failures and narrow documented
+  boundaries.
+- **No speculative architecture:** implement the smallest complete behavior
+  justified by current requirements and repository evidence.
 
 ## Quality and documentation
 
-- Run build, test, lint/format, and coverage gates for every affected stack.
-  Fix the cause; never delete/skip tests, disable a rule, lower a threshold, or
-  widen an allowlist merely to pass.
-- Update living documentation in the same change that makes it stale. Do not
-  duplicate current versions, file inventories, test counts, or feature status
-  in instruction files.
-- A durable decision that may be re-litigated gets an ADR. Index it as accepted,
-  superseded, or historical so agents do not treat incompatible decisions as
-  simultaneously current.
-- Comments explain a non-obvious why. They do not narrate code or duplicate ADR
-  rationale.
+Run every applicable build, format, lint, test, coverage, contract, migration,
+and governance gate. Fix causes; never weaken a rule, threshold, test, or
+allowlist merely to obtain green output.
+
+Update the source that owns a fact:
+
+- feature progress: owning `STATUS.md`;
+- contract policy: generated contract plus owning `API.md` when needed;
+- current layout/runtime: config and `docs/MONOREPO.md`;
+- durable architectural rationale: an ADR;
+- reusable agent workflow: one canonical skill.
+
+Do not copy versions, file inventories, test counts, current feature status, or
+historical narratives into instruction files.
 
 ## Git workflow
 
-The repository is trunk-based with `main` as its only long-lived branch.
+`main` is the only long-lived branch. Task branches start from current
+`origin/main`, use `<type>/<slug>`, rebase before review, and squash-merge.
+Concurrent work uses isolated worktrees. Never overwrite unrelated changes or
+rewrite published history.
 
-- Direct local commits to `main` are allowed after synchronizing with
-  `origin/main`; never rewrite published history.
-- A task branch starts from current `origin/main`, uses `<type>/<slug>` where
-  type is `feat`, `fix`, `chore`, `docs`, or `refactor`, and is rebased before a
-  PR or update. Do not stack it on an unmerged feature branch.
-- PRs squash-merge and delete their branch.
-- Concurrent agents or humans use isolated worktrees. Never share one working
-  directory across simultaneous tasks or overwrite unrelated user changes.
+## Skills and rule persistence
 
-## Rule persistence
+`.agents/skills/` is the only editable repository skill source. Claude's
+`.claude/skills/` tree is generated; never edit it directly.
 
-When a correction, recurring bug, or review finding establishes a durable rule,
-use `.agents/skills/agenza-rule-persistence`. Update every applicable layer:
+After changing a skill:
 
-1. concrete code/documentation;
-2. the correct `AGENTS.md`;
-3. the canonical skill and its references;
-4. an ADR when architectural;
-5. a regression test;
-6. an automated guard when mechanically detectable;
-7. the CI path that runs it.
+```bash
+python scripts/sync_agent_skills.py
+python scripts/sync_agent_skills.py --check
+```
 
-Check examples, comments, and historical instruction layers for the superseded
-teaching. A conversation-only correction is not persisted.
-
-## Skills
-
-`.agents/skills/` is the only editable repository skill source and is consumed
-directly by Codex and GitHub Copilot. The sync script copies it verbatim to
-`.claude/skills/` for Claude Code; never edit that distribution by hand.
-Repository-local `agent-skills/`, `prompts/`, `.claude/agents/`, `.skills/`, and
-standalone `.agent.md` instruction layers are prohibited because they create
-parallel workflows or tool-specific teaching.
-
-Run `python scripts/sync_agent_skills.py` after changing a canonical skill and
-`--check` to verify distributions.
+When a correction establishes a durable reusable rule, use
+`.agents/skills/agenza-rule-persistence` to update the smallest applicable
+instruction, code/test, and guard surface. Do not persist one-off task detail.
 
 ## Mandatory commands
 
 ```bash
-# Governance — always
+# Repository governance — always
 python scripts/sync_agent_skills.py --check
 python scripts/check_agent_governance.py
 python scripts/architecture_guard.py
@@ -130,5 +117,5 @@ npm run build --workspace=apps/admin-frontend
 npm run test:coverage --workspace=apps/admin-frontend
 ```
 
-A task is complete only when every applicable gate is green, documentation is
-truthful, and no required work remains. Report any red gate and its cause.
+A task is complete only when applicable gates are green, documentation remains
+truthful, and unresolved risk is reported explicitly.

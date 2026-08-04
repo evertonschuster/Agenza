@@ -1,40 +1,37 @@
 # assistant-service
 
-Python AI/ML service boundary (FastAPI). Only health endpoints and the
-`/internal/whoami` boundary probe exist; feature behavior should be added only when
-an AI use case is defined.
+FastAPI boundary for future AI receptionist capabilities. The current service
+implements health/readiness probes and an authenticated tenant-context probe;
+it does not yet implement conversational or model behavior.
 
 ## Local development
 
+Prefer the repository AppHost for the full stack. For isolated service work:
+
 ```bash
-python -m venv .venv
-.venv\Scripts\Activate.ps1   # Windows
-pip install uv==0.11.32
 uv sync --frozen --extra dev
 uv run uvicorn app.main:app --reload --port 8001
 uv run pytest
 ```
 
-## Authentication and tenant boundary
+## Identity and tenant boundary
 
-`app/auth/` integrates this service with identity-service:
+- Inbound bearer tokens are validated against identity-service JWKS.
+- Tenant-owned endpoints require a UUID `tenant_id` claim matching
+  `X-Tenant-Id` and depend on the validated `TenantContext` value.
+- Tenant-owned outbound calls delegate the caller token and validated tenant
+  header.
+- Client-credentials tokens are reserved for explicitly tenant-free control
+  plane work. Background tenant work needs a tenant-bound job identity.
 
-- `ServiceTokenClient` acquires and caches a `client_credentials` token only
-  for tenant-free control-plane calls. It must not be used to read tenant data.
-- `require_valid_token` validates inbound bearer tokens against
-  identity-service's JWKS endpoint.
-- `require_tenant_context` fails closed unless the token's UUID `tenant_id`
-  claim exactly matches the `X-Tenant-Id` header. Tenant-owned routes depend
-  on this boundary value rather than parsing claims or headers themselves.
-- Tenant-owned outbound calls delegate the caller's token and validated
-  tenant header. Background work needs an explicit tenant-scoped job identity.
+Configuration keys:
 
-`/internal/whoami` exercises the complete tenant boundary.
+- `IDENTITY_AUTHORITY`
+- `IDENTITY_ISSUER`
+- `IDENTITY_AUDIENCE`
+- `IDENTITY_CLIENT_ID`
+- `IDENTITY_CLIENT_SECRET`
+- `IDENTITY_SCOPE`
 
-Authentication is configured through `IDENTITY_AUTHORITY`, `IDENTITY_ISSUER`,
-`IDENTITY_AUDIENCE`, `IDENTITY_CLIENT_ID`, `IDENTITY_CLIENT_SECRET`, and
-`IDENTITY_SCOPE`; AppHost injects the demo values when Aspire runs the stack.
-
-`pyproject.toml` and `uv.lock` are the single dependency source for local
-development, CI, and Aspire. Do not add a separate hand-maintained
-`requirements.txt`.
+AppHost injects local values. `pyproject.toml` and `uv.lock` are the dependency
+sources; do not add a parallel `requirements.txt`.

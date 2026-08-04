@@ -1,83 +1,26 @@
 # ADR 0009 — TenantOwnedEntity base class
 
-Status: accepted (2026-07); `AssignTenant`'s exception type superseded by
-docs/adr/0014 (throws `InvalidOperationException`; `InvalidTenantException`
-shown below was deleted)
-
-## Context
-
-Once `Service` existed alongside `Tag` (renamed from `ServiceOffering`,
-see migration `20260711172110_RenameServiceOfferingToServiceAndExtend`),
-both entities carried
-identical boilerplate for their `ITenantOwned` implementation: the same
-`TenantId` property, and an `AssignTenant` method with the same
-`Guid.Empty` guard. With one entity this was fine (docs/adr/0008); with
-two it was real duplication that every future tenant-owned entity would
-repeat verbatim.
+Status: accepted (2026-07), with expected exception behavior replaced by ADR
+0014.
 
 ## Decision
 
-Each service's `Domain/Common/` gains a `TenantOwnedEntity` abstract
-class combining `BaseEntity` and `ITenantOwned`:
+Each service with tenant-owned entities defines a service-local
+`TenantOwnedEntity` base that:
 
-> **2026-07 update:** `AssignTenant` now throws plain
-> `InvalidOperationException` — `InvalidTenantException` (shown in the
-> code block below) was deleted by docs/adr/0014. The code block and the
-> paragraph after it are kept for historical context only — do not
-> follow the exception type shown for new code.
+- extends the auditable `BaseEntity`;
+- implements `ITenantOwned`;
+- exposes `TenantId` without a public setter;
+- allows one infrastructure-owned assignment for a previously unassigned new
+  entity;
+- treats reassignment or an invalid tenant as a programming violation.
 
-```csharp
-public abstract class TenantOwnedEntity : BaseEntity, ITenantOwned
-{
-    public Guid TenantId { get; private set; }
-
-    protected TenantOwnedEntity() { }
-    protected TenantOwnedEntity(Guid id) : base(id) { }
-
-    public void AssignTenant(Guid tenantId)
-    {
-        if (tenantId == Guid.Empty)
-        {
-            throw new InvalidTenantException();
-        }
-        TenantId = tenantId;
-    }
-}
-```
-
-`Tag` and `Service` inherit `TenantOwnedEntity` instead of
-`BaseEntity`/`ITenantOwned` directly, and add nothing else for the
-tenant concern — no `TenantId` property, no `AssignTenant` override.
-
-A missing tenant on `AssignTenant` always raises the same
-`InvalidTenantException` (`{Service}.Domain/Exceptions/InvalidTenantException.cs`),
-regardless of which entity. This is a deliberate departure from the
-per-entity `Tag.Invalid`/`Service.Invalid` codes every other
-domain invariant uses: a tag with a bad name and a service offering
-with a bad name are different mistakes a caller can make, but "no
-tenant was available to assign" is the same scoping bug no matter which
-entity hit it — `AuditableEntitySaveChangesInterceptor` calling
-`AssignTenant(Guid.Empty)` is not supposed to happen in practice (it
-only calls it with a real, already-resolved tenant id — see
-docs/adr/0008), so this path exists as a defensive guard, not a
-user-facing validation message that needs entity-specific wording.
+Domain/application code never chooses tenant ownership. EF save interception
+per ADR 0008 performs assignment, and query filters/constraints enforce
+isolation.
 
 ## Consequences
 
-- A new tenant-owned entity inherits `TenantOwnedEntity`, not
-  `BaseEntity` + `ITenantOwned` — one less interface to wire up, no
-  `TenantId` property to declare, and no `AssignTenant` guard to
-  copy-paste or override.
-- `typeof(ITenantOwned)` passed to `ApplyAuditableConventions` still
-  matches every `TenantOwnedEntity` subclass unchanged — the interface
-  is satisfied via inheritance, so the DbContext query-filter wiring
-  (docs/adr/0006) needed no change.
-- `AuditableEntitySaveChangesInterceptor`'s save-time `AssignTenant`
-  call (docs/adr/0008) is untouched — it still just needs
-  `entity is ITenantOwned`.
-- Only entities that genuinely aren't tenant-owned (e.g. `Tenant` in
-  identity-service) inherit `BaseEntity` directly; everything else
-  inherits `TenantOwnedEntity`.
-- `backend/CLAUDE.md` and the `backend-use-case` skill are updated to
-  teach `TenantOwnedEntity` as the default — a new tenant-owned entity
-  needs no tenant-related code of its own at all.
+Tenant ownership has one reusable entity shape without moving business entities
+into a cross-service shared domain package. Each service remains responsible for
+its own domain model and migrations.

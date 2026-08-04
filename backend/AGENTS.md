@@ -1,97 +1,77 @@
 # Backend — agent instructions
 
 Read [../AGENTS.md](../AGENTS.md) first. This file contains durable rules for
-`backend/`; current package versions and project membership come from the
-solution, project files, and `Directory.Packages.props`. Decision history is
-routed through [../docs/adr/README.md](../docs/adr/README.md).
+`backend/`. Project membership and versions come from the solution, project
+files, and `Directory.Packages.props`; decision history is routed through
+[../docs/adr/README.md](../docs/adr/README.md).
 
-## Read by task
+## Load by task
 
 | Task | Read |
 | --- | --- |
-| Command, query, entity, repository, endpoint | `.agents/skills/agenza-backend-use-case` |
-| Brand-new business-context service | `.agents/skills/agenza-backend-new-service` |
-| Exception/error-flow audit | `.agents/skills/agenza-exception-flow-audit` |
-| Tenant-isolation audit | `.agents/skills/agenza-tenant-isolation-review` |
-| Migration or schema change | `.agents/skills/agenza-migration-safety` |
-| API contract drift | `.agents/skills/agenza-api-contract-review` |
-| CI and coverage behavior | `docs/QUALITY.md` |
-| Rationale or superseded decisions | `docs/adr/README.md`, then only routed ADRs |
+| Command/query/entity/repository/endpoint | `../.agents/skills/agenza-backend-use-case` |
+| New business-context service | `../.agents/skills/agenza-backend-new-service` |
+| Error-flow audit | `../.agents/skills/agenza-exception-flow-audit` |
+| Tenant-isolation audit | `../.agents/skills/agenza-tenant-isolation-review` |
+| Migration/schema change | `../.agents/skills/agenza-migration-safety` |
+| API contract drift | `../.agents/skills/agenza-api-contract-review` |
+| CI/coverage | `../docs/QUALITY.md` |
 
-Inspect the live service and tests before relying on an example in prose.
+Inspect the closest live slice and tests before opening historical ADR content.
 
-## Architecture
+## Architecture and flow
 
 ```text
-Domain           no project references or framework dependencies
+Domain           no framework/project dependencies
 Application      -> Domain + Admin.SharedKernel; ports in Abstractions/
-Infrastructure   -> Application + infrastructure-specific shared packages
+Infrastructure   -> Application; implements ports and persistence
 Api              -> Application + Infrastructure + Admin.SharedKernel.AspNetCore
-Tests            -> Domain/Application unit boundaries
-PersistenceTests -> Infrastructure security behavior where needed
+Tests            target the boundary they verify
 ```
 
-- Services are context-aggregated, not one microservice per entity. A feature
-  that fits an existing context stays in that service as vertical slices.
-- Business slices live under `Application/<Feature>/<Operation>/`. Handlers and
-  validators are assembly-scanned; do not register each one manually or add
-  MediatR.
-- Controllers bind commands/queries, dispatch, and map `Result` to HTTP. They do
-  not own business rules or persistence.
-- `Admin.SharedKernel` is framework-agnostic CQRS/Result infrastructure.
-  ASP.NET Core and EF helpers stay in their dedicated sibling packages.
-
-## Domain and error flow
-
-- Aggregate roots inherit the service-local `BaseEntity`; tenant-owned roots
-  inherit `TenantOwnedEntity`. Audit and tenant fields have no public setters.
-- Entities enforce permanent invariants through private construction and
-  behavior methods returning `DomainResult`. Validate all new values before
-  mutating state so a failure cannot leave a partial update.
-- FluentValidation checks command shape only. Validators are synchronous and
-  never inject repositories or query the database.
-- Existence, uniqueness, in-use, and other current-state checks belong in the
-  handler and return `Result.Failure`.
-- A recognized database conflict becomes `PersistenceResult.Failure` at the
-  infrastructure boundary and is mapped explicitly by Application.
-- Exceptions are reserved for unexpected technical failure, programming
-  violations, rollback/resource cleanup, or technical-exception-to-result
-  conversion at an infrastructure boundary. Expected outcomes never throw.
+- Services are context-aggregated. A feature stays in the owning service unless
+  evidence justifies a new context.
+- Business operations are vertical slices under
+  `Application/<Feature>/<Operation>/`; handlers and validators are
+  assembly-scanned. Do not add MediatR or per-handler registrations.
+- Controllers bind, dispatch, and map `Result` to HTTP. They contain no business
+  rules or persistence logic.
+- Domain factories/mutations enforce permanent invariants and return
+  `DomainResult` before changing state.
+- FluentValidation checks synchronous request shape only. Repositories and
+  database queries do not belong in validators.
+- Existence, uniqueness pre-checks, in-use state, and cross-aggregate decisions
+  belong in handlers. Race-safe integrity belongs in database constraints and
+  explicit `PersistenceResult` mapping.
+- Expected outcomes never throw. Exceptions are limited to unexpected technical
+  failure, programming violations, cleanup/rollback, and narrow
+  technical-exception-to-result boundaries.
 
 ## Tenant isolation and persistence
 
-- Resource APIs use `Admin.Identity.Client` and `TenantHeaderFilter`. The
-  `X-Tenant-Id` header is verified against the authenticated claim; client input
-  alone is never trusted. `[IgnoreTenant]` requires a genuinely tenant-free,
-  reviewed endpoint.
-- Repositories do not accept arbitrary tenant ids. EF query filters read the
-  live `DbContext.CurrentTenantId`; do not capture a tenant constant while the
-  model is built and do not add hand-written tenant filters per entity.
+- Resource APIs use `Admin.Identity.Client` and `TenantHeaderFilter`.
+  `X-Tenant-Id` must match the authenticated claim; `[IgnoreTenant]` requires a
+  reviewed, genuinely tenant-free endpoint.
+- Repositories do not accept arbitrary tenant ids. EF filters read the live
+  `DbContext.CurrentTenantId`; never capture a tenant constant during model
+  construction or duplicate tenant filters per query.
 - The save interceptor assigns the current tenant to new `ITenantOwned`
-  entities and fails closed if no valid tenant exists. Handlers do not assign
+  entities and fails closed without valid tenant context. Handlers never assign
   `TenantId`.
-- Apply shared auditable conventions once in `OnModelCreating`. Uniqueness and
-  relationships involving tenant-owned data include the tenant boundary.
 - Each service owns its schema, migrations history, database role, and writes.
-  Services never share tables or write another service's schema.
-- A migration uses `.agents/skills/agenza-migration-safety`; never edit an
-  applied migration or silently destroy/transform existing data.
+  Tenant-aware uniqueness and relationships include the tenant boundary.
+- Never edit an applied migration; use the migration-safety skill for every
+  schema change.
 
-## Testing and packages
+## Tests and packages
 
-- Unit tests use xUnit, AwesomeAssertions, and NSubstitute, asserting returned
-  `Result` behavior at Domain/Application boundaries.
-- Inspect the current `*PersistenceTests` projects before assessing tenant EF
-  coverage. Add or extend the narrow persistence tier when a change affects
-  assignment, filters, tenant indexes, or tenant-aware relationships.
-- Do not restore broad Testcontainers/`WebApplicationFactory` suites without an
-  ADR supported by concrete failure evidence. Runtime OIDC/contract smokes
-  remain a separate CI boundary.
+- Unit tests use xUnit, AwesomeAssertions, and NSubstitute around
+  Domain/Application boundaries.
+- Changes to EF tenant assignment, filters, tenant indexes, or relationships
+  require the narrow persistence-test tier present in the current solution.
+- Do not recreate broad integration suites without an ADR backed by concrete
+  failure evidence. Runtime contract/OIDC smoke remains a separate CI boundary.
 - Package versions are centralized in `backend/Directory.Packages.props`.
-  Project files use versionless `PackageReference` entries.
-- Comments default to zero. Keep one only for a non-obvious security default,
-  concurrency/transaction constraint, provider quirk, or unavoidable
-  suppression. Rationale belongs in an ADR.
 
 ## Required gates
 
@@ -100,4 +80,4 @@ dotnet build backend/AdminBackend.slnx
 dotnet test backend/AdminBackend.slnx
 ```
 
-Also run the repo-wide governance commands from [../AGENTS.md](../AGENTS.md).
+Also run the repository governance commands from the root instructions.

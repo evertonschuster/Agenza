@@ -27,9 +27,8 @@ superseded is historical evidence, not current implementation guidance.
 | 0023 | 0026 | Dedicated runtime-test project |
 | 0030 local-hook portion | 0031 | Repository-owned local Git hooks |
 
-ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, and 0030
-contain explicitly marked historical passages. Their status header and the
-newer ADR named there win over the historical body.
+When an ADR status names a newer decision, the newer ADR wins. Current code,
+tests, migrations, and runtime configuration remain the executable truth.
 
 ## Complete register
 

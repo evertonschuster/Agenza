@@ -1,98 +1,46 @@
 ---
 name: agenza-architecture-review
 description: >
-  Use for a general architecture audit of this monorepo — on request,
-  periodically, or before a release. Trigger on "architecture review",
-  "audit the codebase", "is our architecture sound?", or when asked to
-  check consistency across the monorepo, Clean Architecture layering,
-  vertical slices, multi-tenancy, the Result pattern, testing, migrations,
-  documentation, CI, or dependencies. Review-only by default — implements
-  and validates fixes only when the task explicitly asks for
-  implementation, not just a report.
+  Use for a repository architecture audit covering boundaries, dependency
+  direction, multi-tenancy, Result flow, persistence, contracts, tests, CI, and
+  documentation. Review-only unless implementation is explicitly requested.
 ---
 
-# Architecture Review
+# Architecture review
 
-## Scope
+Load the root instructions, affected area instructions, current layout/config,
+and only the ADR indexes relevant to observed concerns.
 
-Check, across whichever of these areas are in scope for the request:
+## Evidence order
 
-- **Monorepo structure**: does `docs/MONOREPO.md` still match reality?
-  New app/service not listed, a stale entry for something removed?
-- **Clean Architecture / layering**: any dependency pointing outward
-  (Domain referencing Application/Infrastructure, `domain/`/`application/`
-  in the frontend importing React or `infrastructure/`/`presentation/`)?
-- **Vertical slices / feature organization**: backend `Application/<Feature>/<Operation>/`
-  shape followed? Frontend feature folders self-contained, no cross-feature
-  imports?
-- **Multi-tenancy**: delegate the deep pass to
-  `.agents/skills/agenza-tenant-isolation-review` rather than duplicating it
-  here — this review only checks that tenant scoping is *present* where
-  expected, not the full mechanism.
-- **Exceptions / Result pattern**: delegate the deep pass to
-  `.agents/skills/agenza-exception-flow-audit`.
-- **Domain model**: anemic entities (public setters, no invariant
-  enforcement), missing `DomainResult` usage, entities bypassing
-  `BaseEntity`/`TenantOwnedEntity` without a documented reason.
-- **Persistence**: query filters applied by hand instead of via
-  `ApplyAuditableConventions`, missing indexes for a new uniqueness rule,
-  a migration issue — delegate depth to
-  `.agents/skills/agenza-migration-safety`.
-- **Contracts**: delegate to `.agents/skills/agenza-api-contract-review`.
-- **Frontend**: layering (see above), `any` usage, design-system drift
-  (raw palette classes instead of semantic tokens), reusable-component
-  discipline (`.agents/skills/agenza-frontend-feature`).
-- **Accessibility**: keyboard operability, accessible names, contrast —
-  sample a few recently-changed pages rather than the whole app unless
-  asked for a full sweep.
-- **Tests**: coverage gate status, mock-strategy-per-layer discipline
-  (frontend), narrow persistence/runtime boundaries matching the current ADR
-  index instead of treating historical ADR 0015 as the final state.
-- **Migrations**: `.agents/skills/agenza-migration-safety`.
-- **Documentation**: `AGENTS.md`, import-only `CLAUDE.md`, and the Copilot
-  bridge still accurate and in sync (`scripts/check_agent_governance.py` covers the mechanical half of
-  this), STATUS.md rows matching what's actually built, ADRs referenced
-  by number actually existing.
-- **CI**: workflows still matching the commands documented in
-  `docs/QUALITY.md`, coverage gates not silently loosened.
-- **Dependencies**: compare executable pins (`packageManager`, lockfiles,
-  `backend/global.json`, `backend/Directory.Packages.props`, `.python-version`,
-  CI actions) with `docs/adr/0032` before recommending a routine bump.
+1. code, project/package graphs, config, migrations, generated contracts;
+2. tests, guards, and workflows;
+3. living status/API/layout docs;
+4. accepted ADRs;
+5. historical ADR content only when explaining how drift occurred.
 
-## Mode: review-only (default)
+## Review dimensions
 
-Produce a diagnosis, not a diff. For each finding:
+- Monorepo/app/service ownership matches `docs/MONOREPO.md` and `docs/VISION.md`.
+- Dependencies point inward and cross-service calls use explicit contracts.
+- Features are cohesive vertical slices without speculative shared abstractions.
+- Expected failures use the established Result boundary; exceptions remain
+  technical.
+- Tenant identity is authenticated, propagated atomically, filtered in
+  persistence, and included in indexes/relationships/caches where required.
+- Migrations, database roles, schemas, and bootstrap behavior preserve service
+  ownership and data safety.
+- Frontend generated contracts, runtime decoders, and backend OpenAPI agree.
+- Tests verify the boundary that matters; gates run in CI and are not weakened.
+- Active docs describe current state without copying volatile inventories or
+  superseded rules.
+- Dependencies and runtime pins have one owner and no unnecessary parallel
+  tooling path.
 
-- **File/location**
-- **What's wrong** (one sentence)
-- **Why it matters** (tie back to a rule in `AGENTS.md`, an ADR, or a
-  skill — don't invent a new rule mid-review; if there's genuinely no
-  existing rule this violates, that's a finding for
-  `.agents/skills/agenza-rule-persistence` to formalize, not a silent
-  judgment call)
-- **Severity**: blocks tenant isolation / security > breaks a build gate
-  > architectural drift > style nit
-- **Suggested fix** (one sentence — enough to hand to the relevant build
-  skill, not a full patch)
+## Report
 
-Do not edit code in this mode, even for an "obvious" one-line fix.
-
-## Mode: implement (only when explicitly requested)
-
-1. **Diagnose** using the review above.
-2. **Fix**, using the matching build skill for the area
-   (`agenza-backend-use-case`, `agenza-frontend-feature`,
-   `agenza-migration-safety`) rather than ad hoc edits.
-3. **Validate**: run the commands in the relevant `AGENTS.md`
-   ("Mandatory commands") plus `scripts/architecture_guard.py`.
-4. **Report evidence**: paste the actual command output (or a faithful
-   summary of it) showing the gate now passes — not just "should be
-   fixed now."
-
-## Non-goals
-
-- Don't rewrite working code to a "nicer" pattern with no rule behind it —
-  see the repo-wide anti-speculation rule in root `AGENTS.md`.
-- Don't silently widen an allowlist, delete a test, or lower a coverage
-  gate to make a finding go away — that's the exact anti-pattern this
-  governance framework exists to prevent (see `docs/AGENT-GOVERNANCE.md`).
+Lead with blocking security/data-loss findings, then high/medium/low items. For
+each: evidence, violated boundary, impact, smallest correction, and verification
+criterion. Separate confirmed defects from risks and optional improvements.
+When implementation is requested, apply only evidence-backed fixes and run all
+applicable gates.

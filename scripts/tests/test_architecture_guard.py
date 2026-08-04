@@ -310,6 +310,29 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
+    # -- frontend environment boundary ---------------------------------------
+
+    def test_direct_frontend_environment_access_is_blocking(self) -> None:
+        self._write(
+            "apps/admin-frontend/src/features/auth/infrastructure/createUserManager.ts",
+            "const authority = import.meta.env.VITE_OIDC_AUTHORITY\n",
+        )
+
+        findings = ag.check_frontend_environment_boundary()
+
+        self.assertEqual(len(findings), 1)
+        self.assertEqual(findings[0].severity, "blocking")
+
+    def test_frontend_environment_owner_is_clean(self) -> None:
+        self._write(
+            "apps/admin-frontend/src/app/config/environment.ts",
+            "export const environment = import.meta.env\n",
+        )
+
+        findings = ag.check_frontend_environment_boundary()
+
+        self.assertEqual(findings, [])
+
     # -- cross-feature internal imports (ADR 009) ---------------------------
 
     def test_cross_feature_internal_import_is_blocking(self) -> None:

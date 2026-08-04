@@ -1,66 +1,49 @@
-# Platform vision — target architecture
+# Platform vision
 
-Where this monorepo is heading. Agents: treat this as the map when
-deciding *where* new code belongs; treat `MONOREPO.md` as the map of
-what exists *today*.
+This document guides ownership decisions; it is not an implementation backlog.
+`MONOREPO.md` and app `STATUS.md` files describe what exists now. Never scaffold
+a planned component without an explicit product task.
 
-## Frontends — always React (`apps/*`)
+## Product surfaces
 
-| App              | Status  | Purpose                                                        |
-| ---------------- | ------- | -------------------------------------------------------------- |
-| `admin-frontend` | active  | Admin panel for business owners (Clean Architecture, strict TS) |
-| `user-app`       | planned | Lightweight end-user app (booking, messages) — simpler than admin: fewer layers are acceptable, but tenant scoping and strict TS still apply |
-| `company-site`   | planned | Company marketing site — mostly static, SEO-focused             |
+| Surface | State | Direction |
+| --- | --- | --- |
+| `admin-frontend` | active | Admin UI for tenant business owners/staff |
+| end-user booking/messaging app | planned | Lightweight React client when product rules exist |
+| company marketing site | planned | Static/SEO-focused site when needed |
 
-All React + TypeScript, npm workspaces. New apps copy `admin-frontend`'s
-tooling (Vite, Vitest, ESLint boundaries) unless an ADR says otherwise.
-`packages/shared-types` held shared DTO/contract types at one point but was
-removed as unused while `admin-frontend` is the only Node app in the
-workspace — recreate it once `user-app` or `company-site` actually exist and
-need to share contracts with `admin-frontend`, rather than before.
+React applications use strict TypeScript. Tooling may be shared only after a
+second real consumer exists; do not create speculative shared packages.
 
-## Backend — context-aggregated .NET services (`backend/services/*`)
+## Backend contexts
 
-Not fine-grained microservices (ADR 0001): each service is a small,
-explicit-purpose monolith owning one business context end-to-end —
-its own domain model, its own schema, its own API.
+Agenza uses context-aggregated .NET services rather than one service per entity.
+Each context owns its domain, API, schema, and writes.
 
-| Service            | Status   | Context it owns                                              |
-| ------------------ | -------- | ------------------------------------------------------------ |
-| `identity-service` | active   | Authentication (OIDC/OpenIddict), tenants, users, M2M tokens |
-| `services-service` | active   | The business's offerings context: Tags, Categories, and Services; appointments and clients belong here unless evidence justifies another context |
-| `notification-service` | planned | Email/SMS/push — one place for templates, delivery, retries |
+| Context/service | State | Ownership |
+| --- | --- | --- |
+| `identity-service` | active | OIDC/OpenIddict, tenants, users, internal clients |
+| `services-service` | active | Business offerings/catalog; nearby scheduling/client capabilities stay here unless evidence justifies a split |
+| notification delivery | planned | Templates, delivery, retries for email/SMS/push when required |
 
-Cross-service communication: HTTP with M2M JWTs from identity-service
-today; async events later if/when a real need appears. Never shared
-tables, never in-process calls across services.
+Services communicate through explicit HTTP contracts today. Async events are
+introduced only for a demonstrated decoupling or reliability requirement.
 
-## AI services — Python/FastAPI (`ai-services/*`)
+## AI boundary
 
-| Service             | Status | Purpose                                                  |
-| ------------------- | ------ | --------------------------------------------------------- |
-| `assistant-service` | active (skeleton) | Chatbot/receptionist AI; validates identity-service JWTs via JWKS |
-| analytics           | planned | Analysis/reporting over business data                     |
+`assistant-service` is an active security/runtime skeleton, not an implemented
+AI receptionist. It validates identity and tenant context so future model,
+conversation, or tool behavior starts behind the correct boundary. Provider,
+model, memory, orchestration, and prompt architecture remain undecided until a
+concrete AI use case and evaluation criteria exist.
 
-Python services are consumers of the same identity: inbound tokens
-validated against identity-service's JWKS, outbound M2M via client
-credentials. They never touch another service's database.
+AI services consume explicit APIs and tokens; they never read another service's
+database. Tenant-owned delegation remains bound to the caller or to an explicit
+tenant-scoped job identity.
 
-## How we build (SDD — spec/agent-driven development)
+## Delivery principles
 
-The repo is optimized for AI-assisted delivery — the developer-facing
-walkthrough with worked example prompts is [SDD-GUIDE.md](SDD-GUIDE.md):
-
-1. **Instructions are layered**: root `AGENTS.md` → per-area `AGENTS.md`
-   (frontend, backend) → canonical `.agents/skills/` workflows → routed `docs/` references
-   (STATUS, DOMAIN, API, ADRs). An agent reads the layer it needs; specs
-   live in docs, not in chat history.
-2. **State is machine-readable**: `STATUS.md` files say what's done,
-   stubbed, and blocked, in dependency order. Update them as part of the
-   change, not after.
-3. **Quality is enforced, not requested**: CI gates (80% coverage, lint,
-   typecheck, CodeQL, Sonar) mean an agent's "done" is verifiable —
-   see `docs/QUALITY.md`.
-4. **Decisions are recorded**: anything a future agent might re-litigate
-   gets an ADR (`docs/adr/` for cross-cutting,
-   `apps/admin-frontend/docs/adr/` for frontend-local).
+- Implement one complete vertical at a time.
+- Prefer current code/config/contracts over planned diagrams.
+- Record durable decisions in ADRs and current progress in living status docs.
+- Use automated gates as independent evidence, not an agent's completion claim.

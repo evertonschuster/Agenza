@@ -1,69 +1,64 @@
 # AI agent governance
 
-The repository keeps one portable instruction source per responsibility and
-uses progressive disclosure so tools load task-specific workflows only when
-needed.
+The repository uses progressive disclosure: one durable instruction source per
+scope and one portable workflow per repeatable task.
 
-## Instruction stack
+## Canonical stack
 
 ```text
-AGENTS.md                           durable repo-wide rules and routing
-├── backend/AGENTS.md               backend-only rules
-├── apps/admin-frontend/AGENTS.md   frontend-only rules
-├── .agents/skills/*                portable task workflows and references
-├── docs/adr/README.md              accepted/superseded decision routing
-└── living docs, config, code       current state and executable truth
+AGENTS.md                           repository rules and context routing
+├── backend/AGENTS.md               backend-only constraints
+├── apps/admin-frontend/AGENTS.md   frontend-only constraints
+├── .agents/skills/*                task workflows and optional references
+├── */docs/STATUS.md, API.md        living state and integration policy
+├── */docs/adr/README.md            decision routing
+└── code, config, tests             executable truth
 
 .agents/skills/ --sync--> .claude/skills/
 ```
 
-Codex and GitHub Copilot consume `AGENTS.md` and `.agents/skills/`. Claude Code
-loads the same `AGENTS.md` files through import-only `CLAUDE.md` files and uses
-the synced `.claude/skills/` distribution. `.github/copilot-instructions.md` is
-a thin compatibility bridge, not another rule source.
+A normal task loads the root instructions, the nearest area instructions, one
+matching skill, and the live files involved. It does not preload the entire
+documentation tree.
 
 ## Ownership
 
-- `AGENTS.md`: durable constraints, routing, and completion gates. No versions,
-  test counts, feature inventories, or copied code.
-- `.agents/skills/`: one portable workflow per task class. Put conditional
-  detail in directly linked `references/` and prefer live code over templates.
-- `docs/STATUS.md`: current implementation progress for the owning app.
-- ADRs: rationale and history; indexes identify superseded decisions before an
-  agent opens them.
-- Code, config, generated contracts, and tests: executable truth.
+- `AGENTS.md`: durable constraints, precedence, routing, and completion gates.
+- `.agents/skills/`: reusable task workflows. Conditional detail may live in a
+  directly linked `references/` file. The approved project-specific catalogue
+  is enforced by `scripts/check_agent_governance.py`; adding a skill is a
+  governance change, not a convenient place for generic advice.
+- `STATUS.md`: current implementation progress.
+- ADRs: durable rationale and history; the index identifies current versus
+  superseded decisions.
+- Code, config, migrations, generated contracts, and tests: executable truth.
 
-Do not create `agent-skills/`, `prompts/`, `.claude/agents/`, repo-local
-`.skills/`, `.codex/skills/`, or standalone `.agent.md` instruction layers.
-Machine-local state such as `.claude/settings.local.json` stays ignored.
+Do not add parallel instruction trees such as `agent-skills/`, `prompts/`,
+`.claude/agents/`, `.skills/`, `.codex/skills/`, or standalone `.agent.md`
+files. Machine-local settings remain ignored.
 
-## Distribution and guards
+## Tool bridges
 
-Edit `.agents/skills/`, then run:
+- Claude reads import-only `CLAUDE.md` files and the generated
+  `.claude/skills/` distribution.
+- GitHub Copilot reads the thin `.github/copilot-instructions.md` bridge.
+- `.agents/skills/` is always the editable source.
+
+After a canonical skill change, run:
 
 ```bash
 python scripts/sync_agent_skills.py
 python scripts/sync_agent_skills.py --check
+python scripts/check_agent_governance.py
 ```
 
-`scripts/check_agent_governance.py` validates instruction entry points,
-portable skill frontmatter, the Copilot bridge, Claude imports, skill sync,
-references, commands, and forbidden legacy layers. `scripts/architecture_guard.py`
-checks mechanically recognizable application and documentation regressions.
-The agent-governance GitHub Actions workflow runs both guards and their tests.
+`scripts/architecture_guard.py` checks recognizable application/documentation
+regressions. The governance workflow runs these checks and their tests.
 
-## Changing a durable rule
+## Change policy
 
-Use `.agents/skills/agenza-rule-persistence`: fix the concrete instance,
-update the owning `AGENTS.md` and skill, amend or add an ADR when architectural,
-add a regression test and guard where mechanical enforcement is possible,
-confirm CI executes them, and remove obsolete teaching everywhere.
-
-## Adding a skill
-
-1. Confirm the workflow is reusable rather than a one-off prompt.
-2. Add `.agents/skills/<name>/SKILL.md` with portable `name` and `description`
-   frontmatter only.
-3. Keep the body concise and route conditional detail to one-level references.
-4. Validate the skill, sync Claude's distribution, run governance tests, and
-   update routing only where another agent genuinely needs to discover it.
+Persist only reusable rules. Update the smallest applicable `AGENTS.md` or
+skill, fix the concrete code/documentation, add an ADR only for a durable
+architectural choice, and add a regression test/guard when the rule is
+mechanically verifiable. Remove superseded teaching instead of preserving it in
+an active instruction layer.

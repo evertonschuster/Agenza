@@ -1,89 +1,44 @@
 ---
 name: agenza-migration-safety
 description: >
-  Use for any EF Core migration or schema change under backend/ — new
-  migration, column/constraint change, index change, or data backfill.
-  Trigger on "add a migration", "change the schema", "add a column",
-  "add an index/constraint", or when reviewing a PR that includes a
-  `Migrations/` file. Prevents silent data loss, unsafe concurrent
-  execution, and edits to migrations already applied outside local dev.
+  Use for every EF Core migration or schema change. Prevents edits to applied
+  migrations, silent data loss, invalid existing rows, unsafe concurrency, and
+  missing rollback/verification.
 ---
 
-# Migration Safety
+# Migration safety
 
-## Before writing a migration
+## Before generation
 
-1. **Read the model change against real data.** What rows exist today
-   that the new schema must still accommodate? A new `NOT NULL` column
-   needs either a default or an explicit backfill step for existing rows;
-   a narrowed column type/length needs a check that no existing value
-   would be truncated.
-2. **Check for a destructive operation.** Dropping a column/table,
-   narrowing a type, adding a `NOT NULL` without a default, or removing a
-   constraint that currently prevents bad data — every one of these can
-   destroy data or silently change its meaning. None of these are
-   forbidden outright, but every one needs the analysis in this skill
-   before it ships, not after.
-3. **Never edit a migration that has already been applied** outside of
-   local, uncommitted dev iteration. Once a migration has shipped (merged
-   to `main`, or plausibly already applied to any shared/deployed
-   database), a schema fix is a **new** migration, never an edit to the
-   old file. ADR 0028 records the one pre-deployment history reset; after
-   its `InitialCreate` baselines, another squash is prohibited once either
-   baseline has been applied anywhere that matters.
+- Identify existing rows affected by new nullability, defaults, ranges,
+  uniqueness, foreign keys, renames, type/length changes, or deletions.
+- Decide whether backfill, staged deployment, duplicate cleanup, or explicit
+  operator action is required.
+- Never edit a migration that may have been applied outside disposable local
+  development. Add a new migration.
+- Confirm service schema, migrations-history table, database role, and tenant
+  ownership remain correct.
 
-## Required for any migration that touches existing data
+## Review generated migration
 
-- **Analysis of existing data**: what rows exist, what the change does to
-  them, whether any row could violate the new schema (a duplicate that
-  would violate a new unique index, a null that would violate a new
-  `NOT NULL`).
-- **Validation**: `dotnet ef migrations add <Name>` reviewed by hand — the
-  generated `Up`/`Down` should not include anything the description above
-  didn't call for (an unexpected `DropColumn`, an unexpected
-  `RENAME`-as-`DROP`-then-`ADD` that EF sometimes generates for a rename
-  it can't detect as one).
-- **Tests**: this repo has no representative-data migration test tier
-  (docs/adr/0015). The Aspire API-contract job proves that the current
-  migration chain applies to an empty PostgreSQL database, but it does not
-  prove a transition's effect on existing data. State that distinction
-  explicitly; if the change is destructive or high-risk, recommend (or
-  perform, if tooling allows) a dry run against a copy of representative
-  data.
-- **Operational documentation**: note in the PR/commit or `docs/MONOREPO.md`'s
-  "Known gaps" section anything an operator needs to know before applying
-  this in a non-local environment (e.g. the existing note there about
-  `DatabaseBootstrap:RunOnStartup` and concurrent replicas — a new migration
-  doesn't change that mechanism, but a schema change that's unsafe to
-  apply concurrently with multiple running replicas needs the same kind
-  of callout).
-- **Ask the responsible party when real data-loss risk exists.** This is
-  one of the explicit question-policy triggers in root `AGENTS.md`
-  ("modifies data already in a production migration" / genuine risk of
-  data loss) — don't silently choose a lossy migration path because it's
-  simpler to write.
+- Inspect `Up` and `Down`; EF may encode a rename as destructive drop/add.
+- Reject unexpected drops, truncation, defaulting, cascade behavior, or
+  constraint changes.
+- Tenant-owned uniqueness/relationships must include the tenant boundary.
+- Document locking/concurrency impact and whether the current bootstrap model
+  can apply it safely.
 
-## Prohibited
+## Verification
 
-- Silent truncation (narrowing a column without checking existing values
-  fit).
-- Silent removal of data (dropping a column/table/row without calling out
-  what's lost).
-- A destructive change with no verification step at all — at minimum, the
-  analysis above, even without automated integration tests.
-- Concurrent-unsafe execution assumed away — if the deployment model could
-  run migrations from more than one replica at once (see
-  `docs/MONOREPO.md`'s "Known gaps"), say so and flag the risk rather than
-  assuming today's single-container setup forever.
-- Editing a historical, already-applied migration file instead of adding
-  a new one.
-- Changing a constraint (uniqueness, FK, `NOT NULL`) with no test or
-  manual verification that existing data satisfies it.
-- Shipping a schema change with no rollback/recovery path at all — even a
-  documented manual one ("re-run migration N-1, restore column from
-  backup") is better than none.
+- Build and test the affected solution.
+- Apply the full chain to a clean PostgreSQL database through the current
+  contract/runtime gate.
+- For existing-data risk, dry-run against representative data or provide an
+  explicit validation query and recovery plan. A clean-database test is not
+  proof of transition safety.
+- State data impact, operational ordering, rollback/recovery, and any required
+  backup.
 
-## Output when reviewing (not authoring) a migration
-
-`change | destructive? | existing-data impact | concurrency-safe? |
-rollback path | verified how | open questions for the user (if any)`.
+Ask before choosing a lossy path or changing data represented by a production
+migration. Review output: `change | existing-data impact | destructive? |
+tenant-safe? | operational risk | rollback | verification`.
