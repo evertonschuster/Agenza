@@ -1,4 +1,4 @@
-import { useState, type JSX, type ReactNode } from 'react'
+import { type JSX, type ReactNode } from 'react'
 import {
   AlertDialog,
   AlertDialogAction,
@@ -12,6 +12,7 @@ import {
 import { StatusMessage } from '@/shared/presentation/components/feedback/StatusMessage'
 import type { Result } from '@/shared/application/Result'
 import type { AppError } from '@/shared/application/AppError'
+import { useDeleteConfirmation } from '../../hooks/useDeleteConfirmation'
 
 export interface DeleteConfirmationDialogProps {
   isOpen: boolean
@@ -19,8 +20,9 @@ export interface DeleteConfirmationDialogProps {
   entityType: string
   title?: string
   description?: ReactNode
-  onCancel: () => void
-  onConfirm: () => Promise<Result<void, AppError>>
+
+  onDelete: () => Promise<Result<void, AppError>>
+  onClose: () => void
 }
 
 export function DeleteConfirmationDialog({
@@ -29,12 +31,11 @@ export function DeleteConfirmationDialog({
   entityType,
   title,
   description,
-  onCancel,
-  onConfirm,
+  onDelete,
+  onClose,
 }: DeleteConfirmationDialogProps): JSX.Element {
 
-  const [isProcessing, setIsProcessing] = useState(false)
-  const [error] = useState<string | null>(null)
+  const { isDeleting, error, onCancel, onConfirm } = useDeleteConfirmation({ onDelete, onClose })
 
   const entityLabel = entityType.split(' ').pop() ?? entityType
   const defaultTitle = `Excluir ${entityLabel}`
@@ -44,41 +45,38 @@ export function DeleteConfirmationDialog({
     </>
   )
 
+  console.log('DeleteConfirmationDialog render', { isOpen, entityName, entityType, title, description, isDeleting, error })
+
   return (
     <AlertDialog
       open={isOpen}
-      onOpenChange={(open: boolean) => {
-        if (!open) onCancel()
-      }}
     >
       <AlertDialogContent>
         <AlertDialogHeader>
           <AlertDialogTitle>{title ?? defaultTitle}</AlertDialogTitle>
           <AlertDialogDescription>{description ?? defaultDescription}</AlertDialogDescription>
         </AlertDialogHeader>
-        {error !== null && <StatusMessage tone="error">{error}</StatusMessage>}
+
+        {/* //TODO: Cria componente de erro generico */}
+        {error !== null && <StatusMessage tone="error">{error.message}</StatusMessage>}
+
+
         <AlertDialogFooter>
-          <AlertDialogCancel disabled={isProcessing}>Cancelar</AlertDialogCancel>
+
+          <AlertDialogCancel
+            onClick={onCancel}
+            disabled={isDeleting}>
+            Cancelar
+          </AlertDialogCancel>
+
           <AlertDialogAction
             variant="destructive"
-            disabled={isProcessing}
-            onClick={(event: React.MouseEvent<HTMLButtonElement>) => {
-              event.preventDefault()
-              void (async () => {
-                setIsProcessing(true)
-                try {
-                 const result = await onConfirm()
-                 console.log('Deletion result:', result)
-                } catch (error) {
-                  console.error('Error during deletion:', error)
-                } finally {
-                  setIsProcessing(false)
-                }
-              })()
-            }}
+            disabled={isDeleting}
+            onClick={() => { void onConfirm() }}
           >
-            {isProcessing ? 'Excluindo…' : 'Excluir'}
+            {isDeleting ? 'Excluindo…' : 'Excluir'}
           </AlertDialogAction>
+
         </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>

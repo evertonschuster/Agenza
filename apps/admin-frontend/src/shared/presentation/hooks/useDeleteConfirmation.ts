@@ -1,60 +1,39 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
-import { toUiError } from '@/shared/application/UiError'
+import { useCallback, useState } from 'react'
 import type { UseDeleteConfirmationParams, UseDeleteConfirmationResult } from './useDeleteConfirmation.types'
 import type { AppError } from '@/shared/application/AppError'
 import type { Result } from '@/shared/application/Result'
 
-export function useDeleteConfirmation<T>({
+export function useDeleteConfirmation({
   onDelete,
-}: UseDeleteConfirmationParams<T>): UseDeleteConfirmationResult<T> {
-  const [target, setTarget] = useState<T | null>(null)
-  const [error, setError] = useState<string | null>(null)
+  onClose,
+}: UseDeleteConfirmationParams): UseDeleteConfirmationResult {
+  const [error, setError] = useState<AppError | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
-  const isMountedRef = useRef(true)
-  const generationRef = useRef(0)
-
-  useEffect(() => {
-    isMountedRef.current = true
-    return () => {
-      isMountedRef.current = false
-    }
-  }, [])
-
-  function onRequestDelete(item: T): void {
-    generationRef.current += 1
-    setTarget(item)
-    setError(null)
-  }
 
   function onCancel(): void {
-    generationRef.current += 1
-    setTarget(null)
     setError(null)
     setIsDeleting(false)
+    onClose()
   }
 
   const onConfirm = useCallback(async (): Promise<Result<void, AppError>> => {
-    if (target === null || isDeleting) {
-      return { success: false, error: new Error('No target selected') as AppError }
-    }
-    const generation = generationRef.current
-    const isStillWanted = (): boolean =>
-      isMountedRef.current && generation === generationRef.current
-
     setIsDeleting(true)
     setError(null)
-    const result = await onDelete(target)
-    if (result.success) {
-      if (isStillWanted()) {
-        setTarget(null)
+
+    try {
+      const result = await onDelete()
+      console.log('Deletion result:', result)
+      if (!result.success) {
+        setError(result.error)
+        return result;
       }
-    } else if (isStillWanted()) {
-      setError(toUiError(result.error).message)
-    }
-    if (isStillWanted()) {
+
+      onClose()
+      return result
+    } finally {
       setIsDeleting(false)
     }
-  }, [target, isDeleting, onDelete])
+  }, [onDelete, onClose])
 
-  return { target, error, isDeleting, onRequestDelete, onCancel, onConfirm }
+  return { error, isDeleting, onCancel, onConfirm }
 }
