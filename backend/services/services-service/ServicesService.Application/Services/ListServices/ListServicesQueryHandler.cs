@@ -26,9 +26,6 @@ public sealed class ListServicesQueryHandler : IQueryHandler<ListServicesQuery, 
             query.TagId,
             cancellationToken);
 
-        // Only the categories this page's services actually reference (at most
-        // pageSize distinct ids), not the tenant's entire Category catalog on
-        // every page (docs/adr/0012).
         var categoryIds = services
             .Select(service => service.CategoryId)
             .Where(categoryId => categoryId is not null)

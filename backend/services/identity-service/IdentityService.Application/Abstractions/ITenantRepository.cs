@@ -8,6 +8,6 @@ public interface ITenantRepository
 
     Task<bool> NameExistsAsync(string name, CancellationToken cancellationToken);
 
-    // Returns false instead of throwing when a concurrent request already committed the same tenant name (unique-index race, not caught elsewhere in this service - see docs/adr/0012).
+    // Returns false instead of throwing when a concurrent request already committed the same tenant name.
     Task<bool> AddAsync(Tenant tenant, CancellationToken cancellationToken);
 }

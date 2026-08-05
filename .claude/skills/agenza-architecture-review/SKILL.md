@@ -9,15 +9,14 @@ description: >
 # Architecture review
 
 Load the root instructions, affected area instructions, current layout/config,
-and only the ADR indexes relevant to observed concerns.
+and only the living documentation relevant to observed concerns.
 
 ## Evidence order
 
 1. code, project/package graphs, config, migrations, generated contracts;
 2. tests, guards, and workflows;
-3. living status/API/layout docs;
-4. accepted ADRs;
-5. historical ADR content only when explaining how drift occurred.
+3. living status, API, and layout documentation;
+4. scoped frontend ADRs only for frontend-specific rationale.
 
 ## Review dimensions
 

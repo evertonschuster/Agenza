@@ -7,7 +7,7 @@ namespace ServicesService.Application.Tags.CreateTag;
 public static class CreateTagCommandExtensions
 {
     // TenantId is intentionally Guid.Empty - AuditableEntitySaveChangesInterceptor
-    // assigns it on save (docs/adr/0008).
+    // assigns it on save.
     public static DomainResult<Tag> ToModel(this CreateTagCommand command)
     {
         var colorResult = TagColor.Create(command.Color);

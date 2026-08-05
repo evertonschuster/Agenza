@@ -99,7 +99,7 @@ public class ServicesDataContextTenantScopingTests
         }
 
         // Two DbContext instances of the SAME type, different tenants, opened
-        // back to back - the scenario docs/adr/0006 calls out: a naively
+        // back to back - the scenario the current architecture calls out: a naively
         // cached compiled query filter would leak tenant A's row into tenant
         // B's context if CurrentTenantId weren't re-read off the live instance.
         await using var contextForB = CreateContext(databaseName, tenantB);

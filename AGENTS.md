@@ -12,16 +12,15 @@ For a normal task, read only:
 3. one matching skill under `.agents/skills/`;
 4. the live code, tests, config, migrations, or generated contract involved.
 
-Open a living document or ADR only when the task needs it. Never preload all
-skills, all docs, or all ADRs.
+Open additional living documentation only when the task needs it. Never preload
+all skills or the full documentation tree.
 
 When sources disagree, use this order:
 
 1. security and tenant-isolation rules in the nearest `AGENTS.md`;
 2. executable truth: code, tests, config, migrations, generated contracts;
 3. living docs such as `STATUS.md`, `API.md`, and `MONOREPO.md`;
-4. accepted ADRs routed by the relevant ADR index;
-5. superseded ADRs and historical examples, which are context only.
+4. frontend ADRs only when a frontend task is explicitly routed to them.
 
 | Need | Read |
 | --- | --- |
@@ -30,7 +29,7 @@ When sources disagree, use this order:
 | Current layout | `docs/MONOREPO.md` |
 | Product direction | `docs/VISION.md` |
 | CI and coverage | `docs/QUALITY.md` |
-| Decisions | the relevant `docs/adr/README.md` index first |
+| Frontend decisions | `apps/admin-frontend/docs/adr/README.md` when relevant |
 | Agent workflow | `docs/SDD-GUIDE.md` |
 | Governance | `docs/AGENT-GOVERNANCE.md` |
 
@@ -50,7 +49,7 @@ Do not invent requirements. Complete independent work while an answer is open.
   Cross-service interaction uses explicit HTTP/event contracts, never internal
   project references, shared table writes, or in-process shortcuts.
 - **Aspire is the local orchestrator:** evolve `backend/AppHost/AppHost.cs`.
-  Do not add a parallel Compose/Dockerfile runtime without a deployment ADR.
+  Do not add a parallel Compose/Dockerfile runtime without an approved deployment design.
 - **Expected backend outcomes are values:** validation, not-found, conflict,
   in-use, and authorization use `Result`/`DomainResult`/`PersistenceResult`.
   Exceptions are for unexpected technical failures and narrow documented
@@ -69,7 +68,7 @@ Update the source that owns a fact:
 - feature progress: owning `STATUS.md`;
 - contract policy: generated contract plus owning `API.md` when needed;
 - current layout/runtime: config and `docs/MONOREPO.md`;
-- durable architectural rationale: an ADR;
+- durable frontend rationale: the frontend ADR index when needed;
 - reusable agent workflow: one canonical skill.
 
 Do not copy versions, file inventories, test counts, current feature status, or

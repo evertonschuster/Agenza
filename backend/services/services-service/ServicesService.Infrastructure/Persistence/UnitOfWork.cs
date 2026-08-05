@@ -56,7 +56,7 @@ public class UnitOfWork : IUnitOfWork
     // A race between two concurrent requests that both passed NameExistsAsync
     // before either committed surfaces here as a Postgres unique_violation -
     // the database is the final authority on case-insensitive uniqueness
-    // (docs/adr/0012), not the earlier application-level check alone.
+    //, not the earlier application-level check alone.
     private static bool IsUniqueViolation(DbUpdateException exception, out string? constraintName)
     {
         if (exception.InnerException is PostgresException { SqlState: UniqueViolationSqlState } postgresException)

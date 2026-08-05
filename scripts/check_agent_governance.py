@@ -11,8 +11,6 @@ governance *meta-files themselves* are present, consistent, and in sync:
 - GitHub Copilot has a thin bridge to the canonical instructions and skills.
 - Every canonical skill under .agents/skills/ has valid, portable frontmatter.
 - .claude/skills/ is byte-identical to .agents/skills/.
-- Every docs/adr/NNNN reference mentioned in a governance file resolves to
-  a real ADR file.
 - Every .agents/skills/<name> reference mentioned in a governance file
   resolves to a canonical skill.
 - Every scripts/*.py reference mentioned in a governance file exists.
@@ -87,7 +85,6 @@ GOVERNANCE_DOC_GLOBS = [
     "docs/AGENT-GOVERNANCE.md",
 ]
 
-ADR_REF_PATTERN = re.compile(r"docs/adr/(\d{4})")
 SKILL_REF_PATTERN = re.compile(r"\.agents/skills/([\w-]+)")
 SCRIPT_REF_PATTERN = re.compile(r"scripts/([\w-]+\.py)")
 NPM_RUN_PATTERN = re.compile(r"npm run ([\w:.-]+)")
@@ -125,7 +122,7 @@ STALE_TEACHING_PHRASES = {
         "inspect current unit, persistence, contract, and runtime-smoke coverage"
     ),
     "README.md`'s Versions table": (
-        "runtime pins and docs/adr/0032 are the executable version sources"
+        "runtime pins and live project files are the executable version sources"
     ),
 }
 
@@ -334,7 +331,7 @@ def check_no_legacy_instruction_layers() -> list[str]:
 
 
 def _governance_adjacent_files() -> list[Path]:
-    """Every file that might reasonably cite a docs/adr/NNNN or scripts/*.py
+    """Every file that might reasonably cite a scripts/*.py or skill
     reference: the fixed governance docs/CLAUDE.md files, plus every
     canonical skill - all of which are exactly the kind of governance-adjacent
     content that can go stale unnoticed if left out of this scan."""
@@ -409,27 +406,6 @@ def check_removed_product_terms_absent() -> list[str]:
                     problems.append(f"{_rel(path)} contains removed term {term!r} - {rule}")
     return problems
 
-
-def check_adr_references() -> list[str]:
-    problems = []
-    adr_dir = REPO_ROOT / "docs" / "adr"
-    existing_numbers = set()
-    if adr_dir.is_dir():
-        for path in adr_dir.glob("*.md"):
-            match = re.match(r"(\d{4})-", path.name)
-            if match:
-                existing_numbers.add(match.group(1))
-
-    for doc_path in _governance_adjacent_files():
-        if not doc_path.is_file():
-            continue
-        text = doc_path.read_text(encoding="utf-8")
-        for match in ADR_REF_PATTERN.finditer(text):
-            number = match.group(1)
-            if number not in existing_numbers:
-                problems.append(f"{_rel(doc_path)} references docs/adr/{number} which does not exist")
-
-    return problems
 
 
 def check_referenced_scripts_exist() -> list[str]:
@@ -520,7 +496,6 @@ CHECKS = [
     ("no legacy local instruction layers", check_no_legacy_instruction_layers),
     ("no known stale teaching patterns", check_no_known_stale_teaching),
     ("removed product terms absent", check_removed_product_terms_absent),
-    ("ADR references resolve", check_adr_references),
     ("referenced skills exist", check_referenced_skills_exist),
     ("referenced scripts exist", check_referenced_scripts_exist),
     ("documented npm commands exist", check_documented_npm_commands),

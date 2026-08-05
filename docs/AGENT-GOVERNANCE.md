@@ -11,7 +11,7 @@ AGENTS.md                           repository rules and context routing
 ├── apps/admin-frontend/AGENTS.md   frontend-only constraints
 ├── .agents/skills/*                task workflows and optional references
 ├── */docs/STATUS.md, API.md        living state and integration policy
-├── */docs/adr/README.md            decision routing
+├── apps/admin-frontend/docs/adr/README.md  frontend decision routing
 └── code, config, tests             executable truth
 
 .agents/skills/ --sync--> .claude/skills/
@@ -29,8 +29,7 @@ documentation tree.
   is enforced by `scripts/check_agent_governance.py`; adding a skill is a
   governance change, not a convenient place for generic advice.
 - `STATUS.md`: current implementation progress.
-- ADRs: durable rationale and history; the index identifies current versus
-  superseded decisions.
+- Frontend ADRs: scoped rationale for the admin frontend only.
 - Code, config, migrations, generated contracts, and tests: executable truth.
 
 Do not add parallel instruction trees such as `agent-skills/`, `prompts/`,
@@ -58,7 +57,7 @@ regressions. The governance workflow runs these checks and their tests.
 ## Change policy
 
 Persist only reusable rules. Update the smallest applicable `AGENTS.md` or
-skill, fix the concrete code/documentation, add an ADR only for a durable
-architectural choice, and add a regression test/guard when the rule is
+skill, fix the concrete code/documentation, add a frontend ADR only for a
+durable frontend choice, and add a regression test/guard when the rule is
 mechanically verifiable. Remove superseded teaching instead of preserving it in
 an active instruction layer.

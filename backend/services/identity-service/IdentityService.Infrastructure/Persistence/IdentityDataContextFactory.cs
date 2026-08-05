@@ -25,7 +25,7 @@ public class IdentityDataContextFactory : IDesignTimeDbContextFactory<IdentityDa
 
         var optionsBuilder = new DbContextOptionsBuilder<IdentityDataContext>();
         // Kept in sync with DependencyInjection.AddIdentityInfrastructure's runtime
-        // configuration (docs/adr/0017) - design-time tooling (`dotnet ef migrations
+        // configuration - design-time tooling (`dotnet ef migrations
         // list`/`database update`) must resolve migrations against the same
         // schema-scoped history table the running service uses.
         optionsBuilder.UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "identity"));

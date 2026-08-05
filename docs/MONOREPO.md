@@ -18,7 +18,7 @@ Agenza/
 │   └── assistant-service/     authenticated FastAPI boundary; no AI feature yet
 ├── infra/postgres/init/       local database roles and grants
 ├── scripts/                   governance, architecture, contract/runtime checks
-└── docs/                      cross-cutting living docs and ADR index
+└── docs/                      cross-cutting living documentation
 ```
 
 ## Canonical local runtime
@@ -91,6 +91,5 @@ Agenza currently has no production deployment design. Aspire is local
 orchestration and CI runtime-smoke infrastructure, not a production topology.
 Database bootstrap is suitable for the current single-instance demo; a future
 multi-replica deployment must move migration/seed execution to an explicit
-one-shot step. ADR 0028 reset pre-deployment migration histories, so old local
-volumes are intentionally disposable rather than supported by a data-upgrade
-path.
+one-shot step. The current pre-deployment migration history treats old local
+volumes as disposable rather than supporting a data-upgrade path.

@@ -15,7 +15,7 @@ public abstract class TenantOwnedEntity : BaseEntity, ITenantOwned
 
     // Throws rather than DomainResult: TenantHeaderFilter already rejects a
     // missing/mismatched tenant before this runs, so Guid.Empty here is only
-    // reachable via an internal bug, not user input (docs/adr/0014).
+    // reachable via an internal bug, not user input.
     public void AssignTenant(Guid tenantId)
     {
         if (tenantId == Guid.Empty)

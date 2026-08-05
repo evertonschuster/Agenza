@@ -253,9 +253,9 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
-    def test_adr_directory_is_skipped(self) -> None:
+    def test_frontend_adr_directory_is_skipped(self) -> None:
         self._write(
-            "docs/adr/0099-historical.md",
+            "apps/admin-frontend/docs/adr/099-historical.md",
             "\n".join(["```csharp", "throw new DuplicateEntityException();", "```", ""]),
         )
 
@@ -266,28 +266,13 @@ class ArchitectureGuardTests(unittest.TestCase):
     def test_prose_mentioning_banned_name_outside_code_fence_is_not_flagged(self) -> None:
         self._write(
             "some-skill/SKILL.md",
-            "Never write `DuplicateEntityException` - it was deleted by docs/adr/0014.\n",
+            "Never write `DuplicateEntityException`; use the current Result flow.\n",
         )
 
         findings = ag.check_stale_patterns_in_doc_code_blocks()
 
         self.assertEqual(findings, [])
 
-    # -- dangling ADR references (info only) -----------------------------------
-
-    def test_dangling_adr_reference_in_source_is_info_only(self) -> None:
-        self._write("docs/adr/0001-real.md", "# ADR\n")
-        self._write(
-            "backend/services/x/X.Application/Foo/FooHandler.cs",
-            "// see docs/adr/0099 for rationale\n",
-        )
-
-        findings = ag.check_dangling_adr_references()
-
-        self.assertEqual(len(findings), 1)
-        self.assertEqual(findings[0].severity, "info")
-
-    # -- frontend any ----------------------------------------------------------
 
     def test_frontend_any_is_blocking(self) -> None:
         self._write(
@@ -333,7 +318,7 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
-    # -- cross-feature internal imports (ADR 009) ---------------------------
+    # -- cross-feature internal imports (frontend architecture) ---------------------------
 
     def test_cross_feature_internal_import_is_blocking(self) -> None:
         self._write(
@@ -384,7 +369,7 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
-    # -- stale horizontal layout (ADR 009) -----------------------------------
+    # -- stale horizontal layout (frontend architecture) -----------------------------------
 
     def test_stale_domain_dir_is_blocking(self) -> None:
         self._write("apps/admin-frontend/src/domain/entities/Widget.ts", "export class Widget {}\n")
@@ -404,7 +389,7 @@ class ArchitectureGuardTests(unittest.TestCase):
 
         self.assertEqual(findings, [])
 
-    # -- stale OpenAPI generated-types path (ADR 009) --------------------------
+    # -- stale OpenAPI generated-types path (frontend architecture) --------------------------
 
     def test_stale_openapi_path_in_package_json_is_blocking(self) -> None:
         self._write(
@@ -460,7 +445,7 @@ class ArchitectureGuardTests(unittest.TestCase):
     def test_stale_openapi_path_in_prose_outside_code_fence_is_not_flagged(self) -> None:
         self._write(
             "docs/some-narrative.md",
-            "The old path was `src/infrastructure/generated/services-api.d.ts`, moved by ADR 009.\n",
+            "The old path was `src/infrastructure/generated/services-api.d.ts`, moved by the current frontend architecture.\n",
         )
 
         findings = ag.check_stale_openapi_generated_path()
@@ -469,7 +454,7 @@ class ArchitectureGuardTests(unittest.TestCase):
 
     def test_stale_openapi_path_in_adr_directory_is_skipped(self) -> None:
         self._write(
-            "docs/adr/0009-feature-based-modularization.md",
+            "apps/admin-frontend/docs/adr/009-feature-based-modularization.md",
             "\n".join(
                 [
                     "```typescript",

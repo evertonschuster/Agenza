@@ -34,7 +34,7 @@
     <PackageVersion Include="FluentValidation" Version="12.1.1" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.1.1" />
     <!-- Admin.SharedKernel / consumers - framework-agnostic DI + logging
-         abstractions, no ASP.NET Core coupling (docs/adr/0018) -->
+         abstractions, no ASP.NET Core coupling -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.10" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.10" />
     <!-- Testing (shared across every *.Tests project) -->
@@ -46,7 +46,7 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.16.17" />
     <PackageVersion Include="xunit" Version="2.9.3" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="3.1.5" />
-    <!-- ServicesService.PersistenceTests only (docs/adr/0019) - EF Core
+    <!-- ServicesService.PersistenceTests only - EF Core
          InMemory, no Postgres/Docker, deliberately outside the *.Tests
          Domain+Application-only boundary and its coverage gate -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.10" />

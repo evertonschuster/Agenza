@@ -356,27 +356,6 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertEqual(problems, [])
 
-    # -- ADR references ----------------------------------------------------
-
-    def test_dangling_adr_reference_is_reported(self) -> None:
-        self._write("AGENTS.md", "See docs/adr/0099 for details.\n")
-        self._write("docs/adr/0001-something.md", "# ADR\n")
-
-        with self._patch():
-            problems = cag.check_adr_references()
-
-        self.assertTrue(any("0099" in p for p in problems))
-
-    def test_valid_adr_reference_passes(self) -> None:
-        self._write("AGENTS.md", "See docs/adr/0001 for details.\n")
-        self._write("docs/adr/0001-something.md", "# ADR\n")
-
-        with self._patch():
-            problems = cag.check_adr_references()
-
-        self.assertEqual(problems, [])
-
-    # -- referenced skills -------------------------------------------------
 
     def test_missing_referenced_skill_is_reported(self) -> None:
         self._write("AGENTS.md", "Use .agents/skills/missing-skill for this task.\n")
@@ -424,18 +403,6 @@ class GovernanceCheckTests(unittest.TestCase):
 
         self.assertTrue(any("does_not_exist.py" in p for p in problems))
 
-    def test_missing_adr_reference_in_skill_is_reported(self) -> None:
-        self._write("docs/adr/0001-something.md", "# ADR\n")
-        self._write(
-            ".agents/skills/some-skill/SKILL.md",
-            "---\nname: some-skill\ndescription: test\n---\nSee docs/adr/0099.\n",
-        )
-
-        with self._patch():
-            problems = cag.check_adr_references()
-
-        self.assertTrue(any("0099" in p for p in problems))
-
     def test_present_referenced_script_passes(self) -> None:
         self._base_repo()
         self._write("AGENTS.md", "Run scripts/real_script.py before finishing.\n")
@@ -471,7 +438,6 @@ class GovernanceCheckTests(unittest.TestCase):
     def test_run_checks_clean_repo_has_no_problems(self) -> None:
         self._base_repo()
         self._write(".agents/skills/foo/SKILL.md", "---\nname: foo\ndescription: does things\n---\n")
-        self._write("docs/adr/0001-something.md", "# ADR\n")
         claude_target = self.root / ".claude" / "skills"
         sas.sync_target(self.root / ".agents" / "skills", claude_target)
 

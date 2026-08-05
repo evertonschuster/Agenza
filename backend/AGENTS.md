@@ -2,8 +2,8 @@
 
 Read [../AGENTS.md](../AGENTS.md) first. This file contains durable rules for
 `backend/`. Project membership and versions come from the solution, project
-files, and `Directory.Packages.props`; decision history is routed through
-[../docs/adr/README.md](../docs/adr/README.md).
+files, and `Directory.Packages.props`. Current code, tests, configuration, and
+living documentation are the source of truth.
 
 ## Load by task
 
@@ -17,7 +17,7 @@ files, and `Directory.Packages.props`; decision history is routed through
 | API contract drift | `../.agents/skills/agenza-api-contract-review` |
 | CI/coverage | `../docs/QUALITY.md` |
 
-Inspect the closest live slice and tests before opening historical ADR content.
+Inspect the closest live slice and tests before opening broader documentation.
 
 ## Architecture and flow
 
@@ -69,8 +69,8 @@ Tests            target the boundary they verify
   Domain/Application boundaries.
 - Changes to EF tenant assignment, filters, tenant indexes, or relationships
   require the narrow persistence-test tier present in the current solution.
-- Do not recreate broad integration suites without an ADR backed by concrete
-  failure evidence. Runtime contract/OIDC smoke remains a separate CI boundary.
+- Do not recreate broad integration suites without concrete failure evidence and
+  an approved test design. Runtime contract/OIDC smoke remains a separate CI boundary.
 - Package versions are centralized in `backend/Directory.Packages.props`.
 
 ## Required gates

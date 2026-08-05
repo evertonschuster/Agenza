@@ -35,7 +35,7 @@ public class CreateCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_DoesNotDependOnARepository()
     {
-        // No repository is constructor-injected (docs/adr/0012): existence and
+        // No repository is constructor-injected: existence and
         // duplicate-name checks are the handler's job now, not the validator's.
         var result = await _validator.ValidateAsync(new CreateCategoryCommand("Hair"));
 

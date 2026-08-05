@@ -7,7 +7,7 @@ namespace ServicesService.Application.Services;
 // Loads and validates a Service's Category/Tags exactly once per request,
 // returning the same instances CreateService/UpdateService then persist and
 // read the response from - avoids the duplicate existence-check-then-refetch
-// queries the validator/handler split used to produce (docs/adr/0012).
+// queries the validator/handler split used to produce.
 public sealed class ServiceRelationshipLoader
 {
     private readonly ICategoryRepository _categoryRepository;

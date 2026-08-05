@@ -14,7 +14,7 @@
     <!-- Only the Result -> IActionResult mapping and the generic exception
          handler live here - both need MVC/hosting types. Everything else
          (Result, Error, Cqrs, Dispatcher) stays framework-agnostic in
-         Admin.SharedKernel (docs/adr/0018). -->
+         Admin.SharedKernel. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

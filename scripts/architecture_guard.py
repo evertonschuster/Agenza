@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Conservative, regex-based guard against architecture patterns this
-codebase already tried and formally reverted (docs/adr/0012, docs/adr/0014)
-or explicitly decided against (docs/adr/0005, root AGENTS.md). This is not
+codebase explicitly prohibits through current instructions and executable
+architecture rules. This is not
 a general-purpose linter — it exists specifically to stop an agent (or a
 human) from silently reintroducing a bug that was already fixed once.
 
@@ -95,12 +95,12 @@ def _findings_for_pattern(
 
 
 # ---------------------------------------------------------------------------
-# Backend checks (docs/adr/0012, docs/adr/0014)
+# Backend architecture checks
 # ---------------------------------------------------------------------------
 
 def check_deleted_exception_types() -> list[Finding]:
-    """DuplicateEntityException and BusinessExceptionHandler were deleted by
-    docs/adr/0014 - a unique-constraint race now returns PersistenceResult,
+    """DuplicateEntityException and BusinessExceptionHandler are not part of the
+    current error flow - a unique-constraint race returns PersistenceResult,
     and GenericExceptionHandler is the only exception handler. Either name
     reappearing means the reverted pattern is coming back."""
     cs_files = _iter_files(REPO_ROOT / "backend", (".cs",))
@@ -110,33 +110,33 @@ def check_deleted_exception_types() -> list[Finding]:
         re.compile(r"\bDuplicateEntityException\b"),
         "deleted-exception-type",
         "blocking",
-        "DuplicateEntityException was deleted by docs/adr/0014 (PersistenceResult replaces it) - do not reintroduce it.",
+        "DuplicateEntityException is not part of the current error flow; use PersistenceResult.",
     )
     findings += _findings_for_pattern(
         cs_files,
         re.compile(r"\bBusinessExceptionHandler\b"),
         "deleted-exception-type",
         "blocking",
-        "BusinessExceptionHandler was deleted by docs/adr/0014 - GenericExceptionHandler is the only exception handler now.",
+        "BusinessExceptionHandler is not part of the current error flow; GenericExceptionHandler is the only exception handler.",
     )
     return findings
 
 
 def check_validate_and_throw() -> list[Finding]:
     """ValidateAndThrow() throws a ValidationException for what this repo
-    treats as an expected, Result-carrying outcome (docs/adr/0014)."""
+    treats as an expected, Result-carrying outcome."""
     cs_files = _iter_files(REPO_ROOT / "backend", (".cs",))
     return _findings_for_pattern(
         cs_files,
         re.compile(r"\bValidateAndThrow\s*\("),
         "validate-and-throw",
         "blocking",
-        "ValidateAndThrow() throws for a validation failure - this repo returns Result/DomainResult instead (docs/adr/0014).",
+        "ValidateAndThrow() throws for a validation failure; this repo returns Result/DomainResult instead.",
     )
 
 
 def check_validator_repository_dependency() -> list[Finding]:
-    """docs/adr/0012 reverted repository-dependent validators - a Validator
+    """Repository-dependent validators are prohibited: a Validator
     in this repo takes no repository/unit-of-work dependency and has no
     async rule. Constructor injection of a repository, or a MustAsync/
     CustomAsync rule, is the exact pattern that was reverted."""
@@ -164,7 +164,7 @@ def check_validator_repository_dependency() -> list[Finding]:
                         _rel(path),
                         line_number,
                         "Validator constructor takes a repository/IUnitOfWork dependency - "
-                        "docs/adr/0012 moved cross-aggregate checks to the handler; validators "
+                        "cross-aggregate checks belong in the handler; validators "
                         "here are shape-only and take no dependencies.",
                     )
                 )
@@ -178,7 +178,7 @@ def check_validator_repository_dependency() -> list[Finding]:
                         _rel(path),
                         line_number,
                         "MustAsync/CustomAsync in a validator - this repo's validators are "
-                        "synchronous shape checks only; a repository round-trip belongs in the handler (docs/adr/0012).",
+                        "synchronous shape checks only; a repository round-trip belongs in the handler.",
                     )
                 )
     return findings
@@ -186,8 +186,8 @@ def check_validator_repository_dependency() -> list[Finding]:
 
 def check_domain_entity_throws() -> list[Finding]:
     """Domain entities return DomainResult from Create/Update instead of
-    throwing for an invalid value (docs/adr/0014). A `throw new` inside
-    Domain/Entities/*.cs is the pre-ADR-0014 shape. Project folders are
+    throwing for an invalid value. A `throw new` inside
+    Domain/Entities/*.cs violates the current Result-based domain flow. Project folders are
     named "{Service}.Domain" (e.g. ServicesService.Domain), not literally
     "Domain" - matched by suffix, not by an exact path segment."""
     entity_files = [
@@ -201,13 +201,13 @@ def check_domain_entity_throws() -> list[Finding]:
         "domain-entity-throws",
         "blocking",
         "Domain entity throws instead of returning DomainResult - Create/Update must return "
-        "DomainResult/DomainResult<T> and let the handler map the failure (docs/adr/0014).",
+        "DomainResult/DomainResult<T> and let the handler map the failure.",
     )
 
 
 def check_dangling_null_forgiving_after_lookup() -> list[Finding]:
     """A null-forgiving `!` chained directly onto a GetByIdAsync(...) call
-    is the pre-ADR-0012 shape, which assumed a validator had already
+    assumes a validator has already
     guaranteed existence. Handlers here fetch and null-check themselves.
     Informational only - the heuristic can't tell a genuinely-impossible
     null (e.g. right after an Add() on the same aggregate) from a real risk."""
@@ -220,12 +220,12 @@ def check_dangling_null_forgiving_after_lookup() -> list[Finding]:
         "null-forgiving-after-lookup",
         "info",
         "Null-forgiving '!' directly on a GetByIdAsync(...) result - verify this handler null-checks "
-        "the lookup itself rather than assuming a validator already guaranteed existence (docs/adr/0012).",
+        "the lookup itself rather than assuming a validator already guaranteed existence.",
     )
 
 
 # ---------------------------------------------------------------------------
-# Security and operability fitness functions (docs/adr/0022-0030)
+# Security and operability fitness functions
 # ---------------------------------------------------------------------------
 
 def check_razor_post_antiforgery() -> list[Finding]:
@@ -301,7 +301,7 @@ def check_ai_tenant_boundaries() -> list[Finding]:
                 _rel(main_path),
                 text.count("\n", 0, match.start()) + 1,
                 f"Tenant-owned AI route '{route}' does not depend on require_tenant_context "
-                "(docs/adr/0022).",
+                "under the current tenant-boundary policy.",
             )
         )
 
@@ -393,7 +393,7 @@ def check_aspire_local_orchestration() -> list[Finding]:
                 _rel(path),
                 1,
                 "Application Docker/Compose orchestration conflicts with the "
-                "Aspire-only local runtime decision (docs/adr/0029).",
+                "current Aspire-only local runtime policy.",
             )
         )
 
@@ -543,7 +543,7 @@ def check_local_git_hooks_absent() -> list[Finding]:
                     "blocking",
                     _rel(path),
                     1,
-                    "ADR 0031 removes repository-owned Git hooks and lint-staged "
+                    "Current repository policy excludes repository-owned Git hooks and lint-staged "
                     "configuration; run quality commands explicitly and in CI.",
                 )
             )
@@ -566,7 +566,7 @@ def check_local_git_hooks_absent() -> list[Finding]:
                 "blocking",
                 _rel(package_path),
                 1,
-                "ADR 0031 removes Husky and lint-staged from repository "
+                "Current repository policy excludes Husky and lint-staged from repository "
                 "dependencies.",
             )
         )
@@ -577,7 +577,7 @@ def check_local_git_hooks_absent() -> list[Finding]:
                 "blocking",
                 _rel(package_path),
                 1,
-                "ADR 0031 removes the Husky installation script.",
+                "Current repository policy excludes the Husky installation script.",
             )
         )
 
@@ -666,8 +666,8 @@ def check_dotnet_project_reference_boundaries() -> list[Finding]:
 
 
 def check_dedicated_runtime_test_tier_absent() -> list[Finding]:
-    """ADR 0026 removed the Testcontainers/WebApplicationFactory tier.
-    Reintroducing it requires an explicit architecture decision."""
+    """The current test strategy excludes a Testcontainers/WebApplicationFactory tier.
+    Reintroducing it requires concrete failure evidence and an approved design."""
     findings: list[Finding] = []
     backend_root = REPO_ROOT / "backend"
 
@@ -680,8 +680,8 @@ def check_dedicated_runtime_test_tier_absent() -> list[Finding]:
                 "blocking",
                 _rel(project),
                 1,
-                "A RuntimeTests project reintroduces the tier removed by docs/adr/0026; "
-                "record concrete failure evidence and a new ADR before restoring it.",
+                "A RuntimeTests project conflicts with the current test strategy; "
+                "record concrete failure evidence and approve the design before restoring it.",
             )
         )
 
@@ -698,8 +698,7 @@ def check_dedicated_runtime_test_tier_absent() -> list[Finding]:
                         "blocking",
                         _rel(solution),
                         line_number,
-                        "AdminBackend.slnx references a RuntimeTests project removed by "
-                        "docs/adr/0026.",
+                        "AdminBackend.slnx references a RuntimeTests project excluded by the current test strategy.",
                     )
                 )
 
@@ -722,8 +721,7 @@ def check_dedicated_runtime_test_tier_absent() -> list[Finding]:
                         "blocking",
                         _rel(packages),
                         line_number,
-                        f"{package} belongs to the runtime-test tier removed by "
-                        "docs/adr/0026.",
+                        f"{package} belongs to a runtime-test tier excluded by the current test strategy.",
                     )
                 )
 
@@ -781,8 +779,7 @@ def check_database_bootstrap_defaults() -> list[Finding]:
                     "blocking",
                     _rel(path),
                     1,
-                    "Base configuration must set DatabaseBootstrap:RunOnStartup to false "
-                    "(docs/adr/0025).",
+                    "Base configuration must set DatabaseBootstrap:RunOnStartup to false.",
                 )
             )
 
@@ -790,15 +787,15 @@ def check_database_bootstrap_defaults() -> list[Finding]:
 
 
 def check_bootstrap_advisory_lock_absent() -> list[Finding]:
-    """ADR 0027 keeps the demo bootstrap single-instance and rejects a
-    speculative distributed lock until a deployment driver exists."""
+    """The demo bootstrap remains single-instance and rejects a speculative
+    distributed lock until a deployment driver exists."""
     cs_files = _iter_files(REPO_ROOT / "backend", (".cs",))
     return _findings_for_pattern(
         cs_files,
         re.compile(r"\bPostgresAdvisoryLock\b|\bpg_advisory_(?:lock|unlock)\b"),
         "bootstrap-advisory-lock",
         "blocking",
-        "PostgreSQL advisory bootstrap locking was removed by docs/adr/0027; "
+        "PostgreSQL advisory bootstrap locking is outside the current design; "
         "use a one-shot deployment bootstrap when multiple replicas become real.",
     )
 
@@ -829,7 +826,7 @@ def check_database_boundary_configuration() -> list[Finding]:
                         _rel(config_path),
                         1,
                         f"Missing composite tenant relationship fragment '{fragment}' "
-                        "(docs/adr/0024).",
+                        "under the current database-boundary policy.",
                     )
                 )
 
@@ -847,7 +844,7 @@ def check_database_boundary_configuration() -> list[Finding]:
                         _rel(apphost_path),
                         line_number,
                         "Application service connects as the PostgreSQL superuser "
-                        "(docs/adr/0024).",
+                        "under the current database-boundary policy.",
                     )
                 )
 
@@ -894,7 +891,7 @@ def check_destructive_migration_safety() -> list[Finding]:
                 _rel(path),
                 text.count("\n", 0, absolute_offset) + 1,
                 "Destructive Up migration has no 'migration-safety:' marker documenting "
-                "preflight/backfill/rollback review (docs/adr/0025).",
+                "preflight/backfill/rollback review.",
             )
         )
 
@@ -924,8 +921,8 @@ def check_stale_patterns_in_doc_code_blocks() -> list[Finding]:
     """A prose sentence can correctly *describe* a banned pattern (e.g. this
     very script's docstring). A fenced code block presented as something to
     copy is different - that's exactly how the old backend-use-case skill
-    taught MustAsync-with-repository years after docs/adr/0012 reverted it.
-    Scan only code fences, and skip docs/adr/ (historical record) and any
+    taught MustAsync-with-repository after the rule had changed.
+    Scan only code fences, and skip scoped docs/adr/ records and any
     file whose own frontmatter marks it OBSOLETE (redirect stubs explain
     the old, wrong pattern by name on purpose)."""
     findings: list[Finding] = []
@@ -955,7 +952,7 @@ def check_stale_patterns_in_doc_code_blocks() -> list[Finding]:
                             "blocking",
                             _rel(path),
                             start_line + offset,
-                            f"Code block contains '{needle}', a pattern reverted by docs/adr/0014 - "
+                            f"Code block contains '{needle}', a prohibited stale pattern - "
                             "fix the template, don't just fix the prose around it.",
                         )
                     )
@@ -966,48 +963,13 @@ def check_stale_patterns_in_doc_code_blocks() -> list[Finding]:
                         "blocking",
                         _rel(path),
                         start_line,
-                        "Code block mixes a Validator with MustAsync/CustomAsync - docs/adr/0012 moved "
+                        "Code block mixes a Validator with MustAsync/CustomAsync - "
                         "repository-backed checks to the handler; validators take no async rule.",
                     )
                 )
 
     return findings
 
-
-def check_dangling_adr_references() -> list[Finding]:
-    """A source comment citing docs/adr/NNNN where NNNN doesn't exist - this
-    exact class of bug (14 references to a non-existent ADR 0013) was found
-    and fixed in this repo once already (see docs/adr/0016)."""
-    adr_dir = REPO_ROOT / "docs" / "adr"
-    existing = set()
-    if adr_dir.is_dir():
-        for path in adr_dir.glob("*.md"):
-            match = re.match(r"(\d{4})-", path.name)
-            if match:
-                existing.add(match.group(1))
-
-    pattern = re.compile(r"docs/adr/(\d{4})")
-    findings = []
-    source_files = _iter_files(REPO_ROOT / "backend", (".cs",)) + _iter_files(
-        REPO_ROOT / "apps" / "admin-frontend" / "src", (".ts", ".tsx")
-    )
-    for path in source_files:
-        if _is_allowlisted(path):
-            continue
-        text = path.read_text(encoding="utf-8", errors="replace")
-        for line_number, line in enumerate(text.splitlines(), start=1):
-            for match in pattern.finditer(line):
-                if match.group(1) not in existing:
-                    findings.append(
-                        Finding(
-                            "dangling-adr-reference",
-                            "info",
-                            _rel(path),
-                            line_number,
-                            f"References docs/adr/{match.group(1)}, which does not exist.",
-                        )
-                    )
-    return findings
 
 
 # ---------------------------------------------------------------------------
@@ -1061,7 +1023,7 @@ _FEATURE_INTERNAL_IMPORT_PATTERN = re.compile(
 
 
 def check_cross_feature_internal_imports() -> list[Finding]:
-    """ADR 009: a feature's domain/application/infrastructure/presentation is
+    """The current frontend architecture requires that a feature's domain/application/infrastructure/presentation is
     reached from outside that feature only through its own index.ts public
     API - never by importing past it into an internal module. Mirrors
     eslint.config.js's no-restricted-imports rule as an independent,
@@ -1097,14 +1059,14 @@ def check_cross_feature_internal_imports() -> list[Finding]:
                     _rel(path),
                     line_number,
                     f"Imports '{feature}' internals directly - use its public API "
-                    f"(@/features/{feature}) instead (ADR 009).",
+                    f"(@/features/{feature}) instead, following the current frontend public-API rule.",
                 )
             )
     return findings
 
 
 def check_stale_horizontal_layout() -> list[Finding]:
-    """ADR 009 replaced the horizontal domain/application/infrastructure/
+    """The current frontend architecture replaced the horizontal domain/application/infrastructure/
     presentation/composition top-level layout with app/, features/*/,
     shared/. Any of those directories reappearing directly under src/ means
     the old layout is being reintroduced."""
@@ -1119,7 +1081,7 @@ def check_stale_horizontal_layout() -> list[Finding]:
                     "blocking",
                     _rel(candidate),
                     1,
-                    f"src/{name}/ reintroduces the pre-ADR-009 horizontal layout - "
+                    f"src/{name}/ reintroduces the obsolete horizontal layout - "
                     "move its contents into app/, features/*/, or shared/ instead.",
                 )
             )
@@ -1130,7 +1092,7 @@ _STALE_OPENAPI_GENERATED_PATH = "src/infrastructure/generated"
 
 
 def check_stale_openapi_generated_path() -> list[Finding]:
-    """ADR 009 relocated the generated OpenAPI client from the pre-move
+    """The current frontend architecture locates the generated OpenAPI client away from the old
     top-level src/infrastructure/generated/ to src/features/catalog/
     infrastructure/generated/, but several consumers (package.json,
     checkGeneratedApiTypes.mjs, .prettierignore, skills, templates) kept
@@ -1157,7 +1119,7 @@ def check_stale_openapi_generated_path() -> list[Finding]:
         re.compile(re.escape(_STALE_OPENAPI_GENERATED_PATH)),
         "stale-openapi-generated-path",
         "blocking",
-        "References the pre-ADR-009 src/infrastructure/generated/ path - the generated "
+        "References the obsolete src/infrastructure/generated/ path - the generated "
         "OpenAPI client now lives at src/features/catalog/infrastructure/generated/.",
     )
 
@@ -1179,7 +1141,7 @@ def check_stale_openapi_generated_path() -> list[Finding]:
                         "blocking",
                         _rel(path),
                         start_line + offset,
-                        "Code block references the pre-ADR-009 src/infrastructure/generated/ "
+                        "Code block references the obsolete src/infrastructure/generated/ "
                         "path - the generated OpenAPI client now lives at "
                         "src/features/catalog/infrastructure/generated/.",
                     )
@@ -1277,7 +1239,6 @@ CHECKS = [
     check_database_boundary_configuration,
     check_destructive_migration_safety,
     check_stale_patterns_in_doc_code_blocks,
-    check_dangling_adr_references,
     check_frontend_any,
     check_frontend_environment_boundary,
     check_cross_feature_internal_imports,

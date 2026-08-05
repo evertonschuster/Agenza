@@ -11,7 +11,7 @@ public class ProvisionTenantCommandHandlerTests
     private static IUnitOfWork CreatePassthroughUnitOfWork()
     {
         // This passthrough doesn't exercise real transactional rollback against
-        // Postgres - that has no automated coverage since docs/adr/0015 removed
+        // Postgres - that has no automated coverage since the current architecture removed
         // integration tests; verify manually if this handler's transaction logic changes.
         var unitOfWork = Substitute.For<IUnitOfWork>();
         unitOfWork
