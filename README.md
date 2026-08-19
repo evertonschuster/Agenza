@@ -13,11 +13,7 @@ monorepo: React frontend, .NET backend microservices, Python AI services.
 | `infra`               | PostgreSQL init scripts       | Local database roles and schema grants          |
 
 See [docs/MONOREPO.md](docs/MONOREPO.md) for conventions, and each stack's own
-`AGENTS.md`/`README.md` for stack-specific guidance.
-
-This repo is built AI-first: the docs are the spec, agents execute, CI
-verifies. **[docs/SDD-GUIDE.md](docs/SDD-GUIDE.md)** is the developer
-guide — the workflow, worked example prompts, and what stays human.
+`README.md` for stack-specific guidance.
 
 ## Quickstart
 

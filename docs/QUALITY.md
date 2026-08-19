@@ -13,7 +13,6 @@ independently of repository correctness.
 | `ai-services-ci.yml`   | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke                |
 | `codeql.yml`           | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
 | `sonar.yml`            | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
-| `agent-governance.yml` | all PRs/pushes                | AI agent governance framework consistency — see [docs/AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md)         |
 
 Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for npm,
 NuGet, pip, and the workflows' actions.
@@ -61,15 +60,11 @@ Until step 4 happens, `sonar.yml` skips itself — it never blocks a PR.
 ## Agent compatibility
 
 Repository correctness does not depend on which coding agent produced a
-change. Codex, GitHub Copilot, and Claude Code share the rules in `AGENTS.md`,
-the portable workflows in `.agents/skills/`, and the same GitHub Actions gates.
-Tool-specific bridges and local hooks are convenience layers; CI remains the
-independent acceptance boundary. See
-[AGENT-GOVERNANCE.md](AGENT-GOVERNANCE.md) for discovery paths and sync rules.
+change. CI is the independent acceptance boundary regardless of tooling.
 
 ## Branch protection recommendation
 
 Require these checks on `main`: `frontend-build-and-test`,
-`backend-build-and-test`, `ai-services-build-and-test`, `agent-governance`,
+`backend-build-and-test`, `ai-services-build-and-test`,
 the CodeQL languages, and (after setup) the Sonar quality gate. All jobs
 already have stable, unique names for this purpose.

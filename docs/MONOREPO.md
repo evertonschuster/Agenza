@@ -95,7 +95,7 @@ the OpenAPI/OIDC runtime smoke instead of maintaining a parallel Compose graph.
 
 ## Adding a new backend microservice
 
-Follow `.agents/skills/agenza-backend-new-service`. Create the five base projects
+Create the five base projects (Domain/Application/Infrastructure/Api/Tests)
 and add a PersistenceTests project whenever tenant-scoped EF behavior needs
 security coverage. Use the live services, central package file, solution, and
 AppHost as executable references; do not copy versioned project templates.
@@ -116,7 +116,7 @@ their own native tooling (`dotnet`, `pip`/venv).
 The repository installs no local Git hooks. Contributors run the applicable
 format, lint, build, and test commands explicitly before committing; required
 GitHub Actions checks remain the integration gate for `origin/main`. See
-`AGENTS.md` and `docs/QUALITY.md` for the commands and coverage requirements.
+`docs/QUALITY.md` for the commands and coverage requirements.
 
 ## Known gaps (tracked, not blocking)
 
