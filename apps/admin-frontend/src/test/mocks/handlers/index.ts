@@ -1,6 +1,0 @@
-import type { RequestHandler } from 'msw'
-import { categoryHandlers } from '@/test/mocks/handlers/categoryHandlers'
-
-// Handlers are added incrementally, one resource at a time, as each
-// infrastructure-layer repository is built.
-export const handlers: RequestHandler[] = [...categoryHandlers]
