@@ -14,6 +14,7 @@ rationale belong in code/config, STATUS docs, and indexed ADRs.
 | Python AI service | that service's README and config |
 | Current repo layout | `docs/MONOREPO.md` |
 | Target direction | `docs/VISION.md` |
+| Bootstrapping a new app or feature with feature-based architecture | `docs/FRONTEND-ARCHITECTURE.md` |
 | CI and coverage | `docs/QUALITY.md` |
 | Decision rationale | `docs/adr/README.md`, then only the relevant ADRs |
 | Human/agent workflow | `docs/SDD-GUIDE.md` |

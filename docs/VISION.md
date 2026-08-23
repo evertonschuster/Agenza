@@ -13,7 +13,9 @@ what exists *today*.
 | `company-site`   | planned | Company marketing site — mostly static, SEO-focused             |
 
 All React + TypeScript, npm workspaces. New apps copy `admin-frontend`'s
-tooling (Vite, Vitest, ESLint boundaries) unless an ADR says otherwise.
+tooling (Vite, Vitest, ESLint boundaries) unless an ADR says otherwise. See
+[FRONTEND-ARCHITECTURE.md](FRONTEND-ARCHITECTURE.md) for the applied
+feature-based folder structure and a step-by-step bootstrap guide.
 `packages/shared-types` held shared DTO/contract types at one point but was
 removed as unused while `admin-frontend` is the only Node app in the
 workspace — recreate it once `user-app` or `company-site` actually exist and
