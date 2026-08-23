@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { AuthContext, type AuthContextValue } from '@/features/auth/AuthProvider';
-import { INITIAL_SESSION } from '@/features/auth/types';
+import { AuthContext, type AuthContextValue, INITIAL_SESSION } from '@/features/auth';
 import { AppLayout } from './AppLayout';
 
 function renderLayout() {

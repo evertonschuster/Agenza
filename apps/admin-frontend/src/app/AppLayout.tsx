@@ -1,5 +1,5 @@
 import { Button } from '@/shared/ui/button';
-import { useAuth } from '@/features/auth/hooks/useAuth';
+import { useAuth } from '@/features/auth';
 
 /** The empty authenticated shell: layout + placeholder navigation (spec FR-004, FR-013). */
 export function AppLayout() {

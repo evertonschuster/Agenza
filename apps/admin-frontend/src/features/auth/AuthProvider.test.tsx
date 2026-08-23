@@ -3,8 +3,13 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { User } from 'oidc-client-ts';
 import { AuthProvider } from './AuthProvider';
+import { sessionStore } from './sessionStore';
 import { useAuth } from './hooks/useAuth';
 
+// Exhaustive session-transition cases (including the G3 tenant-change-on-renewal case) live
+// in sessionStore.test.ts as pure `reduceSession` tests. This file only verifies that a real
+// `addUserLoaded`/`addSilentRenewError` event from `oidc-client-ts` actually reaches the
+// store and re-renders `useSyncExternalStore` consumers.
 type Handler<T> = (arg: T) => void;
 
 const { mockGetUser, handlers } = vi.hoisted(() => ({
@@ -54,20 +59,21 @@ function wrapper({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
 }
 
-describe('AuthProvider silent renewal (spec FR-007, FR-009)', () => {
+describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> useSyncExternalStore)', () => {
   const TENANT_A = '019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120';
-  const TENANT_B = '11111111-1111-1111-1111-111111111111';
 
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStore.reset();
     handlers.userLoaded = undefined;
     handlers.silentRenewError = undefined;
     mockGetUser.mockResolvedValue(makeOidcUser(TENANT_A));
   });
 
-  it('stays authenticated when a silent renewal succeeds', async () => {
+  it('re-renders consumers to authenticated when oidc-client-ts fires addUserLoaded (spec FR-007)', async () => {
+    mockGetUser.mockResolvedValue(null);
     const { result } = renderHook(() => useAuth(), { wrapper });
-    await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
+    await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
 
     act(() => {
       handlers.userLoaded?.(makeOidcUser(TENANT_A));
@@ -75,10 +81,11 @@ describe('AuthProvider silent renewal (spec FR-007, FR-009)', () => {
 
     await waitFor(() => {
       expect(result.current.session.status).toBe('authenticated');
+      expect(result.current.tenant).toEqual({ tenantId: TENANT_A });
     });
   });
 
-  it('transitions to unauthenticated with renewal_failed when silent renewal fails', async () => {
+  it('re-renders consumers to unauthenticated/renewal_failed when oidc-client-ts fires addSilentRenewError (spec FR-009)', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
 
@@ -89,19 +96,6 @@ describe('AuthProvider silent renewal (spec FR-007, FR-009)', () => {
     await waitFor(() => {
       expect(result.current.session.status).toBe('unauthenticated');
       expect(result.current.session.failureReason).toBe('renewal_failed');
-    });
-  });
-
-  it('re-resolves Tenant Context when the tenant_id claim changes on a successful renewal (spec Edge Case, G3)', async () => {
-    const { result } = renderHook(() => useAuth(), { wrapper });
-    await waitFor(() => expect(result.current.tenant?.tenantId).toBe(TENANT_A));
-
-    act(() => {
-      handlers.userLoaded?.(makeOidcUser(TENANT_B));
-    });
-
-    await waitFor(() => {
-      expect(result.current.tenant?.tenantId).toBe(TENANT_B);
     });
   });
 });

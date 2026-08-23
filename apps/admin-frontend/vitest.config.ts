@@ -31,6 +31,7 @@ export default defineConfig({
         'src/vite-env.d.ts',
         'src/vitest-setup.ts',
         'src/**/*.test.{ts,tsx}',
+        'src/features/*/index.ts',
       ],
       thresholds: {
         lines: 1,

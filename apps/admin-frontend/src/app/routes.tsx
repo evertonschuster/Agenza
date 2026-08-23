@@ -1,7 +1,5 @@
 import { Route, Routes } from 'react-router';
-import { ProtectedRoute } from '@/features/auth/ProtectedRoute';
-import { SignInRedirect } from '@/features/auth/components/SignInRedirect';
-import { LoginRedirect } from '@/features/auth/components/LoginRedirect';
+import { ProtectedRoute, SignInRedirect, LoginRedirect } from '@/features/auth';
 import { AppLayout } from './AppLayout';
 
 export function AppRoutes() {

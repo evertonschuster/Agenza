@@ -2,8 +2,12 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { AuthProvider } from '../AuthProvider';
+import { sessionStore } from '../sessionStore';
 import { useAuth } from './useAuth';
 
+// Exhaustive session-transition cases live in sessionStore.test.ts as pure `reduceSession`
+// tests. This file only verifies the wiring: that oidc-client-ts events actually reach the
+// store, and that `useSyncExternalStore` actually re-renders `useAuth`'s consumers.
 const { mockGetUser, mockSigninRedirect, mockSignoutRedirect, mockEvents } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockSigninRedirect: vi.fn(),
@@ -27,22 +31,17 @@ vi.mock('../authClient', () => ({
   },
 }));
 
-function makeAccessToken(claims: Record<string, unknown>): string {
-  const base64url = (obj: object) =>
-    btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${base64url({ alg: 'none' })}.${base64url(claims)}.signature`;
-}
-
 function wrapper({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
 }
 
-describe('useAuth', () => {
+describe('useAuth (integration: AuthProvider + sessionStore wiring)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    sessionStore.reset();
   });
 
-  it('reports unauthenticated status when no session exists', async () => {
+  it('reports unauthenticated once the initial oidc-client-ts session check resolves with no user', async () => {
     mockGetUser.mockResolvedValue(null);
 
     const { result } = renderHook(() => useAuth(), { wrapper });
@@ -50,38 +49,19 @@ describe('useAuth', () => {
     await waitFor(() => {
       expect(result.current.session.status).toBe('unauthenticated');
     });
-    expect(result.current.session.failureReason).toBeNull();
   });
 
-  it('surfaces identity_unreachable instead of hanging when identity-service is unreachable (G1)', async () => {
+  it('surfaces identity_unreachable when the initial session check rejects (G1)', async () => {
     mockGetUser.mockRejectedValue(new Error('network error'));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
 
     await waitFor(() => {
-      expect(result.current.session.status).toBe('unauthenticated');
       expect(result.current.session.failureReason).toBe('identity_unreachable');
     });
   });
 
-  it('surfaces missing_tenant_claim and remains unauthenticated when the token lacks tenant_id (G2)', async () => {
-    mockGetUser.mockResolvedValue({
-      expired: false,
-      access_token: makeAccessToken({ sub: 'user-1' }),
-      expires_at: Math.floor(Date.now() / 1000) + 3600,
-      profile: { name: 'Demo Owner', email: 'owner@demo.local' },
-    });
-
-    const { result } = renderHook(() => useAuth(), { wrapper });
-
-    await waitFor(() => {
-      expect(result.current.session.status).toBe('unauthenticated');
-      expect(result.current.session.failureReason).toBe('missing_tenant_claim');
-    });
-    expect(result.current.tenant).toBeNull();
-  });
-
-  it('clears the local session and invokes the identity-service end-session flow on logout (FR-008)', async () => {
+  it('clears the local session and invokes the identity-service end-session flow on logout (spec FR-008)', async () => {
     mockGetUser.mockResolvedValue(null);
     mockSignoutRedirect.mockResolvedValue(undefined);
 
