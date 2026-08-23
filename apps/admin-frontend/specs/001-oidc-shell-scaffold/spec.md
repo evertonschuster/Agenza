@@ -23,6 +23,10 @@ Critérios de aceite: `npm run dev` serve o app na porta 5173 via Aspire; usuár
 ### Session 2026-08-18
 
 - Q: Should the spec explicitly state, as a hard constraint, that this feature builds the admin-frontend from a completely empty directory — with no pre-existing app code, configuration, or tooling to migrate or preserve? → A: Yes — add an explicit Assumption/constraint that this is a from-scratch build: no pre-existing app code, tooling config, or CI wiring for admin-frontend exists yet.
+- Q: Should the spec explicitly note that folder/module structure is deferred to `/speckit-plan`, or does this feature need to pin down a specific folder layout now? → A: Pin it down now, as a testable Functional Requirement in this spec (knowingly diverges from the constitution's "Explicitly Deferred Decisions" and will regress the "No implementation details" checklist item).
+- Q: Given that tradeoff, which folder/module convention should this spec require? → A: Feature-based / vertical-slice layout (e.g., `src/features/<name>/{components,hooks,api}`, `src/app/` for shell, `src/shared/` for cross-cutting) — mirrors the vertical-slice style already used in the backend services.
+- Q: Should this scaffold log authentication and session lifecycle events (login outcome, silent-renewal failure, logout), or is logging fully deferred to a later feature? → A: Minimal local logging — log login outcome, renewal failures, and logout to a basic in-app logger (e.g., console/structured log), no external service.
+- Q: Does this scaffold's session model need to carry role or permission claims, even if no route uses them yet, or is "authenticated with a valid tenant" the only authorization signal for now? → A: No roles/permissions modeled yet — any authenticated principal with a valid tenant claim is treated identically; role differentiation is deferred until a feature actually needs it.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -112,12 +116,14 @@ A developer cloning the scaffold can run the standard quality commands (lint, fo
 - **FR-011**: The codebase MUST provide linting, formatting, type-checking, and unit-testing commands that each run and report a pass against the unmodified scaffold.
 - **FR-012**: The codebase MUST include an automated test coverage gate that runs as part of the test command, even if its passing threshold is minimal at this stage.
 - **FR-013**: The initial scaffold MUST NOT expose any business-domain feature (e.g., Categories, Services, Clients); the authenticated shell's navigation is limited to structural/placeholder elements.
+- **FR-014**: The codebase MUST organize source code using a feature-based (vertical-slice) layout: each capability lives under its own directory with its own components, hooks, and API access (e.g., `src/features/<name>/`); the authenticated shell/layout lives under a dedicated app-level directory (e.g., `src/app/`); code shared across features lives under a dedicated shared directory (e.g., `src/shared/`). Legacy flat/global directories such as a top-level `src/components/` or `src/pages/` MUST NOT be created — cross-cutting UI primitives and utilities belong under `src/shared/` (e.g., `src/shared/ui/`), not a bare top-level bucket.
+- **FR-015**: The system MUST log authentication and session lifecycle events — login outcome, silent-renewal failure, and logout — to a basic in-app logger (e.g., console/structured log); sending these events to an external observability or telemetry service is not required by this feature.
 
 ### Key Entities
 
 - **Session**: The visitor's current authentication state — whether a valid, unexpired token exists, and when it needs renewal. Determines whether authenticated routes are reachable.
 - **Tenant Context**: The organization scope resolved from the access token's tenant claim; used to identify the current tenant within the shell. Never derived from client-supplied input.
-- **Authenticated User**: The principal identity returned by identity-service after login (e.g., a display name), shown minimally in the shell layout; profile management is not part of this feature.
+- **Authenticated User**: The principal identity returned by identity-service after login (e.g., a display name), shown minimally in the shell layout; profile management is not part of this feature. The session model carries no role or permission claims in this feature — any authenticated principal with a valid tenant claim is treated identically for authorization purposes.
 
 ## Success Criteria *(mandatory)*
 
@@ -134,7 +140,7 @@ A developer cloning the scaffold can run the standard quality commands (lint, fo
 
 - This feature builds the admin-frontend from a completely empty directory: no pre-existing application code, tooling configuration, or CI wiring for admin-frontend exists before this feature begins. Every requirement below describes creating something new, not adjusting or migrating an existing setup.
 - Business-domain features (Categories, Services, Clients, etc.) are intentionally excluded from this scaffold; only the empty authenticated shell (layout + basic navigation) is delivered.
-- The UI component library and any state/data-fetching library beyond the minimum needed to render the shell are deferred to planning, per the project constitution's "Explicitly Deferred Decisions."
+- The UI component library is Shadcn/ui on Tailwind CSS, settled during planning per the project constitution's "Explicitly Deferred Decisions" (see plan.md Technical Context and research.md); any state/data-fetching library beyond that remains deferred, since this feature makes no business API calls.
 - The generated OpenAPI client may be a minimal/stub client at this stage; generating a full client for every backend endpoint is out of scope.
 - identity-service already exists, exposes a working OIDC endpoint, and is not modified by this feature.
 - "Logout" ends the identity-service (OIDC) session, not just local application state, consistent with standard OIDC RP-initiated logout.
