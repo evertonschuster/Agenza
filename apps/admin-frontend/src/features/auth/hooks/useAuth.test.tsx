@@ -41,6 +41,16 @@ describe('useAuth (integration: AuthProvider + sessionStore wiring)', () => {
     sessionStore.reset();
   });
 
+  it('reports checking (not unauthenticated) synchronously before the initial session check resolves', () => {
+    // Regression test: ProtectedRoute must not treat this as "definitely logged out" and
+    // redirect before getUser() has had a chance to find a valid stored session.
+    mockGetUser.mockReturnValue(new Promise(() => {}));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+
+    expect(result.current.session.status).toBe('checking');
+  });
+
   it('reports unauthenticated once the initial oidc-client-ts session check resolves with no user', async () => {
     mockGetUser.mockResolvedValue(null);
 

@@ -1,4 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
+import { StrictMode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { LoginRedirect } from './LoginRedirect';
@@ -44,5 +45,28 @@ describe('LoginRedirect', () => {
     await waitFor(() => {
       expect(screen.getByText('Login Screen')).toBeInTheDocument();
     });
+  });
+
+  it('calls signinCallback() exactly once per mount, even under StrictMode double-invoke', async () => {
+    // Regression test: without a guard, StrictMode's dev-only double-invoke redeemed the
+    // single-use authorization code twice, racing a success and a failure navigation.
+    mockSigninCallback.mockResolvedValue(undefined);
+
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={['/callback']}>
+          <Routes>
+            <Route path="/callback" element={<LoginRedirect />} />
+            <Route path="/" element={<div>Home</div>} />
+          </Routes>
+        </MemoryRouter>
+      </StrictMode>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('Home')).toBeInTheDocument();
+    });
+
+    expect(mockSigninCallback).toHaveBeenCalledTimes(1);
   });
 });

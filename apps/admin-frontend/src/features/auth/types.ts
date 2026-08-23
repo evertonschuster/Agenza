@@ -1,4 +1,5 @@
-export type SessionStatus = 'unauthenticated' | 'authenticating' | 'authenticated' | 'renewing';
+export type SessionStatus =
+  'checking' | 'unauthenticated' | 'authenticating' | 'authenticated' | 'renewing';
 
 export type SessionFailureReason =
   'renewal_failed' | 'identity_unreachable' | 'missing_tenant_claim';

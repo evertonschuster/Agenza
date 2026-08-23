@@ -12,11 +12,13 @@ import { useAuth } from './hooks/useAuth';
 // store and re-renders `useSyncExternalStore` consumers.
 type Handler<T> = (arg: T) => void;
 
-const { mockGetUser, handlers } = vi.hoisted(() => ({
+const { mockGetUser, mockSignoutRedirect, handlers } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
+  mockSignoutRedirect: vi.fn(),
   handlers: {
     userLoaded: undefined as Handler<User> | undefined,
     silentRenewError: undefined as Handler<unknown> | undefined,
+    userUnloaded: undefined as Handler<void> | undefined,
   },
 }));
 
@@ -24,7 +26,7 @@ vi.mock('./authClient', () => ({
   authClient: {
     getUser: mockGetUser,
     signinRedirect: vi.fn(),
-    signoutRedirect: vi.fn(),
+    signoutRedirect: mockSignoutRedirect,
     events: {
       addUserLoaded: (fn: Handler<User>) => {
         handlers.userLoaded = fn;
@@ -34,7 +36,9 @@ vi.mock('./authClient', () => ({
         handlers.silentRenewError = fn;
       },
       removeSilentRenewError: vi.fn(),
-      addUserUnloaded: vi.fn(),
+      addUserUnloaded: (fn: Handler<void>) => {
+        handlers.userUnloaded = fn;
+      },
       removeUserUnloaded: vi.fn(),
     },
   },
@@ -67,6 +71,7 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     sessionStore.reset();
     handlers.userLoaded = undefined;
     handlers.silentRenewError = undefined;
+    handlers.userUnloaded = undefined;
     mockGetUser.mockResolvedValue(makeOidcUser(TENANT_A));
   });
 
@@ -97,5 +102,36 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
       expect(result.current.session.status).toBe('unauthenticated');
       expect(result.current.session.failureReason).toBe('renewal_failed');
     });
+  });
+
+  it('ignores a UserUnloaded event that fires mid-logout, instead of racing a second signinRedirect against the sign-out navigation', async () => {
+    // Regression test: oidc-client-ts's real signoutRedirect() clears the local user (firing
+    // UserUnloaded) *before* it finishes navigating to identity-service's end-session endpoint.
+    // Reacting to that event by redirecting to /login (which immediately calls signinRedirect()
+    // itself) raced the actual sign-out navigation — observed in manual testing as the browser
+    // landing on identity-service's login form via a fresh /connect/authorize request instead of
+    // a clean end-session round-trip.
+    let resolveSignout!: () => void;
+    mockSignoutRedirect.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveSignout = resolve;
+      }),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
+
+    const logoutPromise = result.current.logout();
+
+    act(() => {
+      handlers.userUnloaded?.();
+    });
+
+    // Still authenticated: the mid-logout UserUnloaded event must not drive a redirect while
+    // the real sign-out navigation is still in flight.
+    expect(result.current.session.status).toBe('authenticated');
+
+    resolveSignout();
+    await logoutPromise;
   });
 });

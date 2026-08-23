@@ -16,6 +16,20 @@ export const INITIAL_SNAPSHOT: AuthSnapshot = {
   user: null,
 };
 
+/**
+ * The store's snapshot before the initial `authClient.getUser()` check has resolved — distinct
+ * from `INITIAL_SNAPSHOT` ('unauthenticated'), which means "checked, definitely no session."
+ * `ProtectedRoute` must treat 'checking' like 'authenticating'/'renewing' (render nothing yet),
+ * never as a reason to redirect — otherwise every page load/refresh redirects into a login
+ * round-trip even when a valid session is already in storage, because the redirect fires before
+ * the async check has a chance to find it.
+ */
+const CHECKING_SNAPSHOT: AuthSnapshot = {
+  session: { ...INITIAL_SESSION, status: 'checking' },
+  tenant: null,
+  user: null,
+};
+
 type SessionEvent =
   | { type: 'INITIAL_USER'; user: User | null }
   | { type: 'INITIAL_ERROR' }
@@ -101,8 +115,17 @@ type Listener = () => void;
  * boundary, not inside the reducer.
  */
 class SessionStore {
-  private snapshot: AuthSnapshot = INITIAL_SNAPSHOT;
+  private snapshot: AuthSnapshot = CHECKING_SNAPSHOT;
   private listeners = new Set<Listener>();
+  // Set for the duration of an in-flight logout. oidc-client-ts's `signoutRedirect()` clears
+  // the local user (firing `UserUnloaded`) *before* it navigates the browser to
+  // identity-service's end-session endpoint. Without this guard, that `UserUnloaded` event
+  // reached `ProtectedRoute`, which redirected to `/login`, which immediately fired its own
+  // `signinRedirect()` — a second browser navigation racing the actual sign-out redirect.
+  // Whichever won, the visitor was bounced through an unpredictable extra hop (sometimes
+  // landing back on identity-service's login form via a fresh authorize request instead of a
+  // clean end-session round-trip) instead of a straightforward logout.
+  private isLoggingOut = false;
 
   getSnapshot = (): AuthSnapshot => this.snapshot;
 
@@ -147,6 +170,7 @@ class SessionStore {
   };
 
   private handleUserUnloaded = (): void => {
+    if (this.isLoggingOut) return;
     this.dispatch({ type: 'USER_UNLOADED' });
   };
 
@@ -179,12 +203,21 @@ class SessionStore {
 
   async logout(): Promise<void> {
     logAuthEvent('logout', this.snapshot.tenant?.tenantId ?? null);
-    await authClient.signoutRedirect();
+    this.isLoggingOut = true;
+    try {
+      await authClient.signoutRedirect();
+    } catch {
+      // signoutRedirect() already cleared the local user before it failed here (see
+      // isLoggingOut's comment) — reflect that instead of leaving the UI stuck showing stale
+      // authenticated content with no way to retry.
+      this.isLoggingOut = false;
+      this.dispatch({ type: 'USER_UNLOADED' });
+    }
   }
 
   /** Test-only: not called by production code. */
   reset(): void {
-    this.snapshot = INITIAL_SNAPSHOT;
+    this.snapshot = CHECKING_SNAPSHOT;
     this.listeners.clear();
   }
 }

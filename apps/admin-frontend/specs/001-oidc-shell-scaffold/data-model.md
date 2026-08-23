@@ -8,7 +8,7 @@ Represents the visitor's current authentication state (spec Key Entities; FR-001
 
 | Field | Type | Notes |
 |---|---|---|
-| `status` | `'unauthenticated' \| 'authenticating' \| 'authenticated' \| 'renewing'` | Drives whether authenticated routes render (FR-001) or redirect (FR-002). No separate `'expired'` value: per FR-009's fail-closed design, an expired token collapses directly into `'unauthenticated'` (see state transitions below) rather than being its own state with no distinct transition into it. |
+| `status` | `'checking' \| 'unauthenticated' \| 'authenticating' \| 'authenticated' \| 'renewing'` | Drives whether authenticated routes render (FR-001) or redirect (FR-002). `'checking'` is the store's bootstrap value, before the initial `authClient.getUser()` call resolves — `ProtectedRoute` MUST treat it like `'authenticating'`/`'renewing'` (render nothing yet) rather than redirecting, otherwise a valid stored session gets bounced through an unnecessary identity-service round-trip on every page load, because the redirect would fire before the async check has a chance to find it. No separate `'expired'` value: per FR-009's fail-closed design, an expired token collapses directly into `'unauthenticated'` (see state transitions below) rather than being its own state with no distinct transition into it. |
 | `accessToken` | `string \| null` | Opaque to the rest of the app beyond what's needed to call the generated API client; sourced from `oidc-client-ts`'s `User.access_token`. |
 | `expiresAt` | `number \| null` | Unix ms timestamp; drives when silent renewal is attempted (FR-007). |
 | `failureReason` | `'renewal_failed' \| 'identity_unreachable' \| 'missing_tenant_claim' \| null` | Set only in terminal failure states; see research.md Decision 8. Logged via `authEvents.ts` (FR-015), never shown to the user verbatim (generic "sign in again" copy). |
@@ -16,6 +16,9 @@ Represents the visitor's current authentication state (spec Key Entities; FR-001
 **State transitions**:
 
 ```text
+checking --(getUser() resolves: valid stored user, has tenant_id claim)--> authenticated
+checking --(getUser() resolves: no user / expired)--> unauthenticated
+checking --(getUser() rejects)--> unauthenticated (failureReason: identity_unreachable)
 unauthenticated --(login redirect completes)--> authenticating
 authenticating --(token validated, has tenant_id claim)--> authenticated
 authenticating --(token invalid / missing tenant_id claim)--> unauthenticated (failureReason: missing_tenant_claim)
@@ -26,6 +29,8 @@ authenticated --(logout triggered)--> unauthenticated
 authenticated --(access token expired, no valid stored session)--> unauthenticated
 any state --(identity-service unreachable)--> unauthenticated (failureReason: identity_unreachable)
 ```
+
+**`ProtectedRoute` rendering rule** (not a `Session` field, but the reason `'checking'` exists): `'checking' | 'authenticating' | 'renewing'` render nothing yet; `'authenticated'` renders the route; `'unauthenticated'` with `failureReason` of `identity_unreachable` or `missing_tenant_claim` renders a failure state with a manual retry (these two don't self-resolve by redirecting again — see spec Edge Cases); `'unauthenticated'` otherwise (including `renewal_failed`) redirects to `/login`.
 
 **Validation rules**:
 - A session MUST NOT be considered `authenticated` unless the decoded access token has a well-formed `tenant_id` claim (FR-005, FR-009; Edge Case: token missing tenant claim → fail closed).
