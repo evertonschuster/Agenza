@@ -2,7 +2,14 @@ import type { User } from 'oidc-client-ts';
 import { authClient } from './authClient';
 import { resolveTenantContext } from './tenant';
 import { logAuthEvent } from './authEvents';
-import { INITIAL_SESSION, type AuthenticatedUser, type Session, type TenantContext } from './types';
+import {
+  INITIAL_SESSION,
+  type AuthenticatedUser,
+  type Session,
+  type SessionFailureReason,
+  type SessionStatus,
+  type TenantContext,
+} from './types';
 
 export interface AuthSnapshot {
   session: Session;
@@ -25,19 +32,55 @@ export const INITIAL_SNAPSHOT: AuthSnapshot = {
  * the async check has a chance to find it.
  */
 const CHECKING_SNAPSHOT: AuthSnapshot = {
+  ...INITIAL_SNAPSHOT,
   session: { ...INITIAL_SESSION, status: 'checking' },
-  tenant: null,
-  user: null,
 };
 
+/**
+ * Whether `ProtectedRoute` should show a "sign-in failed, try again" screen instead of
+ * redirecting straight back to `/login` (spec Edge Cases, spec.md). `identity_unreachable` and
+ * `missing_tenant_claim` don't self-resolve by redirecting again: an unreachable identity-service
+ * fails the same way again, and a missing tenant claim silently re-authenticates via the
+ * identity-service's own SSO session straight back into the same claim-less token — looping
+ * forever with no user action ever breaking the cycle. `renewal_failed` is a normal
+ * expired-session redirect, not a loop risk, since the visitor supplies fresh credentials at the
+ * identity-service. No `default` case, so adding a `SessionFailureReason` later forces a
+ * conscious choice here instead of silently defaulting to "auto-redirect."
+ */
+export function isBlockingFailure(reason: SessionFailureReason): boolean {
+  switch (reason) {
+    case 'identity_unreachable':
+    case 'missing_tenant_claim':
+      return true;
+    case 'renewal_failed':
+      return false;
+  }
+}
+
+/** Whether `ProtectedRoute` should render nothing yet (an async transition is in flight) rather than deciding to show the route or redirect. No `default`, for the same reason as `isBlockingFailure`. */
+export function isTransientStatus(status: SessionStatus): boolean {
+  switch (status) {
+    case 'checking':
+    case 'authenticating':
+    case 'renewing':
+    case 'loggingOut':
+      return true;
+    case 'unauthenticated':
+    case 'authenticated':
+      return false;
+  }
+}
+
 type SessionEvent =
+  | { type: 'INIT' }
   | { type: 'INITIAL_USER'; user: User | null }
   | { type: 'INITIAL_ERROR' }
   | { type: 'USER_LOADED'; user: User }
   | { type: 'SILENT_RENEW_ERROR' }
   | { type: 'USER_UNLOADED' }
   | { type: 'LOGIN_STARTED' }
-  | { type: 'LOGIN_ERROR' };
+  | { type: 'LOGIN_ERROR' }
+  | { type: 'LOGOUT_STARTED' };
 
 function resolveAuthenticated(oidcUser: User): AuthSnapshot {
   const tenant = resolveTenantContext(oidcUser.access_token);
@@ -76,6 +119,8 @@ function resolveAuthenticated(oidcUser: User): AuthSnapshot {
  */
 export function reduceSession(event: SessionEvent): AuthSnapshot {
   switch (event.type) {
+    case 'INIT':
+      return CHECKING_SNAPSHOT;
     case 'INITIAL_USER':
       if (!event.user || event.user.expired) {
         return INITIAL_SNAPSHOT;
@@ -102,6 +147,8 @@ export function reduceSession(event: SessionEvent): AuthSnapshot {
         ...INITIAL_SNAPSHOT,
         session: { ...INITIAL_SESSION, failureReason: 'identity_unreachable' },
       };
+    case 'LOGOUT_STARTED':
+      return { ...INITIAL_SNAPSHOT, session: { ...INITIAL_SESSION, status: 'loggingOut' } };
   }
 }
 
@@ -115,17 +162,8 @@ type Listener = () => void;
  * boundary, not inside the reducer.
  */
 class SessionStore {
-  private snapshot: AuthSnapshot = CHECKING_SNAPSHOT;
+  private snapshot: AuthSnapshot = reduceSession({ type: 'INIT' });
   private listeners = new Set<Listener>();
-  // Set for the duration of an in-flight logout. oidc-client-ts's `signoutRedirect()` clears
-  // the local user (firing `UserUnloaded`) *before* it navigates the browser to
-  // identity-service's end-session endpoint. Without this guard, that `UserUnloaded` event
-  // reached `ProtectedRoute`, which redirected to `/login`, which immediately fired its own
-  // `signinRedirect()` — a second browser navigation racing the actual sign-out redirect.
-  // Whichever won, the visitor was bounced through an unpredictable extra hop (sometimes
-  // landing back on identity-service's login form via a fresh authorize request instead of a
-  // clean end-session round-trip) instead of a straightforward logout.
-  private isLoggingOut = false;
 
   getSnapshot = (): AuthSnapshot => this.snapshot;
 
@@ -170,7 +208,13 @@ class SessionStore {
   };
 
   private handleUserUnloaded = (): void => {
-    if (this.isLoggingOut) return;
+    // oidc-client-ts's `signoutRedirect()` clears the local user (firing `UserUnloaded`)
+    // *before* it navigates the browser to identity-service's end-session endpoint. Reacting to
+    // it while `logout()` already has that redirect in flight (status 'loggingOut') used to
+    // send `ProtectedRoute` to `/login`, which immediately fired its own `signinRedirect()` — a
+    // second browser navigation racing the real sign-out redirect. Whichever won, the visitor
+    // was bounced through an unpredictable extra hop instead of a straightforward logout.
+    if (this.snapshot.session.status === 'loggingOut') return;
     this.dispatch({ type: 'USER_UNLOADED' });
   };
 
@@ -203,21 +247,20 @@ class SessionStore {
 
   async logout(): Promise<void> {
     logAuthEvent('logout', this.snapshot.tenant?.tenantId ?? null);
-    this.isLoggingOut = true;
+    this.dispatch({ type: 'LOGOUT_STARTED' });
     try {
       await authClient.signoutRedirect();
     } catch {
       // signoutRedirect() already cleared the local user before it failed here (see
-      // isLoggingOut's comment) — reflect that instead of leaving the UI stuck showing stale
-      // authenticated content with no way to retry.
-      this.isLoggingOut = false;
+      // handleUserUnloaded's comment) — reflect that instead of leaving the UI stuck on
+      // 'loggingOut' with no way to retry.
       this.dispatch({ type: 'USER_UNLOADED' });
     }
   }
 
   /** Test-only: not called by production code. */
   reset(): void {
-    this.snapshot = CHECKING_SNAPSHOT;
+    this.snapshot = reduceSession({ type: 'INIT' });
     this.listeners.clear();
   }
 }

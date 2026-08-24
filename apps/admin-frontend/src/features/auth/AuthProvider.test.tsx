@@ -104,7 +104,7 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     });
   });
 
-  it('ignores a UserUnloaded event that fires mid-logout, instead of racing a second signinRedirect against the sign-out navigation', async () => {
+  it('sets status to loggingOut for the sign-out redirect, and ignores a UserUnloaded event that fires mid-flight', async () => {
     // Regression test: oidc-client-ts's real signoutRedirect() clears the local user (firing
     // UserUnloaded) *before* it finishes navigating to identity-service's end-session endpoint.
     // Reacting to that event by redirecting to /login (which immediately calls signinRedirect()
@@ -121,17 +121,43 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
 
-    const logoutPromise = result.current.logout();
+    let logoutPromise!: Promise<void>;
+    act(() => {
+      logoutPromise = result.current.logout();
+    });
+    await waitFor(() => expect(result.current.session.status).toBe('loggingOut'));
 
     act(() => {
       handlers.userUnloaded?.();
     });
 
-    // Still authenticated: the mid-logout UserUnloaded event must not drive a redirect while
-    // the real sign-out navigation is still in flight.
-    expect(result.current.session.status).toBe('authenticated');
+    // Still loggingOut: the mid-flight UserUnloaded event must not drive a redirect while the
+    // real sign-out navigation is still in flight.
+    expect(result.current.session.status).toBe('loggingOut');
 
     resolveSignout();
     await logoutPromise;
+  });
+
+  it('leaves loggingOut after signoutRedirect() rejects, so a later UserUnloaded event is still handled', async () => {
+    mockSignoutRedirect.mockRejectedValue(new Error('network error'));
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
+
+    await act(() => result.current.logout());
+    // If the catch branch failed to move status off 'loggingOut', this would still be stuck
+    // here instead of 'unauthenticated'.
+    await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
+
+    act(() => {
+      handlers.userLoaded?.(makeOidcUser(TENANT_A));
+    });
+    await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
+
+    act(() => {
+      handlers.userUnloaded?.();
+    });
+    await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
   });
 });

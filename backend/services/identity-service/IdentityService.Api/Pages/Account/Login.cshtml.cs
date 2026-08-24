@@ -109,9 +109,7 @@ public class LoginModel : PageModel
         var query = fragmentStart < 0
             ? returnUrl[queryStart..]
             : returnUrl[queryStart..fragmentStart];
-        var theme = QueryHelpers.ParseQuery(query).TryGetValue("theme", out var themeValues)
-            ? themeValues.ToString()
-            : null;
+        var theme = QueryHelpers.ParseQuery(query).GetValueOrDefault("theme").ToString();
 
         return theme is "light" or "dark" ? theme : null;
     }

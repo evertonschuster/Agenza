@@ -1,5 +1,6 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { logger } from '@/shared/logger';
+import { FullScreenMessage } from '@/shared/ui/FullScreenMessage';
 
 interface Props {
   children: ReactNode;
@@ -30,12 +31,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <div className="flex min-h-screen flex-col items-center justify-center gap-2 p-6 text-center">
-          <p className="font-semibold">Something went wrong.</p>
-          <p className="text-sm text-muted-foreground">Please reload the page.</p>
-        </div>
-      );
+      return <FullScreenMessage title="Something went wrong." description="Please reload the page." />;
     }
 
     return this.props.children;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { User } from 'oidc-client-ts';
-import { reduceSession } from './sessionStore';
+import { isBlockingFailure, isTransientStatus, reduceSession } from './sessionStore';
 
 function makeAccessToken(claims: Record<string, unknown>): string {
   const base64url = (obj: object) =>
@@ -90,5 +90,36 @@ describe('reduceSession (pure — no React, no oidc-client-ts wiring)', () => {
 
   it('LOGIN_STARTED -> authenticating', () => {
     expect(reduceSession({ type: 'LOGIN_STARTED' }).session.status).toBe('authenticating');
+  });
+
+  it('LOGOUT_STARTED -> loggingOut', () => {
+    expect(reduceSession({ type: 'LOGOUT_STARTED' }).session.status).toBe('loggingOut');
+  });
+
+  it('INIT -> checking', () => {
+    expect(reduceSession({ type: 'INIT' }).session.status).toBe('checking');
+  });
+});
+
+describe('isBlockingFailure', () => {
+  it.each([
+    ['identity_unreachable', true],
+    ['missing_tenant_claim', true],
+    ['renewal_failed', false],
+  ] as const)('%s -> %s', (reason, expected) => {
+    expect(isBlockingFailure(reason)).toBe(expected);
+  });
+});
+
+describe('isTransientStatus', () => {
+  it.each([
+    ['checking', true],
+    ['authenticating', true],
+    ['renewing', true],
+    ['loggingOut', true],
+    ['unauthenticated', false],
+    ['authenticated', false],
+  ] as const)('%s -> %s', (status, expected) => {
+    expect(isTransientStatus(status)).toBe(expected);
   });
 });

@@ -10,16 +10,18 @@ vi.mock('../authClient', () => ({
   authClient: { signinCallback: mockSigninCallback },
 }));
 
-function renderCallback() {
-  return render(
+function renderCallback({ strict = false } = {}) {
+  const tree = (
     <MemoryRouter initialEntries={['/callback']}>
       <Routes>
         <Route path="/callback" element={<LoginRedirect />} />
         <Route path="/" element={<div>Home</div>} />
         <Route path="/login" element={<div>Login Screen</div>} />
       </Routes>
-    </MemoryRouter>,
+    </MemoryRouter>
   );
+
+  return render(strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
 describe('LoginRedirect', () => {
@@ -52,16 +54,7 @@ describe('LoginRedirect', () => {
     // single-use authorization code twice, racing a success and a failure navigation.
     mockSigninCallback.mockResolvedValue(undefined);
 
-    render(
-      <StrictMode>
-        <MemoryRouter initialEntries={['/callback']}>
-          <Routes>
-            <Route path="/callback" element={<LoginRedirect />} />
-            <Route path="/" element={<div>Home</div>} />
-          </Routes>
-        </MemoryRouter>
-      </StrictMode>,
-    );
+    renderCallback({ strict: true });
 
     await waitFor(() => {
       expect(screen.getByText('Home')).toBeInTheDocument();

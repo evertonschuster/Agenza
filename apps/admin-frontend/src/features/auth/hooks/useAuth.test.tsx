@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { AuthProvider } from '../AuthProvider';
 import { sessionStore } from '../sessionStore';
@@ -78,7 +78,7 @@ describe('useAuth (integration: AuthProvider + sessionStore wiring)', () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
 
-    await result.current.logout();
+    await act(() => result.current.logout());
 
     expect(mockSignoutRedirect).toHaveBeenCalledTimes(1);
   });
