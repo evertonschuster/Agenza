@@ -20,10 +20,6 @@ describe('resolveTenantContext', () => {
   });
 
   it('returns null when the claim is missing, regardless of any client-supplied tenant hint (spec FR-006)', () => {
-    // `resolveTenantContext` takes only the access token as input — a URL query string,
-    // route param, or localStorage value is never even a parameter it could read, by
-    // construction. This test documents that invariant explicitly rather than leaving it
-    // merely implicit in the function signature.
     const token = makeAccessToken({ sub: 'user-1' });
 
     expect(resolveTenantContext(token)).toBeNull();

@@ -25,9 +25,6 @@ function renderSignIn(login: () => Promise<void>) {
 
 describe('SignInRedirect', () => {
   it('calls login() exactly once per mount, even under StrictMode double-invoke', () => {
-    // Regression test: StrictMode intentionally mounts -> cleans up -> remounts every effect
-    // once in development. Without a guard, this fired signinRedirect() twice, racing the PKCE
-    // state/verifier it writes to storage before navigating.
     const login = vi.fn().mockResolvedValue(undefined);
 
     renderSignIn(login);

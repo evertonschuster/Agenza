@@ -6,10 +6,8 @@ import { AuthProvider } from './AuthProvider';
 import { sessionStore } from './sessionStore';
 import { useAuth } from './hooks/useAuth';
 
-// Exhaustive session-transition cases (including the G3 tenant-change-on-renewal case) live
-// in sessionStore.test.ts as pure `reduceSession` tests. This file only verifies that a real
-// `addUserLoaded`/`addSilentRenewError` event from `oidc-client-ts` actually reaches the
-// store and re-renders `useSyncExternalStore` consumers.
+// Exhaustive transition cases live in sessionStore.test.ts (pure `reduceSession` tests). This
+// file only verifies real `oidc-client-ts` events reach the store and re-render consumers.
 type Handler<T> = (arg: T) => void;
 
 const { mockGetUser, mockSignoutRedirect, handlers } = vi.hoisted(() => ({
@@ -105,12 +103,6 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
   });
 
   it('sets status to loggingOut for the sign-out redirect, and ignores a UserUnloaded event that fires mid-flight', async () => {
-    // Regression test: oidc-client-ts's real signoutRedirect() clears the local user (firing
-    // UserUnloaded) *before* it finishes navigating to identity-service's end-session endpoint.
-    // Reacting to that event by redirecting to /login (which immediately calls signinRedirect()
-    // itself) raced the actual sign-out navigation — observed in manual testing as the browser
-    // landing on identity-service's login form via a fresh /connect/authorize request instead of
-    // a clean end-session round-trip.
     let resolveSignout!: () => void;
     mockSignoutRedirect.mockReturnValue(
       new Promise<void>((resolve) => {
@@ -131,8 +123,6 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
       handlers.userUnloaded?.();
     });
 
-    // Still loggingOut: the mid-flight UserUnloaded event must not drive a redirect while the
-    // real sign-out navigation is still in flight.
     expect(result.current.session.status).toBe('loggingOut');
 
     resolveSignout();
@@ -146,8 +136,6 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
 
     await act(() => result.current.logout());
-    // If the catch branch failed to move status off 'loggingOut', this would still be stuck
-    // here instead of 'unauthenticated'.
     await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
 
     act(() => {

@@ -58,12 +58,15 @@ describe('ProtectedRoute', () => {
     expect(screen.queryByText('Protected Shell')).not.toBeInTheDocument();
   });
 
-  it.each(['authenticating', 'renewing', 'loggingOut'] as const)('renders nothing while %s', (status) => {
-    renderWithSession({ status });
+  it.each(['authenticating', 'renewing', 'loggingOut'] as const)(
+    'renders nothing while %s',
+    (status) => {
+      renderWithSession({ status });
 
-    expect(screen.queryByText('Login Screen')).not.toBeInTheDocument();
-    expect(screen.queryByText('Protected Shell')).not.toBeInTheDocument();
-  });
+      expect(screen.queryByText('Login Screen')).not.toBeInTheDocument();
+      expect(screen.queryByText('Protected Shell')).not.toBeInTheDocument();
+    },
+  );
 
   it('redirects to /login on a plain renewal failure (spec Edge Case: silent renewal fails -> sent back to login)', () => {
     renderWithSession({ status: 'unauthenticated', failureReason: 'renewal_failed' });

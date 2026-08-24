@@ -7,15 +7,8 @@ export interface ApiClientCredentials {
   tenantId: string | null;
 }
 
-/**
- * The single entry point for calling `services-service` (constitution Principle IV;
- * contracts/api-client-contract.md). No feature or component may construct its own `fetch`
- * call or hand-written request/response DTO against this service.
- *
- * Takes a narrow `{ accessToken, tenantId }` shape rather than the `auth` feature's own
- * `Session`/`TenantContext` types — `shared/` must not depend on `features/*` (the reverse
- * of the intended dependency direction); callers adapt their own richer types to this shape.
- */
+/** Single entry point for services-service (contracts/api-client-contract.md). Narrow
+ * `{ accessToken, tenantId }` shape, not auth's types — `shared/` can't depend on `features/*`. */
 export function createApiClient(credentials: ApiClientCredentials): Client<paths> {
   const env = loadEnv();
   const client = createClient<paths>({ baseUrl: env.apiBaseUrl });

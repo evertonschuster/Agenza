@@ -1,9 +1,4 @@
-/**
- * Public API of the `auth` feature. Other features/app code MUST import only from here —
- * never reach into this feature's internal files directly (enforced by the `no-restricted-imports`
- * rule in eslint.config.js). This is what keeps the feature's internals refactorable without
- * breaking every consumer.
- */
+/** Import only from here — never internal files (enforced by `no-restricted-imports`). */
 export { AuthProvider, AuthContext, type AuthContextValue } from './AuthProvider';
 export { useAuth } from './hooks/useAuth';
 export { ProtectedRoute } from './ProtectedRoute';

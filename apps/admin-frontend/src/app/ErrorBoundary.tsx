@@ -10,11 +10,7 @@ interface State {
   hasError: boolean;
 }
 
-/**
- * Error boundaries have no hook equivalent (React 19) — a class component is required.
- * Without this, an unexpected throw anywhere in the tree (e.g. AuthProvider) white-screens
- * the whole app with no fallback.
- */
+/** Error boundaries have no hook equivalent (React 19) — must be a class component. */
 export class ErrorBoundary extends Component<Props, State> {
   state: State = { hasError: false };
 
@@ -31,7 +27,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return <FullScreenMessage title="Something went wrong." description="Please reload the page." />;
+      return (
+        <FullScreenMessage title="Something went wrong." description="Please reload the page." />
+      );
     }
 
     return this.props.children;

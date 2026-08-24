@@ -11,11 +11,7 @@ function decodeAccessTokenClaims(accessToken: string): Record<string, unknown> |
   }
 }
 
-/**
- * Resolves the tenant exclusively from the access token's `tenant_id` claim (spec FR-005).
- * Never reads from a URL, query string, or client-side storage (spec FR-006) — those aren't
- * even parameters here, by construction.
- */
+/** Tenant comes only from the token's `tenant_id` claim (FR-005) — never URL/storage (FR-006). */
 export function resolveTenantContext(accessToken: string | null): TenantContext | null {
   if (!accessToken) return null;
   const claims = decodeAccessTokenClaims(accessToken);

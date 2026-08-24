@@ -50,8 +50,6 @@ describe('LoginRedirect', () => {
   });
 
   it('calls signinCallback() exactly once per mount, even under StrictMode double-invoke', async () => {
-    // Regression test: without a guard, StrictMode's dev-only double-invoke redeemed the
-    // single-use authorization code twice, racing a success and a failure navigation.
     mockSigninCallback.mockResolvedValue(undefined);
 
     renderCallback({ strict: true });

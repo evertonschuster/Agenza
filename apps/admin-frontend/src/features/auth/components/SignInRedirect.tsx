@@ -7,11 +7,7 @@ export function SignInRedirect() {
   const hasStarted = useRef(false);
 
   useEffect(() => {
-    // Guards against StrictMode's dev-only double-invoke of this effect (mount -> cleanup ->
-    // mount). Without it, `login()` fires twice: `signinRedirect()` writes PKCE state/verifier
-    // to storage before navigating, so two concurrent calls race, and the second call's stored
-    // state can be overwritten before the browser actually navigates on the first — breaking
-    // `signinCallback()`'s state/nonce validation on `/callback`.
+    // StrictMode double-invoke guard — a 2nd login() call would race signinRedirect()'s PKCE write.
     if (hasStarted.current) return;
     hasStarted.current = true;
     void login();

@@ -5,11 +5,8 @@ import { FullScreenMessage } from '@/shared/ui/FullScreenMessage';
 import { useAuth } from './hooks/useAuth';
 import { isBlockingFailure, isTransientStatus } from './sessionStore';
 
-/**
- * The single fail-closed guard (spec FR-001, FR-002, FR-009). Every authenticated route —
- * business features included, once they exist — must be nested under this rather than
- * re-implementing the check, so the invariant stays centralized (contracts/routes-contract.md).
- */
+// Future authenticated routes must nest under this, not re-implement the check (spec FR-001,
+// FR-002, FR-009; contracts/routes-contract.md).
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, login } = useAuth();
 

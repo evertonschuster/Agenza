@@ -9,10 +9,7 @@ export function LoginRedirect() {
   const hasStarted = useRef(false);
 
   useEffect(() => {
-    // Guards against StrictMode's dev-only double-invoke of this effect. The authorization code
-    // in the URL is single-use — a second concurrent `signinCallback()` call redeems an
-    // already-consumed code and rejects, racing the first call's success and sometimes bouncing
-    // straight back to /login right after a successful login.
+    // StrictMode double-invoke guard — a 2nd signinCallback() call would redeem the single-use code twice.
     if (hasStarted.current) return;
     hasStarted.current = true;
 

@@ -23,30 +23,15 @@ export const INITIAL_SNAPSHOT: AuthSnapshot = {
   user: null,
 };
 
-/**
- * The store's snapshot before the initial `authClient.getUser()` check has resolved — distinct
- * from `INITIAL_SNAPSHOT` ('unauthenticated'), which means "checked, definitely no session."
- * `ProtectedRoute` must treat 'checking' like 'authenticating'/'renewing' (render nothing yet),
- * never as a reason to redirect — otherwise every page load/refresh redirects into a login
- * round-trip even when a valid session is already in storage, because the redirect fires before
- * the async check has a chance to find it.
- */
+/** Distinct from INITIAL_SNAPSHOT ('unauthenticated') — must stay transient or a valid
+ * stored session gets redirected before the check finds it. */
 const CHECKING_SNAPSHOT: AuthSnapshot = {
   ...INITIAL_SNAPSHOT,
   session: { ...INITIAL_SESSION, status: 'checking' },
 };
 
-/**
- * Whether `ProtectedRoute` should show a "sign-in failed, try again" screen instead of
- * redirecting straight back to `/login` (spec Edge Cases, spec.md). `identity_unreachable` and
- * `missing_tenant_claim` don't self-resolve by redirecting again: an unreachable identity-service
- * fails the same way again, and a missing tenant claim silently re-authenticates via the
- * identity-service's own SSO session straight back into the same claim-less token — looping
- * forever with no user action ever breaking the cycle. `renewal_failed` is a normal
- * expired-session redirect, not a loop risk, since the visitor supplies fresh credentials at the
- * identity-service. No `default` case, so adding a `SessionFailureReason` later forces a
- * conscious choice here instead of silently defaulting to "auto-redirect."
- */
+/** identity_unreachable and missing_tenant_claim loop forever if auto-redirected (SSO
+ * silently retries into the same failure); renewal_failed doesn't. No `default`. */
 export function isBlockingFailure(reason: SessionFailureReason): boolean {
   switch (reason) {
     case 'identity_unreachable':
@@ -57,7 +42,7 @@ export function isBlockingFailure(reason: SessionFailureReason): boolean {
   }
 }
 
-/** Whether `ProtectedRoute` should render nothing yet (an async transition is in flight) rather than deciding to show the route or redirect. No `default`, for the same reason as `isBlockingFailure`. */
+/** No `default` — same reason as `isBlockingFailure`. */
 export function isTransientStatus(status: SessionStatus): boolean {
   switch (status) {
     case 'checking':
@@ -109,14 +94,7 @@ function resolveAuthenticated(oidcUser: User): AuthSnapshot {
   };
 }
 
-/**
- * The application's session state-transition rules (data-model.md), as a pure function:
- * same event in, same snapshot out, with no React, no `oidc-client-ts` event plumbing, and
- * no side effects. This is the piece that used to live inline inside `AuthProvider`'s
- * `useEffect` — extracting it means the business rules (what should "authenticated" mean,
- * when does a missing tenant claim fail closed, when does a renewal failure reset the
- * session) are testable as plain function calls, independent of how they're wired to the UI.
- */
+// See data-model.md for the full transition table.
 export function reduceSession(event: SessionEvent): AuthSnapshot {
   switch (event.type) {
     case 'INIT':
@@ -154,13 +132,7 @@ export function reduceSession(event: SessionEvent): AuthSnapshot {
 
 type Listener = () => void;
 
-/**
- * The external store `useSyncExternalStore` subscribes to (AuthProvider.tsx). A singleton
- * because there is exactly one session for the whole app — not a per-subtree concern.
- * Wraps `oidc-client-ts`'s event emitter (infrastructure) and dispatches through the pure
- * `reduceSession` (application logic) above; logging side effects happen here, at the
- * boundary, not inside the reducer.
- */
+// Side effects (logAuthEvent) happen here, at the boundary — never inside reduceSession.
 class SessionStore {
   private snapshot: AuthSnapshot = reduceSession({ type: 'INIT' });
   private listeners = new Set<Listener>();
@@ -208,17 +180,12 @@ class SessionStore {
   };
 
   private handleUserUnloaded = (): void => {
-    // oidc-client-ts's `signoutRedirect()` clears the local user (firing `UserUnloaded`)
-    // *before* it navigates the browser to identity-service's end-session endpoint. Reacting to
-    // it while `logout()` already has that redirect in flight (status 'loggingOut') used to
-    // send `ProtectedRoute` to `/login`, which immediately fired its own `signinRedirect()` — a
-    // second browser navigation racing the real sign-out redirect. Whichever won, the visitor
-    // was bounced through an unpredictable extra hop instead of a straightforward logout.
+    // signoutRedirect() fires this *before* navigating away — ignore mid-logout or it races
+    // a second signinRedirect() against that navigation.
     if (this.snapshot.session.status === 'loggingOut') return;
     this.dispatch({ type: 'USER_UNLOADED' });
   };
 
-  /** Registers with `oidc-client-ts` and kicks off the initial session check. Called once from `AuthProvider`'s mount effect. */
   startListening(): () => void {
     authClient.events.addUserLoaded(this.handleUserLoaded);
     authClient.events.addSilentRenewError(this.handleSilentRenewError);
@@ -251,14 +218,12 @@ class SessionStore {
     try {
       await authClient.signoutRedirect();
     } catch {
-      // signoutRedirect() already cleared the local user before it failed here (see
-      // handleUserUnloaded's comment) — reflect that instead of leaving the UI stuck on
-      // 'loggingOut' with no way to retry.
+      // User is already cleared even though this failed — move off 'loggingOut' so retry works.
       this.dispatch({ type: 'USER_UNLOADED' });
     }
   }
 
-  /** Test-only: not called by production code. */
+  /** Test-only. */
   reset(): void {
     this.snapshot = reduceSession({ type: 'INIT' });
     this.listeners.clear();

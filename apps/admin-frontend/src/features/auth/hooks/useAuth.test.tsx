@@ -5,9 +5,8 @@ import { AuthProvider } from '../AuthProvider';
 import { sessionStore } from '../sessionStore';
 import { useAuth } from './useAuth';
 
-// Exhaustive session-transition cases live in sessionStore.test.ts as pure `reduceSession`
-// tests. This file only verifies the wiring: that oidc-client-ts events actually reach the
-// store, and that `useSyncExternalStore` actually re-renders `useAuth`'s consumers.
+// Exhaustive transition cases live in sessionStore.test.ts. This file only verifies the
+// wiring: real oidc-client-ts events reach the store and re-render `useAuth` consumers.
 const { mockGetUser, mockSigninRedirect, mockSignoutRedirect, mockEvents } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockSigninRedirect: vi.fn(),
@@ -42,8 +41,6 @@ describe('useAuth (integration: AuthProvider + sessionStore wiring)', () => {
   });
 
   it('reports checking (not unauthenticated) synchronously before the initial session check resolves', () => {
-    // Regression test: ProtectedRoute must not treat this as "definitely logged out" and
-    // redirect before getUser() has had a chance to find a valid stored session.
     mockGetUser.mockReturnValue(new Promise(() => {}));
 
     const { result } = renderHook(() => useAuth(), { wrapper });
