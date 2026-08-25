@@ -45,22 +45,3 @@ tables, never in-process calls across services.
 Python services are consumers of the same identity: inbound tokens
 validated against identity-service's JWKS, outbound M2M via client
 credentials. They never touch another service's database.
-
-## How we build (SDD — spec/agent-driven development)
-
-The repo is optimized for AI-assisted delivery — the developer-facing
-walkthrough with worked example prompts is [SDD-GUIDE.md](SDD-GUIDE.md):
-
-1. **Instructions are layered**: root `AGENTS.md` → per-area `AGENTS.md`
-   (frontend, backend) → canonical `.agents/skills/` workflows → routed `docs/` references
-   (STATUS, DOMAIN, API, ADRs). An agent reads the layer it needs; specs
-   live in docs, not in chat history.
-2. **State is machine-readable**: `STATUS.md` files say what's done,
-   stubbed, and blocked, in dependency order. Update them as part of the
-   change, not after.
-3. **Quality is enforced, not requested**: CI gates (80% coverage, lint,
-   typecheck, CodeQL, Sonar) mean an agent's "done" is verifiable —
-   see `docs/QUALITY.md`.
-4. **Decisions are recorded**: anything a future agent might re-litigate
-   gets an ADR (`docs/adr/` for cross-cutting,
-   `apps/admin-frontend/docs/adr/` for frontend-local).

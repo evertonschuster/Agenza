@@ -1,6 +1,11 @@
 # ADR 0016 — Cross-tool AI agent governance framework
 
-Status: accepted (2026-07), amended 2026-08-03 for portable multi-agent discovery
+Status: abandoned (2026-08) — accepted (2026-07), amended 2026-08-03 for portable multi-agent discovery
+
+> **2026-08 update:** the framework described here (`AGENTS.md`,
+> `.agents/skills/`, `CLAUDE.md`/Copilot bridges, and the governance scripts
+> that validated them) was removed without a replacement. No formal
+> instruction-file system currently governs AI agent behavior in this repo.
 
 ## Context
 

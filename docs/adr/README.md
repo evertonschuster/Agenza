@@ -11,7 +11,6 @@ superseded is historical evidence, not current implementation guidance.
 | Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012, 0014, 0018 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026 |
-| Agent governance | 0016 |
 | Authentication UX and AI delegation | 0020, 0022 |
 | Database bootstrap | 0025 as narrowed by 0027, plus 0027/0028 |
 | Git workflow | 0021 as amended by 0030/0031 |
@@ -31,6 +30,10 @@ ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, and 0030
 contain explicitly marked historical passages. Their status header and the
 newer ADR named there win over the historical body.
 
+0016 is abandoned (not superseded — no replacement decision exists): the
+formal AI-agent AGENTS.md/skills governance framework it established was
+removed. There is currently no repository decision on this concern.
+
 ## Complete register
 
 0001 context-aggregated services · 0002 schema per service · 0003 OpenIddict ·
@@ -38,11 +41,11 @@ newer ADR named there win over the historical body.
 conventions · 0007 command binding · 0008 tenant assignment · 0009
 TenantOwnedEntity · 0010/0011 superseded validation experiments · 0012 handler
 and domain correction · 0013 superseded relationship enforcement · 0014
-Result-based domain/persistence · 0015 test-tier reduction · 0016 agent
-governance · 0017 migrations history · 0018 shared-kernel split · 0019 tenant
-persistence tests · 0020 authentication feedback · 0021 trunk workflow · 0022
-AI tenant context · 0023 superseded runtime tests · 0024 database ownership ·
-0025/0027 bootstrap evolution · 0026 runtime-smoke boundary · 0028 migration
-baseline · 0029 Aspire-only orchestration · 0030/0031 Git-hook evolution · 0032
-stable runtime/toolchain pins.
+Result-based domain/persistence · 0015 test-tier reduction · 0016 abandoned
+agent governance framework · 0017 migrations history · 0018 shared-kernel
+split · 0019 tenant persistence tests · 0020 authentication feedback · 0021
+trunk workflow · 0022 AI tenant context · 0023 superseded runtime tests · 0024
+database ownership · 0025/0027 bootstrap evolution · 0026 runtime-smoke
+boundary · 0028 migration baseline · 0029 Aspire-only orchestration · 0030/0031
+Git-hook evolution · 0032 stable runtime/toolchain pins.
 

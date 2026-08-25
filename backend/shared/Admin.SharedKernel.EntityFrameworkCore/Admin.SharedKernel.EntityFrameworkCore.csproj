@@ -9,9 +9,9 @@
   <ItemGroup>
     <!-- Infrastructure-only shared kernel: a generic EF repository base
          needs Microsoft.EntityFrameworkCore, which Domain/Application must
-         never depend on (backend/CLAUDE.md layering). Kept as its own
-         project instead of folded into Admin.SharedKernel (which
-         Application references directly) so that boundary can't leak. -->
+         never depend on. Kept as its own project instead of folded into
+         Admin.SharedKernel (which Application references directly) so that
+         boundary can't leak. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
