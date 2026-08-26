@@ -55,8 +55,8 @@ Feature-based/vertical-slice layout per plan.md's Project Structure (spec FR-014
 - [x] T011 [P] Create the minimal in-app logger in `apps/admin-frontend/src/shared/logger.ts` (spec FR-015, research.md Decision 9)
 - [x] T012 [P] Create the Shadcn `cn()` class-merging helper in `apps/admin-frontend/src/shared/lib/utils.ts` (depends on T009)
 - [x] T013 [P] Create the API type generation scripts `apps/admin-frontend/scripts/generateApiTypes.mjs` and `apps/admin-frontend/scripts/checkGeneratedApiTypes.mjs` per contracts/api-client-contract.md's Generation contract (source: `services-service`'s OpenAPI document, default `http://localhost:5080/openapi/v1.json`, overridable via `SERVICES_API_OPENAPI_URL`)
-- [ ] T014 Run the T013 script against a running `services-service` to generate the initial `apps/admin-frontend/src/shared/api/generated/services-api.d.ts` (research.md Decision 6/7; depends on T013) — **deferred**: `services-service` isn't running yet; a clearly-marked placeholder stub is in place so downstream tasks aren't blocked. Will run for real once the Aspire stack is up for e2e verification (Phase 6).
-- [x] T015 Create the typed API client factory `createApiClient(session: Session): Client<paths>` in `apps/admin-frontend/src/shared/api/apiClient.ts` using `openapi-fetch`, attaching `Authorization: Bearer <token>` and `X-Tenant-Id: <tenantId>` via its middleware/interceptor mechanism (contracts/api-client-contract.md; depends on T014)
+- [x] T014 Run the T013 script against a running `services-service` to generate the initial `apps/admin-frontend/src/shared/api/generated/services-api.d.ts` (research.md Decision 6/7; depends on T013). Done against the live Aspire stack; `generate:api-types:check` reports zero drift.
+- [x] T015 Create the typed API client factory `createApiClient(getCredentials: () => { accessToken: string | null; tenantId: string | null }): Client<paths>` in `apps/admin-frontend/src/shared/api/apiClient.ts` using `openapi-fetch`, attaching `Authorization: Bearer <token>` and `X-Tenant-Id: <tenantId>` via its middleware/interceptor mechanism (contracts/api-client-contract.md; depends on T014)
 - [x] T016 [P] Create an environment variable loader/validator for the six `VITE_*` vars that fails fast if any is missing (contracts/env-contract.md) in `apps/admin-frontend/src/shared/env.ts`
 - [x] T017 Create `authClient.ts` (`oidc-client-ts` `UserManager` configured with `authority`, `client_id: "admin-panel"`, redirect/post-logout URIs, scope, `userStore: new WebStorageStateStore({ store: window.localStorage })` per plan.md's I1 remediation — **not** the library's `sessionStorage` default, so a second tab recognizes an existing session — and OIDC discovery per research.md Decision 13, with a documented fallback to explicit endpoints in comments) in `apps/admin-frontend/src/features/auth/authClient.ts` (depends on T016)
 - [x] T018 [P] Create the `Session`, `Tenant Context`, and `Authenticated User` types from data-model.md in `apps/admin-frontend/src/features/auth/types.ts`
@@ -79,8 +79,8 @@ Feature-based/vertical-slice layout per plan.md's Project Structure (spec FR-014
 > Write these tests FIRST, ensure they FAIL before implementation
 
 - [x] T022 [P] [US1] Unit test: `useAuth` reports `unauthenticated` status when no session exists; surfaces a failure state (`failureReason: 'identity_unreachable'`) instead of hanging or crashing when identity-service is unreachable during login (spec Edge Case — G1 remediation); **and (G2 remediation)** surfaces `failureReason: 'missing_tenant_claim'` and remains `unauthenticated` (fail closed) when a session exists with a valid, well-formed access token that lacks the `tenant_id` claim entirely (spec Edge Case, FR-009) — in `apps/admin-frontend/src/features/auth/hooks/useAuth.test.tsx` (renamed from `.ts` — contains JSX). Passing, incl. the T041 logout case in the same file.
-- [x] T023 [P] [US1] Unit test: `ProtectedRoute` redirects to `/login` when session status is `unauthenticated` or `expired` (spec FR-001, FR-002, FR-009), in `apps/admin-frontend/src/features/auth/ProtectedRoute.test.tsx`. Passing.
-- [ ] T024 [P] [US1] Playwright e2e test: an unauthenticated visitor opening the app lands on identity-service's OIDC login screen with no admin-frontend content visible first (quickstart.md Scenario 1), in `apps/admin-frontend/e2e/auth.spec.ts` — **pending**: requires the full Aspire stack running.
+- [x] T023 [P] [US1] Unit test: `ProtectedRoute` redirects to `/login` when session status is `unauthenticated` (spec FR-001, FR-002, FR-009), in `apps/admin-frontend/src/features/auth/ProtectedRoute.test.tsx`. Passing.
+- [x] T024 [P] [US1] Playwright e2e test: an unauthenticated visitor opening the app lands on identity-service's OIDC login screen with no admin-frontend content visible first (quickstart.md Scenario 1), in `apps/admin-frontend/e2e/auth.spec.ts`. Passing against the full Aspire stack.
 
 ### Implementation for User Story 1
 
@@ -107,7 +107,7 @@ Feature-based/vertical-slice layout per plan.md's Project Structure (spec FR-014
 - [x] T030 [P] [US2] Unit test: `tenant.ts` resolves the tenant only from the token's `tenant_id` claim and ignores any URL/query/localStorage value even when present (spec FR-005, FR-006), in `apps/admin-frontend/src/features/auth/tenant.test.ts`. Passing.
 - [x] T031 [P] [US2] Component test: `AppLayout` renders the shell layout + placeholder navigation with no business-domain content (spec FR-004, FR-013), in `apps/admin-frontend/src/app/AppLayout.test.tsx`. Passing.
 - [x] T032 [P] [US2] **(U2 remediation)** Unit/component test for `LoginRedirect` completing the OIDC callback — mock `oidc-client-ts`'s `signinCallback()` to resolve successfully and assert navigation to `/`, and to reject and assert the failure path is taken instead (spec FR-003), in `apps/admin-frontend/src/features/auth/components/LoginRedirect.test.tsx`. Passing.
-- [ ] T033 [P] [US2] Playwright e2e test: a real interactive login as the `DemoTenant` demo user (`owner@demo.local` / `Passw0rd!`) redirects through `/callback` to `/` and renders the shell with the matching tenant (quickstart.md Scenario 2; research.md Decision 12), in `apps/admin-frontend/e2e/auth.spec.ts` — **pending**: requires the full Aspire stack running.
+- [x] T033 [P] [US2] Playwright e2e test: a real interactive login as the `DemoTenant` demo user (`owner@demo.local` / `Passw0rd!`) redirects through `/callback` to `/` and renders the shell with the matching tenant (quickstart.md Scenario 2; research.md Decision 12), in `apps/admin-frontend/e2e/auth.spec.ts`. Passing against the full Aspire stack.
 
 ### Implementation for User Story 2
 
@@ -134,7 +134,7 @@ Feature-based/vertical-slice layout per plan.md's Project Structure (spec FR-014
 
 - [x] T040 [P] [US3] Unit tests: session renews silently before expiry and stays `authenticated` (spec FR-007); renewal failure transitions to `unauthenticated` with `failureReason: 'renewal_failed'` (data-model.md state transitions); **and (G3 remediation)** if the `tenant_id` claim's value changes during a successful renewal, `Tenant Context` updates to the new value rather than keeping the stale one (spec Edge Case) — in `apps/admin-frontend/src/features/auth/AuthProvider.test.tsx`. Passing.
 - [x] T041 [P] [US3] Unit test: logout clears the local session and invokes identity-service's end-session flow (spec FR-008), in `apps/admin-frontend/src/features/auth/hooks/useAuth.test.tsx`. Passing (same file as T022).
-- [ ] T042 [P] [US3] Playwright e2e test: a session that stays active past token expiry is not forced to re-login; triggering logout returns to `/login` and a subsequent visit to `/` redirects to login again (quickstart.md Scenario 3), in `apps/admin-frontend/e2e/auth.spec.ts` — **pending**: requires the full Aspire stack running.
+- [x] T042 [P] [US3] Playwright e2e test: a session that stays active past token expiry is not forced to re-login; triggering logout returns to `/login` and a subsequent visit to `/` redirects to login again (quickstart.md Scenario 3), in `apps/admin-frontend/e2e/auth.spec.ts`. Passing against the full Aspire stack.
 
 ### Implementation for User Story 3
 
@@ -155,13 +155,13 @@ Feature-based/vertical-slice layout per plan.md's Project Structure (spec FR-014
 
 These tasks verify the cumulative result of Phases 1–5 rather than adding new behavior — sequenced last because a "0 violations" pass is only meaningful once the full scaffold exists.
 
-- [x] T047 [US4] Verify `npm run lint --workspace=apps/admin-frontend` passes cleanly (spec FR-011); fix any violations found in the code from Phases 1–5. 0 errors, 2 acceptable react-refresh warnings (Context/cva co-located with components — standard, non-blocking).
+- [x] T047 [US4] Verify `npm run lint --workspace=apps/admin-frontend` passes cleanly (spec FR-011); fix any violations found in the code from Phases 1–5. 0 errors, 1 acceptable react-refresh warning (`button.tsx`'s `cva` co-located with its component — standard, non-blocking; the same warning on `AuthProvider.tsx` was fixed by splitting `AuthContext` into its own file).
 - [x] T048 [US4] Verify `npm run format:check --workspace=apps/admin-frontend` passes cleanly (spec FR-011); fix any violations found. Passing (specs/ and pre-existing tooling dirs excluded — not application source).
 - [x] T049 [US4] Verify `npm run build --workspace=apps/admin-frontend` (tsc strict + Vite build) passes cleanly (spec FR-011; constitution Principle I); fix any violations found. Passing, no warnings.
-- [x] T050 [US4] **(G4 remediation)** Verify both `npm run test --workspace=apps/admin-frontend` (the bare unit-test command) **and** `npm run test:coverage --workspace=apps/admin-frontend` pass cleanly against the Decision 14 coverage gate (spec FR-011, FR-012) — the bare `test` script is a distinct, real npm script that must be verified on its own, not assumed to pass just because `test:coverage` does; add tests for any uncovered branch. Both pass: 17/17 tests, 82.84% statement coverage (well above the trivial 1% gate).
-- [ ] T051 [US4] Verify `npm run test:e2e --workspace=apps/admin-frontend` (all of T024, T033, T042) passes against the full Aspire-orchestrated stack (constitution Principle V) — **pending**: requires the full Aspire stack running.
-- [ ] T052 [US4] Verify `npm run generate:api-types:check --workspace=apps/admin-frontend` passes with zero drift (constitution Principle IV/V; contracts/api-client-contract.md) — **pending**: requires `services-service` running; currently checked against a placeholder stub (T014).
-- [ ] T053 [US4] Verify `dotnet run --project backend/AppHost` serves the admin-frontend on port 5173 with no manual steps beyond starting the orchestrator (spec FR-010, SC-001) — **pending**.
+- [x] T050 [US4] **(G4 remediation)** Verify both `npm run test --workspace=apps/admin-frontend` (the bare unit-test command) **and** `npm run test:coverage --workspace=apps/admin-frontend` pass cleanly against the Decision 14 coverage gate (spec FR-011, FR-012) — the bare `test` script is a distinct, real npm script that must be verified on its own, not assumed to pass just because `test:coverage` does; add tests for any uncovered branch. Both pass: 52/52 tests, 91.02% statement coverage (well above the trivial 1% gate).
+- [x] T051 [US4] Verify `npm run test:e2e --workspace=apps/admin-frontend` (all of T024, T033, T042) passes against the full Aspire-orchestrated stack (constitution Principle V). 3/3 passing against a live Aspire stack, including a real DemoTenant login and logout.
+- [x] T052 [US4] Verify `npm run generate:api-types:check --workspace=apps/admin-frontend` passes with zero drift (constitution Principle IV/V; contracts/api-client-contract.md). Passing against the live `services-service` OpenAPI document.
+- [x] T053 [US4] Verify `dotnet run --project backend/AppHost` serves the admin-frontend on port 5173 with no manual steps beyond starting the orchestrator (spec FR-010, SC-001). Confirmed live.
 
 **Checkpoint**: All four user stories independently functional; every constitutional CI gate passes locally.
 
@@ -221,7 +221,7 @@ Task: "Configure ESLint flat config in eslint.config.js"
 Task: "Configure Prettier in .prettierrc.json and .prettierignore"
 Task: "Configure Vitest in vitest.config.ts with the Decision 14 coverage gate"
 Task: "Configure Playwright in playwright.config.ts"
-Task: "Initialize Tailwind CSS + PostCSS and create src/app/globals.css"
+Task: "Initialize Tailwind CSS v4 (@tailwindcss/vite, no PostCSS) and create src/app/globals.css"
 Task: "Create .env.example documenting the six VITE_* variables"
 ```
 
@@ -229,7 +229,7 @@ Task: "Create .env.example documenting the six VITE_* variables"
 
 ```bash
 # Launch all three User Story 1 tests together (before implementation):
-Task: "Unit test: useAuth reports unauthenticated with no session, and identity_unreachable when identity-service is down, in src/features/auth/hooks/useAuth.test.ts"
+Task: "Unit test: useAuth reports unauthenticated with no session, and identity_unreachable when identity-service is down, in src/features/auth/hooks/useAuth.test.tsx"
 Task: "Unit test: ProtectedRoute redirects to /login when unauthenticated, in src/features/auth/ProtectedRoute.test.tsx"
 Task: "Playwright e2e test: unauthenticated visitor lands on identity-service login, in e2e/auth.spec.ts"
 ```

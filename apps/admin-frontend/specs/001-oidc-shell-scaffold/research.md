@@ -46,7 +46,7 @@ Scope note: every decision below is derived from currently-live repository sourc
 
 ## Decision 8: Session/error state taxonomy — small, feature-scoped set
 
-- **Decision**: Model only the states this feature actually needs: `unauthenticated`, `authenticating`, `authenticated`, `renewing`, and a small set of terminal failure reasons (`renewal_failed`, `identity_unreachable`, `missing_tenant_claim`) surfaced generically as "sign in again."
+- **Decision**: Model only the states this feature actually needs: `checking`, `unauthenticated`, `authenticating`, `authenticated`, `renewing`, `loggingOut`, and a small set of terminal failure reasons (`renewal_failed`, `identity_unreachable`, `missing_tenant_claim`) surfaced generically as "sign in again."
 - **Rationale**: The constitution defers a full error taxonomy to be decided per-feature. Spec's edge cases only require distinguishing "can render the shell" from "must show the login redirect / a failure state" — a small closed set satisfies FR-009 and every edge case without designing error categories for business features that don't exist yet.
 - **Alternatives considered**: A general-purpose app-wide error taxonomy (error codes, i18n message catalog, etc.) — rejected as premature; revisit once a business feature has real failure modes to categorize (e.g., validation errors, conflict errors).
 

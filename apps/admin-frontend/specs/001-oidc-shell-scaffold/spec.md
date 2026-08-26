@@ -138,11 +138,11 @@ A developer cloning the scaffold can run the standard quality commands (lint, fo
 
 ## Assumptions
 
-- This feature builds the admin-frontend from a completely empty directory: no pre-existing application code, tooling configuration, or CI wiring for admin-frontend exists before this feature begins. Every requirement below describes creating something new, not adjusting or migrating an existing setup.
+- This feature builds the admin-frontend application from a completely empty directory: no pre-existing frontend application code or tooling configuration exists before this feature begins. `.github/workflows/frontend-ci.yml` already existed (added ahead of the frontend it checks) and is extended, not created, by this feature.
 - Business-domain features (Categories, Services, Clients, etc.) are intentionally excluded from this scaffold; only the empty authenticated shell (layout + basic navigation) is delivered.
 - The UI component library is Shadcn/ui on Tailwind CSS, settled during planning per the project constitution's "Explicitly Deferred Decisions" (see plan.md Technical Context and research.md); any state/data-fetching library beyond that remains deferred, since this feature makes no business API calls.
 - The generated OpenAPI client may be a minimal/stub client at this stage; generating a full client for every backend endpoint is out of scope.
-- identity-service already exists, exposes a working OIDC endpoint, and is not modified by this feature.
+- identity-service already exists and exposes a working OIDC endpoint; this feature makes no changes to its authentication/authorization logic — the one exception is an unrelated pre-existing bug fix to its login page's theme-query-parameter parsing (`Login.cshtml.cs`), found during integration testing.
 - "Logout" ends the identity-service (OIDC) session, not just local application state, consistent with standard OIDC RP-initiated logout.
 - The coverage gate's passing threshold starts minimal/trivial, as stated in the acceptance criteria, and is expected to rise in later features rather than being fixed by this one.
 - The admin-frontend and identity-service run on the fixed local ports already set by the project constitution.
