@@ -17,6 +17,7 @@ The shape future features will consume to call `services-service` — this scaff
 - The returned client MUST attach on every request, via `openapi-fetch`'s middleware/interceptor mechanism (not left to each call site to remember):
   - `Authorization: Bearer <accessToken>` (mirrors how the OIDC session already holds the token).
   - `X-Tenant-Id: <tenantId>` — set automatically from the validated token's `tenant_id` claim, exactly matching ADR 0006's contract with `services-service`'s `TenantHeaderFilter`. Callers of the client MUST NOT be able to override this header per-call — there is no parameter for it.
+  - If `getCredentials()` returns a missing `accessToken` or `tenantId` at request time, the client fails closed — it throws instead of sending a request with one or both headers absent.
 - Components and features are forbidden from calling `fetch` directly, and from writing their own request/response DTOs, against `services-service` — every call goes through `createApiClient()` (constitution Principle IV). This is enforced by code review at this stage; an ESLint rule banning bare `fetch` outside `shared/api/` is a reasonable future hardening but isn't required by this feature.
 
 ## What this scaffold does NOT do

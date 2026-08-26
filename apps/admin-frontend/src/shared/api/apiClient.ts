@@ -19,12 +19,13 @@ export function createApiClient(getCredentials: () => ApiClientCredentials): Cli
   client.use({
     onRequest({ request }) {
       const { accessToken, tenantId } = getCredentials();
-      if (accessToken) {
-        request.headers.set('Authorization', `Bearer ${accessToken}`);
+      if (!accessToken || !tenantId) {
+        throw new Error(
+          'createApiClient: request attempted without an authenticated session (missing accessToken or tenantId).',
+        );
       }
-      if (tenantId) {
-        request.headers.set('X-Tenant-Id', tenantId);
-      }
+      request.headers.set('Authorization', `Bearer ${accessToken}`);
+      request.headers.set('X-Tenant-Id', tenantId);
       return request;
     },
   });
