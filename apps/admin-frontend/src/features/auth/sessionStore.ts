@@ -171,18 +171,26 @@ class SessionStore {
     }
   }
 
+  // A silent renewal or the initial getUser() can still resolve after logout() has already
+  // dispatched LOGOUT_STARTED — without this guard, whichever settles last would overwrite
+  // 'loggingOut' and could send ProtectedRoute into a redirect that fights signoutRedirect()'s
+  // own navigation.
+  private get isLoggingOut(): boolean {
+    return this.snapshot.session.status === 'loggingOut';
+  }
+
   private handleUserLoaded = (user: User): void => {
+    if (this.isLoggingOut) return;
     this.dispatch({ type: 'USER_LOADED', user });
   };
 
   private handleSilentRenewError = (): void => {
+    if (this.isLoggingOut) return;
     this.dispatch({ type: 'SILENT_RENEW_ERROR' });
   };
 
   private handleUserUnloaded = (): void => {
-    // signoutRedirect() fires this *before* navigating away — ignore mid-logout or it races
-    // a second signinRedirect() against that navigation.
-    if (this.snapshot.session.status === 'loggingOut') return;
+    if (this.isLoggingOut) return;
     this.dispatch({ type: 'USER_UNLOADED' });
   };
 
@@ -193,8 +201,14 @@ class SessionStore {
 
     authClient
       .getUser()
-      .then((user) => this.dispatch({ type: 'INITIAL_USER', user }))
-      .catch(() => this.dispatch({ type: 'INITIAL_ERROR' }));
+      .then((user) => {
+        if (this.isLoggingOut) return;
+        this.dispatch({ type: 'INITIAL_USER', user });
+      })
+      .catch(() => {
+        if (this.isLoggingOut) return;
+        this.dispatch({ type: 'INITIAL_ERROR' });
+      });
 
     return () => {
       authClient.events.removeUserLoaded(this.handleUserLoaded);

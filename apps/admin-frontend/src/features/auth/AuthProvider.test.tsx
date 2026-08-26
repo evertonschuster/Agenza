@@ -129,6 +129,37 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     await logoutPromise;
   });
 
+  it('ignores UserLoaded and SilentRenewError events that fire mid-logout (a stale renewal racing logout)', async () => {
+    let resolveSignout!: () => void;
+    mockSignoutRedirect.mockReturnValue(
+      new Promise<void>((resolve) => {
+        resolveSignout = resolve;
+      }),
+    );
+
+    const { result } = renderHook(() => useAuth(), { wrapper });
+    await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
+
+    let logoutPromise!: Promise<void>;
+    act(() => {
+      logoutPromise = result.current.logout();
+    });
+    await waitFor(() => expect(result.current.session.status).toBe('loggingOut'));
+
+    act(() => {
+      handlers.userLoaded?.(makeOidcUser(TENANT_A));
+    });
+    expect(result.current.session.status).toBe('loggingOut');
+
+    act(() => {
+      handlers.silentRenewError?.(new Error('renewal failed'));
+    });
+    expect(result.current.session.status).toBe('loggingOut');
+
+    resolveSignout();
+    await logoutPromise;
+  });
+
   it('leaves loggingOut after signoutRedirect() rejects, so a later UserUnloaded event is still handled', async () => {
     mockSignoutRedirect.mockRejectedValue(new Error('network error'));
 
