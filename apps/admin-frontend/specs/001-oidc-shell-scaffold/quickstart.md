@@ -35,8 +35,8 @@ npm run dev --workspace=apps/admin-frontend
 
 ### 2. Successful login renders the tenant-scoped shell (→ User Story 2, SC-003)
 
-1. From the login screen, sign in as the seeded demo user: `owner@demo.local` / `Passw0rd!` (identity-service's `DemoTenant`, id `019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120` — see `research.md` Decision 12).
-2. **Expected**: redirected through `http://localhost:5173/callback` to `/`; the authenticated shell (layout + placeholder navigation, no business content per FR-013) renders; the tenant context in use (see `data-model.md` Tenant Context) is the demo tenant id above.
+1. From the login screen, sign in as the seeded demo user: `owner@demo.local` / `Passw0rd!` (identity-service's `DemoTenant` — see `research.md` Decision 12).
+2. **Expected**: redirected through `http://localhost:5173/callback` to `/`; the authenticated shell (layout + placeholder navigation, no business content per FR-013) renders; the tenant context in use (see `data-model.md` Tenant Context) matches the `tenant_id` claim on the issued access token — the demo tenant's id is generated fresh (`Guid.CreateVersion7()`) whenever the database is seeded, so it differs per environment rather than being a fixed value.
 
 ### 3. Silent renewal and logout (→ User Story 3, SC-004)
 
