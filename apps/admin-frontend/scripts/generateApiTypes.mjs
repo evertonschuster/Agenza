@@ -1,5 +1,5 @@
 import { writeFile } from 'node:fs/promises';
-import { fileURLToPath } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import openapiTS, { astToString } from 'openapi-typescript';
 import prettier from 'prettier';
@@ -31,7 +31,9 @@ export async function generate() {
   return banner + formatted;
 }
 
-if (import.meta.url === `file://${process.argv[1]}`) {
+// String-concatenating `file://` breaks on Windows (backslashes, drive-letter encoding) —
+// pathToFileURL() normalizes both sides so this entry-point check works cross-platform.
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
   const content = await generate();
   await writeFile(OUTPUT_PATH, content, 'utf-8');
   console.log(`Generated ${OUTPUT_PATH} from ${OPENAPI_URL}`);
