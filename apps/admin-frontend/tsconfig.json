@@ -22,12 +22,11 @@
     "noUncheckedIndexedAccess": true,
     "erasableSyntaxOnly": true,
 
-    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
 
-    "types": ["vite/client", "vitest/globals", "@testing-library/jest-dom"]
+    "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"]
   },
   "include": ["src", "e2e"],
   "exclude": ["src/shared/api/generated"]
