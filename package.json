@@ -25,6 +25,7 @@
     "lint:frontend": "npm run lint --workspace=apps/admin-frontend"
   },
   "allowScripts": {
-    "msw": true
+    "msw": true,
+    "esbuild@0.28.2": true
   }
 }

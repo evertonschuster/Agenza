@@ -96,15 +96,12 @@ jobs:
       - name: Test
         run: npm run test:coverage --workspace=apps/admin-frontend
 
-      - name: Install Playwright browser
-        run: npm exec --workspace=apps/admin-frontend -- playwright install --with-deps chromium
-
-      - name: Browser tests
-        run: npm run test:e2e --workspace=apps/admin-frontend
+  # e2e/*.spec.ts drives real identity-service logins, so it needs the full Aspire
+  # stack running - that only happens in api-contract-check below, not here.
 
   # Separate gate from `changes` above: a services-service response shape
   # change is exactly the kind of drift
-  # src/features/catalog/infrastructure/generated/services-api.d.ts needs to
+  # src/shared/api/generated/services-api.d.ts needs to
   # catch, even on a PR that never touches apps/admin-frontend itself.
   api-contract-changes:
     name: detect-api-contract-changes
@@ -184,6 +181,18 @@ jobs:
         # when apps/admin-frontend hasn't been (re)created yet in this branch.
         if: hashFiles('apps/admin-frontend/package.json') != ''
         run: npm run generate:api-types:check --workspace=apps/admin-frontend
+
+      - name: Install Playwright browser
+        if: hashFiles('apps/admin-frontend/package.json') != ''
+        run: npm exec --workspace=apps/admin-frontend -- playwright install --with-deps chromium
+
+      - name: Browser tests
+        # Real logins against the DemoTenant seed data (spec quickstart Scenarios 1-3), which is
+        # why this needs the Aspire stack above rather than living in frontend-build-and-test.
+        # playwright.config.ts's webServer waits for :5173 itself (reusing Aspire's Vite server),
+        # so there's no separate readiness step here.
+        if: hashFiles('apps/admin-frontend/package.json') != ''
+        run: npm run test:e2e --workspace=apps/admin-frontend
 
       - name: Exercise real OIDC scopes and cross-service tenant boundary
         run: python scripts/smoke_oidc_contract.py
