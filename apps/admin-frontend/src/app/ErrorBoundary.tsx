@@ -27,9 +27,7 @@ export class ErrorBoundary extends Component<Props, State> {
 
   render() {
     if (this.state.hasError) {
-      return (
-        <FullScreenMessage title="Something went wrong." description="Please reload the page." />
-      );
+      return <FullScreenMessage title="Algo deu errado." description="Recarregue a página." />;
     }
 
     return this.props.children;

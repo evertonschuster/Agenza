@@ -5,8 +5,6 @@ import { FullScreenMessage } from '@/shared/ui/FullScreenMessage';
 import { useAuth } from './hooks/useAuth';
 import { isBlockingFailure, isTransientStatus } from './sessionStore';
 
-// Future authenticated routes must nest under this, not re-implement the check (spec FR-001,
-// FR-002, FR-009; contracts/routes-contract.md).
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, login } = useAuth();
 
@@ -21,11 +19,11 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (session.failureReason && isBlockingFailure(session.failureReason)) {
     return (
       <FullScreenMessage
-        title="Sign-in failed."
-        description="Please try signing in again."
+        title="Falha ao entrar."
+        description="Tente entrar novamente."
         action={
           <Button variant="outline" size="sm" onClick={() => void login()}>
-            Try again
+            Tentar novamente
           </Button>
         }
       />

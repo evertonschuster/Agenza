@@ -17,7 +17,7 @@ describe('ErrorBoundary', () => {
       </ErrorBoundary>,
     );
 
-    expect(screen.getByText('Something went wrong.')).toBeInTheDocument();
+    expect(screen.getByText('Algo deu errado.')).toBeInTheDocument();
   });
 
   it('renders children normally when nothing throws', () => {

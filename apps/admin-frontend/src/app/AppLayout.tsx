@@ -12,18 +12,20 @@ export function AppLayout() {
           {user?.displayName ? <span>{user.displayName}</span> : null}
           {tenant ? <span data-testid="tenant-id">{tenant.tenantId}</span> : null}
           <Button variant="outline" size="sm" onClick={() => void logout()}>
-            Log out
+            Sair
           </Button>
         </div>
       </header>
       <div className="flex flex-1">
         <nav className="w-56 border-r px-4 py-6">
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>Dashboard</li>
+            <li>Painel</li>
           </ul>
         </nav>
         <main className="flex-1 p-6">
-          <p className="text-sm text-muted-foreground">No business features yet (spec FR-013).</p>
+          <p className="text-sm text-muted-foreground">
+            Nenhuma funcionalidade de negócio ainda (spec FR-013).
+          </p>
         </main>
       </div>
     </div>

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { AuthContext, type AuthContextValue } from './AuthProvider';
+import { AuthContext, type AuthContextValue } from './AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { INITIAL_SESSION, type Session } from './types';
 
@@ -80,7 +80,7 @@ describe('ProtectedRoute', () => {
       renderWithSession({ status: 'unauthenticated', failureReason });
 
       expect(screen.queryByText('Login Screen')).not.toBeInTheDocument();
-      expect(screen.getByText('Sign-in failed.')).toBeInTheDocument();
+      expect(screen.getByText('Falha ao entrar.')).toBeInTheDocument();
     },
   );
 
@@ -91,7 +91,7 @@ describe('ProtectedRoute', () => {
       failureReason: 'identity_unreachable',
     });
 
-    await user.click(screen.getByRole('button', { name: 'Try again' }));
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(login).toHaveBeenCalledTimes(1);
   });

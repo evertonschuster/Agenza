@@ -24,8 +24,8 @@ describe('AppLayout', () => {
     renderLayout();
 
     expect(screen.getByText('Agenza Admin')).toBeInTheDocument();
-    expect(screen.getByText('Dashboard')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /log out/i })).toBeInTheDocument();
+    expect(screen.getByText('Painel')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /sair/i })).toBeInTheDocument();
 
     for (const forbidden of ['Categories', 'Services', 'Clients']) {
       expect(screen.queryByText(forbidden)).not.toBeInTheDocument();

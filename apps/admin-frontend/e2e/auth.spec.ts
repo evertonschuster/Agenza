@@ -43,7 +43,7 @@ test('an active session persists across reload and logout fully ends it (quickst
   await page.reload();
   await expect(page.getByText('Agenza Admin')).toBeVisible();
 
-  await page.getByRole('button', { name: /log out/i }).click();
+  await page.getByRole('button', { name: /sair/i }).click();
 
   // Logging out and landing back on /login (which always re-triggers signinRedirect) ends
   // up back at identity-service's real credentials form only if BOTH the local and
