@@ -8,18 +8,22 @@ export interface ApiClientCredentials {
 }
 
 /** Single entry point for services-service (contracts/api-client-contract.md). Narrow
- * `{ accessToken, tenantId }` shape, not auth's types — `shared/` can't depend on `features/*`. */
-export function createApiClient(credentials: ApiClientCredentials): Client<paths> {
+ * `{ accessToken, tenantId }` shape, not auth's types — `shared/` can't depend on `features/*`.
+ * Takes a getter, not a value: the client is meant to be built once and reused, and reading
+ * credentials fresh on every request (rather than closing over a snapshot) keeps it correct
+ * across token renewal and tenant changes. */
+export function createApiClient(getCredentials: () => ApiClientCredentials): Client<paths> {
   const env = loadEnv();
   const client = createClient<paths>({ baseUrl: env.apiBaseUrl });
 
   client.use({
     onRequest({ request }) {
-      if (credentials.accessToken) {
-        request.headers.set('Authorization', `Bearer ${credentials.accessToken}`);
+      const { accessToken, tenantId } = getCredentials();
+      if (accessToken) {
+        request.headers.set('Authorization', `Bearer ${accessToken}`);
       }
-      if (credentials.tenantId) {
-        request.headers.set('X-Tenant-Id', credentials.tenantId);
+      if (tenantId) {
+        request.headers.set('X-Tenant-Id', tenantId);
       }
       return request;
     },
