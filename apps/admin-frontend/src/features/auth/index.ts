@@ -1,5 +1,6 @@
 /** Import only from here — never internal files (enforced by `no-restricted-imports`). */
-export { AuthProvider, AuthContext, type AuthContextValue } from './AuthProvider';
+export { AuthProvider } from './AuthProvider';
+export { AuthContext, type AuthContextValue } from './AuthContext';
 export { useAuth } from './hooks/useAuth';
 export { ProtectedRoute } from './ProtectedRoute';
 export { SignInRedirect } from './components/SignInRedirect';

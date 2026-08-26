@@ -1,7 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from '../hooks/useAuth';
 
-/** The `/login` route: triggers the OIDC redirect to identity-service (contracts/routes-contract.md). */
 export function SignInRedirect() {
   const { login } = useAuth();
   const hasStarted = useRef(false);

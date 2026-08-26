@@ -1,16 +1,6 @@
-import { createContext, useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { AuthContext, type AuthContextValue } from './AuthContext';
 import { sessionStore } from './sessionStore';
-import type { AuthenticatedUser, Session, TenantContext } from './types';
-
-export interface AuthContextValue {
-  session: Session;
-  tenant: TenantContext | null;
-  user: AuthenticatedUser | null;
-  login: () => Promise<void>;
-  logout: () => Promise<void>;
-}
-
-export const AuthContext = createContext<AuthContextValue | null>(null);
 
 const login = () => sessionStore.login();
 const logout = () => sessionStore.logout();
