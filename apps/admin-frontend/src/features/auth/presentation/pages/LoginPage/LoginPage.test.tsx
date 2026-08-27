@@ -1,11 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 import { StrictMode } from 'react';
 import { render } from '@testing-library/react';
-import { AuthContext, type AuthContextValue } from '../AuthContext';
-import { INITIAL_SESSION } from '../types';
-import { SignInRedirect } from './SignInRedirect';
+import { AuthContext, type AuthContextValue } from '../../AuthContext';
+import { INITIAL_SESSION } from '../../../domain/session';
+import { LoginPage } from './LoginPage';
 
-function renderSignIn(login: () => Promise<void>) {
+function renderLoginPage(login: () => Promise<void>) {
   const value: AuthContextValue = {
     session: INITIAL_SESSION,
     tenant: null,
@@ -17,17 +17,17 @@ function renderSignIn(login: () => Promise<void>) {
   return render(
     <StrictMode>
       <AuthContext.Provider value={value}>
-        <SignInRedirect />
+        <LoginPage />
       </AuthContext.Provider>
     </StrictMode>,
   );
 }
 
-describe('SignInRedirect', () => {
+describe('LoginPage', () => {
   it('calls login() exactly once per mount, even under StrictMode double-invoke', () => {
     const login = vi.fn().mockResolvedValue(undefined);
 
-    renderSignIn(login);
+    renderLoginPage(login);
 
     expect(login).toHaveBeenCalledTimes(1);
   });

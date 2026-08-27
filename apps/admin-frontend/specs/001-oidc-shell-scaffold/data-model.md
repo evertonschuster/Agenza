@@ -70,7 +70,7 @@ The principal identity returned by identity-service after login (spec Key Entiti
 
 ## AuthEvent (supporting type, not a spec Key Entity)
 
-The shape logged by `features/auth/authEvents.ts` to satisfy FR-015 (minimal local logging of auth/session lifecycle events).
+The shape logged by `features/auth/application/authEvents.ts` to satisfy FR-015 (minimal local logging of auth/session lifecycle events).
 
 | Field | Type | Notes |
 |---|---|---|

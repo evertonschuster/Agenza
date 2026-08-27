@@ -4,8 +4,8 @@ The full set of client-side routes this scaffold serves. Every route not explici
 
 | Route | Access | Renders | Notes |
 |---|---|---|---|
-| `/login` | Public | Triggers OIDC redirect to identity-service's `/connect/authorize` | Also the post-logout redirect target (`VITE_OIDC_POST_LOGOUT_REDIRECT_URI`). Does not itself render a form — identity-service owns the actual login UI (constitution: auth goes through identity-service). |
-| `/callback` | Public (OIDC round-trip only) | `LoginRedirect` component: completes `oidc-client-ts`'s `signinCallback()`, then navigates to `/` | Fixed by `VITE_OIDC_REDIRECT_URI`; MUST exactly match the registered redirect URI in identity-service's `admin-panel` client registration. |
+| `/login` | Public | `LoginPage` component (`presentation/pages/LoginPage/`): triggers the OIDC redirect to identity-service's `/connect/authorize` via its `useLoginRedirect` hook | Also the post-logout redirect target (`VITE_OIDC_POST_LOGOUT_REDIRECT_URI`). Does not itself render a form — identity-service owns the actual login UI (constitution: auth goes through identity-service). |
+| `/callback` | Public (OIDC round-trip only) | `AuthCallbackPage` component (`presentation/pages/AuthCallbackPage/`): its `useAuthCallback` hook completes `oidc-client-ts`'s `signinCallback()`, then navigates to `/` | Fixed by `VITE_OIDC_REDIRECT_URI`; MUST exactly match the registered redirect URI in identity-service's `admin-panel` client registration. |
 | `/` (and any other authenticated path) | Authenticated only, via `ProtectedRoute` | `AppLayout` (shell: layout + placeholder navigation, FR-004) | No business routes exist yet (FR-013) — this is the only authenticated destination in this scaffold. Unauthenticated visitors are redirected to `/login` (FR-002); an expired/renewal-failed session is treated identically (FR-009). |
 
 **Contract rules**:

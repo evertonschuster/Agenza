@@ -78,18 +78,26 @@ apps/admin-frontend/
 │   │   ├── routes.tsx
 │   │   └── globals.css               # Tailwind directives + Shadcn/ui CSS variables
 │   ├── features/
-│   │   └── auth/                     # Login/logout/silent-renewal/tenant resolution
-│   │       ├── components/
-│   │       │   ├── LoginRedirect.tsx # /callback handler: completes signinCallback()
-│   │       │   └── SignInRedirect.tsx # /login trigger: calls authClient.signinRedirect()
-│   │       ├── hooks/
-│   │       │   └── useAuth.ts
-│   │       ├── AuthProvider.tsx      # Wraps oidc-client-ts UserManager in React Context
-│   │       ├── authClient.ts         # oidc-client-ts UserManager configuration (incl. localStorage store)
-│   │       ├── ProtectedRoute.tsx    # Fail-closed route guard (spec FR-001, FR-009)
-│   │       ├── tenant.ts             # Resolves tenant_id claim only (spec FR-005, FR-006)
-│   │       ├── types.ts              # Session, Tenant Context, Authenticated User (data-model.md)
-│   │       └── authEvents.ts         # Logs login/renewal/logout outcomes (spec FR-015)
+│   │   └── auth/                     # Login/logout/silent-renewal/tenant resolution — Clean Architecture layers
+│   │       ├── domain/               # Pure — no React, no oidc-client-ts wiring
+│   │       │   ├── session.ts        # Session, SessionStatus, SessionFailureReason (data-model.md)
+│   │       │   ├── tenant.ts         # TenantContext + resolveTenantContext (spec FR-005, FR-006)
+│   │       │   ├── user.ts           # Authenticated User (data-model.md)
+│   │       │   ├── authEvent.ts      # AuthEvent shape (spec FR-015)
+│   │       │   └── sessionMachine.ts # reduceSession state machine + isBlockingFailure/isTransientStatus
+│   │       ├── application/          # Orchestration
+│   │       │   ├── sessionStore.ts   # SessionStore: bridges oidc-client-ts events → reduceSession, side effects
+│   │       │   └── authEvents.ts     # Logs login/renewal/logout outcomes (spec FR-015)
+│   │       ├── infrastructure/
+│   │       │   └── authClient.ts     # oidc-client-ts UserManager configuration (incl. localStorage store)
+│   │       ├── presentation/
+│   │       │   ├── AuthContext.ts / AuthProvider.tsx  # UserManager state → React Context (useSyncExternalStore)
+│   │       │   ├── ProtectedRoute.tsx                 # Fail-closed route guard (spec FR-001, FR-009)
+│   │       │   ├── hooks/useAuth.ts                   # Context accessor — the only shared hook
+│   │       │   └── pages/
+│   │       │       ├── LoginPage/         # /login — LoginPage.tsx + useLoginRedirect.ts + components/
+│   │       │       └── AuthCallbackPage/  # /callback — AuthCallbackPage.tsx + useAuthCallback.ts + components/
+│   │       └── index.ts              # Barrel — the feature's only public surface (no-restricted-imports)
 │   ├── shared/
 │   │   ├── api/
 │   │   │   ├── generated/
@@ -146,3 +154,14 @@ After the scaffold was built and all tests were passing, a review against Clean 
 5. **Not changed, deliberately**: `AuthProvider`/`sessionStore` still import the `authClient` singleton directly rather than depending on an injected interface (research.md Decision 2's "no DI container" call). This trade-off was re-examined, not reversed — introducing a full ports-and-adapters seam for a single OIDC integration was judged premature for this scaffold's size; the cost (module-level mocking in tests, harder to swap the OIDC library later) is accepted, not overlooked.
 
 Net effect at the time: 27/27 tests passing (up from 17 — the pure reducer made exhaustive edge-case coverage cheap), 87.04% statement coverage (up from 82.84%), lint/build/format all still clean. Since superseded by further work (a `loggingOut` status, an `AuthContext`/`AuthProvider` split, i18n, Tailwind theme tokens, and their tests) — see tasks.md T050 for the current totals.
+
+## Auth Module Restructure (2026-08-27)
+
+The flat `src/features/auth/` directory (~12 files at one level, `components/` + `hooks/` the only subfolders) was reorganized into four explicit Clean Architecture layers, with the dependency rule pointing inward. No behavior change — same 56/56 tests passing, `tsc`/`eslint`/`build`/`format` all clean.
+
+1. **`domain/`** — pure types and rules, zero framework imports: `session.ts`, `tenant.ts` (type + `resolveTenantContext`), `user.ts`, `authEvent.ts`, and `sessionMachine.ts` (the `reduceSession` state machine + `isBlockingFailure`/`isTransientStatus`, extracted from the old `sessionStore.ts`). The one tolerated coupling is `import type { User }` from `oidc-client-ts` (erased at build) — consistent with the "no DI seam" call in item 5 above.
+2. **`application/`** — `sessionStore.ts` (just the orchestrating `SessionStore` class + singleton now) and `authEvents.ts`.
+3. **`infrastructure/`** — `authClient.ts` (the `UserManager` config), isolated.
+4. **`presentation/`** — `AuthContext`/`AuthProvider`, `ProtectedRoute`, `hooks/useAuth.ts` (the only *shared* hook — a pure Context accessor), and `pages/`. Each route component is now its own folder: **`LoginPage/`** (was `SignInRedirect`) and **`AuthCallbackPage/`** (was `LoginRedirect`) — the confusing "…Redirect" names are gone. Each page folder holds a thin component (no `useEffect`/`useState`/`useRef` of its own), its **own dedicated hook** (`useLoginRedirect` / `useAuthCallback`) carrying all the effect/StrictMode-guard logic, and an empty `components/` subfolder for future sub-parts.
+
+`index.ts` stays the single public surface (imports rewritten to the new paths); `src/app/routes.tsx` updated for the two renamed pages. Spec docs (`routes-contract.md`, `data-model.md`, `research.md`) updated to the new component names / file paths. `tasks.md` left as-is (historical log).

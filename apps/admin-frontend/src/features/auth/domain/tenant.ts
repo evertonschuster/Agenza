@@ -1,4 +1,6 @@
-import type { TenantContext } from './types';
+export interface TenantContext {
+  tenantId: string;
+}
 
 function decodeAccessTokenClaims(accessToken: string): Record<string, unknown> | null {
   try {

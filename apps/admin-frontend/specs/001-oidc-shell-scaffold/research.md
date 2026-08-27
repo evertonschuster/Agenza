@@ -52,7 +52,7 @@ Scope note: every decision below is derived from currently-live repository sourc
 
 ## Decision 9: Logging approach — minimal in-app logger
 
-- **Decision**: A small `shared/logger.ts` wrapping `console` (structured — event name + minimal metadata, no PII beyond tenant id), called from `features/auth/authEvents.ts` on login outcome, renewal failure, and logout (spec FR-015). No external telemetry/observability backend.
+- **Decision**: A small `shared/logger.ts` wrapping `console` (structured — event name + minimal metadata, no PII beyond tenant id), called from `features/auth/application/authEvents.ts` on login outcome, renewal failure, and logout (spec FR-015). No external telemetry/observability backend.
 - **Rationale**: Directly implements the clarify-session decision (spec Clarifications, 2026-08-18): minimal local logging, no external service commitment before one is chosen.
 - **Alternatives considered**: Already covered by the clarify session itself (options A/C were rejected there).
 

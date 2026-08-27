@@ -11,21 +11,6 @@ export interface Session {
   failureReason: SessionFailureReason | null;
 }
 
-export interface TenantContext {
-  tenantId: string;
-}
-
-export interface AuthenticatedUser {
-  displayName: string | null;
-  email: string | null;
-}
-
-export interface AuthEvent {
-  type: 'login_success' | 'login_failure' | 'renewal_failure' | 'logout';
-  timestamp: number;
-  tenantId: string | null;
-}
-
 export const INITIAL_SESSION: Session = {
   status: 'unauthenticated',
   accessToken: null,

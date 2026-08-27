@@ -1,6 +1,6 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
 import { AuthContext, type AuthContextValue } from './AuthContext';
-import { sessionStore } from './sessionStore';
+import { sessionStore } from '../application/sessionStore';
 
 const login = () => sessionStore.login();
 const logout = () => sessionStore.logout();

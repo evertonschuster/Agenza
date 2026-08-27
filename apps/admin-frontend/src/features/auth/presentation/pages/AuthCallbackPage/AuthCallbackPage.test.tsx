@@ -2,11 +2,11 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { StrictMode } from 'react';
 import { render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router';
-import { LoginRedirect } from './LoginRedirect';
+import { AuthCallbackPage } from './AuthCallbackPage';
 
 const { mockSigninCallback } = vi.hoisted(() => ({ mockSigninCallback: vi.fn() }));
 
-vi.mock('../authClient', () => ({
+vi.mock('../../../infrastructure/authClient', () => ({
   authClient: { signinCallback: mockSigninCallback },
 }));
 
@@ -14,7 +14,7 @@ function renderCallback({ strict = false } = {}) {
   const tree = (
     <MemoryRouter initialEntries={['/callback']}>
       <Routes>
-        <Route path="/callback" element={<LoginRedirect />} />
+        <Route path="/callback" element={<AuthCallbackPage />} />
         <Route path="/" element={<div>Home</div>} />
         <Route path="/login" element={<div>Login Screen</div>} />
       </Routes>
@@ -24,7 +24,7 @@ function renderCallback({ strict = false } = {}) {
   return render(strict ? <StrictMode>{tree}</StrictMode> : tree);
 }
 
-describe('LoginRedirect', () => {
+describe('AuthCallbackPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });

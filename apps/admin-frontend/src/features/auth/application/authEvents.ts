@@ -1,5 +1,5 @@
 import { logger } from '@/shared/logger';
-import type { AuthEvent } from './types';
+import type { AuthEvent } from '../domain/authEvent';
 
 /** No external transmission (spec FR-015). */
 export function logAuthEvent(type: AuthEvent['type'], tenantId: string | null): void {

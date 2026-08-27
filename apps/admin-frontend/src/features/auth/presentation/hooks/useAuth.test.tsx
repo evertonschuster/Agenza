@@ -2,10 +2,10 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { AuthProvider } from '../AuthProvider';
-import { sessionStore } from '../sessionStore';
+import { sessionStore } from '../../application/sessionStore';
 import { useAuth } from './useAuth';
 
-// Exhaustive transition cases live in sessionStore.test.ts. This file only verifies the
+// Exhaustive transition cases live in sessionMachine.test.ts. This file only verifies the
 // wiring: real oidc-client-ts events reach the store and re-render `useAuth` consumers.
 const { mockGetUser, mockSigninRedirect, mockSignoutRedirect, mockEvents } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
@@ -21,7 +21,7 @@ const { mockGetUser, mockSigninRedirect, mockSignoutRedirect, mockEvents } = vi.
   },
 }));
 
-vi.mock('../authClient', () => ({
+vi.mock('../../infrastructure/authClient', () => ({
   authClient: {
     getUser: mockGetUser,
     signinRedirect: mockSigninRedirect,

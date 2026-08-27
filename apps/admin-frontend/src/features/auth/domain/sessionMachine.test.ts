@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { User } from 'oidc-client-ts';
-import { isBlockingFailure, isTransientStatus, reduceSession } from './sessionStore';
+import { isBlockingFailure, isTransientStatus, reduceSession } from './sessionMachine';
 
 function makeAccessToken(claims: Record<string, unknown>): string {
   const base64url = (obj: object) =>
