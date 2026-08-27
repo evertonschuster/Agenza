@@ -20,6 +20,15 @@ The shape future features will consume to call `services-service` — this scaff
   - If `getCredentials()` returns a missing `accessToken` or `tenantId` at request time, the client fails closed — it throws instead of sending a request with one or both headers absent.
 - Components and features are forbidden from calling `fetch` directly, and from writing their own request/response DTOs, against `services-service` — every call goes through `createApiClient()` (constitution Principle IV). This is enforced by code review at this stage; an ESLint rule banning bare `fetch` outside `shared/api/` is a reasonable future hardening but isn't required by this feature.
 
+## Wiring (how features actually get the client)
+
+The middleware that injects the two headers already lives in `createApiClient` (`client.use({ onRequest })`); it just needs a `getCredentials` and to be instantiated once. Two pieces do that, no React plumbing:
+
+- `src/features/auth` exposes **`getAuthCredentials()`** from its barrel — a plain (non-React) reader over the session store singleton, returning the narrow `{ accessToken, tenantId }` shape (never the feature's own `Session`/`TenantContext` types). The client's per-request interceptor calls it on every request, so it always reflects the live session across silent renewal and tenant changes.
+- `src/app/servicesApi.ts` — `export const servicesApi = createApiClient(getAuthCredentials)`. This is the composition root: the one place allowed to import both `@/shared/api` and `@/features/auth`. Built once at module load.
+
+A feature module does `import { servicesApi } from '@/app/servicesApi'` and calls `servicesApi.GET(...)` — the bearer token and `X-Tenant-Id` are attached automatically and identically for every module, and the interceptor still fails closed if it is ever called without an authenticated session.
+
 ## What this scaffold does NOT do
 
 - Does not call any actual `services-service` business endpoint from the UI — there are no business routes/components to call one from yet (spec FR-013).

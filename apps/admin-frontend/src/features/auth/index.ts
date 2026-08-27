@@ -2,6 +2,7 @@
 export { AuthProvider } from './presentation/AuthProvider';
 export { AuthContext, type AuthContextValue } from './presentation/AuthContext';
 export { useAuth } from './presentation/hooks/useAuth';
+export { getAuthCredentials } from './application/sessionStore';
 export { ProtectedRoute } from './presentation/ProtectedRoute';
 export { LoginPage } from './presentation/pages/LoginPage/LoginPage';
 export { AuthCallbackPage } from './presentation/pages/AuthCallbackPage/AuthCallbackPage';

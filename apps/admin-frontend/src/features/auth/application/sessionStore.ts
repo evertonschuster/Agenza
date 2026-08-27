@@ -118,3 +118,12 @@ class SessionStore {
 }
 
 export const sessionStore = new SessionStore();
+
+/** Current auth credentials for the API layer, read outside React. The services-service client's
+ * per-request interceptor calls this on every request, so it always reflects the live session
+ * across silent renewal and tenant changes. Narrow `{ accessToken, tenantId }` shape on purpose —
+ * `shared/api` must not depend on the auth feature's richer types. */
+export function getAuthCredentials(): { accessToken: string | null; tenantId: string | null } {
+  const { session, tenant } = sessionStore.getSnapshot();
+  return { accessToken: session.accessToken, tenantId: tenant?.tenantId ?? null };
+}
