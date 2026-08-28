@@ -5,11 +5,13 @@ import type {
   RequiredKeysOf,
   SuccessResponse,
 } from 'openapi-typescript-helpers';
-import { ok, fail } from '@/shared/result';
-import { type ApiResult, NETWORK_PROBLEM, asProblem } from './apiProblem';
-import type { paths } from './generated/services-api.d.ts';
+import { ok, fail, type Result } from '@/shared/result';
+import type { components, paths } from './generated/services-api.d.ts';
 
 const API_VERSION = '1.0';
+
+export type ApiProblem = components['schemas']['ApiProblemDetails'];
+export type ApiResult<T> = Result<T, ApiProblem>;
 
 type Verb = 'get' | 'post' | 'put' | 'delete';
 type Op<M extends Verb, P extends PathsWithMethod<paths, M>> = paths[P][M];
@@ -71,21 +73,9 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
   const verbs = { get: 'GET', post: 'POST', put: 'PUT', delete: 'DELETE' } as const;
 
   async function run(dispatch: () => Promise<RawResult>): Promise<ApiResult<unknown>> {
-    let result: RawResult;
-    try {
-      result = await dispatch();
-    } catch {
-      return fail(NETWORK_PROBLEM);
-    }
-
-    const { data, error, response } = result;
-    if (response.status === 204) return ok(undefined);
-    if (!response.ok || error !== undefined) {
-      return fail(asProblem(response.status, error));
-    }
-
-    const payload = (data as { data?: unknown } | undefined)?.data;
-    return payload == null ? fail(asProblem(502, null)) : ok(payload);
+    const { data, error, response } = await dispatch();
+    if (!response.ok) return fail(error as ApiProblem);
+    return ok((data as { data?: unknown } | undefined)?.data);
   }
 
   const buildInit = (options: LooseOptions) => ({

@@ -1,5 +1,5 @@
 import { ok } from '@/shared/result';
-import type { ApiResult } from '@/shared/api/apiProblem';
+import type { ApiResult } from '@/shared/api/servicesFacade';
 import type { components } from '@/shared/api/generated/services-api.d.ts';
 import { servicesApi } from '@/app/servicesApi';
 

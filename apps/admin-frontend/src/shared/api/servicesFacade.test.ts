@@ -1,7 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Client } from 'openapi-fetch';
 import type { paths } from './generated/services-api.d.ts';
-import { NETWORK_PROBLEM } from './apiProblem';
 import { createServicesFacade } from './servicesFacade';
 
 const CATEGORY = { id: '11111111-1111-1111-1111-111111111111', name: 'Cabelo' };
@@ -60,54 +59,18 @@ describe('createServicesFacade', () => {
     });
   });
 
-  it('passes the Problem Details body straight through on an error response (never throws)', async () => {
-    const problem = { title: 'Not Found', status: 404, code: 'Category.NotFound' };
+  it('passes the Problem Details body through on an error response', async () => {
+    const problem = {
+      title: "Categoria '…' não foi encontrada.",
+      status: 404,
+      code: 'Category.NotFound',
+      errors: { '': [{ code: 'Category.NotFound', message: '…' }] },
+    };
     GET.mockResolvedValue(raw({ error: problem, status: 404 }));
 
     const result = await api.get('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } });
 
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error).toBe(problem);
-  });
-
-  it('keeps the backend field errors intact on a 400', async () => {
-    GET.mockResolvedValue(
-      raw({
-        error: { title: 'Inválido', status: 400, errors: { Name: [{ message: 'Obrigatório' }] } },
-        status: 400,
-      }),
-    );
-
-    const result = await api.get('/api/v{version}/categories', { query: {} });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.errors?.Name).toEqual([{ message: 'Obrigatório' }]);
-  });
-
-  it('returns the offline problem when the client rejects', async () => {
-    GET.mockRejectedValue(new TypeError('Failed to fetch'));
-
-    const result = await api.get('/api/v{version}/categories', { query: {} });
-
-    expect(result).toEqual({ ok: false, error: NETWORK_PROBLEM });
-  });
-
-  it('synthesizes a problem for a non-object error body', async () => {
-    GET.mockResolvedValue(raw({ error: '<html>502</html>', status: 502 }));
-
-    const result = await api.get('/api/v{version}/categories', { query: {} });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('Http.Unexpected');
-  });
-
-  it('returns a synthesized problem when a 2xx body has no envelope data', async () => {
-    GET.mockResolvedValue(raw({ data: { data: null, success: false } }));
-
-    const result = await api.get('/api/v{version}/categories', { query: {} });
-
-    expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.error.code).toBe('Http.Unexpected');
+    expect(result).toEqual({ ok: false, error: problem });
   });
 
   it('treats 204 No Content as success with no payload', async () => {

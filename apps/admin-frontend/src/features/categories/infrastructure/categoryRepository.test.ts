@@ -4,7 +4,7 @@ const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 vi.mock('@/app/servicesApi', () => ({ servicesApi: { get: getMock } }));
 
 import { ok, fail } from '@/shared/result';
-import type { ApiProblem } from '@/shared/api/apiProblem';
+import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { categoryRepository } from './categoryRepository';
 
 const DTO = { id: '11111111-1111-1111-1111-111111111111', name: 'Cabelo' };
