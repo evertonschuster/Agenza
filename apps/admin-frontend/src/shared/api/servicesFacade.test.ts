@@ -1,46 +1,76 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import createClient from 'openapi-fetch';
+import type { Client } from 'openapi-fetch';
 import type { paths } from './generated/services-api.d.ts';
 import { createServicesFacade } from './servicesFacade';
 
 const CATEGORY = { id: '11111111-1111-1111-1111-111111111111', name: 'Cabelo' };
 
-function jsonResponse(body: unknown, status = 200): Response {
-  return new Response(JSON.stringify(body), {
-    status,
-    headers: { 'Content-Type': 'application/json' },
-  });
+interface RawShape {
+  data?: unknown;
+  error?: unknown;
+  response: Response;
 }
 
+// Stand-in for the openapi-fetch client. The facade's job is what it hands to this client, and how
+// it turns the client's `{ data, error, response }` (or a rejection) into an ApiResult.
+const GET = vi.fn<(path: string, init: unknown) => Promise<RawShape>>();
+const DELETE = vi.fn<(path: string, init: unknown) => Promise<RawShape>>();
+const fakeClient = { GET, DELETE, POST: vi.fn(), PUT: vi.fn() } as unknown as Client<paths>;
+const api = createServicesFacade(fakeClient);
+
+const raw = (over: { data?: unknown; error?: unknown; status?: number }): RawShape => ({
+  data: over.data,
+  error: over.error,
+  response: new Response(null, { status: over.status ?? 200 }),
+});
+
 describe('createServicesFacade', () => {
-  const fetchMock = vi.fn<(request: Request) => Promise<Response>>();
-  const api = createServicesFacade(
-    createClient<paths>({ baseUrl: 'http://services.test', fetch: fetchMock }),
-  );
+  beforeEach(() => {
+    GET.mockReset();
+    DELETE.mockReset();
+  });
 
-  beforeEach(() => fetchMock.mockReset());
-
-  it('injects the API version and a tenant header so callers pass neither', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ data: [CATEGORY] }));
+  it('injects the API version and the tenant header — callers pass neither', async () => {
+    GET.mockResolvedValue(raw({ data: { data: [CATEGORY] } }));
 
     await api.get('/api/v{version}/categories', { query: { Search: 'cab' } });
 
-    const request = fetchMock.mock.calls[0]?.[0] as Request;
-    expect(new URL(request.url).pathname).toBe('/api/v1.0/categories');
-    expect(new URL(request.url).searchParams.get('Search')).toBe('cab');
-    expect(request.headers.has('X-Tenant-Id')).toBe(true); // real value comes from createApiClient's middleware
+    expect(GET).toHaveBeenCalledWith('/api/v{version}/categories', {
+      params: {
+        path: { version: '1.0' },
+        query: { Search: 'cab' },
+        header: { 'X-Tenant-Id': '' }, // real value is set by createApiClient's middleware
+      },
+      body: undefined,
+    });
+  });
+
+  it('merges caller path params with the injected version', async () => {
+    GET.mockResolvedValue(raw({ data: { data: CATEGORY } }));
+
+    await api.get('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } });
+
+    expect(GET).toHaveBeenCalledWith('/api/v{version}/categories/{id}', {
+      params: {
+        path: { version: '1.0', id: CATEGORY.id },
+        query: undefined,
+        header: { 'X-Tenant-Id': '' },
+      },
+      body: undefined,
+    });
   });
 
   it('unwraps the response envelope on success', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ data: [CATEGORY], success: true }));
+    GET.mockResolvedValue(raw({ data: { data: [CATEGORY], success: true } }));
 
-    const result = await api.get('/api/v{version}/categories', { query: {} });
-
-    expect(result).toEqual({ ok: true, data: [CATEGORY] });
+    expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
+      ok: true,
+      data: [CATEGORY],
+    });
   });
 
   it('returns a not_found failure for 404 (never throws)', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ title: 'Not Found', status: 404 }, 404));
+    GET.mockResolvedValue(raw({ error: { title: 'Not Found', status: 404 }, status: 404 }));
 
     const result = await api.get('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } });
 
@@ -49,8 +79,11 @@ describe('createServicesFacade', () => {
   });
 
   it('returns a validation failure with field issues for 400', async () => {
-    fetchMock.mockResolvedValue(
-      jsonResponse({ detail: 'Inválido', errors: { name: [{ message: 'Obrigatório' }] } }, 400),
+    GET.mockResolvedValue(
+      raw({
+        error: { detail: 'Inválido', errors: { name: [{ message: 'Obrigatório' }] } },
+        status: 400,
+      }),
     );
 
     const result = await api.get('/api/v{version}/categories', { query: {} });
@@ -64,8 +97,8 @@ describe('createServicesFacade', () => {
     }
   });
 
-  it('returns a network failure when the request never resolves', async () => {
-    fetchMock.mockImplementation(() => Promise.reject(new TypeError('Failed to fetch')));
+  it('returns a network failure when the client rejects', async () => {
+    GET.mockRejectedValue(new TypeError('Failed to fetch'));
 
     const result = await api.get('/api/v{version}/categories', { query: {} });
 
@@ -74,7 +107,7 @@ describe('createServicesFacade', () => {
   });
 
   it('returns a server failure when a 2xx body has no envelope data', async () => {
-    fetchMock.mockResolvedValue(jsonResponse({ data: null, success: false }));
+    GET.mockResolvedValue(raw({ data: { data: null, success: false } }));
 
     const result = await api.get('/api/v{version}/categories', { query: {} });
 
@@ -83,10 +116,13 @@ describe('createServicesFacade', () => {
   });
 
   it('treats 204 No Content as success with no payload', async () => {
-    fetchMock.mockResolvedValue(new Response(null, { status: 204 }));
+    DELETE.mockResolvedValue(raw({ data: undefined, status: 204 }));
 
-    const result = await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } });
-
-    expect(result).toEqual({ ok: true, data: undefined });
+    expect(await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } })).toEqual(
+      {
+        ok: true,
+        data: undefined,
+      },
+    );
   });
 });

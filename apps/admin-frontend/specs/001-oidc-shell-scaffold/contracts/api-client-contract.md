@@ -22,12 +22,21 @@ The shape future features will consume to call `services-service` — this scaff
 
 ## Wiring (how features actually get the client)
 
-The middleware that injects the two headers already lives in `createApiClient` (`client.use({ onRequest })`); it just needs a `getCredentials` and to be instantiated once. Two pieces do that, no React plumbing:
+Three layers, each with one job. A repository states none of: the token, the tenant, the API version, the response envelope, or exception handling.
 
-- `src/features/auth` exposes **`getAuthCredentials()`** from its barrel — a plain (non-React) reader over the session store singleton, returning the narrow `{ accessToken, tenantId }` shape (never the feature's own `Session`/`TenantContext` types). The client's per-request interceptor calls it on every request, so it always reflects the live session across silent renewal and tenant changes.
-- `src/app/servicesApi.ts` — `export const servicesApi = createApiClient(getAuthCredentials)`. This is the composition root: the one place allowed to import both `@/shared/api` and `@/features/auth`. Built once at module load.
+- `src/shared/api/apiClient.ts` — `createApiClient(getCredentials)`. Its `client.use({ onRequest })` middleware attaches `Authorization: Bearer <token>` + `X-Tenant-Id` on every request, and fails closed (throws) with no session. Feature-agnostic.
+- `src/features/auth` barrel exports **`getAuthCredentials()`** — a plain (non-React) reader over the session store singleton returning `{ accessToken, tenantId }` (never `Session`/`TenantContext`). Read fresh per request → survives silent renewal / tenant change.
+- `src/shared/api/servicesFacade.ts` — `createServicesFacade(client)` returns a `ServicesApi` with `get` / `post` / `put` / `del`. It: injects the `v{version}` path segment and the `X-Tenant-Id` placeholder (real value still comes from the middleware) so **callers pass neither**; lifts the payload out of the `{ data, success, … }` success envelope; maps Problem Details (RFC 7807/9457) and network rejections to an `ApiFailure`; and returns every outcome as an `ApiResult<T>` (`{ ok: true, data } | { ok: false, error }`) — **it never throws**. The heavily-generic client is used loosely inside; the `ServicesApi` interface re-applies full path/query/body/response typing on the outside.
+- `src/app/servicesApi.ts` — `export const servicesApi = createServicesFacade(createApiClient(getAuthCredentials))`. The composition root: the one place that imports both `@/shared/api` and `@/features/auth`.
 
-A feature module does `import { servicesApi } from '@/app/servicesApi'` and calls `servicesApi.GET(...)` — the bearer token and `X-Tenant-Id` are attached automatically and identically for every module, and the interceptor still fails closed if it is ever called without an authenticated session.
+A repository does `import { servicesApi } from '@/app/servicesApi'` and:
+
+```ts
+const result = await servicesApi.get('/api/v{version}/categories', { query: { Search } });
+return result.ok ? ok(result.data.map(toDomain)) : result;   // no headers, no unwrap, no try/catch
+```
+
+`Result` / `ok` / `fail` live in `src/shared/result.ts`; `ApiResult` / `ApiFailure` / `toApiFailure` in `src/shared/api/apiFailure.ts`. The interface layer branches on `result.ok`, then on `result.error.kind` (`validation` / `not_found` / `network` / …), rendering `error.message` and `error.fieldIssues` directly — no exceptions cross into React.
 
 ## What this scaffold does NOT do
 

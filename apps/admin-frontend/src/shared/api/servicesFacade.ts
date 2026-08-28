@@ -23,9 +23,15 @@ type Verb = 'get' | 'post' | 'put' | 'delete';
 type Op<M extends Verb, P extends PathsWithMethod<paths, M>> = paths[P][M];
 
 // --- Request: business parameters only. `version` and `X-Tenant-Id` are injected for you. ---
-type QueryOf<O> = O extends { parameters: { query?: infer Q } } ? ([Q] extends [never] ? never : Q) : never;
+type QueryOf<O> = O extends { parameters: { query?: infer Q } }
+  ? [Q] extends [never]
+    ? never
+    : Q
+  : never;
 type PathOf<O> = O extends { parameters: { path: infer PP } } ? Omit<PP, 'version'> : object;
-type BodyOf<O> = O extends { requestBody: { content: { 'application/json': infer B } } } ? B : never;
+type BodyOf<O> = O extends { requestBody: { content: { 'application/json': infer B } } }
+  ? B
+  : never;
 
 type CallOptions<O> = (QueryOf<O> extends never
   ? { query?: never }
@@ -33,9 +39,10 @@ type CallOptions<O> = (QueryOf<O> extends never
   (keyof PathOf<O> extends never ? { path?: never } : { path: PathOf<O> }) &
   (BodyOf<O> extends never ? { body?: never } : { body: BodyOf<O> });
 
-type CallArgs<O> = RequiredKeysOf<CallOptions<O>> extends never
-  ? [options?: CallOptions<O>]
-  : [options: CallOptions<O>];
+type CallArgs<O> =
+  RequiredKeysOf<CallOptions<O>> extends never
+    ? [options?: CallOptions<O>]
+    : [options: CallOptions<O>];
 
 // --- Response: the success payload, already lifted out of the `{ data, success, ... }` envelope. ---
 type Payload<O> = O extends { responses: infer R extends Record<string | number, unknown> }
@@ -65,6 +72,12 @@ interface RawResult {
 
 type LooseOptions = { query?: unknown; path?: Record<string, unknown>; body?: unknown } | undefined;
 
+/** The four verbs of `Client<paths>`, seen loosely — the generic typing is re-applied by `ServicesApi`. */
+type RawClient = Record<
+  'GET' | 'POST' | 'PUT' | 'DELETE',
+  (path: string, init: unknown) => Promise<RawResult>
+>;
+
 /**
  * Wraps an `openapi-fetch` client so every repository call is uniform: infra parameters are
  * pre-filled, the response envelope is unwrapped, and every outcome — including a network
@@ -74,17 +87,19 @@ type LooseOptions = { query?: unknown; path?: Record<string, unknown>; body?: un
  * Everything a repository touches is fully typed through `ServicesApi`.
  */
 export function createServicesFacade(client: Client<paths>): ServicesApi {
+  // The generic client is used loosely inside; `ServicesApi` re-applies full typing on the outside.
+  const raw = client as unknown as RawClient;
+  const verbs = { get: 'GET', post: 'POST', put: 'PUT', delete: 'DELETE' } as const;
+
   async function run(dispatch: () => Promise<RawResult>): Promise<ApiResult<unknown>> {
-    let raw: RawResult;
+    let result: RawResult;
     try {
-      raw = await dispatch();
-    } catch (e) {
-      // eslint-disable-next-line no-console
-      console.log('RUN CAUGHT', e);
+      result = await dispatch();
+    } catch {
       return fail(networkFailure());
     }
 
-    const { data, error, response } = raw;
+    const { data, error, response } = result;
     if (response.status === 204) return ok(undefined);
     if (!response.ok || error !== undefined) {
       return fail(toApiFailure(response.status, error ?? null));
@@ -103,25 +118,10 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
     body: options?.body,
   });
 
-  const send = (verb: Verb, path: string, options: LooseOptions): Promise<RawResult> => {
-    const init = buildInit(options) as never;
-    const p = path as never;
-    switch (verb) {
-      case 'get':
-        return client.GET(p, init) as unknown as Promise<RawResult>;
-      case 'post':
-        return client.POST(p, init) as unknown as Promise<RawResult>;
-      case 'put':
-        return client.PUT(p, init) as unknown as Promise<RawResult>;
-      case 'delete':
-        return client.DELETE(p, init) as unknown as Promise<RawResult>;
-    }
-  };
-
   const call =
     (verb: Verb) =>
-    (path: string, options?: LooseOptions) =>
-      run(() => send(verb, path, options));
+    (path: string, options?: LooseOptions): Promise<ApiResult<unknown>> =>
+      run(() => raw[verbs[verb]](path, buildInit(options)));
 
   return {
     get: call('get') as ServicesApi['get'],

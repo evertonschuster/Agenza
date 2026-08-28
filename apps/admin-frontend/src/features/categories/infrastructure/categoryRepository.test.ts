@@ -28,7 +28,9 @@ describe('categoryRepository', () => {
 
     const result = await categoryRepository.list({ search: 'cab' });
 
-    expect(getMock).toHaveBeenCalledWith('/api/v{version}/categories', { query: { Search: 'cab' } });
+    expect(getMock).toHaveBeenCalledWith('/api/v{version}/categories', {
+      query: { Search: 'cab' },
+    });
     expect(result).toEqual({ ok: true, data: [{ id: DTO.id, name: 'Cabelo' }] });
   });
 
@@ -52,7 +54,9 @@ describe('categoryRepository', () => {
 
     const result = await categoryRepository.getById(DTO.id);
 
-    expect(getMock).toHaveBeenCalledWith('/api/v{version}/categories/{id}', { path: { id: DTO.id } });
+    expect(getMock).toHaveBeenCalledWith('/api/v{version}/categories/{id}', {
+      path: { id: DTO.id },
+    });
     expect(result).toEqual({ ok: true, data: { id: DTO.id, name: 'Cabelo' } });
   });
 

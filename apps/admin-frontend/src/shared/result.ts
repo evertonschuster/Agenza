@@ -5,8 +5,7 @@
  * `try/catch`. Producers return `ok(...)` / `fail(...)` and never throw for expected failures.
  */
 export type Result<T, E> =
-  | { readonly ok: true; readonly data: T }
-  | { readonly ok: false; readonly error: E };
+  { readonly ok: true; readonly data: T } | { readonly ok: false; readonly error: E };
 
 export const ok = <T>(data: T): Result<T, never> => ({ ok: true, data });
 
