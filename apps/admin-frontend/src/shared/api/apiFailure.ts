@@ -1,7 +1,4 @@
 import type { Result } from '@/shared/result';
-import type { components } from './generated/services-api.d.ts';
-
-type ProblemDetails = components['schemas']['ApiProblemDetails'];
 
 export interface FieldIssue {
   readonly field: string;
@@ -46,32 +43,45 @@ function kindFromStatus(status: number): ApiFailure['kind'] {
   }
 }
 
-function toFiniteNumber(value: number | string | null | undefined): number | null {
+function asRecord(value: unknown): Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value)
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
+function asString(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+function toFiniteNumber(value: unknown): number | null {
   const n = typeof value === 'string' ? Number(value) : value;
   return typeof n === 'number' && Number.isFinite(n) ? n : null;
 }
 
-function toFieldIssues(errors: ProblemDetails['errors']): FieldIssue[] {
-  if (!errors) return [];
-  return Object.entries(errors).flatMap(([field, issues]) =>
-    (issues ?? []).map((issue) => ({
-      field,
-      message: issue.message ?? 'Valor inválido.',
-      code: issue.code ?? null,
-    })),
+function toFieldIssues(errors: unknown): FieldIssue[] {
+  return Object.entries(asRecord(errors)).flatMap(([field, issues]) =>
+    (Array.isArray(issues) ? issues : []).map((issue) => {
+      const record = asRecord(issue);
+      return {
+        field,
+        message: asString(record.message) ?? 'Valor inválido.',
+        code: asString(record.code),
+      };
+    }),
   );
 }
 
 export function toApiFailure(status: number, problem: unknown): ApiFailure {
-  const p = (problem ?? {}) as Partial<ProblemDetails>;
+  const p = asRecord(problem);
   const resolvedStatus = toFiniteNumber(p.status) ?? status;
   return {
     kind: kindFromStatus(resolvedStatus),
-    message: p.detail ?? p.title ?? 'Ocorreu um erro inesperado. Tente novamente.',
+    message:
+      asString(p.detail) ?? asString(p.title) ?? 'Ocorreu um erro inesperado. Tente novamente.',
     fieldIssues: toFieldIssues(p.errors),
-    code: p.code ?? null,
+    code: asString(p.code),
     status: resolvedStatus,
-    traceId: p.traceId ?? null,
+    traceId: asString(p.traceId),
   };
 }
 

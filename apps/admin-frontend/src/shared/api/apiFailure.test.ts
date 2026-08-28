@@ -43,6 +43,19 @@ describe('toApiFailure', () => {
     expect(failure.fieldIssues).toEqual([]);
   });
 
+  it.each([
+    'a plain string body',
+    { errors: 'not an object' },
+    { errors: { name: 'not an array' } },
+    { errors: { name: [42, 'nope', null] } },
+    { detail: 123, title: { nested: true }, code: [], traceId: 0, status: {} },
+  ])('never throws on a malformed error payload (%o)', (problem) => {
+    expect(() => toApiFailure(400, problem)).not.toThrow();
+    const failure = toApiFailure(400, problem);
+    expect(failure.kind).toBe('validation');
+    expect(Array.isArray(failure.fieldIssues)).toBe(true);
+  });
+
   it('networkFailure / serverFailure carry the right kind and no field issues', () => {
     expect(networkFailure().kind).toBe('network');
     expect(serverFailure().kind).toBe('server');
