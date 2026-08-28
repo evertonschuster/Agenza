@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { AuthContext, type AuthContextValue } from './AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
-import { INITIAL_SESSION, type Session } from '../domain/session';
+import { INITIAL_SESSION, type Session } from '../model/session';
 
 function renderWithSession(session: Partial<Session> & { status: Session['status'] }) {
   const login = vi.fn();

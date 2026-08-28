@@ -2,11 +2,11 @@ import type { User } from 'oidc-client-ts';
 import { resolveTenantContext, type TenantContext } from './tenant';
 import {
   INITIAL_SESSION,
+  type AuthenticatedUser,
   type Session,
   type SessionFailureReason,
   type SessionStatus,
 } from './session';
-import type { AuthenticatedUser } from './user';
 
 export interface AuthSnapshot {
   session: Session;
@@ -20,15 +20,11 @@ export const INITIAL_SNAPSHOT: AuthSnapshot = {
   user: null,
 };
 
-/** Distinct from INITIAL_SNAPSHOT ('unauthenticated') — must stay transient or a valid
- * stored session gets redirected before the check finds it. */
 const CHECKING_SNAPSHOT: AuthSnapshot = {
   ...INITIAL_SNAPSHOT,
   session: { ...INITIAL_SESSION, status: 'checking' },
 };
 
-/** identity_unreachable and missing_tenant_claim loop forever if auto-redirected (SSO
- * silently retries into the same failure); renewal_failed doesn't. No `default`. */
 export function isBlockingFailure(reason: SessionFailureReason): boolean {
   switch (reason) {
     case 'identity_unreachable':
@@ -39,7 +35,6 @@ export function isBlockingFailure(reason: SessionFailureReason): boolean {
   }
 }
 
-/** No `default` — same reason as `isBlockingFailure`. */
 export function isTransientStatus(status: SessionStatus): boolean {
   switch (status) {
     case 'checking':
@@ -91,7 +86,6 @@ function resolveAuthenticated(oidcUser: User): AuthSnapshot {
   };
 }
 
-// See data-model.md for the full transition table.
 export function reduceSession(event: SessionEvent): AuthSnapshot {
   switch (event.type) {
     case 'INIT':

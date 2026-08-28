@@ -11,8 +11,6 @@ interface RawShape {
   response: Response;
 }
 
-// Stand-in for the openapi-fetch client. The facade's job is what it hands to this client, and how
-// it turns the client's `{ data, error, response }` (or a rejection) into an ApiResult.
 const GET = vi.fn<(path: string, init: unknown) => Promise<RawShape>>();
 const DELETE = vi.fn<(path: string, init: unknown) => Promise<RawShape>>();
 const fakeClient = { GET, DELETE, POST: vi.fn(), PUT: vi.fn() } as unknown as Client<paths>;
@@ -30,17 +28,13 @@ describe('createServicesFacade', () => {
     DELETE.mockReset();
   });
 
-  it('injects the API version and the tenant header — callers pass neither', async () => {
+  it('injects the API version — callers pass no version and no tenant header', async () => {
     GET.mockResolvedValue(raw({ data: { data: [CATEGORY] } }));
 
     await api.get('/api/v{version}/categories', { query: { Search: 'cab' } });
 
     expect(GET).toHaveBeenCalledWith('/api/v{version}/categories', {
-      params: {
-        path: { version: '1.0' },
-        query: { Search: 'cab' },
-        header: { 'X-Tenant-Id': '' }, // real value is set by createApiClient's middleware
-      },
+      params: { path: { version: '1.0' }, query: { Search: 'cab' } },
       body: undefined,
     });
   });
@@ -51,11 +45,7 @@ describe('createServicesFacade', () => {
     await api.get('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } });
 
     expect(GET).toHaveBeenCalledWith('/api/v{version}/categories/{id}', {
-      params: {
-        path: { version: '1.0', id: CATEGORY.id },
-        query: undefined,
-        header: { 'X-Tenant-Id': '' },
-      },
+      params: { path: { version: '1.0', id: CATEGORY.id }, query: undefined },
       body: undefined,
     });
   });
@@ -119,10 +109,7 @@ describe('createServicesFacade', () => {
     DELETE.mockResolvedValue(raw({ data: undefined, status: 204 }));
 
     expect(await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } })).toEqual(
-      {
-        ok: true,
-        data: undefined,
-      },
+      { ok: true, data: undefined },
     );
   });
 });

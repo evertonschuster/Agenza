@@ -6,7 +6,7 @@ import { AuthCallbackPage } from './AuthCallbackPage';
 
 const { mockSigninCallback } = vi.hoisted(() => ({ mockSigninCallback: vi.fn() }));
 
-vi.mock('../../../infrastructure/authClient', () => ({
+vi.mock('../../../api/authClient', () => ({
   authClient: { signinCallback: mockSigninCallback },
 }));
 

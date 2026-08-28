@@ -3,11 +3,9 @@ import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { User } from 'oidc-client-ts';
 import { AuthProvider } from './AuthProvider';
-import { sessionStore } from '../application/sessionStore';
-import { useAuth } from './hooks/useAuth';
+import { sessionStore } from '../model/sessionStore';
+import { useAuth } from './useAuth';
 
-// Exhaustive transition cases live in sessionMachine.test.ts (pure `reduceSession` tests). This
-// file only verifies real `oidc-client-ts` events reach the store and re-render consumers.
 type Handler<T> = (arg: T) => void;
 
 const { mockGetUser, mockSignoutRedirect, handlers } = vi.hoisted(() => ({
@@ -20,7 +18,7 @@ const { mockGetUser, mockSignoutRedirect, handlers } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../infrastructure/authClient', () => ({
+vi.mock('../api/authClient', () => ({
   authClient: {
     getUser: mockGetUser,
     signinRedirect: vi.fn(),

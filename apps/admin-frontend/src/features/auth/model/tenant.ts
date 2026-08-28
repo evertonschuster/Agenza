@@ -13,7 +13,6 @@ function decodeAccessTokenClaims(accessToken: string): Record<string, unknown> |
   }
 }
 
-/** Tenant comes only from the token's `tenant_id` claim (FR-005) — never URL/storage (FR-006). */
 export function resolveTenantContext(accessToken: string | null): TenantContext | null {
   if (!accessToken) return null;
   const claims = decodeAccessTokenClaims(accessToken);

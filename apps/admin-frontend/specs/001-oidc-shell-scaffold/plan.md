@@ -37,7 +37,7 @@ This plan builds exclusively from currently-live sources of truth — `.specify/
 | Principle | Status | Notes |
 |---|---|---|
 | I. Strict TypeScript | PASS | `tsconfig.json` ships with `strict: true`; no suppressions planned. |
-| II. Multi-Tenant Safety Enforced Server-Side | PASS | Tenant resolved only from the validated token's `tenant_id` claim (`features/auth/tenant.ts`); the `X-Tenant-Id` header the generated API client attaches mirrors that claim automatically (per ADR 0006) and is never populated from URL/query/localStorage (spec FR-005/FR-006). |
+| II. Multi-Tenant Safety Enforced Server-Side | PASS | Tenant resolved only from the validated token's `tenant_id` claim (`features/auth/model/tenant.ts`); the `X-Tenant-Id` header `createApiClient`'s middleware attaches mirrors that claim automatically (per ADR 0006) and is never populated from URL/query/localStorage (spec FR-005/FR-006). |
 | III. Authentication via identity-service (Fixed Ports) | PASS | Uses the already-wired `admin-panel` OIDC client (port 5081) and admin-frontend's own fixed port 5173; no port renegotiation. |
 | IV. Generated OpenAPI Client Only | PASS | `openapi-typescript` generates types from `services-service`'s live OpenAPI contract; `openapi-fetch` provides the runtime client parameterized by those types — no hand-written `fetch` calls or backend DTOs. See research.md Decision 6 for why a types-only generator alone would not fully satisfy this principle. |
 | V. CI Quality Gates Non-Negotiable From Scaffold | PASS | ESLint, Prettier, `tsc` strict, Vitest + coverage, Playwright (incl. a real interactive OIDC login — new, see Decision 12), and the existing `frontend-ci.yml` drift check (`generate:api-types:check`) and `scripts/smoke_oidc_contract.py` are all targeted by this scaffold's npm scripts. |
@@ -78,25 +78,21 @@ apps/admin-frontend/
 │   │   ├── routes.tsx
 │   │   └── globals.css               # Tailwind directives + Shadcn/ui CSS variables
 │   ├── features/
-│   │   └── auth/                     # Login/logout/silent-renewal/tenant resolution — Clean Architecture layers
-│   │       ├── domain/               # Pure — no React, no oidc-client-ts wiring
-│   │       │   ├── session.ts        # Session, SessionStatus, SessionFailureReason (data-model.md)
+│   │   └── auth/                     # Login/logout/silent-renewal/tenant resolution — Feature-Sliced Design segments
+│   │       ├── model/                # Data model + rules (no React)
+│   │       │   ├── session.ts        # Session/SessionStatus/SessionFailureReason, AuthenticatedUser, AuthEvent
 │   │       │   ├── tenant.ts         # TenantContext + resolveTenantContext (spec FR-005, FR-006)
-│   │       │   ├── user.ts           # Authenticated User (data-model.md)
-│   │       │   ├── authEvent.ts      # AuthEvent shape (spec FR-015)
-│   │       │   └── sessionMachine.ts # reduceSession state machine + isBlockingFailure/isTransientStatus
-│   │       ├── application/          # Orchestration
-│   │       │   ├── sessionStore.ts   # SessionStore: bridges oidc-client-ts events → reduceSession, side effects
-│   │       │   └── authEvents.ts     # Logs login/renewal/logout outcomes (spec FR-015)
-│   │       ├── infrastructure/
+│   │       │   ├── sessionMachine.ts # reduceSession state machine + isBlockingFailure/isTransientStatus
+│   │       │   └── sessionStore.ts   # SessionStore (oidc events → reduceSession, side effects) + getAuthCredentials
+│   │       ├── api/
 │   │       │   └── authClient.ts     # oidc-client-ts UserManager configuration (incl. localStorage store)
-│   │       ├── presentation/
+│   │       ├── ui/
 │   │       │   ├── AuthContext.ts / AuthProvider.tsx  # UserManager state → React Context (useSyncExternalStore)
+│   │       │   ├── useAuth.ts                         # Context accessor — the only shared hook
 │   │       │   ├── ProtectedRoute.tsx                 # Fail-closed route guard (spec FR-001, FR-009)
-│   │       │   ├── hooks/useAuth.ts                   # Context accessor — the only shared hook
 │   │       │   └── pages/
-│   │       │       ├── LoginPage/         # /login — LoginPage.tsx + useLoginRedirect.ts + components/
-│   │       │       └── AuthCallbackPage/  # /callback — AuthCallbackPage.tsx + useAuthCallback.ts + components/
+│   │       │       ├── LoginPage/         # /login — LoginPage.tsx + useLoginRedirect.ts
+│   │       │       └── AuthCallbackPage/  # /callback — AuthCallbackPage.tsx + useAuthCallback.ts
 │   │       └── index.ts              # Barrel — the feature's only public surface (no-restricted-imports)
 │   ├── shared/
 │   │   ├── api/
@@ -157,11 +153,14 @@ Net effect at the time: 27/27 tests passing (up from 17 — the pure reducer mad
 
 ## Auth Module Restructure (2026-08-27)
 
-The flat `src/features/auth/` directory (~12 files at one level, `components/` + `hooks/` the only subfolders) was reorganized into four explicit Clean Architecture layers, with the dependency rule pointing inward. No behavior change — same 56/56 tests passing, `tsc`/`eslint`/`build`/`format` all clean.
+`src/features/auth/` was reorganized twice this day. First from a flat directory into four Clean Architecture layers (`domain`/`application`/`infrastructure`/`presentation`); then — after a review against the Feature-Sliced Design community standard — collapsed into FSD's flatter segments. No behavior change at any step; tests green throughout.
 
-1. **`domain/`** — pure types and rules, zero framework imports: `session.ts`, `tenant.ts` (type + `resolveTenantContext`), `user.ts`, `authEvent.ts`, and `sessionMachine.ts` (the `reduceSession` state machine + `isBlockingFailure`/`isTransientStatus`, extracted from the old `sessionStore.ts`). The one tolerated coupling is `import type { User }` from `oidc-client-ts` (erased at build) — consistent with the "no DI seam" call in item 5 above.
-2. **`application/`** — `sessionStore.ts` (just the orchestrating `SessionStore` class + singleton now) and `authEvents.ts`.
-3. **`infrastructure/`** — `authClient.ts` (the `UserManager` config), isolated.
-4. **`presentation/`** — `AuthContext`/`AuthProvider`, `ProtectedRoute`, `hooks/useAuth.ts` (the only *shared* hook — a pure Context accessor), and `pages/`. Each route component is now its own folder: **`LoginPage/`** (was `SignInRedirect`) and **`AuthCallbackPage/`** (was `LoginRedirect`) — the confusing "…Redirect" names are gone. Each page folder holds a thin component (no `useEffect`/`useState`/`useRef` of its own), its **own dedicated hook** (`useLoginRedirect` / `useAuthCallback`) carrying all the effect/StrictMode-guard logic, and an empty `components/` subfolder for future sub-parts.
+Final layout (FSD segments):
 
-`index.ts` stays the single public surface (imports rewritten to the new paths); `src/app/routes.tsx` updated for the two renamed pages. Spec docs (`routes-contract.md`, `data-model.md`, `research.md`) updated to the new component names / file paths. `tasks.md` left as-is (historical log).
+1. **`model/`** — data model + rules, no React: `session.ts` (Session/status/failure types + `AuthenticatedUser` + `AuthEvent`), `tenant.ts` (`TenantContext` + `resolveTenantContext`), `sessionMachine.ts` (`reduceSession` + `isBlockingFailure`/`isTransientStatus`), `sessionStore.ts` (`SessionStore` orchestrator + `logAuthEvent` + `getAuthCredentials`). The one tolerated coupling is `import type { User }` from `oidc-client-ts` (erased at build).
+2. **`api/`** — `authClient.ts` (the `UserManager` config), isolated.
+3. **`ui/`** — `AuthContext`/`AuthProvider`, `useAuth.ts` (the only *shared* hook), `ProtectedRoute.tsx`, and `pages/`. Each route component is its own folder — **`LoginPage/`** (was `SignInRedirect`) and **`AuthCallbackPage/`** (was `LoginRedirect`) — a thin component (no `useEffect`/`useState`/`useRef`) plus its own hook (`useLoginRedirect` / `useAuthCallback`) holding the effect/StrictMode-guard logic. Sub-components, when a page grows them, go in a `components/` subfolder (not pre-created).
+
+Why FSD over the 4-layer Clean Arch folders: FSD is the practice-oriented reading of the same principles — `model` = domain + application, `api` = infrastructure-for-backend, `ui` = presentation — with less nesting and names any dev reads immediately. `domain`'s purity is now guaranteed by its mock-free tests, not by a folder name.
+
+`index.ts` stays the single public surface. `src/app/routes.tsx` updated for the two renamed pages. Also this day: JSDoc/`what`-comments stripped across today's files (senior team, self-documenting code); `X-Tenant-Id` dropped from the generated types via a `transform()` in `generateApiTypes.mjs` so `createApiClient`'s middleware is the sole source of that header. `tasks.md` left as-is (historical log).

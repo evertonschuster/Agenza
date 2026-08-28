@@ -2,8 +2,8 @@ import type { ReactNode } from 'react';
 import { Navigate } from 'react-router';
 import { Button } from '@/shared/ui/button';
 import { FullScreenMessage } from '@/shared/ui/FullScreenMessage';
-import { useAuth } from './hooks/useAuth';
-import { isBlockingFailure, isTransientStatus } from '../domain/sessionMachine';
+import { useAuth } from './useAuth';
+import { isBlockingFailure, isTransientStatus } from '../model/sessionMachine';
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const { session, login } = useAuth();

@@ -16,10 +16,7 @@ export interface paths {
         query?: {
           Search?: string;
         };
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           version: string;
         };
@@ -100,10 +97,7 @@ export interface paths {
     post: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           version: string;
         };
@@ -204,10 +198,7 @@ export interface paths {
     get: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           id: string;
           version: string;
@@ -288,10 +279,7 @@ export interface paths {
     put: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           id: string;
           version: string;
@@ -383,10 +371,7 @@ export interface paths {
     delete: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           id: string;
           version: string;
@@ -483,10 +468,7 @@ export interface paths {
           CategoryId?: string;
           TagId?: string;
         };
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           version: string;
         };
@@ -567,10 +549,7 @@ export interface paths {
     post: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           version: string;
         };
@@ -672,10 +651,7 @@ export interface paths {
     put: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           id: string;
           version: string;
@@ -767,10 +743,7 @@ export interface paths {
     delete: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           id: string;
           version: string;
@@ -863,10 +836,7 @@ export interface paths {
         query?: {
           Search?: string;
         };
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           version: string;
         };
@@ -947,10 +917,7 @@ export interface paths {
     post: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           version: string;
         };
@@ -1052,10 +1019,7 @@ export interface paths {
     put: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           id: string;
           version: string;
@@ -1147,10 +1111,7 @@ export interface paths {
     delete: {
       parameters: {
         query?: never;
-        header: {
-          /** @description Tenant ativo usado pelas requisições da documentação. */
-          'X-Tenant-Id': string;
-        };
+        header?: never;
         path: {
           id: string;
           version: string;

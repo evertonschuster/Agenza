@@ -1,11 +1,16 @@
 import type { User } from 'oidc-client-ts';
-import { authClient } from '../infrastructure/authClient';
-import { logAuthEvent } from './authEvents';
-import { reduceSession, type AuthSnapshot, type SessionEvent } from '../domain/sessionMachine';
+import { logger } from '@/shared/logger';
+import { authClient } from '../api/authClient';
+import { reduceSession, type AuthSnapshot, type SessionEvent } from './sessionMachine';
+import type { AuthEvent } from './session';
 
 type Listener = () => void;
 
-// Side effects (logAuthEvent) happen here, at the boundary — never inside reduceSession.
+function logAuthEvent(type: AuthEvent['type'], tenantId: string | null): void {
+  const level = type === 'login_failure' || type === 'renewal_failure' ? 'warn' : 'info';
+  logger[level](`auth.${type}`, { tenantId, timestamp: Date.now() });
+}
+
 class SessionStore {
   private snapshot: AuthSnapshot = reduceSession({ type: 'INIT' });
   private listeners = new Set<Listener>();
@@ -44,10 +49,9 @@ class SessionStore {
     }
   }
 
-  // A silent renewal or the initial getUser() can still resolve after logout() has already
-  // dispatched LOGOUT_STARTED — without this guard, whichever settles last would overwrite
-  // 'loggingOut' and could send ProtectedRoute into a redirect that fights signoutRedirect()'s
-  // own navigation.
+  // A silent renewal or the initial getUser() can resolve after logout() has already dispatched
+  // LOGOUT_STARTED; without this guard the late one overwrites 'loggingOut' and fights
+  // signoutRedirect()'s own navigation.
   private get isLoggingOut(): boolean {
     return this.snapshot.session.status === 'loggingOut';
   }
@@ -105,12 +109,11 @@ class SessionStore {
     try {
       await authClient.signoutRedirect();
     } catch {
-      // User is already cleared even though this failed — move off 'loggingOut' so retry works.
       this.dispatch({ type: 'USER_UNLOADED' });
     }
   }
 
-  /** Test-only. */
+  // test-only
   reset(): void {
     this.snapshot = reduceSession({ type: 'INIT' });
     this.listeners.clear();
@@ -119,10 +122,6 @@ class SessionStore {
 
 export const sessionStore = new SessionStore();
 
-/** Current auth credentials for the API layer, read outside React. The services-service client's
- * per-request interceptor calls this on every request, so it always reflects the live session
- * across silent renewal and tenant changes. Narrow `{ accessToken, tenantId }` shape on purpose —
- * `shared/api` must not depend on the auth feature's richer types. */
 export function getAuthCredentials(): { accessToken: string | null; tenantId: string | null } {
   const { session, tenant } = sessionStore.getSnapshot();
   return { accessToken: session.accessToken, tenantId: tenant?.tenantId ?? null };

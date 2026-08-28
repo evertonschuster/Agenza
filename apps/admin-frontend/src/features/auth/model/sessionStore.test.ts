@@ -2,8 +2,6 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { User } from 'oidc-client-ts';
 import { sessionStore, getAuthCredentials } from './sessionStore';
 
-// Full transition coverage lives in domain/sessionMachine.test.ts and presentation/AuthProvider.test.tsx.
-// This file only covers getAuthCredentials — the non-React reader the API client relies on.
 const { mockGetUser, mockEvents } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
   mockEvents: {
@@ -16,7 +14,7 @@ const { mockGetUser, mockEvents } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock('../infrastructure/authClient', () => ({
+vi.mock('../api/authClient', () => ({
   authClient: {
     getUser: mockGetUser,
     signinRedirect: vi.fn(),

@@ -5,7 +5,7 @@ The shape future features will consume to call `services-service` — this scaff
 ## Generation contract
 
 - **Input**: `services-service`'s live OpenAPI document, `${SERVICES_API_OPENAPI_URL ?? 'http://localhost:5080/openapi/v1.json'}` (env override kept for CI, which starts AppHost headlessly — see `frontend-ci.yml`'s `api-contract-check` job).
-- **Tool**: `openapi-typescript` (research.md Decision 6).
+- **Tool**: `openapi-typescript` (research.md Decision 6). `generateApiTypes.mjs` fetches the document and strips the `X-Tenant-Id` header parameter from every operation before generating — `createApiClient`'s middleware sets that header, so call sites never see it. The strip runs in `generate()`, so `generate:api-types:check` stays consistent.
 - **Output**: `src/shared/api/generated/services-api.d.ts` (research.md Decision 7) — generated, never hand-edited; regenerating and diffing is how `npm run generate:api-types:check` detects drift.
 - **npm scripts** (required by root `package.json`'s `lint:frontend`/CI expectations, and by `frontend-ci.yml`'s `api-contract-check` job):
   - `generate:api-types` — regenerates `services-api.d.ts` from the live OpenAPI document.
@@ -26,7 +26,7 @@ Three layers, each with one job. A repository states none of: the token, the ten
 
 - `src/shared/api/apiClient.ts` — `createApiClient(getCredentials)`. Its `client.use({ onRequest })` middleware attaches `Authorization: Bearer <token>` + `X-Tenant-Id` on every request, and fails closed (throws) with no session. Feature-agnostic.
 - `src/features/auth` barrel exports **`getAuthCredentials()`** — a plain (non-React) reader over the session store singleton returning `{ accessToken, tenantId }` (never `Session`/`TenantContext`). Read fresh per request → survives silent renewal / tenant change.
-- `src/shared/api/servicesFacade.ts` — `createServicesFacade(client)` returns a `ServicesApi` with `get` / `post` / `put` / `del`. It: injects the `v{version}` path segment and the `X-Tenant-Id` placeholder (real value still comes from the middleware) so **callers pass neither**; lifts the payload out of the `{ data, success, … }` success envelope; maps Problem Details (RFC 7807/9457) and network rejections to an `ApiFailure`; and returns every outcome as an `ApiResult<T>` (`{ ok: true, data } | { ok: false, error }`) — **it never throws**. The heavily-generic client is used loosely inside; the `ServicesApi` interface re-applies full path/query/body/response typing on the outside.
+- `src/shared/api/servicesFacade.ts` — `createServicesFacade(client)` returns a `ServicesApi` with `get` / `post` / `put` / `del`. It: injects the `v{version}` path segment so **callers pass no version** (and `X-Tenant-Id` is stripped from the generated types entirely — `generateApiTypes.mjs` removes it — so the middleware is its sole source); lifts the payload out of the `{ data, success, … }` success envelope; maps Problem Details (RFC 7807/9457) and network rejections to an `ApiFailure`; and returns every outcome as an `ApiResult<T>` (`{ ok: true, data } | { ok: false, error }`) — **it never throws**. The heavily-generic client is used loosely inside; the `ServicesApi` interface re-applies full path/query/body/response typing on the outside.
 - `src/app/servicesApi.ts` — `export const servicesApi = createServicesFacade(createApiClient(getAuthCredentials))`. The composition root: the one place that imports both `@/shared/api` and `@/features/auth`.
 
 A repository does `import { servicesApi } from '@/app/servicesApi'` and:

@@ -2,12 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { createApiClient } from './apiClient';
 
 const CATEGORIES_PATH = '/api/v{version}/categories' as const;
-// The generated type requires X-Tenant-Id as a documented request parameter (services-service's
-// TenantHeaderFilter) — irrelevant to what's under test here, since createApiClient's middleware
-// sets the real header itself regardless of this placeholder.
-const REQUEST_PARAMS = {
-  params: { path: { version: '1.0' }, header: { 'X-Tenant-Id': 'unused' } },
-};
+const REQUEST_PARAMS = { params: { path: { version: '1.0' } } };
 
 describe('createApiClient', () => {
   const fetchMock = vi.fn();

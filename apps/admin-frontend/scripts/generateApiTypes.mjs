@@ -16,8 +16,26 @@ const OUTPUT_PATH = path.join(
 );
 const OPENAPI_URL = process.env.SERVICES_API_OPENAPI_URL ?? 'http://localhost:5080/openapi/v1.json';
 
+const HTTP_METHODS = ['get', 'put', 'post', 'delete', 'options', 'head', 'patch', 'trace'];
+
+// The X-Tenant-Id header is attached by createApiClient's middleware from the auth session, not by
+// call sites — drop it from the generated types so repositories never have to pass a placeholder.
+function stripTenantHeaderParam(document) {
+  for (const pathItem of Object.values(document.paths ?? {})) {
+    for (const method of HTTP_METHODS) {
+      const operation = pathItem[method];
+      if (!Array.isArray(operation?.parameters)) continue;
+      operation.parameters = operation.parameters.filter(
+        (parameter) => !(parameter.in === 'header' && parameter.name === 'X-Tenant-Id'),
+      );
+    }
+  }
+  return document;
+}
+
 export async function generate() {
-  const ast = await openapiTS(new URL(OPENAPI_URL));
+  const document = await fetch(new URL(OPENAPI_URL)).then((response) => response.json());
+  const ast = await openapiTS(stripTenantHeaderParam(document));
   const raw = astToString(ast);
   const prettierConfig = (await prettier.resolveConfig(__dirname)) ?? {};
   const formatted = await prettier.format(raw, { ...prettierConfig, parser: 'typescript' });

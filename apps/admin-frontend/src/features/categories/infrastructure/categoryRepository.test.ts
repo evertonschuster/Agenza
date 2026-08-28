@@ -17,9 +17,6 @@ const failure = (kind: ApiFailure['kind']): ApiFailure => ({
   traceId: null,
 });
 
-// Header/token/tenant injection and envelope unwrapping are covered in
-// shared/api/servicesFacade.test.ts and shared/api/apiClient.test.ts — this file is about the
-// repository: which endpoint it hits, and mapping the payload to domain `Category`.
 describe('categoryRepository', () => {
   beforeEach(() => getMock.mockReset());
 
