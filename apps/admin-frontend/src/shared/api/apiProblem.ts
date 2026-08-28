@@ -12,7 +12,7 @@ export const NETWORK_PROBLEM: ApiProblem = {
 };
 
 export function asProblem(status: number, body: unknown): ApiProblem {
-  return body !== null && typeof body === 'object' && !Array.isArray(body)
-    ? body
+  return body !== null && typeof body === 'object' && !Array.isArray(body) && 'title' in body
+    ? (body as ApiProblem)
     : { status, title: 'O servidor retornou uma resposta inesperada.', code: 'Http.Unexpected' };
 }

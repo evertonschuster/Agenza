@@ -19,6 +19,7 @@ describe('asProblem', () => {
     ['an empty body', undefined],
     ['an array body', [1, 2, 3]],
     ['a null body', null],
+    ['an object without a title', { message: 'Bad Gateway' }],
   ])('synthesizes a problem for %s', (_label, body) => {
     const problem = asProblem(502, body);
     expect(problem.status).toBe(502);
