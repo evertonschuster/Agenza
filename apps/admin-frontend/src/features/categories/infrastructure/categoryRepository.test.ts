@@ -4,18 +4,11 @@ const { getMock } = vi.hoisted(() => ({ getMock: vi.fn() }));
 vi.mock('@/app/servicesApi', () => ({ servicesApi: { get: getMock } }));
 
 import { ok, fail } from '@/shared/result';
-import type { ApiFailure } from '@/shared/api/apiFailure';
+import type { ApiProblem } from '@/shared/api/apiProblem';
 import { categoryRepository } from './categoryRepository';
 
 const DTO = { id: '11111111-1111-1111-1111-111111111111', name: 'Cabelo' };
-const failure = (kind: ApiFailure['kind']): ApiFailure => ({
-  kind,
-  message: 'x',
-  fieldIssues: [],
-  code: null,
-  status: null,
-  traceId: null,
-});
+const problem = (status: number, code: string): ApiProblem => ({ status, code, title: code });
 
 describe('categoryRepository', () => {
   beforeEach(() => getMock.mockReset());
@@ -40,7 +33,7 @@ describe('categoryRepository', () => {
   });
 
   it('list() passes a failure straight through to the caller', async () => {
-    const f = fail(failure('network'));
+    const f = fail(problem(0, 'Network.Unreachable'));
     getMock.mockResolvedValue(f);
 
     expect(await categoryRepository.list()).toBe(f);
@@ -58,7 +51,7 @@ describe('categoryRepository', () => {
   });
 
   it('getById() surfaces a not_found failure instead of returning null', async () => {
-    const f = fail(failure('not_found'));
+    const f = fail(problem(404, 'Category.NotFound'));
     getMock.mockResolvedValue(f);
 
     expect(await categoryRepository.getById('missing')).toBe(f);
