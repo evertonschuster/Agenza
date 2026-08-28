@@ -1,13 +1,14 @@
 import { createApiClient } from '@/shared/api/apiClient';
+import { createServicesFacade } from '@/shared/api/servicesFacade';
 import { getAuthCredentials } from '@/features/auth';
 
 /**
- * The single services-service client for the whole app. `createApiClient`'s middleware injects
- * `Authorization: Bearer <access token>` and `X-Tenant-Id` on every request, reading them live
- * from the auth session via `getAuthCredentials` — so it stays correct across silent renewal and
- * tenant changes, and fails closed (throws) if used without an authenticated session.
+ * The single services-service client for the whole app.
  *
- * Features import this directly and call `servicesApi.GET(...)` etc. — they never build their own
- * client or call `fetch` (constitution Principle IV).
+ * `createApiClient` attaches `Authorization: Bearer <token>` and `X-Tenant-Id` on every request
+ * from the live auth session; `createServicesFacade` pre-fills the API version, unwraps the
+ * response envelope, and turns every outcome into an `ApiResult`. A repository just calls
+ * `servicesApi.get(...)` / `.post(...)` — it never states the token, the tenant, the version, or
+ * touches an exception.
  */
-export const servicesApi = createApiClient(getAuthCredentials);
+export const servicesApi = createServicesFacade(createApiClient(getAuthCredentials));
