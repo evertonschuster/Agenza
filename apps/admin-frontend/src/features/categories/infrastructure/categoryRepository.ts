@@ -29,4 +29,17 @@ export const categoryRepository = {
     const result = await servicesApi.get('/api/v{version}/categories/{id}', { path: { id } });
     return result.ok ? ok(toCategory(result.data)) : result;
   },
+
+  async create(name: string): Promise<ApiResult<Category>> {
+    const result = await servicesApi.post('/api/v{version}/categories', { body: { name } });
+    return result.ok ? ok(toCategory(result.data)) : result;
+  },
+
+  async update(id: string, name: string): Promise<ApiResult<Category>> {
+    const result = await servicesApi.put('/api/v{version}/categories/{id}', {
+      path: { id },
+      body: { categoryId: id, name },
+    });
+    return result.ok ? ok(toCategory(result.data)) : result;
+  },
 };
