@@ -29,14 +29,25 @@ Three layers, each with one job. A repository states none of: the token, the ten
 - `src/shared/api/servicesFacade.ts` — `createServicesFacade(client)` returns a `ServicesApi` with `get` / `post` / `put` / `del`. It injects the `v{version}` path segment so **callers pass no version** (`X-Tenant-Id` is stripped from the generated types entirely — `generateApiTypes.mjs` removes it — so the middleware is its sole source), and normalizes the backend's two response shapes: on a 2xx it lifts the payload out of the `{ data, success, … }` envelope → `ok(payload)`; on a non-2xx it returns the backend's own `ApiProblemDetails` body verbatim → `fail(problem)`. That's the whole of `run` (three lines). A genuine network failure (no response) propagates as a rejection — the facade only speaks in the shapes the backend actually sends. `ApiResult<T>` (= `Result<T, ApiProblem>`) and `ApiProblem` (= the generated `ApiProblemDetails`) are exported from this file. The heavily-generic client is used loosely inside; the `ServicesApi` interface re-applies full path/query/body/response typing on the outside.
 - `src/app/servicesApi.ts` — `export const servicesApi = createServicesFacade(createApiClient(getAuthCredentials))`. The composition root: the one place that imports both `@/shared/api` and `@/features/auth`.
 
-A repository does `import { servicesApi } from '@/app/servicesApi'` and:
+A repository (`import { servicesApi } from '@/app/servicesApi'`) is a thin, typed delegation. Its domain type (`Category`, …) is hand-written and owned by the frontend — not `components['schemas']['…']`. When that type is structurally what the endpoint returns, the repository **forwards the result verbatim** (`servicesApi.get`'s `ApiResult<CategoryResponse[]>` is assignable to `ApiResult<Category[]>`, and the `return` line is the one compile-time checkpoint against a breaking wire change):
 
 ```ts
-const result = await servicesApi.get('/api/v{version}/categories', { query: { Search } });
-return result.ok ? ok(result.data.map(toDomain)) : result;   // no headers, no unwrap, no mapping
+export const categoryRepository = {
+  list: (filter: CategoryListFilter = {}): Promise<ApiResult<Category[]>> =>
+    servicesApi.get('/api/v{version}/categories', {
+      query: filter.search ? { Search: filter.search } : {},
+    }),
+  // getById / create / update — same shape
+};
 ```
 
-`Result` / `ok` / `fail` live in `src/shared/result.ts`. The interface layer branches on `result.ok`, then on `result.error.code` (or `.status`), rendering `result.error.title` and reading `result.error.errors` directly.
+Only when the wire shape and the domain type genuinely diverge does a repository add a `toDomain(dto)` mapper, applied through `mapOk` (`src/shared/result.ts` — `mapOk(result, fn)` transforms the ok branch, passes the failure through):
+
+```ts
+list: async () => mapOk(await servicesApi.get(PATH, opts), (rows) => rows.map(toDomain)),
+```
+
+`Result` / `ok` / `fail` / `mapOk` live in `src/shared/result.ts`. The interface layer branches on `result.ok`, then on `result.error.code` (or `.status`), rendering `result.error.title` and reading `result.error.errors` directly.
 
 ## What this scaffold does NOT do
 

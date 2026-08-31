@@ -1,6 +1,4 @@
-import { ok } from '@/shared/result';
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import type { components } from '@/shared/api/generated/services-api.d.ts';
 import { servicesApi } from '@/app/servicesApi';
 
 export interface Category {
@@ -12,34 +10,21 @@ export interface CategoryListFilter {
   search?: string;
 }
 
-const toCategory = (dto: components['schemas']['CategoryResponse']): Category => ({
-  id: dto.id,
-  name: dto.name,
-});
-
 export const categoryRepository = {
-  async list(filter: CategoryListFilter = {}): Promise<ApiResult<Category[]>> {
-    const result = await servicesApi.get('/api/v{version}/categories', {
+  list: (filter: CategoryListFilter = {}): Promise<ApiResult<Category[]>> =>
+    servicesApi.get('/api/v{version}/categories', {
       query: filter.search ? { Search: filter.search } : {},
-    });
-    return result.ok ? ok(result.data.map(toCategory)) : result;
-  },
+    }),
 
-  async getById(id: string): Promise<ApiResult<Category>> {
-    const result = await servicesApi.get('/api/v{version}/categories/{id}', { path: { id } });
-    return result.ok ? ok(toCategory(result.data)) : result;
-  },
+  getById: (id: string): Promise<ApiResult<Category>> =>
+    servicesApi.get('/api/v{version}/categories/{id}', { path: { id } }),
 
-  async create(name: string): Promise<ApiResult<Category>> {
-    const result = await servicesApi.post('/api/v{version}/categories', { body: { name } });
-    return result.ok ? ok(toCategory(result.data)) : result;
-  },
+  create: (name: string): Promise<ApiResult<Category>> =>
+    servicesApi.post('/api/v{version}/categories', { body: { name } }),
 
-  async update(id: string, name: string): Promise<ApiResult<Category>> {
-    const result = await servicesApi.put('/api/v{version}/categories/{id}', {
+  update: (id: string, name: string): Promise<ApiResult<Category>> =>
+    servicesApi.put('/api/v{version}/categories/{id}', {
       path: { id },
       body: { categoryId: id, name },
-    });
-    return result.ok ? ok(toCategory(result.data)) : result;
-  },
+    }),
 };
