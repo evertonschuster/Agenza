@@ -1,24 +1,36 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/shared/ui/button';
-import type { ApiProblem } from '@/shared/api/servicesFacade';
+import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
 import { categoryRepository, type Category } from '../infrastructure/categoryRepository';
+
+const OFFLINE: ApiProblem = {
+  status: 0,
+  title: 'Sem conexão com o servidor. Tente novamente.',
+  code: 'Network.Unreachable',
+};
 
 export function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
   const [problem, setProblem] = useState<ApiProblem | null>(null);
   const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
   const [newName, setNewName] = useState('');
   const [editing, setEditing] = useState<Category | null>(null);
 
   const load = useCallback(async () => {
-    const result = await categoryRepository.list();
-    if (result.ok) {
-      setCategories(result.data);
-      setProblem(null);
-    } else {
-      setProblem(result.error);
+    try {
+      const result = await categoryRepository.list();
+      if (result.ok) {
+        setCategories(result.data);
+        setProblem(null);
+      } else {
+        setProblem(result.error);
+      }
+    } catch {
+      setProblem(OFFLINE);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -26,25 +38,37 @@ export function CategoriesPage() {
     void load();
   }, [load]);
 
-  const create = async () => {
-    const result = await categoryRepository.create(newName.trim());
-    if (result.ok) {
-      setNewName('');
-      void load();
-    } else {
-      setProblem(result.error);
+  const mutate = async <T,>(op: () => Promise<ApiResult<T>>, onOk: () => void) => {
+    if (busy) return;
+    setBusy(true);
+    try {
+      const result = await op();
+      if (result.ok) {
+        onOk();
+        await load();
+      } else {
+        setProblem(result.error);
+      }
+    } catch {
+      setProblem(OFFLINE);
+    } finally {
+      setBusy(false);
     }
   };
 
-  const saveEdit = async () => {
+  const create = () =>
+    void mutate(
+      () => categoryRepository.create(newName.trim()),
+      () => setNewName(''),
+    );
+
+  const saveEdit = () => {
     if (!editing) return;
-    const result = await categoryRepository.update(editing.id, editing.name.trim());
-    if (result.ok) {
-      setEditing(null);
-      void load();
-    } else {
-      setProblem(result.error);
-    }
+    const { id, name } = editing;
+    void mutate(
+      () => categoryRepository.update(id, name.trim()),
+      () => setEditing(null),
+    );
   };
 
   return (
@@ -61,16 +85,17 @@ export function CategoriesPage() {
         className="flex gap-2"
         onSubmit={(event) => {
           event.preventDefault();
-          void create();
+          create();
         }}
       >
         <input
           className="flex-1 rounded border px-2 py-1 text-sm"
+          aria-label="Nova categoria"
           placeholder="Nova categoria"
           value={newName}
           onChange={(event) => setNewName(event.target.value)}
         />
-        <Button type="submit" size="sm" disabled={!newName.trim()}>
+        <Button type="submit" size="sm" disabled={busy || !newName.trim()}>
           Criar
         </Button>
       </form>
@@ -85,10 +110,15 @@ export function CategoriesPage() {
                 <>
                   <input
                     className="flex-1 rounded border px-2 py-1 text-sm"
+                    aria-label="Nome da categoria"
                     value={editing.name}
                     onChange={(event) => setEditing({ ...editing, name: event.target.value })}
                   />
-                  <Button size="sm" disabled={!editing.name.trim()} onClick={() => void saveEdit()}>
+                  <Button
+                    size="sm"
+                    disabled={busy || !editing.name.trim()}
+                    onClick={() => saveEdit()}
+                  >
                     Salvar
                   </Button>
                   <Button size="sm" variant="outline" onClick={() => setEditing(null)}>
