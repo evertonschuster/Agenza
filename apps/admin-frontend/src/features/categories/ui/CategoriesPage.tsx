@@ -5,7 +5,7 @@ import { settle, useApiResource } from '@/shared/api/apiResource';
 import { categoryRepository, type Category } from '../infrastructure/categoryRepository';
 
 export function CategoriesPage() {
-  const categories = useApiResource((signal) => categoryRepository.list({ signal }));
+  const categories = useApiResource(() => categoryRepository.list());
 
   const [busy, setBusy] = useState(false);
   const [mutationProblem, setMutationProblem] = useState<ApiProblem | null>(null);

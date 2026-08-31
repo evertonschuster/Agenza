@@ -16,15 +16,13 @@ describe('settle', () => {
     expect(await settle(Promise.resolve(result))).toBe(result);
   });
 
-  it('collapses a transport rejection into NETWORK_PROBLEM', async () => {
+  it('collapses any rejection — transport error or AbortError — into NETWORK_PROBLEM', async () => {
     expect(await settle(Promise.reject(new TypeError('Failed to fetch')))).toEqual(
       fail(NETWORK_PROBLEM),
     );
-  });
-
-  it('rethrows an AbortError so a cancelled request can be dropped', async () => {
-    const aborted = Promise.reject(new DOMException('aborted', 'AbortError'));
-    await expect(settle(aborted)).rejects.toBeInstanceOf(DOMException);
+    expect(await settle(Promise.reject(new DOMException('aborted', 'AbortError')))).toEqual(
+      fail(NETWORK_PROBLEM),
+    );
   });
 });
 

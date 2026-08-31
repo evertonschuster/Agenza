@@ -27,21 +27,22 @@ Three layers, each with one job. A repository states none of: the token, the ten
 - `src/shared/api/apiClient.ts` — `createApiClient(getCredentials)`. Its `client.use({ onRequest })` middleware attaches `Authorization: Bearer <token>` + `X-Tenant-Id` on every request, and fails closed (throws) with no session. Feature-agnostic.
 - `src/features/auth` barrel exports **`getAuthCredentials()`** — a plain (non-React) reader over the session store singleton returning `{ accessToken, tenantId }` (never `Session`/`TenantContext`). Read fresh per request → survives silent renewal / tenant change.
 - `src/shared/api/servicesFacade.ts` — `createServicesFacade(client)` returns a `ServicesApi` with `get` / `post` / `put` / `del`. It injects the `v{version}` path segment so **callers pass no version** (`X-Tenant-Id` is stripped from the generated types entirely — `generateApiTypes.mjs` removes it — so the middleware is its sole source), and normalizes the backend's two response shapes: on a 2xx it lifts the payload out of the `{ data, success, … }` envelope → `ok(payload)`; on a non-2xx it returns the backend's own `ApiProblemDetails` body verbatim → `fail(problem)`. That's the whole of `run` (three lines). A genuine network failure (no response) propagates as a rejection — the facade only speaks in the shapes the backend actually sends. `ApiResult<T>` (= `Result<T, ApiProblem>`) and `ApiProblem` (= the generated `ApiProblemDetails`) are exported from this file. Every call also accepts an optional `signal?: AbortSignal`, threaded straight into the fetch. The heavily-generic client is used loosely inside; the `ServicesApi` interface re-applies full path/query/body/response typing on the outside.
-- `src/shared/api/apiResource.ts` — the UI-side boundary that consumes an `ApiResult`. `settle(call)` awaits a repository promise and turns the facade's transport-level rejection into a single rendered Problem, `NETWORK_PROBLEM` (`status: 0`, `code: 'Network.Unreachable'`) — an `AbortError` is re-thrown instead, so a cancelled request is dropped silently. `useApiResource(fetcher)` is the read primitive: it calls `fetcher(signal)` on mount, `AbortController`-cancels the in-flight request on unmount, runs it through `settle`, and returns `{ data, problem, loading, reload }`. Mutations call `settle(op())` directly.
+- `src/shared/api/apiResource.ts` — the UI-side boundary that consumes an `ApiResult`. `settle(call)` awaits a repository promise and collapses **any** rejection (transport error, `AbortError`) into a single rendered Problem, `NETWORK_PROBLEM` (`status: 0`, `code: 'Network.Unreachable'`). `useApiResource(fetcher)` is the read primitive: on mount it runs `fetcher(signal)` through `settle`, guards the state update with an `ignore` flag on cleanup (React's canonical race fix — this is what actually drops a stale/cancelled response), and `AbortController`-`.abort()`s on cleanup so a fetcher that chose to forward `signal` also stops the network. It returns `{ data, problem, loading, reload }`. Mutations call `settle(op())` directly. **Cancellation is opt-in:** `useApiResource(() => repo.list())` is race-safe with zero ceremony; `useApiResource((signal) => repo.search(q, signal))` additionally aborts the request — the fetcher decides.
 - `src/app/servicesApi.ts` — `export const servicesApi = createServicesFacade(createApiClient(getAuthCredentials))`. The composition root: the one place that imports both `@/shared/api` and `@/features/auth`.
 
 A repository (`import { servicesApi } from '@/app/servicesApi'`) is a thin, typed delegation. Its domain type (`Category`, …) is hand-written and owned by the frontend — not `components['schemas']['…']`. When that type is structurally what the endpoint returns, the repository **forwards the result verbatim** (`servicesApi.get`'s `ApiResult<CategoryResponse[]>` is assignable to `ApiResult<Category[]>`, and the `return` line is the one compile-time checkpoint against a breaking wire change):
 
 ```ts
 export const categoryRepository = {
-  list: ({ search, signal }: CategoryListOptions = {}): Promise<ApiResult<Category[]>> =>
+  list: (filter: CategoryListFilter = {}): Promise<ApiResult<Category[]>> =>
     servicesApi.get('/api/v{version}/categories', {
-      query: search ? { Search: search } : {},
-      signal,
+      query: filter.search ? { Search: filter.search } : {},
     }),
   // create / update — same shape
 };
 ```
+
+A repository method takes a trailing `signal?: AbortSignal` only if that call is worth cancelling on the wire (a slow search, a large export); `categoryRepository` doesn't, so it stays signal-free. The facade always accepts one.
 
 Only when the wire shape and the domain type genuinely diverge does a repository add a `toDomain(dto)` mapper — transforming the ok branch and forwarding the failure:
 
@@ -56,5 +57,5 @@ list: async () => {
 
 ## What this scaffold does NOT do
 
-- Does not call any actual `services-service` business endpoint from the UI — there are no business routes/components to call one from yet (spec FR-013).
+- Beyond the `categories` page — added to exercise this layer end-to-end against a running backend (list / create / update) — no other `services-service` business endpoint is wired to the UI yet.
 - Does not generate a client for `identity-service`'s own OpenAPI document — identity-service is consumed entirely through the OIDC protocol (`oidc-client-ts`), not through generated REST types; its OpenAPI/Scalar setup is for human API exploration only (research.md, Topic 2 of the original research pass).

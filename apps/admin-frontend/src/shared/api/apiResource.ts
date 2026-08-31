@@ -11,9 +11,7 @@ export const NETWORK_PROBLEM: ApiProblem = {
 export async function settle<T>(call: Promise<ApiResult<T>>): Promise<ApiResult<T>> {
   try {
     return await call;
-  } catch (error) {
-    // A cancelled request is not a failure — let the caller drop it silently.
-    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+  } catch {
     return fail(NETWORK_PROBLEM);
   }
 }
@@ -39,22 +37,22 @@ export function useApiResource<T>(
   });
 
   useEffect(() => {
+    let ignore = false;
     const controller = new AbortController();
-    void settle(fetcherRef.current(controller.signal))
-      .then((result) => {
-        if (controller.signal.aborted) return;
-        setLoading(false);
-        if (result.ok) {
-          setData(result.data);
-          setProblem(null);
-        } else {
-          setProblem(result.error);
-        }
-      })
-      .catch(() => {
-        // aborted by cleanup — the component moved on; keep the last state
-      });
-    return () => controller.abort();
+    void settle(fetcherRef.current(controller.signal)).then((result) => {
+      if (ignore) return;
+      setLoading(false);
+      if (result.ok) {
+        setData(result.data);
+        setProblem(null);
+      } else {
+        setProblem(result.error);
+      }
+    });
+    return () => {
+      ignore = true;
+      controller.abort();
+    };
   }, [attempt]);
 
   const reload = useCallback(() => {

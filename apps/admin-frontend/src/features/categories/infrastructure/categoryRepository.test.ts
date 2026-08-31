@@ -39,18 +39,6 @@ describe('categoryRepository', () => {
     expect(getMock).toHaveBeenCalledWith('/api/v{version}/categories', { query: {} });
   });
 
-  it('list() forwards an AbortSignal for cancellation', async () => {
-    getMock.mockResolvedValue(ok([]));
-    const controller = new AbortController();
-
-    await categoryRepository.list({ signal: controller.signal });
-
-    expect(getMock).toHaveBeenCalledWith('/api/v{version}/categories', {
-      query: {},
-      signal: controller.signal,
-    });
-  });
-
   it('create() posts the name', async () => {
     postMock.mockResolvedValue(ok(DTO));
 
