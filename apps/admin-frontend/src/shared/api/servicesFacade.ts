@@ -1,10 +1,5 @@
 import type { Client } from 'openapi-fetch';
-import type {
-  MediaType,
-  PathsWithMethod,
-  RequiredKeysOf,
-  SuccessResponse,
-} from 'openapi-typescript-helpers';
+import type { MediaType, PathsWithMethod, SuccessResponse } from 'openapi-typescript-helpers';
 import { ok, fail, type Result } from '@/shared/result';
 import type { components, paths } from './generated/services-api.d.ts';
 
@@ -25,7 +20,7 @@ export const SERVER_PROBLEM: ApiProblem = {
   title: 'O servidor está instável. Tente novamente em instantes.',
 };
 
-const isProblem = (value: unknown): boolean =>
+const isProblem = (value: unknown): value is ApiProblem =>
   typeof value === 'object' &&
   value !== null &&
   'title' in value &&
@@ -50,11 +45,6 @@ type CallOptions<O> = (QueryOf<O> extends never
   (keyof PathOf<O> extends never ? { path?: never } : { path: PathOf<O> }) &
   (BodyOf<O> extends never ? { body?: never } : { body: BodyOf<O> });
 
-type CallArgs<O> =
-  RequiredKeysOf<CallOptions<O>> extends never
-    ? [options?: CallOptions<O>]
-    : [options: CallOptions<O>];
-
 type Payload<O> = O extends { responses: infer R extends Record<string | number, unknown> }
   ? SuccessResponse<R, MediaType> extends { data: infer D }
     ? NonNullable<D>
@@ -63,7 +53,7 @@ type Payload<O> = O extends { responses: infer R extends Record<string | number,
 
 type Call<M extends Verb> = <P extends PathsWithMethod<paths, M>>(
   path: P,
-  ...args: CallArgs<Op<M, P>>
+  options: CallOptions<Op<M, P>>,
 ) => Promise<ApiResult<Payload<Op<M, P>>>>;
 
 interface ServicesApi {
@@ -93,7 +83,7 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
   async function run(dispatch: () => Promise<RawResult>): Promise<ApiResult<unknown>> {
     try {
       const { data, error, response } = await dispatch();
-      if (!response.ok) return fail(isProblem(error) ? (error as ApiProblem) : SERVER_PROBLEM);
+      if (!response.ok) return fail(isProblem(error) ? error : SERVER_PROBLEM);
       return ok((data as { data?: unknown } | undefined)?.data);
     } catch {
       return fail(NETWORK_PROBLEM);
@@ -114,9 +104,9 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
       run(() => raw[verbs[verb]](path, buildInit(options)));
 
   return {
-    get: call('get') as ServicesApi['get'],
-    post: call('post') as ServicesApi['post'],
-    put: call('put') as ServicesApi['put'],
-    del: call('delete') as ServicesApi['del'],
-  };
+    get: call('get'),
+    post: call('post'),
+    put: call('put'),
+    del: call('delete'),
+  } as unknown as ServicesApi;
 }
