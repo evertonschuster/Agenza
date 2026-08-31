@@ -1,6 +1,7 @@
 import type { Client } from 'openapi-fetch';
 import type { MediaType, PathsWithMethod, SuccessResponse } from 'openapi-typescript-helpers';
 import { ok, fail, type Result } from '@/shared/result';
+import { MissingSessionError } from './apiClient';
 import type { components, paths } from './generated/services-api.d.ts';
 
 const API_VERSION = '1.0';
@@ -18,6 +19,12 @@ export const SERVER_PROBLEM: ApiProblem = {
   status: 0,
   code: 'Server.Unavailable',
   title: 'O servidor está instável. Tente novamente em instantes.',
+};
+
+export const SESSION_PROBLEM: ApiProblem = {
+  status: 0,
+  code: 'Session.Missing',
+  title: 'Sua sessão expirou. Entre novamente.',
 };
 
 const isProblem = (value: unknown): value is ApiProblem =>
@@ -85,8 +92,8 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
       const { data, error, response } = await dispatch();
       if (!response.ok) return fail(isProblem(error) ? error : SERVER_PROBLEM);
       return ok((data as { data?: unknown } | undefined)?.data);
-    } catch {
-      return fail(NETWORK_PROBLEM);
+    } catch (cause) {
+      return fail(cause instanceof MissingSessionError ? SESSION_PROBLEM : NETWORK_PROBLEM);
     }
   }
 

@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { createApiClient } from './apiClient';
+import { MissingSessionError, createApiClient } from './apiClient';
 
 const CATEGORIES_PATH = '/api/v{version}/categories' as const;
 const REQUEST_PARAMS = { params: { path: { version: '1.0' } } };
@@ -39,12 +39,12 @@ describe('createApiClient', () => {
     ['accessToken', { accessToken: null, tenantId: 'tenant-1' }],
     ['tenantId', { accessToken: 'token-1', tenantId: null }],
   ] as const)(
-    'fails closed instead of sending a request when %s is missing',
+    'fails closed with a MissingSessionError instead of sending a request when %s is missing',
     async (_label, credentials) => {
       const client = createApiClient(() => credentials);
 
       await expect(client.GET(CATEGORIES_PATH, REQUEST_PARAMS)).rejects.toThrow(
-        /authenticated session/,
+        MissingSessionError,
       );
       expect(fetchMock).not.toHaveBeenCalled();
     },

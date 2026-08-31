@@ -70,13 +70,15 @@ tenant, the API version, the response envelope, or exception handling.
 
 - `2xx` → `ok(payload)` — payload lifted out of the envelope, typed from the OpenAPI spec.
 - `non-2xx` with an RFC 7807 `application/problem+json` body → `fail(problem)` verbatim.
+- no authenticated session — the client's middleware threw `MissingSessionError` → `fail(SESSION_PROBLEM)`.
 - a thrown fetch (offline, DNS, connection refused) → `fail(NETWORK_PROBLEM)`.
 - a `non-2xx` whose body isn't a Problem (a gateway 5xx, an empty error) → `fail(SERVER_PROBLEM)`.
 
-`NETWORK_PROBLEM` / `SERVER_PROBLEM` are `ApiProblem`s (`status: 0`, namespaced `code`) exported
-from the facade — the UI branches on them exactly like a backend Problem. Because the one place
-that turns HTTP into `ApiResult` also owns a failed transport, **a repository does zero exception
-handling and a page has no `try/catch`.**
+`SESSION_PROBLEM` / `NETWORK_PROBLEM` / `SERVER_PROBLEM` are `ApiProblem`s (`status: 0`, namespaced
+`code`) exported from the facade — the UI branches on them exactly like a backend Problem. Splitting
+`SESSION_PROBLEM` out of the transport bucket is what keeps an expired session from reading as "no
+connection". Because the one place that turns HTTP into `ApiResult` also owns a failed transport,
+**a repository does zero exception handling and a page has no `try/catch`.**
 
 **A repository is a thin typed delegation.** Its domain entity (`Category`) is hand-written, owned
 by the frontend (not `components['schemas']['…']`), and lives in `model/`. When the entity is
@@ -119,7 +121,8 @@ Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell
   is **stripped from the generated types** (`generateApiTypes.mjs`) so no call site can set it.
   Mirrors backend [ADR 0006](../../../docs/adr/0006-tenant-header-base-entity-generic-repository.md).
 - **Fail closed.** `ProtectedRoute` redirects when the session isn't `authenticated`; the client
-  throws rather than send a request with a missing token or tenant.
+  throws `MissingSessionError` rather than send a request with a missing token or tenant, and the
+  facade surfaces that to the UI as `SESSION_PROBLEM` ("entre novamente"), not a network error.
 
 ---
 

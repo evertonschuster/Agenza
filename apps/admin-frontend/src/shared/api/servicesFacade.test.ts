@@ -1,7 +1,13 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Client } from 'openapi-fetch';
 import type { paths } from './generated/services-api.d.ts';
-import { NETWORK_PROBLEM, SERVER_PROBLEM, createServicesFacade } from './servicesFacade';
+import { MissingSessionError } from './apiClient';
+import {
+  NETWORK_PROBLEM,
+  SERVER_PROBLEM,
+  SESSION_PROBLEM,
+  createServicesFacade,
+} from './servicesFacade';
 
 const CATEGORY = { id: '11111111-1111-1111-1111-111111111111', name: 'Cabelo' };
 
@@ -79,6 +85,15 @@ describe('createServicesFacade', () => {
     expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
       ok: false,
       error: NETWORK_PROBLEM,
+    });
+  });
+
+  it('maps a missing-session throw to SESSION_PROBLEM, not a dead network', async () => {
+    GET.mockRejectedValue(new MissingSessionError());
+
+    expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
+      ok: false,
+      error: SESSION_PROBLEM,
     });
   });
 
