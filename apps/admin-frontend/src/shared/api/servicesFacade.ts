@@ -30,7 +30,9 @@ type CallOptions<O> = (QueryOf<O> extends never
   ? { query?: never }
   : { query?: QueryOf<O> | undefined }) &
   (keyof PathOf<O> extends never ? { path?: never } : { path: PathOf<O> }) &
-  (BodyOf<O> extends never ? { body?: never } : { body: BodyOf<O> });
+  (BodyOf<O> extends never ? { body?: never } : { body: BodyOf<O> }) & {
+    signal?: AbortSignal | undefined;
+  };
 
 type CallArgs<O> =
   RequiredKeysOf<CallOptions<O>> extends never
@@ -61,7 +63,9 @@ interface RawResult {
   response: Response;
 }
 
-type LooseOptions = { query?: unknown; path?: Record<string, unknown>; body?: unknown } | undefined;
+type LooseOptions =
+  | { query?: unknown; path?: Record<string, unknown>; body?: unknown; signal?: AbortSignal }
+  | undefined;
 
 type RawClient = Record<
   'GET' | 'POST' | 'PUT' | 'DELETE',
@@ -84,6 +88,7 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
       query: options?.query,
     },
     body: options?.body,
+    signal: options?.signal,
   });
 
   const call =

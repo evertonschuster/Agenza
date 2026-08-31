@@ -6,14 +6,16 @@ export interface Category {
   name: string;
 }
 
-interface CategoryListFilter {
+interface CategoryListOptions {
   search?: string;
+  signal?: AbortSignal;
 }
 
 export const categoryRepository = {
-  list: (filter: CategoryListFilter = {}): Promise<ApiResult<Category[]>> =>
+  list: ({ search, signal }: CategoryListOptions = {}): Promise<ApiResult<Category[]>> =>
     servicesApi.get('/api/v{version}/categories', {
-      query: filter.search ? { Search: filter.search } : {},
+      query: search ? { Search: search } : {},
+      signal,
     }),
 
   create: (name: string): Promise<ApiResult<Category>> =>

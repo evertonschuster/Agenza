@@ -1,59 +1,31 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
+import { settle, useApiResource } from '@/shared/api/apiResource';
 import { categoryRepository, type Category } from '../infrastructure/categoryRepository';
 
-const OFFLINE: ApiProblem = {
-  status: 0,
-  title: 'Sem conexão com o servidor. Tente novamente.',
-  code: 'Network.Unreachable',
-};
-
 export function CategoriesPage() {
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [problem, setProblem] = useState<ApiProblem | null>(null);
-  const [loading, setLoading] = useState(true);
+  const categories = useApiResource((signal) => categoryRepository.list({ signal }));
+
   const [busy, setBusy] = useState(false);
+  const [mutationProblem, setMutationProblem] = useState<ApiProblem | null>(null);
   const [newName, setNewName] = useState('');
   const [editing, setEditing] = useState<Category | null>(null);
 
-  const load = useCallback(async () => {
-    try {
-      const result = await categoryRepository.list();
-      if (result.ok) {
-        setCategories(result.data);
-        setProblem(null);
-      } else {
-        setProblem(result.error);
-      }
-    } catch {
-      setProblem(OFFLINE);
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- fetch on mount; a route loader / query lib comes later
-    void load();
-  }, [load]);
+  const problem = mutationProblem ?? categories.problem;
 
   const mutate = async <T,>(op: () => Promise<ApiResult<T>>, onOk: () => void) => {
     if (busy) return;
     setBusy(true);
-    try {
-      const result = await op();
-      if (result.ok) {
-        onOk();
-        await load();
-      } else {
-        setProblem(result.error);
-      }
-    } catch {
-      setProblem(OFFLINE);
-    } finally {
-      setBusy(false);
+    const result = await settle(op());
+    if (result.ok) {
+      setMutationProblem(null);
+      onOk();
+      categories.reload();
+    } else {
+      setMutationProblem(result.error);
     }
+    setBusy(false);
   };
 
   const create = () =>
@@ -100,11 +72,11 @@ export function CategoriesPage() {
         </Button>
       </form>
 
-      {loading ? (
+      {categories.loading ? (
         <p className="text-sm text-muted-foreground">Carregando…</p>
       ) : (
         <ul className="space-y-2">
-          {categories.map((category) => (
+          {(categories.data ?? []).map((category) => (
             <li key={category.id} className="flex items-center gap-2">
               {editing?.id === category.id ? (
                 <>
