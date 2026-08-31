@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
-import { settle } from '@/shared/api/settle';
 import { categoryRepository, type Category } from '../infrastructure/categoryRepository';
 
 export function CategoriesPage() {
@@ -13,7 +12,7 @@ export function CategoriesPage() {
   const [editing, setEditing] = useState<Category | null>(null);
 
   const load = useCallback(async () => {
-    const result = await settle(categoryRepository.list());
+    const result = await categoryRepository.list();
     if (result.ok) {
       setCategories(result.data);
       setProblem(null);
@@ -31,7 +30,7 @@ export function CategoriesPage() {
   const mutate = async <T,>(op: () => Promise<ApiResult<T>>, onOk: () => void) => {
     if (busy) return;
     setBusy(true);
-    const result = await settle(op());
+    const result = await op();
     if (result.ok) {
       onOk();
       await load();

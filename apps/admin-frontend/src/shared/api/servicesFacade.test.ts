@@ -1,7 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import type { Client } from 'openapi-fetch';
 import type { paths } from './generated/services-api.d.ts';
-import { createServicesFacade } from './servicesFacade';
+import { NETWORK_PROBLEM, SERVER_PROBLEM, createServicesFacade } from './servicesFacade';
 
 const CATEGORY = { id: '11111111-1111-1111-1111-111111111111', name: 'Cabelo' };
 
@@ -71,6 +71,24 @@ describe('createServicesFacade', () => {
     const result = await api.get('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } });
 
     expect(result).toEqual({ ok: false, error: problem });
+  });
+
+  it('normalizes a transport rejection to NETWORK_PROBLEM (the call never rejects)', async () => {
+    GET.mockRejectedValue(new TypeError('Failed to fetch'));
+
+    expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
+      ok: false,
+      error: NETWORK_PROBLEM,
+    });
+  });
+
+  it('normalizes a non-2xx with no Problem body to SERVER_PROBLEM', async () => {
+    GET.mockResolvedValue(raw({ error: '<html>502 Bad Gateway</html>', status: 502 }));
+
+    expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
+      ok: false,
+      error: SERVER_PROBLEM,
+    });
   });
 
   it('treats 204 No Content as success with no payload', async () => {
