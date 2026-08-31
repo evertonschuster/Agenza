@@ -1,13 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
+import { settle } from '@/shared/api/settle';
 import { categoryRepository, type Category } from '../infrastructure/categoryRepository';
-
-const OFFLINE: ApiProblem = {
-  status: 0,
-  title: 'Sem conexão com o servidor. Tente novamente.',
-  code: 'Network.Unreachable',
-};
 
 export function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
@@ -18,19 +13,14 @@ export function CategoriesPage() {
   const [editing, setEditing] = useState<Category | null>(null);
 
   const load = useCallback(async () => {
-    try {
-      const result = await categoryRepository.list();
-      if (result.ok) {
-        setCategories(result.data);
-        setProblem(null);
-      } else {
-        setProblem(result.error);
-      }
-    } catch {
-      setProblem(OFFLINE);
-    } finally {
-      setLoading(false);
+    const result = await settle(categoryRepository.list());
+    if (result.ok) {
+      setCategories(result.data);
+      setProblem(null);
+    } else {
+      setProblem(result.error);
     }
+    setLoading(false);
   }, []);
 
   useEffect(() => {
@@ -41,19 +31,14 @@ export function CategoriesPage() {
   const mutate = async <T,>(op: () => Promise<ApiResult<T>>, onOk: () => void) => {
     if (busy) return;
     setBusy(true);
-    try {
-      const result = await op();
-      if (result.ok) {
-        onOk();
-        await load();
-      } else {
-        setProblem(result.error);
-      }
-    } catch {
-      setProblem(OFFLINE);
-    } finally {
-      setBusy(false);
+    const result = await settle(op());
+    if (result.ok) {
+      onOk();
+      await load();
+    } else {
+      setProblem(result.error);
     }
+    setBusy(false);
   };
 
   const create = () =>
