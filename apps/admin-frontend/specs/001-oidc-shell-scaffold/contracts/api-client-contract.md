@@ -29,15 +29,18 @@ Three layers, each with one job. A repository states none of: the token, the ten
 - `src/shared/api/servicesFacade.ts` — `createServicesFacade(client)` returns a `ServicesApi` with `get` / `post` / `put` / `del`. It injects the `v{version}` path segment so **callers pass no version** (`X-Tenant-Id` is stripped from the generated types entirely — `generateApiTypes.mjs` removes it — so the middleware is its sole source), and every call resolves to an `ApiResult` — **it never rejects**. `run` is the whole of it: a 2xx lifts the payload out of the `{ data, success, … }` envelope → `ok(payload)`; a non-2xx with the backend's `ApiProblemDetails` body → `fail(problem)` verbatim; anything else the transport can hand back — a thrown fetch (offline, DNS, connection refused), or a non-2xx whose body isn't `problem+json` (a gateway 5xx, an empty error) — is normalized in place to `fail(NETWORK_PROBLEM)` / `fail(SERVER_PROBLEM)`. Those two are `ApiProblem`s (`status: 0`, namespaced `code`) exported alongside `ApiResult<T>` and `ApiProblem`, so the interface layer branches on them exactly like a backend Problem. This is why a repository needs no `try/catch`: the one place that turns HTTP into `ApiResult` is also the one place that handles a failed transport. The heavily-generic client is used loosely inside; the `ServicesApi` interface re-applies full path/query/body/response typing on the outside.
 - `src/app/servicesApi.ts` — `export const servicesApi = createServicesFacade(createApiClient(getAuthCredentials))`. The composition root: the one place that imports both `@/shared/api` and `@/features/auth`.
 
-A repository (`import { servicesApi } from '@/app/servicesApi'`) is a thin, typed delegation. Its domain type (`Category`, …) is hand-written and owned by the frontend — not `components['schemas']['…']`. When that type is structurally what the endpoint returns, the repository **forwards the result verbatim** (`servicesApi.get`'s `ApiResult<CategoryResponse[]>` is assignable to `ApiResult<Category[]>`, and the `return` line is the one compile-time checkpoint against a breaking wire change):
+A repository lives in the feature's **`api/`** segment (`features/categories/api/categoryRepository.ts`, `import { servicesApi } from '@/app/servicesApi'`) and is a thin, typed delegation. The domain **entity** it returns (`Category`) is hand-written, owned by the frontend — not `components['schemas']['…']` — and lives in the **`model/`** segment (`features/categories/model/category.ts`), imported by both the repository and the `ui/`. A type that is only a repository *input* (`CategoryListFilter` — the shape of a list query) stays private to `api/`, next to the repository. When the entity is structurally what the endpoint returns, the repository **forwards the result verbatim** (`servicesApi.get`'s `ApiResult<CategoryResponse[]>` is assignable to `ApiResult<Category[]>`, and the `return` line is the one compile-time checkpoint against a breaking wire change):
 
 ```ts
+// api/categoryRepository.ts
+import type { Category } from '../model/category';
+
 export const categoryRepository = {
   list: (filter: CategoryListFilter = {}): Promise<ApiResult<Category[]>> =>
     servicesApi.get('/api/v{version}/categories', {
       query: filter.search ? { Search: filter.search } : {},
     }),
-  // getById / create / update — same shape
+  // create / update — same shape
 };
 ```
 

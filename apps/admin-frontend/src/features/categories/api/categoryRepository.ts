@@ -1,10 +1,6 @@
 import type { ApiResult } from '@/shared/api/servicesFacade';
 import { servicesApi } from '@/app/servicesApi';
-
-export interface Category {
-  id: string;
-  name: string;
-}
+import type { Category } from '../model/category';
 
 interface CategoryListFilter {
   search?: string;

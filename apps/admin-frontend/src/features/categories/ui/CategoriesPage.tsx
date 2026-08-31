@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Button } from '@/shared/ui/button';
 import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
-import { categoryRepository, type Category } from '../infrastructure/categoryRepository';
+import { categoryRepository } from '../api/categoryRepository';
+import type { Category } from '../model/category';
 
 export function CategoriesPage() {
   const [categories, setCategories] = useState<Category[]>([]);
