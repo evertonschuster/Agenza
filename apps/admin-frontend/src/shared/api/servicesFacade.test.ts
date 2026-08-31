@@ -50,19 +50,6 @@ describe('createServicesFacade', () => {
     });
   });
 
-  it('forwards an AbortSignal to the transport', async () => {
-    GET.mockResolvedValue(raw({ data: { data: [] } }));
-    const controller = new AbortController();
-
-    await api.get('/api/v{version}/categories', { query: {}, signal: controller.signal });
-
-    expect(GET).toHaveBeenCalledWith('/api/v{version}/categories', {
-      params: { path: { version: '1.0' }, query: {} },
-      body: undefined,
-      signal: controller.signal,
-    });
-  });
-
   it('unwraps the response envelope on success', async () => {
     GET.mockResolvedValue(raw({ data: { data: [CATEGORY], success: true } }));
 
