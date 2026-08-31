@@ -6,10 +6,3 @@ export { ProtectedRoute } from './ui/ProtectedRoute';
 export { LoginPage } from './ui/pages/LoginPage/LoginPage';
 export { AuthCallbackPage } from './ui/pages/AuthCallbackPage/AuthCallbackPage';
 export { INITIAL_SESSION } from './model/session';
-export type {
-  Session,
-  SessionStatus,
-  SessionFailureReason,
-  AuthenticatedUser,
-} from './model/session';
-export type { TenantContext } from './model/tenant';

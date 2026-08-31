@@ -6,7 +6,7 @@ export interface Category {
   name: string;
 }
 
-export interface CategoryListFilter {
+interface CategoryListFilter {
   search?: string;
 }
 
@@ -15,9 +15,6 @@ export const categoryRepository = {
     servicesApi.get('/api/v{version}/categories', {
       query: filter.search ? { Search: filter.search } : {},
     }),
-
-  getById: (id: string): Promise<ApiResult<Category>> =>
-    servicesApi.get('/api/v{version}/categories/{id}', { path: { id } }),
 
   create: (name: string): Promise<ApiResult<Category>> =>
     servicesApi.post('/api/v{version}/categories', { body: { name } }),

@@ -14,7 +14,7 @@ export interface AuthSnapshot {
   user: AuthenticatedUser | null;
 }
 
-export const INITIAL_SNAPSHOT: AuthSnapshot = {
+const INITIAL_SNAPSHOT: AuthSnapshot = {
   session: INITIAL_SESSION,
   tenant: null,
   user: null,

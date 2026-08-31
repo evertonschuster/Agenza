@@ -48,7 +48,7 @@ type Call<M extends Verb> = <P extends PathsWithMethod<paths, M>>(
   ...args: CallArgs<Op<M, P>>
 ) => Promise<ApiResult<Payload<Op<M, P>>>>;
 
-export interface ServicesApi {
+interface ServicesApi {
   get: Call<'get'>;
   post: Call<'post'>;
   put: Call<'put'>;

@@ -41,13 +41,16 @@ export const categoryRepository = {
 };
 ```
 
-Only when the wire shape and the domain type genuinely diverge does a repository add a `toDomain(dto)` mapper, applied through `mapOk` (`src/shared/result.ts` — `mapOk(result, fn)` transforms the ok branch, passes the failure through):
+Only when the wire shape and the domain type genuinely diverge does a repository add a `toDomain(dto)` mapper — transforming the ok branch and forwarding the failure:
 
 ```ts
-list: async () => mapOk(await servicesApi.get(PATH, opts), (rows) => rows.map(toDomain)),
+list: async () => {
+  const result = await servicesApi.get(PATH, opts);
+  return result.ok ? ok(result.data.map(toDomain)) : result;
+},
 ```
 
-`Result` / `ok` / `fail` / `mapOk` live in `src/shared/result.ts`. The interface layer branches on `result.ok`, then on `result.error.code` (or `.status`), rendering `result.error.title` and reading `result.error.errors` directly.
+`Result` / `ok` / `fail` live in `src/shared/result.ts`. The interface layer branches on `result.ok`, then on `result.error.code` (or `.status`), rendering `result.error.title` and reading `result.error.errors` directly.
 
 ## What this scaffold does NOT do
 

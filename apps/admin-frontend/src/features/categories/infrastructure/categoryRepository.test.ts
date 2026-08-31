@@ -39,16 +39,6 @@ describe('categoryRepository', () => {
     expect(getMock).toHaveBeenCalledWith('/api/v{version}/categories', { query: {} });
   });
 
-  it('getById() targets the id route', async () => {
-    getMock.mockResolvedValue(ok(DTO));
-
-    await categoryRepository.getById(DTO.id);
-
-    expect(getMock).toHaveBeenCalledWith('/api/v{version}/categories/{id}', {
-      path: { id: DTO.id },
-    });
-  });
-
   it('create() posts the name', async () => {
     postMock.mockResolvedValue(ok(DTO));
 
