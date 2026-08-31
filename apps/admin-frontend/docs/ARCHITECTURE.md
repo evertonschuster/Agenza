@@ -4,6 +4,9 @@ A pragmatic map of how this app is built and **why it looks the way it does**. I
 summarises decisions taken across the OIDC-shell work and the API-layer iterations;
 for the blow-by-blow see [`specs/001-oidc-shell-scaffold/`](../specs/001-oidc-shell-scaffold/).
 
+§1–§5 describe what's settled. **§6 is the honest counterpart** — what's a placeholder,
+what we consciously left out, and what doesn't exist yet. Read both.
+
 Two rules of thumb behind everything here:
 
 - **Abstraction proportional to the problem.** Lean wiring, invested domain structure.
@@ -154,7 +157,47 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 
 ---
 
-## 6. Toolchain & gates
+## 6. Deferred, provisional & not-yet-built
+
+Not everything above is set in stone, and not everything the specs describe is implemented —
+because it didn't need to be yet. This is the compiled view across the whole app.
+
+### Provisional — works, but expected to change
+
+- **`features/categories/` is a harness, not a reference feature.** It exists only to exercise the
+  API layer end to end against a running backend (list / create / update over one endpoint). It
+  will be rebuilt as a real feature and is slated to become the first `entities/` slice. Copy the
+  `model` / `api` / `ui` split from it — nothing else.
+- **`CategoriesPage.tsx`** still holds `useState` / `useEffect` directly instead of being a shell
+  over its own hook (§1). Acceptable for a harness; align it on the rebuild.
+- The original scaffold spec (**FR-013**) said the shell must expose _no_ business feature.
+  `categories` was added afterwards, deliberately, to have something real calling the backend — a
+  conscious departure, not a violation to "fix".
+
+### Deliberately not built — no need yet
+
+| Not built                                              | Why not                                                                                      | Build it when                                           |
+| ------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `entities/` and top-level `pages/` FSD layers          | Nothing is shared across features yet                                                        | A second feature needs the same entity or page          |
+| Server-state library (TanStack Query, SWR)             | One page, one fetch-on-mount                                                                 | Caching, refetch-on-focus, or request dedup is wanted   |
+| Request-cancellation layer (`AbortController`)         | The effect `ignore`-flag already fixes the race; nothing is slow enough to abort on the wire | Search-as-you-type, a large export                      |
+| `toDomain(dto)` mappers                                | `Category` is structurally identical to the wire type                                        | A wire shape and a domain type genuinely diverge        |
+| Ports/adapters seam for OIDC (injected `authClient`)   | One integration; module-mock in tests is acceptable                                          | A second identity provider, or the mock cost turns real |
+| Broad OpenAPI client generation                        | Only `categories` endpoints are called                                                       | The next business feature is wired                      |
+| ESLint rule banning bare `fetch` outside `shared/api/` | Small surface, caught in review                                                              | The surface grows, or a bare `fetch` slips in           |
+| `identity-service` typed client                        | Consumed purely through the OIDC protocol                                                    | Never — it's protocol, not REST                         |
+| External telemetry / observability backend             | `shared/logger.ts` → `console` is enough                                                     | A real ops requirement appears                          |
+| A consumer for `servicesApi.del`                       | The facade provides it, but no endpoint needs `DELETE`                                       | A repository calls it                                   |
+
+### Pages that don't exist yet
+
+Routing today is `/login`, `/callback`, and `/categories` — everything else redirects to
+`/categories`. Navigation is a single link. No dashboard, no Services / Clients / Appointments /
+Settings. Each will be its own `src/features/<name>/` slice (with `ui/pages/<Page>/`) when built.
+
+---
+
+## 7. Toolchain & gates
 
 React 19 · Vite · strict TypeScript (`exactOptionalPropertyTypes`, `verbatimModuleSyntax`,
 `noUnusedLocals`) · Tailwind 4 · `react-router` v8 for client-side routing.
@@ -169,7 +212,7 @@ Unit/component tests use Vitest + React Testing Library with module mocks (`vi.m
 
 ---
 
-## 7. Pointers
+## 8. Pointers
 
 - API wiring, in full — [`specs/001-oidc-shell-scaffold/contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md)
 - Routes / env contracts — [`contracts/routes-contract.md`](../specs/001-oidc-shell-scaffold/contracts/routes-contract.md), [`contracts/env-contract.md`](../specs/001-oidc-shell-scaffold/contracts/env-contract.md)
