@@ -62,7 +62,8 @@ export function CategoriesPage() {
 
       {problem ? (
         <p role="alert" className="text-sm text-destructive">
-          {problem.title} <span className="text-muted-foreground">({problem.code})</span>
+          {problem.title ?? 'Algo deu errado.'}
+          {problem.code ? <span className="text-muted-foreground"> ({problem.code})</span> : null}
         </p>
       ) : null}
 

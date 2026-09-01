@@ -50,6 +50,16 @@ describe('CategoriesPage', () => {
     expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
   });
 
+  it('falls back to generic copy when the Problem body has no title or code', async () => {
+    listMock.mockResolvedValue(fail({ status: 0 }));
+
+    render(<CategoriesPage />);
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Algo deu errado.');
+    expect(alert).not.toHaveTextContent('(');
+  });
+
   it('ignores a second submit while a create is already in flight', async () => {
     const user = userEvent.setup();
     let resolveCreate!: (result: ApiResult<Category>) => void;
