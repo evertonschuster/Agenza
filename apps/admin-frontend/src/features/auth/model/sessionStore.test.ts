@@ -1,5 +1,5 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import type { User } from 'oidc-client-ts';
+import { makeOidcUser } from '@/test/oidcUser';
 import { sessionStore, getAuthCredentials } from './sessionStore';
 
 const { mockGetUser, mockEvents } = vi.hoisted(() => ({
@@ -23,21 +23,6 @@ vi.mock('../api/authClient', () => ({
   },
 }));
 
-function makeAccessToken(claims: Record<string, unknown>): string {
-  const base64url = (obj: object) =>
-    btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${base64url({ alg: 'none' })}.${base64url(claims)}.signature`;
-}
-
-function makeOidcUser(tenantId: string): User {
-  return {
-    access_token: makeAccessToken({ sub: 'user-1', tenant_id: tenantId }),
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
-    expired: false,
-    profile: { name: 'Demo Owner', email: 'owner@demo.local' },
-  } as User;
-}
-
 describe('getAuthCredentials', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -49,7 +34,7 @@ describe('getAuthCredentials', () => {
   });
 
   it('reports the live access token and tenant once the session is authenticated', async () => {
-    const user = makeOidcUser('tenant-abc');
+    const user = makeOidcUser({ tenantId: 'tenant-abc' });
     mockGetUser.mockResolvedValue(user);
 
     const stopListening = sessionStore.startListening();

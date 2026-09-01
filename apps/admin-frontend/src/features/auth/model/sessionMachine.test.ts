@@ -1,25 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { User } from 'oidc-client-ts';
+import { makeOidcUser } from '@/test/oidcUser';
 import { isBlockingFailure, isTransientStatus, reduceSession } from './sessionMachine';
-
-function makeAccessToken(claims: Record<string, unknown>): string {
-  const base64url = (obj: object) =>
-    btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${base64url({ alg: 'none' })}.${base64url(claims)}.signature`;
-}
-
-function makeOidcUser(overrides: Partial<User> & { tenantId?: string } = {}): User {
-  const { tenantId, ...rest } = overrides;
-  return {
-    access_token: makeAccessToken(
-      tenantId ? { sub: 'user-1', tenant_id: tenantId } : { sub: 'user-1' },
-    ),
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
-    expired: false,
-    profile: { name: 'Demo Owner', email: 'owner@demo.local' },
-    ...rest,
-  } as User;
-}
 
 const TENANT_A = '019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120';
 const TENANT_B = '11111111-1111-1111-1111-111111111111';

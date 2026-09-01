@@ -30,6 +30,7 @@ export default defineConfig({
         'src/shared/api/generated/**',
         'src/vite-env.d.ts',
         'src/vitest-setup.ts',
+        'src/test/**',
         'src/**/*.test.{ts,tsx}',
         'src/features/*/index.ts',
       ],

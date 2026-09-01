@@ -1,11 +1,6 @@
 import { describe, expect, it } from 'vitest';
+import { makeAccessToken } from '@/test/oidcUser';
 import { resolveTenantContext } from './tenant';
-
-function makeAccessToken(claims: Record<string, unknown>): string {
-  const base64url = (obj: object) =>
-    btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${base64url({ alg: 'none' })}.${base64url(claims)}.signature`;
-}
 
 describe('resolveTenantContext', () => {
   it('resolves the tenant from the token tenant_id claim (spec FR-005)', () => {

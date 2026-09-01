@@ -2,6 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import type { User } from 'oidc-client-ts';
+import { makeOidcUser } from '@/test/oidcUser';
 import { AuthProvider } from './AuthProvider';
 import { sessionStore } from '../model/sessionStore';
 import { useAuth } from './useAuth';
@@ -40,21 +41,6 @@ vi.mock('../api/authClient', () => ({
   },
 }));
 
-function makeAccessToken(claims: Record<string, unknown>): string {
-  const base64url = (obj: object) =>
-    btoa(JSON.stringify(obj)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-  return `${base64url({ alg: 'none' })}.${base64url(claims)}.signature`;
-}
-
-function makeOidcUser(tenantId: string): User {
-  return {
-    access_token: makeAccessToken({ sub: 'user-1', tenant_id: tenantId }),
-    expires_at: Math.floor(Date.now() / 1000) + 3600,
-    expired: false,
-    profile: { name: 'Demo Owner', email: 'owner@demo.local' },
-  } as User;
-}
-
 function wrapper({ children }: { children: ReactNode }) {
   return <AuthProvider>{children}</AuthProvider>;
 }
@@ -68,7 +54,7 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     handlers.userLoaded = undefined;
     handlers.silentRenewError = undefined;
     handlers.userUnloaded = undefined;
-    mockGetUser.mockResolvedValue(makeOidcUser(TENANT_A));
+    mockGetUser.mockResolvedValue(makeOidcUser({ tenantId: TENANT_A }));
   });
 
   it('re-renders consumers to authenticated when oidc-client-ts fires addUserLoaded (spec FR-007)', async () => {
@@ -77,7 +63,7 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
 
     act(() => {
-      handlers.userLoaded?.(makeOidcUser(TENANT_A));
+      handlers.userLoaded?.(makeOidcUser({ tenantId: TENANT_A }));
     });
 
     await waitFor(() => {
@@ -145,7 +131,7 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     await waitFor(() => expect(result.current.session.status).toBe('loggingOut'));
 
     act(() => {
-      handlers.userLoaded?.(makeOidcUser(TENANT_A));
+      handlers.userLoaded?.(makeOidcUser({ tenantId: TENANT_A }));
     });
     expect(result.current.session.status).toBe('loggingOut');
 
@@ -168,7 +154,7 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
 
     act(() => {
-      handlers.userLoaded?.(makeOidcUser(TENANT_A));
+      handlers.userLoaded?.(makeOidcUser({ tenantId: TENANT_A }));
     });
     await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
 
