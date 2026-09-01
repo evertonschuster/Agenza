@@ -1,6 +1,11 @@
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
+// Keep FR-015's logAuthEvent calls (sessionStore) out of the test console without dropping them.
+vi.mock('@/shared/logger', () => ({
+  logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
+}));
+
 // Stub Aspire-injected env vars so tests don't trip shared/env.ts's fail-fast check.
 vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:5080');
 vi.stubEnv('VITE_OIDC_AUTHORITY', 'http://localhost:5081');
