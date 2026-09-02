@@ -4,7 +4,7 @@ import type { ReactNode } from 'react';
 import type { User } from 'oidc-client-ts';
 import { makeOidcUser } from '@/test/oidcUser';
 import { AuthProvider } from './AuthProvider';
-import { sessionStore } from '../model/sessionStore';
+import { sessionStore } from '@/shared/session/sessionStore';
 import { useAuth } from './useAuth';
 
 type Handler<T> = (arg: T) => void;

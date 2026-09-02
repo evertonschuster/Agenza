@@ -1,10 +1,10 @@
-import type { User } from 'oidc-client-ts';
 import { resolveTenantContext, type TenantContext } from './tenant';
 import {
   INITIAL_SESSION,
   type AuthenticatedUser,
   type Session,
   type SessionFailureReason,
+  type SessionPrincipal,
   type SessionStatus,
 } from './session';
 
@@ -50,20 +50,20 @@ export function isTransientStatus(status: SessionStatus): boolean {
 
 export type SessionEvent =
   | { type: 'INIT' }
-  | { type: 'INITIAL_USER'; user: User | null }
+  | { type: 'INITIAL_USER'; principal: SessionPrincipal | null }
   | { type: 'INITIAL_ERROR' }
-  | { type: 'USER_LOADED'; user: User }
+  | { type: 'USER_LOADED'; principal: SessionPrincipal }
   | { type: 'SILENT_RENEW_ERROR' }
   | { type: 'USER_UNLOADED' }
   | { type: 'LOGIN_STARTED' }
   | { type: 'LOGIN_ERROR' }
   | { type: 'LOGOUT_STARTED' };
 
-function resolveAuthenticated(oidcUser: User): AuthSnapshot {
-  const tenant = resolveTenantContext(oidcUser.access_token);
+function resolveAuthenticated(principal: SessionPrincipal): AuthSnapshot {
+  const tenant = resolveTenantContext(principal.accessToken);
   const user: AuthenticatedUser = {
-    displayName: typeof oidcUser.profile.name === 'string' ? oidcUser.profile.name : null,
-    email: typeof oidcUser.profile.email === 'string' ? oidcUser.profile.email : null,
+    displayName: principal.displayName,
+    email: principal.email,
   };
 
   if (!tenant) {
@@ -77,8 +77,8 @@ function resolveAuthenticated(oidcUser: User): AuthSnapshot {
   return {
     session: {
       status: 'authenticated',
-      accessToken: oidcUser.access_token,
-      expiresAt: oidcUser.expires_at ? oidcUser.expires_at * 1000 : null,
+      accessToken: principal.accessToken,
+      expiresAt: principal.expiresAt,
       failureReason: null,
     },
     tenant,
@@ -91,17 +91,17 @@ export function reduceSession(event: SessionEvent): AuthSnapshot {
     case 'INIT':
       return CHECKING_SNAPSHOT;
     case 'INITIAL_USER':
-      if (!event.user || event.user.expired) {
+      if (!event.principal) {
         return INITIAL_SNAPSHOT;
       }
-      return resolveAuthenticated(event.user);
+      return resolveAuthenticated(event.principal);
     case 'INITIAL_ERROR':
       return {
         ...INITIAL_SNAPSHOT,
         session: { ...INITIAL_SESSION, failureReason: 'identity_unreachable' },
       };
     case 'USER_LOADED':
-      return resolveAuthenticated(event.user);
+      return resolveAuthenticated(event.principal);
     case 'SILENT_RENEW_ERROR':
       return {
         ...INITIAL_SNAPSHOT,

@@ -1,14 +1,12 @@
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
+import { sessionStore } from '@/shared/session/sessionStore';
 import { AuthContext, type AuthContextValue } from './AuthContext';
-import { sessionStore } from '../model/sessionStore';
-
-const login = () => sessionStore.login();
-const logout = () => sessionStore.logout();
+import { login, logout, startListening } from '../model/sessionDriver';
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const snapshot = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
 
-  useEffect(() => sessionStore.startListening(), []);
+  useEffect(() => startListening(), []);
 
   const value: AuthContextValue = {
     session: snapshot.session,

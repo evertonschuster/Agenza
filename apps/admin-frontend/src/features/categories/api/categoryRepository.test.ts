@@ -5,7 +5,7 @@ const { getMock, postMock, putMock } = vi.hoisted(() => ({
   postMock: vi.fn(),
   putMock: vi.fn(),
 }));
-vi.mock('@/app/servicesApi', () => ({
+vi.mock('@/shared/api/servicesApi', () => ({
   servicesApi: { get: getMock, post: postMock, put: putMock },
 }));
 

@@ -1,6 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { makeOidcUser } from '@/test/oidcUser';
-import { sessionStore, getAuthCredentials } from './sessionStore';
+import { getAuthCredentials, sessionStore } from '@/shared/session/sessionStore';
+import { startListening } from './sessionDriver';
 
 const { mockGetUser, mockEvents } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
@@ -37,13 +38,32 @@ describe('getAuthCredentials', () => {
     const user = makeOidcUser({ tenantId: 'tenant-abc' });
     mockGetUser.mockResolvedValue(user);
 
-    const stopListening = sessionStore.startListening();
+    const stopListening = startListening();
 
     await vi.waitFor(() =>
       expect(getAuthCredentials()).toEqual({
         accessToken: user.access_token,
         tenantId: 'tenant-abc',
       }),
+    );
+
+    stopListening();
+  });
+});
+
+describe('startListening', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStore.reset();
+  });
+
+  it('translates an expired stored user into an unauthenticated session (fail closed)', async () => {
+    mockGetUser.mockResolvedValue(makeOidcUser({ expired: true, tenantId: 'tenant-abc' }));
+
+    const stopListening = startListening();
+
+    await vi.waitFor(() =>
+      expect(sessionStore.getSnapshot().session.status).toBe('unauthenticated'),
     );
 
     stopListening();

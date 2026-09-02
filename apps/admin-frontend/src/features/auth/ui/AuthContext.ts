@@ -1,6 +1,6 @@
 import { createContext } from 'react';
-import type { AuthenticatedUser, Session } from '../model/session';
-import type { TenantContext } from '../model/tenant';
+import type { AuthenticatedUser, Session } from '@/shared/session/session';
+import type { TenantContext } from '@/shared/session/tenant';
 
 export interface AuthContextValue {
   session: Session;

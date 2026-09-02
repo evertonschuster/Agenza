@@ -1,29 +1,21 @@
 import { describe, expect, it } from 'vitest';
-import { makeOidcUser } from '@/test/oidcUser';
+import { makePrincipal } from '@/test/oidcUser';
 import { isBlockingFailure, isTransientStatus, reduceSession } from './sessionMachine';
 
 const TENANT_A = '019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120';
 const TENANT_B = '11111111-1111-1111-1111-111111111111';
 
-describe('reduceSession (pure — no React, no oidc-client-ts wiring)', () => {
+describe('reduceSession (pure — no React, no identity-provider wiring)', () => {
   it('INITIAL_USER with no stored user -> unauthenticated', () => {
-    expect(reduceSession({ type: 'INITIAL_USER', user: null }).session.status).toBe(
+    expect(reduceSession({ type: 'INITIAL_USER', principal: null }).session.status).toBe(
       'unauthenticated',
     );
-  });
-
-  it('INITIAL_USER with an expired stored user -> unauthenticated (fail closed)', () => {
-    const result = reduceSession({
-      type: 'INITIAL_USER',
-      user: makeOidcUser({ expired: true, tenantId: TENANT_A }),
-    });
-    expect(result.session.status).toBe('unauthenticated');
   });
 
   it('INITIAL_USER / USER_LOADED with a valid tenant claim -> authenticated (spec FR-005)', () => {
     const result = reduceSession({
       type: 'USER_LOADED',
-      user: makeOidcUser({ tenantId: TENANT_A }),
+      principal: makePrincipal({ tenantId: TENANT_A }),
     });
     expect(result.session.status).toBe('authenticated');
     expect(result.tenant).toEqual({ tenantId: TENANT_A });
@@ -31,7 +23,7 @@ describe('reduceSession (pure — no React, no oidc-client-ts wiring)', () => {
   });
 
   it('USER_LOADED with a token missing tenant_id -> unauthenticated, missing_tenant_claim (spec FR-009, G2)', () => {
-    const result = reduceSession({ type: 'USER_LOADED', user: makeOidcUser() });
+    const result = reduceSession({ type: 'USER_LOADED', principal: makePrincipal() });
     expect(result.session.status).toBe('unauthenticated');
     expect(result.session.failureReason).toBe('missing_tenant_claim');
     expect(result.tenant).toBeNull();
@@ -40,7 +32,7 @@ describe('reduceSession (pure — no React, no oidc-client-ts wiring)', () => {
   it('USER_LOADED with a changed tenant_id re-resolves Tenant Context to the new value (spec Edge Case, G3)', () => {
     const result = reduceSession({
       type: 'USER_LOADED',
-      user: makeOidcUser({ tenantId: TENANT_B }),
+      principal: makePrincipal({ tenantId: TENANT_B }),
     });
     expect(result.tenant).toEqual({ tenantId: TENANT_B });
   });

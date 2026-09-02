@@ -14,7 +14,7 @@ const { createApiClientMock, createServicesFacadeMock, fakeClient, fakeFacade } 
 vi.mock('@/shared/api/apiClient', () => ({ createApiClient: createApiClientMock }));
 vi.mock('@/shared/api/servicesFacade', () => ({ createServicesFacade: createServicesFacadeMock }));
 
-import { getAuthCredentials } from '@/features/auth';
+import { getAuthCredentials } from '@/shared/session/sessionStore';
 import { servicesApi } from './servicesApi';
 
 describe('servicesApi', () => {
