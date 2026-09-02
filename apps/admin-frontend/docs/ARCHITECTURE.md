@@ -109,6 +109,23 @@ with `ok()` / `fail()` in `shared/result.ts` — custom, ~6 lines, no library. N
 The interface layer branches on `result.ok`, then on `result.error.code` / `.status`, renders
 `result.error.title`, reads `result.error.errors` directly.
 
+**`Result` is the internal currency; the framework boundary is the cashier.** `servicesApi` never
+rejects, but React Router and TanStack Query signal failure _only_ by a rejected promise — a
+`loader` or `queryFn` that returns `{ ok: false, error }` reads as success. `shared/api/unwrap.ts`
+converts, in exactly one place:
+
+| Boundary               | Converts?                          | Why                                                                                        |
+| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| `repository → loader`  | `unwrapOrThrow`                    | the router signals failure only by rejection                                               |
+| `repository → queryFn` | `unwrapOrThrow`                    | same; without it every query resolves "ok" with an error inside                            |
+| `action` / mutation    | **no** — `Result` straight through | a validation error (400 with `errors`) is expected flow and returns to the form as a value |
+| below that             | no                                 | plain `Result`; no new `try/catch`                                                         |
+
+_"`Result` é a moeda interna; a fronteira do framework é o caixa."_
+
+> The third row is the one that gets misread. A dead network is exceptional; "name already taken"
+> is not. Routing both down the rejection path turns validation into an error screen.
+
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
 
 ---
