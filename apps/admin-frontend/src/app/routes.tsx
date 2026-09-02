@@ -1,6 +1,12 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { ProtectedRoute, LoginPage, AuthCallbackPage } from '@/features/auth';
-import { CategoriesPage } from '@/features/categories';
+import {
+  CategoriesPage,
+  CategoriesPending,
+  CategoriesRouteError,
+  categoriesAction,
+  categoriesLoader,
+} from '@/features/categories';
 import { AppLayout } from './AppLayout';
 
 export const router = createBrowserRouter([
@@ -13,7 +19,14 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { path: '/categories', element: <CategoriesPage /> },
+      {
+        path: '/categories',
+        loader: categoriesLoader,
+        action: categoriesAction,
+        element: <CategoriesPage />,
+        errorElement: <CategoriesRouteError />,
+        HydrateFallback: CategoriesPending,
+      },
       { path: '*', element: <Navigate to="/categories" replace /> },
     ],
   },

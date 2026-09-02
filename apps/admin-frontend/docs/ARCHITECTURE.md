@@ -25,7 +25,8 @@ src/
 │   ├── model/               Types + rules. No React. ( = domain + application )
 │   ├── api/                 Backend gateway — repositories. ( = infrastructure )
 │   ├── ui/                  Everything that imports React
-│   │   └── pages/<Page>/    One folder per route: <Page>.tsx (shell) + use<Page>.ts (logic)
+│   │   └── pages/<Page>/    One folder per route: <Page>.tsx (shell) + use<Page>.ts (form
+│   │                        state) + route.ts (loader/action), all re-exported by index.ts
 │   └── index.ts             The slice's ONLY public surface
 └── shared/                  Cross-cutting, no business logic
     ├── api/                 servicesApi facade, generated types, apiClient
@@ -54,9 +55,16 @@ proven by its mock-free tests, not by its folder name.
   slice are unaffected.
 
 **Route pages are shells.** `<Page>.tsx` holds no `useEffect`/`useState`/`useRef` of its own; all
-effect and state logic lives in that page's **own** hook (`useLoginRedirect`, `useAuthCallback`, …).
-Hooks are never shared between pages — the one exception is a pure Context accessor like `useAuth`.
-Sub-components go in a `components/` subfolder, created only when a page actually grows them.
+effect and state logic lives in that page's **own** hook (`useLoginRedirect`, `useAuthCallback`,
+`useCategoriesPage`, …). Hooks are never shared between pages — the one exception is a pure Context
+accessor like `useAuth`. Sub-components go in a `components/` subfolder, created only when a page
+actually grows them.
+
+**A page's `loader` and `action` live in `ui/pages/<Page>/route.ts`** and are re-exported from the
+slice barrel, so `app/routes.tsx` wires them by importing `@/features/<slice>` — the dependency
+still runs `app → features`. Server data reaches the shell through `useLoaderData()` /
+`useActionData()` / `useNavigation()`, never through page-owned state. `categories` is the worked
+example (§6).
 
 ---
 
@@ -196,22 +204,21 @@ because it didn't need to be yet. This is the compiled view across the whole app
 
 ### Provisional — works, but expected to change
 
-- **`features/categories/` is a harness, not a reference feature.** It exists only to exercise the
-  API layer end to end against a running backend (list / create / update over one endpoint). It
-  will be rebuilt as a real feature and is slated to become the first `entities/` slice. Copy the
-  `model` / `api` / `ui` split from it — nothing else.
-- **`CategoriesPage.tsx`** still holds `useState` / `useEffect` directly instead of being a shell
-  over its own hook (§1). Acceptable for a harness; align it on the rebuild.
 - The original scaffold spec (**FR-013**) said the shell must expose _no_ business feature.
   `categories` was added afterwards, deliberately, to have something real calling the backend — a
   conscious departure, not a violation to "fix".
+- **`features/categories/` is now the reference slice**, not a harness: loader on the route, page
+  as a shell, `route.ts` owning `categoriesLoader` / `categoriesAction`, form state confined to
+  `useCategoriesPage`, and a `CategoriesRouteError` that renders an `ApiProblem` through
+  `FullScreenMessage`. Copy its `model` / `api` / `ui/pages/<Page>/` shape for a new feature. It is
+  still expected to seed the first `entities/` slice once a second consumer of `Category` appears.
 
 ### Deliberately not built — no need yet
 
 | Not built                                              | Why not                                                                                      | Build it when                                           |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | `entities/` and top-level `pages/` FSD layers          | Nothing is shared across features yet                                                        | A second feature needs the same entity or page          |
-| Server-state library (TanStack Query, SWR)             | One page, one fetch-on-mount                                                                 | Caching, refetch-on-focus, or request dedup is wanted   |
+| Server-state library (TanStack Query, SWR)             | One page; the route `loader` + `action` + RR revalidation cover fetch / mutate / refetch     | Cross-route caching, refetch-on-focus, or optimistic UI |
 | Request-cancellation layer (`AbortController`)         | The effect `ignore`-flag already fixes the race; nothing is slow enough to abort on the wire | Search-as-you-type, a large export                      |
 | `toDomain(dto)` mappers                                | `Category` is structurally identical to the wire type                                        | A wire shape and a domain type genuinely diverge        |
 | Ports/adapters seam for OIDC (injected `authClient`)   | One integration; module-mock in tests is acceptable                                          | A second identity provider, or the mock cost turns real |
