@@ -43,6 +43,12 @@ proven by its mock-free tests, not by its folder name.
 - `app` → `features` → `shared`. Never the reverse; `shared/` must not import from `features/*`.
 - Within a slice: `ui` → `model` / `api`, and `api` → `model`. The domain entity is defined in
   `model/` and imported by the layers that use it — the wire layer never owns it.
+- One edge deliberately runs the other way: `auth`'s `model/sessionStore.ts` imports
+  `../api/authClient`. That's the **functional core, imperative shell** split — `model/sessionMachine.ts`
+  is the pure reducer (`reduceSession(event): AuthSnapshot`, no React; its only `oidc-client-ts`
+  reference is an `import type`, erased at runtime by `verbatimModuleSyntax`), and `sessionStore.ts`
+  is the shell that holds the effect, subscribes to the `UserManager` events, and feeds them to the
+  reducer. `api → model` still holds for the pure core; the shell may reach the adapter it drives.
 - A slice is reachable only through its `index.ts`. An ESLint `no-restricted-imports` rule blocks
   `@/features/*/*` (reaching past the barrel) from outside the slice. Relative imports inside a
   slice are unaffected.
@@ -116,10 +122,14 @@ Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell
 - **Session state machine** is a pure `reduceSession(event): AuthSnapshot` in
   `features/auth/model/sessionMachine.ts` — zero React, zero `oidc-client-ts` imports, tested
   directly with no mocking. `AuthProvider` just reads the store.
-- **Tenant comes only from the validated access token's `tenant_id` claim.** Never from URL,
-  query, or `localStorage`. The `X-Tenant-Id` header is attached by `apiClient`'s middleware and
-  is **stripped from the generated types** (`generateApiTypes.mjs`) so no call site can set it.
-  Mirrors backend [ADR 0006](../../../docs/adr/0006-tenant-header-base-entity-generic-repository.md).
+- **Tenant comes only from the access token's `tenant_id` claim** — never from URL, query, or
+  `localStorage`. The frontend only **decodes** that token: `features/auth/model/tenant.ts` runs
+  `atob` + `JSON.parse` on the payload and reads the claim; it does not verify the signature, and
+  isn't meant to. The `X-Tenant-Id` header `apiClient`'s middleware attaches from that claim is a
+  **routing convenience, not a security boundary** — it's also **stripped from the generated types**
+  (`generateApiTypes.mjs`) so no call site can set it by hand. The boundary is the backend refusing
+  any request whose header doesn't match its own validated token claim:
+  [ADR 0006](../../../docs/adr/0006-tenant-header-base-entity-generic-repository.md).
 - **Fail closed.** `ProtectedRoute` redirects when the session isn't `authenticated`; the client
   throws `MissingSessionError` rather than send a request with a missing token or tenant, and the
   facade surfaces that to the UI as `SESSION_PROBLEM` ("entre novamente"), not a network error.
@@ -157,6 +167,8 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | Removed `lucide-react`, `msw`                                      | Zero imports anywhere; `msw` was never wired (tests use `vi.mock`).                                                                                                                                                                                                                                                          |
 | shadcn/ui + Tailwind, remapped to `shared/ui` + `shared/lib`       | Owned component source over a black-box dep; accessible Radix primitives suit a growing admin panel; one choice covers "UI library" + "CSS framework".                                                                                                                                                                       |
 | Minimal in-app logger, no telemetry backend                        | `shared/logger.ts` wrapping `console`, structured, no PII beyond tenant id.                                                                                                                                                                                                                                                  |
+| OIDC session kept in `localStorage`                                | `authClient.ts` uses `WebStorageStateStore` over `window.localStorage` (not the default `sessionStorage`) so a second tab reuses the session. Accepted threat: an XSS on our own origin can read the access token. Rejected alternative: token in memory + refresh token in an `httpOnly` cookie — needs a backend change.   |
+| `categories` repo imports `@/app/servicesApi` — known debt         | `categoryRepository.ts` reaches up to the composition root, inverting the `app → features → shared` direction from §1. To be fixed by moving the session core into `shared/`. ESLint doesn't catch it: `no-restricted-imports` only covers `@/features/*/*`, not `@/app/*`.                                                  |
 
 ---
 
@@ -207,8 +219,10 @@ React 19 · Vite · strict TypeScript (`exactOptionalPropertyTypes`, `verbatimMo
 
 CI gates (all must pass): `tsc --noEmit`, ESLint (`recommendedTypeChecked` + `react-hooks` +
 `no-explicit-any` as error + the feature-boundary `no-restricted-imports`), Prettier `--check`,
-Vitest + coverage, `generate:api-types:check` (regenerate the OpenAPI types and fail on drift),
-and Playwright e2e against the **real** Aspire-orchestrated stack (a seeded demo login, no mocks).
+the Vitest run (CI invokes `test:coverage`, but every threshold in `vitest.config.ts` is `1` — a
+symbolic floor, so coverage is a report, not a gate), `generate:api-types:check` (regenerate the
+OpenAPI types and fail on drift), and Playwright e2e against the **real** Aspire-orchestrated stack
+(a seeded demo login, no mocks).
 
 Unit/component tests use Vitest + React Testing Library with module mocks (`vi.mock` / `vi.hoisted`)
 — no network-level mocking. Test files are colocated next to their source.
