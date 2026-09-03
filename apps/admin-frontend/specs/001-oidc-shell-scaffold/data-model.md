@@ -8,10 +8,10 @@ Represents the visitor's current authentication state (spec Key Entities; FR-001
 
 | Field | Type | Notes |
 |---|---|---|
-| `status` | `'checking' \| 'unauthenticated' \| 'authenticating' \| 'authenticated' \| 'renewing' \| 'loggingOut'` | Drives whether authenticated routes render (FR-001) or redirect (FR-002). `'checking'`, `'authenticating'`, `'renewing'`, and `'loggingOut'` are all transient — an async transition is in flight and `ProtectedRoute` MUST render nothing yet (`sessionStore.isTransientStatus`) rather than deciding to show the route or redirect. `'checking'` specifically is the store's bootstrap value, before the initial `authClient.getUser()` call resolves; without the transient treatment, a valid stored session would get bounced through an unnecessary identity-service round-trip on every page load, because the redirect would fire before the async check has a chance to find it. `'loggingOut'` exists for the same reason on the way out: `oidc-client-ts`'s `signoutRedirect()` clears the local session (firing a `UserUnloaded` event) *before* it finishes navigating to identity-service's end-session endpoint, and reacting to that event immediately used to race a second sign-in redirect against the real sign-out navigation. No separate `'expired'` value: per FR-009's fail-closed design, an expired token collapses directly into `'unauthenticated'` (see state transitions below) rather than being its own state with no distinct transition into it. |
+| `status` | `'checking' \| 'unauthenticated' \| 'authenticating' \| 'authenticated' \| 'renewing' \| 'loggingOut'` | Drives whether authenticated routes render (FR-001) or redirect (FR-002). `'checking'`, `'authenticating'`, `'renewing'`, and `'loggingOut'` are all transient — an async transition is in flight and `ProtectedRoute` MUST render nothing yet (`sessionMachine.isTransientStatus`) rather than deciding to show the route or redirect. `'checking'` specifically is the store's bootstrap value, before the initial `authClient.getUser()` call resolves; without the transient treatment, a valid stored session would get bounced through an unnecessary identity-service round-trip on every page load, because the redirect would fire before the async check has a chance to find it. `'loggingOut'` exists for the same reason on the way out: `oidc-client-ts`'s `signoutRedirect()` clears the local session (firing a `UserUnloaded` event) *before* it finishes navigating to identity-service's end-session endpoint, and reacting to that event immediately used to race a second sign-in redirect against the real sign-out navigation. No separate `'expired'` value: per FR-009's fail-closed design, an expired token collapses directly into `'unauthenticated'` (see state transitions below) rather than being its own state with no distinct transition into it. |
 | `accessToken` | `string \| null` | Opaque to the rest of the app beyond what's needed to call the generated API client; sourced from `oidc-client-ts`'s `User.access_token`. |
-| `expiresAt` | `number \| null` | Unix ms timestamp; drives when silent renewal is attempted (FR-007). |
-| `failureReason` | `'renewal_failed' \| 'identity_unreachable' \| 'missing_tenant_claim' \| null` | Set only in terminal failure states; see research.md Decision 8. Logged via `authEvents.ts` (FR-015), never shown to the user verbatim (generic "sign in again" copy). |
+| `expiresAt` | `number \| null` | Unix ms timestamp, re-derived from the token's `exp` on every load. Informational snapshot state — `oidc-client-ts` (`automaticSilentRenew`) schedules silent renewal off its own `User.expires_at` (FR-007); no app code reads this field to trigger it. |
+| `failureReason` | `'renewal_failed' \| 'identity_unreachable' \| 'missing_tenant_claim' \| null` | Set only in terminal failure states; see research.md Decision 8. Logged via `logAuthEvent` (`model/sessionStore.ts`, FR-015), never shown to the user verbatim (generic "sign in again" copy). |
 
 **State transitions**:
 
@@ -33,7 +33,7 @@ authenticated --(access token expired, no valid stored session)--> unauthenticat
 any state --(identity-service unreachable)--> unauthenticated (failureReason: identity_unreachable)
 ```
 
-Every transition above — including the bootstrap one — is a case of the same `reduceSession(event)` pure function (sessionStore.ts), dispatched through the store's `dispatch()`; `'checking'` and `'loggingOut'` are ordinary reachable states, not special-cased outside the reducer.
+Every transition above — including the bootstrap one — is a case of the same `reduceSession(event)` pure function (`model/sessionMachine.ts`), dispatched through the store's `dispatch()` (`model/sessionStore.ts`); `'checking'` and `'loggingOut'` are ordinary reachable states, not special-cased outside the reducer.
 
 **`ProtectedRoute` rendering rule** (not a `Session` field, but the reason the transient statuses exist): `isTransientStatus(status)` (`'checking' | 'authenticating' | 'renewing' | 'loggingOut'`) renders nothing yet; `'authenticated'` renders the route; `'unauthenticated'` with `failureReason` of `identity_unreachable` or `missing_tenant_claim` renders a failure state with a manual retry (these two don't self-resolve by redirecting again — see spec Edge Cases); `'unauthenticated'` otherwise (including `renewal_failed`) redirects to `/login`.
 
@@ -70,7 +70,7 @@ The principal identity returned by identity-service after login (spec Key Entiti
 
 ## AuthEvent (supporting type, not a spec Key Entity)
 
-The shape logged by `features/auth/authEvents.ts` to satisfy FR-015 (minimal local logging of auth/session lifecycle events).
+The shape logged by `logAuthEvent` in `features/auth/model/sessionStore.ts` to satisfy FR-015 (minimal local logging of auth/session lifecycle events).
 
 | Field | Type | Notes |
 |---|---|---|

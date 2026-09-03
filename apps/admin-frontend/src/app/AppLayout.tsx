@@ -1,3 +1,4 @@
+import { Link, Outlet } from 'react-router';
 import { Button } from '@/shared/ui/button';
 import { useAuth } from '@/features/auth';
 
@@ -19,13 +20,13 @@ export function AppLayout() {
       <div className="flex flex-1">
         <nav className="w-56 border-r px-4 py-6">
           <ul className="space-y-2 text-sm text-muted-foreground">
-            <li>Painel</li>
+            <li>
+              <Link to="/categories">Categorias</Link>
+            </li>
           </ul>
         </nav>
         <main className="flex-1 p-6">
-          <p className="text-sm text-muted-foreground">
-            Nenhuma funcionalidade de negócio ainda (spec FR-013).
-          </p>
+          <Outlet />
         </main>
       </div>
     </div>

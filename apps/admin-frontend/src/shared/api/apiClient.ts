@@ -7,6 +7,13 @@ export interface ApiClientCredentials {
   tenantId: string | null;
 }
 
+export class MissingSessionError extends Error {
+  constructor() {
+    super('API request attempted without an authenticated session.');
+    this.name = 'MissingSessionError';
+  }
+}
+
 /** Single entry point for services-service (contracts/api-client-contract.md). Narrow
  * `{ accessToken, tenantId }` shape, not auth's types — `shared/` can't depend on `features/*`.
  * Takes a getter, not a value: the client is meant to be built once and reused, and reading
@@ -20,9 +27,7 @@ export function createApiClient(getCredentials: () => ApiClientCredentials): Cli
     onRequest({ request }) {
       const { accessToken, tenantId } = getCredentials();
       if (!accessToken || !tenantId) {
-        throw new Error(
-          'createApiClient: request attempted without an authenticated session (missing accessToken or tenantId).',
-        );
+        throw new MissingSessionError();
       }
       request.headers.set('Authorization', `Bearer ${accessToken}`);
       request.headers.set('X-Tenant-Id', tenantId);

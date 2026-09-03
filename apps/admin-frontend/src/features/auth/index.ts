@@ -1,15 +1,6 @@
-/** Import only from here — never internal files (enforced by `no-restricted-imports`). */
-export { AuthProvider } from './AuthProvider';
-export { AuthContext, type AuthContextValue } from './AuthContext';
-export { useAuth } from './hooks/useAuth';
-export { ProtectedRoute } from './ProtectedRoute';
-export { SignInRedirect } from './components/SignInRedirect';
-export { LoginRedirect } from './components/LoginRedirect';
-export {
-  INITIAL_SESSION,
-  type Session,
-  type SessionStatus,
-  type SessionFailureReason,
-  type TenantContext,
-  type AuthenticatedUser,
-} from './types';
+export { AuthProvider } from './ui/AuthProvider';
+export { AuthContext, type AuthContextValue } from './ui/AuthContext';
+export { useAuth } from './ui/useAuth';
+export { ProtectedRoute } from './ui/ProtectedRoute';
+export { LoginPage } from './ui/pages/LoginPage/LoginPage';
+export { AuthCallbackPage } from './ui/pages/AuthCallbackPage/AuthCallbackPage';

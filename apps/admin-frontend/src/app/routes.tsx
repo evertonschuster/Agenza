@@ -1,20 +1,39 @@
-import { Route, Routes } from 'react-router';
-import { ProtectedRoute, SignInRedirect, LoginRedirect } from '@/features/auth';
+import { createBrowserRouter, Navigate } from 'react-router';
+import { ProtectedRoute, LoginPage, AuthCallbackPage } from '@/features/auth';
+import {
+  CategoriesPage,
+  CategoriesPending,
+  CategoriesRouteError,
+  categoriesAction,
+  categoriesLoader,
+} from '@/features/categories';
 import { AppLayout } from './AppLayout';
+import { AppRouteError } from './AppRouteError';
 
-export function AppRoutes() {
-  return (
-    <Routes>
-      <Route path="/login" element={<SignInRedirect />} />
-      <Route path="/callback" element={<LoginRedirect />} />
-      <Route
-        path="/*"
-        element={
+export const router = createBrowserRouter([
+  {
+    errorElement: <AppRouteError />,
+    children: [
+      { path: '/login', element: <LoginPage /> },
+      { path: '/callback', element: <AuthCallbackPage /> },
+      {
+        element: (
           <ProtectedRoute>
             <AppLayout />
           </ProtectedRoute>
-        }
-      />
-    </Routes>
-  );
-}
+        ),
+        children: [
+          {
+            path: '/categories',
+            loader: categoriesLoader,
+            action: categoriesAction,
+            element: <CategoriesPage />,
+            errorElement: <CategoriesRouteError />,
+            HydrateFallback: CategoriesPending,
+          },
+          { path: '*', element: <Navigate to="/categories" replace /> },
+        ],
+      },
+    ],
+  },
+]);

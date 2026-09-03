@@ -1,6 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { AuthContext, type AuthContextValue, INITIAL_SESSION } from '@/features/auth';
+import { MemoryRouter, Route, Routes } from 'react-router';
+import { AuthContext, type AuthContextValue } from '@/features/auth';
+import { INITIAL_SESSION } from '@/shared/session/session';
 import { AppLayout } from './AppLayout';
 
 function renderLayout() {
@@ -14,22 +16,25 @@ function renderLayout() {
 
   return render(
     <AuthContext.Provider value={value}>
-      <AppLayout />
+      <MemoryRouter initialEntries={['/inner']}>
+        <Routes>
+          <Route element={<AppLayout />}>
+            <Route path="inner" element={<div>routed content</div>} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
     </AuthContext.Provider>,
   );
 }
 
 describe('AppLayout', () => {
-  it('renders the shell layout and placeholder navigation with no business-domain content (spec FR-004, FR-013)', () => {
+  it('renders the shell (header, nav, logout) and the routed page via Outlet', () => {
     renderLayout();
 
     expect(screen.getByText('Agenza Admin')).toBeInTheDocument();
-    expect(screen.getByText('Painel')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Categorias' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sair/i })).toBeInTheDocument();
-
-    for (const forbidden of ['Categories', 'Services', 'Clients']) {
-      expect(screen.queryByText(forbidden)).not.toBeInTheDocument();
-    }
+    expect(screen.getByText('routed content')).toBeInTheDocument();
   });
 
   it('displays the authenticated tenant id (spec FR-004)', () => {
