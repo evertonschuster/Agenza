@@ -25,10 +25,17 @@ src/
 │   ├── model/               Types + rules. No React. ( = domain + application )
 │   ├── api/                 Backend gateway — repositories. ( = infrastructure )
 │   ├── ui/                  Everything that imports React
-│   │   └── pages/<Page>/    One folder per route: <Page>.tsx (shell) + use<Page>.ts (logic)
+│   │   └── pages/<Page>/    One folder per route: <Page>.tsx (shell) + use<Page>.ts (form
+│   │                        state) + route.ts (loader/action), all re-exported by index.ts
 │   └── index.ts             The slice's ONLY public surface
 └── shared/                  Cross-cutting, no business logic
-    ├── api/                 servicesApi facade, generated types, apiClient
+    ├── api/                 servicesFacade, servicesApi (its composition), apiClient,
+    │                        unwrap (Result → exception at the framework boundary), generated types
+    ├── session/             Session core — no identity-provider knowledge
+    │   ├── sessionMachine.ts   pure reducer, reduceSession(event): AuthSnapshot
+    │   ├── sessionStore.ts     snapshot, subscribe, dispatch, getAuthCredentials
+    │   ├── session.ts          types, including SessionPrincipal
+    │   └── tenant.ts           decode the tenant_id claim from the access token
     ├── ui/                  shadcn/ui primitives (owned source), lib/utils.ts (cn())
     ├── env.ts               Fail-fast loader for the six VITE_* vars
     └── logger.ts            Minimal structured console wrapper
@@ -40,23 +47,38 @@ proven by its mock-free tests, not by its folder name.
 
 **Dependency direction** — enforced, not just intended:
 
-- `app` → `features` → `shared`. Never the reverse; `shared/` must not import from `features/*`.
+- `app` → `features` → `shared`. Never up: `shared/` imports neither `features/` nor `app/`, and
+  `features/` never imports `app/`.
 - Within a slice: `ui` → `model` / `api`, and `api` → `model`. The domain entity is defined in
   `model/` and imported by the layers that use it — the wire layer never owns it.
-- One edge deliberately runs the other way: `auth`'s `model/sessionStore.ts` imports
-  `../api/authClient`. That's the **functional core, imperative shell** split — `model/sessionMachine.ts`
-  is the pure reducer (`reduceSession(event): AuthSnapshot`, no React; its only `oidc-client-ts`
-  reference is an `import type`, erased at runtime by `verbatimModuleSyntax`), and `sessionStore.ts`
-  is the shell that holds the effect, subscribes to the `UserManager` events, and feeds them to the
-  reducer. `api → model` still holds for the pure core; the shell may reach the adapter it drives.
-- A slice is reachable only through its `index.ts`. An ESLint `no-restricted-imports` rule blocks
-  `@/features/*/*` (reaching past the barrel) from outside the slice. Relative imports inside a
-  slice are unaffected.
+- **Functional core, imperative shell** — and the one `model → api` edge it still needs. The pure
+  core (`sessionMachine.ts`'s `reduceSession(event): AuthSnapshot`, plus `session.ts`, `tenant.ts`,
+  `sessionStore.ts`) sits in `shared/session/` and carries no OIDC reference at all — not even
+  `import type`. The shell is `features/auth/model/sessionDriver.ts`: it subscribes to the
+  `oidc-client-ts` `UserManager` events, maps a `User` to a `SessionPrincipal`, and dispatches into
+  the shared store. That `sessionDriver` → `../api/authClient` import is the `model → api` edge, kept
+  inside `auth`. The core dropping a layer is exactly what lets `shared/api/servicesApi.ts` compose
+  the facade over `getAuthCredentials` with nothing reaching up
+  ([ADR 0037](../../../docs/adr/0037-admin-frontend-session-core-in-shared.md)).
+- The whole direction is mechanically enforced, not just the barrel. Three `no-restricted-imports`
+  blocks in the flat config: the base bans `@/features/*/*` (reaching past a slice's `index.ts`)
+  everywhere; `src/shared/**` additionally may not import `@/features/*` or `@/app/*`; `src/features/**`
+  may not import `@/app/*`. Relative imports inside a slice are unaffected. Flat-config gotcha (noted
+  in `eslint.config.js`): a later block's `no-restricted-imports` **replaces** the base one for
+  matching files rather than merging, so each block restates every pattern it must keep — the
+  `src/features/**` block repeats the `@/features/*/*` barrel ban.
 
 **Route pages are shells.** `<Page>.tsx` holds no `useEffect`/`useState`/`useRef` of its own; all
-effect and state logic lives in that page's **own** hook (`useLoginRedirect`, `useAuthCallback`, …).
-Hooks are never shared between pages — the one exception is a pure Context accessor like `useAuth`.
-Sub-components go in a `components/` subfolder, created only when a page actually grows them.
+effect and state logic lives in that page's **own** hook (`useLoginRedirect`, `useAuthCallback`,
+`useCategoriesPage`, …). Hooks are never shared between pages — the one exception is a pure Context
+accessor like `useAuth`. Sub-components go in a `components/` subfolder, created only when a page
+actually grows them.
+
+**A page's `loader` and `action` live in `ui/pages/<Page>/route.ts`** and are re-exported from the
+slice barrel, so `app/routes.tsx` wires them by importing `@/features/<slice>` — the dependency
+still runs `app → features`. Server data reaches the shell through `useLoaderData()` /
+`useActionData()` / `useNavigation()`, never through page-owned state. `categories` is the worked
+example (§6).
 
 ---
 
@@ -65,12 +87,12 @@ Sub-components go in a `components/` subfolder, created only when a page actuall
 Three layers, each stating exactly one thing. A repository states **none** of: the token, the
 tenant, the API version, the response envelope, or exception handling.
 
-| Layer            | File                                     | Job                                                                                                                                                |
-| ---------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Client           | `shared/api/apiClient.ts`                | `openapi-fetch` client; middleware attaches `Authorization: Bearer` + `X-Tenant-Id`, fails closed with no session. Feature-agnostic.               |
-| Credentials      | `features/auth` → `getAuthCredentials()` | Non-React reader over the session store; returns `{ accessToken, tenantId }`, read fresh per request.                                              |
-| Facade           | `shared/api/servicesFacade.ts`           | `servicesApi` (`get`/`post`/`put`/`del`). Injects `v{version}` into the path, unwraps the `{ data, success, … }` envelope, returns `ApiResult<T>`. |
-| Composition root | `app/servicesApi.ts`                     | `createServicesFacade(createApiClient(getAuthCredentials))` — the one place that imports both `@/shared/api` and `@/features/auth`.                |
+| Layer       | File                                                      | Job                                                                                                                                                                                                                                                                                                                 |
+| ----------- | --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Client      | `shared/api/apiClient.ts`                                 | `openapi-fetch` client; middleware attaches `Authorization: Bearer` + `X-Tenant-Id`, fails closed with no session. Feature-agnostic.                                                                                                                                                                                |
+| Credentials | `shared/session/sessionStore.ts` → `getAuthCredentials()` | Non-React reader over the session store; returns `{ accessToken, tenantId }`, read fresh per request.                                                                                                                                                                                                               |
+| Facade      | `shared/api/servicesFacade.ts`                            | `servicesApi` (`get`/`post`/`put`/`del`). Injects `v{version}` into the path, unwraps the `{ data, success, … }` envelope, returns `ApiResult<T>`.                                                                                                                                                                  |
+| Composition | `shared/api/servicesApi.ts`                               | `createServicesFacade(createApiClient(getAuthCredentials))`. Every import is `shared/*`, so the wiring lives in `shared/` and no repository ever reaches up to `app/` for a client — the inversion the `shared/session` move ([ADR 0037](../../../docs/adr/0037-admin-frontend-session-core-in-shared.md)) removed. |
 
 **`servicesApi` never rejects.** `run()` (the whole of it) is a `try/catch`:
 
@@ -109,6 +131,23 @@ with `ok()` / `fail()` in `shared/result.ts` — custom, ~6 lines, no library. N
 The interface layer branches on `result.ok`, then on `result.error.code` / `.status`, renders
 `result.error.title`, reads `result.error.errors` directly.
 
+**`Result` is the internal currency; the framework boundary is the cashier.** `servicesApi` never
+rejects, but React Router and TanStack Query signal failure _only_ by a rejected promise — a
+`loader` or `queryFn` that returns `{ ok: false, error }` reads as success. `shared/api/unwrap.ts`
+converts, in exactly one place:
+
+| Boundary               | Converts?                          | Why                                                                                        |
+| ---------------------- | ---------------------------------- | ------------------------------------------------------------------------------------------ |
+| `repository → loader`  | `unwrapOrThrow`                    | the router signals failure only by rejection                                               |
+| `repository → queryFn` | `unwrapOrThrow`                    | same; without it every query resolves "ok" with an error inside                            |
+| `action` / mutation    | **no** — `Result` straight through | a validation error (400 with `errors`) is expected flow and returns to the form as a value |
+| below that             | no                                 | plain `Result`; no new `try/catch`                                                         |
+
+_"`Result` é a moeda interna; a fronteira do framework é o caixa."_
+
+> The third row is the one that gets misread. A dead network is exceptional; "name already taken"
+> is not. Routing both down the rejection path turns validation into an error screen.
+
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
 
 ---
@@ -117,13 +156,16 @@ Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell
 
 - **OIDC Authorization Code + PKCE** against `identity-service` via `oidc-client-ts` (no
   `react-oidc-context` wrapper, no hand-rolled PKCE).
-- **`AuthProvider`** wraps the `UserManager` in a plain React Context; `useSyncExternalStore`
-  subscribes to its event emitter. No DI container.
+- **`AuthProvider`** exposes the session snapshot through a plain React Context;
+  `useSyncExternalStore` subscribes to the `shared/session` store. The `UserManager`'s event
+  emitter is wired to that store by `sessionDriver` (below), not by the provider. No DI container.
 - **Session state machine** is a pure `reduceSession(event): AuthSnapshot` in
-  `features/auth/model/sessionMachine.ts` — zero React, zero `oidc-client-ts` imports, tested
-  directly with no mocking. `AuthProvider` just reads the store.
+  `shared/session/sessionMachine.ts` — zero React, zero `oidc-client-ts` (not even `import type`),
+  tested directly with `SessionPrincipal` fixtures and no mocking. `AuthProvider` reads the store
+  from `shared/session` and drives it through `startListening` / `login` / `logout` in
+  `features/auth/model/sessionDriver.ts`.
 - **Tenant comes only from the access token's `tenant_id` claim** — never from URL, query, or
-  `localStorage`. The frontend only **decodes** that token: `features/auth/model/tenant.ts` runs
+  `localStorage`. The frontend only **decodes** that token: `shared/session/tenant.ts` runs
   `atob` + `JSON.parse` on the payload and reads the claim; it does not verify the signature, and
   isn't meant to. The `X-Tenant-Id` header `apiClient`'s middleware attaches from that claim is a
   **routing convenience, not a security boundary** — it's also **stripped from the generated types**
@@ -155,20 +197,20 @@ Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell
 
 Chosen, and — just as important — tried and backed out of, so nobody re-litigates:
 
-| Decision                                                           | Rationale                                                                                                                                                                                                                                                                                                                    |
-| ------------------------------------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FSD segments over `domain/application/infrastructure/presentation` | Practice-oriented reading of the same principles, less nesting.                                                                                                                                                                                                                                                              |
-| Custom `Result` (not neverthrow / Effect)                          | ~6 lines, no dependency, no `unwrap`-that-throws.                                                                                                                                                                                                                                                                            |
-| `openapi-typescript` + `openapi-fetch`, kept                       | A hand-rolled typed client would be _more_ code (URL/query/path serialization, content negotiation).                                                                                                                                                                                                                         |
-| No server-state library (TanStack Query, SWR, …)                   | Not needed yet; a route loader or query lib is the eventual home for cache/refetch.                                                                                                                                                                                                                                          |
-| Error normalization **inside `run()`**                             | A short-lived call-site `settle(call)` wrapper was tried and removed — it was one more thing every caller had to remember. The HTTP layer owns it.                                                                                                                                                                           |
-| **No request-cancellation layer**                                  | An `AbortController` threaded through the facade + a `useApiResource` hook was built twice and reverted twice: awkward to use, and React's `ignore`-flag on the effect already fixes the only real bug (a stale response landing after unmount). Revisit only if a concrete need appears (search-as-you-type, large export). |
-| `Category` entity in `model/`, not `api/`                          | The UI was reaching through to the backend layer just for a domain type — inverted dependency.                                                                                                                                                                                                                               |
-| Removed `lucide-react`, `msw`                                      | Zero imports anywhere; `msw` was never wired (tests use `vi.mock`).                                                                                                                                                                                                                                                          |
-| shadcn/ui + Tailwind, remapped to `shared/ui` + `shared/lib`       | Owned component source over a black-box dep; accessible Radix primitives suit a growing admin panel; one choice covers "UI library" + "CSS framework".                                                                                                                                                                       |
-| Minimal in-app logger, no telemetry backend                        | `shared/logger.ts` wrapping `console`, structured, no PII beyond tenant id.                                                                                                                                                                                                                                                  |
-| OIDC session kept in `localStorage`                                | `authClient.ts` uses `WebStorageStateStore` over `window.localStorage` (not the default `sessionStorage`) so a second tab reuses the session. Accepted threat: an XSS on our own origin can read the access token. Rejected alternative: token in memory + refresh token in an `httpOnly` cookie — needs a backend change.   |
-| `categories` repo imports `@/app/servicesApi` — known debt         | `categoryRepository.ts` reaches up to the composition root, inverting the `app → features → shared` direction from §1. To be fixed by moving the session core into `shared/`. ESLint doesn't catch it: `no-restricted-imports` only covers `@/features/*/*`, not `@/app/*`.                                                  |
+| Decision                                                           | Rationale                                                                                                                                                                                                                                                       |
+| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| FSD segments over `domain/application/infrastructure/presentation` | Practice-oriented reading of the same principles, less nesting.                                                                                                                                                                                                 |
+| Custom `Result` (not neverthrow / Effect)                          | ~6 lines, no dependency, no `unwrap`-that-throws; the boundary conversion is single-sited in `shared/api/unwrap.ts` — [ADR 0034](../../../docs/adr/0034-admin-frontend-custom-result-type.md).                                                                  |
+| `openapi-typescript` + `openapi-fetch`, kept                       | A hand-rolled typed client would be _more_ code (URL/query/path serialization, content negotiation).                                                                                                                                                            |
+| No server-state library (TanStack Query, SWR, …)                   | The route `loader` + `action` + RR revalidation cover one screen; when a query lib lands it **replaces** the repository — [ADR 0035](../../../docs/adr/0035-admin-frontend-no-server-state-library.md).                                                         |
+| Error normalization **inside `run()`**                             | A short-lived call-site `settle(call)` wrapper was tried and removed — it was one more thing every caller had to remember. The HTTP layer owns it.                                                                                                              |
+| **No request-cancellation layer**                                  | Facade `AbortController` + `useApiResource` built and reverted twice; the effect `ignore`-flag fixes the only real bug. Revisit for search-as-you-type or a large export — [ADR 0033](../../../docs/adr/0033-admin-frontend-no-request-cancellation-layer.md).  |
+| `Category` entity in `model/`, not `api/`                          | The UI was reaching through to the backend layer just for a domain type — inverted dependency.                                                                                                                                                                  |
+| Removed `lucide-react`, `msw`                                      | Zero imports anywhere; `msw` was never wired (tests use `vi.mock`).                                                                                                                                                                                             |
+| shadcn/ui + Tailwind, remapped to `shared/ui` + `shared/lib`       | Owned component source over a black-box dep; accessible Radix primitives suit a growing admin panel; one choice covers "UI library" + "CSS framework".                                                                                                          |
+| Minimal in-app logger, no telemetry backend                        | `shared/logger.ts` wrapping `console`, structured, no PII beyond tenant id.                                                                                                                                                                                     |
+| OIDC session kept in `localStorage`                                | A second tab reuses the session; accepted threat is an XSS on our origin reading the token; in-memory + `httpOnly` cookie rejected (needs a backend change) — [ADR 0036](../../../docs/adr/0036-admin-frontend-oidc-session-in-localstorage.md).                |
+| Session core in `shared/session`                                   | Store, reducer and tenant decode moved out of `features/auth` / `app/` so the composition descends with them; no feature imports `app/`, and ESLint now enforces both directions — [ADR 0037](../../../docs/adr/0037-admin-frontend-session-core-in-shared.md). |
 
 ---
 
@@ -179,22 +221,21 @@ because it didn't need to be yet. This is the compiled view across the whole app
 
 ### Provisional — works, but expected to change
 
-- **`features/categories/` is a harness, not a reference feature.** It exists only to exercise the
-  API layer end to end against a running backend (list / create / update over one endpoint). It
-  will be rebuilt as a real feature and is slated to become the first `entities/` slice. Copy the
-  `model` / `api` / `ui` split from it — nothing else.
-- **`CategoriesPage.tsx`** still holds `useState` / `useEffect` directly instead of being a shell
-  over its own hook (§1). Acceptable for a harness; align it on the rebuild.
 - The original scaffold spec (**FR-013**) said the shell must expose _no_ business feature.
   `categories` was added afterwards, deliberately, to have something real calling the backend — a
   conscious departure, not a violation to "fix".
+- **`features/categories/` is now the reference slice**, not a harness: loader on the route, page
+  as a shell, `route.ts` owning `categoriesLoader` / `categoriesAction`, form state confined to
+  `useCategoriesPage`, and a `CategoriesRouteError` that renders an `ApiProblem` through
+  `FullScreenMessage`. Copy its `model` / `api` / `ui/pages/<Page>/` shape for a new feature. It is
+  still expected to seed the first `entities/` slice once a second consumer of `Category` appears.
 
 ### Deliberately not built — no need yet
 
 | Not built                                              | Why not                                                                                      | Build it when                                           |
 | ------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
 | `entities/` and top-level `pages/` FSD layers          | Nothing is shared across features yet                                                        | A second feature needs the same entity or page          |
-| Server-state library (TanStack Query, SWR)             | One page, one fetch-on-mount                                                                 | Caching, refetch-on-focus, or request dedup is wanted   |
+| Server-state library (TanStack Query, SWR)             | One page; the route `loader` + `action` + RR revalidation cover fetch / mutate / refetch     | Cross-route caching, refetch-on-focus, or optimistic UI |
 | Request-cancellation layer (`AbortController`)         | The effect `ignore`-flag already fixes the race; nothing is slow enough to abort on the wire | Search-as-you-type, a large export                      |
 | `toDomain(dto)` mappers                                | `Category` is structurally identical to the wire type                                        | A wire shape and a domain type genuinely diverge        |
 | Ports/adapters seam for OIDC (injected `authClient`)   | One integration; module-mock in tests is acceptable                                          | A second identity provider, or the mock cost turns real |
@@ -218,9 +259,11 @@ React 19 · Vite · strict TypeScript (`exactOptionalPropertyTypes`, `verbatimMo
 `noUnusedLocals`) · Tailwind 4 · `react-router` v8 for client-side routing.
 
 CI gates (all must pass): `tsc --noEmit`, ESLint (`recommendedTypeChecked` + `react-hooks` +
-`no-explicit-any` as error + the feature-boundary `no-restricted-imports`), Prettier `--check`,
-the Vitest run (CI invokes `test:coverage`, but every threshold in `vitest.config.ts` is `1` — a
-symbolic floor, so coverage is a report, not a gate), `generate:api-types:check` (regenerate the
+`no-explicit-any` as error + `no-restricted-imports` enforcing both the feature barrel and the
+`app → features → shared` layer direction), Prettier `--check`,
+the Vitest run (CI invokes `test:coverage`, whose `vitest.config.ts` thresholds are a real gate —
+85% statements, lines and functions, 80% branches, chosen with headroom so a genuine regression
+fails CI without tripping on small-file noise), `generate:api-types:check` (regenerate the
 OpenAPI types and fail on drift), and Playwright e2e against the **real** Aspire-orchestrated stack
 (a seeded demo login, no mocks).
 

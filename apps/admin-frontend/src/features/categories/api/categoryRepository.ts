@@ -1,5 +1,5 @@
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import { servicesApi } from '@/app/servicesApi';
+import { servicesApi } from '@/shared/api/servicesApi';
 import type { Category } from '../model/category';
 
 interface CategoryListFilter {

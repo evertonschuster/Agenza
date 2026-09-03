@@ -11,6 +11,13 @@ export interface Session {
   failureReason: SessionFailureReason | null;
 }
 
+export interface SessionPrincipal {
+  accessToken: string;
+  expiresAt: number | null;
+  displayName: string | null;
+  email: string | null;
+}
+
 export interface AuthenticatedUser {
   displayName: string | null;
   email: string | null;

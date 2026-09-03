@@ -2,7 +2,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { AuthProvider } from './AuthProvider';
-import { sessionStore } from '../model/sessionStore';
+import { sessionStore } from '@/shared/session/sessionStore';
 import { useAuth } from './useAuth';
 
 const { mockGetUser, mockSigninRedirect, mockSignoutRedirect, mockEvents } = vi.hoisted(() => ({

@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { StrictMode } from 'react';
 import { render } from '@testing-library/react';
 import { AuthContext, type AuthContextValue } from '../../AuthContext';
-import { INITIAL_SESSION } from '../../../model/session';
+import { INITIAL_SESSION } from '@/shared/session/session';
 import { LoginPage } from './LoginPage';
 
 function renderLoginPage(login: () => Promise<void>) {

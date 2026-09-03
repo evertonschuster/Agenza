@@ -45,6 +45,49 @@ export default tseslint.config(
       ],
     },
   },
+  // Dependency direction (ARCHITECTURE.md §1): app -> features -> shared, never the reverse.
+  // Flat-config note: `no-restricted-imports` in a later matching block REPLACES the base
+  // definition for those files — it does not merge — so each block below restates every
+  // pattern it needs.
+  {
+    files: ['src/shared/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/features/*', '@/features/*/*', '@/app/*'],
+              message:
+                '`shared/` is the bottom layer — it must not import from `@/features` or `@/app`.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/features/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
+              group: ['@/app/*'],
+              message:
+                '`features/` must not import from `@/app` — the composition root depends on features, not the reverse.',
+            },
+            {
+              group: ['@/features/*/*'],
+              message:
+                'Import from the feature\'s public API (e.g. "@/features/auth"), not its internals.',
+            },
+          ],
+        },
+      ],
+    },
+  },
   {
     files: ['*.config.{ts,js,mjs}', 'scripts/**/*.mjs'],
     languageOptions: {

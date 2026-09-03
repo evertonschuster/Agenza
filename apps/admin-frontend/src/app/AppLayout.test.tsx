@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router';
-import { AuthContext, type AuthContextValue, INITIAL_SESSION } from '@/features/auth';
+import { AuthContext, type AuthContextValue } from '@/features/auth';
+import { INITIAL_SESSION } from '@/shared/session/session';
 import { AppLayout } from './AppLayout';
 
 function renderLayout() {
