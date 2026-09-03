@@ -8,26 +8,32 @@ import {
   categoriesLoader,
 } from '@/features/categories';
 import { AppLayout } from './AppLayout';
+import { AppRouteError } from './AppRouteError';
 
 export const router = createBrowserRouter([
-  { path: '/login', element: <LoginPage /> },
-  { path: '/callback', element: <AuthCallbackPage /> },
   {
-    element: (
-      <ProtectedRoute>
-        <AppLayout />
-      </ProtectedRoute>
-    ),
+    errorElement: <AppRouteError />,
     children: [
+      { path: '/login', element: <LoginPage /> },
+      { path: '/callback', element: <AuthCallbackPage /> },
       {
-        path: '/categories',
-        loader: categoriesLoader,
-        action: categoriesAction,
-        element: <CategoriesPage />,
-        errorElement: <CategoriesRouteError />,
-        HydrateFallback: CategoriesPending,
+        element: (
+          <ProtectedRoute>
+            <AppLayout />
+          </ProtectedRoute>
+        ),
+        children: [
+          {
+            path: '/categories',
+            loader: categoriesLoader,
+            action: categoriesAction,
+            element: <CategoriesPage />,
+            errorElement: <CategoriesRouteError />,
+            HydrateFallback: CategoriesPending,
+          },
+          { path: '*', element: <Navigate to="/categories" replace /> },
+        ],
       },
-      { path: '*', element: <Navigate to="/categories" replace /> },
     ],
   },
 ]);
