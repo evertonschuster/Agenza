@@ -261,8 +261,9 @@ React 19 · Vite · strict TypeScript (`exactOptionalPropertyTypes`, `verbatimMo
 CI gates (all must pass): `tsc --noEmit`, ESLint (`recommendedTypeChecked` + `react-hooks` +
 `no-explicit-any` as error + `no-restricted-imports` enforcing both the feature barrel and the
 `app → features → shared` layer direction), Prettier `--check`,
-the Vitest run (CI invokes `test:coverage`, but every threshold in `vitest.config.ts` is `1` — a
-symbolic floor, so coverage is a report, not a gate), `generate:api-types:check` (regenerate the
+the Vitest run (CI invokes `test:coverage`, whose `vitest.config.ts` thresholds are a real gate —
+85% statements, lines and functions, 80% branches, chosen with headroom so a genuine regression
+fails CI without tripping on small-file noise), `generate:api-types:check` (regenerate the
 OpenAPI types and fail on drift), and Playwright e2e against the **real** Aspire-orchestrated stack
 (a seeded demo login, no mocks).
 

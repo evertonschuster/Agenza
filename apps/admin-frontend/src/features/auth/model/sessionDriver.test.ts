@@ -1,6 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { makeOidcUser } from '@/test/oidcUser';
-import { getAuthCredentials, sessionStore } from '@/shared/session/sessionStore';
+import { sessionStore } from '@/shared/session/sessionStore';
 import { startListening } from './sessionDriver';
 
 const { mockGetUser, mockEvents } = vi.hoisted(() => ({
@@ -24,37 +24,27 @@ vi.mock('../api/authClient', () => ({
   },
 }));
 
-describe('getAuthCredentials', () => {
+describe('startListening', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     sessionStore.reset();
   });
 
-  it('returns nulls when there is no authenticated session', () => {
-    expect(getAuthCredentials()).toEqual({ accessToken: null, tenantId: null });
-  });
-
-  it('reports the live access token and tenant once the session is authenticated', async () => {
+  it('translates a live stored user into an authenticated principal', async () => {
     const user = makeOidcUser({ tenantId: 'tenant-abc' });
     mockGetUser.mockResolvedValue(user);
 
     const stopListening = startListening();
 
-    await vi.waitFor(() =>
-      expect(getAuthCredentials()).toEqual({
-        accessToken: user.access_token,
-        tenantId: 'tenant-abc',
-      }),
-    );
+    await vi.waitFor(() => {
+      const snapshot = sessionStore.getSnapshot();
+      expect(snapshot.session.status).toBe('authenticated');
+      expect(snapshot.session.accessToken).toBe(user.access_token);
+      expect(snapshot.user).toEqual({ displayName: 'Demo Owner', email: 'owner@demo.local' });
+      expect(snapshot.tenant).toEqual({ tenantId: 'tenant-abc' });
+    });
 
     stopListening();
-  });
-});
-
-describe('startListening', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-    sessionStore.reset();
   });
 
   it('translates an expired stored user into an unauthenticated session (fail closed)', async () => {
@@ -65,6 +55,19 @@ describe('startListening', () => {
     await vi.waitFor(() =>
       expect(sessionStore.getSnapshot().session.status).toBe('unauthenticated'),
     );
+
+    stopListening();
+  });
+
+  it('ignores the initial getUser() result when a logout is already in flight (isLoggingOut guard)', async () => {
+    sessionStore.dispatch({ type: 'LOGOUT_STARTED' });
+    mockGetUser.mockResolvedValue(makeOidcUser({ tenantId: 'tenant-abc' }));
+
+    const stopListening = startListening();
+    await mockGetUser.mock.results[0]?.value;
+    await Promise.resolve();
+
+    expect(sessionStore.getSnapshot().session.status).toBe('loggingOut');
 
     stopListening();
   });

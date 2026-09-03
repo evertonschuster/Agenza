@@ -1,11 +1,10 @@
 import { useActionData, useLoaderData, useLocation } from 'react-router';
-import type { ApiProblem } from '@/shared/api/servicesFacade';
-import type { Category } from '../../../model/category';
 import { CategoriesForm } from './CategoriesForm';
+import type { categoriesAction, categoriesLoader } from './route';
 
 export function CategoriesPage() {
-  const categories = useLoaderData<Category[]>();
-  const problem = useActionData<ApiProblem | null>();
+  const categories = useLoaderData<typeof categoriesLoader>();
+  const problem = useActionData<typeof categoriesAction>();
   const location = useLocation();
 
   return (
