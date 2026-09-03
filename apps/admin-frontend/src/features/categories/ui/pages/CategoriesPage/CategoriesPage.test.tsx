@@ -6,7 +6,8 @@ import { ok, fail } from '@/shared/result';
 import { SESSION_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
 import type { Category } from '../../../model/category';
 import { CategoriesPage } from './CategoriesPage';
-import { CategoriesPending, CategoriesRouteError } from './CategoriesRouteError';
+import { CategoriesPending } from './CategoriesPending';
+import { CategoriesRouteError } from './CategoriesRouteError';
 import { categoriesAction, categoriesLoader } from './route';
 
 const { listMock, createMock, updateMock } = vi.hoisted(() => ({
@@ -64,8 +65,9 @@ describe('CategoriesPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('O servidor está instável.')).toBeInTheDocument();
-    expect(screen.getByText('Server.Unavailable')).toBeInTheDocument();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('O servidor está instável.');
+    expect(alert).toHaveTextContent('(Server.Unavailable)');
     expect(screen.queryByText('Carregando…')).not.toBeInTheDocument();
   });
 
@@ -74,8 +76,9 @@ describe('CategoriesPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Algo deu errado.')).toBeInTheDocument();
-    expect(screen.queryByText(/\(/)).not.toBeInTheDocument();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Algo deu errado.');
+    expect(alert).not.toHaveTextContent('(');
   });
 
   it('ignores a second submit while a create is already in flight', async () => {
@@ -182,8 +185,9 @@ describe('CategoriesPage', () => {
 
     renderPage();
 
-    expect(await screen.findByText('Sua sessão expirou. Entre novamente.')).toBeInTheDocument();
-    expect(screen.getByText('Session.Missing')).toBeInTheDocument();
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Sua sessão expirou. Entre novamente.');
+    expect(alert).toHaveTextContent('(Session.Missing)');
     expect(screen.queryByLabelText('Nova categoria')).not.toBeInTheDocument();
   });
 });
