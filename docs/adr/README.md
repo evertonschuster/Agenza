@@ -15,6 +15,9 @@ superseded is historical evidence, not current implementation guidance.
 | Database bootstrap | 0025 as narrowed by 0027, plus 0027/0028 |
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032 |
+| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
+| admin-frontend UI foundation | 0039, 0040 |
+| AI agent instruction files | 0041 |
 
 ## Superseded decisions
 
@@ -30,9 +33,12 @@ ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, and 0030
 contain explicitly marked historical passages. Their status header and the
 newer ADR named there win over the historical body.
 
-0016 is abandoned (not superseded — no replacement decision exists): the
-formal AI-agent AGENTS.md/skills governance framework it established was
-removed. There is currently no repository decision on this concern.
+0016 is abandoned: the formal AI-agent AGENTS.md/skills governance framework it
+established was removed. [ADR 0041](0041-ai-instruction-files-reinstated.md) now
+decides this concern — it reinstates the instruction files but deliberately not
+the `.agents/skills/` mirror, the sync script, or the governance CI job, which
+are the parts 0016 identified as the failure. Read 0016 for the failure analysis;
+follow 0041 for what to do.
 
 ## Complete register
 
@@ -47,5 +53,9 @@ split · 0019 tenant persistence tests · 0020 authentication feedback · 0021
 trunk workflow · 0022 AI tenant context · 0023 superseded runtime tests · 0024
 database ownership · 0025/0027 bootstrap evolution · 0026 runtime-smoke
 boundary · 0028 migration baseline · 0029 Aspire-only orchestration · 0030/0031
-Git-hook evolution · 0032 stable runtime/toolchain pins.
+Git-hook evolution · 0032 stable runtime/toolchain pins · 0033 no request
+cancellation layer · 0034 custom Result type · 0035 no server-state library ·
+0036 OIDC session in localStorage · 0037 session core in shared · 0038 categories
+harness removed · 0039 Base UI primitives · 0040 three-state theme · 0041 AI
+instruction files reinstated.
 
