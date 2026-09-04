@@ -11,10 +11,10 @@
     --text-muted: #676c76;
     --border: #e2e4e9;
     --border-strong: #c8ccd4;
-    --primary: #1b1d22;
-    --primary-hover: #30333a;
+    --primary: #6956bd;
+    --primary-hover: #7564cc;
     --primary-foreground: #ffffff;
-    --focus: #5b68df;
+    --focus: #6956bd;
     --danger: #c9363f;
     --danger-surface: #fff1f2;
     --danger-border: #fecdd3;
@@ -63,8 +63,8 @@ a {
     overflow: hidden;
     padding: clamp(2rem, 4vw, 4.5rem);
     background:
-        radial-gradient(circle at 15% 15%, rgb(104 118 255 / 18%), transparent 34%),
-        radial-gradient(circle at 85% 80%, rgb(41 191 161 / 13%), transparent 38%),
+        radial-gradient(circle at 15% 15%, rgb(127 102 233 / 18%), transparent 34%),
+        radial-gradient(circle at 85% 80%, rgb(166 68 160 / 13%), transparent 38%),
         #111318;
     color: #ffffff;
 }
@@ -214,7 +214,7 @@ a {
     min-height: 100svh;
     padding: clamp(2rem, 5vw, 5rem);
     background:
-        radial-gradient(circle at 100% 0%, rgb(91 104 223 / 7%), transparent 30rem),
+        radial-gradient(circle at 100% 0%, rgb(105 86 189 / 7%), transparent 30rem),
         var(--page);
 }
 
@@ -247,7 +247,7 @@ a {
 }
 
 .theme-toggle:focus-visible {
-    outline: 3px solid rgb(91 104 223 / 28%);
+    outline: 3px solid rgb(105 86 189 / 28%);
     outline-offset: 2px;
 }
 
@@ -434,7 +434,7 @@ html[data-theme="dark"] .theme-toggle__sun {
 .field input:focus {
     border-color: var(--focus);
     background: var(--surface);
-    box-shadow: 0 0 0 3px rgb(91 104 223 / 13%);
+    box-shadow: 0 0 0 3px rgb(105 86 189 / 13%);
 }
 
 .field__control:focus-within .field__icon {
@@ -509,7 +509,7 @@ html[data-theme="dark"] .theme-toggle__sun {
 }
 
 .submit-button:focus-visible {
-    outline: 3px solid rgb(91 104 223 / 32%);
+    outline: 3px solid rgb(105 86 189 / 32%);
     outline-offset: 3px;
 }
 
@@ -633,9 +633,10 @@ html[data-theme="dark"] {
     --text-muted: #a4a8b2;
     --border: #30333a;
     --border-strong: #464b55;
-    --primary: #f1f2f4;
-    --primary-hover: #ffffff;
-    --primary-foreground: #17191d;
+    --primary: #a194fa;
+    --primary-hover: #b4adf4;
+    --primary-foreground: #131220;
+    --focus: #a194fa;
     --danger: #ff8790;
     --danger-surface: #321b20;
     --danger-border: #602831;

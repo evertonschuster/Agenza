@@ -36,54 +36,54 @@ fluxo Spec Kit por não ser produto.
 
 ### Tokens
 
-- [ ] T010 [FND] Reescrever `src/app/globals.css`: `@import 'tailwindcss'` e
+- [x] T010 [FND] Reescrever `src/app/globals.css`: `@import 'tailwindcss'` e
       `@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *))`
-- [ ] T011 [FND] Camada semântica completa em `:root` — incluir os que faltam hoje: `--card`,
+- [x] T011 [FND] Camada semântica completa em `:root` — incluir os que faltam hoje: `--card`,
       `--card-foreground`, `--popover`, `--popover-foreground`, `--destructive-foreground`,
       `--sidebar-*`, `--chart-1..5`, `--font-sans`. Sem eles, componentes shadcn renderizam sem fundo
-- [ ] T012 [FND] Marca violeta: `--brand-h: 288 --brand-c: 0.155 --brand-l: 0.525` no claro;
+- [x] T012 [FND] Marca violeta: `--brand-h: 288 --brand-c: 0.155 --brand-l: 0.525` no claro;
       `0.72 / 0.145` no escuro. Neutros derivados do mesmo hue em croma 0.006–0.018
-- [ ] T013 [FND] Bloco `[data-theme='dark']` sobrescrevendo **apenas** os tokens que mudam
-- [ ] T014 [FND] `@theme inline` mapeando `--color-*` para as variáveis semânticas
-- [ ] T015 [FND] Anel de foco de dois tons (WCAG 2.2 SC 2.4.13): traço na marca mais deslocamento na
+- [x] T013 [FND] Bloco `[data-theme='dark']` sobrescrevendo **apenas** os tokens que mudam
+- [x] T014 [FND] `@theme inline` mapeando `--color-*` para as variáveis semânticas
+- [x] T015 [FND] Anel de foco de dois tons (WCAG 2.2 SC 2.4.13): traço na marca mais deslocamento na
       cor do fundo. Nenhum `outline: none` sem substituto
-- [ ] T016 [FND] Elevação: no escuro, degraus de luminosidade de superfície mais realce interno de
+- [x] T016 [FND] Elevação: no escuro, degraus de luminosidade de superfície mais realce interno de
       1 px, em vez de `box-shadow`
-- [ ] T017 [FND] Classe de etiqueta derivando fundo, texto e borda do hex do backend via `color-mix`
+- [x] T017 [FND] Classe de etiqueta derivando fundo, texto e borda do hex do backend via `color-mix`
       contra a superfície do tema — o hex nunca é usado cru (FR-016)
-- [ ] T018 [FND] Densidade dupla: `@media (pointer: coarse)` eleva alvos de toque a ≥44 px
-- [ ] T019 [FND] `@media (prefers-reduced-motion: reduce)` desligando transições
+- [x] T018 [FND] Densidade dupla: `@media (pointer: coarse)` eleva alvos de toque a ≥44 px
+- [x] T019 [FND] `@media (prefers-reduced-motion: reduce)` desligando transições
 
 ### Tipografia
 
-- [ ] T020 [P] [FND] Instalar `@fontsource-variable/inter` e importar no ponto de entrada
-- [ ] T021 [P] [FND] Definir `--font-sans` e a escala tipográfica em `globals.css`
+- [x] T020 [P] [FND] Instalar `@fontsource-variable/inter` e importar no ponto de entrada
+- [x] T021 [P] [FND] Definir `--font-sans` e a escala tipográfica em `globals.css`
 
 ### Tema de três estados
 
-- [ ] T030 [US1] `src/shared/theme/theme.ts` — tipos `ThemeChoice`/`ResolvedTheme`, a função pura
+- [x] T030 [US1] `src/shared/theme/theme.ts` — tipos `ThemeChoice`/`ResolvedTheme`, a função pura
       `resolveTheme(choice, prefersDark)` e `THEME_STORAGE_KEY = 'admin-theme'` (mesma chave do
       identity-service)
-- [ ] T031 [US1] `src/shared/theme/themeStore.ts` — snapshot/subscribe/setChoice espelhando
+- [x] T031 [US1] `src/shared/theme/themeStore.ts` — snapshot/subscribe/setChoice espelhando
       `shared/session/sessionStore.ts`; assina `matchMedia('(prefers-color-scheme: dark)')` para
       reagir ao SO; aplica `data-theme`, `style.colorScheme` e `<meta name="theme-color">`
-- [ ] T032 [US1] `src/shared/theme/useTheme.ts` — `useSyncExternalStore` sobre o store
-- [ ] T033 [US1] Testes de `theme.ts` e `themeStore.ts` — resolução dos três estados, reação à
+- [x] T032 [US1] `src/shared/theme/useTheme.ts` — `useSyncExternalStore` sobre o store
+- [x] T033 [US1] Testes de `theme.ts` e `themeStore.ts` — resolução dos três estados, reação à
       mudança do SO, persistência, ausência de preferência
-- [ ] T034 [US1] `index.html`: script inline bloqueante no `<head>`, porte direto de
+- [x] T034 [US1] `index.html`: script inline bloqueante no `<head>`, porte direto de
       `identity-service/wwwroot/js/theme-init.js` (mesma precedência: armazenado → atributo → SO)
-- [ ] T035 [US1] `index.html`: `lang="pt-BR"` (hoje está `en`), `<meta name="theme-color">`, e
+- [x] T035 [US1] `index.html`: `lang="pt-BR"` (hoje está `en`), `<meta name="theme-color">`, e
       `viewport` com `viewport-fit=cover, interactive-widget=resizes-content`
 
 ### Handoff com o identity-service (fecha a ADR 0020)
 
-- [ ] T040 [US1] `src/features/auth/model/sessionDriver.ts`: passar
+- [x] T040 [US1] `src/features/auth/model/sessionDriver.ts`: passar
       `extraQueryParams: { theme: resolvedTheme }` no `signinRedirect()` — em tempo de chamada, não
       na construção do `UserManager`, para ler o tema corrente
-- [ ] T041 [US1] Teste afirmando que o tema resolvido corrente chega ao `signinRedirect`
-- [ ] T042 [US1] `backend/services/identity-service/IdentityService.Api/wwwroot/css/login.css`:
+- [x] T041 [US1] Teste afirmando que o tema resolvido corrente chega ao `signinRedirect`
+- [x] T042 [US1] `backend/services/identity-service/IdentityService.Api/wwwroot/css/login.css`:
       aplicar o violeta em `--primary` e `--focus` e no gradiente do painel de marca
-- [ ] T043 [US1] Verificar que `AuthorizationController` aceita e aplica o parâmetro `theme`
+- [x] T043 [US1] Verificar que `AuthorizationController` aceita e aplica o parâmetro `theme`
       conforme a ADR 0020; se não aceitar, implementar
 
 **Checkpoint 1**: `npm run build && npm run test:coverage` verdes. Alternar os três temas manualmente,
