@@ -21,7 +21,7 @@ Two rules of thumb behind everything here:
 ```
 src/
 ├── app/                     Composition root — providers, route table, layout, ErrorBoundary
-├── features/<slice>/        One vertical slice per user-facing capability (auth, categories, …)
+├── features/<slice>/        One vertical slice per user-facing capability (auth, …)
 │   ├── model/               Types + rules. No React. ( = domain + application )
 │   ├── api/                 Backend gateway — repositories. ( = infrastructure )
 │   ├── ui/                  Everything that imports React
@@ -70,15 +70,15 @@ proven by its mock-free tests, not by its folder name.
 
 **Route pages are shells.** `<Page>.tsx` holds no `useEffect`/`useState`/`useRef` of its own; all
 effect and state logic lives in that page's **own** hook (`useLoginRedirect`, `useAuthCallback`,
-`useCategoriesPage`, …). Hooks are never shared between pages — the one exception is a pure Context
-accessor like `useAuth`. Sub-components go in a `components/` subfolder, created only when a page
-actually grows them.
+…). Hooks are never shared between pages — the one exception is a pure Context accessor like
+`useAuth`. Sub-components go in a `components/` subfolder, created only when a page actually grows
+them.
 
 **A page's `loader` and `action` live in `ui/pages/<Page>/route.ts`** and are re-exported from the
 slice barrel, so `app/routes.tsx` wires them by importing `@/features/<slice>` — the dependency
 still runs `app → features`. Server data reaches the shell through `useLoaderData()` /
-`useActionData()` / `useNavigation()`, never through page-owned state. `categories` is the worked
-example (§6).
+`useActionData()` / `useNavigation()`, never through page-owned state. No slice implements this yet
+(§6) — the convention is set for the first one that does.
 
 ---
 
@@ -108,14 +108,18 @@ tenant, the API version, the response envelope, or exception handling.
 connection". Because the one place that turns HTTP into `ApiResult` also owns a failed transport,
 **a repository does zero exception handling and a page has no `try/catch`.**
 
-**A repository is a thin typed delegation.** Its domain entity (`Category`) is hand-written, owned
-by the frontend (not `components['schemas']['…']`), and lives in `model/`. When the entity is
-structurally what the endpoint returns, the repository forwards the result verbatim — the return
-annotation is the one compile-time checkpoint against a breaking wire change. A `toDomain(dto)`
-mapper is added only when wire and domain genuinely diverge.
+**A repository is a thin typed delegation.** Its domain entity is hand-written, owned by the
+frontend (not `components['schemas']['…']`), and lives in `model/`. When the entity is structurally
+what the endpoint returns, the repository forwards the result verbatim — the return annotation is
+the one compile-time checkpoint against a breaking wire change. A `toDomain(dto)` mapper is added
+only when wire and domain genuinely diverge.
+
+The shape below is illustrative — `categoryRepository` and the `categories` slice it belonged to no
+longer exist in this codebase ([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)).
+It's kept here to show the pattern the next repository should follow:
 
 ```ts
-// features/categories/api/categoryRepository.ts
+// features/<slice>/api/<entity>Repository.ts (illustrative — no such file exists today)
 import type { Category } from '../model/category';
 
 export const categoryRepository = {
@@ -222,33 +226,40 @@ because it didn't need to be yet. This is the compiled view across the whole app
 ### Provisional — works, but expected to change
 
 - The original scaffold spec (**FR-013**) said the shell must expose _no_ business feature.
-  `categories` was added afterwards, deliberately, to have something real calling the backend — a
-  conscious departure, not a violation to "fix".
-- **`features/categories/` is now the reference slice**, not a harness: loader on the route, page
-  as a shell, `route.ts` owning `categoriesLoader` / `categoriesAction`, form state confined to
-  `useCategoriesPage`, and a `CategoriesRouteError` that renders an `ApiProblem` through
-  `FullScreenMessage`. Copy its `model` / `api` / `ui/pages/<Page>/` shape for a new feature. It is
-  still expected to seed the first `entities/` slice once a second consumer of `Category` appears.
+  `features/categories/` was added afterwards, deliberately, as a conscious departure from that —
+  a harness to have something real calling the backend while the API layer was built and hardened.
+  That job is done, and the harness has been removed
+  ([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)): the app is back
+  to a shell with no business feature, aligned with FR-013 again.
+- **`HomePage` (`src/app/HomePage.tsx`) is a provisional placeholder**, not a feature — no `model`,
+  no API call, no state, mounted directly in `app/` because it doesn't meet this doc's own
+  definition of a slice (§1). Its retirement trigger is named up front: **the first real business
+  route replaces it** as the protected area's index route. Whichever feature ships next should
+  delete it rather than build alongside it.
+- **The API layer (`servicesApi`, `apiClient`, `unwrap`, `servicesFacade`, the generated types) is
+  standing with zero call sites, on purpose.** It is not dead code — see
+  [ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md) before removing
+  anything under `shared/api/` on the grounds that nothing imports it.
 
 ### Deliberately not built — no need yet
 
-| Not built                                              | Why not                                                                                      | Build it when                                           |
-| ------------------------------------------------------ | -------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `entities/` and top-level `pages/` FSD layers          | Nothing is shared across features yet                                                        | A second feature needs the same entity or page          |
-| Server-state library (TanStack Query, SWR)             | One page; the route `loader` + `action` + RR revalidation cover fetch / mutate / refetch     | Cross-route caching, refetch-on-focus, or optimistic UI |
-| Request-cancellation layer (`AbortController`)         | The effect `ignore`-flag already fixes the race; nothing is slow enough to abort on the wire | Search-as-you-type, a large export                      |
-| `toDomain(dto)` mappers                                | `Category` is structurally identical to the wire type                                        | A wire shape and a domain type genuinely diverge        |
-| Ports/adapters seam for OIDC (injected `authClient`)   | One integration; module-mock in tests is acceptable                                          | A second identity provider, or the mock cost turns real |
-| Broad OpenAPI client generation                        | Only `categories` endpoints are called                                                       | The next business feature is wired                      |
-| ESLint rule banning bare `fetch` outside `shared/api/` | Small surface, caught in review                                                              | The surface grows, or a bare `fetch` slips in           |
-| `identity-service` typed client                        | Consumed purely through the OIDC protocol                                                    | Never — it's protocol, not REST                         |
-| External telemetry / observability backend             | `shared/logger.ts` → `console` is enough                                                     | A real ops requirement appears                          |
-| A consumer for `servicesApi.del`                       | The facade provides it, but no endpoint needs `DELETE`                                       | A repository calls it                                   |
+| Not built                                              | Why not                                                                                               | Build it when                                           |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `entities/` and top-level `pages/` FSD layers          | Nothing is shared across features yet                                                                 | A second feature needs the same entity or page          |
+| Server-state library (TanStack Query, SWR)             | No route has a `loader` / `action` right now; the router's revalidation is the plan for when one does | Cross-route caching, refetch-on-focus, or optimistic UI |
+| Request-cancellation layer (`AbortController`)         | The effect `ignore`-flag already fixes the race; nothing is slow enough to abort on the wire          | Search-as-you-type, a large export                      |
+| `toDomain(dto)` mappers                                | No repository exists yet to need one; add only when a wire shape and a domain type diverge            | A wire shape and a domain type genuinely diverge        |
+| Ports/adapters seam for OIDC (injected `authClient`)   | One integration; module-mock in tests is acceptable                                                   | A second identity provider, or the mock cost turns real |
+| Broad OpenAPI client generation                        | No frontend endpoint is called at all right now (§6 above)                                            | The next business feature is wired                      |
+| ESLint rule banning bare `fetch` outside `shared/api/` | Small surface, caught in review                                                                       | The surface grows, or a bare `fetch` slips in           |
+| `identity-service` typed client                        | Consumed purely through the OIDC protocol                                                             | Never — it's protocol, not REST                         |
+| External telemetry / observability backend             | `shared/logger.ts` → `console` is enough                                                              | A real ops requirement appears                          |
+| A consumer for `servicesApi.del`                       | The facade provides it, but no endpoint needs `DELETE`                                                | A repository calls it                                   |
 
 ### Pages that don't exist yet
 
-Routing today is `/login`, `/callback`, and `/categories` — everything else redirects to
-`/categories`. Navigation is a single link. No dashboard, no Services / Clients / Appointments /
+Routing today is `/login`, `/callback`, and `/` (the provisional `HomePage`) — everything else
+redirects to `/`. Navigation is a single link. No dashboard, no Services / Clients / Appointments /
 Settings. Each will be its own `src/features/<name>/` slice (with `ui/pages/<Page>/`) when built.
 
 ---

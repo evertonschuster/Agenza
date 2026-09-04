@@ -11,7 +11,7 @@ function Boom(): never {
 function ThrowApiProblem(): never {
   throw new ApiProblemError({
     status: 409,
-    code: 'Category.DuplicateName',
+    code: 'Resource.DuplicateName',
     title: 'Esse nome já existe.',
   });
 }
@@ -24,12 +24,12 @@ function renderTree(children: RouteObject[], initialPath: string) {
 }
 
 describe('AppRouteError', () => {
-  it('catches a render error from a sibling of /categories with the app screen, not the React Router default', () => {
+  it('catches a render error from a sibling route with the app screen, not the React Router default', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
     renderTree(
       [
-        { path: '/categories', element: <div>categorias</div> },
+        { path: '/home', element: <div>início</div> },
         { path: '/reports', element: <Boom /> },
       ],
       '/reports',
@@ -43,10 +43,7 @@ describe('AppRouteError', () => {
   it('lets a route with its own errorElement win over the app-level one', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    renderTree(
-      [{ path: '/categories', element: <Boom />, errorElement: <p>erro da fatia</p> }],
-      '/categories',
-    );
+    renderTree([{ path: '/home', element: <Boom />, errorElement: <p>erro da fatia</p> }], '/home');
 
     expect(screen.getByText('erro da fatia')).toBeInTheDocument();
     expect(screen.queryByText('Recarregue a página.')).not.toBeInTheDocument();
@@ -55,9 +52,9 @@ describe('AppRouteError', () => {
   it('shows an ApiProblemError title and code through FullScreenMessage', () => {
     vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    renderTree([{ path: '/categories', element: <ThrowApiProblem /> }], '/categories');
+    renderTree([{ path: '/home', element: <ThrowApiProblem /> }], '/home');
 
     expect(screen.getByText('Esse nome já existe.')).toBeInTheDocument();
-    expect(screen.getByText('Category.DuplicateName')).toBeInTheDocument();
+    expect(screen.getByText('Resource.DuplicateName')).toBeInTheDocument();
   });
 });

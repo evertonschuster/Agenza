@@ -21,7 +21,7 @@ export function AppLayout() {
         <nav className="w-56 border-r px-4 py-6">
           <ul className="space-y-2 text-sm text-muted-foreground">
             <li>
-              <Link to="/categories">Categorias</Link>
+              <Link to="/">Início</Link>
             </li>
           </ul>
         </nav>
