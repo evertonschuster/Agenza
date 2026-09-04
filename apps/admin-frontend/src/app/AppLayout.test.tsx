@@ -32,7 +32,7 @@ describe('AppLayout', () => {
     renderLayout();
 
     expect(screen.getByText('Agenza Admin')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Categorias' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Início' })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /sair/i })).toBeInTheDocument();
     expect(screen.getByText('routed content')).toBeInTheDocument();
   });
