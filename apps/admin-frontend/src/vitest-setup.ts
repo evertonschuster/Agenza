@@ -31,7 +31,7 @@ if (typeof window.localStorage === 'undefined') {
 
 // jsdom ships no matchMedia; without this every consumer sees `undefined` instead of a query.
 if (typeof window.matchMedia !== 'function') {
-  window.matchMedia = ((query: string) => ({
+  window.matchMedia = (query: string) => ({
     matches: false,
     media: query,
     onchange: null,
@@ -40,7 +40,7 @@ if (typeof window.matchMedia !== 'function') {
     addListener: vi.fn(),
     removeListener: vi.fn(),
     dispatchEvent: vi.fn(),
-  })) as typeof window.matchMedia;
+  });
 }
 
 // Stub Aspire-injected env vars so tests don't trip shared/env.ts's fail-fast check.
