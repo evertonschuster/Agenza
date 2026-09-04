@@ -78,12 +78,12 @@ Ver [README.md](README.md) para a preparação de ambiente.
 
 ## Skills deste app
 
-| Skill | Quando |
-| --- | --- |
-| `agenza-frontend-slice` | construir ou alterar uma fatia de feature |
-| `agenza-ui-primitive` | adicionar ou alterar algo em `shared/ui/` |
-| `agenza-a11y-review` | revisar uma tela nova |
-| `agenza-api-contract` | mexer em tipos gerados, envelope ou contrato de erro |
-| `agenza-testing` | escrever testes ou destravar o gate de cobertura |
-| `agenza-ptbr-copy` | escrever texto visível ou formatar número, data e moeda |
-| `agenza-tenant-isolation` | revisar qualquer coisa que toque tenant |
+| Skill                     | Quando                                                  |
+| ------------------------- | ------------------------------------------------------- |
+| `agenza-frontend-slice`   | construir ou alterar uma fatia de feature               |
+| `agenza-ui-primitive`     | adicionar ou alterar algo em `shared/ui/`               |
+| `agenza-a11y-review`      | revisar uma tela nova                                   |
+| `agenza-api-contract`     | mexer em tipos gerados, envelope ou contrato de erro    |
+| `agenza-testing`          | escrever testes ou destravar o gate de cobertura        |
+| `agenza-ptbr-copy`        | escrever texto visível ou formatar número, data e moeda |
+| `agenza-tenant-isolation` | revisar qualquer coisa que toque tenant                 |
