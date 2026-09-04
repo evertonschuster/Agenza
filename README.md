@@ -13,12 +13,15 @@ monorepo: React frontend, .NET backend microservices, Python AI services.
 | `infra`               | PostgreSQL init scripts       | Local database roles and schema grants          |
 
 See [docs/MONOREPO.md](docs/MONOREPO.md) for conventions, and each stack's own
-`README.md` for stack-specific guidance.
+`README.md` for stack-specific guidance. Frontend environment setup — prerequisites,
+the Aspire-only run path, seeded demo login, and the two build gotchas — is in
+[apps/admin-frontend/README.md](apps/admin-frontend/README.md).
 
 ## Quickstart
 
 ```bash
-# Frontend
+# Frontend — note it needs the Aspire orchestrator for its six VITE_* variables;
+# see apps/admin-frontend/README.md before running it standalone.
 npm install
 npm run dev:frontend
 
@@ -44,3 +47,19 @@ Use the repository pins instead of copying versions from documentation:
 and the CI setup actions are the executable sources. Compatibility exceptions
 and upgrade conditions are recorded in
 [ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibility-pins.md).
+
+## AI coding agents
+
+[`AGENTS.md`](AGENTS.md) is the tool-independent entry point; Codex reads it natively,
+`CLAUDE.md` imports it, and `.github/copilot-instructions.md` bridges Copilot to it.
+Repository-specific workflows live in `.claude/skills/agenza-*/`.
+
+These files **point at** the sources of truth rather than restating them — versions, file
+inventories, and feature status stay in lockfiles, code, and ADRs. That constraint is the
+lesson of the abandoned
+[ADR 0016](docs/adr/0016-ai-agent-governance-framework.md), recorded in
+[ADR 0041](docs/adr/0041-ai-instruction-files-reinstated.md).
+
+[`.mcp.json`](.mcp.json) declares four optional MCP servers (GitHub, shadcn, Playwright,
+Chrome DevTools). None is required to develop; authorize them with `claude mcp list` in an
+interactive session.
