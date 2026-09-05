@@ -170,28 +170,32 @@ a partir do lockfile regerado.
 
 **Depende de**: Fases 3 e 4.
 
-- [ ] T100 [US4] `src/shared/keyboard/platform.ts` — glifo `⌘` ou `Ctrl`; na dúvida, `Ctrl`
-- [ ] T101 [US4] `src/shared/keyboard/shortcuts.ts` — registro pequeno; comparação por `event.key`,
+- [x] T100 [US4] `src/shared/keyboard/platform.ts` — glifo `⌘` ou `Ctrl`; na dúvida, `Ctrl`
+- [x] T101 [US4] `src/shared/keyboard/shortcuts.ts` — registro pequeno; comparação por `event.key`,
       **nunca** `event.code` (ABNT2); supressão automática em `input`, `textarea`, `contenteditable`,
       `[role="textbox"]` e com diálogo aberto
-- [ ] T102 [US4] `src/shared/keyboard/useShortcut.ts` — assinatura e limpeza
-- [ ] T103 [US4] Marcação de teclado: `data-kbd` no `<html>` ao primeiro keydown real, para resgatar
+- [x] T102 [US4] `src/shared/keyboard/useShortcut.ts` — assinatura e limpeza
+- [x] T103 [US4] Marcação de teclado: `data-kbd` no `<html>` ao primeiro keydown real, para resgatar
       tablet com teclado acoplado (reportado como `pointer: coarse`). **Nunca** `navigator.maxTouchPoints`
-- [ ] T104 [US4] Preferência "Atalhos de teclado" (WCAG 2.1.4): desligada remove handlers de tecla
+- [x] T104 [US4] Preferência "Atalhos de teclado" (WCAG 2.1.4): desligada remove handlers de tecla
       única **e** todas as dicas; `Ctrl/⌘+K` e `Esc` permanecem
-- [ ] T105 [US4] `src/app/shell/CommandPalette.tsx` sobre o Base UI Combobox — navegar aos seis
+- [x] T105 [US4] `src/app/shell/CommandPalette.tsx` sobre o Base UI Combobox — navegar aos seis
       destinos, trocar tema, abrir ajuda, sair; trilho direito com a tecla de cada item
-- [ ] T106 [US4] `src/app/shell/ShortcutHelpSheet.tsx` — a folha `?`, agrupada, com o modificador
+- [x] T106 [US4] `src/app/shell/ShortcutHelpSheet.tsx` — a folha `?`, agrupada, com o modificador
       correto da plataforma
-- [ ] T107 [US4] Nível A: keycap em repouso no controle de busca, na ação primária única da tela e no
+- [x] T107 [US4] Nível A: keycap em repouso no controle de busca, na ação primária única da tela e no
       confirmar de diálogo. `<kbd aria-hidden="true">` + `aria-keyshortcuts` no botão — sem isso o nome
-      acessível vira "Novo serviço N"
-- [ ] T108 [US4] Nível B: tooltip em hover **e** foco a 250 ms nos botões de ícone com atalho
-- [ ] T109 [US4] Portão de renderização das dicas:
+      acessível vira "Novo serviço N". _Busca e CTA de Serviços feitos; nenhum diálogo com confirmar
+      existe ainda nesta fase — o padrão fica pronto para quando um aparecer._
+- [x] T108 [US4] Nível B: tooltip em hover **e** foco a 250 ms nos botões de ícone com atalho.
+      _Nenhum botão de ícone com atalho próprio existe ainda (itens de navegação são excluídos por
+      decisão D4) — o `Tooltip` + `Kbd` que o padrão usaria já existe e roda no modo compacto do
+      `SidebarNav`; revisitar quando surgir uma instância concreta._
+- [x] T109 [US4] Portão de renderização das dicas:
       `shortcutsEnabled AND ((hover:hover) and (pointer:fine) OR html[data-kbd])`
-- [ ] T110 [US4] O keycap é **derivado do registro de atalhos**, não digitado à mão; sem prop
+- [x] T110 [US4] O keycap é **derivado do registro de atalhos**, não digitado à mão; sem prop
       `shortcut` no `Button` genérico (decisão D4)
-- [ ] T111 [US4] Testes: `event.key` em teclas de caractere único, supressão durante digitação,
+- [x] T111 [US4] Testes: `event.key` em teclas de caractere único, supressão durante digitação,
       preferência desligada, e nome acessível do CTO primário igual ao rótulo visível
 
 **Checkpoint 5**: sem instrução prévia, é possível identificar na tela de Serviços que criar serviço

@@ -1,7 +1,9 @@
 import { Outlet } from 'react-router';
 import { AppHeader } from './AppHeader';
 import { BottomNav } from './BottomNav';
+import { CommandPalette } from './CommandPalette';
 import { RouteAnnouncer } from './RouteAnnouncer';
+import { ShortcutHelpSheet } from './ShortcutHelpSheet';
 import { SidebarNav } from './SidebarNav';
 import { SkipLink } from './SkipLink';
 import { useRouteFocus } from './useRouteFocus';
@@ -30,6 +32,8 @@ export function AppShell() {
       </div>
 
       {viewportKind === 'bottom' && <BottomNav />}
+      <CommandPalette />
+      <ShortcutHelpSheet />
     </div>
   );
 }

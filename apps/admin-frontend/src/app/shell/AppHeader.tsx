@@ -1,5 +1,6 @@
 import { LogOut, Search } from 'lucide-react';
 import { useAuth } from '@/features/auth';
+import { shortcutRegistry, useShortcutHint } from '@/shared/keyboard/shortcuts';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import {
@@ -11,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
+import { Kbd } from '@/shared/ui/kbd';
 import { ThemeToggle } from './ThemeToggle';
 
 function initialsOf(name: string | null): string {
@@ -23,15 +25,19 @@ function initialsOf(name: string | null): string {
 
 export function AppHeader() {
   const { user, logout } = useAuth();
+  const searchHint = useShortcutHint('command-palette-slash');
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
       <Button
         variant="outline"
+        aria-keyshortcuts={searchHint.key}
         className="w-full max-w-sm justify-start text-muted-foreground sm:w-64"
+        onClick={() => shortcutRegistry.getShortcut('command-palette-slash')?.handler()}
       >
         <Search aria-hidden="true" />
         <span>Buscar</span>
+        {searchHint.visible && <Kbd className="ml-auto">{searchHint.displayKey}</Kbd>}
       </Button>
 
       <div className="ml-auto flex items-center gap-1">
