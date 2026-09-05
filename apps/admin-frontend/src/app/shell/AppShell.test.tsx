@@ -3,6 +3,7 @@ import { render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AuthContext, type AuthContextValue } from '@/features/auth';
 import { INITIAL_SESSION } from '@/shared/session/session';
+import { expectNoA11yViolations } from '@/test/a11y';
 import { TooltipProvider } from '@/shared/ui/tooltip';
 import { AppShell } from './AppShell';
 
@@ -74,6 +75,12 @@ describe('AppShell', () => {
     expect(screen.getByText('routed content')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Pular para o conteúdo' })).toBeInTheDocument();
     expect(screen.getByRole('main')).toHaveAttribute('id', 'main-content');
+  });
+
+  it('has no a11y violations', async () => {
+    const { baseElement } = renderShell();
+
+    await expectNoA11yViolations(baseElement);
   });
 
   it('shows the sidebar and no bottom bar at desktop width', () => {

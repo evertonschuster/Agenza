@@ -205,21 +205,28 @@ tem atalho; desligar a preferência silencia `/`, `?` e `n`; CI verde.
 
 ## Fase 6 — Portões de acessibilidade e documentação
 
-- [ ] T120 [US3] Instalar `axe-core` e `@axe-core/playwright`
-- [ ] T121 [US3] `src/test/a11y.ts` — helper `expectNoA11yViolations(container)` sobre `axe-core`
+- [x] T120 [US3] Instalar `axe-core` e `@axe-core/playwright`
+- [x] T121 [US3] `src/test/a11y.ts` — helper `expectNoA11yViolations(container)` sobre `axe-core`
       direto (~15 linhas), evitando um wrapper de terceiros
-- [ ] T122 [US3] Aplicar o helper ao shell, ao diálogo, à paleta e às telas "Em breve"
-- [ ] T123 [US3] `e2e/a11y.spec.ts` — auditoria contra o stack Aspire real, nos dois temas
+- [x] T122 [US3] Aplicar o helper ao shell, ao diálogo, à paleta e às telas "Em breve"
+- [ ] T123 [US3] `e2e/a11y.spec.ts` — auditoria contra o stack Aspire real, nos dois temas.
+      _Escrito (`e2e/a11y.spec.ts`, dois temas × shell/Serviços, reaproveitando o login de
+      `e2e/helpers.ts`) e tipado, mas **não executado**: este ambiente não tem os browsers do
+      Playwright instalados (`npx playwright install`) nem o stack Aspire de pé (`ECONNREFUSED` em
+      5080/5081). Falta rodar `npm run test:e2e -- e2e/a11y.spec.ts` com o Aspire real no ar antes
+      de marcar como feito._
 - [ ] T124 [US3] **Verificação manual** (a automação cobre ~30–40%): teclado do login ao logout;
       leitor de tela em pt-BR; 375 px real; contraste dos tokens nos dois temas em hardware Windows
-      1366×768
-- [ ] T130 ADR 0039 — Base UI como camada de primitivos; encerra "UI component library" dos Deferred
-      Decisions da constitution
-- [ ] T131 ADR 0040 — tema de três estados e o contrato de handoff com o identity-service
-- [ ] T132 Atualizar `docs/ARCHITECTURE.md`: §1 (novas pastas `shared/theme`, `shared/keyboard`,
+      1366×768. _Não automatizável por definição — depende de quem tem o hardware e o leitor de
+      tela; nenhuma das quatro verificações foi feita ainda._
+- [x] T130 ADR 0039 — Base UI como camada de primitivos; encerra "UI component library" dos Deferred
+      Decisions da constitution. _Já existia; conferida a precisão contra o código enviado._
+- [x] T131 ADR 0040 — tema de três estados e o contrato de handoff com o identity-service. _Já
+      existia; conferida a precisão contra o código enviado._
+- [x] T132 Atualizar `docs/ARCHITECTURE.md`: §1 (novas pastas `shared/theme`, `shared/keyboard`,
       `app/shell`, `app/pages`), §5 (Base UI, tema próprio, exclusão de cobertura, a regra D4, e o que
       não foi adotado e por quê), §6 (remover `HomePage` da lista de provisórios)
-- [ ] T133 Atualizar `.specify/memory/constitution.md` — marcar "UI component library" como resolvido
+- [x] T133 Atualizar `.specify/memory/constitution.md` — marcar "UI component library" como resolvido
       apontando para a ADR 0039
 
 **Checkpoint 6**: todos os portões de CI verdes; auditoria a11y sem violações nos dois temas;

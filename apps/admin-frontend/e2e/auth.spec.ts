@@ -1,20 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginAsDemoUser, LOGIN_URL_RE } from './helpers';
 
-const DEMO_EMAIL = 'owner@demo.local';
-const DEMO_PASSWORD = 'Passw0rd!';
-const LOGIN_URL_RE = /localhost:5081\/Account\/Login/;
 // Matches authClient.ts's UserManager config (env-contract.md) — oidc-client-ts's
 // WebStorageStateStore key format.
 const OIDC_STORAGE_KEY = 'oidc.user:http://localhost:5081:admin-panel';
-
-async function loginAsDemoUser(page: import('@playwright/test').Page) {
-  await page.goto('/');
-  await page.waitForURL(LOGIN_URL_RE);
-  await page.locator('#Email').fill(DEMO_EMAIL);
-  await page.locator('#Password').fill(DEMO_PASSWORD);
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL('http://localhost:5173/');
-}
 
 interface StoredOidcUser {
   access_token: string;

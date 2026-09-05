@@ -20,7 +20,10 @@ Two rules of thumb behind everything here:
 
 ```
 src/
-├── app/                     Composition root — providers, route table, layout, ErrorBoundary
+├── app/                     Composition root — providers, route table, ErrorBoundary
+│   ├── shell/               AppShell chrome: responsive nav (sidebar/rail/bottom), header,
+│   │                        command palette, shortcut help sheet, route focus/announce
+│   └── pages/               One stub per route (§6) — not feature slices; no model, no api
 ├── features/<slice>/        One vertical slice per user-facing capability (auth, …)
 │   ├── model/               Types + rules. No React. ( = domain + application )
 │   ├── api/                 Backend gateway — repositories. ( = infrastructure )
@@ -36,7 +39,11 @@ src/
     │   ├── sessionStore.ts     snapshot, subscribe, dispatch, getAuthCredentials
     │   ├── session.ts          types, including SessionPrincipal
     │   └── tenant.ts           decode the tenant_id claim from the access token
-    ├── ui/                  shadcn/ui primitives (owned source), lib/utils.ts (cn())
+    ├── theme/               Three-state (light/dark/system) store, shaped like shared/session's
+    │                        snapshot/subscribe/reducer; data-theme, handed to identity-service
+    ├── keyboard/            Shortcut registry: single-character + modified, WCAG 2.1.4 preference,
+    │                        keyboard-device detection for when a resting keycap may render
+    ├── ui/                  Base UI primitives (owned source), lib/utils.ts (cn())
     ├── env.ts               Fail-fast loader for the six VITE_* vars
     └── logger.ts            Minimal structured console wrapper
 ```
@@ -201,20 +208,25 @@ Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell
 
 Chosen, and — just as important — tried and backed out of, so nobody re-litigates:
 
-| Decision                                                           | Rationale                                                                                                                                                                                                                                                       |
-| ------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| FSD segments over `domain/application/infrastructure/presentation` | Practice-oriented reading of the same principles, less nesting.                                                                                                                                                                                                 |
-| Custom `Result` (not neverthrow / Effect)                          | ~6 lines, no dependency, no `unwrap`-that-throws; the boundary conversion is single-sited in `shared/api/unwrap.ts` — [ADR 0034](../../../docs/adr/0034-admin-frontend-custom-result-type.md).                                                                  |
-| `openapi-typescript` + `openapi-fetch`, kept                       | A hand-rolled typed client would be _more_ code (URL/query/path serialization, content negotiation).                                                                                                                                                            |
-| No server-state library (TanStack Query, SWR, …)                   | The route `loader` + `action` + RR revalidation cover one screen; when a query lib lands it **replaces** the repository — [ADR 0035](../../../docs/adr/0035-admin-frontend-no-server-state-library.md).                                                         |
-| Error normalization **inside `run()`**                             | A short-lived call-site `settle(call)` wrapper was tried and removed — it was one more thing every caller had to remember. The HTTP layer owns it.                                                                                                              |
-| **No request-cancellation layer**                                  | Facade `AbortController` + `useApiResource` built and reverted twice; the effect `ignore`-flag fixes the only real bug. Revisit for search-as-you-type or a large export — [ADR 0033](../../../docs/adr/0033-admin-frontend-no-request-cancellation-layer.md).  |
-| `Category` entity in `model/`, not `api/`                          | The UI was reaching through to the backend layer just for a domain type — inverted dependency.                                                                                                                                                                  |
-| Removed `lucide-react`, `msw`                                      | Zero imports anywhere; `msw` was never wired (tests use `vi.mock`).                                                                                                                                                                                             |
-| shadcn/ui + Tailwind, remapped to `shared/ui` + `shared/lib`       | Owned component source over a black-box dep; accessible Radix primitives suit a growing admin panel; one choice covers "UI library" + "CSS framework".                                                                                                          |
-| Minimal in-app logger, no telemetry backend                        | `shared/logger.ts` wrapping `console`, structured, no PII beyond tenant id.                                                                                                                                                                                     |
-| OIDC session kept in `localStorage`                                | A second tab reuses the session; accepted threat is an XSS on our origin reading the token; in-memory + `httpOnly` cookie rejected (needs a backend change) — [ADR 0036](../../../docs/adr/0036-admin-frontend-oidc-session-in-localstorage.md).                |
-| Session core in `shared/session`                                   | Store, reducer and tenant decode moved out of `features/auth` / `app/` so the composition descends with them; no feature imports `app/`, and ESLint now enforces both directions — [ADR 0037](../../../docs/adr/0037-admin-frontend-session-core-in-shared.md). |
+| Decision                                                                                                      | Rationale                                                                                                                                                                                                                                                                                                                                                                            |
+| ------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| FSD segments over `domain/application/infrastructure/presentation`                                            | Practice-oriented reading of the same principles, less nesting.                                                                                                                                                                                                                                                                                                                      |
+| Custom `Result` (not neverthrow / Effect)                                                                     | ~6 lines, no dependency, no `unwrap`-that-throws; the boundary conversion is single-sited in `shared/api/unwrap.ts` — [ADR 0034](../../../docs/adr/0034-admin-frontend-custom-result-type.md).                                                                                                                                                                                       |
+| `openapi-typescript` + `openapi-fetch`, kept                                                                  | A hand-rolled typed client would be _more_ code (URL/query/path serialization, content negotiation).                                                                                                                                                                                                                                                                                 |
+| No server-state library (TanStack Query, SWR, …)                                                              | The route `loader` + `action` + RR revalidation cover one screen; when a query lib lands it **replaces** the repository — [ADR 0035](../../../docs/adr/0035-admin-frontend-no-server-state-library.md).                                                                                                                                                                              |
+| Error normalization **inside `run()`**                                                                        | A short-lived call-site `settle(call)` wrapper was tried and removed — it was one more thing every caller had to remember. The HTTP layer owns it.                                                                                                                                                                                                                                   |
+| **No request-cancellation layer**                                                                             | Facade `AbortController` + `useApiResource` built and reverted twice; the effect `ignore`-flag fixes the only real bug. Revisit for search-as-you-type or a large export — [ADR 0033](../../../docs/adr/0033-admin-frontend-no-request-cancellation-layer.md).                                                                                                                       |
+| `Category` entity in `model/`, not `api/`                                                                     | The UI was reaching through to the backend layer just for a domain type — inverted dependency.                                                                                                                                                                                                                                                                                       |
+| Removed `lucide-react`, `msw`                                                                                 | Zero imports anywhere; `msw` was never wired (tests use `vi.mock`).                                                                                                                                                                                                                                                                                                                  |
+| `lucide-react` reinstated for `specs/002-ui-foundation/`; `msw` stays removed                                 | Every icon in the new shell and pages needs one; best bundle-to-icon-count ratio of the candidates. `msw`'s absence was unrelated to icons and nothing in this feature needed network-level mocking.                                                                                                                                                                                 |
+| shadcn/ui + Tailwind, remapped to `shared/ui` + `shared/lib`, on **Base UI** (not Radix)                      | Owned component source over a black-box dep; one choice covers "UI library" + "CSS framework". Base UI ships Toast and Combobox, so `sonner` and `cmdk` are never added — D1, [ADR 0039](../../../docs/adr/0039-admin-frontend-base-ui-primitives.md).                                                                                                                               |
+| Three-state theme (`light`/`dark`/`system`), hand-rolled in `shared/theme/`, not `next-themes`                | Same snapshot/subscribe/reducer shape as `shared/session`; `next-themes` carries SSR machinery this client-only SPA has no use for and has open React 19 issues. `data-theme` + the `admin-theme` storage key are byte-identical to identity-service's, which is what makes the cross-app handoff work — D2, [ADR 0040](../../../docs/adr/0040-admin-frontend-three-state-theme.md). |
+| No animation library (`motion`, `tw-animate-css`)                                                             | Every overlay animates on Base UI's own `data-starting-style` / `data-ending-style` attributes plus a plain Tailwind `transition` — the mechanism already had to exist for Base UI's overlays, so a library would duplicate it — D3.                                                                                                                                                 |
+| Keycap hints derived from the shortcut registry, never hand-typed; no `shortcut` prop on the generic `Button` | A hand-typed `<Kbd>` drifts silently the first time a binding changes; sourcing every keycap from the registry makes announcing a shortcut that doesn't exist structurally impossible. Evidence is tiered by how often a control appears on screen — at most once per screen for a resting keycap — D4.                                                                              |
+| `shared/ui/**` excluded from the coverage gate; `shared/theme/**` and `shared/keyboard/**` are not            | Presentational `cva` primitives have no logic to test; holding them to the threshold would buy ceremonial tests. The corollary is enforced by review, not tooling: anything with behaviour does not belong in `shared/ui/` — D5.                                                                                                                                                     |
+| Minimal in-app logger, no telemetry backend                                                                   | `shared/logger.ts` wrapping `console`, structured, no PII beyond tenant id.                                                                                                                                                                                                                                                                                                          |
+| OIDC session kept in `localStorage`                                                                           | A second tab reuses the session; accepted threat is an XSS on our origin reading the token; in-memory + `httpOnly` cookie rejected (needs a backend change) — [ADR 0036](../../../docs/adr/0036-admin-frontend-oidc-session-in-localstorage.md).                                                                                                                                     |
+| Session core in `shared/session`                                                                              | Store, reducer and tenant decode moved out of `features/auth` / `app/` so the composition descends with them; no feature imports `app/`, and ESLint now enforces both directions — [ADR 0037](../../../docs/adr/0037-admin-frontend-session-core-in-shared.md).                                                                                                                      |
 
 ---
 
@@ -231,11 +243,14 @@ because it didn't need to be yet. This is the compiled view across the whole app
   That job is done, and the harness has been removed
   ([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)): the app is back
   to a shell with no business feature, aligned with FR-013 again.
-- **`HomePage` (`src/app/HomePage.tsx`) is a provisional placeholder**, not a feature — no `model`,
-  no API call, no state, mounted directly in `app/` because it doesn't meet this doc's own
-  definition of a slice (§1). Its retirement trigger is named up front: **the first real business
-  route replaces it** as the protected area's index route. Whichever feature ships next should
-  delete it rather than build alongside it.
+- **`src/app/pages/` holds provisional placeholders, not features** — no `model`, no `api`, no
+  state beyond what a page's own hook needs (Servicos' keyboard shortcut). Same criterion as the
+  `HomePage` it replaces: none of them meet this doc's definition of a slice (§1). Building the
+  full shell and all six destinations before any real feature slice exists was
+  `specs/002-ui-foundation/`'s explicit scope (D6) — chrome, theme, routing and "Em breve" stubs
+  first. Retirement trigger, per page: **the first real feature slice replaces the stub it
+  corresponds to** (e.g. a `features/services/` slice replaces `app/pages/Servicos.tsx` and moves
+  under `ui/pages/<Page>/` per §1), once its backend exists.
 - **The API layer (`servicesApi`, `apiClient`, `unwrap`, `servicesFacade`, the generated types) is
   standing with zero call sites, on purpose.** It is not dead code — see
   [ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md) before removing
@@ -255,12 +270,6 @@ because it didn't need to be yet. This is the compiled view across the whole app
 | `identity-service` typed client                        | Consumed purely through the OIDC protocol                                                             | Never — it's protocol, not REST                         |
 | External telemetry / observability backend             | `shared/logger.ts` → `console` is enough                                                              | A real ops requirement appears                          |
 | A consumer for `servicesApi.del`                       | The facade provides it, but no endpoint needs `DELETE`                                                | A repository calls it                                   |
-
-### Pages that don't exist yet
-
-Routing today is `/login`, `/callback`, and `/` (the provisional `HomePage`) — everything else
-redirects to `/`. Navigation is a single link. No dashboard, no Services / Clients / Appointments /
-Settings. Each will be its own `src/features/<name>/` slice (with `ui/pages/<Page>/`) when built.
 
 ---
 

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
+import { expectNoA11yViolations } from '@/test/a11y';
 import { Agenda } from './Agenda';
 import { Ajustes } from './Ajustes';
 import { Clientes } from './Clientes';
@@ -38,5 +39,15 @@ describe('"Em breve" destinations (spec FR-006, US5)', () => {
 
     expect(bodies.every((text) => text.length > 20)).toBe(true);
     expect(new Set(bodies).size).toBe(bodies.length);
+  });
+
+  it.each(PAGES)('$name has no a11y violations', async ({ Component }) => {
+    const { container } = render(
+      <MemoryRouter>
+        <Component />
+      </MemoryRouter>,
+    );
+
+    await expectNoA11yViolations(container);
   });
 });
