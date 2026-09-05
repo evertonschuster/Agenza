@@ -8,6 +8,8 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
+      // shadcn's "base-nova" style generates `import { cn } from "cn"` — redirect to our own cn().
+      cn: path.resolve(import.meta.dirname, './src/shared/lib/utils.ts'),
     },
   },
   server: {

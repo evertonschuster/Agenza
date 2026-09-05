@@ -95,21 +95,21 @@ mudar o tema do SO em modo automático, recarregar sem lampejo, e conferir o log
 
 **Depende de**: Fase 1. **Bloqueia**: Fases 3, 4, 5.
 
-- [ ] T050 [FND] **Antes de qualquer primitivo**: adicionar `src/shared/ui/**` a `coverage.exclude`
+- [x] T050 [FND] **Antes de qualquer primitivo**: adicionar `src/shared/ui/**` a `coverage.exclude`
       em `vitest.config.ts` (decisão D5 do plan.md). Fora de ordem, o CI fica vermelho e parece
       regressão
-- [ ] T051 [FND] Instalar `@base-ui/react@^1.8.0` e `lucide-react`
-- [ ] T052 [FND] Reescrever `src/shared/ui/button.tsx` com a prop `render` do Base UI, aposentando
+- [x] T051 [FND] Instalar `@base-ui/react@^1.8.0` e `lucide-react`
+- [x] T052 [FND] Reescrever `src/shared/ui/button.tsx` com a prop `render` do Base UI, aposentando
       `Slot.Root`. Preservar os `data-slot`/`data-variant`/`data-size` e o conjunto estendido de tamanhos
-- [ ] T053 [FND] Remover `radix-ui` do `package.json`
-- [ ] T054 [FND] Criar `src/shared/hooks/` — declarado em `components.json`, nunca criado
-- [ ] T055 [P] [FND] Primitivos de superfície: `card`, `badge`, `separator`, `skeleton`, `avatar`
-- [ ] T056 [P] [FND] Primitivos de sobreposição: `dialog`, `sheet`, `dropdown-menu`, `tooltip`, `toast`
-- [ ] T057 [P] [FND] Primitivos de entrada: `input`, `label`, `visually-hidden`
-- [ ] T058 [FND] `src/shared/ui/kbd.tsx` — o keycap, com as variantes de nível A e B da decisão D4
-- [ ] T059 [FND] Reescrever `src/shared/ui/FullScreenMessage.tsx` sobre os novos tokens
-- [ ] T060 [FND] Passe de `exactOptionalPropertyTypes` em todos os primitivos adicionados
-- [ ] T061 [FND] Regerar `package-lock.json` em container Linux
+- [x] T053 [FND] Remover `radix-ui` do `package.json`
+- [x] T054 [FND] Criar `src/shared/hooks/` — declarado em `components.json`, nunca criado
+- [x] T055 [P] [FND] Primitivos de superfície: `card`, `badge`, `separator`, `skeleton`, `avatar`
+- [x] T056 [P] [FND] Primitivos de sobreposição: `dialog`, `sheet`, `dropdown-menu`, `tooltip`, `toast`
+- [x] T057 [P] [FND] Primitivos de entrada: `input`, `label`, `visually-hidden`
+- [x] T058 [FND] `src/shared/ui/kbd.tsx` — o keycap, com as variantes de nível A e B da decisão D4
+- [x] T059 [FND] Reescrever `src/shared/ui/FullScreenMessage.tsx` sobre os novos tokens
+- [x] T060 [FND] Passe de `exactOptionalPropertyTypes` em todos os primitivos adicionados
+- [x] T061 [FND] Regerar `package-lock.json` em container Linux
       (`npm install --package-lock-only --ignore-scripts`) — senão `npm ci` quebra no CI por causa dos
       bindings nativos do `@tailwindcss/oxide`
 

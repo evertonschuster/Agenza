@@ -73,6 +73,38 @@ So: **dark elevation is a luminosity step of the surface plus a 1px inset highli
 edge**, not a `box-shadow`. A component that expresses depth only through `shadow-*` looks flat in
 dark. Take the elevation utility from `globals.css` rather than inventing per-component shadows.
 
+## Transitions on overlays
+
+A component fetched fresh from the `base-nova` registry (`Dialog`, `Tooltip`, `DropdownMenu`) ships
+with classes like `data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out
+data-closed:fade-out-0`. These come from `tw-animate-css`, a package plan.md's D3 deliberately does
+not add — without it the classes are silently inert and the overlay just snaps open/closed. `Sheet`
+and `Toast`'s stock templates already avoid this: they use plain `transition` plus Base UI's own
+`data-starting-style` / `data-ending-style` attributes (present on every Popup-style part —
+confirmed on `MenuPopupDataAttributes` and `TooltipPopupDataAttributes`, not just Dialog's). Convert
+the other three to match, rather than installing the missing package:
+
+```tsx
+// Before (stock, needs tw-animate-css to do anything)
+className={cn(
+  'fixed top-1/2 left-1/2 z-50 ... rounded-xl bg-popover p-4 ... duration-100 outline-none sm:max-w-sm ' +
+  'data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95',
+  className,
+)}
+
+// After (zero dependency, matches Sheet/Toast)
+className={cn(
+  'fixed top-1/2 left-1/2 z-50 ... rounded-xl bg-popover p-4 ... outline-none transition sm:max-w-sm ' +
+  'data-starting-style:scale-95 data-starting-style:opacity-0 data-ending-style:scale-95 data-ending-style:opacity-0',
+  className,
+)}
+```
+
+A closing dropdown that scrolls also needs `data-ending-style:overflow-hidden` (the stock
+`data-closed:overflow-hidden` served the same purpose — prevents a scrollbar flash while the popup is
+shrinking). If a future `npx shadcn add` regenerates one of these three files, the dead `animate-in`
+classes come back — reapply this conversion rather than reaching for `tw-animate-css`.
+
 ## Backend-owned colours (FR-016)
 
 Tag colours arrive as a hex from the API. **The value is not ours to change** — no lightening, no

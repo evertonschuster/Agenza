@@ -7,6 +7,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(import.meta.dirname, './src'),
+      cn: path.resolve(import.meta.dirname, './src/shared/lib/utils.ts'),
     },
   },
   test: {
@@ -28,6 +29,7 @@ export default defineConfig({
         'src/app/App.tsx',
         'src/app/routes.tsx',
         'src/shared/api/generated/**',
+        'src/shared/ui/**',
         'src/vite-env.d.ts',
         'src/vitest-setup.ts',
         'src/test/**',

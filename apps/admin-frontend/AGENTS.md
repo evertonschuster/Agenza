@@ -68,8 +68,14 @@ Dois atritos previsíveis, ambos esperados e não eventuais:
 - **`exactOptionalPropertyTypes`** — componentes gerados por CLI repassam props por spread e
   frequentemente exigem `X | undefined` explícito.
 - **Lockfile** — ao adicionar ou atualizar dependência, regere o `package-lock.json` num container
-  Linux (`npm install --package-lock-only --ignore-scripts`). Regerado no Windows, `npm ci` quebra no
-  CI por causa dos bindings nativos do `@tailwindcss/oxide`.
+  Linux, da raiz do monorepo:
+  `docker run --rm -v "$PWD:/w" -w /w node:22 sh -c "npm install -g npm@12.0.2 && npm install --package-lock-only --ignore-scripts --allow-remote=all"`.
+  Regerado no Windows, `npm ci` quebra no CI por causa dos bindings nativos do `@tailwindcss/oxide`.
+  As duas partes extras do comando são necessárias, não cosméticas: o `--allow-remote=all` porque o
+  npm 12 passou a bloquear por padrão o fetch das variantes de plataforma que este passo existe para
+  capturar (erro `EALLOWREMOTE` sem a flag); e o `npm install -g npm@12.0.2` porque o npm 10 que já
+  vem na imagem `node:22` quebra neste grafo de workspaces com `Cannot read properties of null
+(reading 'edgesOut')`.
 
 ## Ambiente
 

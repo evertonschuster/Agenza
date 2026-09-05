@@ -24,12 +24,17 @@ compile here.** Radix composes with `asChild` + `Slot`; Base UI composes with a 
 <Button render={<Link to="/agenda" />}>Agenda</Button>   {/* Base UI */}
 ```
 
-On the shadcn docs site, **switch to the Base UI tab** before copying. In the shadcn MCP, pass the
-Base UI registry — `list_items_in_registries` / `view_items_in_registries` / `get_add_command_for_items`.
+**Switching the docs site's tab to "Base UI" does not change what `npx shadcn add` fetches.** The
+CLI still defaults to Radix (`style: "new-york"`) regardless of which tab you're reading. What
+actually selects Base UI is `components.json`'s `"style"` field: it's set to `"base-nova"` (Base UI
++ the Nova preset, which is Lucide-based — matches this repo's icon choice) and **must stay that
+way**. Style names follow `{library}-{preset}`; every `add` then resolves against
+`https://ui.shadcn.com/r/styles/base-nova/{name}.json`. If a component ever shows up importing
+`@radix-ui/*`, check `components.json`'s `style` before anything else.
 
 `src/shared/ui/button.tsx` is the reference for the cva + `data-slot`/`data-variant`/`data-size`
-conventions. Until T052 of `specs/002-ui-foundation/tasks.md` lands it is also the app's last
-`radix-ui` consumer — read it for the conventions, never for `asChild`.
+conventions — read it for those, never for `asChild` (retired with T052; `radix-ui` is fully
+removed from `package.json`).
 
 ## 1. Check whether it already exists
 
@@ -43,14 +48,28 @@ component is the most common wrong answer here.
 npx shadcn@latest add <name>
 ```
 
-`components.json` already remaps the aliases: components land in `@/shared/ui`, `cn()` resolves to
-`@/shared/lib/utils`, hooks to `@/shared/hooks`. Do not hand-copy files from the docs — you lose the
-alias rewrite and end up with `@/components/ui` imports that fail the path check.
+`components.json` remaps components to `@/shared/ui` and hooks to `@/shared/hooks`. Do not hand-copy
+files from the docs — you lose that rewrite and end up with `@/components/ui` imports that fail the
+path check.
 
-Two things to verify right after: the CLI did **not** add `radix-ui` back to `package.json`, and any
-icon it pulled comes from `lucide-react`. If you added or bumped a dependency, regenerate
-`package-lock.json` in a Linux container (`npm install --package-lock-only --ignore-scripts`) —
-regenerated on Windows, `npm ci` breaks CI on `@tailwindcss/oxide` native bindings.
+**`cn` is not rewritten to `@/shared/lib/utils` by the CLI.** Every `base-nova` file imports
+`from "cn"` — a real, wrong npm package the CLI also adds to `package.json` (`"cn": "^0.2.5"`). This
+repo handles it with an alias instead of a per-file fix: `vite.config.ts`, `vitest.config.ts` and
+`tsconfig.json`'s `paths` all redirect the bare specifier `"cn"` to `src/shared/lib/utils.ts`, so a
+freshly generated file works as-is. Still run `npm uninstall cn` after an `add` — the alias makes the
+import resolve correctly, but the stray dependency in `package.json` is real and wrong. For
+consistency with the rest of the codebase, also rewrite the import to `'@/shared/lib/utils'` by hand
+(a new file that's the only one in the repo saying `from "cn"` is a readability smell, even once it
+compiles).
+
+Two more things to verify right after: the CLI did **not** add `radix-ui` back to `package.json`, and
+any icon it pulled comes from `lucide-react`. If you added or bumped a dependency, regenerate
+`package-lock.json` in a Linux container:
+`docker run --rm -v "$PWD:/w" -w /w node:22 sh -c "npm install -g npm@12.0.2 && npm install --package-lock-only --ignore-scripts --allow-remote=all"`
+from the monorepo root — regenerated on Windows, `npm ci` breaks CI on `@tailwindcss/oxide` native
+bindings. The `--allow-remote=all` and the `npm@12.0.2` pin are both load-bearing: npm 12 defaults to
+blocking the cross-platform optional-dependency fetches this step exists to capture, and the `node:22`
+image's stock npm 10 crashes outright on this workspace's dependency graph.
 
 ## 3. The typing pass — expect it on every component
 
@@ -78,7 +97,14 @@ class (`bg-neutral-900`, `text-white`, `#hex`) breaks theme portability** — it
 Dark is an **attribute** variant, not a media query. Writing `@media (prefers-color-scheme: dark)`
 in a component breaks explicit light-on-a-dark-OS, which is a supported state.
 
-Full token system, focus ring, dark elevation, and the backend-hex technique:
+**A freshly generated overlay's `animate-in`/`fade-in-0`/`zoom-in-95`/`slide-in-from-*` classes do
+nothing** — they're `tw-animate-css` classes, and plan.md's D3 deliberately keeps that dependency
+out. Convert them to the zero-dependency pattern `Sheet` and `Toast` already ship with: `transition`
+plus Base UI's own `data-starting-style` / `data-ending-style` attributes. Don't add `tw-animate-css`
+to make the stock classes work — rewrite the class list instead. Details and worked examples:
+[`references/tokens.md`](references/tokens.md#transitions-on-overlays).
+
+Full token system, focus ring, dark elevation, and the backend-hex technique: also in
 [`references/tokens.md`](references/tokens.md).
 
 ## 5. If it is an action — pick its keycap tier
