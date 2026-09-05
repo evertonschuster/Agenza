@@ -7,6 +7,15 @@ import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
 import { expectNoA11yViolations } from '@/test/a11y';
 import { CommandPalette } from './CommandPalette';
 
+function registerHelpShortcut(): void {
+  shortcutRegistry.register({
+    id: 'shortcut-help',
+    key: '?',
+    description: 'Abrir a ajuda de atalhos',
+    handler: () => {},
+  });
+}
+
 function renderPalette() {
   const value: AuthContextValue = {
     session: { ...INITIAL_SESSION, status: 'authenticated', accessToken: 'token' },
@@ -36,6 +45,16 @@ describe('CommandPalette', () => {
     fireEvent.keyDown(document, { key: '/' });
 
     expect(screen.getByRole('option', { name: 'Início' })).toBeInTheDocument();
+  });
+
+  it('shows the trailing keycap for a command with a registered shortcut', () => {
+    registerHelpShortcut();
+    renderPalette();
+
+    fireEvent.keyDown(document, { key: '/' });
+
+    const helpOption = screen.getByRole('option', { name: 'Abrir ajuda' });
+    expect(helpOption.querySelector('[data-slot="kbd"]')).toHaveTextContent('?');
   });
 
   it('has no a11y violations while open', async () => {

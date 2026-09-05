@@ -4,7 +4,11 @@ import type { LucideIcon } from 'lucide-react';
 import { HelpCircle, LogOut, Monitor, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { useTheme } from '@/shared/theme/useTheme';
-import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
+import {
+  formatShortcutKey,
+  shortcutRegistry,
+  useRegisteredShortcut,
+} from '@/shared/keyboard/shortcuts';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import {
   Combobox,
@@ -16,6 +20,7 @@ import {
   ComboboxList,
   ComboboxPaletteContent,
 } from '@/shared/ui/combobox';
+import { Kbd } from '@/shared/ui/kbd';
 import { NAV_DESTINATIONS } from './navigation';
 
 interface Command {
@@ -23,6 +28,13 @@ interface Command {
   label: string;
   icon: LucideIcon;
   run: () => void;
+  shortcutId?: string;
+}
+
+function CommandKeycap({ shortcutId }: { shortcutId: string }) {
+  const shortcut = useRegisteredShortcut(shortcutId);
+  if (!shortcut) return null;
+  return <Kbd className="ml-auto">{formatShortcutKey(shortcut)}</Kbd>;
 }
 
 export function CommandPalette() {
@@ -67,6 +79,7 @@ export function CommandPalette() {
           id: 'help',
           label: 'Abrir ajuda',
           icon: HelpCircle,
+          shortcutId: 'shortcut-help',
           run: () => shortcutRegistry.getShortcut('shortcut-help')?.handler(),
         },
         { id: 'logout', label: 'Sair', icon: LogOut, run: () => void logout() },
@@ -115,6 +128,7 @@ export function CommandPalette() {
                 <ComboboxItem key={command.id} value={command.id}>
                   <command.icon aria-hidden="true" />
                   <span>{command.label}</span>
+                  {command.shortcutId && <CommandKeycap shortcutId={command.shortcutId} />}
                 </ComboboxItem>
               ))}
             </ComboboxGroup>

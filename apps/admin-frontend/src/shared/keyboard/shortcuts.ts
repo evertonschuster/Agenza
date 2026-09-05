@@ -32,6 +32,17 @@ function isDialogOpen(): boolean {
   return document.querySelector('[role="dialog"][data-open]') !== null;
 }
 
+const KEYS_NEVER_FROM_A_TOUCH_KEYBOARD = new Set(['Tab', 'Escape']);
+
+// A touch-only device can only ever fire keydown from its on-screen keyboard, which requires a
+// focused field — so an unmodified, non-Tab/Escape key there is ordinary typing, not evidence of
+// a real hardware keyboard (D4: touch devices get no shortcut hints).
+function looksLikeRealKeyboard(event: KeyboardEvent): boolean {
+  if (event.ctrlKey || event.metaKey || event.altKey) return true;
+  if (KEYS_NEVER_FROM_A_TOUCH_KEYBOARD.has(event.key)) return true;
+  return !isTypingTarget(event.target);
+}
+
 type Listener = () => void;
 
 class ShortcutRegistry {
@@ -106,7 +117,9 @@ class ShortcutRegistry {
   };
 
   private handleKeyDown = (event: KeyboardEvent): void => {
-    this.markKeyboardDevice();
+    if (looksLikeRealKeyboard(event)) {
+      this.markKeyboardDevice();
+    }
 
     for (const shortcut of this.shortcuts.values()) {
       if (event.key.toLowerCase() !== shortcut.key.toLowerCase()) continue;

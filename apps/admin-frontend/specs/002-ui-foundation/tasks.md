@@ -46,12 +46,33 @@ fluxo Spec Kit por não ser produto.
 - [x] T013 [FND] Bloco `[data-theme='dark']` sobrescrevendo **apenas** os tokens que mudam
 - [x] T014 [FND] `@theme inline` mapeando `--color-*` para as variáveis semânticas
 - [x] T015 [FND] Anel de foco de dois tons (WCAG 2.2 SC 2.4.13): traço na marca mais deslocamento na
-      cor do fundo. Nenhum `outline: none` sem substituto
+      cor do fundo. Nenhum `outline: none` sem substituto. _Revisão (7b/T143) achou os primitivos
+      (`button`, `input`, `textarea`, `input-group`) matando o anel de `@layer base` com
+      `outline-none` e sobrando só um `ring-*/50` translúcido, sem deslocamento. Corrigido: cada um
+      ganhou `ring-offset-2 ring-offset-background` + `ring-2 ring-ring` opacos — o próprio
+      substituto de dois tons que a regra exige, agora no nível do componente. Contraste
+      `--ring` × `--background` calculado (não estimado): 5.54:1 claro, 7.41:1 escuro, acima do 3:1
+      da SC 2.4.13. Verificado num browser real contra o Aspire real: o `box-shadow` computado do
+      input focado mostra exatamente `oklch(--background) 2px` seguido de `oklch(--ring) 2px`._
 - [x] T016 [FND] Elevação: no escuro, degraus de luminosidade de superfície mais realce interno de
       1 px, em vez de `box-shadow`
-- [x] T017 [FND] Classe de etiqueta derivando fundo, texto e borda do hex do backend via `color-mix`
-      contra a superfície do tema — o hex nunca é usado cru (FR-016)
-- [x] T018 [FND] Densidade dupla: `@media (pointer: coarse)` eleva alvos de toque a ≥44 px
+- [ ] T017 [FND] ~~Classe de etiqueta derivando fundo, texto e borda do hex do backend via
+      `color-mix` contra a superfície do tema — o hex nunca é usado cru (FR-016)~~. **Desmarcado**
+      (7b/T148): a técnica está correta, mas não existe nenhum lugar nesta fase com dado real de
+      tag vindo do backend para exercitá-la (todas as telas de negócio são "Em breve"), e fabricar
+      um consumidor só para marcar a tarefa violaria FR-006/o princípio de não construir UI falsa.
+      A classe `.tag` continua em `globals.css`, pronta, seguindo o mesmo precedente já registrado
+      para `shared/api/` na ADR 0038 (infraestrutura correta sem chamador ainda não é código morto)
+- [ ] T018 [FND] ~~Densidade dupla: `@media (pointer: coarse)` eleva alvos de toque a ≥44 px~~.
+      **Desmarcado** (7b/T144): `--control-h-sm/md/lg` foi declarado e nunca lido por nenhum
+      primitivo — CSS morto confirmado (zero ocorrências fora de `globals.css` e deste arquivo).
+      Ligá-lo de verdade exigiria decidir, sem nenhuma decisão de design registrada em spec.md/plan.md,
+      quais controles participam (`Button` teria variantes claramente mapeáveis por valor, mas
+      `Avatar`, os ícones compactos de `InputGroup` e os chips do Combobox não têm um limite óbvio) —
+      exatamente o tipo de julgamento que este ciclo de correções não deveria inventar sozinho. Os
+      tokens e o bloco `@media (pointer: coarse)` foram removidos de `globals.css`. `BottomNav`'s
+      `min-h-11`, escrito à mão, continua sendo o único ponto real de conformidade com alvo de toque
+      ≥44 px do app hoje
 - [x] T019 [FND] `@media (prefers-reduced-motion: reduce)` desligando transições
 
 ### Tipografia
@@ -176,11 +197,24 @@ a partir do lockfile regerado.
       `[role="textbox"]` e com diálogo aberto
 - [x] T102 [US4] `src/shared/keyboard/useShortcut.ts` — assinatura e limpeza
 - [x] T103 [US4] Marcação de teclado: `data-kbd` no `<html>` ao primeiro keydown real, para resgatar
-      tablet com teclado acoplado (reportado como `pointer: coarse`). **Nunca** `navigator.maxTouchPoints`
+      tablet com teclado acoplado (reportado como `pointer: coarse`). **Nunca** `navigator.maxTouchPoints`.
+      _Revisão (7b/T147) achou `markKeyboardDevice()` chamado incondicionalmente em todo keydown —
+      um toque em campo de texto num Android/iPhone (via teclado virtual) também marcava `data-kbd`,
+      liberando dicas num aparelho só de toque, contra a regra D4. Corrigido com
+      `looksLikeRealKeyboard(event)`: conta como teclado real se houver modificador, se a tecla for
+      Tab/Escape, ou se o alvo não for um campo de digitação — um toque puro só produz keydown via
+      teclado virtual, e isso exige um campo focado, então um caractere simples ali nunca conta
+      sozinho. Testes novos em `shortcuts.test.ts` cobrem as quatro combinações._
 - [x] T104 [US4] Preferência "Atalhos de teclado" (WCAG 2.1.4): desligada remove handlers de tecla
       única **e** todas as dicas; `Ctrl/⌘+K` e `Esc` permanecem
 - [x] T105 [US4] `src/app/shell/CommandPalette.tsx` sobre o Base UI Combobox — navegar aos seis
-      destinos, trocar tema, abrir ajuda, sair; trilho direito com a tecla de cada item
+      destinos, trocar tema, abrir ajuda, sair; trilho direito com a tecla de cada item. _Revisão
+      (7b/T145) achou o trilho ausente — `CommandPalette.tsx` nem importava `Kbd`. Corrigido: `Command`
+      ganhou `shortcutId?`, e um `CommandKeycap` interno lê o atalho do registro
+      (`useRegisteredShortcut` + `formatShortcutKey`, nunca digitado à mão — D4/T110) e mostra o
+      trilho sem depender do gate de visibilidade (Nível C do D4: a paleta sempre mostra). Só "Abrir
+      ajuda" tem atalho de verdade hoje (`?`); navegação/tema/sair não têm um registrado. Verificado
+      no Aspire real: o item mostra "?" corretamente._
 - [x] T106 [US4] `src/app/shell/ShortcutHelpSheet.tsx` — a folha `?`, agrupada, com o modificador
       correto da plataforma
 - [x] T107 [US4] Nível A: keycap em repouso no controle de busca, na ação primária única da tela e no
@@ -190,7 +224,14 @@ a partir do lockfile regerado.
 - [x] T108 [US4] Nível B: tooltip em hover **e** foco a 250 ms nos botões de ícone com atalho.
       _Nenhum botão de ícone com atalho próprio existe ainda (itens de navegação são excluídos por
       decisão D4) — o `Tooltip` + `Kbd` que o padrão usaria já existe e roda no modo compacto do
-      `SidebarNav`; revisitar quando surgir uma instância concreta._
+      `SidebarNav`; revisitar quando surgir uma instância concreta._ **Revisão (7b/T146)**: achou o
+      bug real por trás dessa espera — `TooltipProvider`'s `delay` valia `0`, não os 250 ms da
+      decisão D4, então mesmo quando um consumidor aparecer o tooltip abriria instantâneo.
+      Corrigido o default para `250`. Verificado no Aspire real: hover no `SidebarNav` compacto abre
+      o tooltip (mecanismo confirmado ponta a ponta); o limite exato de 250 ms não deu para cronometrar
+      com precisão neste ambiente de automação — a aba fica "hidden" para o host e por isso os timers
+      rodam sob throttling, então a fonte (`delay = 250`, sem nenhum override) é a evidência que sustenta
+      o número, não um cronômetro no browser
 - [x] T109 [US4] Portão de renderização das dicas:
       `shortcutsEnabled AND ((hover:hover) and (pointer:fine) OR html[data-kbd])`
 - [x] T110 [US4] O keycap é **derivado do registro de atalhos**, não digitado à mão; sem prop
@@ -277,27 +318,29 @@ portões existentes, que é exatamente por que passou.
 Cada item abaixo está com `[x]` na fase original. **Entregar, ou desmarcar e registrar por quê** —
 o que não pode continuar é a marcação mentir.
 
-- [ ] T143 [US3] **T015 — o anel de foco de dois tons não alcança os controles.** Está definido em
+- [x] T143 [US3] **T015 — o anel de foco de dois tons não alcança os controles.** Está definido em
       `@layer base` (`globals.css:174`), mas `button.tsx`, `input.tsx`, `textarea.tsx` e
       `input-group.tsx` trazem `outline-none` como *utility*, e no Tailwind v4 utility vence base.
       Os controles ficam só com `ring-ring/50` translúcido. Verificar o contraste do indicador
-      resultante contra SC 2.4.13 nos dois temas
-- [ ] T144 [US2] **T018 — densidade dupla é CSS morto.** `--control-h-sm/md/lg` é declarado
+      resultante contra SC 2.4.13 nos dois temas. **Entregue** — ver T015 acima
+- [x] T144 [US2] **T018 — densidade dupla é CSS morto.** `--control-h-sm/md/lg` é declarado
       (`globals.css:96`) e sobrescrito em `(pointer: coarse)` (`:209`), mas **nenhum componente lê
       `var(--control-h-*)`**. Os únicos 44 px reais são `min-h-11` escrito à mão no `BottomNav`. Ou
-      os primitivos passam a consumir os tokens, ou remova os tokens e a promessa
-- [ ] T145 [US4] **T105 — a paleta não tem trilho de atalho.** `CommandPalette.tsx` sequer importa
+      os primitivos passam a consumir os tokens, ou remova os tokens e a promessa. **Desmarcado T018**
+      — ver a nota lá; a segunda opção da tarefa foi a escolhida
+- [x] T145 [US4] **T105 — a paleta não tem trilho de atalho.** `CommandPalette.tsx` sequer importa
       `Kbd`. Nenhum item mostra tecla — e a paleta era, pela pesquisa, a superfície de maior retorno
-      para descoberta de atalhos
-- [ ] T146 [US4] **T108 — tooltip abre com 0 ms**, não os 250 ms da decisão D4
+      para descoberta de atalhos. **Entregue** — ver T105 acima
+- [x] T146 [US4] **T108 — tooltip abre com 0 ms**, não os 250 ms da decisão D4
       (`src/shared/ui/tooltip.tsx:6`). Os 250 ms existiam justamente porque hover lento foi a queixa
-      original do produto
-- [ ] T147 [US4] **T103 — `data-kbd` é marcado por qualquer keydown**, inclusive de teclado virtual
+      original do produto. **Entregue** — ver T108 acima
+- [x] T147 [US4] **T103 — `data-kbd` é marcado por qualquer keydown**, inclusive de teclado virtual
       (`shortcuts.ts:109` chama `markKeyboardDevice()` incondicionalmente). Digitar num campo no
       Android libera os keycaps num aparelho só de toque, contra a regra D4 de que no toque a dica é
-      **ausente**
-- [ ] T148 [FND] **T017 — a classe `.tag` não tem nenhum consumidor** (`globals.css:189`). A técnica
-      de `color-mix` sobre o hex do backend está correta e não é exercida por nada
+      **ausente**. **Entregue** — ver T103 acima
+- [x] T148 [FND] **T017 — a classe `.tag` não tem nenhum consumidor** (`globals.css:189`). A técnica
+      de `color-mix` sobre o hex do backend está correta e não é exercida por nada. **Desmarcado
+      T017** — ver a nota lá; a classe fica, sem consumidor, até uma feature de negócio real precisar
 
 ### 7c — Violações de regra (baratas)
 

@@ -104,6 +104,41 @@ describe('shortcutRegistry', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  describe('keyboard-device detection', () => {
+    it('does not mark a keyboard device for a plain character typed into a field', () => {
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+
+      dispatchKeydown(input, 'a');
+
+      expect(shortcutRegistry.getKeyboardDeviceSnapshot()).toBe(false);
+    });
+
+    it('marks a keyboard device for Tab even while typing into a field', () => {
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+
+      dispatchKeydown(input, 'Tab');
+
+      expect(shortcutRegistry.getKeyboardDeviceSnapshot()).toBe(true);
+    });
+
+    it('marks a keyboard device for a modified key even while typing into a field', () => {
+      const input = document.createElement('input');
+      document.body.appendChild(input);
+
+      dispatchKeydown(input, 'k', { ctrlKey: true });
+
+      expect(shortcutRegistry.getKeyboardDeviceSnapshot()).toBe(true);
+    });
+
+    it('marks a keyboard device for a plain character when nothing is focused', () => {
+      dispatchKeydown(document, 'a');
+
+      expect(shortcutRegistry.getKeyboardDeviceSnapshot()).toBe(true);
+    });
+  });
+
   describe('formatShortcutKey', () => {
     it('upper-cases a single letter with no modifier', () => {
       expect(formatShortcutKey({ key: 'n', modified: false })).toBe('N');
