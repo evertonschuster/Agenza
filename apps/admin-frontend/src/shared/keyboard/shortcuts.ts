@@ -184,7 +184,6 @@ function subscribeHoverFine(onChange: () => void): () => void {
   return () => media.removeEventListener('change', onChange);
 }
 
-/** T109's rendering gate: shortcutsEnabled AND ((hover:hover) and (pointer:fine) OR html[data-kbd]). */
 export function useShortcutHintsVisible(): boolean {
   const enabled = useShortcutsEnabled();
   const canHoverFine = useSyncExternalStore(subscribeHoverFine, getHoverFineSnapshot);
@@ -208,7 +207,6 @@ export interface ShortcutHint {
   visible: boolean;
 }
 
-/** A tier-A/B control's resting keycap and aria-keyshortcuts value, derived from the registry. */
 export function useShortcutHint(id: string): ShortcutHint {
   const shortcut = useRegisteredShortcut(id);
   const hintsVisible = useShortcutHintsVisible();

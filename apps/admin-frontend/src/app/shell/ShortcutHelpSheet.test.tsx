@@ -16,6 +16,7 @@ describe('ShortcutHelpSheet', () => {
 
     expect(screen.getByRole('dialog', { name: 'Atalhos de teclado' })).toBeInTheDocument();
     expect(screen.getByRole('checkbox', { name: /caractere único/ })).toBeChecked();
+    expect(screen.getByRole('button', { name: 'Fechar' })).toBeInTheDocument();
   });
 
   it('has no a11y violations while open', async () => {

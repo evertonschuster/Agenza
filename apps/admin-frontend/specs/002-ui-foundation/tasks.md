@@ -301,14 +301,17 @@ o que não pode continuar é a marcação mentir.
 
 ### 7c — Violações de regra (baratas)
 
-- [ ] T149 [US5] **FR-015 — texto em inglês na interface pt-BR.** `"Close"` em `dialog.tsx:65`,
+- [x] T149 [US5] **FR-015 — texto em inglês na interface pt-BR.** `"Close"` em `dialog.tsx:65`,
       `dialog.tsx:98`, `sheet.tsx:66`, e `aria-label="Close toast"` em `toast.tsx:124`. Texto
-      `sr-only` é conteúdo de usuário
-- [ ] T150 [FND] **Dois blocos JSDoc em `shortcuts.ts:187` e `:211`**, contra a regra de "sem
+      `sr-only` é conteúdo de usuário. _As quatro strings viraram "Fechar" / "Fechar notificação".
+      `ShortcutHelpSheet` é quem consome `SheetContent` de verdade hoje — o novo teste em
+      `ShortcutHelpSheet.test.tsx` confirma o botão de fechar real com nome acessível "Fechar"._
+- [x] T150 [FND] **Dois blocos JSDoc em `shortcuts.ts:187` e `:211`**, contra a regra de "sem
       comentário de o-quê, sem JSDoc". Um deles ancora em `T109`, um id de tarefa que perde sentido
-      quando a feature fechar
-- [ ] T151 [FND] **Diretivas `'use client'` em 5 primitivos** (`avatar`, `combobox`, `dialog`,
-      `toast`, `tooltip`) — artefato de Next.js, morto no Vite
+      quando a feature fechar. _Os dois blocos removidos; os nomes das funções já bastam._
+- [x] T151 [FND] **Diretivas `'use client'` em 5 primitivos** (`avatar`, `combobox`, `dialog`,
+      `toast`, `tooltip`) — artefato de Next.js, morto no Vite. _Removida dos cinco arquivos;
+      confirmado por busca que nenhuma outra permanece em `src/`._
 
 ### 7d — Cobertura de aceite
 
