@@ -153,14 +153,14 @@ a partir do lockfile regerado.
 
 **Depende de**: Fase 3. **Bloqueia**: Fase 5.
 
-- [ ] T090 [US5] `src/app/pages/ComingSoon.tsx` — componente compartilhado, recebendo o texto
+- [x] T090 [US5] `src/app/pages/ComingSoon.tsx` — componente compartilhado, recebendo o texto
       específico de cada destino
-- [ ] T091 [P] [US5] `Agenda.tsx`, `Clientes.tsx`, `Conversas.tsx`, `Ajustes.tsx` — cada uma com
+- [x] T091 [P] [US5] `Agenda.tsx`, `Clientes.tsx`, `Conversas.tsx`, `Ajustes.tsx` — cada uma com
       explicação própria do escopo, sem texto genérico repetido (FR-006)
-- [ ] T092 [P] [US5] `Inicio.tsx` e `Servicos.tsx` — esqueleto mínimo; o conteúdo real é feature futura
-- [ ] T093 [US5] `src/app/routes.tsx` — seis rotas sob `<ProtectedRoute><AppShell/></ProtectedRoute>`,
+- [x] T092 [P] [US5] `Inicio.tsx` e `Servicos.tsx` — esqueleto mínimo; o conteúdo real é feature futura
+- [x] T093 [US5] `src/app/routes.tsx` — seis rotas sob `<ProtectedRoute><AppShell/></ProtectedRoute>`,
       preservando `/login`, `/callback` e o `AppRouteError`
-- [ ] T094 [US5] Teste: cada destino sem backend renderiza sua explicação específica
+- [x] T094 [US5] Teste: cada destino sem backend renderiza sua explicação específica
 
 **Checkpoint 4**: seis rotas alcançáveis, cada uma com título e anúncio corretos; CI verde.
 
