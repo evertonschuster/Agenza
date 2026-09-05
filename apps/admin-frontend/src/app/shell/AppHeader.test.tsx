@@ -1,8 +1,26 @@
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { act, render, screen, fireEvent } from '@testing-library/react';
 import { AuthContext, type AuthContextValue } from '@/features/auth';
 import { INITIAL_SESSION } from '@/shared/session/session';
+import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
 import { AppHeader } from './AppHeader';
+
+function markKeyboardDevice(): void {
+  act(() => {
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
+  });
+}
+
+// AppHeader reads this shortcut's hint but doesn't register it — in the app it's registered by
+// the sibling <CommandPalette>, absent here since AppHeader renders alone in this file.
+function registerSearchShortcut(): void {
+  shortcutRegistry.register({
+    id: 'command-palette-slash',
+    key: '/',
+    description: 'Abrir a paleta de comandos',
+    handler: () => {},
+  });
+}
 
 function renderHeader(logout = vi.fn()) {
   const value: AuthContextValue = {
@@ -21,6 +39,10 @@ function renderHeader(logout = vi.fn()) {
 }
 
 describe('AppHeader', () => {
+  afterEach(() => {
+    shortcutRegistry.reset();
+  });
+
   it('shows the initials of the signed-in user on the account menu trigger', () => {
     renderHeader();
 
@@ -35,5 +57,28 @@ describe('AppHeader', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sair' }));
 
     expect(logout).toHaveBeenCalledTimes(1);
+  });
+
+  it('advertises the search shortcut once a keyboard is detected', () => {
+    registerSearchShortcut();
+    renderHeader();
+    markKeyboardDevice();
+
+    expect(screen.getByRole('button', { name: 'Buscar' })).toHaveAttribute(
+      'aria-keyshortcuts',
+      '/',
+    );
+  });
+
+  it('stops advertising the search shortcut once shortcuts are disabled (WCAG 2.1.4)', () => {
+    registerSearchShortcut();
+    renderHeader();
+    markKeyboardDevice();
+
+    act(() => {
+      shortcutRegistry.setEnabled(false);
+    });
+
+    expect(screen.getByRole('button', { name: 'Buscar' })).not.toHaveAttribute('aria-keyshortcuts');
   });
 });

@@ -212,9 +212,10 @@ export interface ShortcutHint {
 export function useShortcutHint(id: string): ShortcutHint {
   const shortcut = useRegisteredShortcut(id);
   const hintsVisible = useShortcutHintsVisible();
+  const visible = hintsVisible && !!shortcut;
   return {
-    key: shortcut?.key,
+    key: visible ? shortcut?.key : undefined,
     displayKey: shortcut ? formatShortcutKey(shortcut) : undefined,
-    visible: hintsVisible && !!shortcut,
+    visible,
   };
 }

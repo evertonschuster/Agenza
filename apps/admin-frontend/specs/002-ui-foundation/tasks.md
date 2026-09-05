@@ -234,6 +234,108 @@ documentação sincronizada com o código.
 
 ---
 
+---
+
+## Fase 7 — Correções da revisão (2026-09-04)
+
+Achados **verificados individualmente** na revisão da implementação. Cada um foi confirmado lendo o
+código; nenhum vem de suposição. Os gates atuais passam apesar deles — nada aqui é detectável pelos
+portões existentes, que é exatamente por que passou.
+
+### 7a — Bloqueador e segurança (fazer primeiro, entregar sozinho)
+
+- [x] T140 [US2] **Header estoura horizontalmente abaixo de 640 px.** `Button` traz `shrink-0` na
+      base do cva (`src/shared/ui/button.tsx:6`) e `src/app/shell/AppHeader.tsx:31` aplica `w-full`
+      nele. Item flex que não encolhe com largura 100% empurra os irmãos para fora e o menu de conta
+      sai da tela. Reprova FR-007 e SC-002. Corrigir no consumidor (`min-w-0` + `flex-1`), não
+      removendo o `shrink-0` do primitivo, que outros usos dependem dele. _Corrigido em
+      `AppHeader.tsx`: `w-full max-w-sm ... sm:w-64` → `min-w-0 flex-1 ... sm:max-w-64` (o `max-w`
+      no lugar do `w` porque `flex-1` fixa `flex-basis:0`, que passa a ignorar `width` no eixo
+      principal — um `width` ali ficaria morto). Verificado num browser real, sem overflow: 375 px,
+      620 px (a faixa exatamente abaixo dos 640 px do achado) e 1280 px, onde a caixa de busca
+      volta a ocupar os mesmos ~256 px de antes. Não dá para testar isso em jsdom — não há layout
+      real — por isso a verificação foi só no browser, sem teste automatizado novo._
+- [x] T141 [US4] **`aria-keyshortcuts` sobrevive ao desligar dos atalhos (WCAG 2.1.4).**
+      `useShortcutHint` (`src/shared/keyboard/shortcuts.ts:211`) devolve `key` incondicionalmente e
+      `AppHeader.tsx:34` o repassa. Com a preferência desligada o keycap some, mas o leitor de tela
+      continua anunciando um atalho que não dispara mais. `key` deve seguir a mesma condição de
+      `visible`. _Corrigido: `key` só é devolvido quando `visible` é verdadeiro. Verificado num
+      browser real (o atributo desaparece do DOM ao desmarcar a preferência) e com dois testes novos
+      em `AppHeader.test.tsx`._
+- [x] T142 [US3] **A folha de ajuda é silenciosa para leitor de tela.** `src/shared/ui/kbd.tsx:13`
+      aplica `aria-hidden="true"` incondicionalmente — correto dentro de um botão, onde o keycap
+      poluiria o nome acessível, e errado em `ShortcutHelpSheet.tsx:31,36`, onde a tecla **é** o
+      conteúdo. O componente serve dois papéis e precisa de dois comportamentos (uma prop, ou dois
+      componentes). _Corrigido com a primeira opção: `aria-hidden="true"` virou um default
+      sobrescrevível (movido para antes do `{...props}` em vez de depois), e os dois usos em
+      `ShortcutHelpSheet.tsx` passam `aria-hidden={false}`. Verificado num browser real (as quatro
+      teclas da folha ficam com `aria-hidden="false"`, os usos dentro de botão continuam
+      `"true"`) e com um teste novo em `ShortcutHelpSheet.test.tsx`._
+
+### 7b — Marcado como feito, não entregue
+
+Cada item abaixo está com `[x]` na fase original. **Entregar, ou desmarcar e registrar por quê** —
+o que não pode continuar é a marcação mentir.
+
+- [ ] T143 [US3] **T015 — o anel de foco de dois tons não alcança os controles.** Está definido em
+      `@layer base` (`globals.css:174`), mas `button.tsx`, `input.tsx`, `textarea.tsx` e
+      `input-group.tsx` trazem `outline-none` como *utility*, e no Tailwind v4 utility vence base.
+      Os controles ficam só com `ring-ring/50` translúcido. Verificar o contraste do indicador
+      resultante contra SC 2.4.13 nos dois temas
+- [ ] T144 [US2] **T018 — densidade dupla é CSS morto.** `--control-h-sm/md/lg` é declarado
+      (`globals.css:96`) e sobrescrito em `(pointer: coarse)` (`:209`), mas **nenhum componente lê
+      `var(--control-h-*)`**. Os únicos 44 px reais são `min-h-11` escrito à mão no `BottomNav`. Ou
+      os primitivos passam a consumir os tokens, ou remova os tokens e a promessa
+- [ ] T145 [US4] **T105 — a paleta não tem trilho de atalho.** `CommandPalette.tsx` sequer importa
+      `Kbd`. Nenhum item mostra tecla — e a paleta era, pela pesquisa, a superfície de maior retorno
+      para descoberta de atalhos
+- [ ] T146 [US4] **T108 — tooltip abre com 0 ms**, não os 250 ms da decisão D4
+      (`src/shared/ui/tooltip.tsx:6`). Os 250 ms existiam justamente porque hover lento foi a queixa
+      original do produto
+- [ ] T147 [US4] **T103 — `data-kbd` é marcado por qualquer keydown**, inclusive de teclado virtual
+      (`shortcuts.ts:109` chama `markKeyboardDevice()` incondicionalmente). Digitar num campo no
+      Android libera os keycaps num aparelho só de toque, contra a regra D4 de que no toque a dica é
+      **ausente**
+- [ ] T148 [FND] **T017 — a classe `.tag` não tem nenhum consumidor** (`globals.css:189`). A técnica
+      de `color-mix` sobre o hex do backend está correta e não é exercida por nada
+
+### 7c — Violações de regra (baratas)
+
+- [ ] T149 [US5] **FR-015 — texto em inglês na interface pt-BR.** `"Close"` em `dialog.tsx:65`,
+      `dialog.tsx:98`, `sheet.tsx:66`, e `aria-label="Close toast"` em `toast.tsx:124`. Texto
+      `sr-only` é conteúdo de usuário
+- [ ] T150 [FND] **Dois blocos JSDoc em `shortcuts.ts:187` e `:211`**, contra a regra de "sem
+      comentário de o-quê, sem JSDoc". Um deles ancora em `T109`, um id de tarefa que perde sentido
+      quando a feature fechar
+- [ ] T151 [FND] **Diretivas `'use client'` em 5 primitivos** (`avatar`, `combobox`, `dialog`,
+      `toast`, `tooltip`) — artefato de Next.js, morto no Vite
+
+### 7d — Cobertura de aceite
+
+- [ ] T152 [US3] **`dialog.tsx` não tem nenhum consumidor**, e o SC-001 exige percorrer
+      "login → painel → diálogo → logout" só com teclado. Ou uma tela usa o diálogo, ou o SC-001
+      precisa ser reescrito
+- [ ] T153 [US3] **T123 — `e2e/a11y.spec.ts` cobre 2 das 6 rotas** e nenhuma sobreposição, contra o
+      "todas as rotas, nos dois temas" do SC-004. A tarefa está corretamente **desmarcada**; isto é
+      o que falta para marcá-la
+- [ ] T154 [FND] **Triagem dos achados não verificados.** A revisão levantou ~13 alegações que
+      **não** foram confirmadas lendo o código: lógica inline em `Servicos.tsx`; scroll ao topo na
+      troca de rota; `overscroll-behavior` inerte; contraste AA de 2 das 8 cores de tag no tema
+      claro; `ThemeToggle` sinalizando seleção só por ícone; elevação escura inerte; `bg-black` cru
+      nos backdrops; alias `cn` não usado; `research.md` citado no `spec.md` e nunca commitado.
+      Confirmar ou descartar cada uma **antes** de agir
+
+### 7e — Consistência do tema (decisão, não defeito)
+
+- [ ] T155 [US1] O par de hex do `theme-color` está em 6 lugares (`themeStore.ts:27`,
+      `index.html:10,41`, `theme-init.js:26`, `Login.cshtml:9`, mais o teste) e `#f5f6f8` não bate
+      com o `--background` do painel, que é `oklch(0.99 0.006 288)`. **É uma escolha, não um erro**:
+      casar com o `--page` do identity-service mantém a barra do navegador constante na travessia do
+      redirect; casar com o `--background` faz a cor pular a cada ida ao login. Decidir qual coerência
+      vale mais e registrar
+
+---
+
 ## Dependências entre fases
 
 ```

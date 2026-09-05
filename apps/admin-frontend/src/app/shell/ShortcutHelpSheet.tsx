@@ -28,12 +28,12 @@ export function ShortcutHelpSheet() {
             {shortcuts.map((shortcut) => (
               <li key={shortcut.id} className="flex items-center justify-between gap-4 text-sm">
                 <span className="text-muted-foreground">{shortcut.description}</span>
-                <Kbd>{formatShortcutKey(shortcut)}</Kbd>
+                <Kbd aria-hidden={false}>{formatShortcutKey(shortcut)}</Kbd>
               </li>
             ))}
             <li className="flex items-center justify-between gap-4 text-sm">
               <span className="text-muted-foreground">Fechar diálogo, folha ou paleta</span>
-              <Kbd>Esc</Kbd>
+              <Kbd aria-hidden={false}>Esc</Kbd>
             </li>
           </ul>
 

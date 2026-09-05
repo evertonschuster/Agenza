@@ -25,4 +25,16 @@ describe('ShortcutHelpSheet', () => {
 
     await expectNoA11yViolations(baseElement);
   });
+
+  it('exposes each keycap to the accessibility tree instead of hiding it', () => {
+    const { baseElement } = render(<ShortcutHelpSheet />);
+
+    fireEvent.keyDown(document, { key: '?' });
+
+    const keycaps = baseElement.querySelectorAll('[data-slot="kbd"]');
+    expect(keycaps.length).toBeGreaterThan(0);
+    keycaps.forEach((keycap) => {
+      expect(keycap).not.toHaveAttribute('aria-hidden', 'true');
+    });
+  });
 });

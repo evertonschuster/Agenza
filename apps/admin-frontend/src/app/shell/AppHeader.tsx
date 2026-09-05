@@ -32,7 +32,7 @@ export function AppHeader() {
       <Button
         variant="outline"
         aria-keyshortcuts={searchHint.key}
-        className="w-full max-w-sm justify-start text-muted-foreground sm:w-64"
+        className="min-w-0 flex-1 justify-start text-muted-foreground sm:max-w-64"
         onClick={() => shortcutRegistry.getShortcut('command-palette-slash')?.handler()}
       >
         <Search aria-hidden="true" />
