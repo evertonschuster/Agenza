@@ -122,26 +122,27 @@ a partir do lockfile regerado.
 
 **Depende de**: Fase 2. **Bloqueia**: Fases 4, 5.
 
-- [ ] T070 [US2] `src/app/shell/navigation.ts` — os seis destinos como dado: rótulo pt-BR, ícone,
+- [x] T070 [US2] `src/app/shell/navigation.ts` — os seis destinos como dado: rótulo pt-BR, ícone,
       rota, sinalizador `comingSoon`
-- [ ] T071 [US2] `src/app/shell/AppShell.tsx` — grade responsiva; ≥1024 px barra lateral,
+- [x] T071 [US2] `src/app/shell/AppShell.tsx` — grade responsiva; ≥1024 px barra lateral,
       768–1023 px trilho de ícones, <768 px barra inferior
-- [ ] T072 [US2] `src/app/shell/SidebarNav.tsx` — `aria-current="page"` no item ativo,
+- [x] T072 [US2] `src/app/shell/SidebarNav.tsx` — `aria-current="page"` no item ativo,
       `<nav aria-label>` distinto
-- [ ] T073 [US2] `src/app/shell/BottomNav.tsx` — cinco alvos, `env(safe-area-inset-bottom)` no padding
-- [ ] T074 [US2] `src/app/shell/AppHeader.tsx` — busca, ações, menu de conta
-- [ ] T075 [US1] `src/app/shell/ThemeToggle.tsx` — os três estados, não um alternador binário
-- [ ] T076 [US3] `src/app/shell/SkipLink.tsx` — primeiro elemento focável do documento
-- [ ] T077 [US3] `src/app/shell/RouteAnnouncer.tsx` — região `aria-live="polite"` anunciando o título
+- [x] T073 [US2] `src/app/shell/BottomNav.tsx` — cinco alvos, `env(safe-area-inset-bottom)` no padding
+- [x] T074 [US2] `src/app/shell/AppHeader.tsx` — busca, ações, menu de conta
+- [x] T075 [US1] `src/app/shell/ThemeToggle.tsx` — os três estados, não um alternador binário
+- [x] T076 [US3] `src/app/shell/SkipLink.tsx` — primeiro elemento focável do documento
+- [x] T077 [US3] `src/app/shell/RouteAnnouncer.tsx` — região `aria-live="polite"` anunciando o título
       da rota; SPA não dispara isso sozinho
-- [ ] T078 [US3] Foco movido para `<main tabIndex={-1}>` na troca de rota, com scroll ao topo
-- [ ] T079 [US2] Mobile: `100dvh`, `overscroll-behavior: contain` nas listas, `font-size` mínimo de
+- [x] T078 [US3] Foco movido para `<main tabIndex={-1}>` na troca de rota, com scroll ao topo
+- [x] T079 [US2] Mobile: `100dvh`, `overscroll-behavior: contain` nas listas, `font-size` mínimo de
       16 px em campos para evitar o zoom automático do iOS
-- [ ] T080 [FND] **Deletar** `src/app/AppLayout.tsx` e `src/app/AppLayout.test.tsx`
-- [ ] T081 [FND] **Deletar** `src/app/HomePage.tsx` e `src/app/HomePage.test.tsx`
-- [ ] T082 [US2] Testes: item ativo da navegação, alternância de layout por largura, anunciador de rota
-- [ ] T083 [FND] Atualizar `vitest.config.ts` — trocar as exclusões de `AppLayout`/`HomePage` pelas
-      novas equivalentes
+- [x] T080 [FND] **Deletar** `src/app/AppLayout.tsx` e `src/app/AppLayout.test.tsx`
+- [x] T081 [FND] **Deletar** `src/app/HomePage.tsx` e `src/app/HomePage.test.tsx`
+- [x] T082 [US2] Testes: item ativo da navegação, alternância de layout por largura, anunciador de rota
+- [x] T083 [FND] Atualizar `vitest.config.ts` — trocar as exclusões de `AppLayout`/`HomePage` pelas
+      novas equivalentes (nenhuma existia; cobertura de `app/shell` ficou em 98.75%/85.45%/100%/100%
+      sem precisar excluir nada novo)
 
 **Checkpoint 3**: navegar por todos os destinos apenas com teclado; verificar a 375 px, 800 px e
 1440 px; CI verde.

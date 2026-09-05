@@ -1,6 +1,12 @@
 import '@testing-library/jest-dom/vitest';
 import { vi } from 'vitest';
 
+declare global {
+  // Declared by @base-ui/react/global.d.ts too, but that subpath isn't resolvable through a
+  // triple-slash reference — restated here for the one place that sets it.
+  var BASE_UI_ANIMATIONS_DISABLED: boolean;
+}
+
 // Keep FR-015's logAuthEvent calls (sessionStore) out of the test console without dropping them.
 vi.mock('@/shared/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
@@ -42,6 +48,29 @@ if (typeof window.matchMedia !== 'function') {
     dispatchEvent: vi.fn(),
   });
 }
+
+// jsdom has no ResizeObserver; Base UI's Popup/Positioner (Dialog, Menu, Tooltip...) needs one to
+// compute anchor position and silently never opens without it.
+if (typeof window.ResizeObserver === 'undefined') {
+  window.ResizeObserver = class {
+    observe(): void {}
+    unobserve(): void {}
+    disconnect(): void {}
+  };
+}
+
+// jsdom has no pointer-capture implementation; Base UI's press handling calls these unconditionally.
+if (typeof window.Element.prototype.hasPointerCapture === 'undefined') {
+  window.Element.prototype.hasPointerCapture = () => false;
+  window.Element.prototype.setPointerCapture = () => {};
+  window.Element.prototype.releasePointerCapture = () => {};
+}
+
+// Base UI's useAnimationsFinished explicitly falls back to closing/opening instantly when
+// getAnimations is absent (as it genuinely is in jsdom) — do NOT polyfill getAnimations here, or
+// Base UI takes the Promise.all(animation.finished) path instead, which never settles without a
+// real CSS engine and leaves overlays stuck mid-transition.
+globalThis.BASE_UI_ANIMATIONS_DISABLED = true;
 
 // Stub Aspire-injected env vars so tests don't trip shared/env.ts's fail-fast check.
 vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:5080');
