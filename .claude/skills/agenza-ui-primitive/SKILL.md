@@ -45,8 +45,12 @@ component is the most common wrong answer here.
 ## 2. Add it with the CLI, from `apps/admin-frontend/`
 
 ```
-npx shadcn@latest add <name>
+npx shadcn@4.21.0 add <name>
 ```
+
+Pinned, not `@latest` — an `npx` run on an unpinned package fetches whatever the registry serves at
+that moment, which is a supply-chain risk for a command every contributor and agent runs. Bump the
+pin deliberately (check the changelog first), don't drop back to `@latest`.
 
 `components.json` remaps components to `@/shared/ui` and hooks to `@/shared/hooks`. Do not hand-copy
 files from the docs — you lose that rewrite and end up with `@/components/ui` imports that fail the
@@ -65,11 +69,13 @@ compiles).
 Two more things to verify right after: the CLI did **not** add `radix-ui` back to `package.json`, and
 any icon it pulled comes from `lucide-react`. If you added or bumped a dependency, regenerate
 `package-lock.json` in a Linux container:
-`docker run --rm -v "$PWD:/w" -w /w node:22 sh -c "npm install -g npm@12.0.2 && npm install --package-lock-only --ignore-scripts --allow-remote=all"`
+`docker run --rm -v "$PWD:/w" -w /w node:22.23.2@sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d sh -c "npm install -g npm@12.0.2 && npm install --package-lock-only --ignore-scripts --allow-remote=all"`
 from the monorepo root — regenerated on Windows, `npm ci` breaks CI on `@tailwindcss/oxide` native
 bindings. The `--allow-remote=all` and the `npm@12.0.2` pin are both load-bearing: npm 12 defaults to
 blocking the cross-platform optional-dependency fetches this step exists to capture, and the `node:22`
-image's stock npm 10 crashes outright on this workspace's dependency graph.
+image's stock npm 10 crashes outright on this workspace's dependency graph. The `sha256` pin is
+deliberate (a bare `node:22` is mutable) and needs an occasional manual refresh — full rationale in
+[`AGENTS.md`](../../../apps/admin-frontend/AGENTS.md).
 
 ## 3. The typing pass — expect it on every component
 

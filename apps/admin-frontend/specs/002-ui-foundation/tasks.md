@@ -104,8 +104,10 @@ fluxo Spec Kit por não ser produto.
 - [x] T041 [US1] Teste afirmando que o tema resolvido corrente chega ao `signinRedirect`
 - [x] T042 [US1] `backend/services/identity-service/IdentityService.Api/wwwroot/css/login.css`:
       aplicar o violeta em `--primary` e `--focus` e no gradiente do painel de marca
-- [x] T043 [US1] Verificar que `AuthorizationController` aceita e aplica o parâmetro `theme`
-      conforme a ADR 0020; se não aceitar, implementar
+- [x] T043 [US1] Verificar que `LoginModel.ResolveTheme` (`Pages/Account/Login.cshtml.cs`) aceita e
+      aplica o parâmetro `theme` conforme a ADR 0020; se não aceitar, implementar.
+      `AuthorizationController` só preserva o parâmetro dentro do `returnUrl` — quem valida e aplica
+      é `LoginModel`
 
 **Checkpoint 1**: `npm run build && npm run test:coverage` verdes. Alternar os três temas manualmente,
 mudar o tema do SO em modo automático, recarregar sem lampejo, e conferir o login no mesmo tema.
@@ -193,8 +195,10 @@ a partir do lockfile regerado.
 
 - [x] T100 [US4] `src/shared/keyboard/platform.ts` — glifo `⌘` ou `Ctrl`; na dúvida, `Ctrl`
 - [x] T101 [US4] `src/shared/keyboard/shortcuts.ts` — registro pequeno; comparação por `event.key`,
-      **nunca** `event.code` (ABNT2); supressão automática em `input`, `textarea`, `contenteditable`,
-      `[role="textbox"]` e com diálogo aberto
+      **nunca** `event.code` (ABNT2). A supressão automática (`input`, `textarea`, `contenteditable`,
+      `[role="textbox"]`, diálogo aberto) vale só para os atalhos de caractere único **não
+      modificados** registrados aqui — `Esc` nunca passa por este registro; quem fecha diálogo, folha
+      e paleta é o próprio Base UI, nativamente, e continua funcionando com qualquer um deles aberto
 - [x] T102 [US4] `src/shared/keyboard/useShortcut.ts` — assinatura e limpeza
 - [x] T103 [US4] Marcação de teclado: `data-kbd` no `<html>` ao primeiro keydown real, para resgatar
       tablet com teclado acoplado (reportado como `pointer: coarse`). **Nunca** `navigator.maxTouchPoints`.
@@ -370,11 +374,16 @@ o que não pode continuar é a marcação mentir.
       "todas as rotas, nos dois temas" do SC-004. A tarefa está corretamente **desmarcada**; isto é
       o que falta para marcá-la
 - [ ] T154 [FND] **Triagem dos achados não verificados.** A revisão levantou ~13 alegações que
-      **não** foram confirmadas lendo o código: lógica inline em `Servicos.tsx`; scroll ao topo na
-      troca de rota; `overscroll-behavior` inerte; contraste AA de 2 das 8 cores de tag no tema
-      claro; `ThemeToggle` sinalizando seleção só por ícone; elevação escura inerte; `bg-black` cru
-      nos backdrops; alias `cn` não usado; `research.md` citado no `spec.md` e nunca commitado.
-      Confirmar ou descartar cada uma **antes** de agir
+      **não** foram confirmadas lendo o código. Estado por item, para não ficar por conta de quem
+      lê adivinhar contra o quê cada uma já foi resolvida:
+      - Refutadas por uma segunda revisão (ver a introdução da Fase 8): lógica inline em
+        `Servicos.tsx`, `overscroll-behavior` inerte, alias `cn` não usado
+      - Confirmadas e corrigidas: contraste AA de 2 das 8 cores de tag no tema claro (T156),
+        `ThemeToggle` sinalizando seleção só por ícone (T158), scroll ao topo na troca de rota
+        (T157)
+      - Confirmada, não é bug: elevação escura inerte — sem consumidor, sutil por design (T156)
+      - **Ainda sem confirmar**: `bg-black` cru nos backdrops; `research.md` citado no `spec.md` e
+        nunca commitado
 
 ### 7e — Consistência do tema (decisão, não defeito)
 
@@ -399,7 +408,7 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
 
 - [x] T156 [US3] **Subir o stack e olhar.** Ninguem nunca executou esta fundacao — ela foi construida
       e revisada so estaticamente. `dotnet run --project backend/AppHost --launch-profile http`,
-      login com `owner@demo.local`. Isso fecha a T124 e resolve de uma vez as tres alegacoes que nao
+      login com `owner@demo.local`. Isso avanca a T124 (nao fecha — ver T124) e resolve de uma vez as tres alegacoes que nao
       consegui verificar sem navegador: contraste AA de 2 das 8 cores de tag no tema claro, se a
       elevacao no escuro e mesmo inerte, e se o trilho de icones (768–1023 px) distingue destino
       indisponivel. Confira tambem o risco visual que o plano nomeou: o keycap sobre o violeta a 100%
@@ -497,24 +506,46 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
       dialogo → logout" so com teclado. O `sheet.tsx` **e** usado (BottomNav e folha de ajuda) e
       renderiza `role="dialog"`, entao o SC-001 ja e satisfazivel na pratica. Decidir: reescrever o
       SC-001 apontando para a folha, e manter `dialog.tsx` para a primeira tela de formulario ou
-      remove-lo. Idem `separator`, `skeleton`, `card`, `visually-hidden`, hoje sem consumidor
-- [ ] T161 [US1] **A ADR 0040 diz que o `themeStore` espelha o `sessionStore`, e ele nao espelha.**
+      remove-lo. Idem `separator`, `skeleton`, `card`, `visually-hidden`, `textarea` (e o
+      `InputGroupTextarea` que o consome), hoje sem consumidor (ver T166)
+- [x] T161 [US1] **A ADR 0040 diz que o `themeStore` espelha o `sessionStore`, e ele nao espelha.**
       `themeStore.ts:31` chama `window.matchMedia` num inicializador de campo e o construtor faz
       `applyToDocument`, entao importar o modulo ja muta o `document`; o `sessionStore` nao toca
       window nem document. Recomendacao: **corrigir a ADR**, nao o codigo — funciona, e mover isso so
-      por pureza seria abstracao sem problema correspondente. Registrar a divergencia e o porque
+      por pureza seria abstracao sem problema correspondente. Registrar a divergencia e o porque.
+      _Corrigido o texto da ADR 0040: o espelhamento é de forma (snapshot/subscribe/reducer), não de
+      ausência de efeito colateral — `themeStore` muta `document` de propósito, para aplicar o tema
+      antes do primeiro paint._
 
 ### 8d — Nits (um commit so, quando der)
 
-- [ ] T162 `spec.md:32` cita um `research.md` que nunca foi commitado — remover a referencia
-- [ ] T163 `themeStore.reset()` nao chama `applyToDocument`, entao `data-theme` fica sujo entre
-      testes do mesmo arquivo
-- [ ] T164 O branch `requestedTheme` do script inline (`index.html:16`) e inalcancavel no React —
-      manter e legitimo (a T034 pediu porte fiel do `theme-init.js`), mas merece uma nota
-- [ ] T165 `bg-black/10` e `/20` em `dialog.tsx:29`, `sheet.tsx:29`, `combobox.tsx:124` sao classes de
-      paleta crua. Vieram do padrao do shadcn; decidir se a regra vale para scrim
-- [ ] T166 `textarea.tsx` e `input-group.tsx` entraram em `shared/ui/` sem constar de nenhuma tarefa —
-      manter e registrar, ou remover
+- [x] T162 `spec.md:32` cita um `research.md` que nunca foi commitado — remover a referencia.
+      _Removida — o arquivo nunca existiu neste repo e não há como reconstruir o conteúdo original._
+- [x] T163 `themeStore.reset()` nao chama `applyToDocument`, entao `data-theme` fica sujo entre
+      testes do mesmo arquivo. _Confirmado e corrigido: `reset()` agora chama `applyToDocument`
+      depois de recompor o snapshot, igual ao que `recompute()` já fazia no caminho normal._
+- [x] T164 O branch `requestedTheme` do script inline (`index.html:16`) e inalcancavel no React —
+      manter e legitimo (a T034 pediu porte fiel do `theme-init.js`), mas merece uma nota.
+      _Confirmado: nada define `data-theme` em `<html>` antes deste script rodar, entao
+      `requestedTheme` e sempre `undefined` hoje. Comentario adicionado explicando o porque do
+      branch continuar morto na pratica e por que fica mesmo assim (porte fiel do
+      `theme-init.js`, sem custo de manutencao real)._
+- [x] T165 `bg-black/10` e `/20` em `dialog.tsx:29`, `sheet.tsx:29`, `combobox.tsx:124` sao classes de
+      paleta crua. Vieram do padrao do shadcn; decidir se a regra vale para scrim. _Decisão: a regra
+      não vale aqui. Um scrim de overlay precisa ser um preto **estável nos dois temas** — é
+      exatamente o oposto de "portável entre temas" que a regra de tokens semânticos persegue. Trocar
+      por `bg-foreground/10` pareceria certo no tema claro (onde `--foreground` já é quase-preto) e
+      quebraria no escuro, onde `--foreground` é quase-branco: o scrim clarearia o fundo em vez de
+      escurecê-lo, invertendo o efeito. `bg-black/*` fica — é o padrão do próprio shadcn/ui e o
+      comportamento correto, não um raw color escapando por descuido._
+- [x] T166 `textarea.tsx` e `input-group.tsx` entraram em `shared/ui/` sem constar de nenhuma tarefa —
+      manter e registrar, ou remover. _Verificado por consumidor real: `input-group.tsx` (menos
+      `InputGroupTextarea`) sustenta o campo de busca da paleta de comandos via `combobox.tsx`
+      (`InputGroup`/`InputGroupInput`/`InputGroupAddon`/`InputGroupButton`) — registrado
+      retroativamente, fica. `textarea.tsx` e o `InputGroupTextarea` que o usa **não** têm nenhum
+      consumidor hoje — mesma categoria que `dialog`/`separator`/`skeleton`/`card`/`visually-hidden`
+      já levantada em T160; dobrado ali em vez de decidir sozinho aqui uma segunda vez a mesma
+      pergunta (manter scaffold do shadcn sem uso vs. remover)._
 
 ### 8e — Ja aberta desde a Fase 6
 

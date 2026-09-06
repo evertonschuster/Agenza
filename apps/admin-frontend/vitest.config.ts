@@ -29,7 +29,31 @@ export default defineConfig({
         'src/app/App.tsx',
         'src/app/routes.tsx',
         'src/shared/api/generated/**',
-        'src/shared/ui/**',
+        // Presentational cva wrappers with no logic of their own — see D5 in plan.md.
+        'src/shared/ui/avatar.tsx',
+        'src/shared/ui/badge.tsx',
+        'src/shared/ui/button.tsx',
+        'src/shared/ui/card.tsx',
+        'src/shared/ui/input.tsx',
+        'src/shared/ui/kbd.tsx',
+        'src/shared/ui/label.tsx',
+        'src/shared/ui/separator.tsx',
+        'src/shared/ui/skeleton.tsx',
+        'src/shared/ui/textarea.tsx',
+        'src/shared/ui/visually-hidden.tsx',
+        'src/shared/ui/FullScreenMessage.tsx',
+        // No consumer anywhere yet (T160 in tasks.md) — 0% here is dead-code noise, not a gap.
+        'src/shared/ui/dialog.tsx',
+        // Real behaviour, but most of each file is shadcn scaffold with no product consumer yet
+        // (submenus, checkbox items, chips, groups — see D5 in plan.md). The consumed subset is
+        // exercised for real by ThemeToggle/CommandPalette/ShortcutHelpSheet tests; file-level
+        // coverage can't separate that from the unused rest, so this gate is enforced by review,
+        // not by the aggregate number. tooltip.tsx is deliberately not here: SidebarNav.test.tsx
+        // and AppShell.test.tsx already exercise all of it for real.
+        'src/shared/ui/dropdown-menu.tsx',
+        'src/shared/ui/combobox.tsx',
+        'src/shared/ui/sheet.tsx',
+        'src/shared/ui/toast.tsx',
         'src/vite-env.d.ts',
         'src/vitest-setup.ts',
         'src/test/**',

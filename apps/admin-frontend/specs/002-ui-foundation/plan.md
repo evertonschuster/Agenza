@@ -48,13 +48,13 @@ identity-service, e `features → shared` é a única direção permitida.
 Chave de armazenamento `admin-theme` e atributo `data-theme`, **idênticos** aos que
 `identity-service/wwwroot/js/theme-init.js` já usa — é o que torna o handoff possível.
 
-### D3 — Sem biblioteca de animação
+### D3 — Sem biblioteca de animação (`docs/ARCHITECTURE.md` §5)
 
 CSS `transition` + `@starting-style` + os atributos `data-*` de estado do Base UI. `motion` custa
 ~31 KB gzip no build React, e a persona usa Android intermediário. Reavaliar apenas se uma animação
 de layout específica exigir.
 
-### D4 — Regra de evidência de atalhos
+### D4 — Regra de evidência de atalhos (`docs/ARCHITECTURE.md` §5)
 
 > Um keycap em repouso só pode aparecer num controle que ocorre **no máximo uma vez por tela**.
 
@@ -64,23 +64,45 @@ O benefício da descoberta é uma vez por usuário; o custo do ruído é por ins
 | --- | --- | --- |
 | A | Controle de busca do cabeçalho; ação primária única da tela; confirmar de diálogo | keycap em repouso, no slot final, nunca dentro do rótulo |
 | B | Botões de ícone e ações secundárias com atalho | tooltip em hover **e** foco, 250 ms |
-| C | Todo o resto que tem atalho | apenas paleta, trilho do menu e folha `?` |
+| C | O resto que tem atalho | apenas paleta, trilho do menu e folha `?` |
 | D | Sem atalho | nada |
 
 Sem prop `shortcut` no `Button` genérico: o chip vive em três componentes e é **derivado do registro
 de atalhos**, nunca digitado à mão. Isso torna estruturalmente impossível anunciar um atalho inexistente.
 
-### D5 — Cobertura mede lógica, não marcação
+### D5 — Cobertura mede lógica, não marcação (`docs/ARCHITECTURE.md` §5, ADR 0039)
 
-`src/shared/ui/**` entra em `coverage.exclude`. Primitivos apresentativos com `cva` não têm lógica a
-testar e derrubariam o percentual, empurrando o time a escrever testes cerimoniais. Em contrapartida,
+Primitivos apresentativos com `cva` e sem comportamento próprio (`avatar`, `badge`, `button`, `card`,
+`input`, `kbd`, `label`, `separator`, `skeleton`, `textarea`, `visually-hidden`, `FullScreenMessage`)
+entram em `coverage.exclude` — não têm lógica a testar e derrubariam o percentual, empurrando o time a
+escrever testes cerimoniais. `dialog.tsx` entra pelo mesmo mecanismo, mas por um motivo diferente e
+temporário: não tem consumidor (T160 em `tasks.md`), então cobrança de cobertura ali seria ruído de
+código morto, não lacuna real — sai da lista quando o T160 resolver.
+
+`dropdown-menu`, `combobox`, `sheet` e `toast` também entram — não pela falta de comportamento (têm
+bastante), mas porque cada arquivo é um scaffold do shadcn com vários subcomponentes e só um subconjunto
+tem consumidor hoje: `dropdown-menu.tsx` carrega submenu e checkbox-item que nada usa; `combobox.tsx`
+carrega chips e groups que nada usa; idem partes de `sheet.tsx`/`toast.tsx`. O subconjunto realmente
+consumido **é** exercitado de verdade por quem o usa (`ThemeToggle.test.tsx`, `CommandPalette.test.tsx`,
+`ShortcutHelpSheet.test.tsx`), mas cobertura por arquivo não separa "export usado, ramo sem teste" de
+"export sem nenhum uso" — forçar o percentual aqui só compraria teste cerimonial para o scaffold morto.
+O gate para esses cinco arquivos é o review, não o agregado: uma linha de comportamento nova num export
+já consumido precisa de teste na revisão, mesmo sem contar para o número.
+
+`tooltip.tsx` **não** entra no exclude — `SidebarNav.test.tsx` e `AppShell.test.tsx` já exercitam o
+arquivo inteiro de verdade, então excluí-lo esconderia cobertura real em vez de contar uma lacuna.
+`input-group.tsx` também não entra: `InputGroupAddon` tem teste próprio
+(`input-group.test.tsx`, cobrindo o bug de composição do `onClick` corrigido nesta rodada);
+`InputGroupText`/`InputGroupTextarea` seguem sem consumidor, mesma categoria do parágrafo acima, mas o
+arquivo é pequeno o bastante para não derrubar o agregado sozinho.
+
 `shared/theme/**`, `shared/keyboard/**` e a lógica de navegação e anúncio de rota são testados de
-verdade.
+verdade — não há scaffold não-usado nesses módulos, então a cobertura de arquivo inteiro é honesta ali.
 
 **Esta alteração é feita antes de qualquer primitivo ser adicionado**, ou o CI fica vermelho e parece
 regressão.
 
-### D6 — Telas "Em breve" moram em `app/`, não em `features/`
+### D6 — Telas "Em breve" moram em `app/`, não em `features/` (`docs/ARCHITECTURE.md` §6)
 
 Não têm `model` nem `api`, portanto não atendem à definição de fatia do `ARCHITECTURE.md` §1 — o mesmo
 critério pelo qual `HomePage` mora em `app/` hoje. Cada uma é substituída por uma fatia real quando o

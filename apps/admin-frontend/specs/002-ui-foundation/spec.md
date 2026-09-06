@@ -28,8 +28,7 @@ A interface atual pode ser inteiramente descartada, mantendo apenas o esqueleto 
   "Em breve" honesta.
 - Q: Qual a profundidade do sistema de atalhos, dado que a persona é dona de salão e não usuária
   avançada? → A: **Essenciais + paleta de comandos.** `Ctrl/⌘+K`, `/`, `?`, `Esc`, `n`.
-- Q: Aprovar o visual antes de escrever código? → A: **Sim**, protótipo clicável primeiro.
-  Concluído; ver `research.md`.
+- Q: Aprovar o visual antes de escrever código? → A: **Sim**, protótipo clicável primeiro. Concluído.
 - Q: Após revisar o protótipo, alguma correção? → A: **Uma.** A dica de atalho precisa ser mais
   evidente nas ações que possuem atalho. O chip `Ctrl K` dentro do campo de busca funcionou; o botão
   "Novo serviço" não tinha equivalente e o atalho foi difícil de descobrir.
@@ -66,8 +65,7 @@ ativo; recarregar; ir para `/login` e conferir que a página de credenciais abre
 ### User Story 2 — O painel é utilizável no celular, entre um atendimento e outro (Priority: P1)
 
 A dona do negócio abre o painel no celular. A navegação fica ao alcance do polegar, os alvos de toque
-são confortáveis, nada escapa horizontalmente, o teclado do sistema não encobre o campo em foco, e a
-lista de serviços vira cartões legíveis em vez de uma tabela espremida.
+são confortáveis, nada escapa horizontalmente, e o teclado do sistema não encobre o campo em foco.
 
 **Why this priority**: A persona é majoritariamente móvel. Um shell que só funciona no desktop falha
 para a maior parte dos usos reais, e refazer o shell depois é a refatoração mais cara desta feature.
@@ -84,8 +82,11 @@ encoberto.
    aplica zoom e o campo permanece visível.
 3. **Given** uma largura ≥ 1024 px, **When** a pessoa abre qualquer rota, **Then** a navegação aparece
    como barra lateral persistente.
-4. **Given** a lista de serviços, **When** a largura é menor que 768 px, **Then** cada serviço é
-   apresentado como cartão, com nome, código, categoria, duração, preço e etiquetas legíveis.
+
+> Uma quarta cena testava a lista de Serviços virando cartões abaixo de 768 px — removida daqui:
+> CRUD de Serviços está fora do escopo desta fundação (nenhuma tela nova consome API), e `Servicos.tsx`
+> é propositalmente um esqueleto sem dado nenhum para paginar. Pertence à spec da feature de Serviços,
+> quando ela existir.
 
 ---
 

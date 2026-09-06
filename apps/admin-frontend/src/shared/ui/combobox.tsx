@@ -131,7 +131,7 @@ function ComboboxPaletteContent({ className, children, ...props }: ComboboxPrimi
           <ComboboxPrimitive.Popup
             data-slot="combobox-palette-content"
             className={cn(
-              'flex max-h-[min(28rem,70vh)] w-[min(34rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/10 transition data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0',
+              'group/combobox-palette-content flex max-h-[min(28rem,70vh)] w-[min(34rem,calc(100vw-2rem))] flex-col overflow-hidden rounded-xl bg-popover text-popover-foreground shadow-lg ring-1 ring-foreground/10 transition data-ending-style:scale-95 data-ending-style:opacity-0 data-starting-style:scale-95 data-starting-style:opacity-0',
               className,
             )}
             {...props}
@@ -204,7 +204,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
     <ComboboxPrimitive.Empty
       data-slot="combobox-empty"
       className={cn(
-        'hidden w-full justify-center py-2 text-center text-sm text-muted-foreground group-data-empty/combobox-content:flex',
+        'hidden w-full justify-center py-2 text-center text-sm text-muted-foreground group-data-empty/combobox-content:flex group-data-empty/combobox-palette-content:flex',
         className,
       )}
       {...props}

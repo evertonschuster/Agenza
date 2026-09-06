@@ -204,14 +204,23 @@ export function useShortcutHintsVisible(): boolean {
   return enabled && (canHoverFine || hasKeyboardDevice);
 }
 
+function ariaKeyToken(key: string): string {
+  return key.length === 1 && /[a-z]/i.test(key) ? key.toUpperCase() : key;
+}
+
 export function formatShortcutKey(shortcut: Pick<Shortcut, 'key' | 'modified'>): string {
-  const upperKey =
-    shortcut.key.length === 1 && /[a-z]/i.test(shortcut.key)
-      ? shortcut.key.toUpperCase()
-      : shortcut.key;
+  const upperKey = ariaKeyToken(shortcut.key);
   if (!shortcut.modified) return upperKey;
   const glyph = modifierGlyph();
   return glyph === '⌘' ? `${glyph}${upperKey}` : `${glyph}+${upperKey}`;
+}
+
+// aria-keyshortcuts wants literal modifier tokens (e.g. "Control+K Meta+K"), not the platform
+// glyph formatShortcutKey renders for sighted users — a screen reader would otherwise announce
+// a modified shortcut as if it had no modifier at all.
+export function formatAriaKeyshortcuts(shortcut: Pick<Shortcut, 'key' | 'modified'>): string {
+  const key = ariaKeyToken(shortcut.key);
+  return shortcut.modified ? `Control+${key} Meta+${key}` : key;
 }
 
 export interface ShortcutHint {
@@ -225,7 +234,7 @@ export function useShortcutHint(id: string): ShortcutHint {
   const hintsVisible = useShortcutHintsVisible();
   const visible = hintsVisible && !!shortcut;
   return {
-    key: visible ? shortcut?.key : undefined,
+    key: visible && shortcut ? formatAriaKeyshortcuts(shortcut) : undefined,
     displayKey: shortcut ? formatShortcutKey(shortcut) : undefined,
     visible,
   };

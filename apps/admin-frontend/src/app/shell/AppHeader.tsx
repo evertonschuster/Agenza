@@ -29,6 +29,7 @@ export function AppHeader() {
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
+      <span className="shrink-0 text-sm font-semibold">Agenza Admin</span>
       <Button
         variant="outline"
         aria-keyshortcuts={searchHint.key}

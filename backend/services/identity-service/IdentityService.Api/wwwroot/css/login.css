@@ -247,7 +247,7 @@ a {
 }
 
 .theme-toggle:focus-visible {
-    outline: 3px solid rgb(105 86 189 / 28%);
+    outline: 3px solid var(--focus);
     outline-offset: 2px;
 }
 
@@ -509,7 +509,7 @@ html[data-theme="dark"] .theme-toggle__sun {
 }
 
 .submit-button:focus-visible {
-    outline: 3px solid rgb(105 86 189 / 32%);
+    outline: 3px solid var(--focus);
     outline-offset: 3px;
 }
 

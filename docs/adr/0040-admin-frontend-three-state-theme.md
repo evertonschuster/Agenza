@@ -35,19 +35,29 @@ beside it. A theme store is the same shape with a smaller state.
 `'light' | 'dark' | 'system'`; the resolved theme is derived. Storing the resolved value would
 make "automatic" unrepresentable and silently freeze the user's first OS state.
 
-**Hand-rolled, in `shared/theme/`**, mirroring `shared/session/`: a pure `resolveTheme` function,
-a store that subscribes to `matchMedia('(prefers-color-scheme: dark)')`, and a `useTheme` hook over
-`useSyncExternalStore`. No dependency.
+**Hand-rolled, in `shared/theme/`**, mirroring `shared/session/`'s *shape* — a pure `resolveTheme`
+function, a snapshot/subscribe store, and a `useTheme` hook over `useSyncExternalStore`. No
+dependency. The mirroring stops at the shape: unlike `sessionStore`, `themeStore` calls
+`window.matchMedia` in a field initializer and `applyToDocument` in its constructor, so importing
+the module mutates `document` immediately — deliberately, since the whole point is applying the
+theme before React's first paint. Moving that side effect out for purity would be abstraction
+without a matching problem.
 
 It lives in `shared/` rather than in a feature because `features/auth` must read the resolved
 theme to send it to the identity-service, and `features → shared` is the only direction the
 ESLint layer rules permit.
 
 **The storage key is `admin-theme` and the attribute is `data-theme`** — byte-identical to what
-`identity-service/wwwroot/js/theme-init.js` already uses. This is what makes the handoff work at
-all, and it is why the Tailwind dark variant is defined as
-`@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *))` rather than the
-class-based default.
+`identity-service/wwwroot/js/theme-init.js` already uses. `localStorage` is scoped per origin, so
+matching names do **not** by themselves move a theme choice from one application to the other — a
+key set on `admin-frontend`'s origin is invisible to `identity-service`'s. What this byte-identical
+naming buys is a **consistent bootstrap convention**: each origin can independently resolve its own
+pre-paint theme (stored choice → attribute → OS) using the same algorithm and, when a user has
+visited that origin directly before, its own locally-stored choice. It is also why the Tailwind dark
+variant is defined as `@custom-variant dark (&:where([data-theme=dark], [data-theme=dark] *))`
+rather than the class-based default. **The actual cross-origin handoff is the query parameter**,
+below — `extraQueryParams: { theme }` on `signinRedirect()`, read by `LoginModel.ResolveTheme`
+before first paint.
 
 **A blocking inline script in `index.html`** applies the resolved theme before first paint. It is
 a direct port of `theme-init.js`, with the same precedence: stored choice → attribute → OS.

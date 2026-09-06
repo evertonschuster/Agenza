@@ -13,6 +13,8 @@
       (() => {
         const storageKey = 'admin-theme';
         const root = document.documentElement;
+        // Ported from theme-init.js for parity. Nothing sets data-theme on <html> before this
+        // runs, so this branch is dead in practice; kept in case something upstream someday does.
         const requestedTheme = root.dataset.theme;
         let storedChoice = null;
 

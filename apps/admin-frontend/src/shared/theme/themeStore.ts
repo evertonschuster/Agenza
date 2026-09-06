@@ -85,6 +85,7 @@ class ThemeStore {
       choice: this.choice,
       resolved: resolveTheme(this.choice, this.media.matches),
     };
+    applyToDocument(this.snapshot.resolved);
     this.listeners.clear();
   }
 }

@@ -43,6 +43,12 @@ describe('AppHeader', () => {
     shortcutRegistry.reset();
   });
 
+  it('shows the app name, so the panel is identifiable regardless of viewport kind', () => {
+    renderHeader();
+
+    expect(screen.getByText('Agenza Admin')).toBeInTheDocument();
+  });
+
   it('shows the initials of the signed-in user on the account menu trigger', () => {
     renderHeader();
 

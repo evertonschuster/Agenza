@@ -25,7 +25,6 @@ humano e não pode ser delegado a um teste verde.
 - [ ] ≥1024 px: barra lateral persistente
 - [ ] 320 px (o mínimo real): nada quebra nem vaza
 - [ ] Alvos de toque da navegação com ≥44 px na menor dimensão
-- [ ] Lista de serviços vira cartões abaixo de 768 px, com todos os campos legíveis
 - [ ] Safe area respeitada num aparelho com notch — padding real, não `0px` presumido
 
 ## Acessibilidade (US3 · SC-001 · SC-004)

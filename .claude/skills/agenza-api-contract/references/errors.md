@@ -84,6 +84,7 @@ export function toFormErrors(problem: ApiProblem, fields: readonly string[]) {
 
   for (const [key, entries] of Object.entries(problem.errors ?? {})) {
     const messages = entries.flatMap((entry) => (entry.message ? [entry.message] : []));
+    if (messages.length === 0) continue;
     const field = byField.get(key.toLowerCase());
     if (field) (perField[field] ??= []).push(...messages);
     else formLevel.push(...messages);

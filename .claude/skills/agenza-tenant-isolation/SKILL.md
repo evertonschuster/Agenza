@@ -45,7 +45,8 @@ Cheap, and it catches most of what matters. Each hit is a question to answer, no
 
 ## 3. Order of checks
 
-Cheapest disqualifier first; stop at the first real finding rather than writing a full report.
+Cheapest disqualifier first, but evaluate all five — a bad source doesn't excuse skipping the
+fail-closed or defense-in-depth checks, and each is an independent way for isolation to break.
 
 1. **Where does the value come from?** Trace it to a claim read at the boundary, or reject it. One
    hop is enough — if the trail ends at a parameter, keep walking up until it ends at a claim.
