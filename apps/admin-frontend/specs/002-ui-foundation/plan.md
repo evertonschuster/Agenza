@@ -173,7 +173,7 @@ Cada fase termina com CI verde. Ordem é dependência real, não preferência.
 
 | Risco | Mitigação |
 | --- | --- |
-| `npm ci` quebra no CI após adicionar dependências | Regerar o lockfile em container Linux (`npm install --package-lock-only --ignore-scripts`) num passo próprio ao fim da Fase 2 |
+| `npm ci` quebra no CI após adicionar dependências | Regerar o lockfile em container Linux — comando completo (imagem pinada por digest, `npm@12.0.2`, `--allow-remote=all`) na seção "Portões de CI" de [`AGENTS.md`](../../AGENTS.md), não repetido aqui para não virar uma terceira cópia para desalinhar |
 | `exactOptionalPropertyTypes` atrita com componentes gerados pelo shadcn | Passe de tipagem por componente; esperado, não eventual |
 | Gate de cobertura fica vermelho ao adicionar primitivos | D5 é feito **antes** de qualquer primitivo |
 | Chip de atalho sobre o violeta lê como botão dentro de botão | Revisar a 100% de zoom em Windows 1366×768 real; se a borda não sobreviver, enviar sem chip — nível B mais a linha na paleta ainda supera o estado atual |

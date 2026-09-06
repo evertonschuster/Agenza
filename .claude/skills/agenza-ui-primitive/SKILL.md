@@ -131,9 +131,10 @@ Tiers, tooltip rules under WCAG 1.4.13, `event.key` vs `event.code`, focus:
 
 ## 6. Tests and coverage
 
-`src/shared/ui/**` is excluded from coverage in `vitest.config.ts`. **Coverage measures logic, not
-cva markup** — presentational primitives have nothing to assert, and counting them pushes the team
-toward ceremonial tests.
+**Coverage measures logic, not cva markup** — but the exclude list in `vitest.config.ts` is by
+file name, not a blanket `src/shared/ui/**`, and which files are on it changes over time. Don't
+assume a new primitive is exempt from coverage; read the exclude list itself, or D5 in
+`specs/002-ui-foundation/plan.md` for the current reasoning, before skipping its tests.
 
 The exclusion is not permission to skip testing behaviour. It is the boundary that tells you where
 behaviour belongs: **anything with logic goes in `shared/` proper** (`shared/theme/`,
