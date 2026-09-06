@@ -117,7 +117,10 @@ those services, not something the frontend configures independently.
 The following are intentionally **not** constrained by this constitution and
 are decided per-feature in `/speckit-plan`, not here:
 
-- UI component library
+- UI component library — **resolved** by
+  [ADR 0039](../../../docs/adr/0039-admin-frontend-base-ui-primitives.md): Base UI
+  (`@base-ui/react`), via the shadcn CLI, as owned source in `shared/ui/`. Recorded here as the
+  paragraph below prescribes, not as a constitutional amendment.
 - State/data-fetching approach (whether a server-state library is used, and
   which)
 - Dependency injection pattern
