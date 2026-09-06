@@ -35,4 +35,18 @@ describe('SidebarNav', () => {
     expect(screen.getByRole('link', { name: /Início/ })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: /Agenda \(em breve\)/ })).toBeInTheDocument();
   });
+
+  it('marks a coming-soon destination with a dot on its icon in compact mode, matching BottomNav', () => {
+    render(
+      <MemoryRouter>
+        <SidebarNav compact />
+      </MemoryRouter>,
+    );
+
+    const agenda = screen.getByRole('link', { name: /Agenda \(em breve\)/ });
+    const inicio = screen.getByRole('link', { name: 'Início' });
+
+    expect(agenda.querySelector('.rounded-full')).toBeInTheDocument();
+    expect(inicio.querySelector('.rounded-full')).not.toBeInTheDocument();
+  });
 });

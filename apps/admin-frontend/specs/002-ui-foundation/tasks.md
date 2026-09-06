@@ -259,7 +259,12 @@ tem atalho; desligar a preferência silencia `/`, `?` e `n`; CI verde.
 - [ ] T124 [US3] **Verificação manual** (a automação cobre ~30–40%): teclado do login ao logout;
       leitor de tela em pt-BR; 375 px real; contraste dos tokens nos dois temas em hardware Windows
       1366×768. _Não automatizável por definição — depende de quem tem o hardware e o leitor de
-      tela; nenhuma das quatro verificações foi feita ainda._
+      tela; nenhuma das quatro verificações foi feita ainda._ **T156 avançou duas das quatro, mas
+      não fecha esta tarefa**: login→logout foi exercitado de ponta a ponta contra o Aspire real e
+      375 px/1366×768 foram emulados com precisão (não hardware físico), mas nem "teclado" nem
+      "leitor de tela" aqui significam automação disparando eventos — significam uma pessoa com as
+      mãos num teclado de verdade e um leitor de tela de verdade. Isso continua sem ser feito, e só
+      uma pessoa consegue fechar
 - [x] T130 ADR 0039 — Base UI como camada de primitivos; encerra "UI component library" dos Deferred
       Decisions da constitution. _Já existia; conferida a precisão contra o código enviado._
 - [x] T131 ADR 0040 — tema de três estados e o contrato de handoff com o identity-service. _Já
@@ -379,6 +384,119 @@ o que não pode continuar é a marcação mentir.
       casar com o `--page` do identity-service mantém a barra do navegador constante na travessia do
       redirect; casar com o `--background` faz a cor pular a cada ida ao login. Decidir qual coerência
       vale mais e registrar
+
+---
+
+---
+
+## Fase 8 — Pendências da segunda revisão
+
+Verificadas individualmente lendo o codigo. As alegacoes refutadas na segunda revisao **nao** estao
+aqui de proposito: `Servicos.tsx` respeita a regra de casca, `overscroll-behavior` nao e inerte, e o
+alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhuma das tres.
+
+### 8a — Rodar a aplicacao (faca isto antes das outras)
+
+- [x] T156 [US3] **Subir o stack e olhar.** Ninguem nunca executou esta fundacao — ela foi construida
+      e revisada so estaticamente. `dotnet run --project backend/AppHost --launch-profile http`,
+      login com `owner@demo.local`. Isso fecha a T124 e resolve de uma vez as tres alegacoes que nao
+      consegui verificar sem navegador: contraste AA de 2 das 8 cores de tag no tema claro, se a
+      elevacao no escuro e mesmo inerte, e se o trilho de icones (768–1023 px) distingue destino
+      indisponivel. Confira tambem o risco visual que o plano nomeou: o keycap sobre o violeta a 100%
+      de zoom em 1366×768 real. O MCP `chrome-devtools` esta configurado — use `lighthouse_audit` e
+      `performance_start_trace` com CPU estrangulada para medir como a persona veria.
+
+      _O stack já estava de pé (Aspire do usuário, não iniciado por mim) — login real feito contra
+      ele, sessão real testada. As três alegações, resolvidas com números, não estimativa:_
+
+      1. _**Contraste de tag confirmado**: usando a paleta real de 8 cores
+         (`ServicesService.Domain/ValueObjects/TagColor.cs`), calculei OKLCH→sRGB→luminância
+         relativa para cada uma. `amber` (4.18:1) e `green` (4.35:1) realmente falhavam AA (4.5:1)
+         no tema claro; as outras 6 já passavam. Corrigido em `globals.css`: o mix do texto
+         (`color-mix(in oklab, var(--tag) 65%, var(--card-foreground))`) caiu para 60% — reduzir o
+         peso da própria cor da tag é o que escurece o texto (contra-intuitivo: subir a porcentagem
+         clareia, porque `amber`/`green` são intrinsecamente claras). Recalculado: as 8 passam AA
+         nos dois temas, pior caso `amber` 4.70:1. Confirmado visualmente injetando as 8 no
+         Aspire real, os dois temas._
+      2. _**Elevação escura**: `.elevate-1`/`.elevate-2` seguem sem nenhum consumidor (igual a
+         `.tag`/T017) — realmente inerte no app de hoje, por falta de uso, não por bug. Os valores
+         de `box-shadow` batem exatamente com o declarado (confirmado via `getComputedStyle`
+         injetando os dois no Aspire real); a força de 6–8% de branco é deliberadamente sutil
+         (T016 chama de "realce" secundário, não o mecanismo principal — esse é o degrau de
+         luminosidade entre `--background`/`--card`/`--popover`, que É visível e testado na prática
+         via Combobox/Dialog/Sheet/DropdownMenu). Nenhum código mudou; T016 permanece marcada._
+      3. _**Trilho de ícones**: confirmado o gap — `BottomNav.tsx` já tinha um ponto
+         (`bg-muted-foreground`, `size-1.5`, `rounded-full`) sobre o ícone de destino "Em breve";
+         `SidebarNav.tsx` no modo compacto não tinha nada equivalente, só o rótulo `sr-only` e o
+         tooltip (ambos invisíveis sem hover/foco). Corrigido: o mesmo ponto, no mesmo lugar, agora
+         em `SidebarNav.tsx`. Teste novo confirma; verificado visualmente no rail (768–1023 px) do
+         Aspire real._
+
+      _**Risco do keycap sobre o violeta**: avaliado a 1366×768 real (Aspire), tema claro e escuro,
+      no botão "Novo serviço". `bg-muted`/`text-muted-foreground` do `Kbd` ficam bem mais claros que
+      o `--primary` violeta (L 0.965 vs 0.525) — o chip se destaca com força. Isso é exatamente o
+      efeito de "keycap", não ilegibilidade, mas é uma leitura estética (o plano previu "lê como
+      botão dentro de botão"), não um número que dá para computar. Ficou como está — na minha
+      leitura não ficou confuso — mas é o tipo de chamada que vale o dono do produto olhar o
+      screenshot antes de aceitar; não decidi isso sozinho._
+
+      _**Lighthouse** (mobile, `owner@demo.local` autenticado): Acessibilidade 100, Boas Práticas
+      100. As 3 reprovações são todas SEO/Agentic Browsing (`meta-description`, `robots.txt`,
+      `llms.txt`) — corretamente inaplicáveis a um painel interno atrás de login; não "corrigidas"._
+
+      _**Performance (trace com CPU 4× + Fast 4G, emulando Android intermediário)**: LCP 6.05 s,
+      99.9% do tempo é "render delay" (TTFB 8 ms). **Isto foi medido contra o dev server do Vite**
+      (módulos não empacotados, sem minificação) **e não contra o build de produção** — não é o
+      número que um usuário real veria implantado, mas expõe o mesmo sintoma que o aviso do build
+      já aponta desde a Fase 2 ("chunk maior que 500 kB, considere code-splitting"). Não tentei medir
+      contra o build de produção nem fazer code-splitting agora — são escopos maiores que esta
+      tarefa, e a decisão de investir neles é do time, não minha para tomar sozinho aqui._
+
+### 8b — Correcoes confirmadas
+
+- [ ] T157 [US2] **Scroll ao topo mira o contêiner errado.** `useRouteFocus.ts:15` chama
+      `window.scrollTo(0, 0)`, mas `AppShell.tsx:28` poe `overflow-y-auto` no `<main>` — quem rola e
+      o `main`, nao a janela. Navegar de uma posicao rolada mantem o usuario rolado. Rolar o proprio
+      elemento referenciado
+- [ ] T158 [US3] **`ThemeToggle` nao expoe qual tema esta selecionado.** `ThemeToggle.tsx:31` usa
+      `DropdownMenuItem` e marca a selecao com um `Check` `aria-hidden` — leitor de tela ouve tres
+      itens identicos. Usar `menuitemradio` com `aria-checked`, ou equivalente
+- [ ] T159 [US3] **O helper de a11y descarta `incomplete` em silencio.** `src/test/a11y.ts` pega so
+      `violations`. No jsdom o contraste cai em `incomplete`, entao a asserção nunca o checa — e o
+      `acceptance.md` contava essa auditoria como cobertura de contraste. Ou desabilitar
+      explicitamente as regras que o jsdom nao decide (deixando claro que nao sao checadas), ou
+      falhar/reportar quando houver `incomplete` relevante. A skill `agenza-a11y-review` ja descreve
+      essa armadilha em `references/automation.md`
+
+### 8c — Decisoes (nao sao defeito)
+
+- [ ] T160 [FND] **`dialog.tsx` nao tem consumidor**, e o SC-001 exige percorrer "login → painel →
+      dialogo → logout" so com teclado. O `sheet.tsx` **e** usado (BottomNav e folha de ajuda) e
+      renderiza `role="dialog"`, entao o SC-001 ja e satisfazivel na pratica. Decidir: reescrever o
+      SC-001 apontando para a folha, e manter `dialog.tsx` para a primeira tela de formulario ou
+      remove-lo. Idem `separator`, `skeleton`, `card`, `visually-hidden`, hoje sem consumidor
+- [ ] T161 [US1] **A ADR 0040 diz que o `themeStore` espelha o `sessionStore`, e ele nao espelha.**
+      `themeStore.ts:31` chama `window.matchMedia` num inicializador de campo e o construtor faz
+      `applyToDocument`, entao importar o modulo ja muta o `document`; o `sessionStore` nao toca
+      window nem document. Recomendacao: **corrigir a ADR**, nao o codigo — funciona, e mover isso so
+      por pureza seria abstracao sem problema correspondente. Registrar a divergencia e o porque
+
+### 8d — Nits (um commit so, quando der)
+
+- [ ] T162 `spec.md:32` cita um `research.md` que nunca foi commitado — remover a referencia
+- [ ] T163 `themeStore.reset()` nao chama `applyToDocument`, entao `data-theme` fica sujo entre
+      testes do mesmo arquivo
+- [ ] T164 O branch `requestedTheme` do script inline (`index.html:16`) e inalcancavel no React —
+      manter e legitimo (a T034 pediu porte fiel do `theme-init.js`), mas merece uma nota
+- [ ] T165 `bg-black/10` e `/20` em `dialog.tsx:29`, `sheet.tsx:29`, `combobox.tsx:124` sao classes de
+      paleta crua. Vieram do padrao do shadcn; decidir se a regra vale para scrim
+- [ ] T166 `textarea.tsx` e `input-group.tsx` entraram em `shared/ui/` sem constar de nenhuma tarefa —
+      manter e registrar, ou remover
+
+### 8e — Ja aberta desde a Fase 6
+
+- [ ] T123 continua valida: o `e2e/a11y.spec.ts` cobre 2 das 6 rotas e nenhuma sobreposicao, contra o
+      "todas as rotas, nos dois temas" do SC-004
 
 ---
 

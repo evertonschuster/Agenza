@@ -22,7 +22,15 @@ export function SidebarNav({ compact }: { compact: boolean }) {
             : destination.label;
           const content = (
             <>
-              <destination.icon className="size-5 shrink-0" aria-hidden="true" />
+              <span className="relative shrink-0">
+                <destination.icon className="size-5" aria-hidden="true" />
+                {destination.comingSoon && (
+                  <span
+                    aria-hidden="true"
+                    className="absolute -top-0.5 -right-0.5 size-1.5 rounded-full bg-muted-foreground"
+                  />
+                )}
+              </span>
               <span className={compact ? 'sr-only' : 'truncate'}>{label}</span>
             </>
           );

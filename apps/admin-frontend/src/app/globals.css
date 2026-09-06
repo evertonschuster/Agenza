@@ -196,7 +196,7 @@
     line-height: 1.25rem;
     background-color: color-mix(in oklab, var(--tag) 12%, var(--card));
     border-color: color-mix(in oklab, var(--tag) 30%, var(--card));
-    color: color-mix(in oklab, var(--tag) 65%, var(--card-foreground));
+    color: color-mix(in oklab, var(--tag) 60%, var(--card-foreground));
   }
 }
 
