@@ -2,16 +2,16 @@ import { describe, expect, it } from 'vitest';
 import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { expectNoA11yViolations } from '@/test/a11y';
-import { Agenda } from './Agenda';
-import { Ajustes } from './Ajustes';
-import { Clientes } from './Clientes';
-import { Conversas } from './Conversas';
+import { Schedule } from './Schedule';
+import { Settings } from './Settings';
+import { Clients } from './Clients';
+import { Conversations } from './Conversations';
 
 const PAGES = [
-  { name: 'Agenda', Component: Agenda },
-  { name: 'Clientes', Component: Clientes },
-  { name: 'Conversas', Component: Conversas },
-  { name: 'Ajustes', Component: Ajustes },
+  { name: 'Agenda', Component: Schedule },
+  { name: 'Clientes', Component: Clients },
+  { name: 'Conversas', Component: Conversations },
+  { name: 'Ajustes', Component: Settings },
 ];
 
 describe('"Em breve" destinations (spec FR-006, US5)', () => {

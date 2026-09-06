@@ -12,7 +12,7 @@ function announceComingSoon(): void {
   });
 }
 
-export function Servicos() {
+export function Services() {
   const hint = useShortcutHint('novo-servico');
 
   useShortcut('novo-servico', 'n', 'Novo serviço', announceComingSoon);

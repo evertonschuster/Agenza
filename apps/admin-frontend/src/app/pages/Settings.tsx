@@ -1,10 +1,10 @@
-import { Settings } from 'lucide-react';
+import { Settings as SettingsIcon } from 'lucide-react';
 import { ComingSoon } from './ComingSoon';
 
-export function Ajustes() {
+export function Settings() {
   return (
     <ComingSoon
-      icon={Settings}
+      icon={SettingsIcon}
       title="Ajustes"
       description="Dados do negócio, equipe e preferências do painel vão morar aqui."
     />

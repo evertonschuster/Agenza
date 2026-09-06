@@ -244,12 +244,12 @@ because it didn't need to be yet. This is the compiled view across the whole app
   ([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)): the app is back
   to a shell with no business feature, aligned with FR-013 again.
 - **`src/app/pages/` holds provisional placeholders, not features** — no `model`, no `api`, no
-  state beyond what a page's own hook needs (Servicos' keyboard shortcut). Same criterion as the
+  state beyond what a page's own hook needs (`Services`' keyboard shortcut). Same criterion as the
   `HomePage` it replaces: none of them meet this doc's definition of a slice (§1). Building the
   full shell and all six destinations before any real feature slice exists was
   `specs/002-ui-foundation/`'s explicit scope (D6) — chrome, theme, routing and "Em breve" stubs
   first. Retirement trigger, per page: **the first real feature slice replaces the stub it
-  corresponds to** (e.g. a `features/services/` slice replaces `app/pages/Servicos.tsx` and moves
+  corresponds to** (e.g. a `features/services/` slice replaces `app/pages/Services.tsx` and moves
   under `ui/pages/<Page>/` per §1), once its backend exists.
 - **The API layer (`servicesApi`, `apiClient`, `unwrap`, `servicesFacade`, the generated types) is
   standing with zero call sites, on purpose.** It is not dead code — see

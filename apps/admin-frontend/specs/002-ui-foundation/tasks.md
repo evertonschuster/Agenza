@@ -178,9 +178,12 @@ a partir do lockfile regerado.
 
 - [x] T090 [US5] `src/app/pages/ComingSoon.tsx` — componente compartilhado, recebendo o texto
       específico de cada destino
-- [x] T091 [P] [US5] `Agenda.tsx`, `Clientes.tsx`, `Conversas.tsx`, `Ajustes.tsx` — cada uma com
-      explicação própria do escopo, sem texto genérico repetido (FR-006)
-- [x] T092 [P] [US5] `Inicio.tsx` e `Servicos.tsx` — esqueleto mínimo; o conteúdo real é feature futura
+- [x] T091 [P] [US5] `Schedule.tsx`, `Clients.tsx`, `Conversations.tsx`, `Settings.tsx` — cada uma com
+      explicação própria do escopo, sem texto genérico repetido (FR-006). _Renomeadas de
+      `Agenda`/`Clientes`/`Conversas`/`Ajustes.tsx` — identificador de código em inglês, o `title`
+      exibido continua pt-BR._
+- [x] T092 [P] [US5] `Home.tsx` e `Services.tsx` — esqueleto mínimo; o conteúdo real é feature futura.
+      _Renomeadas de `Inicio`/`Servicos.tsx`, mesmo motivo._
 - [x] T093 [US5] `src/app/routes.tsx` — seis rotas sob `<ProtectedRoute><AppShell/></ProtectedRoute>`,
       preservando `/login`, `/callback` e o `AppRouteError`
 - [x] T094 [US5] Teste: cada destino sem backend renderiza sua explicação específica
@@ -377,7 +380,7 @@ o que não pode continuar é a marcação mentir.
       **não** foram confirmadas lendo o código. Estado por item, para não ficar por conta de quem
       lê adivinhar contra o quê cada uma já foi resolvida:
       - Refutadas por uma segunda revisão (ver a introdução da Fase 8): lógica inline em
-        `Servicos.tsx`, `overscroll-behavior` inerte, alias `cn` não usado
+        `Services.tsx`, `overscroll-behavior` inerte, alias `cn` não usado
       - Confirmadas e corrigidas: contraste AA de 2 das 8 cores de tag no tema claro (T156),
         `ThemeToggle` sinalizando seleção só por ícone (T158), scroll ao topo na troca de rota
         (T157)
@@ -401,7 +404,7 @@ o que não pode continuar é a marcação mentir.
 ## Fase 8 — Pendências da segunda revisão
 
 Verificadas individualmente lendo o codigo. As alegacoes refutadas na segunda revisao **nao** estao
-aqui de proposito: `Servicos.tsx` respeita a regra de casca, `overscroll-behavior` nao e inerte, e o
+aqui de proposito: `Services.tsx` respeita a regra de casca, `overscroll-behavior` nao e inerte, e o
 alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhuma das tres.
 
 ### 8a — Rodar a aplicacao (faca isto antes das outras)

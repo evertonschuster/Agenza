@@ -1,7 +1,7 @@
 import { CalendarDays } from 'lucide-react';
 import { ComingSoon } from './ComingSoon';
 
-export function Agenda() {
+export function Schedule() {
   return (
     <ComingSoon
       icon={CalendarDays}

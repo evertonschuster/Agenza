@@ -84,7 +84,7 @@ encoberto.
    como barra lateral persistente.
 
 > Uma quarta cena testava a lista de Serviços virando cartões abaixo de 768 px — removida daqui:
-> CRUD de Serviços está fora do escopo desta fundação (nenhuma tela nova consome API), e `Servicos.tsx`
+> CRUD de Serviços está fora do escopo desta fundação (nenhuma tela nova consome API), e `Services.tsx`
 > é propositalmente um esqueleto sem dado nenhum para paginar. Pertence à spec da feature de Serviços,
 > quando ela existir.
 

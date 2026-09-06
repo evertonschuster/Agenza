@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import { Inicio } from './Inicio';
+import { Home } from './Home';
 
-describe('Inicio', () => {
+describe('Home', () => {
   it('renders the title', () => {
-    render(<Inicio />);
+    render(<Home />);
 
     expect(screen.getByRole('heading', { name: 'Início' })).toBeInTheDocument();
   });

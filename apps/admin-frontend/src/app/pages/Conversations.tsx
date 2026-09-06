@@ -1,7 +1,7 @@
 import { MessageCircle } from 'lucide-react';
 import { ComingSoon } from './ComingSoon';
 
-export function Conversas() {
+export function Conversations() {
   return (
     <ComingSoon
       icon={MessageCircle}

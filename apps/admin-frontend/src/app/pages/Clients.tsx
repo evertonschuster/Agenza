@@ -1,7 +1,7 @@
 import { Users } from 'lucide-react';
 import { ComingSoon } from './ComingSoon';
 
-export function Clientes() {
+export function Clients() {
   return (
     <ComingSoon
       icon={Users}

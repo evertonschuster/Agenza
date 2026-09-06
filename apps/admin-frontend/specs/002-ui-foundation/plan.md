@@ -145,7 +145,7 @@ src/
 │   │   └── navigation.ts            destinos como dado
 │   └── pages/                       NOVO — telas sem fatia
 │       ├── ComingSoon.tsx
-│       └── Inicio.tsx  Agenda.tsx  Clientes.tsx  Conversas.tsx  Servicos.tsx  Ajustes.tsx
+│       └── Home.tsx  Schedule.tsx  Clients.tsx  Conversations.tsx  Services.tsx  Settings.tsx
 └── shared/
     ├── theme/                       NOVO — theme.ts  themeStore.ts  useTheme.ts
     ├── keyboard/                    NOVO — shortcuts.ts  useShortcut.ts  platform.ts
