@@ -55,6 +55,16 @@ describe('AppHeader', () => {
     expect(screen.getByText('DO')).toBeInTheDocument();
   });
 
+  it('shows the tenant id in the account menu, proving the shell is scoped to it', () => {
+    renderHeader();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Menu da conta' }));
+
+    expect(screen.getByTestId('tenant-id')).toHaveTextContent(
+      '019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120',
+    );
+  });
+
   it('signs the user out from the account menu', () => {
     const logout = vi.fn();
     renderHeader(logout);

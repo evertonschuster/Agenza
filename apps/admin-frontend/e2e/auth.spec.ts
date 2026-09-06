@@ -45,6 +45,9 @@ test('a real login as the DemoTenant user renders the shell scoped to the matchi
 
   await expect(page.getByText('Agenza Admin')).toBeVisible();
   const tenantId = await getSignedInTenantId(page);
+
+  // Tenant id lives in the account menu, not loose header chrome — open it first.
+  await page.getByRole('button', { name: 'Menu da conta' }).click();
   await expect(page.getByTestId('tenant-id')).toHaveText(tenantId);
 });
 
@@ -59,7 +62,9 @@ test('an active session persists across reload and logout fully ends it (quickst
   await page.reload();
   await expect(page.getByText('Agenza Admin')).toBeVisible();
 
-  await page.getByRole('button', { name: /sair/i }).click();
+  // Sign-out lives in the account menu (a menuitem, not a standalone button) — open it first.
+  await page.getByRole('button', { name: 'Menu da conta' }).click();
+  await page.getByRole('menuitem', { name: /sair/i }).click();
 
   // Logging out and landing back on /login (which always re-triggers signinRedirect) ends
   // up back at identity-service's real credentials form only if BOTH the local and

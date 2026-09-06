@@ -24,7 +24,7 @@ function initialsOf(name: string | null): string {
 }
 
 export function AppHeader() {
-  const { user, logout } = useAuth();
+  const { user, tenant, logout } = useAuth();
   const searchHint = useShortcutHint('command-palette-slash');
 
   return (
@@ -53,9 +53,17 @@ export function AppHeader() {
             </Avatar>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            {user?.displayName && (
+            {(user?.displayName || tenant) && (
               <DropdownMenuGroup>
-                <DropdownMenuLabel>{user.displayName}</DropdownMenuLabel>
+                {user?.displayName && <DropdownMenuLabel>{user.displayName}</DropdownMenuLabel>}
+                {tenant && (
+                  <p
+                    data-testid="tenant-id"
+                    className="truncate px-1.5 pb-1 text-xs text-muted-foreground"
+                  >
+                    {tenant.tenantId}
+                  </p>
+                )}
               </DropdownMenuGroup>
             )}
             <DropdownMenuSeparator />
