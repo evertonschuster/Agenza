@@ -17,17 +17,33 @@ describe('ThemeToggle', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'Alternar tema' }));
 
-    expect(screen.getByRole('menuitem', { name: /Claro/ })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /Escuro/ })).toBeInTheDocument();
-    expect(screen.getByRole('menuitem', { name: /Automático/ })).toBeInTheDocument();
+    expect(screen.getByRole('menuitemradio', { name: /Claro/ })).toBeInTheDocument();
+    expect(screen.getByRole('menuitemradio', { name: /Escuro/ })).toBeInTheDocument();
+    expect(screen.getByRole('menuitemradio', { name: /Automático/ })).toBeInTheDocument();
   });
 
   it('applies the chosen theme through the shared theme store', () => {
     render(<ThemeToggle />);
 
     fireEvent.click(screen.getByRole('button', { name: 'Alternar tema' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: /Escuro/ }));
+    fireEvent.click(screen.getByRole('menuitemradio', { name: /Escuro/ }));
 
     expect(themeStore.getSnapshot()).toEqual({ choice: 'dark', resolved: 'dark' });
+  });
+
+  it('exposes the selected theme via aria-checked, not just a decorative icon', () => {
+    themeStore.setChoice('light');
+    render(<ThemeToggle />);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Alternar tema' }));
+
+    expect(screen.getByRole('menuitemradio', { name: /Claro/ })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(screen.getByRole('menuitemradio', { name: /Escuro/ })).toHaveAttribute(
+      'aria-checked',
+      'false',
+    );
   });
 });

@@ -454,19 +454,42 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
 
 ### 8b — Correcoes confirmadas
 
-- [ ] T157 [US2] **Scroll ao topo mira o contêiner errado.** `useRouteFocus.ts:15` chama
+- [x] T157 [US2] **Scroll ao topo mira o contêiner errado.** `useRouteFocus.ts:15` chama
       `window.scrollTo(0, 0)`, mas `AppShell.tsx:28` poe `overflow-y-auto` no `<main>` — quem rola e
       o `main`, nao a janela. Navegar de uma posicao rolada mantem o usuario rolado. Rolar o proprio
-      elemento referenciado
-- [ ] T158 [US3] **`ThemeToggle` nao expoe qual tema esta selecionado.** `ThemeToggle.tsx:31` usa
+      elemento referenciado. _Corrigido: `window.scrollTo(0, 0)` virou `ref.current.scrollTop = 0`
+      + `scrollLeft = 0` no próprio elemento (não `.scrollTo`, que jsdom não implementa em elementos
+      — só em `window`). Teste reescrito: o harness antigo desmontava/remontava uma div nova por
+      rota, o que tornava a asserção antiga sobre `window.scrollTo` cega para o bug de verdade;
+      agora simula o container real (estável entre rotas, só o `<Outlet/>` troca) já rolado antes de
+      navegar, e confirma que ele — não a janela — volta a `scrollTop`/`scrollLeft` zero. Verificado
+      também no Aspire real: navegar entre destinos foca e não lança erro; a posição de rolagem
+      exata não deu para confirmar visualmente porque o painel do browser fica "hidden" para o host
+      neste ambiente, o que colapsa a altura do `main` para caber no conteúdo em vez de travar numa
+      viewport real — o teste unitário é quem prova o pixel, não o browser aqui._
+- [x] T158 [US3] **`ThemeToggle` nao expoe qual tema esta selecionado.** `ThemeToggle.tsx:31` usa
       `DropdownMenuItem` e marca a selecao com um `Check` `aria-hidden` — leitor de tela ouve tres
-      itens identicos. Usar `menuitemradio` com `aria-checked`, ou equivalente
-- [ ] T159 [US3] **O helper de a11y descarta `incomplete` em silencio.** `src/test/a11y.ts` pega so
+      itens identicos. Usar `menuitemradio` com `aria-checked`, ou equivalente. _Corrigido:
+      `DropdownMenuRadioGroup`/`DropdownMenuRadioItem` (Base UI `Menu.RadioGroup`/`RadioItem`, que já
+      existiam em `dropdown-menu.tsx` sem nenhum consumidor) substituem os três `DropdownMenuItem` +
+      o `Check` manual — `role="menuitemradio"` e `aria-checked` vêm de graça do primitivo. Testes
+      atualizados para a role nova, mais um teste novo afirmando `aria-checked` por item. Verificado
+      no Aspire real: os três itens saem como `menuitemradio`, o `aria-checked` certo muda ao trocar
+      de tema, o menu fecha (`closeOnClick`)._
+- [x] T159 [US3] **O helper de a11y descarta `incomplete` em silencio.** `src/test/a11y.ts` pega so
       `violations`. No jsdom o contraste cai em `incomplete`, entao a asserção nunca o checa — e o
       `acceptance.md` contava essa auditoria como cobertura de contraste. Ou desabilitar
       explicitamente as regras que o jsdom nao decide (deixando claro que nao sao checadas), ou
       falhar/reportar quando houver `incomplete` relevante. A skill `agenza-a11y-review` ja descreve
-      essa armadilha em `references/automation.md`
+      essa armadilha em `references/automation.md`. _Feitas as duas coisas: `color-contrast` e
+      `target-size` desabilitadas explicitamente (nunca decidíveis em jsdom), e uma segunda
+      asserção falha se sobrar qualquer `incomplete` **não** nessa lista — para não deixar uma
+      regra nova cair no mesmo buraco no futuro sem ninguém notar. Essa segunda asserção pegou dois
+      achados reais na hora: `aria-hidden-focus` e `aria-valid-attr-value`, disparados pelos spans de
+      focus-guard e pelo `aria-controls` do Combobox que **todo** overlay do Base UI usa — confirmado
+      que não é um bug (o id referenciado existe de verdade no DOM; axe só não consegue confirmar
+      visibilidade/estado sem layout real) e adicionadas às duas rodadas de exclusão, com o porquê
+      registrado no comentário. `CommandPalette`/`ShortcutHelpSheet` voltaram a passar._
 
 ### 8c — Decisoes (nao sao defeito)
 

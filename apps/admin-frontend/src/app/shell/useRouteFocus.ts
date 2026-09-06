@@ -12,7 +12,10 @@ export function useRouteFocus<T extends HTMLElement>(): React.RefObject<T | null
       return;
     }
     ref.current?.focus();
-    window.scrollTo(0, 0);
+    if (ref.current) {
+      ref.current.scrollTop = 0;
+      ref.current.scrollLeft = 0;
+    }
   }, [pathname]);
 
   return ref;

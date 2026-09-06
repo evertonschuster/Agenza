@@ -1,15 +1,15 @@
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, Link } from 'react-router';
+import { MemoryRouter, Route, Routes, Link, Outlet } from 'react-router';
 import { useRouteFocus } from './useRouteFocus';
 
-function Page({ label }: { label: string }) {
+function Shell() {
   const ref = useRouteFocus<HTMLDivElement>();
   return (
-    <div ref={ref} tabIndex={-1} data-testid={`page-${label}`}>
+    <div ref={ref} tabIndex={-1} data-testid="shell">
       <Link to="/two">to two</Link>
-      {label}
+      <Outlet />
     </div>
   );
 }
@@ -19,30 +19,41 @@ describe('useRouteFocus', () => {
     render(
       <MemoryRouter initialEntries={['/one']}>
         <Routes>
-          <Route path="/one" element={<Page label="one" />} />
+          <Route element={<Shell />}>
+            <Route path="/one" element={<div>one</div>} />
+          </Route>
         </Routes>
       </MemoryRouter>,
     );
 
-    expect(screen.getByTestId('page-one')).not.toHaveFocus();
+    expect(screen.getByTestId('shell')).not.toHaveFocus();
   });
 
-  it('moves focus to the ref and scrolls to top on a route change', async () => {
-    const scrollTo = vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+  it('moves focus to the ref and scrolls the referenced element to top on a route change', async () => {
     const user = userEvent.setup();
 
     render(
       <MemoryRouter initialEntries={['/one']}>
         <Routes>
-          <Route path="/one" element={<Page label="one" />} />
-          <Route path="/two" element={<Page label="two" />} />
+          <Route element={<Shell />}>
+            <Route path="/one" element={<div>one</div>} />
+            <Route path="/two" element={<div>two</div>} />
+          </Route>
         </Routes>
       </MemoryRouter>,
     );
 
+    // main is the actual overflow-y-auto container in AppShell — never the window — and it
+    // persists across route changes (only the routed content under it swaps). Simulate that it
+    // was scrolled before navigating.
+    const shell = screen.getByTestId('shell');
+    Object.defineProperty(shell, 'scrollTop', { value: 200, writable: true });
+    Object.defineProperty(shell, 'scrollLeft', { value: 50, writable: true });
+
     await user.click(screen.getByRole('link', { name: 'to two' }));
 
-    expect(screen.getByTestId('page-two')).toHaveFocus();
-    expect(scrollTo).toHaveBeenCalledWith(0, 0);
+    expect(shell).toHaveFocus();
+    expect(shell.scrollTop).toBe(0);
+    expect(shell.scrollLeft).toBe(0);
   });
 });
