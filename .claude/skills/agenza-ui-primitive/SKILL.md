@@ -52,6 +52,11 @@ Pinned, not `@latest` — an `npx` run on an unpinned package fetches whatever t
 that moment, which is a supply-chain risk for a command every contributor and agent runs. Bump the
 pin deliberately (check the changelog first), don't drop back to `@latest`.
 
+The pin covers the CLI version, not the component JSON it fetches from the registry at generation
+time — the CLI doesn't verify a signature or hash on that response. Review the diff before
+committing generated output, same as any other dependency-sourced code; don't treat the command's
+exit code as proof the files are safe to commit unread.
+
 `components.json` remaps components to `@/shared/ui` and hooks to `@/shared/hooks`. Do not hand-copy
 files from the docs — you lose that rewrite and end up with `@/components/ui` imports that fail the
 path check.
