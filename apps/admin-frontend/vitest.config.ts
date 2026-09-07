@@ -28,6 +28,7 @@ export default defineConfig({
         'src/main.tsx',
         'src/app/App.tsx',
         'src/app/routes.tsx',
+        'src/app/shell/ProtectedAppShell.tsx',
         'src/shared/api/generated/**',
         // Presentational cva wrappers with no logic of their own — see D5 in plan.md.
         'src/shared/ui/avatar.tsx',

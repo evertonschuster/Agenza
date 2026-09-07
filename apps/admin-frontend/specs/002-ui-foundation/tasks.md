@@ -555,6 +555,25 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
 - [ ] T123 continua valida: o `e2e/a11y.spec.ts` cobre 2 das 6 rotas e nenhuma sobreposicao, contra o
       "todas as rotas, nos dois temas" do SC-004
 
+### 8f — Code-splitting das rotas (pedido do usuário)
+
+- [x] T167 [US2] O aviso de build "chunk maior que 500 kB, considere code-splitting" (desde a Fase 2,
+      citado em T156) nunca foi resolvido — todas as rotas eram `import` estático, um bundle só.
+      _Implementado com a propriedade `lazy` nativa do react-router (v8), não `React.lazy`+`Suspense`:
+      as seis páginas de destino e `ProtectedAppShell` (que compõe `ProtectedRoute`+`AppShell`, criado
+      para isso) viram `lazy: () => import(...)`. `LoginPage`/`AuthCallbackPage` ficaram de fora —
+      tentei, mas o próprio aviso `INEFFECTIVE_DYNAMIC_IMPORT` do Rollup expôs que elas compartilham o
+      barril `@/features/auth` com `useAuth`, já importado sem lazy por `AppProviders`/`AppHeader`/
+      `CommandPalette`/`ProtectedAppShell` — não tem como isolar em chunk próprio sem violar a regra do
+      barril, então lazy ali seria só indireção sem ganho. Resultado real, medido no build de produção:
+      chunk de entrada caiu de 646 kB para 348 kB (-46%), `ProtectedAppShell` virou chunk próprio de
+      127 kB só carregado após autenticação, cada página de destino ficou com 0,3–1,2 kB. O aviso de
+      chunk grande sumiu do build. Adicionado `HydrateFallback` na rota raiz (`routes.tsx`) — sem ele
+      o react-router avisa em dev, e numa conexão lenta o usuário veria tela em branco em vez de um
+      placeholder no tema certo enquanto o chunk da primeira rota carrega. Verificado ao vivo no
+      Aspire real: as seis rotas renderizam certo por navegação de cliente de verdade; suite completa
+      (tsc/eslint/prettier/vitest+coverage/build) verde, cobertura idêntica a antes._
+
 ---
 
 ## Dependências entre fases
