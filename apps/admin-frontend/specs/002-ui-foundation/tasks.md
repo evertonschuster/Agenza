@@ -572,7 +572,18 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
       o react-router avisa em dev, e numa conexão lenta o usuário veria tela em branco em vez de um
       placeholder no tema certo enquanto o chunk da primeira rota carrega. Verificado ao vivo no
       Aspire real: as seis rotas renderizam certo por navegação de cliente de verdade; suite completa
-      (tsc/eslint/prettier/vitest+coverage/build) verde, cobertura idêntica a antes._
+      (tsc/eslint/prettier/vitest+coverage/build) verde, cobertura idêntica a antes.
+      **Regressão real pega só pelo CI, não pela verificação local**: a primeira versão do
+      `HydrateFallback` era um `<div>` sem `<main>` nem `<h1>` — na janela (real, ainda que curta)
+      em que ele fica na tela antes do chunk da primeira rota resolver, o `e2e/a11y.spec.ts` contra o
+      Aspire real do CI pegou 3 violações do axe (`landmark-one-main`, `page-has-heading-one`,
+      `region`) nessa página intermediária. Não pegou localmente porque o teste unitário equivalente
+      (`expectNoA11yViolations` rodando `axe.run()` contra um container isolado, não `document`) nem
+      chega a avaliar essas três regras de estrutura de página inteira — só o axe de verdade contra a
+      página real do Playwright as avalia. Corrigido: `HydrateFallback` virou `<main>` com um `<h1>`
+      de verdade (visível, "Carregando…") — as três violações eram exatamente sobre a falta desses
+      dois elementos. Não dava pra escrever um teste unitário que pegasse isso de forma confiável;
+      quem prova é o e2e no CI._
 
 ---
 

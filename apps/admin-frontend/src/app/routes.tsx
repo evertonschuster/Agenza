@@ -11,11 +11,13 @@ function handle(title: string): { handle: RouteHandle } {
 // destinations are sub-kB and this app never server-renders, so on any real connection this
 // never becomes visible. On a throttled one it replaces a blank tab with a themed, non-jarring
 // placeholder (react-router warns without one: "No HydrateFallback element provided").
+// It's a real (if fleeting) page state — axe caught this the first time without a <main>
+// landmark or an <h1>, since nothing else has mounted yet to provide either.
 function RouteHydrateFallback() {
   return (
-    <div className="flex min-h-dvh items-center justify-center bg-background text-sm text-muted-foreground">
-      Carregando…
-    </div>
+    <main className="flex min-h-dvh items-center justify-center bg-background text-sm text-muted-foreground">
+      <h1 className="text-sm font-normal">Carregando…</h1>
+    </main>
   );
 }
 
