@@ -4,12 +4,12 @@ import { BottomNav } from './BottomNav';
 import { CommandPalette } from './CommandPalette';
 import { ShortcutHelpSheet } from './ShortcutHelpSheet';
 import { SidebarNav } from './SidebarNav';
-import { useRouteFocus } from './useRouteFocus';
+import { useRouteScrollReset } from './useRouteScrollReset';
 import { useViewportKind } from './useViewportKind';
 
 export function AppShell() {
   const viewportKind = useViewportKind();
-  const mainRef = useRouteFocus<HTMLElement>();
+  const mainRef = useRouteScrollReset<HTMLElement>();
 
   return (
     <div className="flex h-dvh min-h-0 flex-col md:flex-row">

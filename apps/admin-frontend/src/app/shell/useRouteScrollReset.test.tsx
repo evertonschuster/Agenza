@@ -2,10 +2,10 @@ import { describe, expect, it } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, Link, Outlet } from 'react-router';
-import { useRouteFocus } from './useRouteFocus';
+import { useRouteScrollReset } from './useRouteScrollReset';
 
 function Shell() {
-  const ref = useRouteFocus<HTMLDivElement>();
+  const ref = useRouteScrollReset<HTMLDivElement>();
   return (
     <div ref={ref} data-testid="shell">
       <Link to="/two">to two</Link>
@@ -14,7 +14,7 @@ function Shell() {
   );
 }
 
-describe('useRouteFocus', () => {
+describe('useRouteScrollReset', () => {
   it('scrolls the referenced element to top on a route change', async () => {
     const user = userEvent.setup();
 

@@ -162,12 +162,9 @@ export function useShortcutHintsVisible(): boolean {
   return canHoverFine || hasKeyboardDevice;
 }
 
-function ariaKeyToken(key: string): string {
-  return key.length === 1 && /[a-z]/i.test(key) ? key.toUpperCase() : key;
-}
-
 export function formatShortcutKey(shortcut: Pick<Shortcut, 'key' | 'modified'>): string {
-  const upperKey = ariaKeyToken(shortcut.key);
+  const { key } = shortcut;
+  const upperKey = key.length === 1 && /[a-z]/i.test(key) ? key.toUpperCase() : key;
   if (!shortcut.modified) return upperKey;
   const glyph = modifierGlyph();
   return glyph === '⌘' ? `${glyph}${upperKey}` : `${glyph}+${upperKey}`;
