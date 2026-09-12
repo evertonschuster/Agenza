@@ -286,7 +286,7 @@ portões existentes, que é exatamente por que passou.
 Cada item abaixo está com `[x]` na fase original. **Entregar, ou desmarcar e registrar por quê** —
 o que não pode continuar é a marcação mentir.
 
-- [x] T143 [US3] **T015 — o anel de foco de dois tons não alcança os controles.** Está definido em
+- [x] T143 [FND] **T015 — o anel de foco de dois tons não alcança os controles.** Está definido em
       `@layer base` (`globals.css:174`), mas `button.tsx`, `input.tsx`, `textarea.tsx` e
       `input-group.tsx` trazem `outline-none` como *utility*, e no Tailwind v4 utility vence base.
       Os controles ficam só com `ring-ring/50` translúcido. Verificar o contraste do indicador
