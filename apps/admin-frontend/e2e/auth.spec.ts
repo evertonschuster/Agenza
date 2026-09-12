@@ -1,20 +1,9 @@
 import { test, expect } from '@playwright/test';
+import { loginAsDemoUser, LOGIN_URL_RE } from './helpers';
 
-const DEMO_EMAIL = 'owner@demo.local';
-const DEMO_PASSWORD = 'Passw0rd!';
-const LOGIN_URL_RE = /localhost:5081\/Account\/Login/;
 // Matches authClient.ts's UserManager config (env-contract.md) — oidc-client-ts's
 // WebStorageStateStore key format.
 const OIDC_STORAGE_KEY = 'oidc.user:http://localhost:5081:admin-panel';
-
-async function loginAsDemoUser(page: import('@playwright/test').Page) {
-  await page.goto('/');
-  await page.waitForURL(LOGIN_URL_RE);
-  await page.locator('#Email').fill(DEMO_EMAIL);
-  await page.locator('#Password').fill(DEMO_PASSWORD);
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL('http://localhost:5173/');
-}
 
 interface StoredOidcUser {
   access_token: string;
@@ -56,6 +45,9 @@ test('a real login as the DemoTenant user renders the shell scoped to the matchi
 
   await expect(page.getByText('Agenza Admin')).toBeVisible();
   const tenantId = await getSignedInTenantId(page);
+
+  // Tenant id lives in the account menu, not loose header chrome — open it first.
+  await page.getByRole('button', { name: 'Menu da conta' }).click();
   await expect(page.getByTestId('tenant-id')).toHaveText(tenantId);
 });
 
@@ -70,7 +62,9 @@ test('an active session persists across reload and logout fully ends it (quickst
   await page.reload();
   await expect(page.getByText('Agenza Admin')).toBeVisible();
 
-  await page.getByRole('button', { name: /sair/i }).click();
+  // Sign-out lives in the account menu (a menuitem, not a standalone button) — open it first.
+  await page.getByRole('button', { name: 'Menu da conta' }).click();
+  await page.getByRole('menuitem', { name: /sair/i }).click();
 
   // Logging out and landing back on /login (which always re-triggers signinRedirect) ends
   // up back at identity-service's real credentials form only if BOTH the local and
