@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatAriaKeyshortcuts, formatShortcutKey, shortcutRegistry } from './shortcuts';
+import { formatShortcutKey, shortcutRegistry } from './shortcuts';
 
 vi.mock('./platform', () => ({
   modifierGlyph: () => 'Ctrl' as const,
@@ -17,9 +17,6 @@ function dispatchKeydown(
 
 describe('shortcutRegistry', () => {
   afterEach(() => {
-    // Clear before reset — reset() re-reads the enabled flag from storage, so a leftover
-    // 'false' from the disabled-preference test would otherwise leak into the next test.
-    localStorage.clear();
     shortcutRegistry.reset();
     document.body.innerHTML = '';
   });
@@ -42,31 +39,6 @@ describe('shortcutRegistry', () => {
     dispatchKeydown(input, 'n');
 
     expect(handler).not.toHaveBeenCalled();
-  });
-
-  it('suppresses an unmodified shortcut once the preference is disabled, but still fires modified shortcuts', () => {
-    const plainHandler = vi.fn();
-    const modifiedHandler = vi.fn();
-    shortcutRegistry.register({
-      id: 'plain',
-      key: 'n',
-      description: 'Novo',
-      handler: plainHandler,
-    });
-    shortcutRegistry.register({
-      id: 'modified',
-      key: 'k',
-      description: 'Palette',
-      handler: modifiedHandler,
-      modified: true,
-    });
-
-    shortcutRegistry.setEnabled(false);
-    dispatchKeydown(document, 'n');
-    dispatchKeydown(document, 'k', { ctrlKey: true });
-
-    expect(plainHandler).not.toHaveBeenCalled();
-    expect(modifiedHandler).toHaveBeenCalledTimes(1);
   });
 
   it('suppresses an unmodified shortcut while a dialog is open, but resumes once it closes', () => {
@@ -150,16 +122,6 @@ describe('shortcutRegistry', () => {
 
     it('leaves a non-letter key as-is when unmodified', () => {
       expect(formatShortcutKey({ key: '?', modified: false })).toBe('?');
-    });
-  });
-
-  describe('formatAriaKeyshortcuts', () => {
-    it('returns the bare key when unmodified', () => {
-      expect(formatAriaKeyshortcuts({ key: 'n', modified: false })).toBe('N');
-    });
-
-    it('lists both cross-platform modifier tokens when modified', () => {
-      expect(formatAriaKeyshortcuts({ key: 'k', modified: true })).toBe('Control+K Meta+K');
     });
   });
 });

@@ -11,7 +11,6 @@ export function useRouteFocus<T extends HTMLElement>(): React.RefObject<T | null
       skipNext.current = false;
       return;
     }
-    ref.current?.focus();
     if (ref.current) {
       ref.current.scrollTop = 0;
       ref.current.scrollLeft = 0;

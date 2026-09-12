@@ -26,7 +26,7 @@ export function Services() {
             A lista dos seus serviços, com categorias e etiquetas, vai aparecer aqui.
           </p>
         </div>
-        <Button aria-keyshortcuts={hint.key} onClick={announceComingSoon}>
+        <Button onClick={announceComingSoon}>
           <Plus aria-hidden="true" />
           <span>Novo serviço</span>
           {hint.visible && <Kbd className="ml-auto">{hint.displayKey}</Kbd>}

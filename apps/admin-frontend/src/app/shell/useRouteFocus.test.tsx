@@ -7,7 +7,7 @@ import { useRouteFocus } from './useRouteFocus';
 function Shell() {
   const ref = useRouteFocus<HTMLDivElement>();
   return (
-    <div ref={ref} tabIndex={-1} data-testid="shell">
+    <div ref={ref} data-testid="shell">
       <Link to="/two">to two</Link>
       <Outlet />
     </div>
@@ -15,21 +15,7 @@ function Shell() {
 }
 
 describe('useRouteFocus', () => {
-  it('does not steal focus on the initial render', () => {
-    render(
-      <MemoryRouter initialEntries={['/one']}>
-        <Routes>
-          <Route element={<Shell />}>
-            <Route path="/one" element={<div>one</div>} />
-          </Route>
-        </Routes>
-      </MemoryRouter>,
-    );
-
-    expect(screen.getByTestId('shell')).not.toHaveFocus();
-  });
-
-  it('moves focus to the ref and scrolls the referenced element to top on a route change', async () => {
+  it('scrolls the referenced element to top on a route change', async () => {
     const user = userEvent.setup();
 
     render(
@@ -52,7 +38,6 @@ describe('useRouteFocus', () => {
 
     await user.click(screen.getByRole('link', { name: 'to two' }));
 
-    expect(shell).toHaveFocus();
     expect(shell.scrollTop).toBe(0);
     expect(shell.scrollLeft).toBe(0);
   });

@@ -32,7 +32,6 @@ export function AppHeader() {
       <span className="shrink-0 text-sm font-semibold">Agenza Admin</span>
       <Button
         variant="outline"
-        aria-keyshortcuts={searchHint.key}
         className="min-w-0 flex-1 justify-start text-muted-foreground sm:max-w-64"
         onClick={() => shortcutRegistry.getShortcut('command-palette-slash')?.handler()}
       >

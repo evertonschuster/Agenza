@@ -4,7 +4,6 @@ import { MemoryRouter } from 'react-router';
 import { AuthContext, type AuthContextValue } from '@/features/auth';
 import { INITIAL_SESSION } from '@/shared/session/session';
 import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
-import { expectNoA11yViolations } from '@/test/a11y';
 import { CommandPalette } from './CommandPalette';
 
 function registerHelpShortcut(): void {
@@ -55,13 +54,5 @@ describe('CommandPalette', () => {
 
     const helpOption = screen.getByRole('option', { name: 'Abrir ajuda' });
     expect(helpOption.querySelector('[data-slot="kbd"]')).toHaveTextContent('?');
-  });
-
-  it('has no a11y violations while open', async () => {
-    const { baseElement } = renderPalette();
-
-    fireEvent.keyDown(document, { key: '/' });
-
-    await expectNoA11yViolations(baseElement);
   });
 });

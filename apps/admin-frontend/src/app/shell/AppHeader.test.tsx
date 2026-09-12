@@ -75,26 +75,11 @@ describe('AppHeader', () => {
     expect(logout).toHaveBeenCalledTimes(1);
   });
 
-  it('advertises the search shortcut once a keyboard is detected', () => {
+  it('shows the search shortcut hint once a keyboard is detected', () => {
     registerSearchShortcut();
     renderHeader();
     markKeyboardDevice();
 
-    expect(screen.getByRole('button', { name: 'Buscar' })).toHaveAttribute(
-      'aria-keyshortcuts',
-      '/',
-    );
-  });
-
-  it('stops advertising the search shortcut once shortcuts are disabled (WCAG 2.1.4)', () => {
-    registerSearchShortcut();
-    renderHeader();
-    markKeyboardDevice();
-
-    act(() => {
-      shortcutRegistry.setEnabled(false);
-    });
-
-    expect(screen.getByRole('button', { name: 'Buscar' })).not.toHaveAttribute('aria-keyshortcuts');
+    expect(screen.getByRole('button', { name: 'Buscar' })).toHaveTextContent('/');
   });
 });

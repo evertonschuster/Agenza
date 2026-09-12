@@ -9,16 +9,6 @@ export interface Shortcut {
   modified?: boolean | undefined;
 }
 
-const ENABLED_STORAGE_KEY = 'admin-shortcuts-enabled';
-
-function readStoredEnabled(): boolean {
-  try {
-    return localStorage.getItem(ENABLED_STORAGE_KEY) !== 'false';
-  } catch {
-    return true;
-  }
-}
-
 function isTypingTarget(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false;
   if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') return true;
@@ -49,8 +39,6 @@ class ShortcutRegistry {
   private shortcuts = new Map<string, Shortcut>();
   private registryListeners = new Set<Listener>();
   private cachedList: Shortcut[] | null = null;
-  private enabled = readStoredEnabled();
-  private enabledListeners = new Set<Listener>();
   private hasKeyboardDevice = false;
   private keyboardListeners = new Set<Listener>();
 
@@ -88,25 +76,6 @@ class ShortcutRegistry {
     };
   };
 
-  getEnabledSnapshot = (): boolean => this.enabled;
-
-  setEnabled = (enabled: boolean): void => {
-    this.enabled = enabled;
-    try {
-      localStorage.setItem(ENABLED_STORAGE_KEY, String(enabled));
-    } catch {
-      // A private-mode Safari throw here must not stop the preference from applying in-memory.
-    }
-    this.enabledListeners.forEach((listener) => listener());
-  };
-
-  subscribeEnabled = (listener: Listener): (() => void) => {
-    this.enabledListeners.add(listener);
-    return () => {
-      this.enabledListeners.delete(listener);
-    };
-  };
-
   getKeyboardDeviceSnapshot = (): boolean => this.hasKeyboardDevice;
 
   subscribeKeyboardDevice = (listener: Listener): (() => void) => {
@@ -127,7 +96,6 @@ class ShortcutRegistry {
       if (shortcut.modified) {
         if (!(event.ctrlKey || event.metaKey)) continue;
       } else {
-        if (!this.enabled) continue;
         if (event.ctrlKey || event.metaKey || event.altKey) continue;
         if (isTypingTarget(event.target)) continue;
         if (isDialogOpen()) continue;
@@ -151,8 +119,6 @@ class ShortcutRegistry {
     this.shortcuts.clear();
     this.cachedList = null;
     this.registryListeners.clear();
-    this.enabled = readStoredEnabled();
-    this.enabledListeners.clear();
     this.hasKeyboardDevice = false;
     delete document.documentElement.dataset.kbd;
     this.keyboardListeners.clear();
@@ -160,13 +126,6 @@ class ShortcutRegistry {
 }
 
 export const shortcutRegistry = new ShortcutRegistry();
-
-export function useShortcutsEnabled(): boolean {
-  return useSyncExternalStore(
-    shortcutRegistry.subscribeEnabled,
-    shortcutRegistry.getEnabledSnapshot,
-  );
-}
 
 export function useHasKeyboardDevice(): boolean {
   return useSyncExternalStore(
@@ -198,10 +157,9 @@ function subscribeHoverFine(onChange: () => void): () => void {
 }
 
 export function useShortcutHintsVisible(): boolean {
-  const enabled = useShortcutsEnabled();
   const canHoverFine = useSyncExternalStore(subscribeHoverFine, getHoverFineSnapshot);
   const hasKeyboardDevice = useHasKeyboardDevice();
-  return enabled && (canHoverFine || hasKeyboardDevice);
+  return canHoverFine || hasKeyboardDevice;
 }
 
 function ariaKeyToken(key: string): string {
@@ -215,16 +173,7 @@ export function formatShortcutKey(shortcut: Pick<Shortcut, 'key' | 'modified'>):
   return glyph === '⌘' ? `${glyph}${upperKey}` : `${glyph}+${upperKey}`;
 }
 
-// aria-keyshortcuts wants literal modifier tokens (e.g. "Control+K Meta+K"), not the platform
-// glyph formatShortcutKey renders for sighted users — a screen reader would otherwise announce
-// a modified shortcut as if it had no modifier at all.
-export function formatAriaKeyshortcuts(shortcut: Pick<Shortcut, 'key' | 'modified'>): string {
-  const key = ariaKeyToken(shortcut.key);
-  return shortcut.modified ? `Control+${key} Meta+${key}` : key;
-}
-
 export interface ShortcutHint {
-  key: string | undefined;
   displayKey: string | undefined;
   visible: boolean;
 }
@@ -234,7 +183,6 @@ export function useShortcutHint(id: string): ShortcutHint {
   const hintsVisible = useShortcutHintsVisible();
   const visible = hintsVisible && !!shortcut;
   return {
-    key: visible && shortcut ? formatAriaKeyshortcuts(shortcut) : undefined,
     displayKey: shortcut ? formatShortcutKey(shortcut) : undefined,
     visible,
   };

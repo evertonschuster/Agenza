@@ -41,7 +41,6 @@ export default defineConfig({
         'src/shared/ui/separator.tsx',
         'src/shared/ui/skeleton.tsx',
         'src/shared/ui/textarea.tsx',
-        'src/shared/ui/visually-hidden.tsx',
         'src/shared/ui/FullScreenMessage.tsx',
         // No consumer anywhere yet (T160 in tasks.md) — 0% here is dead-code noise, not a gap.
         'src/shared/ui/dialog.tsx',
@@ -57,7 +56,6 @@ export default defineConfig({
         'src/shared/ui/toast.tsx',
         'src/vite-env.d.ts',
         'src/vitest-setup.ts',
-        'src/test/**',
         'src/**/*.test.{ts,tsx}',
         'src/features/*/index.ts',
       ],
