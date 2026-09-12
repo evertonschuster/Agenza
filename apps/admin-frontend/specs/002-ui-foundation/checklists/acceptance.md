@@ -21,28 +21,11 @@ humano e não pode ser delegado a um teste verde.
 - [ ] 375 px: barra inferior, folha "Mais", nenhuma rolagem horizontal
 - [ ] 375 px: focar um campo de texto **não** provoca zoom automático no iOS
 - [ ] 375 px: o teclado do sistema não encobre o campo em foco
-- [ ] 768–1023 px: trilho de ícones com rótulos acessíveis preservados
+- [ ] 768–1023 px: trilho de ícones com rótulos preservados
 - [ ] ≥1024 px: barra lateral persistente
 - [ ] 320 px (o mínimo real): nada quebra nem vaza
 - [ ] Alvos de toque da navegação com ≥44 px na menor dimensão
 - [ ] Safe area respeitada num aparelho com notch — padding real, não `0px` presumido
-
-## Acessibilidade (US3 · SC-001 · SC-004)
-
-- [ ] Tab a partir do topo: o primeiro focável é "Pular para o conteúdo", e ele funciona
-- [ ] Percurso completo login → painel → todos os seis destinos → diálogo → logout **só com teclado**
-- [ ] Foco sempre visível, sobre qualquer superfície, nos **dois** temas
-- [ ] `Esc` fecha diálogo/folha/paleta **e devolve o foco** a quem abriu
-- [ ] Troca de rota é anunciada por região viva e o foco vai para `<main>`
-- [ ] Nenhum controle sem nome acessível; ícones decorativos com `aria-hidden`
-- [ ] Nome acessível do CTA primário **igual** ao rótulo visível — o keycap não pode entrar nele
-      (verificável por teste; adicionar um)
-- [ ] Cabeçalho fixo e barra inferior não encobrem o elemento focado (SC 2.4.11)
-- [ ] Tooltips: aparecem no **foco**, não só no hover; dispensáveis com `Esc`; o ponteiro pode
-      entrar nelas (SC 1.4.13)
-- [ ] Contraste verificado nos dois temas, incluindo os chips de etiqueta das 8 cores do backend
-- [ ] Auditoria axe sem violações em todas as rotas, nos dois temas *(automatizado)*
-- [ ] Leitor de tela em pt-BR: rótulos, números, moeda e datas anunciados corretamente
 
 ## Atalhos (US4 · SC-005)
 

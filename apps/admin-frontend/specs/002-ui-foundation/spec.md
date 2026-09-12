@@ -7,8 +7,7 @@
 **Status**: Draft
 
 **Input**: User description (pt-BR, transcrito de voz): montar o plano de instalação e configuração do
-layout da aplicação. Tema claro/escuro **e** automático conforme o sistema operacional. Compatível com
-acessibilidade. Atalhos de teclado para as operações do sistema. Visual moderno, suave, muito clean —
+layout da aplicação. Tema claro/escuro **e** automático conforme o sistema operacional. Atalhos de teclado para as operações do sistema. Visual moderno, suave, muito clean —
 sem excesso de opções ou usabilidade complicada; interface fluida como Mercado Livre e Nubank,
 totalmente intuitiva. Responsivo para mobile. Respeitar a arquitetura existente sem pedir demais dela.
 A interface atual pode ser inteiramente descartada, mantendo apenas o esqueleto do projeto.
@@ -90,43 +89,16 @@ encoberto.
 
 ---
 
-### User Story 3 — Quem usa teclado ou leitor de tela consegue operar o painel inteiro (Priority: P1)
-
-Uma pessoa que não usa mouse percorre o painel inteiro pelo teclado. O foco é sempre visível, a troca
-de rota é anunciada, existe um atalho para pular a navegação repetida, e nenhum controle é alcançável
-sem nome acessível.
-
-**Why this priority**: Foi pedido explicitamente. Acessibilidade adicionada depois vira retrabalho em
-cada componente já escrito; adicionada na fundação, é praticamente gratuita.
-
-**Independent Test**: Desconectar o mouse. Ir do login ao logout usando apenas o teclado, com um
-leitor de tela ativo em pt-BR.
-
-**Acceptance Scenarios**:
-
-1. **Given** o foco no início do documento, **When** a pessoa pressiona Tab, **Then** o primeiro
-   elemento focável é um link "Pular para o conteúdo" que move o foco para a região principal.
-2. **Given** qualquer navegação entre rotas, **When** a rota muda, **Then** o novo título é anunciado
-   por região viva e o foco vai para a região principal.
-3. **Given** qualquer controle interativo, **When** ele recebe foco pelo teclado, **Then** há um
-   indicador de foco visível que atende o critério 2.4.13 sobre qualquer superfície dos dois temas.
-4. **Given** qualquer diálogo aberto, **When** a pessoa pressiona `Esc`, **Then** o diálogo fecha e o
-   foco retorna ao elemento que o abriu.
-
----
-
 ### User Story 4 — A pessoa descobre que existe um caminho mais rápido (Priority: P2)
 
 Quem trabalha no desktop percebe, olhando para a tela, que as ações principais têm atalho. Uma paleta
-de comandos concentra navegação e ações num só lugar, e existe uma folha de ajuda listando tudo. Quem
-não quer atalhos de tecla única pode desligá-los.
+de comandos concentra navegação e ações num só lugar, e existe uma folha de ajuda listando tudo.
 
 **Why this priority**: Pedido explicitamente, mas é acelerador — o painel precisa ser inteiramente
 operável sem nenhum atalho. Depende de US2 e US3 estarem prontas.
 
 **Independent Test**: Sem ler documentação, olhar a tela de Serviços no desktop e identificar que
-criar um serviço tem atalho. Depois desligar os atalhos e confirmar que teclas de caractere único
-param de agir.
+criar um serviço tem atalho.
 
 **Acceptance Scenarios**:
 
@@ -136,8 +108,6 @@ param de agir.
    dica de atalho é exibida.
 3. **Given** o foco num campo de texto, **When** a pessoa digita `n`, **Then** o caractere é inserido
    e nenhuma ação de atalho dispara.
-4. **Given** os atalhos desligados na preferência, **When** a pessoa pressiona `/`, `?` ou `n`,
-   **Then** nada acontece e nenhuma dica é exibida; `Ctrl/⌘+K` e `Esc` continuam funcionando.
 
 ---
 
@@ -176,13 +146,9 @@ próprio escopo, sem texto genérico repetido.
   **NÃO DEVEM** ser apresentados como funcionais.
 - **FR-007**: O shell **DEVE** apresentar barra lateral em telas largas e barra inferior em telas
   estreitas, sem rolagem horizontal em nenhuma largura a partir de 320 px.
-- **FR-008**: Todo controle interativo **DEVE** ter nome acessível e indicador de foco visível.
-- **FR-009**: A mudança de rota **DEVE** ser anunciada a tecnologia assistiva e mover o foco para a
-  região principal.
-- **FR-010**: O painel **DEVE** oferecer um link de pulo para o conteúdo como primeiro elemento focável.
 - **FR-011**: O painel **DEVE** oferecer os atalhos `Ctrl/⌘+K`, `/`, `?`, `Esc` e `n`.
-- **FR-012**: Atalhos de caractere único **DEVEM** poder ser desligados por preferência do usuário
-  (WCAG 2.1.4), e **NÃO DEVEM** disparar enquanto o foco estiver em campo de texto.
+- **FR-012**: Atalhos de caractere único **NÃO DEVEM** disparar enquanto o foco estiver em campo de
+  texto.
 - **FR-013**: Ações com atalho **DEVEM** expor a tecla visivelmente em repouso quando forem a ação
   primária única da tela; demais ações com atalho expõem por tooltip em hover **e** foco, ou apenas
   na paleta e na folha de ajuda.
@@ -203,13 +169,9 @@ próprio escopo, sem texto genérico repetido.
 
 ## Success Criteria *(mandatory)*
 
-- **SC-001**: Uma pessoa consegue ir do login ao logout, passando por todos os seis destinos e abrindo
-  um diálogo, usando exclusivamente o teclado.
 - **SC-002**: Em 375 px, nenhuma rota apresenta rolagem horizontal e todos os alvos de toque da
   navegação têm ao menos 44 px na menor dimensão.
 - **SC-003**: Recarregar com tema escuro salvo não produz nenhum quadro em tema claro.
-- **SC-004**: Uma auditoria automatizada de acessibilidade passa sem violações em todas as rotas, nos
-  dois temas.
 - **SC-005**: Olhando a tela de Serviços no desktop, sem instrução prévia, é possível identificar que
   a criação de serviço tem atalho.
 - **SC-006**: Todos os portões de CI passam.

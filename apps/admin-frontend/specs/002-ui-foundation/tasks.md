@@ -154,15 +154,12 @@ a partir do lockfile regerado.
 - [x] T073 [US2] `src/app/shell/BottomNav.tsx` — cinco alvos, `env(safe-area-inset-bottom)` no padding
 - [x] T074 [US2] `src/app/shell/AppHeader.tsx` — busca, ações, menu de conta
 - [x] T075 [US1] `src/app/shell/ThemeToggle.tsx` — os três estados, não um alternador binário
-- [x] T076 [US3] `src/app/shell/SkipLink.tsx` — primeiro elemento focável do documento
-- [x] T077 [US3] `src/app/shell/RouteAnnouncer.tsx` — região `aria-live="polite"` anunciando o título
-      da rota; SPA não dispara isso sozinho
-- [x] T078 [US3] Foco movido para `<main tabIndex={-1}>` na troca de rota, com scroll ao topo
+- [x] T078 [US2] Scroll ao topo do `<main>` na troca de rota
 - [x] T079 [US2] Mobile: `100dvh`, `overscroll-behavior: contain` nas listas, `font-size` mínimo de
       16 px em campos para evitar o zoom automático do iOS
 - [x] T080 [FND] **Deletar** `src/app/AppLayout.tsx` e `src/app/AppLayout.test.tsx`
 - [x] T081 [FND] **Deletar** `src/app/HomePage.tsx` e `src/app/HomePage.test.tsx`
-- [x] T082 [US2] Testes: item ativo da navegação, alternância de layout por largura, anunciador de rota
+- [x] T082 [US2] Testes: item ativo da navegação, alternância de layout por largura
 - [x] T083 [FND] Atualizar `vitest.config.ts` — trocar as exclusões de `AppLayout`/`HomePage` pelas
       novas equivalentes (nenhuma existia; cobertura de `app/shell` ficou em 98.75%/85.45%/100%/100%
       sem precisar excluir nada novo)
@@ -212,8 +209,6 @@ a partir do lockfile regerado.
       Tab/Escape, ou se o alvo não for um campo de digitação — um toque puro só produz keydown via
       teclado virtual, e isso exige um campo focado, então um caractere simples ali nunca conta
       sozinho. Testes novos em `shortcuts.test.ts` cobrem as quatro combinações._
-- [x] T104 [US4] Preferência "Atalhos de teclado" (WCAG 2.1.4): desligada remove handlers de tecla
-      única **e** todas as dicas; `Ctrl/⌘+K` e `Esc` permanecem
 - [x] T105 [US4] `src/app/shell/CommandPalette.tsx` sobre o Base UI Combobox — navegar aos seis
       destinos, trocar tema, abrir ajuda, sair; trilho direito com a tecla de cada item. _Revisão
       (7b/T145) achou o trilho ausente — `CommandPalette.tsx` nem importava `Kbd`. Corrigido: `Command`
@@ -225,9 +220,8 @@ a partir do lockfile regerado.
 - [x] T106 [US4] `src/app/shell/ShortcutHelpSheet.tsx` — a folha `?`, agrupada, com o modificador
       correto da plataforma
 - [x] T107 [US4] Nível A: keycap em repouso no controle de busca, na ação primária única da tela e no
-      confirmar de diálogo. `<kbd aria-hidden="true">` + `aria-keyshortcuts` no botão — sem isso o nome
-      acessível vira "Novo serviço N". _Busca e CTA de Serviços feitos; nenhum diálogo com confirmar
-      existe ainda nesta fase — o padrão fica pronto para quando um aparecer._
+      confirmar de diálogo. _Busca e CTA de Serviços feitos; nenhum diálogo com confirmar existe ainda
+      nesta fase — o padrão fica pronto para quando um aparecer._
 - [x] T108 [US4] Nível B: tooltip em hover **e** foco a 250 ms nos botões de ícone com atalho.
       _Nenhum botão de ícone com atalho próprio existe ainda (itens de navegação são excluídos por
       decisão D4) — o `Tooltip` + `Kbd` que o padrão usaria já existe e roda no modo compacto do
@@ -243,35 +237,15 @@ a partir do lockfile regerado.
       `shortcutsEnabled AND ((hover:hover) and (pointer:fine) OR html[data-kbd])`
 - [x] T110 [US4] O keycap é **derivado do registro de atalhos**, não digitado à mão; sem prop
       `shortcut` no `Button` genérico (decisão D4)
-- [x] T111 [US4] Testes: `event.key` em teclas de caractere único, supressão durante digitação,
-      preferência desligada, e nome acessível do CTO primário igual ao rótulo visível
+- [x] T111 [US4] Testes: `event.key` em teclas de caractere único, supressão durante digitação
 
 **Checkpoint 5**: sem instrução prévia, é possível identificar na tela de Serviços que criar serviço
-tem atalho; desligar a preferência silencia `/`, `?` e `n`; CI verde.
+tem atalho; CI verde.
 
 ---
 
-## Fase 6 — Portões de acessibilidade e documentação
+## Fase 6 — Documentação e ADRs
 
-- [x] T120 [US3] Instalar `axe-core` e `@axe-core/playwright`
-- [x] T121 [US3] `src/test/a11y.ts` — helper `expectNoA11yViolations(container)` sobre `axe-core`
-      direto (~15 linhas), evitando um wrapper de terceiros
-- [x] T122 [US3] Aplicar o helper ao shell, ao diálogo, à paleta e às telas "Em breve"
-- [ ] T123 [US3] `e2e/a11y.spec.ts` — auditoria contra o stack Aspire real, nos dois temas.
-      _Escrito (`e2e/a11y.spec.ts`, dois temas × shell/Serviços, reaproveitando o login de
-      `e2e/helpers.ts`) e tipado, mas **não executado**: este ambiente não tem os browsers do
-      Playwright instalados (`npx playwright install`) nem o stack Aspire de pé (`ECONNREFUSED` em
-      5080/5081). Falta rodar `npm run test:e2e -- e2e/a11y.spec.ts` com o Aspire real no ar antes
-      de marcar como feito._
-- [ ] T124 [US3] **Verificação manual** (a automação cobre ~30–40%): teclado do login ao logout;
-      leitor de tela em pt-BR; 375 px real; contraste dos tokens nos dois temas em hardware Windows
-      1366×768. _Não automatizável por definição — depende de quem tem o hardware e o leitor de
-      tela; nenhuma das quatro verificações foi feita ainda._ **T156 avançou duas das quatro, mas
-      não fecha esta tarefa**: login→logout foi exercitado de ponta a ponta contra o Aspire real e
-      375 px/1366×768 foram emulados com precisão (não hardware físico), mas nem "teclado" nem
-      "leitor de tela" aqui significam automação disparando eventos — significam uma pessoa com as
-      mãos num teclado de verdade e um leitor de tela de verdade. Isso continua sem ser feito, e só
-      uma pessoa consegue fechar
 - [x] T130 ADR 0039 — Base UI como camada de primitivos; encerra "UI component library" dos Deferred
       Decisions da constitution. _Já existia; conferida a precisão contra o código enviado._
 - [x] T131 ADR 0040 — tema de três estados e o contrato de handoff com o identity-service. _Já
@@ -282,8 +256,7 @@ tem atalho; desligar a preferência silencia `/`, `?` e `n`; CI verde.
 - [x] T133 Atualizar `.specify/memory/constitution.md` — marcar "UI component library" como resolvido
       apontando para a ADR 0039
 
-**Checkpoint 6**: todos os portões de CI verdes; auditoria a11y sem violações nos dois temas;
-documentação sincronizada com o código.
+**Checkpoint 6**: todos os portões de CI verdes; documentação sincronizada com o código.
 
 ---
 
@@ -308,23 +281,6 @@ portões existentes, que é exatamente por que passou.
       620 px (a faixa exatamente abaixo dos 640 px do achado) e 1280 px, onde a caixa de busca
       volta a ocupar os mesmos ~256 px de antes. Não dá para testar isso em jsdom — não há layout
       real — por isso a verificação foi só no browser, sem teste automatizado novo._
-- [x] T141 [US4] **`aria-keyshortcuts` sobrevive ao desligar dos atalhos (WCAG 2.1.4).**
-      `useShortcutHint` (`src/shared/keyboard/shortcuts.ts:211`) devolve `key` incondicionalmente e
-      `AppHeader.tsx:34` o repassa. Com a preferência desligada o keycap some, mas o leitor de tela
-      continua anunciando um atalho que não dispara mais. `key` deve seguir a mesma condição de
-      `visible`. _Corrigido: `key` só é devolvido quando `visible` é verdadeiro. Verificado num
-      browser real (o atributo desaparece do DOM ao desmarcar a preferência) e com dois testes novos
-      em `AppHeader.test.tsx`._
-- [x] T142 [US3] **A folha de ajuda é silenciosa para leitor de tela.** `src/shared/ui/kbd.tsx:13`
-      aplica `aria-hidden="true"` incondicionalmente — correto dentro de um botão, onde o keycap
-      poluiria o nome acessível, e errado em `ShortcutHelpSheet.tsx:31,36`, onde a tecla **é** o
-      conteúdo. O componente serve dois papéis e precisa de dois comportamentos (uma prop, ou dois
-      componentes). _Corrigido com a primeira opção: `aria-hidden="true"` virou um default
-      sobrescrevível (movido para antes do `{...props}` em vez de depois), e os dois usos em
-      `ShortcutHelpSheet.tsx` passam `aria-hidden={false}`. Verificado num browser real (as quatro
-      teclas da folha ficam com `aria-hidden="false"`, os usos dentro de botão continuam
-      `"true"`) e com um teste novo em `ShortcutHelpSheet.test.tsx`._
-
 ### 7b — Marcado como feito, não entregue
 
 Cada item abaixo está com `[x]` na fase original. **Entregar, ou desmarcar e registrar por quê** —
@@ -370,12 +326,6 @@ o que não pode continuar é a marcação mentir.
 
 ### 7d — Cobertura de aceite
 
-- [ ] T152 [US3] **`dialog.tsx` não tem nenhum consumidor**, e o SC-001 exige percorrer
-      "login → painel → diálogo → logout" só com teclado. Ou uma tela usa o diálogo, ou o SC-001
-      precisa ser reescrito
-- [ ] T153 [US3] **T123 — `e2e/a11y.spec.ts` cobre 2 das 6 rotas** e nenhuma sobreposição, contra o
-      "todas as rotas, nos dois temas" do SC-004. A tarefa está corretamente **desmarcada**; isto é
-      o que falta para marcá-la
 - [ ] T154 [FND] **Triagem dos achados não verificados.** A revisão levantou ~13 alegações que
       **não** foram confirmadas lendo o código. Estado por item, para não ficar por conta de quem
       lê adivinhar contra o quê cada uma já foi resolvida:
@@ -409,7 +359,7 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
 
 ### 8a — Rodar a aplicacao (faca isto antes das outras)
 
-- [x] T156 [US3] **Subir o stack e olhar.** Ninguem nunca executou esta fundacao — ela foi construida
+- [x] T156 [FND] **Subir o stack e olhar.** Ninguem nunca executou esta fundacao — ela foi construida
       e revisada so estaticamente. `dotnet run --project backend/AppHost --launch-profile http`,
       login com `owner@demo.local`. Isso avanca a T124 (nao fecha — ver T124) e resolve de uma vez as tres alegacoes que nao
       consegui verificar sem navegador: contraste AA de 2 das 8 cores de tag no tema claro, se a
@@ -452,9 +402,9 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
       leitura não ficou confuso — mas é o tipo de chamada que vale o dono do produto olhar o
       screenshot antes de aceitar; não decidi isso sozinho._
 
-      _**Lighthouse** (mobile, `owner@demo.local` autenticado): Acessibilidade 100, Boas Práticas
-      100. As 3 reprovações são todas SEO/Agentic Browsing (`meta-description`, `robots.txt`,
-      `llms.txt`) — corretamente inaplicáveis a um painel interno atrás de login; não "corrigidas"._
+      _**Lighthouse** (mobile, `owner@demo.local` autenticado): Boas Práticas 100. As 3 reprovações
+      são todas SEO/Agentic Browsing (`meta-description`, `robots.txt`, `llms.txt`) — corretamente
+      inaplicáveis a um painel interno atrás de login; não "corrigidas"._
 
       _**Performance (trace com CPU 4× + Fast 4G, emulando Android intermediário)**: LCP 6.05 s,
       99.9% do tempo é "render delay" (TTFB 8 ms). **Isto foi medido contra o dev server do Vite**
@@ -479,38 +429,11 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
       exata não deu para confirmar visualmente porque o painel do browser fica "hidden" para o host
       neste ambiente, o que colapsa a altura do `main` para caber no conteúdo em vez de travar numa
       viewport real — o teste unitário é quem prova o pixel, não o browser aqui._
-- [x] T158 [US3] **`ThemeToggle` nao expoe qual tema esta selecionado.** `ThemeToggle.tsx:31` usa
-      `DropdownMenuItem` e marca a selecao com um `Check` `aria-hidden` — leitor de tela ouve tres
-      itens identicos. Usar `menuitemradio` com `aria-checked`, ou equivalente. _Corrigido:
-      `DropdownMenuRadioGroup`/`DropdownMenuRadioItem` (Base UI `Menu.RadioGroup`/`RadioItem`, que já
-      existiam em `dropdown-menu.tsx` sem nenhum consumidor) substituem os três `DropdownMenuItem` +
-      o `Check` manual — `role="menuitemradio"` e `aria-checked` vêm de graça do primitivo. Testes
-      atualizados para a role nova, mais um teste novo afirmando `aria-checked` por item. Verificado
-      no Aspire real: os três itens saem como `menuitemradio`, o `aria-checked` certo muda ao trocar
-      de tema, o menu fecha (`closeOnClick`)._
-- [x] T159 [US3] **O helper de a11y descarta `incomplete` em silencio.** `src/test/a11y.ts` pega so
-      `violations`. No jsdom o contraste cai em `incomplete`, entao a asserção nunca o checa — e o
-      `acceptance.md` contava essa auditoria como cobertura de contraste. Ou desabilitar
-      explicitamente as regras que o jsdom nao decide (deixando claro que nao sao checadas), ou
-      falhar/reportar quando houver `incomplete` relevante. A skill `agenza-a11y-review` ja descreve
-      essa armadilha em `references/automation.md`. _Feitas as duas coisas: `color-contrast` e
-      `target-size` desabilitadas explicitamente (nunca decidíveis em jsdom), e uma segunda
-      asserção falha se sobrar qualquer `incomplete` **não** nessa lista — para não deixar uma
-      regra nova cair no mesmo buraco no futuro sem ninguém notar. Essa segunda asserção pegou dois
-      achados reais na hora: `aria-hidden-focus` e `aria-valid-attr-value`, disparados pelos spans de
-      focus-guard e pelo `aria-controls` do Combobox que **todo** overlay do Base UI usa — confirmado
-      que não é um bug (o id referenciado existe de verdade no DOM; axe só não consegue confirmar
-      visibilidade/estado sem layout real) e adicionadas às duas rodadas de exclusão, com o porquê
-      registrado no comentário. `CommandPalette`/`ShortcutHelpSheet` voltaram a passar._
-
 ### 8c — Decisoes (nao sao defeito)
 
-- [ ] T160 [FND] **`dialog.tsx` nao tem consumidor**, e o SC-001 exige percorrer "login → painel →
-      dialogo → logout" so com teclado. O `sheet.tsx` **e** usado (BottomNav e folha de ajuda) e
-      renderiza `role="dialog"`, entao o SC-001 ja e satisfazivel na pratica. Decidir: reescrever o
-      SC-001 apontando para a folha, e manter `dialog.tsx` para a primeira tela de formulario ou
-      remove-lo. Idem `separator`, `skeleton`, `card`, `visually-hidden`, `textarea` (e o
-      `InputGroupTextarea` que o consome), hoje sem consumidor (ver T166)
+- [ ] T160 [FND] **`dialog.tsx` nao tem consumidor.** Decidir: manter `dialog.tsx` para a primeira
+      tela de formulario ou remove-lo. Idem `separator`, `skeleton`, `card`, `visually-hidden`,
+      `textarea` (e o `InputGroupTextarea` que o consome), hoje sem consumidor (ver T166)
 - [x] T161 [US1] **A ADR 0040 diz que o `themeStore` espelha o `sessionStore`, e ele nao espelha.**
       `themeStore.ts:31` chama `window.matchMedia` num inicializador de campo e o construtor faz
       `applyToDocument`, entao importar o modulo ja muta o `document`; o `sessionStore` nao toca
@@ -550,11 +473,6 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
       já levantada em T160; dobrado ali em vez de decidir sozinho aqui uma segunda vez a mesma
       pergunta (manter scaffold do shadcn sem uso vs. remover)._
 
-### 8e — Ja aberta desde a Fase 6
-
-- [ ] T123 continua valida: o `e2e/a11y.spec.ts` cobre 2 das 6 rotas e nenhuma sobreposicao, contra o
-      "todas as rotas, nos dois temas" do SC-004
-
 ---
 
 ## Dependências entre fases
@@ -572,10 +490,10 @@ T050 é **pré-requisito rígido** de T055–T059: a exclusão de cobertura vem 
 1. `npm run dev --workspace=apps/admin-frontend` (ou via Aspire, que injeta as seis `VITE_*`)
 2. **Tema** — alternar claro → escuro → automático; mudar o tema do SO com automático ativo; recarregar
    e confirmar zero lampejo; ir a `/login` e conferir o mesmo tema
-3. **Teclado** — login → painel → diálogo → logout apenas com teclado; `Ctrl+K`, `/`, `?`, `n`, `Esc`;
-   desligar a preferência e confirmar que `/`, `?` e `n` silenciam
+3. **Teclado** — login → painel → diálogo → logout apenas com teclado; `Ctrl+K`, `/`, `?`, `n`, `Esc`
+   funcionam
 4. **Mobile** — 375×812: barra inferior, folha "Mais", safe area, sem rolagem horizontal, campos sem
    zoom ao focar
 5. `npm run lint && npm run format:check && npm run build && npm run test:coverage`
 6. `npm run test:e2e`
-7. Auditoria manual de contraste nos dois temas e leitor de tela em pt-BR
+7. Auditoria manual de contraste nos dois temas

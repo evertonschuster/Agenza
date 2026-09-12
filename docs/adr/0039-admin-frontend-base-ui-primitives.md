@@ -79,6 +79,6 @@ of switching only grows.
 recorded for shadcn/ui: owned component source beats a black-box dependency for an admin panel
 whose visual direction is still being set.
 
-**React Aria Components.** Strongest accessibility story of the candidates. Rejected because it
-is not what the project's component CLI targets, so every component would be hand-authored
-against a different API than the documentation the team reads.
+**React Aria Components.** Rejected because it is not what the project's component CLI targets,
+so every component would be hand-authored against a different API than the documentation the team
+reads.

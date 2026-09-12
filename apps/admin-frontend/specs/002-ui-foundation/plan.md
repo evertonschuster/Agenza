@@ -96,8 +96,8 @@ arquivo inteiro de verdade, então excluí-lo esconderia cobertura real em vez d
 `InputGroupText`/`InputGroupTextarea` seguem sem consumidor, mesma categoria do parágrafo acima, mas o
 arquivo é pequeno o bastante para não derrubar o agregado sozinho.
 
-`shared/theme/**`, `shared/keyboard/**` e a lógica de navegação e anúncio de rota são testados de
-verdade — não há scaffold não-usado nesses módulos, então a cobertura de arquivo inteiro é honesta ali.
+`shared/theme/**`, `shared/keyboard/**` e a lógica de navegação são testados de verdade — não há
+scaffold não-usado nesses módulos, então a cobertura de arquivo inteiro é honesta ali.
 
 **Esta alteração é feita antes de qualquer primitivo ser adicionado**, ou o CI fica vermelho e parece
 regressão.
@@ -117,8 +117,6 @@ backend existir.
 | `@base-ui/react` | `^1.8.0` | Dialog, Popover, Select, Menu, Tooltip, Tabs, Switch, Toast, Combobox |
 | `lucide-react` | latest | Ícones; melhor relação bundle/fonte da categoria (~1.0–1.2x contra 16–18x do Phosphor) |
 | `@fontsource-variable/inter` | latest | Inter self-hosted; a tela de login já usa Inter |
-| `axe-core` (dev) | latest | Base do helper de a11y nos testes |
-| `@axe-core/playwright` (dev) | latest | Auditoria a11y no e2e contra o stack real |
 
 ### Remover
 
@@ -140,8 +138,7 @@ src/
 │   ├── routes.tsx                   seis rotas
 │   ├── shell/                       NOVO — composition root do layout
 │   │   ├── AppShell.tsx  SidebarNav.tsx  BottomNav.tsx  AppHeader.tsx
-│   │   ├── ThemeToggle.tsx  SkipLink.tsx  RouteAnnouncer.tsx
-│   │   ├── CommandPalette.tsx  ShortcutHelpSheet.tsx
+│   │   ├── ThemeToggle.tsx  CommandPalette.tsx  ShortcutHelpSheet.tsx
 │   │   └── navigation.ts            destinos como dado
 │   └── pages/                       NOVO — telas sem fatia
 │       ├── ComingSoon.tsx
@@ -164,10 +161,10 @@ Cada fase termina com CI verde. Ordem é dependência real, não preferência.
 | --- | --- | --- |
 | 1 | Tokens, tema, tipografia, handoff com identity-service | tudo |
 | 2 | Camada de primitivos (Base UI in, Radix out) + ajuste de cobertura | 3, 4, 5 |
-| 3 | Shell responsivo + acessibilidade do shell | 4, 5 |
+| 3 | Shell responsivo | 4, 5 |
 | 4 | Seis rotas + telas "Em breve" | 5 |
 | 5 | Atalhos, paleta de comandos, evidência | — |
-| 6 | Portões automatizados de a11y + documentação + ADRs | — |
+| 6 | Documentação + ADRs | — |
 
 ## Risks
 
@@ -178,7 +175,6 @@ Cada fase termina com CI verde. Ordem é dependência real, não preferência.
 | Gate de cobertura fica vermelho ao adicionar primitivos | D5 é feito **antes** de qualquer primitivo |
 | Chip de atalho sobre o violeta lê como botão dentro de botão | Revisar a 100% de zoom em Windows 1366×768 real; se a borda não sobreviver, enviar sem chip — nível B mais a linha na paleta ainda supera o estado atual |
 | Snippet Radix copiado não compila com Base UI | Skill `agenza-ui-primitive` documenta a diferença `render` vs `asChild` |
-| Regressão silenciosa de nome acessível | Teste que afirma que o nome computado do CTA primário é igual ao rótulo visível |
 
 ## Verification
 

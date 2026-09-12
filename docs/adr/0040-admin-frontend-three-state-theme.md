@@ -89,8 +89,7 @@ not read as two products across the redirect.
 - Tokens must be declared for both themes at the token layer, never inside a component. A colour
   whose only definition sits in one theme's block renders one theme's text on the other theme's
   ground.
-- `index.html` gains `lang="pt-BR"` (it was `en`, which mis-announces every string to a screen
-  reader) and a `theme-color` meta the store keeps current.
+- `index.html` gains `lang="pt-BR"` (it was `en`) and a `theme-color` meta the store keeps current.
 
 ## Alternatives considered
 

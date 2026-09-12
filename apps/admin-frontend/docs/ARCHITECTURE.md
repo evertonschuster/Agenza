@@ -22,7 +22,7 @@ Two rules of thumb behind everything here:
 src/
 ├── app/                     Composition root — providers, route table, ErrorBoundary
 │   ├── shell/               AppShell chrome: responsive nav (sidebar/rail/bottom), header,
-│   │                        command palette, shortcut help sheet, route focus/announce
+│   │                        command palette, shortcut help sheet
 │   └── pages/               One stub per route (§6) — not feature slices; no model, no api
 ├── features/<slice>/        One vertical slice per user-facing capability (auth, …)
 │   ├── model/               Types + rules. No React. ( = domain + application )
@@ -41,8 +41,8 @@ src/
     │   └── tenant.ts           decode the tenant_id claim from the access token
     ├── theme/               Three-state (light/dark/system) store, shaped like shared/session's
     │                        snapshot/subscribe/reducer; data-theme, handed to identity-service
-    ├── keyboard/            Shortcut registry: single-character + modified, WCAG 2.1.4 preference,
-    │                        keyboard-device detection for when a resting keycap may render
+    ├── keyboard/            Shortcut registry: single-character + modified, keyboard-device
+    │                        detection for when a resting keycap may render
     ├── ui/                  Base UI primitives (owned source), lib/utils.ts (cn())
     ├── env.ts               Fail-fast loader for the six VITE_* vars
     └── logger.ts            Minimal structured console wrapper

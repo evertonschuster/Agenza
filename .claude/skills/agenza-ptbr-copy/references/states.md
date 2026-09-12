@@ -73,8 +73,7 @@ Prefer no text at all. A skeleton shaped like the content that is coming beats "
 survives a slow connection without a layout jump. If a word is unavoidable, name the noun —
 "Carregando serviços…" — never "Aguarde", never "Processando sua solicitação".
 
-A region that is loading is `aria-busy`; a route change is announced by the shell's route announcer.
-Do not add a second live region per screen — see `agenza-a11y-review`.
+A region that is loading is `aria-busy`.
 
 ## "Em breve"
 

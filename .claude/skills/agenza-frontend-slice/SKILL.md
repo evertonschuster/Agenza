@@ -85,14 +85,13 @@ does zero error handling, and a page has no `try/catch`. Never branch on a backe
 branch on `result.error.code`. Full shape, boundary table and testing:
 [references/api-integration.md](references/api-integration.md).
 
-## 6. UI, a11y, tests
+## 6. UI, tests
 
 - Primitives come from `shared/ui/` over Base UI, which uses a `render` prop —
   Radix's `asChild` + `Slot` snippets do not compile here
   ([ADR 0039](../../../docs/adr/0039-admin-frontend-base-ui-primitives.md)). Use
   `agenza-ui-primitive` before adding anything to `shared/ui/`.
-- Semantic tokens only (`bg-background`, `text-muted-foreground`); every interactive control needs an
-  accessible name; decorative icons get `aria-hidden`. Run `agenza-a11y-review` on a new screen.
+- Semantic tokens only (`bg-background`, `text-muted-foreground`).
 - Tests are colocated, Vitest + RTL, module mocks via `vi.mock` / `vi.hoisted` — no network mocking.
   Coverage thresholds in `vitest.config.ts` are a real gate: `shared/ui/` and slice barrels are
   excluded, so your `model/`, `api/` and page hooks carry the number. See `agenza-testing`.

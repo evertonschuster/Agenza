@@ -85,12 +85,10 @@ export { loader as clientsLoader, action as clientsAction } from './ui/pages/Cli
   from a shadcn/Radix tutorial will not compile, and the fix is the `render` prop, not a cast.
 - Semantic tokens only: `bg-background`, `text-muted-foreground`, `border-border`. A raw palette
   class breaks light/dark/system, which is a real three-state theme in `shared/theme/`.
-- Every interactive control needs an accessible name; decorative icons take `aria-hidden`. Prefer the
-  primitive's own keyboard behaviour to a hand-written key handler. Run `agenza-a11y-review`.
+- Prefer the primitive's own keyboard behaviour to a hand-written key handler.
 - A resting `<kbd>` keycap belongs only on a control that occurs at most **once per screen** — the
   header search, the screen's single primary CTA, a modal's confirm. Row actions, nav items and
-  anything destructive get tooltip-on-hover-and-focus or the palette's right rail instead. The keycap
-  is `<kbd aria-hidden>` plus `aria-keyshortcuts` on the button; never inside `aria-label`.
+  anything destructive get tooltip-on-hover-and-focus or the palette's right rail instead.
 - Shortcut matching uses `event.key`, never `event.code` — ABNT2 keyboards.
 - All visible strings pt-BR, including empty states and error copy; key names (`Ctrl`, `Esc`,
   `Enter`) are not translated. See `agenza-ptbr-copy`.

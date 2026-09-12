@@ -54,8 +54,7 @@ uma página não tem `try/catch`. A conversão para rejeição acontece num luga
 **Tokens semânticos, nunca classes de paleta crua.** `bg-background`, `text-muted-foreground`,
 `border-border`. Cor crua quebra a portabilidade entre temas.
 
-**Todo controle interativo precisa de nome acessível.** Ícone decorativo leva `aria-hidden`. Prefira o
-comportamento do primitivo a um handler de tecla próprio.
+Prefira o comportamento do primitivo a um handler de tecla próprio.
 
 ## Portões de CI
 
@@ -91,7 +90,6 @@ Ver [README.md](README.md) para a preparação de ambiente.
 | ------------------------- | ------------------------------------------------------- |
 | `agenza-frontend-slice`   | construir ou alterar uma fatia de feature               |
 | `agenza-ui-primitive`     | adicionar ou alterar algo em `shared/ui/`               |
-| `agenza-a11y-review`      | revisar uma tela nova                                   |
 | `agenza-api-contract`     | mexer em tipos gerados, envelope ou contrato de erro    |
 | `agenza-testing`          | escrever testes ou destravar o gate de cobertura        |
 | `agenza-ptbr-copy`        | escrever texto visível ou formatar número, data e moeda |
