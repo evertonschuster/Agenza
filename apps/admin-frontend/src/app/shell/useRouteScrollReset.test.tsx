@@ -30,8 +30,7 @@ describe('useRouteScrollReset', () => {
     );
 
     // main is the actual overflow-y-auto container in AppShell — never the window — and it
-    // persists across route changes (only the routed content under it swaps). Simulate that it
-    // was scrolled before navigating.
+    // persists across route changes (only the routed content under it swaps).
     const shell = screen.getByTestId('shell');
     Object.defineProperty(shell, 'scrollTop', { value: 200, writable: true });
     Object.defineProperty(shell, 'scrollLeft', { value: 50, writable: true });
