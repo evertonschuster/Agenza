@@ -1,10 +1,12 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { makeOidcUser } from '@/test/oidcUser';
 import { sessionStore } from '@/shared/session/sessionStore';
-import { startListening } from './sessionDriver';
+import { themeStore } from '@/shared/theme/themeStore';
+import { login, startListening } from './sessionDriver';
 
-const { mockGetUser, mockEvents } = vi.hoisted(() => ({
+const { mockGetUser, mockSigninRedirect, mockEvents } = vi.hoisted(() => ({
   mockGetUser: vi.fn(),
+  mockSigninRedirect: vi.fn(),
   mockEvents: {
     addUserLoaded: vi.fn(),
     removeUserLoaded: vi.fn(),
@@ -18,7 +20,7 @@ const { mockGetUser, mockEvents } = vi.hoisted(() => ({
 vi.mock('../api/authClient', () => ({
   authClient: {
     getUser: mockGetUser,
-    signinRedirect: vi.fn(),
+    signinRedirect: mockSigninRedirect,
     signoutRedirect: vi.fn(),
     events: mockEvents,
   },
@@ -70,5 +72,32 @@ describe('startListening', () => {
     expect(sessionStore.getSnapshot().session.status).toBe('loggingOut');
 
     stopListening();
+  });
+});
+
+describe('login', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    sessionStore.reset();
+    localStorage.clear();
+    themeStore.reset();
+  });
+
+  it('sends the current resolved theme as an extension parameter (ADR 0020, 0040)', async () => {
+    themeStore.setChoice('dark');
+    mockSigninRedirect.mockResolvedValue(undefined);
+
+    await login();
+
+    expect(mockSigninRedirect).toHaveBeenCalledWith({ extraQueryParams: { theme: 'dark' } });
+  });
+
+  it('reads the theme at call time, not at module load', async () => {
+    themeStore.setChoice('light');
+    mockSigninRedirect.mockResolvedValue(undefined);
+
+    await login();
+
+    expect(mockSigninRedirect).toHaveBeenCalledWith({ extraQueryParams: { theme: 'light' } });
   });
 });

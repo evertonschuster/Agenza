@@ -1,6 +1,7 @@
 import type { User } from 'oidc-client-ts';
 import { sessionStore } from '@/shared/session/sessionStore';
 import type { SessionPrincipal } from '@/shared/session/session';
+import { themeStore } from '@/shared/theme/themeStore';
 import { authClient } from '../api/authClient';
 
 function toPrincipal(user: User): SessionPrincipal {
@@ -61,7 +62,11 @@ export function startListening(): () => void {
 export async function login(): Promise<void> {
   sessionStore.dispatch({ type: 'LOGIN_STARTED' });
   try {
-    await authClient.signinRedirect();
+    // Read at call time, not baked into authClient's UserManager construction, so the
+    // extension parameter always reflects the theme choice active right now (ADR 0020, 0040).
+    await authClient.signinRedirect({
+      extraQueryParams: { theme: themeStore.getSnapshot().resolved },
+    });
   } catch {
     sessionStore.dispatch({ type: 'LOGIN_ERROR' });
   }

@@ -23,7 +23,8 @@
     "erasableSyntaxOnly": true,
 
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "cn": ["./src/shared/lib/utils.ts"]
     },
 
     "types": ["node", "vite/client", "vitest/globals", "@testing-library/jest-dom"]
