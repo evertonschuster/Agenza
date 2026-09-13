@@ -17,10 +17,7 @@ export function AppShell() {
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <AppHeader />
-        <main
-          ref={mainRef}
-          className="flex-1 overflow-y-auto overscroll-contain p-4 pb-20 md:pb-4"
-        >
+        <main ref={mainRef} className="flex-1 overflow-y-auto overscroll-contain p-4 pb-20 md:pb-4">
           <Outlet />
         </main>
       </div>
