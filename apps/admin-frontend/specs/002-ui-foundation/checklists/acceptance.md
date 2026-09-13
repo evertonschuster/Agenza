@@ -33,8 +33,6 @@ humano e não pode ser delegado a um teste verde.
       serviço tem atalho
 - [ ] `Ctrl/⌘+K`, `/`, `?`, `n`, `Esc` funcionam conforme a folha de ajuda
 - [ ] Digitando num campo, `n` insere o caractere e **não** dispara a ação
-- [ ] Desligar a preferência silencia `/`, `?` e `n` **e** remove todas as dicas visuais;
-      `Ctrl/⌘+K` e `Esc` continuam
 - [ ] Num dispositivo só de toque, nenhuma dica de atalho aparece
 - [ ] Num tablet com teclado acoplado, as dicas **aparecem** após a primeira tecla
 - [ ] O modificador exibido corresponde à plataforma (`⌘` no macOS, `Ctrl` no resto)

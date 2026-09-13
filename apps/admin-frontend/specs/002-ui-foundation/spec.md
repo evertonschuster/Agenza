@@ -95,7 +95,7 @@ Quem trabalha no desktop percebe, olhando para a tela, que as ações principais
 de comandos concentra navegação e ações num só lugar, e existe uma folha de ajuda listando tudo.
 
 **Why this priority**: Pedido explicitamente, mas é acelerador — o painel precisa ser inteiramente
-operável sem nenhum atalho. Depende de US2 e US3 estarem prontas.
+operável sem nenhum atalho. Depende de US2 estar pronta.
 
 **Independent Test**: Sem ler documentação, olhar a tela de Serviços no desktop e identificar que
 criar um serviço tem atalho.

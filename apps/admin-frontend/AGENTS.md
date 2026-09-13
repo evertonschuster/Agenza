@@ -54,7 +54,7 @@ uma página não tem `try/catch`. A conversão para rejeição acontece num luga
 **Tokens semânticos, nunca classes de paleta crua.** `bg-background`, `text-muted-foreground`,
 `border-border`. Cor crua quebra a portabilidade entre temas.
 
-Prefira o comportamento do primitivo a um handler de tecla próprio.
+**Prefira o comportamento do primitivo a um handler de tecla próprio.**
 
 ## Portões de CI
 

@@ -332,8 +332,7 @@ o que não pode continuar é a marcação mentir.
       - Refutadas por uma segunda revisão (ver a introdução da Fase 8): lógica inline em
         `Services.tsx`, `overscroll-behavior` inerte, alias `cn` não usado
       - Confirmadas e corrigidas: contraste AA de 2 das 8 cores de tag no tema claro (T156),
-        `ThemeToggle` sinalizando seleção só por ícone (T158), scroll ao topo na troca de rota
-        (T157)
+        scroll ao topo na troca de rota (T157)
       - Confirmada, não é bug: elevação escura inerte — sem consumidor, sutil por design (T156)
       - **Ainda sem confirmar**: `bg-black` cru nos backdrops; `research.md` citado no `spec.md` e
         nunca commitado
@@ -361,7 +360,7 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
 
 - [x] T156 [FND] **Subir o stack e olhar.** Ninguem nunca executou esta fundacao — ela foi construida
       e revisada so estaticamente. `dotnet run --project backend/AppHost --launch-profile http`,
-      login com `owner@demo.local`. Isso avanca a T124 (nao fecha — ver T124) e resolve de uma vez as tres alegacoes que nao
+      login com `owner@demo.local`. Isso resolve de uma vez as tres alegacoes que nao
       consegui verificar sem navegador: contraste AA de 2 das 8 cores de tag no tema claro, se a
       elevacao no escuro e mesmo inerte, e se o trilho de icones (768–1023 px) distingue destino
       indisponivel. Confira tambem o risco visual que o plano nomeou: o keycap sobre o violeta a 100%
@@ -416,7 +415,8 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
 
 ### 8b — Correcoes confirmadas
 
-- [x] T157 [US2] **Scroll ao topo mira o contêiner errado.** `useRouteFocus.ts:15` chama
+- [x] T157 [US2] **Scroll ao topo mira o contêiner errado.** `useRouteScrollReset.ts` (então
+      `useRouteFocus.ts`) chama
       `window.scrollTo(0, 0)`, mas `AppShell.tsx:28` poe `overflow-y-auto` no `<main>` — quem rola e
       o `main`, nao a janela. Navegar de uma posicao rolada mantem o usuario rolado. Rolar o proprio
       elemento referenciado. _Corrigido: `window.scrollTo(0, 0)` virou `ref.current.scrollTop = 0`
