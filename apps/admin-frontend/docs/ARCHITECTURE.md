@@ -160,6 +160,9 @@ _"`Result` é a moeda interna; a fronteira do framework é o caixa."_
 > is not. Routing both down the rejection path turns validation into an error screen.
 
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
+Exemplos reais de request/response — sucesso, validação, conflito, 404, autenticação/tenant —
+verificados ao vivo contra o `services-service`, incluindo formas de erro que o `services-api.d.ts`
+gerado não cobre: [`docs/API.md`](../../../docs/API.md).
 
 ---
 
