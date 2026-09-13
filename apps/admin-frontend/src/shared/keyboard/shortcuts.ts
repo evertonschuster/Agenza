@@ -94,7 +94,10 @@ class ShortcutRegistry {
       if (event.key.toLowerCase() !== shortcut.key.toLowerCase()) continue;
 
       if (shortcut.modified) {
-        if (!(event.ctrlKey || event.metaKey)) continue;
+        // AltGr reports as ctrlKey (+ altKey) on some layouts while typing an ordinary
+        // character (e.g. ABNT2's Alt Gr+Q for "/") — excluding altKey keeps that from
+        // firing a Ctrl-modified shortcut.
+        if (!(event.ctrlKey || event.metaKey) || event.altKey) continue;
       } else {
         if (event.ctrlKey || event.metaKey || event.altKey) continue;
         if (isTypingTarget(event.target)) continue;

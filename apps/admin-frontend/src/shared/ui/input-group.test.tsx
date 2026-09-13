@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
-import { InputGroup, InputGroupAddon, InputGroupButton, InputGroupInput } from './input-group';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+  InputGroupTextarea,
+} from './input-group';
 
 describe('InputGroupAddon', () => {
   it('focuses the sibling input when the addon itself is clicked', () => {
@@ -14,6 +20,19 @@ describe('InputGroupAddon', () => {
     fireEvent.click(screen.getByText('icon'));
 
     expect(screen.getByPlaceholderText('Buscar')).toHaveFocus();
+  });
+
+  it('focuses a sibling textarea when the addon itself is clicked', () => {
+    render(
+      <InputGroup>
+        <InputGroupAddon>icon</InputGroupAddon>
+        <InputGroupTextarea placeholder="Descrição" />
+      </InputGroup>,
+    );
+
+    fireEvent.click(screen.getByText('icon'));
+
+    expect(screen.getByPlaceholderText('Descrição')).toHaveFocus();
   });
 
   it('does not steal focus when the click lands on a button inside the addon', () => {

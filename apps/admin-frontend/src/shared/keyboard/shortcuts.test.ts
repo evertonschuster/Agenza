@@ -57,6 +57,21 @@ describe('shortcutRegistry', () => {
     expect(handler).toHaveBeenCalledTimes(1);
   });
 
+  it('does not fire a modified shortcut when altKey is also held (AltGr)', () => {
+    const handler = vi.fn();
+    shortcutRegistry.register({
+      id: 'palette',
+      key: 'k',
+      description: 'Palette',
+      handler,
+      modified: true,
+    });
+
+    dispatchKeydown(document, 'k', { ctrlKey: true, altKey: true });
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it('does not suppress a modified shortcut while a dialog is open', () => {
     const handler = vi.fn();
     shortcutRegistry.register({

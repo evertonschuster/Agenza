@@ -1,14 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { LoginPage, AuthCallbackPage } from '@/features/auth';
 import { AppRouteError } from './AppRouteError';
-
-function RouteHydrateFallback() {
-  return (
-    <main className="flex min-h-dvh items-center justify-center bg-background text-sm text-muted-foreground">
-      <h1 className="text-sm font-normal">Carregando…</h1>
-    </main>
-  );
-}
+import { RouteHydrateFallback } from './RouteHydrateFallback';
 
 export const router = createBrowserRouter([
   {
