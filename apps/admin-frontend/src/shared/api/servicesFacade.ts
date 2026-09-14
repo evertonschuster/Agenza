@@ -27,6 +27,16 @@ export const SESSION_PROBLEM: ApiProblem = {
   title: 'Sua sessão expirou. Entre novamente.',
 };
 
+const TRANSIENT_PROBLEM_CODES = new Set(
+  [NETWORK_PROBLEM.code, SESSION_PROBLEM.code, SERVER_PROBLEM.code].filter(
+    (code): code is string => code != null,
+  ),
+);
+
+export function isTransientProblem(problem: ApiProblem): boolean {
+  return !!problem.code && TRANSIENT_PROBLEM_CODES.has(problem.code);
+}
+
 const isProblem = (value: unknown): value is ApiProblem =>
   typeof value === 'object' &&
   value !== null &&
