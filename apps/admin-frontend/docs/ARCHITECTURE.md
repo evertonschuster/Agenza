@@ -24,7 +24,7 @@ src/
 │   ├── shell/               AppShell chrome: responsive nav (sidebar/rail/bottom), header,
 │   │                        command palette, shortcut help sheet
 │   └── pages/               One stub per route (§6) — not feature slices; no model, no api
-├── features/<slice>/        One vertical slice per user-facing capability (auth, …)
+├── features/<slice>/        One vertical slice per user-facing capability (auth, tags, …)
 │   ├── model/               Types + rules. No React. ( = domain + application )
 │   ├── api/                 Backend gateway — repositories. ( = infrastructure )
 │   ├── ui/                  Everything that imports React
@@ -84,8 +84,14 @@ them.
 **A page's `loader` and `action` live in `ui/pages/<Page>/route.ts`** and are re-exported from the
 slice barrel, so `app/routes.tsx` wires them by importing `@/features/<slice>` — the dependency
 still runs `app → features`. Server data reaches the shell through `useLoaderData()` /
-`useActionData()` / `useNavigation()`, never through page-owned state. No slice implements this yet
-(§6) — the convention is set for the first one that does.
+`useActionData()` / `useFetcher()`, never through page-owned state.
+`features/tags/ui/pages/TagsPage/route.ts` is the first slice to implement this
+(`specs/003-tags-crud/`): `tagsLoader` calls `unwrapOrThrow` (an unexpected list-fetch failure has no
+sensible inline treatment); `tagsAction` returns its `ApiResult` straight through, never unwrapped —
+a validation or conflict response is expected flow for the create/edit/delete dialogs, not an error
+boundary. Each dialog owns its own `useFetcher()` rather than the page holding one shared fetcher,
+so reopening a dialog for a different tag starts from a clean `fetcher.data` instead of carrying a
+stale error from an unrelated earlier submission.
 
 ---
 
@@ -121,21 +127,27 @@ what the endpoint returns, the repository forwards the result verbatim — the r
 the one compile-time checkpoint against a breaking wire change. A `toDomain(dto)` mapper is added
 only when wire and domain genuinely diverge.
 
-The shape below is illustrative — `categoryRepository` and the `categories` slice it belonged to no
-longer exist in this codebase ([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)).
-It's kept here to show the pattern the next repository should follow:
+`features/tags/api/tagsRepository.ts` is the first repository built against this pattern
+(`specs/003-tags-crud/`), replacing the illustrative, since-deleted `categoryRepository`
+([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)) as the reference:
 
 ```ts
-// features/<slice>/api/<entity>Repository.ts (illustrative — no such file exists today)
-import type { Category } from '../model/category';
+// features/tags/api/tagsRepository.ts
+import { servicesApi } from '@/shared/api/servicesApi';
+import type { ApiResult } from '@/shared/api/servicesFacade';
+import type { Tag } from '../model/tag';
 
-export const categoryRepository = {
-  list: (filter: CategoryListFilter = {}): Promise<ApiResult<Category[]>> =>
-    servicesApi.get('/api/v{version}/categories', {
-      query: filter.search ? { Search: filter.search } : {},
-    }),
-};
+function list(search?: string): Promise<ApiResult<Tag[]>> {
+  return servicesApi.get('/api/v{version}/tags', {
+    query: search ? { Search: search } : undefined,
+  });
+}
 ```
+
+`Tag` and the generated `TagResponse` are structurally identical, so `list` forwards the facade's
+result verbatim — no `toDomain` mapper — and the `Promise<ApiResult<Tag[]>>` return annotation is
+the one compile-time checkpoint against a breaking wire change. `create` / `update` / `remove`
+follow the same shape (`servicesApi.post` / `.put` / `.del`).
 
 **Errors are values, never exceptions.** `Result<T, E> = { ok: true; data } | { ok: false; error }`
 with `ok()` / `fail()` in `shared/result.ts` — custom, ~6 lines, no library. No `unwrap()`-that-throws.
@@ -160,6 +172,9 @@ _"`Result` é a moeda interna; a fronteira do framework é o caixa."_
 > is not. Routing both down the rejection path turns validation into an error screen.
 
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
+Exemplos reais de request/response — sucesso, validação, conflito, 404, autenticação/tenant —
+verificados ao vivo contra o `services-service`, incluindo formas de erro que o `services-api.d.ts`
+gerado não cobre: [`docs/API.md`](../../../docs/API.md).
 
 ---
 
@@ -213,7 +228,7 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | FSD segments over `domain/application/infrastructure/presentation`                                                                    | Practice-oriented reading of the same principles, less nesting.                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | Custom `Result` (not neverthrow / Effect)                                                                                             | ~6 lines, no dependency, no `unwrap`-that-throws; the boundary conversion is single-sited in `shared/api/unwrap.ts` — [ADR 0034](../../../docs/adr/0034-admin-frontend-custom-result-type.md).                                                                                                                                                                                                                                                                                                                        |
 | `openapi-typescript` + `openapi-fetch`, kept                                                                                          | A hand-rolled typed client would be _more_ code (URL/query/path serialization, content negotiation).                                                                                                                                                                                                                                                                                                                                                                                                                  |
-| No server-state library (TanStack Query, SWR, …)                                                                                      | The route `loader` + `action` + RR revalidation cover one screen; when a query lib lands it **replaces** the repository — [ADR 0035](../../../docs/adr/0035-admin-frontend-no-server-state-library.md).                                                                                                                                                                                                                                                                                                               |
+| No server-state library (TanStack Query, SWR, …)                                                                                      | The route `loader` + `action` + RR revalidation cover one screen; when a query lib lands it **replaces** the repository — [ADR 0035](../../../docs/adr/0035-admin-frontend-no-server-state-library.md). `features/tags` (the first slice with a real `loader`/`action`) proves the plan: create/edit/delete each revalidate the list automatically, no library added.                                                                                                                                                 |
 | Error normalization **inside `run()`**                                                                                                | A short-lived call-site `settle(call)` wrapper was tried and removed — it was one more thing every caller had to remember. The HTTP layer owns it.                                                                                                                                                                                                                                                                                                                                                                    |
 | **No request-cancellation layer**                                                                                                     | Facade `AbortController` + `useApiResource` built and reverted twice; the effect `ignore`-flag fixes the only real bug. Revisit for search-as-you-type or a large export — [ADR 0033](../../../docs/adr/0033-admin-frontend-no-request-cancellation-layer.md).                                                                                                                                                                                                                                                        |
 | `Category` entity in `model/`, not `api/`                                                                                             | The UI was reaching through to the backend layer just for a domain type — inverted dependency.                                                                                                                                                                                                                                                                                                                                                                                                                        |
@@ -227,6 +242,7 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | Minimal in-app logger, no telemetry backend                                                                                           | `shared/logger.ts` wrapping `console`, structured, no PII beyond tenant id.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | OIDC session kept in `localStorage`                                                                                                   | A second tab reuses the session; accepted threat is an XSS on our origin reading the token; in-memory + `httpOnly` cookie rejected (needs a backend change) — [ADR 0036](../../../docs/adr/0036-admin-frontend-oidc-session-in-localstorage.md).                                                                                                                                                                                                                                                                      |
 | Session core in `shared/session`                                                                                                      | Store, reducer and tenant decode moved out of `features/auth` / `app/` so the composition descends with them; no feature imports `app/`, and ESLint now enforces both directions — [ADR 0037](../../../docs/adr/0037-admin-frontend-session-core-in-shared.md).                                                                                                                                                                                                                                                       |
+| `features/tags` — first real business feature slice                                                                                   | Exercises the FSD slice, the repository pattern and `loader`/`action` end to end for the first time (§1–§2 were written for this moment); a fixed-option `shared/ui/color-swatch-picker.tsx` primitive and a `CommandPalette` entry outside `NAV_DESTINATIONS` came with it — `specs/003-tags-crud/`.                                                                                                                                                                                                                 |
 
 ---
 
@@ -251,25 +267,25 @@ because it didn't need to be yet. This is the compiled view across the whole app
   first. Retirement trigger, per page: **the first real feature slice replaces the stub it
   corresponds to** (e.g. a `features/services/` slice replaces `app/pages/Services.tsx` and moves
   under `ui/pages/<Page>/` per §1), once its backend exists.
-- **The API layer (`servicesApi`, `apiClient`, `unwrap`, `servicesFacade`, the generated types) is
-  standing with zero call sites, on purpose.** It is not dead code — see
-  [ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md) before removing
-  anything under `shared/api/` on the grounds that nothing imports it.
+- **The API layer (`servicesApi`, `apiClient`, `unwrap`, `servicesFacade`, the generated types) stood
+  with zero call sites for a while, on purpose — not dead code.** `features/tags/api/tagsRepository.ts`
+  is its first real consumer (`specs/003-tags-crud/`); see
+  [ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md) for why the layer
+  was kept standing in the meantime.
 
 ### Deliberately not built — no need yet
 
-| Not built                                              | Why not                                                                                               | Build it when                                           |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
-| `entities/` and top-level `pages/` FSD layers          | Nothing is shared across features yet                                                                 | A second feature needs the same entity or page          |
-| Server-state library (TanStack Query, SWR)             | No route has a `loader` / `action` right now; the router's revalidation is the plan for when one does | Cross-route caching, refetch-on-focus, or optimistic UI |
-| Request-cancellation layer (`AbortController`)         | The effect `ignore`-flag already fixes the race; nothing is slow enough to abort on the wire          | Search-as-you-type, a large export                      |
-| `toDomain(dto)` mappers                                | No repository exists yet to need one; add only when a wire shape and a domain type diverge            | A wire shape and a domain type genuinely diverge        |
-| Ports/adapters seam for OIDC (injected `authClient`)   | One integration; module-mock in tests is acceptable                                                   | A second identity provider, or the mock cost turns real |
-| Broad OpenAPI client generation                        | No frontend endpoint is called at all right now (§6 above)                                            | The next business feature is wired                      |
-| ESLint rule banning bare `fetch` outside `shared/api/` | Small surface, caught in review                                                                       | The surface grows, or a bare `fetch` slips in           |
-| `identity-service` typed client                        | Consumed purely through the OIDC protocol                                                             | Never — it's protocol, not REST                         |
-| External telemetry / observability backend             | `shared/logger.ts` → `console` is enough                                                              | A real ops requirement appears                          |
-| A consumer for `servicesApi.del`                       | The facade provides it, but no endpoint needs `DELETE`                                                | A repository calls it                                   |
+| Not built                                              | Why not                                                                                         | Build it when                                           |
+| ------------------------------------------------------ | ----------------------------------------------------------------------------------------------- | ------------------------------------------------------- |
+| `entities/` and top-level `pages/` FSD layers          | Nothing is shared across features yet                                                           | A second feature needs the same entity or page          |
+| Server-state library (TanStack Query, SWR)             | `features/tags`'s one route proves loader/action + revalidation is enough so far                | Cross-route caching, refetch-on-focus, or optimistic UI |
+| Request-cancellation layer (`AbortController`)         | The effect `ignore`-flag already fixes the race; nothing is slow enough to abort on the wire    | Search-as-you-type, a large export                      |
+| `toDomain(dto)` mappers                                | `tagsRepository` forwards `Tag`/`TagResponse` verbatim — no repository has needed one yet       | A wire shape and a domain type genuinely diverge        |
+| Ports/adapters seam for OIDC (injected `authClient`)   | One integration; module-mock in tests is acceptable                                             | A second identity provider, or the mock cost turns real |
+| Broad OpenAPI client generation                        | `features/tags` calls four `/tags` endpoints; the rest of the generated surface is still unused | The next business feature is wired                      |
+| ESLint rule banning bare `fetch` outside `shared/api/` | Small surface, caught in review                                                                 | The surface grows, or a bare `fetch` slips in           |
+| `identity-service` typed client                        | Consumed purely through the OIDC protocol                                                       | Never — it's protocol, not REST                         |
+| External telemetry / observability backend             | `shared/logger.ts` → `console` is enough                                                        | A real ops requirement appears                          |
 
 ---
 

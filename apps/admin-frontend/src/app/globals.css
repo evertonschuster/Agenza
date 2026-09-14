@@ -21,6 +21,7 @@
   --color-accent-foreground: var(--accent-foreground);
   --color-destructive: var(--destructive);
   --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
@@ -73,6 +74,7 @@
 
   --destructive: oklch(0.577 0.245 27.325);
   --destructive-foreground: oklch(0.98 0.006 27);
+  --success: oklch(0.55 0.13 145);
 
   --border: oklch(0.91 0.012 288);
   --input: oklch(0.91 0.012 288);
@@ -123,6 +125,7 @@
 
   --destructive: oklch(0.704 0.191 22.216);
   --destructive-foreground: oklch(0.2 0.03 22);
+  --success: oklch(0.65 0.13 145);
 
   --border: oklch(0.96 0.01 288 / 12%);
   --input: oklch(0.96 0.01 288 / 16%);
@@ -162,6 +165,16 @@
   }
   h4 {
     @apply text-base font-semibold;
+  }
+
+  button:not(:disabled),
+  [role='button']:not([aria-disabled='true']),
+  [role='radio']:not([aria-disabled='true']),
+  [role='tab']:not([aria-disabled='true']),
+  [role='menuitem']:not([aria-disabled='true']),
+  [role='option'],
+  a[href] {
+    cursor: pointer;
   }
 
   :focus {
