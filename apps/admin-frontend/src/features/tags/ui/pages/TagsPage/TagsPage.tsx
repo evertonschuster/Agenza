@@ -19,6 +19,7 @@ export function TagsPage() {
   const {
     tags,
     query,
+    searchInputRef,
     isEmptyCatalog,
     isEmptySearch,
     dialog,
@@ -48,7 +49,7 @@ export function TagsPage() {
             <SearchIcon aria-hidden="true" />
           </InputGroupAddon>
           <InputGroupInput
-            key={query}
+            ref={searchInputRef}
             name="q"
             defaultValue={query}
             placeholder="Buscar etiquetas por nome..."

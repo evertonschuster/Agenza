@@ -73,6 +73,21 @@ describe('TagsPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
+  it('keeps keyboard focus on the search field after submitting, so the person can keep typing', async () => {
+    const user = userEvent.setup();
+    renderPage(TAGS);
+    await screen.findByText('Promoção');
+
+    const searchInput = screen.getByLabelText('Buscar etiquetas por nome');
+    await user.type(searchInput, 'vip{Enter}');
+
+    await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
+    expect(searchInput).toHaveFocus();
+
+    await user.keyboard('!');
+    expect(searchInput).toHaveValue('vip!');
+  });
+
   it('narrows the list to tags whose name contains the search term after clicking the search button, case-insensitively (spec US1)', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
