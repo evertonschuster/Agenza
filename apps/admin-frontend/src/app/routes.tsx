@@ -36,6 +36,15 @@ export const router = createBrowserRouter([
             lazy: () => import('./pages/Services').then((m) => ({ Component: m.Services })),
           },
           {
+            path: 'tags',
+            lazy: () =>
+              import('@/features/tags').then((m) => ({
+                Component: m.TagsPage,
+                loader: m.tagsLoader,
+                action: m.tagsAction,
+              })),
+          },
+          {
             path: 'ajustes',
             lazy: () => import('./pages/Settings').then((m) => ({ Component: m.Settings })),
           },

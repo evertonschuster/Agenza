@@ -15,11 +15,12 @@ fully built and covered by 75 passing backend tests (run this session).
 unnecessary churn; `generate:api-types:check` already exists specifically to catch drift, so it's the
 right Setup-phase task instead.
 
-## Decision 2 — Data fetching: route `loader`, fetched once, filtered client-side
+## Decision 2 — Data fetching: route `loader`, re-run on explicit search submission
 
-**Decision**: `TagsPage`'s data comes from a React Router `loader` (`route.ts`) that calls
-`tagsRepository.list()` once per navigation to `/tags`. The search box (FR-002) filters the
-already-loaded array in `useTagsPage.ts` — no per-keystroke request, no debounce.
+**Decision** (superseded 2026-09-14, see below): `TagsPage`'s data comes from a React Router
+`loader` (`route.ts`) that calls `tagsRepository.list()` once per navigation to `/tags`. The search
+box (FR-002) filters the already-loaded array in `useTagsPage.ts` — no per-keystroke request, no
+debounce.
 
 **Rationale**: Spec Assumptions fix the catalog at "small (dezenas a poucas centenas)" with no
 pagination, matching the backend's own unpaginated `ListTagsQuery`. The constitution still defers
@@ -32,6 +33,15 @@ single small, infrequently-changing list would be exactly the premature complexi
 supports it (`ListTagsQuery(string? Search)`, case-insensitive `ILIKE`), so this is a legitimate
 future option if the catalog grows past "small," but there's no evidence that's true today and it
 would add debounce/race-handling complexity for no current benefit.
+
+**Superseded 2026-09-14**: reversed by explicit user direction — client-side filtering ships the
+whole catalog to the browser and re-filters it in JS regardless of how large the catalog grows,
+which the user flagged as a real risk, not a hypothetical one. `route.ts`'s `tagsLoader` now reads
+`?q=` from `request.url` and forwards it to `tagsRepository.list(query)`, so the backend's own
+`ILIKE` search does the filtering (spec FR-002). The debounce/race-handling cost flagged above as the
+reason to defer this is avoided by triggering the request only on explicit submission (Enter or a
+search button) via a plain `<Form method="get">` — not per keystroke — so no debounce was needed
+after all.
 
 ## Decision 3 — Mutations as router `action`s, not local state + manual refetch
 
@@ -88,16 +98,24 @@ directly). `tagsRepository.ts` forwards `servicesApi` calls verbatim — no `toD
 **Rationale**: Matches the project's established repository shape (`AGENTS.md`): hand-written domain
 types decouple feature code from OpenAPI-generated names, add a mapper only the day wire ≠ domain.
 
-## Decision 7 — Command palette entry, deliberately not a `NAV_DESTINATIONS` entry
+## Decision 7 — `NAV_DESTINATIONS` entry, not a standalone command-palette item
 
-**Decision**: Add one item to `app/shell/CommandPalette.tsx`'s command list, structurally separate
-from the `NAV_DESTINATIONS`-derived "Ir para" group (`navigation.ts` stays unchanged, still exactly
-the 6 fixed destinations powering `SidebarNav`/`BottomNav`).
+**Decision** (supersedes the original plan-time decision, see below): Add `Etiquetas` as a seventh
+entry to `navigation.ts`'s `NAV_DESTINATIONS`, the single array already powering `SidebarNav`,
+`BottomNav`, and the command palette's "Ir para" group. No structurally separate command-palette
+group.
 
-**Rationale**: Directly implements spec FR-014 — reachable only through the command palette, no new
-sidebar/bottom-nav icon. Confirmed against the live `CommandPalette.tsx` source this session: today
-its groups are "Ir para" (`NAV_DESTINATIONS.map(...)`), "Tema," "Outros" — Tags becomes a fourth,
-one-item group (or joins "Outros"; a tasks-time call, not a plan-level one).
+**Rationale**: Directly implements the revised spec FR-014 — reachable both through the command
+palette and a dedicated destination in the primary navigation (sidebar on wide screens, "Mais" sheet
+on narrow ones, same as `Ajustes`). Reusing `NAV_DESTINATIONS` rather than adding a second,
+parallel wiring path is the [[prefers-minimal-plumbing]] choice: `SidebarNav`/`BottomNav`/command
+palette all already render whatever this one array contains.
+
+**Superseded 2026-09-14** (original decision, kept for record): the original plan added one item to
+`app/shell/CommandPalette.tsx`'s command list, structurally separate from the `NAV_DESTINATIONS`
+-derived "Ir para" group, specifically to implement the then-current FR-014 — reachable *only*
+through the command palette, no sidebar/bottom-nav icon. The user reversed that access decision by
+explicit request in chat, wanting a more direct, discoverable path than the command palette alone.
 
 ## Decision 8 — e2e "tag in use" scenario needs a new fixture-seeding helper
 

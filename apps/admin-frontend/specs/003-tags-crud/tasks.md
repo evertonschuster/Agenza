@@ -25,9 +25,9 @@ implementable, testable, and demoable.
 
 ## Phase 1: Setup
 
-- [ ] T001 Create the `src/features/tags/` skeleton — empty `model/`, `api/`,
+- [x] T001 Create the `src/features/tags/` skeleton — empty `model/`, `api/`,
   `ui/pages/TagsPage/` folders and an `index.ts` barrel stub
-- [ ] T002 [P] Run `npm run generate:api-types:check` — confirm the generated client already
+- [x] T002 [P] Run `npm run generate:api-types:check` — confirm the generated client already
   covers `/tags` with no diff (research.md Decision 1)
 
 ---
@@ -36,25 +36,25 @@ implementable, testable, and demoable.
 
 **⚠️ CRITICAL**: `/tags` is not reachable and nothing below compiles until this phase is done.
 
-- [ ] T003 [P] Define the `Tag` domain type and the 8-entry color palette constant in
+- [x] T003 [P] Define the `Tag` domain type and the 8-entry color palette constant in
   `src/features/tags/model/tag.ts` (data-model.md)
-- [ ] T004 [P] Define client-side field validation (`validateTagForm`: name required ≤40,
+- [x] T004 [P] Define client-side field validation (`validateTagForm`: name required ≤40,
   description ≤200) in `src/features/tags/model/tagForm.ts` (research.md Decision 5 — UX
   pre-check only, never the source of truth)
-- [ ] T005 [P] Build the color-swatch picker primitive in `src/shared/ui/color-swatch-picker.tsx`
+- [x] T005 [P] Build the color-swatch picker primitive in `src/shared/ui/color-swatch-picker.tsx`
   via the `agenza-ui-primitive` skill — generic `{value,label}[]` options, `role="radiogroup"`,
   no Tag-specific knowledge (research.md Decision 4)
-- [ ] T006 Implement `tagsRepository` (`list`, `create`, `update`, `remove`) in
+- [x] T006 Implement `tagsRepository` (`list`, `create`, `update`, `remove`) in
   `src/features/tags/api/tagsRepository.ts`, delegating to `servicesApi` verbatim (depends on
   T003)
-- [ ] T007 Implement `tagsLoader` + `tagsAction` in
+- [x] T007 Implement `tagsLoader` + `tagsAction` in
   `src/features/tags/ui/pages/TagsPage/route.ts` per contracts/routes-contract.md — loader
   `unwrapOrThrow`s, action returns the raw `ApiResult` (depends on T006)
-- [ ] T008 Export `TagsPage`, `tagsLoader`, `tagsAction` from `src/features/tags/index.ts`
+- [x] T008 Export `TagsPage`, `tagsLoader`, `tagsAction` from `src/features/tags/index.ts`
   (depends on T007)
-- [ ] T009 Wire the `/tags` route into `src/app/routes.tsx` (`lazy` returning
+- [x] T009 Wire the `/tags` route into `src/app/routes.tsx` (`lazy` returning
   `Component`/`loader`/`action` together, contracts/routes-contract.md) (depends on T008)
-- [ ] T010 [P] Add the "Etiquetas" entry to `src/app/shell/CommandPalette.tsx`, kept out of
+- [x] T010 [P] Add the "Etiquetas" entry to `src/app/shell/CommandPalette.tsx`, kept out of
   `NAV_DESTINATIONS` (research.md Decision 7; spec FR-014) (depends on T008)
 
 **Checkpoint**: `/tags` renders (empty body). User story work can begin.
@@ -72,19 +72,19 @@ returns; with zero tags, confirm the empty state (not an error).
 
 ### Tests for User Story 1
 
-- [ ] T011 [P] [US1] Component test — list rendering, empty-catalog state, empty-search state in
+- [x] T011 [P] [US1] Component test — list rendering, empty-catalog state, empty-search state in
   `src/features/tags/ui/pages/TagsPage/TagsPage.test.tsx`
-- [ ] T012 [P] [US1] Hook test — search filter is a case-insensitive substring match over the
+- [x] T012 [P] [US1] Hook test — search filter is a case-insensitive substring match over the
   already-loaded list in `src/features/tags/ui/pages/TagsPage/useTagsPage.test.ts`
 
 ### Implementation for User Story 1
 
-- [ ] T013 [P] [US1] Implement `TagRow.tsx` (chip via the existing global `.tag` class,
+- [x] T013 [P] [US1] Implement `TagRow.tsx` (chip via the existing global `.tag` class,
   description, row-actions slot) in `src/features/tags/ui/pages/TagsPage/TagRow.tsx`
-- [ ] T014 [US1] Implement `useTagsPage.ts` (read loader data, search state, filtered list,
+- [x] T014 [US1] Implement `useTagsPage.ts` (read loader data, search state, filtered list,
   empty/empty-search branching) in `src/features/tags/ui/pages/TagsPage/useTagsPage.ts` (depends
   on T013)
-- [ ] T015 [US1] Implement `TagsPage.tsx` shell — search input + list of `TagRow` + page header
+- [x] T015 [US1] Implement `TagsPage.tsx` shell — search input + list of `TagRow` + page header
   with only the title and the primary action (no route indicator, no subtitle — spec FR-015) in
   `src/features/tags/ui/pages/TagsPage/TagsPage.tsx` (depends on T014)
 
@@ -104,16 +104,16 @@ confirm nothing was created.
 
 ### Tests for User Story 2
 
-- [ ] T016 [P] [US2] Component test — required-field errors, duplicate-name banner (verbatim
+- [x] T016 [P] [US2] Component test — required-field errors, duplicate-name banner (verbatim
   backend text, spec FR-012), successful create in
   `src/features/tags/ui/pages/TagsPage/TagFormDialog.test.tsx`
 
 ### Implementation for User Story 2
 
-- [ ] T017 [US2] Implement `TagFormDialog.tsx` create mode — name input, `color-swatch-picker`,
+- [x] T017 [US2] Implement `TagFormDialog.tsx` create mode — name input, `color-swatch-picker`,
   description textarea, backend error rendering by structure (field vs. general) never by parsing
   message text, in `src/features/tags/ui/pages/TagsPage/TagFormDialog.tsx` (depends on T005, T004)
-- [ ] T018 [US2] Wire "Nova etiqueta" (button + `n` shortcut, mirroring `Services.tsx`'s
+- [x] T018 [US2] Wire "Nova etiqueta" (button + `n` shortcut, mirroring `Services.tsx`'s
   `useShortcut` pattern) in `TagsPage.tsx` to open `TagFormDialog` and submit `intent=create` via
   `useFetcher` (depends on T015, T017)
 
@@ -132,14 +132,14 @@ rename it to another tag's existing name, confirm the conflict message and that 
 
 ### Tests for User Story 3
 
-- [ ] T019 [P] [US3] Component test — pre-filled fields, rename-to-duplicate conflict, in the same
+- [x] T019 [P] [US3] Component test — pre-filled fields, rename-to-duplicate conflict, in the same
   `src/features/tags/ui/pages/TagsPage/TagFormDialog.test.tsx` from T016
 
 ### Implementation for User Story 3
 
-- [ ] T020 [US3] Extend `TagFormDialog.tsx` with edit mode — pre-fill from the selected `Tag`,
+- [x] T020 [US3] Extend `TagFormDialog.tsx` with edit mode — pre-fill from the selected `Tag`,
   submit `intent=update` (depends on T017)
-- [ ] T021 [US3] Wire each row's "Editar" action (`TagRow.tsx` / `useTagsPage.ts`) to open
+- [x] T021 [US3] Wire each row's "Editar" action (`TagRow.tsx` / `useTagsPage.ts`) to open
   `TagFormDialog` in edit mode (depends on T013, T020)
 
 **Checkpoint**: US1 + US2 + US3 — the catalog can be fully maintained except deletion.
@@ -157,14 +157,14 @@ that it is not removed.
 
 ### Tests for User Story 4
 
-- [ ] T022 [P] [US4] Component test — confirm→success and confirm→blocked-in-use (verbatim service
+- [x] T022 [P] [US4] Component test — confirm→success and confirm→blocked-in-use (verbatim service
   count, spec FR-008) in `src/features/tags/ui/pages/TagsPage/DeleteTagDialog.test.tsx`
 
 ### Implementation for User Story 4
 
-- [ ] T023 [US4] Implement `DeleteTagDialog.tsx` — confirm state, then the blocked-state swap,
+- [x] T023 [US4] Implement `DeleteTagDialog.tsx` — confirm state, then the blocked-state swap,
   submitting `intent=delete` via `useFetcher` (depends on T007)
-- [ ] T024 [US4] Wire each row's "Excluir" action (`TagRow.tsx` / `useTagsPage.ts`) to open
+- [x] T024 [US4] Wire each row's "Excluir" action (`TagRow.tsx` / `useTagsPage.ts`) to open
   `DeleteTagDialog` (depends on T013, T023)
 
 **Checkpoint**: All four user stories independently functional — full CRUD.
@@ -173,14 +173,14 @@ that it is not removed.
 
 ## Phase 7: Polish & Cross-Cutting
 
-- [ ] T025 [P] Add a fixture-seeding helper (tag + a service referencing it, via direct
+- [x] T025 [P] Add a fixture-seeding helper (tag + a service referencing it, via direct
   authenticated API calls) in `e2e/helpers.ts` (research.md Decision 8 — no Services-creation UI
   exists to drive this through the browser)
-- [ ] T026 Write `e2e/tags.spec.ts` — full CRUD path plus the duplicate-name and tag-in-use
+- [x] T026 Write `e2e/tags.spec.ts` — full CRUD path plus the duplicate-name and tag-in-use
   conflicts, per quickstart.md (depends on T025 and on Phases 3–6)
-- [ ] T027 [P] Record this feature's `loader`/`action`-per-route pattern — the app's first real use
+- [x] T027 [P] Record this feature's `loader`/`action`-per-route pattern — the app's first real use
   of it — in `docs/ARCHITECTURE.md`
-- [ ] T028 Run the full gate suite (`npm run lint`, `npm run format:check`, `npx tsc --noEmit`,
+- [x] T028 Run the full gate suite (`npm run lint`, `npm run format:check`, `npx tsc --noEmit`,
   `npm run generate:api-types:check`, `npm run test:coverage`, `npm run test:e2e`) and fix until
   green (depends on everything above)
 
@@ -239,3 +239,16 @@ what was created. Ship Setup → Foundational → US1 → US2 as the first demoa
 4. US3 → mistakes are fixable.
 5. US4 → the catalog can be kept clean; the in-use guard is provably enforced.
 6. Polish → e2e proof of the whole flow, gate suite green, architecture doc updated.
+
+## Phase 8: Convergence
+
+- [x] T029 In `src/features/tags/ui/pages/TagsPage/DeleteTagDialog.tsx`, distinguish a genuine
+  `Tag.InUse` block from a transient failure (`Network.Unreachable` / `Session.Missing` /
+  `Server.Unavailable`) per Edge Cases ("conexão falhar") / FR-012 (partial): the blocked view
+  currently renders the same fixed "Não é possível excluir" heading with only an "Entendi"
+  (dismiss) button for both cases. For a transient failure, keep the message verbatim (FR-012
+  is not violated today) but give the person a way to retry — e.g. stay on the confirm framing
+  with the error shown inline, or add a "Tentar novamente" action — instead of a dismiss-only
+  dialog that reads as a permanent rule. Add a component test asserting the retry path for a
+  `NETWORK_PROBLEM`-shaped `fetcher.data`, alongside the existing `Tag.InUse` test in
+  `DeleteTagDialog.test.tsx`.

@@ -20,27 +20,43 @@ have, following the backend contract: `string Name, string Color, string? Descri
   exibir a rota (`/tags`) nem um subtítulo descritivo — só o título "Etiquetas" e a ação "Nova
   etiqueta". O protótipo corrigido é a referência visual desta feature.
 
+### Session 2026-09-14
+
+- Q: A tela de Etiquetas deve continuar acessível somente pela paleta de comandos, como decidido na
+  sessão anterior? → A: Não, essa decisão foi revertida. A tela **DEVE** também aparecer como destino
+  fixo na navegação principal (barra lateral em telas largas, item "Mais" na navegação inferior em
+  telas estreitas), com ícone próprio, para um acesso mais direto e intuitivo; a paleta de comandos
+  continua funcionando como via adicional.
+- Q: A busca por nome (US1, FR-002) deve continuar filtrando a lista já carregada no frontend a cada
+  tecla digitada? → A: Não. Com um catálogo que pode crescer bastante, filtrar no frontend obriga a
+  carregar e reprocessar a lista inteira no navegador a cada tecla. A busca **DEVE** ser executada no
+  backend, disparada apenas quando a pessoa confirma explicitamente (tecla Enter ou um botão de
+  busca) — nunca a cada tecla digitada.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — A pessoa vê e localiza as etiquetas existentes (Priority: P1)
 
 Quem administra o catálogo de serviços abre a área de Etiquetas e vê todas as etiquetas já
-cadastradas, com nome, cor e descrição visíveis de relance. Digitando parte de um nome, a lista se
-restringe às etiquetas correspondentes.
+cadastradas, com nome, cor e descrição visíveis de relance. Digitando parte de um nome e confirmando
+a busca (Enter ou botão de busca), a lista passa a mostrar apenas as etiquetas correspondentes,
+buscadas no backend.
 
 **Why this priority**: Sem enxergar o que já existe, a pessoa não sabe se uma etiqueta já foi
 criada, arrisca duplicar nomes e não consegue decidir o que editar ou excluir. É a base sobre a qual
 as outras histórias se apoiam.
 
 **Independent Test**: Com etiquetas já cadastradas (via seed/API), abrir a tela e conferir que todas
-aparecem corretamente; digitar um trecho de nome e confirmar que a lista filtra.
+aparecem corretamente; digitar um trecho de nome, confirmar a busca (Enter ou botão) e conferir que a
+lista passa a mostrar apenas as etiquetas correspondentes, buscadas no backend.
 
 **Acceptance Scenarios**:
 
 1. **Given** existem etiquetas cadastradas, **When** a pessoa abre a tela de Etiquetas, **Then**
    cada etiqueta aparece com nome, cor e descrição (quando houver).
-2. **Given** a lista de etiquetas, **When** a pessoa digita parte de um nome na busca, **Then**
-   somente as etiquetas cujo nome contém o texto digitado permanecem visíveis.
+2. **Given** a lista de etiquetas, **When** a pessoa digita parte de um nome na busca e confirma
+   (tecla Enter ou botão de busca), **Then** o sistema busca no backend e somente as etiquetas cujo
+   nome contém o texto buscado permanecem visíveis.
 3. **Given** nenhuma etiqueta foi cadastrada ainda, **When** a pessoa abre a tela, **Then** vê uma
    indicação clara de que o catálogo está vazio, não uma lista quebrada ou um erro.
 4. **Given** o painel autenticado em qualquer tela, **When** a pessoa abre a paleta de comandos e
@@ -138,7 +154,10 @@ explicação.
 
 - **FR-001**: O sistema **DEVE** listar todas as etiquetas do tenant atual, mostrando nome, cor e
   descrição de cada uma.
-- **FR-002**: O sistema **DEVE** permitir localizar etiquetas por nome através de um campo de busca.
+- **FR-002**: O sistema **DEVE** permitir localizar etiquetas por nome através de um campo de busca
+  que filtra no backend, disparando a busca apenas quando a pessoa confirma explicitamente (tecla
+  Enter ou botão de busca); **NÃO DEVE** filtrar a listagem já carregada no frontend a cada tecla
+  digitada.
 - **FR-003**: O sistema **DEVE** permitir criar uma nova etiqueta informando nome (obrigatório), cor
   (obrigatória, escolhida entre uma paleta fixa de 8 cores) e descrição (opcional).
 - **FR-004**: O sistema **DEVE** impedir a criação de uma etiqueta com nome já usado por outra
@@ -164,8 +183,9 @@ explicação.
   campo indicado, ou a ausência de um), nunca em interpretar o texto da mensagem.
 - **FR-013**: Os textos visíveis **DEVEM** estar em pt-BR.
 - **FR-014**: A tela de gestão de Etiquetas **DEVE** estar disponível na URL `/tags` e **DEVE** ser
-  alcançável pela paleta de comandos do painel; **NÃO DEVE** exigir passar pela tela de Serviços nem
-  ganhar um novo ícone na navegação principal fixa.
+  alcançável tanto pela paleta de comandos do painel quanto por um destino próprio, com ícone
+  dedicado, na navegação principal fixa (barra lateral em telas largas, item "Mais" da navegação
+  inferior em telas estreitas); **NÃO DEVE** exigir passar pela tela de Serviços.
 - **FR-015**: O cabeçalho da tela **NÃO DEVE** exibir a rota nem um subtítulo descritivo; **DEVE**
   mostrar apenas o título "Etiquetas" e a ação primária "Nova etiqueta".
 
@@ -196,9 +216,9 @@ explicação.
   (mesma premissa da Fundação de UI).
 - O catálogo de etiquetas é pequeno (dezenas a poucas centenas) — a listagem não precisa de
   paginação, alinhado ao endpoint existente do backend.
-- A tela tem rota própria (`/tags`), fora da área de Serviços, alcançada pela paleta de comandos —
-  não é um destino novo na navegação principal fixa, que permanece com os seis destinos já
-  estabelecidos.
+- A tela tem rota própria (`/tags`), fora da área de Serviços, alcançável tanto pela paleta de
+  comandos quanto por um destino próprio na navegação principal fixa — a navegação passa a ter sete
+  destinos.
 - Os únicos atributos de etiqueta são nome, cor e descrição — sem ícone, ordenação manual ou
   arquivamento.
 - A paleta de 8 cores é fixa e definida pelo backend; o frontend não introduz cores adicionais.

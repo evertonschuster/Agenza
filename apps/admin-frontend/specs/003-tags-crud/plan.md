@@ -11,8 +11,9 @@ Add the first real data-driven feature slice to `admin-frontend`: a catalog scre
 `services-service` already exposes at `/api/v1/tags` — the generated OpenAPI client
 (`src/shared/api/generated/services-api.d.ts`) already contains the full contract (`TagResponse`,
 `CreateTagCommand`, `UpdateTagCommand`), so this is purely additive frontend work with no backend or
-contract change. The screen is reached only through the command palette (FR-014/FR-015; not nested
-under Serviços, no new sidebar/bottom-nav icon), and is this codebase's first real exercise of the
+contract change. The screen is reached both through the command palette and a dedicated destination
+in the primary navigation (FR-014/FR-015; not nested under Serviços), and is this codebase's first
+real exercise of the
 `loader`/`action`-per-route pattern that `AGENTS.md` prescribes but no existing page has used yet —
 `features/auth`'s pages predate data loading and use plain effects instead. The approved,
 user-corrected clicked-through prototype
