@@ -10,6 +10,9 @@ import {
   DialogTitle,
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
+import { extractErrorMessage, isTransientProblem, type ApiResult } from '../api/servicesFacade';
+import { useState } from 'react';
+import { toast } from './toast';
 
 interface ConfirmDialogFailure {
   message: string;
@@ -17,38 +20,70 @@ interface ConfirmDialogFailure {
 }
 
 interface ConfirmDialogProps {
-  open: boolean;
   onOpenChange: (open: boolean) => void;
-  onConfirm: () => void;
-  isSubmitting: boolean;
+  onConfirm: <T>(this: void) => Promise<ApiResult<T>>;
   title: string;
   description: React.ReactNode;
-  confirmLabel: string;
+  confirmLabel?: string;
   confirmIcon: LucideIcon;
   blockedTitle: string;
-  failure?: ConfirmDialogFailure | undefined;
   cancelLabel?: string;
   retryLabel?: string;
   dismissLabel?: string;
 }
 
 function ConfirmDialog({
-  open,
   onOpenChange,
   onConfirm,
-  isSubmitting,
   title,
   description,
-  confirmLabel,
   confirmIcon: ConfirmIcon,
   blockedTitle,
-  failure,
+  confirmLabel = "Excluir",
   cancelLabel = 'Cancelar',
   retryLabel = 'Tentar novamente',
   dismissLabel = 'Entendi',
 }: ConfirmDialogProps) {
+
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [failure, setFailure] = useState<ConfirmDialogFailure>();
+
+
+  function handleConfirm() {
+    setIsSubmitting(true);
+    onConfirm()
+      .then(result => {
+
+        setIsSubmitting(false);
+
+        if (result.ok) {
+          toast.add({
+            title: 'Etiqueta excluída',
+            description: `"${"Todo"}" foi removida do catálogo.`,
+            type: 'success',
+          });
+          onOpenChange(false);
+          return;
+        }
+
+        setFailure({
+          message: extractErrorMessage(result.error),
+          transient: isTransientProblem(result.error),
+        });
+      })
+      .catch((error: unknown) => {
+        setIsSubmitting(false);
+        const message = error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
+        setFailure({
+          message,
+          transient: true,
+        });
+      });
+  }
+
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
+    <Dialog open={true} onOpenChange={onOpenChange}>
       <DialogContent>
         {failure && !failure.transient ? (
           <>
@@ -84,7 +119,7 @@ function ConfirmDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {cancelLabel}
               </Button>
-              <Button variant="destructive" onClick={onConfirm} disabled={isSubmitting}>
+              <Button variant="destructive" onClick={handleConfirm} disabled={isSubmitting}>
                 <ConfirmIcon aria-hidden="true" />
                 {failure?.transient ? retryLabel : confirmLabel}
               </Button>
