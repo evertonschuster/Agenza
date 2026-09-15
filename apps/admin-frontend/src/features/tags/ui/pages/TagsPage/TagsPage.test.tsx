@@ -1,10 +1,16 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub, type LoaderFunctionArgs } from 'react-router';
 import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
+import { toast } from '@/shared/ui/toast';
 import { TagsPage } from './TagsPage';
 import type { Tag } from '../../../model/tag';
+
+const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
+
+vi.mock('../../../api/tagsRepository', () => ({
+  tagsRepository: { list: mockList, create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+}));
 
 const TAGS: Tag[] = [
   { id: '1', name: 'Promoção', color: '#f59e0b', description: 'Desconto temporário' },
@@ -12,25 +18,19 @@ const TAGS: Tag[] = [
 ];
 
 function renderPage(tags: Tag[]) {
-  const Stub = createRoutesStub([
-    {
-      path: '/tags',
-      Component: TagsPage,
-      loader: ({ request }: LoaderFunctionArgs) => {
-        const query = new URL(request.url).searchParams.get('q') ?? '';
-        const needle = query.toLowerCase();
-        const filtered = needle
-          ? tags.filter((tag) => tag.name.toLowerCase().includes(needle))
-          : tags;
-        return { tags: filtered, query };
-      },
-      action: vi.fn(),
-    },
-  ]);
-  render(<Stub initialEntries={['/tags']} />);
+  mockList.mockImplementation((search?: string) => {
+    const needle = search?.toLowerCase();
+    const filtered = needle ? tags.filter((tag) => tag.name.toLowerCase().includes(needle)) : tags;
+    return Promise.resolve({ ok: true, data: filtered });
+  });
+  render(<TagsPage />);
 }
 
 describe('TagsPage', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   afterEach(() => {
     shortcutRegistry.reset();
   });
@@ -49,6 +49,27 @@ describe('TagsPage', () => {
     expect(screen.getByText('Desconto temporário')).toBeInTheDocument();
     expect(screen.getByText('VIP')).toBeInTheDocument();
     expect(screen.getByText('Sem descrição')).toBeInTheDocument();
+  });
+
+  it('shows a toast and stops the loading state when the initial fetch fails', async () => {
+    mockList.mockResolvedValue({
+      ok: false,
+      error: { title: 'O servidor está instável. Tente novamente em instantes.' },
+    });
+    const toastAddSpy = vi.spyOn(toast, 'add');
+
+    render(<TagsPage />);
+
+    await waitFor(() =>
+      expect(toastAddSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Não foi possível carregar as etiquetas',
+          description: 'O servidor está instável. Tente novamente em instantes.',
+          type: 'error',
+        }),
+      ),
+    );
+    expect(screen.getByText('Nenhuma etiqueta cadastrada')).toBeInTheDocument();
   });
 
   it('does not filter while typing — search only runs once submitted (backend-driven, not frontend)', async () => {

@@ -7,7 +7,9 @@ import {
   SERVER_PROBLEM,
   SESSION_PROBLEM,
   createServicesFacade,
+  isTransientProblem,
 } from './servicesFacade';
+import type { ApiProblem } from './servicesFacade';
 
 const CATEGORY = { id: '11111111-1111-1111-1111-111111111111', name: 'Cabelo' };
 
@@ -112,5 +114,27 @@ describe('createServicesFacade', () => {
     expect(await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } })).toEqual(
       { ok: true, data: undefined },
     );
+  });
+});
+
+describe('isTransientProblem', () => {
+  it.each([
+    ['NETWORK_PROBLEM', NETWORK_PROBLEM],
+    ['SESSION_PROBLEM', SESSION_PROBLEM],
+    ['SERVER_PROBLEM', SERVER_PROBLEM],
+  ])('treats %s as transient', (_name, problem) => {
+    expect(isTransientProblem(problem)).toBe(true);
+  });
+
+  it('treats a domain error code as not transient', () => {
+    const problem: ApiProblem = { status: 409, code: 'Tag.InUse', title: '…' };
+
+    expect(isTransientProblem(problem)).toBe(false);
+  });
+
+  it('treats a missing code as not transient', () => {
+    const problem: ApiProblem = { status: 500, title: '…' };
+
+    expect(isTransientProblem(problem)).toBe(false);
   });
 });
