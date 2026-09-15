@@ -45,10 +45,6 @@ test.describe('Tags CRUD', () => {
     await page.getByLabel('Buscar etiquetas por nome').fill(name);
     await page.getByRole('search').getByRole('button', { name: 'Buscar' }).click();
 
-    // The GET form navigation is async (waits on the backend fetch before committing the URL),
-    // so this must poll rather than read page.url() once — a plain sync assertion here would
-    // race the pending navigation and read the pre-submit URL.
-    await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(name);
     await expect(page.getByText(name, { exact: true })).toBeVisible();
   });
 
@@ -103,7 +99,7 @@ test.describe('Tags CRUD', () => {
     const searchInput = page.getByLabel('Buscar etiquetas por nome');
     await searchInput.fill(name);
     await searchInput.press('Enter');
-    await expect.poll(() => new URL(page.url()).searchParams.get('q')).toBe(name);
+    await expect(page.getByRole('button', { name: `Excluir ${name}` })).toBeVisible();
     await page.getByRole('button', { name: `Excluir ${name}` }).click();
     await page.getByRole('button', { name: 'Excluir' }).click();
 

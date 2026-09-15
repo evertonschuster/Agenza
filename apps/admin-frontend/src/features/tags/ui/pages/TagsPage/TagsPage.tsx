@@ -1,5 +1,4 @@
 import { PlusIcon, SearchIcon } from 'lucide-react';
-import { Form } from 'react-router';
 import { Button } from '@/shared/ui/button';
 import {
   InputGroup,
@@ -19,10 +18,13 @@ export function TagsPage() {
   const {
     tags,
     query,
+    isLoading,
     searchInputRef,
     isEmptyCatalog,
     isEmptySearch,
     dialog,
+    submitSearch,
+    refresh,
     openCreateDialog,
     openEditDialog,
     openDeleteDialog,
@@ -43,15 +45,19 @@ export function TagsPage() {
         </Button>
       </div>
 
-      <Form method="get" role="search">
+      <form
+        role="search"
+        onSubmit={(event) => {
+          event.preventDefault();
+          submitSearch();
+        }}
+      >
         <InputGroup>
           <InputGroupAddon>
             <SearchIcon aria-hidden="true" />
           </InputGroupAddon>
           <InputGroupInput
             ref={searchInputRef}
-            name="q"
-            defaultValue={query}
             placeholder="Buscar etiquetas por nome..."
             aria-label="Buscar etiquetas por nome"
           />
@@ -59,7 +65,9 @@ export function TagsPage() {
             <InputGroupButton type="submit">Buscar</InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
-      </Form>
+      </form>
+
+      {isLoading && <p className="px-1 text-sm text-muted-foreground">Carregando etiquetas…</p>}
 
       {isEmptyCatalog && (
         <div className="rounded-xl border border-dashed border-border px-6 py-14 text-center">
@@ -93,6 +101,7 @@ export function TagsPage() {
           onOpenChange={(open) => {
             if (!open) closeDialog();
           }}
+          onSaved={refresh}
         />
       )}
 
@@ -102,6 +111,7 @@ export function TagsPage() {
           onOpenChange={(open) => {
             if (!open) closeDialog();
           }}
+          onDeleted={refresh}
         />
       )}
     </div>

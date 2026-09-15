@@ -1,11 +1,19 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub, type ActionFunction } from 'react-router';
 import { TagFormDialog } from './TagFormDialog';
 import { toast } from '@/shared/ui/toast';
 import type { Tag } from '../../../model/tag';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
+
+const { mockCreate, mockUpdate } = vi.hoisted(() => ({
+  mockCreate: vi.fn(),
+  mockUpdate: vi.fn(),
+}));
+
+vi.mock('../../../api/tagsRepository', () => ({
+  tagsRepository: { create: mockCreate, update: mockUpdate, list: vi.fn(), remove: vi.fn() },
+}));
 
 const EXISTING_TAG: Tag = {
   id: 'tag-1',
@@ -14,59 +22,55 @@ const EXISTING_TAG: Tag = {
   description: 'Clientes premium',
 };
 
-function renderDialog({ tag = null, action }: { tag?: Tag | null; action: ActionFunction }) {
+function renderDialog({ tag = null }: { tag?: Tag | null } = {}) {
   const onOpenChange = vi.fn();
-  const Stub = createRoutesStub([
-    {
-      path: '/tags',
-      Component: () => <TagFormDialog tag={tag} onOpenChange={onOpenChange} />,
-      action,
-    },
-  ]);
-
-  render(<Stub initialEntries={['/tags']} />);
-  return { onOpenChange };
+  const onSaved = vi.fn();
+  render(<TagFormDialog tag={tag} onOpenChange={onOpenChange} onSaved={onSaved} />);
+  return { onOpenChange, onSaved };
 }
 
 describe('TagFormDialog', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('blocks submission and shows the exact backend-style message when the name is empty (spec FR-005)', async () => {
     const user = userEvent.setup();
-    const action = vi.fn();
-    renderDialog({ action });
+    renderDialog();
 
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('O nome da etiqueta é obrigatório.')).toBeInTheDocument();
-    expect(action).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it('blocks submission when no color is selected (spec FR-003)', async () => {
     const user = userEvent.setup();
-    const action = vi.fn();
-    renderDialog({ action });
+    renderDialog();
 
     await user.type(screen.getByLabelText('Nome'), 'Promoção');
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText('A cor da etiqueta é obrigatória.')).toBeInTheDocument();
-    expect(action).not.toHaveBeenCalled();
+    expect(mockCreate).not.toHaveBeenCalled();
   });
 
   it('creates a tag with valid input, shows a success toast, and closes the dialog (spec US2)', async () => {
     const user = userEvent.setup();
-    const action = vi.fn().mockResolvedValue({
+    mockCreate.mockResolvedValue({
       ok: true,
       data: { id: 'new-id', name: 'Promoção', color: '#f59e0b', description: null },
     });
     const toastAddSpy = vi.spyOn(toast, 'add');
-    const { onOpenChange } = renderDialog({ action });
+    const { onOpenChange, onSaved } = renderDialog();
 
     await user.type(screen.getByLabelText('Nome'), 'Promoção');
     await user.click(screen.getByRole('radio', { name: 'Âmbar' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-    expect(action).toHaveBeenCalledTimes(1);
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(onSaved).toHaveBeenCalledTimes(1);
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Etiqueta criada',
@@ -78,13 +82,18 @@ describe('TagFormDialog', () => {
 
   it('edits a tag, shows a success toast worded for an update, and closes the dialog (spec US3)', async () => {
     const user = userEvent.setup();
-    const action = vi.fn().mockResolvedValue({ ok: true, data: EXISTING_TAG });
+    mockUpdate.mockResolvedValue({ ok: true, data: EXISTING_TAG });
     const toastAddSpy = vi.spyOn(toast, 'add');
-    const { onOpenChange } = renderDialog({ tag: EXISTING_TAG, action });
+    const { onOpenChange } = renderDialog({ tag: EXISTING_TAG });
 
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(mockUpdate).toHaveBeenCalledWith('tag-1', {
+      name: 'VIP',
+      color: '#8b5cf6',
+      description: 'Clientes premium',
+    });
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Etiqueta atualizada',
@@ -105,8 +114,8 @@ describe('TagFormDialog', () => {
         '': [{ code: 'Tag.DuplicateName', message: "Já existe uma etiqueta chamada 'VIP'." }],
       },
     };
-    const action = vi.fn().mockResolvedValue({ ok: false, error: conflict });
-    const { onOpenChange } = renderDialog({ action });
+    mockCreate.mockResolvedValue({ ok: false, error: conflict });
+    const { onOpenChange } = renderDialog();
 
     await user.type(screen.getByLabelText('Nome'), 'VIP');
     await user.click(screen.getByRole('radio', { name: 'Violeta' }));
@@ -125,8 +134,8 @@ describe('TagFormDialog', () => {
       code: 'Tag.NotFound',
       errors: { '': [{ code: 'Tag.NotFound', message: "Etiqueta 'tag-1' não foi encontrada." }] },
     };
-    const action = vi.fn().mockResolvedValue({ ok: false, error: notFound });
-    renderDialog({ tag: EXISTING_TAG, action });
+    mockUpdate.mockResolvedValue({ ok: false, error: notFound });
+    renderDialog({ tag: EXISTING_TAG });
 
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
@@ -140,8 +149,8 @@ describe('TagFormDialog', () => {
       code: 'Network.Unreachable',
       title: 'Sem conexão com o servidor. Tente novamente.',
     };
-    const action = vi.fn().mockResolvedValue({ ok: false, error: networkProblem });
-    renderDialog({ action });
+    mockCreate.mockResolvedValue({ ok: false, error: networkProblem });
+    renderDialog();
 
     await user.type(screen.getByLabelText('Nome'), 'Promoção');
     await user.click(screen.getByRole('radio', { name: 'Âmbar' }));
@@ -154,7 +163,7 @@ describe('TagFormDialog', () => {
   });
 
   it('pre-fills the fields when editing an existing tag (spec US3)', () => {
-    renderDialog({ tag: EXISTING_TAG, action: vi.fn() });
+    renderDialog({ tag: EXISTING_TAG });
 
     expect(screen.getByRole('heading', { name: 'Editar etiqueta' })).toBeInTheDocument();
     expect(screen.getByLabelText('Nome')).toHaveValue('VIP');
@@ -172,8 +181,8 @@ describe('TagFormDialog', () => {
         '': [{ code: 'Tag.DuplicateName', message: "Já existe uma etiqueta chamada 'Promoção'." }],
       },
     };
-    const action = vi.fn().mockResolvedValue({ ok: false, error: conflict });
-    const { onOpenChange } = renderDialog({ tag: EXISTING_TAG, action });
+    mockUpdate.mockResolvedValue({ ok: false, error: conflict });
+    const { onOpenChange } = renderDialog({ tag: EXISTING_TAG });
 
     await user.clear(screen.getByLabelText('Nome'));
     await user.type(screen.getByLabelText('Nome'), 'Promoção');

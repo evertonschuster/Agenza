@@ -1,43 +1,45 @@
-import { useEffect } from 'react';
-import { useFetcher } from 'react-router';
+import { useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
-import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
+import { ConfirmDialog, type ConfirmDialogFailure } from '@/shared/ui/confirm-dialog';
 import { toast } from '@/shared/ui/toast';
-import { isTransientProblem } from '@/shared/api/servicesFacade';
+import { extractErrorMessage, isTransientProblem } from '@/shared/api/servicesFacade';
+import { tagsRepository } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
-import type { tagsAction } from './route';
 
 interface DeleteTagDialogProps {
   tag: Tag;
   onOpenChange: (open: boolean) => void;
+  onDeleted: () => void;
 }
 
-function DeleteTagDialog({ tag, onOpenChange }: DeleteTagDialogProps) {
-  const fetcher = useFetcher<typeof tagsAction>();
+function DeleteTagDialog({ tag, onOpenChange, onDeleted }: DeleteTagDialogProps) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [failure, setFailure] = useState<ConfirmDialogFailure>();
 
-  useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data?.ok) {
+  function handleConfirm() {
+    void deleteTag();
+  }
+
+  async function deleteTag() {
+    setIsSubmitting(true);
+    const result = await tagsRepository.remove(tag.id);
+    setIsSubmitting(false);
+
+    if (result.ok) {
       toast.add({
         title: 'Etiqueta excluída',
         description: `"${tag.name}" foi removida do catálogo.`,
         type: 'success',
       });
+      onDeleted();
       onOpenChange(false);
+      return;
     }
-  }, [fetcher.state, fetcher.data, onOpenChange, tag.name]);
 
-  const problem = fetcher.data && !fetcher.data.ok ? fetcher.data.error : undefined;
-  const failureMessage = problem
-    ? (problem.errors?.['']?.[0]?.message ?? problem.title ?? undefined)
-    : undefined;
-  const failure =
-    problem && failureMessage
-      ? { message: failureMessage, transient: isTransientProblem(problem) }
-      : undefined;
-  const isSubmitting = fetcher.state !== 'idle';
-
-  function handleConfirm() {
-    void fetcher.submit({ intent: 'delete', id: tag.id }, { method: 'post' });
+    setFailure({
+      message: extractErrorMessage(result.error),
+      transient: isTransientProblem(result.error),
+    });
   }
 
   return (
