@@ -1,4 +1,3 @@
-import { Trash2Icon } from 'lucide-react';
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import { tagsRepository } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
@@ -18,11 +17,9 @@ function DeleteTagDialog({ tag, onOpenChange, onDeleted }: DeleteTagDialogProps)
     <ConfirmDialog
       onOpenChange={onOpenChange}
       onConfirm={handleConfirm}
-      onConfirmed={onDeleted}
+      onSuccess={onDeleted}
       confirmation={{
-        title: 'Excluir etiqueta?',
         description: `Tem certeza que deseja excluir a etiqueta "${tag.name}"? Essa ação não pode ser desfeita.`,
-        icon: Trash2Icon,
       }}
       success={{
         description: `"${tag.name}" foi removida do catálogo.`,

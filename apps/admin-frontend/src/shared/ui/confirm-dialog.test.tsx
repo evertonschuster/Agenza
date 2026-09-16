@@ -11,10 +11,10 @@ const BASE_PROPS = {
     description:
       'Tem certeza que deseja desativar a promoção "Verão"? Ela para de aparecer para clientes.',
     icon: ArchiveIcon,
-    label: 'Desativar',
+    confirmLabel: 'Desativar',
   },
   error: {
-    title: 'Não é possível desativar',
+    blockedTitle: 'Não é possível desativar',
   },
 } as const;
 
@@ -161,9 +161,9 @@ describe('ConfirmDialog', () => {
           title: 'Remover usuário?',
           description: 'Tem certeza que deseja remover "Ana" do tenant?',
           icon: ArchiveIcon,
-          label: 'Remover',
+          confirmLabel: 'Remover',
         }}
-        error={{ title: 'Não é possível remover' }}
+        error={{ blockedTitle: 'Não é possível remover' }}
       />,
     );
 

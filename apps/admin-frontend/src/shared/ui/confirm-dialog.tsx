@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from 'react';
-import { AlertCircleIcon } from 'lucide-react';
+import { AlertCircleIcon, Trash2Icon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
   Dialog,
@@ -19,28 +19,28 @@ interface ConfirmDialogFailure {
 }
 
 interface ConfirmDialogConfirmation {
-  title: string;
-  description: ReactNode;
-  icon: LucideIcon;
-  label?: string;
+  title?: string;
+  description?: ReactNode;
+  icon?: LucideIcon;
+  confirmLabel?: string;
   cancelLabel?: string;
 }
 
 interface ConfirmDialogError {
-  title?: string;
+  blockedTitle?: string;
   retryLabel?: string;
   dismissLabel?: string;
 }
 
 interface ConfirmDialogSuccess {
   title?: string;
-  description: string;
+  description?: string;
 }
 
 interface ConfirmDialogProps<T> {
   onOpenChange: (open: boolean) => void;
   onConfirm: () => Promise<ApiResult<T>>;
-  onConfirmed?: (data: T) => void;
+  onSuccess?: (data: T) => void;
   confirmation: ConfirmDialogConfirmation;
   error?: ConfirmDialogError;
   success?: ConfirmDialogSuccess;
@@ -49,20 +49,23 @@ interface ConfirmDialogProps<T> {
 function ConfirmDialog<T>({
   onOpenChange,
   onConfirm,
-  onConfirmed,
+  onSuccess,
   confirmation: {
-    title,
-    description,
-    icon: ConfirmIcon,
-    label: confirmLabel = 'Excluir',
+    title = 'Confirmar exclusão?',
+    description = 'Essa ação não pode ser desfeita.',
+    icon: ConfirmIcon = Trash2Icon,
+    confirmLabel = 'Excluir',
     cancelLabel = 'Cancelar',
   },
   error: {
-    title: blockedTitle = 'Não é possível excluir',
+    blockedTitle = 'Não é possível excluir',
     retryLabel = 'Tentar novamente',
     dismissLabel = 'Entendi',
   } = {},
-  success,
+  success: {
+    title: successTitle = 'Excluído com sucesso',
+    description: successDescription = 'A operação foi concluída.',
+  } = {},
 }: ConfirmDialogProps<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [failure, setFailure] = useState<ConfirmDialogFailure>();
@@ -73,14 +76,8 @@ function ConfirmDialog<T>({
     setIsSubmitting(false);
 
     if (result.ok) {
-      if (success) {
-        toast.add({
-          title: success.title ?? 'Excluído com sucesso',
-          description: success.description,
-          type: 'success',
-        });
-      }
-      onConfirmed?.(result.data);
+      toast.add({ title: successTitle, description: successDescription, type: 'success' });
+      onSuccess?.(result.data);
       onOpenChange(false);
       return;
     }

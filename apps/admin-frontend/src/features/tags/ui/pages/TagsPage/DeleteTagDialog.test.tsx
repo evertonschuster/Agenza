@@ -45,7 +45,7 @@ describe('DeleteTagDialog', () => {
     expect(onDeleted).toHaveBeenCalledTimes(1);
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'Etiqueta excluída',
+        title: 'Excluído com sucesso',
         description: '"Sazonal" foi removida do catálogo.',
         type: 'success',
       }),
@@ -117,7 +117,7 @@ describe('DeleteTagDialog', () => {
     expect(
       await screen.findByText('Sem conexão com o servidor. Tente novamente.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Excluir etiqueta?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Confirmar exclusão?' })).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Não é possível excluir' }),
     ).not.toBeInTheDocument();
