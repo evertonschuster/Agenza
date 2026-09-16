@@ -1,4 +1,4 @@
-import * as React from 'react';
+import { useState, type ReactNode } from 'react';
 import { AlertCircleIcon } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -11,7 +11,6 @@ import {
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import { extractErrorMessage, isTransientProblem, type ApiResult } from '../api/servicesFacade';
-import { useState } from 'react';
 import { toast } from './toast';
 
 interface ConfirmDialogFailure {
@@ -19,71 +18,81 @@ interface ConfirmDialogFailure {
   transient: boolean;
 }
 
-interface ConfirmDialogProps {
-  onOpenChange: (open: boolean) => void;
-  onConfirm: <T>(this: void) => Promise<ApiResult<T>>;
+interface ConfirmDialogConfirmation {
   title: string;
-  description: React.ReactNode;
-  confirmLabel?: string;
-  confirmIcon: LucideIcon;
-  blockedTitle: string;
+  description: ReactNode;
+  icon: LucideIcon;
+  label?: string;
   cancelLabel?: string;
+}
+
+interface ConfirmDialogError {
+  title?: string;
   retryLabel?: string;
   dismissLabel?: string;
 }
 
-function ConfirmDialog({
+interface ConfirmDialogSuccess {
+  title?: string;
+  description: string;
+}
+
+interface ConfirmDialogProps<T> {
+  onOpenChange: (open: boolean) => void;
+  onConfirm: () => Promise<ApiResult<T>>;
+  onConfirmed?: (data: T) => void;
+  confirmation: ConfirmDialogConfirmation;
+  error?: ConfirmDialogError;
+  success?: ConfirmDialogSuccess;
+}
+
+function ConfirmDialog<T>({
   onOpenChange,
   onConfirm,
-  title,
-  description,
-  confirmIcon: ConfirmIcon,
-  blockedTitle,
-  confirmLabel = "Excluir",
-  cancelLabel = 'Cancelar',
-  retryLabel = 'Tentar novamente',
-  dismissLabel = 'Entendi',
-}: ConfirmDialogProps) {
-
-
+  onConfirmed,
+  confirmation: {
+    title,
+    description,
+    icon: ConfirmIcon,
+    label: confirmLabel = 'Excluir',
+    cancelLabel = 'Cancelar',
+  },
+  error: {
+    title: blockedTitle = 'Não é possível excluir',
+    retryLabel = 'Tentar novamente',
+    dismissLabel = 'Entendi',
+  } = {},
+  success,
+}: ConfirmDialogProps<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [failure, setFailure] = useState<ConfirmDialogFailure>();
 
-
-  function handleConfirm() {
+  async function handleConfirm() {
     setIsSubmitting(true);
-    onConfirm()
-      .then(result => {
+    const result = await onConfirm();
+    setIsSubmitting(false);
 
-        setIsSubmitting(false);
-
-        if (result.ok) {
-          toast.add({
-            title: 'Etiqueta excluída',
-            description: `"${"Todo"}" foi removida do catálogo.`,
-            type: 'success',
-          });
-          onOpenChange(false);
-          return;
-        }
-
-        setFailure({
-          message: extractErrorMessage(result.error),
-          transient: isTransientProblem(result.error),
+    if (result.ok) {
+      if (success) {
+        toast.add({
+          title: success.title ?? 'Excluído com sucesso',
+          description: success.description,
+          type: 'success',
         });
-      })
-      .catch((error: unknown) => {
-        setIsSubmitting(false);
-        const message = error instanceof Error ? error.message : 'Ocorreu um erro inesperado.';
-        setFailure({
-          message,
-          transient: true,
-        });
-      });
+      }
+      onConfirmed?.(result.data);
+      onOpenChange(false);
+      return;
+    }
+
+    setFailure({
+      message: extractErrorMessage(result.error),
+      transient: isTransientProblem(result.error),
+    });
   }
 
   return (
-    <Dialog open={true} onOpenChange={onOpenChange}>
+    <Dialog open onOpenChange={onOpenChange}>
       <DialogContent>
         {failure && !failure.transient ? (
           <>
@@ -119,7 +128,11 @@ function ConfirmDialog({
               <Button variant="outline" onClick={() => onOpenChange(false)}>
                 {cancelLabel}
               </Button>
-              <Button variant="destructive" onClick={handleConfirm} disabled={isSubmitting}>
+              <Button
+                variant="destructive"
+                onClick={() => void handleConfirm()}
+                disabled={isSubmitting}
+              >
                 <ConfirmIcon aria-hidden="true" />
                 {failure?.transient ? retryLabel : confirmLabel}
               </Button>

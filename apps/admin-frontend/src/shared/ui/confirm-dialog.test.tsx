@@ -1,18 +1,21 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ArchiveIcon } from 'lucide-react';
 import { ConfirmDialog } from './confirm-dialog';
+import type { ApiResult } from '@/shared/api/servicesFacade';
 
 const BASE_PROPS = {
-  open: true,
-  isSubmitting: false,
-  title: 'Desativar promoção?',
-  description:
-    'Tem certeza que deseja desativar a promoção "Verão"? Ela para de aparecer para clientes.',
-  confirmLabel: 'Desativar',
-  confirmIcon: ArchiveIcon,
-  blockedTitle: 'Não é possível desativar',
+  confirmation: {
+    title: 'Desativar promoção?',
+    description:
+      'Tem certeza que deseja desativar a promoção "Verão"? Ela para de aparecer para clientes.',
+    icon: ArchiveIcon,
+    label: 'Desativar',
+  },
+  error: {
+    title: 'Não é possível desativar',
+  },
 } as const;
 
 describe('ConfirmDialog', () => {
@@ -28,7 +31,7 @@ describe('ConfirmDialog', () => {
 
   it('does not call onConfirm until the confirm button is clicked', async () => {
     const user = userEvent.setup();
-    const onConfirm = vi.fn();
+    const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
     render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
 
     expect(onConfirm).not.toHaveBeenCalled();
@@ -45,52 +48,94 @@ describe('ConfirmDialog', () => {
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('disables the confirm button while isSubmitting, preventing a second submit', () => {
-    render(
-      <ConfirmDialog {...BASE_PROPS} isSubmitting onOpenChange={vi.fn()} onConfirm={vi.fn()} />,
+  it('disables the confirm button while a confirm is in flight', async () => {
+    const user = userEvent.setup();
+    let resolveConfirm: (result: ApiResult<void>) => void = () => {};
+    const onConfirm = vi.fn(
+      () =>
+        new Promise<ApiResult<void>>((resolve) => {
+          resolveConfirm = resolve;
+        }),
     );
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
 
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
     expect(screen.getByRole('button', { name: 'Desativar' })).toBeDisabled();
+
+    resolveConfirm({ ok: true, data: undefined });
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: 'Desativar' })).not.toBeDisabled(),
+    );
   });
 
-  it('shows the transient-failure banner, relabels confirm to retry, and keeps calling onConfirm', async () => {
+  it('fires a success toast built from the success copy when confirm succeeds', async () => {
     const user = userEvent.setup();
-    const onConfirm = vi.fn();
+    const toastModule = await import('./toast');
+    const toastAddSpy = vi.spyOn(toastModule.toast, 'add');
+    const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
     render(
       <ConfirmDialog
         {...BASE_PROPS}
         onOpenChange={vi.fn()}
         onConfirm={onConfirm}
-        failure={{ message: 'Sem conexão com o servidor. Tente novamente.', transient: true }}
+        success={{ title: 'Promoção desativada', description: '"Verão" foi desativada.' }}
       />,
     );
 
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+
+    await waitFor(() =>
+      expect(toastAddSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          title: 'Promoção desativada',
+          description: '"Verão" foi desativada.',
+          type: 'success',
+        }),
+      ),
+    );
+  });
+
+  it('shows the transient-failure banner, relabels confirm to retry, and keeps calling onConfirm', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: {
+        status: 0,
+        code: 'Network.Unreachable',
+        title: 'Sem conexão com o servidor. Tente novamente.',
+      },
+    });
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+
     expect(screen.getByRole('heading', { name: 'Desativar promoção?' })).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent(
+    expect(await screen.findByRole('alert')).toHaveTextContent(
       'Sem conexão com o servidor. Tente novamente.',
     );
     expect(screen.queryByRole('button', { name: 'Desativar' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
-    expect(onConfirm).toHaveBeenCalledTimes(1);
+    expect(onConfirm).toHaveBeenCalledTimes(2);
   });
 
   it('swaps to the blocked state with a single dismiss button and no retry, for a non-transient failure', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
-    render(
-      <ConfirmDialog
-        {...BASE_PROPS}
-        onOpenChange={onOpenChange}
-        onConfirm={vi.fn()}
-        failure={{
-          message: 'Esta promoção está em uso e não pode ser desativada.',
-          transient: false,
-        }}
-      />,
-    );
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: {
+        title: 'Esta promoção está em uso e não pode ser desativada.',
+        code: 'Promotion.InUse',
+      },
+    });
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={onOpenChange} onConfirm={onConfirm} />);
 
-    expect(screen.getByRole('heading', { name: 'Não é possível desativar' })).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+
+    expect(
+      await screen.findByRole('heading', { name: 'Não é possível desativar' }),
+    ).toBeInTheDocument();
     expect(
       screen.getByText('Esta promoção está em uso e não pode ser desativada.'),
     ).toBeInTheDocument();
@@ -110,15 +155,15 @@ describe('ConfirmDialog', () => {
 
     render(
       <ConfirmDialog
-        open
         onOpenChange={vi.fn()}
         onConfirm={vi.fn()}
-        isSubmitting={false}
-        title="Remover usuário?"
-        description='Tem certeza que deseja remover "Ana" do tenant?'
-        confirmLabel="Remover"
-        confirmIcon={ArchiveIcon}
-        blockedTitle="Não é possível remover"
+        confirmation={{
+          title: 'Remover usuário?',
+          description: 'Tem certeza que deseja remover "Ana" do tenant?',
+          icon: ArchiveIcon,
+          label: 'Remover',
+        }}
+        error={{ title: 'Não é possível remover' }}
       />,
     );
 
@@ -140,7 +185,7 @@ describe('ConfirmDialog', () => {
         {...BASE_PROPS}
         onOpenChange={vi.fn()}
         onConfirm={vi.fn()}
-        cancelLabel="Voltar"
+        confirmation={{ ...BASE_PROPS.confirmation, cancelLabel: 'Voltar' }}
       />,
     );
 
