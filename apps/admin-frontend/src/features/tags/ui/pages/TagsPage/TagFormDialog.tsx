@@ -1,5 +1,4 @@
-import { useEffect, useId, useState, type FormEvent } from 'react';
-import { useFetcher } from 'react-router';
+import { useId, useState, type FormEvent } from 'react';
 import { AlertCircleIcon } from 'lucide-react';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
@@ -8,23 +7,25 @@ import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { ColorSwatchPicker } from '@/shared/ui/color-swatch-picker';
 import { toast } from '@/shared/ui/toast';
+import { extractErrorMessage, type ApiResult } from '@/shared/api/servicesFacade';
+import { tagsRepository } from '../../../api/tagsRepository';
 import { validateTagForm, hasTagFormErrors, type TagFormErrors } from '../../../model/tagForm';
 import { TAG_COLOR_PALETTE, type Tag } from '../../../model/tag';
-import type { tagsAction } from './route';
 
 interface TagFormDialogProps {
   tag: Tag | null;
   onOpenChange: (open: boolean) => void;
+  onSaved: () => void;
 }
 
-function serverErrors(data: Awaited<ReturnType<typeof tagsAction>> | undefined): {
+function serverErrors(result: ApiResult<Tag> | undefined): {
   fieldErrors: TagFormErrors;
   generalError: string | undefined;
 } {
-  if (!data || data.ok) {
+  if (!result || result.ok) {
     return { fieldErrors: {}, generalError: undefined };
   }
-  const byField = data.error.errors;
+  const byField = result.error.errors;
   return {
     fieldErrors: {
       name: byField?.['Name']?.[0]?.message,
@@ -32,35 +33,22 @@ function serverErrors(data: Awaited<ReturnType<typeof tagsAction>> | undefined):
       description: byField?.['Description']?.[0]?.message,
     },
     generalError:
-      byField?.['']?.[0]?.message ?? (byField ? undefined : (data.error.title ?? undefined)),
+      byField?.['']?.[0]?.message ?? (byField ? undefined : extractErrorMessage(result.error)),
   };
 }
 
-function TagFormDialog({ tag, onOpenChange }: TagFormDialogProps) {
-  const fetcher = useFetcher<typeof tagsAction>();
+function TagFormDialog({ tag, onOpenChange, onSaved }: TagFormDialogProps) {
   const isEdit = tag !== null;
 
   const [name, setName] = useState(tag?.name ?? '');
   const [color, setColor] = useState<string | null>(tag?.color ?? null);
   const [description, setDescription] = useState(tag?.description ?? '');
   const [clientErrors, setClientErrors] = useState<TagFormErrors>({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [apiResult, setApiResult] = useState<ApiResult<Tag>>();
 
   const nameId = useId();
   const descriptionId = useId();
-
-  useEffect(() => {
-    if (fetcher.state === 'idle' && fetcher.data?.ok) {
-      const trimmedName = name.trim();
-      toast.add({
-        title: isEdit ? 'Etiqueta atualizada' : 'Etiqueta criada',
-        description: isEdit
-          ? `"${trimmedName}" foi atualizada.`
-          : `"${trimmedName}" foi adicionada ao catálogo.`,
-        type: 'success',
-      });
-      onOpenChange(false);
-    }
-  }, [fetcher.state, fetcher.data, onOpenChange, isEdit, name]);
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -69,25 +57,37 @@ function TagFormDialog({ tag, onOpenChange }: TagFormDialogProps) {
       setClientErrors(validation);
       return;
     }
-
     setClientErrors({});
-    void fetcher.submit(
-      {
-        intent: isEdit ? 'update' : 'create',
-        ...(tag ? { id: tag.id } : {}),
-        name,
-        color: color ?? '',
-        description,
-      },
-      { method: 'post' },
-    );
+    void saveTag();
+  }
+
+  async function saveTag() {
+    const input = { name, color: color ?? '', description: description.trim() || null };
+    setIsSubmitting(true);
+    const result = tag
+      ? await tagsRepository.update(tag.id, input)
+      : await tagsRepository.create(input);
+    setIsSubmitting(false);
+    setApiResult(result);
+
+    if (result.ok) {
+      const trimmedName = name.trim();
+      toast.add({
+        title: isEdit ? 'Etiqueta atualizada' : 'Etiqueta criada',
+        description: isEdit
+          ? `"${trimmedName}" foi atualizada.`
+          : `"${trimmedName}" foi adicionada ao catálogo.`,
+        type: 'success',
+      });
+      onSaved();
+      onOpenChange(false);
+    }
   }
 
   const hasClientErrors = hasTagFormErrors(clientErrors);
-  const { fieldErrors: apiFieldErrors, generalError: apiGeneralError } = serverErrors(fetcher.data);
+  const { fieldErrors: apiFieldErrors, generalError: apiGeneralError } = serverErrors(apiResult);
   const errors = hasClientErrors ? clientErrors : apiFieldErrors;
   const generalError = hasClientErrors ? undefined : apiGeneralError;
-  const isSubmitting = fetcher.state !== 'idle';
 
   return (
     <Dialog open onOpenChange={onOpenChange}>

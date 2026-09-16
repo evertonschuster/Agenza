@@ -1,48 +1,51 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createRoutesStub, type ActionFunction } from 'react-router';
 import { DeleteTagDialog } from './DeleteTagDialog';
 import { toast } from '@/shared/ui/toast';
 import type { Tag } from '../../../model/tag';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 
+const { mockRemove } = vi.hoisted(() => ({ mockRemove: vi.fn() }));
+
+vi.mock('../../../api/tagsRepository', () => ({
+  tagsRepository: { remove: mockRemove, list: vi.fn(), create: vi.fn(), update: vi.fn() },
+}));
+
 const TAG: Tag = { id: 'tag-1', name: 'Sazonal', color: '#0ea5e9', description: null };
 
-function renderDialog(action: ActionFunction) {
+function renderDialog() {
   const onOpenChange = vi.fn();
-  const Stub = createRoutesStub([
-    {
-      path: '/tags',
-      Component: () => <DeleteTagDialog tag={TAG} onOpenChange={onOpenChange} />,
-      action,
-    },
-  ]);
-  render(<Stub initialEntries={['/tags']} />);
-  return { onOpenChange };
+  const onDeleted = vi.fn();
+  render(<DeleteTagDialog tag={TAG} onOpenChange={onOpenChange} onDeleted={onDeleted} />);
+  return { onOpenChange, onDeleted };
 }
 
 describe('DeleteTagDialog', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('does not submit anything until the person confirms (spec US4)', () => {
-    const action = vi.fn();
-    renderDialog(action);
+    renderDialog();
 
     expect(screen.getByText(/Tem certeza que deseja excluir/)).toBeInTheDocument();
-    expect(action).not.toHaveBeenCalled();
+    expect(mockRemove).not.toHaveBeenCalled();
   });
 
   it('removes an unused tag, shows a success toast, and closes on confirm (spec US4)', async () => {
     const user = userEvent.setup();
-    const action = vi.fn().mockResolvedValue({ ok: true, data: undefined });
+    mockRemove.mockResolvedValue({ ok: true, data: undefined });
     const toastAddSpy = vi.spyOn(toast, 'add');
-    const { onOpenChange } = renderDialog(action);
+    const { onOpenChange, onDeleted } = renderDialog();
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
     await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(onDeleted).toHaveBeenCalledTimes(1);
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
-        title: 'Etiqueta excluída',
+        title: 'Excluído com sucesso',
         description: '"Sazonal" foi removida do catálogo.',
         type: 'success',
       }),
@@ -65,8 +68,8 @@ describe('DeleteTagDialog', () => {
         ],
       },
     };
-    const action = vi.fn().mockResolvedValue({ ok: false, error: blocked });
-    const { onOpenChange } = renderDialog(action);
+    mockRemove.mockResolvedValue({ ok: false, error: blocked });
+    const { onOpenChange } = renderDialog();
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
@@ -91,8 +94,8 @@ describe('DeleteTagDialog', () => {
       code: 'Tag.NotFound',
       errors: { '': [{ code: 'Tag.NotFound', message: "Etiqueta 'tag-1' não foi encontrada." }] },
     };
-    const action = vi.fn().mockResolvedValue({ ok: false, error: notFound });
-    renderDialog(action);
+    mockRemove.mockResolvedValue({ ok: false, error: notFound });
+    renderDialog();
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
@@ -106,21 +109,21 @@ describe('DeleteTagDialog', () => {
       code: 'Network.Unreachable',
       title: 'Sem conexão com o servidor. Tente novamente.',
     };
-    const action = vi.fn().mockResolvedValue({ ok: false, error: networkProblem });
-    const { onOpenChange } = renderDialog(action);
+    mockRemove.mockResolvedValue({ ok: false, error: networkProblem });
+    const { onOpenChange } = renderDialog();
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
     expect(
       await screen.findByText('Sem conexão com o servidor. Tente novamente.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: 'Excluir etiqueta?' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Confirmar exclusão?' })).toBeInTheDocument();
     expect(
       screen.queryByRole('heading', { name: 'Não é possível excluir' }),
     ).not.toBeInTheDocument();
     expect(onOpenChange).not.toHaveBeenCalledWith(false);
 
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
-    expect(action).toHaveBeenCalledTimes(2);
+    expect(mockRemove).toHaveBeenCalledTimes(2);
   });
 });
