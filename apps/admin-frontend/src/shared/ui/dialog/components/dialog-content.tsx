@@ -5,8 +5,7 @@ import type { DialogContentProps } from '../dialog.types';
 import { Button } from '@/shared/ui/button';
 import { XIcon } from 'lucide-react';
 
-import { DialogPortal } from './dialog-portal';
-import { DialogOverlay } from './dialog-overlay';
+import { DialogPortal, DialogOverlay } from './dialog-primitives';
 
 function DialogContent({
   className,

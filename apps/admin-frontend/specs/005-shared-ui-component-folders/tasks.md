@@ -408,3 +408,37 @@ nenhum momento.
   isolada se `tsc`/lint/teste quebrar nela especificamente.
 - Nenhuma tarefa desta lista deve alterar comportamento, texto visível ou contrato de props — qualquer
   diff que não seja puramente estrutural é regressão (FR-009), não parte do escopo.
+
+---
+
+## Fase 9: Revisão pós-implementação (2026-09-17, mesmo dia — research.md D10)
+
+Depois de T001–T038 completas (112 arquivos, todos os portões verdes), uma revisão apontou segregação
+exagerada em dois pontos concretos: 19 arquivos de ≤10 linhas dentro de `components/` (wrappers triviais
+de uma sub-parte só) e 7 pastas atômicas (`badge`, `button`, `input`, `label`, `separator`, `skeleton`,
+`textarea`) sem nenhum `types.ts` nem `components/` — ceremônia sem organização. As tarefas T003–T032
+acima **não foram reescritas** — descrevem fielmente o que foi feito naquele momento; esta fase registra
+a correção feita em cima, não substitui o histórico.
+
+- [X] T039 [P] Dissolver `avatar/` e `card/` inteiramente em `index.tsx` (nenhuma sub-parte tinha peso
+  real) — remove `avatar.types.ts`, `card.types.ts` e as duas pastas `components/`. Conteúdo final
+  idêntico ao arquivo original pré-migração, só que dentro da pasta.
+- [X] T040 [P] Dissolver `kbd/` inteiramente em `index.tsx` (`KbdGroup` é trivial) — remove
+  `components/kbd-group.tsx`.
+- [X] T041 [P] Agrupar as sub-partes triviais de `tooltip/`, `dialog/`, `sheet/`, `toast/`,
+  `dropdown-menu/`, `combobox/` e `input-group/` num único `components/<nome>-primitives.tsx` por
+  componente, mantendo isoladas só as sub-partes com peso real (composição, estado/handler/ref,
+  classe longa sem condicional) — mapeamento exato em data-model.md. Ajustar os imports cruzados que
+  apontavam para os arquivos individuais removidos (`dialog-content.tsx`, `sheet-content.tsx`,
+  `toast-list.tsx`, `combobox-input.tsx`, `index.tsx` de cada um).
+- [X] T042 [P] Reverter `badge/`, `button/`, `input/`, `label/`, `separator/`, `skeleton/`, `textarea/`
+  para arquivo único na raiz de `shared/ui/` (nenhum tinha `types.ts` nem `components/` — pasta sem
+  ganho). `color-swatch-picker/` e `FullScreenMessage/` continuam pasta (têm tipo próprio real).
+- [X] T043 Atualizar `vitest.config.ts`: 7 entradas voltam a apontar para arquivo exato (as revertidas
+  em T042); as demais 9 continuam glob de pasta.
+- [X] T044 Revalidar `tsc --noEmit`, `lint`, `format:check`, `test:coverage` — mesmo resultado de
+  T033–T035 (6 avisos pré-existentes, 0 erros; 39/196 testes; 91.27/86.34/85.96/92.21%, idêntico).
+- [X] T045 Atualizar `spec.md` (FR-001–004, SC-004, Assumptions), `research.md` (D10) e `data-model.md`
+  (reescrito) para refletir a regra revisada.
+
+**Resultado**: 112 → 60 arquivos (46% menos), mesmos portões verdes de antes.

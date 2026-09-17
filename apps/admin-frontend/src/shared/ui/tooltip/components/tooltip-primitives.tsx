@@ -4,4 +4,8 @@ function TooltipProvider({ delay = 250, ...props }: TooltipPrimitive.Provider.Pr
   return <TooltipPrimitive.Provider data-slot="tooltip-provider" delay={delay} {...props} />;
 }
 
-export { TooltipProvider };
+function TooltipTrigger({ ...props }: TooltipPrimitive.Trigger.Props) {
+  return <TooltipPrimitive.Trigger data-slot="tooltip-trigger" {...props} />;
+}
+
+export { TooltipProvider, TooltipTrigger };

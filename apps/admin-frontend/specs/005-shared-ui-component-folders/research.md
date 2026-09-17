@@ -186,3 +186,52 @@ fechado.
 caminho e seção exatos (§1 e §5, já existentes) e não depende de encontrar a skill; a atualização da
 skill pode ser uma tarefa separada em `tasks.md`, sinalizada como dependente de localizar o arquivo
 primeiro.
+
+## D10 — Revisão pós-implementação (2026-09-17): segregação exagerada em dois pontos
+
+**Contexto**: Depois da primeira implementação completa (D1–D9, todos os 20 componentes migrados,
+`tsc`/lint/format/cobertura verdes), uma revisão apontou dois excessos concretos antes de abrir o PR:
+112 arquivos para ~2100 linhas originais, com 19 arquivos de ≤10 linhas dentro de `components/` (a
+maioria com exatamente 7 — um wrapper de uma linha em torno de um primitivo) e 7 pastas atômicas
+(`badge`, `button`, `input`, `label`, `separator`, `skeleton`, `textarea`) contendo só `index.tsx`
+idêntico ao arquivo antigo, sem `types.ts` nem `components/` — ceremônia sem organização.
+
+**Decision**: Duas correções, ambas mantendo tudo que D1–D9 já tinham decidido corretamente:
+
+1. **Sub-parte só ganha arquivo próprio quando tem peso real** — composição de outros componentes
+   (`ComboboxInput`, `DialogContent`), estado/handler/ref próprios (`InputGroupAddon`, `ToastIcon`,
+   `ComboboxPaletteContent`), ou classe longa o bastante para justificar isolamento mesmo sem lógica em
+   JS (`DropdownMenuItem`). Sub-partes sem nenhum desses três — um elemento primitivo, classe estática
+   ou só orientada por seletor CSS (`data-inset`, `group-data-*`), sem composição, sem condicional —
+   ficam juntas num único `components/<nome>-primitives.tsx`. Reduz `combobox` de 18→10 arquivos,
+   `dropdown-menu` de 16→9, `toast` de 13→5, `dialog`/`sheet` de 11→5/4, `input-group` de 7→5.
+   `avatar`/`card`/`kbd` não tinham nenhuma sub-parte com peso real — dissolvem inteiramente em
+   `index.tsx`, sem `components/` nenhum (voltam a ser, em conteúdo, idênticos ao arquivo original,
+   só que dentro de uma pasta).
+2. **Pasta só existe quando o componente se qualifica pelo FR-004 (critério de `components/`) ou tem
+   tipo próprio real (critério do `types.ts`)** — reverte a ampliação de D9 para os 7 componentes que
+   não se enquadravam em nenhum dos dois: exportação única, sem tipo, sem complexidade. Voltam a ser
+   `badge.tsx`, `button.tsx`, etc. na raiz. `color-swatch-picker` e `FullScreenMessage` continuam pasta
+   — são exportação única, mas COM tipo próprio real, então diferente dos outros 7.
+
+Resultado: **112 → 60 arquivos** (46% menos), com os mesmos `tsc`/lint (6 avisos pré-existentes,
+inalterados)/format/cobertura (91.27/86.34/85.96/92.21%, idêntico) verdes de antes.
+
+**Rationale**: O pedido original era não precisar abrir um arquivo de 300 linhas para mexer numa
+sub-parte de peso — não dar arquivo próprio para um wrapper de 3 linhas. Um arquivo por trivialidade
+trocou "um arquivo grande" por "muitos arquivos minúsculos com indireção de import", que piora a visão
+do conjunto sem ganho de legibilidade real para essas peças especificamente. `avatar`/`card` são o caso
+mais claro: 90/87 linhas originais com 6–7 exports, mas cada um um wrapper de elemento único — o
+critério antigo do FR-004 ("exporta mais de um componente") disparava a segregação só pela contagem de
+exports, sem considerar que exportar muitos wrappers triviais não é o mesmo problema que exportar
+muitos wrappers complexos.
+
+**Alternatives considered**:
+- Manter os 112 arquivos e só documentar a razão de cada um — rejeitado; documentar por que um arquivo
+  de 3 linhas existe não resolve o problema de navegação que ele cria.
+- Dobrar no critério de linha (ex. "sub-parte ganha arquivo só acima de N linhas") em vez do critério
+  qualitativo (composição/estado/condicional/classe longa) — rejeitado pela mesma razão que FR-004 já
+  rejeitou um limiar numérico para si mesmo: uma classe Tailwind longa mas estática (`DropdownMenuItem`)
+  passaria acima de qualquer N razoável mesmo sem nenhuma lógica, e um wrapper com uma linha de
+  condicional (`ToastClose`'s `children ?? <XIcon />`) ficaria abaixo — line count não distingue os
+  casos que efetivamente importam.

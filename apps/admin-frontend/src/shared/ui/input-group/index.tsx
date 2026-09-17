@@ -3,9 +3,11 @@ import { cn } from '@/shared/lib/utils';
 
 import { InputGroupAddon } from './components/input-group-addon';
 import { InputGroupButton } from './components/input-group-button';
-import { InputGroupText } from './components/input-group-text';
-import { InputGroupInput } from './components/input-group-input';
-import { InputGroupTextarea } from './components/input-group-textarea';
+import {
+  InputGroupText,
+  InputGroupInput,
+  InputGroupTextarea,
+} from './components/input-group-primitives';
 
 function InputGroup({ className, ...props }: React.ComponentProps<'div'>) {
   return (

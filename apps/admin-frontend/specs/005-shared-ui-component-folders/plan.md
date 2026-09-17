@@ -36,7 +36,17 @@ de hoje — não normalizada para kebab-case, para não quebrar FR-005.
 > conferir os exports reais); exporta `Kbd` + `KbdGroup`, mesma forma de `avatar`/`card`. Na mesma data,
 > o escopo foi ampliado de "só os compostos" (10, depois 11 com a correção do `kbd`) para "todos os 20",
 > a pedido explícito do usuário, para seguir o padrão de pasta-por-unidade já usado no resto do projeto.
-> Ver `data-model.md` para o mapeamento completo dos 9 atômicos.
+>
+> **Revisão pós-implementação (mesmo dia, research.md D10)**: depois de implementar o parágrafo acima
+> (112 arquivos), uma revisão encontrou segregação exagerada em dois pontos — sub-parte trivial ganhando
+> arquivo próprio mesmo sem peso real (19 arquivos de ≤10 linhas), e as 7 pastas atômicas sem nenhum
+> `types.ts`/`components/` dentro (ceremônia sem organização). Os números acima ficaram desatualizados
+> por essa revisão: **a regra final é pasta só quando o componente se qualifica** (critério de
+> `components/` **ou** de `types.ts`), e dentro da pasta, sub-parte só ganha arquivo próprio quando tem
+> peso real — as triviais vão para um `<nome>-primitives.tsx` único. Resultado: `avatar`/`card`/`kbd`
+> perdem `components/` e `types.ts` (dissolvem em `index.tsx`); os 7 atômicos sem tipo voltam a ser
+> arquivo único; `color-swatch-picker`/`FullScreenMessage` continuam pasta (têm tipo real). Total: 60
+> arquivos. Ver `data-model.md` (reescrito) para o mapeamento final e `research.md` D10 para o porquê.
 
 ## Technical Context
 

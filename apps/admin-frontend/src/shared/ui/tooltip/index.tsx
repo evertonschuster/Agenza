@@ -1,7 +1,6 @@
 import { Tooltip as TooltipPrimitive } from '@base-ui/react/tooltip';
 
-import { TooltipProvider } from './components/tooltip-provider';
-import { TooltipTrigger } from './components/tooltip-trigger';
+import { TooltipProvider, TooltipTrigger } from './components/tooltip-primitives';
 import { TooltipContent } from './components/tooltip-content';
 
 function Tooltip({ ...props }: TooltipPrimitive.Root.Props) {

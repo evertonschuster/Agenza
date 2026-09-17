@@ -1,12 +1,14 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 
 import { Toast } from '..';
-import { ToastContent } from './toast-content';
 import { ToastIcon } from './toast-icon';
-import { ToastTitle } from './toast-title';
-import { ToastDescription } from './toast-description';
-import { ToastAction } from './toast-action';
-import { ToastClose } from './toast-close';
+import {
+  ToastContent,
+  ToastTitle,
+  ToastDescription,
+  ToastAction,
+  ToastClose,
+} from './toast-primitives';
 
 function ToastList() {
   const { toasts } = ToastPrimitive.useToastManager();

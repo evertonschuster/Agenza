@@ -5,8 +5,7 @@ import type { SheetContentProps } from '../sheet.types';
 import { Button } from '@/shared/ui/button';
 import { XIcon } from 'lucide-react';
 
-import { SheetPortal } from './sheet-portal';
-import { SheetOverlay } from './sheet-overlay';
+import { SheetPortal, SheetOverlay } from './sheet-primitives';
 
 function SheetContent({
   className,
