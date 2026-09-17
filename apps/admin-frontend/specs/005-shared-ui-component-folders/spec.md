@@ -147,21 +147,25 @@ apenas lendo a convenção documentada, sem perguntar a outra pessoa da equipe.
 
 ### Functional Requirements
 
-- **FR-001**: A reorganização **DEVE** dar uma pasta própria a todo componente de `src/shared/ui/` que
-  se enquadre no critério do FR-004 (exporta mais de um componente fortemente acoplado, **OU** um único
-  componente complexo o bastante) **OU** que tenha pelo menos um tipo próprio real para extrair (mesmo
-  critério do FR-002). Um componente de exportação única, sem tipo próprio e sem essa complexidade,
-  permanece arquivo único na raiz de `shared/ui/` — **revisado em 2026-09-17**: a versão anterior desta
-  FR dava pasta a todo componente sem exceção; sete componentes puramente atômicos (`badge`, `button`,
-  `input`, `label`, `separator`, `skeleton`, `textarea`) ganharam pasta nessa versão anterior sem
-  nenhum ganho real (só `index.tsx` dentro, idêntico ao arquivo de hoje) e voltaram a ser arquivo único.
+- **FR-001**: A reorganização **DEVE** dar uma pasta própria a todo componente de `src/shared/ui/`, sem
+  exceção. O critério do FR-004 (exporta mais de um componente fortemente acoplado, **OU** um único
+  componente complexo o bastante) decide se, dentro dessa pasta, existe uma subpasta `components/`
+  (FR-003); ter pelo menos um tipo próprio real para extrair (mesmo critério do FR-002) decide se existe
+  `<nome>.types.ts`. Um componente de exportação única, sem tipo próprio e sem essa complexidade, ainda
+  ganha pasta — só que com nada além de `index.tsx` dentro — **revisado duas vezes em 2026-09-17**: a
+  versão original desta FR dava pasta a todo componente sem exceção; uma primeira revisão (research.md
+  D10) restringiu a pasta aos componentes que se qualificassem por FR-004 ou FR-002, deixando sete
+  componentes puramente atômicos (`badge`, `button`, `input`, `label`, `separator`, `skeleton`,
+  `textarea`) como arquivo único; uma segunda revisão no mesmo dia (research.md D11) reverteu essa
+  restrição — pasta volta a ser universal, porque a inconsistência de ter 7 componentes fora do padrão
+  dos outros 13 pesou mais do que evitar uma pasta de um arquivo só.
 - **FR-002**: Uma pasta de componente **DEVE** ter, na sua raiz, um `index.tsx` como ponto de entrada
   público — sempre presente numa pasta que existe. Um arquivo `<nome>.types.ts`, só com os tipos
   daquele componente (sem JSX, sem lógica de renderização, sem classes de estilo), existe **sempre que
-  houver pelo menos um tipo próprio real para extrair** — é justamente essa condição, junto com a do
-  FR-004, que decide se o componente ganha pasta (FR-001). Quando o componente só repassa
-  `React.ComponentProps<'x'>` adiante, ou seu único tipo vem de uma variante `cva` que permanece junto
-  do componente, não há `<nome>.types.ts`.
+  houver pelo menos um tipo próprio real para extrair** — essa condição, junto com a do FR-004, decide o
+  que existe **dentro** da pasta (que agora é sempre criada, FR-001), não se a pasta existe. Quando o
+  componente só repassa `React.ComponentProps<'x'>` adiante, ou seu único tipo vem de uma variante `cva`
+  que permanece junto do componente, não há `<nome>.types.ts`.
 - **FR-003**: Uma pasta de componente que se qualifica pelo critério do FR-004 **DEVE** ter uma
   subpasta `components/` contendo as sub-partes internas/dependentes com peso real — composição de
   outros componentes, estado/handler/ref próprios, ou lógica condicional/classe longa o bastante para
@@ -171,7 +175,7 @@ apenas lendo a convenção documentada, sem perguntar a outra pessoa da equipe.
   2026-09-17**: a versão anterior desta FR dava um arquivo a cada sub-parte sem exceção, o que produziu
   19 arquivos de ≤10 linhas (a maioria com exatamente 7) para wrappers de uma linha como
   `DialogPortal`/`DialogTrigger`/`ComboboxValue`.
-- **FR-004**: Um componente se qualifica pelo critério acima (FR-001 e FR-003) quando exporta mais de
+- **FR-004**: Um componente se qualifica pelo critério acima (FR-003) quando exporta mais de
   um componente fortemente acoplado (ex. uma raiz mais Trigger/Content/Item), **OU** quando um único
   componente exportado tem lógica de renderização e superfície de tipos complexas o bastante para
   prejudicar a leitura em arquivo único (ex. múltiplos ramos condicionais, múltiplas declarações de
@@ -221,26 +225,32 @@ apenas lendo a convenção documentada, sem perguntar a outra pessoa da equipe.
 - **SC-003**: Depois da reorganização, a suíte completa de portões de CI (tipo, lint, formatação,
   cobertura, drift de tipos gerados, Playwright) passa sem nenhuma alteração fora de `src/shared/ui/`,
   além da própria lista de exclusão de cobertura.
-- **SC-004**: 100% dos componentes que se enquadram no FR-001 (critério do FR-004 **ou** tipo próprio
-  real) ganham pasta própria; nenhum componente de exportação única, sem tipo e sem essa complexidade,
-  ganha pasta sem necessidade. Dentro das pastas, 100% dos sub-partes com peso real (composição,
-  estado, condicional) têm arquivo próprio em `components/`; as triviais ficam agrupadas num único
-  `<nome>-primitives.tsx` por componente, nunca uma por arquivo.
+- **SC-004**: 100% dos componentes de `shared/ui/` têm pasta própria (FR-001), sem exceção. Dentro
+  dessas pastas, 100% dos que se enquadram no critério do FR-004 têm subpasta `components/`, e 100% dos
+  que têm tipo próprio real têm `<nome>.types.ts`; os demais ficam só com `index.tsx`. Dentro de
+  `components/`, 100% das sub-partes com peso real (composição, estado, condicional) têm arquivo
+  próprio; as triviais ficam agrupadas num único `<nome>-primitives.tsx` por componente, nunca uma por
+  arquivo.
 - **SC-005**: Nenhum dos consumidores hoje existentes desses componentes precisa de qualquer alteração
   além de, no máximo, recompilar — nenhum caminho de import muda.
 
 ## Assumptions
 
-- **Ganha pasta** (FR-001) o componente que exporta mais de um componente fortemente acoplado, tem
-  tipo próprio real, ou é um único export complexo o bastante (FR-004): `avatar`, `card`, `combobox`,
-  `confirm-dialog`, `dialog`, `dropdown-menu`, `input-group`, `kbd` (exporta `Kbd` + `KbdGroup` — mesma
-  forma de `avatar`/`card`, corrigido em 2026-09-17 após classificação inicial errada), `sheet`, `toast`,
-  `tooltip`, `color-swatch-picker` e `FullScreenMessage` — 13 no total. Os outros 7 (`badge`, `button`,
-  `input`, `label`, `separator`, `skeleton`, `textarea`) são exportação única, sem tipo próprio, sem
-  complexidade — permanecem arquivo único. Esta lista é ilustrativa do estado atual, não um teto fixo.
-  **Histórico**: entre 2026-09-17 e a revisão no mesmo dia, esses 7 chegaram a ganhar pasta (por um
-  pedido de uniformizar tudo), mas sem nenhum `types.ts` ou `components/` dentro — só ceremônia, sem
-  ganho de organização — e voltaram a ser arquivo único.
+- **Todo componente ganha pasta** (FR-001), sem exceção — 20 no total. O que varia é o conteúdo dentro
+  dela: `avatar`, `card`, `kbd` (exporta `Kbd` + `KbdGroup` — mesma forma de `avatar`/`card`, corrigido
+  em 2026-09-17 após classificação inicial errada), `badge`, `button`, `input`, `label`, `separator`,
+  `skeleton` e `textarea` — 10 no total — não se qualificam nem pelo FR-004 nem pelo FR-002, então têm
+  só `index.tsx`. `color-swatch-picker` e `FullScreenMessage` têm tipo próprio real (FR-002) mas não se
+  qualificam pelo FR-004, então têm `index.tsx` + `<nome>.types.ts`, sem `components/`. `combobox`,
+  `confirm-dialog`, `dialog`, `dropdown-menu`, `input-group`, `sheet`, `toast` e `tooltip` — 8 no total —
+  se qualificam pelo FR-004 e ganham `components/` (mais `<nome>.types.ts` quando também há tipo próprio
+  real). Esta lista é ilustrativa do estado atual, não um teto fixo.
+  **Histórico**: a versão original desta feature já dava pasta a todo componente sem exceção
+  (research.md D9); uma revisão em 2026-09-17 (research.md D10) restringiu a pasta aos 13 que se
+  qualificavam por FR-004 ou FR-002, deixando os outros 7 como arquivo único; uma segunda revisão no
+  mesmo dia (research.md D11) reverteu essa restrição de volta à regra original, porque a inconsistência
+  visível de 7 componentes fora do padrão dos outros 13 pesou mais do que evitar uma pasta de um arquivo
+  só.
 - A subpasta `components/` só é criada quando o componente se qualifica pelo FR-004 **e**, dentro
   dela, só a sub-parte com peso real (composição de outros componentes, estado/handler/ref próprios,
   ou condicional em JS) ganha arquivo próprio — mesma regra já aplicada a páginas de feature em
@@ -273,11 +283,10 @@ apenas lendo a convenção documentada, sem perguntar a outra pessoa da equipe.
   precisa resolvê-la.
 - A lista de exclusão de cobertura em `vitest.config.ts` é atualizada como parte desta feature para
   refletir os novos caminhos, sem mudar o status (incluído/excluído) nem o motivo já documentado de
-  nenhum componente. Das 16 entradas hoje existentes para `shared/ui/`, 9 viram glob de pasta
-  (`<nome>/**` — os 9 componentes que ganharam pasta e já estavam na lista: `avatar`, `card`, `kbd`,
-  `dialog`, `dropdown-menu`, `combobox`, `sheet`, `toast`, `FullScreenMessage`) e 7 continuam apontando
-  para o arquivo exato (`badge.tsx`, `button.tsx`, `input.tsx`, `label.tsx`, `separator.tsx`,
-  `skeleton.tsx`, `textarea.tsx` — os 7 que permanecem arquivo único).
+  nenhum componente. Das 16 entradas hoje existentes para `shared/ui/`, todas as 16 viram glob de pasta
+  (`<nome>/**`) — incluindo `badge`, `button`, `input`, `label`, `separator`, `skeleton` e `textarea`,
+  que numa revisão intermediária (research.md D10) chegaram a apontar para o arquivo exato, mas voltaram
+  a glob de pasta quando a revisão seguinte (research.md D11) reverteu essa restrição.
 
 ## Out of Scope
 

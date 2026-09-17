@@ -2,20 +2,24 @@
 
 Esta feature não tem entidade de domínio — o "modelo" aqui é estrutural: qual arquivo existe, o que ele
 exporta, e de quem ele depende. Este documento é o mapeamento completo, componente a componente,
-**já refletindo a revisão pós-implementação de 2026-09-17** (research.md D10) — a primeira
+**já refletindo a revisão pós-implementação de 2026-09-17** (research.md D10 e D11) — a primeira
 implementação (D1–D9) deu um arquivo a cada sub-parte sem exceção e uma pasta a todo componente sem
-exceção; uma revisão encontrou 19 arquivos de ≤10 linhas e 7 pastas sem nenhum conteúdo real, e as duas
-regras foram apertadas. O resultado final tem 60 arquivos (era 112).
+exceção; uma revisão encontrou 19 arquivos de ≤10 linhas dentro de `components/` e apertou essa regra
+(D10), inclusive revertendo 7 pastas para arquivo único por não terem `components/` nem `types.ts`; uma
+segunda revisão (D11) reverteu só essa segunda parte — os 20 componentes voltam a ter pasta, sempre. O
+resultado final tem 60 arquivos (era 112 depois de D1–D9, 60 depois de D10, 60 ainda depois de D11 — a
+reversão só move arquivo, não cria nem remove).
 
-Convenção final (research.md D1–D2, D4, D9, D10):
+Convenção final (research.md D1–D2, D4, D9, D10, D11):
 
-- **Pasta**: só existe para um componente que se qualifica pelo critério de `components/` (mais de um
-  export fortemente acoplado, ou um único export complexo o bastante) **ou** tem pelo menos um tipo
-  próprio real para extrair. Um componente de exportação única, sem tipo, sem essa complexidade,
-  permanece arquivo único na raiz de `shared/ui/`.
-- `index.tsx` — sempre presente numa pasta que existe; ponto de entrada público, exporta o(s)
-  componente(s)-raiz e reexporta tudo de `components/`. Único arquivo que muda com `@/shared/ui/<nome>`
-  de fora.
+- **Pasta**: existe para todo componente de `shared/ui/`, sem exceção (D9, restaurado por D11 depois de
+  D10 ter aberto uma exceção temporária). O que é condicional é o **conteúdo** da pasta: `types.ts` só
+  aparece quando há tipo próprio real para extrair (critério do FR-002); `components/` só aparece
+  quando o componente se qualifica pelo critério de `components/` do FR-004 (mais de um export
+  fortemente acoplado, ou um único export complexo o bastante). Um componente sem nenhum dos dois tem
+  pasta só com `index.tsx`.
+- `index.tsx` — sempre presente; ponto de entrada público, exporta o(s) componente(s)-raiz e reexporta
+  tudo de `components/`. Único arquivo que muda com `@/shared/ui/<nome>` de fora.
 - `<nome>.types.ts` — presente só quando há tipo próprio real; nunca uma chamada `cva()` (fica com o
   componente que a usa).
 - `components/<sub-parte>.tsx` — um arquivo próprio só para a sub-parte com peso real: composição de
@@ -189,22 +193,24 @@ triviais) — não fazem parte da revisão de D10.
 Imports ajustados (research.md D6): `from '../api/servicesFacade'` → `from '../../api/servicesFacade'`,
 `from './toast'` → `from '../toast'`. `confirm-dialog.test.tsx` migra para a raiz, import para `from '.'`.
 
-## Componentes que permanecem arquivo único — 7 arquivos
+## badge/, button/, input/, label/, separator/, skeleton/, textarea/ — 1 arquivo cada (D11)
 
-Exportação única, sem tipo próprio real, sem complexidade — não se qualificam nem pelo critério de
-`components/` nem pelo de `types.ts`, então não ganham pasta (FR-001 revisado, D10).
+Mesmo caso de `avatar/`/`card/`/`kbd/`: exportação única (ou única + variantes de estilo), sem tipo
+próprio real, sem sub-parte para segregar — não se qualificam pelo critério de `components/` nem pelo
+de `types.ts`. Diferente de D10 (que por isso os deixava arquivo único na raiz), D11 dá pasta mesmo
+assim, por uniformidade estrutural: o conteúdo de `index.tsx` é idêntico ao arquivo antigo, só movido.
 
-| Componente | Por quê |
+| Componente | `index.tsx` exporta |
 |---|---|
-| `badge.tsx` | `Badge` + `badgeVariants` (cva fica junto do componente) |
-| `button.tsx` | `Button` + `buttonVariants`, mesmo caso |
-| `input.tsx` | só repassa `React.ComponentProps<'input'>` |
-| `label.tsx` | só repassa `React.ComponentProps<'label'>` |
-| `separator.tsx` | só repassa o tipo do primitivo |
-| `skeleton.tsx` | só repassa `React.ComponentProps<'div'>` |
-| `textarea.tsx` | só repassa `React.ComponentProps<'textarea'>` |
+| `badge/` | `Badge`, `badgeVariants` (cva fica junto do componente) |
+| `button/` | `Button`, `buttonVariants`, mesmo caso |
+| `input/` | só repassa `React.ComponentProps<'input'>` |
+| `label/` | só repassa `React.ComponentProps<'label'>` |
+| `separator/` | só repassa o tipo do primitivo |
+| `skeleton/` | só repassa `React.ComponentProps<'div'>` |
+| `textarea/` | só repassa `React.ComponentProps<'textarea'>` |
 
-## Componentes de exportação única que ganham pasta — 2 arquivos cada
+## Componentes de exportação única com `types.ts` — 2 arquivos cada
 
 Diferente dos 7 acima: exportação única, mas **com** tipo próprio real — qualificam pelo critério de
 `types.ts` do FR-001/FR-002, mesmo sem `components/`.
@@ -216,9 +222,8 @@ Diferente dos 7 acima: exportação única, mas **com** tipo próprio real — q
 
 ## Mapeamento de `vitest.config.ts` (`coverage.exclude`)
 
-Das 16 entradas hoje existentes para `shared/ui/`, **9 viram glob de pasta** (os componentes que
-ganharam pasta e já estavam na lista) e **7 continuam apontando para o arquivo exato** (os que
-permanecem arquivo único).
+Das 16 entradas hoje existentes para `shared/ui/`, **todas as 16 viram glob de pasta** (D11 elimina a
+última entrada de arquivo exato, ao dar pasta também para os 7 que D10 tinha deixado na raiz).
 
 | Entrada atual | Nova entrada | Motivo documentado (inalterado) |
 |---|---|---|
@@ -226,13 +231,13 @@ permanecem arquivo único).
 | `src/shared/ui/card.tsx` | `src/shared/ui/card/**` | idem |
 | `src/shared/ui/kbd.tsx` | `src/shared/ui/kbd/**` | idem |
 | `src/shared/ui/FullScreenMessage.tsx` | `src/shared/ui/FullScreenMessage/**` | idem (grafia PascalCase preservada) |
-| `src/shared/ui/badge.tsx` | **inalterada** | idem |
-| `src/shared/ui/button.tsx` | **inalterada** | idem |
-| `src/shared/ui/input.tsx` | **inalterada** | idem |
-| `src/shared/ui/label.tsx` | **inalterada** | idem |
-| `src/shared/ui/separator.tsx` | **inalterada** | idem |
-| `src/shared/ui/skeleton.tsx` | **inalterada** | idem |
-| `src/shared/ui/textarea.tsx` | **inalterada** | idem |
+| `src/shared/ui/badge.tsx` | `src/shared/ui/badge/**` | idem |
+| `src/shared/ui/button.tsx` | `src/shared/ui/button/**` | idem |
+| `src/shared/ui/input.tsx` | `src/shared/ui/input/**` | idem |
+| `src/shared/ui/label.tsx` | `src/shared/ui/label/**` | idem |
+| `src/shared/ui/separator.tsx` | `src/shared/ui/separator/**` | idem |
+| `src/shared/ui/skeleton.tsx` | `src/shared/ui/skeleton/**` | idem |
+| `src/shared/ui/textarea.tsx` | `src/shared/ui/textarea/**` | idem |
 | `src/shared/ui/dialog.tsx` | `src/shared/ui/dialog/**` | "No consumer anywhere yet (T160 in tasks.md)" |
 | `src/shared/ui/dropdown-menu.tsx` | `src/shared/ui/dropdown-menu/**` | "shadcn scaffold, sem consumidor real da parte não usada" (D5, ARCHITECTURE.md) |
 | `src/shared/ui/combobox.tsx` | `src/shared/ui/combobox/**` | idem |

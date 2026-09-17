@@ -235,3 +235,39 @@ muitos wrappers complexos.
   passaria acima de qualquer N razoável mesmo sem nenhuma lógica, e um wrapper com uma linha de
   condicional (`ToastClose`'s `children ?? <XIcon />`) ficaria abaixo — line count não distingue os
   casos que efetivamente importam.
+
+## D11 — Reversão parcial de D10 (2026-09-17): pasta própria volta a ser universal
+
+**Contexto**: Depois de D10, o usuário revisou o resultado (`badge.tsx`, `button.tsx`, `input.tsx`,
+`label.tsx`, `separator.tsx`, `skeleton.tsx`, `textarea.tsx` de volta à raiz de `shared/ui/`) e pediu
+que esses 7 também fiquem dentro de pasta — "para seguirmos o padrão do projeto", o mesmo argumento de
+consistência que já tinha motivado D9.
+
+**Decision**: Reverte só o ponto 2 de D10 (a condição "pasta só existe quando o componente se qualifica
+pelo FR-004 ou tem tipo próprio real"). Os 7 voltam a ser pasta com `index.tsx` único — sem
+`components/`, sem `types.ts` — mesma forma que `avatar/`, `card/`, `kbd/` já tinham antes e depois de
+D10. O ponto 1 de D10 (bundle de sub-partes triviais em `<nome>-primitives.tsx`) continua valendo sem
+alteração; a reversão é só sobre a pasta de nível superior, não sobre a segregação interna dos
+componentes compostos.
+
+Resultado: pasta volta a ser universal para os 20 componentes de `shared/ui/` (D9 restaurado
+integralmente), com a segregação interna de D10 mantida. Contagem de arquivos **inalterada em 60** — os
+7 arquivos só mudam de `shared/ui/<nome>.tsx` para `shared/ui/<nome>/index.tsx`, nenhum arquivo novo é
+criado nem conteúdo alterado. `tsc`/lint (6 avisos pré-existentes, inalterados)/format/cobertura
+(91.27/86.34/85.96/92.21%, 196 testes) idênticos a antes da reversão.
+
+**Rationale**: A uniformidade estrutural — todo componente sob `shared/ui/` é uma pasta, sem exceção —
+é, para este projeto, mais valiosa do que evitar uma pasta de um arquivo só. Diferente da
+sub-segregação interna que D10 corrigiu (onde o custo era navegacional: muitos arquivos minúsculos com
+indireção de import entre si), o "custo" que D10 original removeu aqui era só profundidade de
+diretório — uma pasta com um único `index.tsx` não introduz indireção nem arquivos extras para navegar.
+O projeto prioriza a previsibilidade de "todo componente é uma pasta, sempre no mesmo nível" sobre
+evitar essa profundidade.
+
+**Alternatives considered**:
+- Manter os 7 na raiz e documentar a exceção — rejeitado pelo próprio usuário: a inconsistência visível
+  no explorador de arquivos (7 componentes fora do padrão dos outros 13) é exatamente o problema
+  apontado.
+- Reabrir também o ponto 1 de D10 (voltar a segregar sub-partes triviais em arquivo próprio) — fora de
+  escopo do pedido; o usuário só apontou a inconsistência de nível superior, não a segregação interna
+  já consolidada.

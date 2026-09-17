@@ -47,6 +47,15 @@ de hoje — não normalizada para kebab-case, para não quebrar FR-005.
 > perdem `components/` e `types.ts` (dissolvem em `index.tsx`); os 7 atômicos sem tipo voltam a ser
 > arquivo único; `color-swatch-picker`/`FullScreenMessage` continuam pasta (têm tipo real). Total: 60
 > arquivos. Ver `data-model.md` (reescrito) para o mapeamento final e `research.md` D10 para o porquê.
+>
+> **Segunda revisão (mesmo dia, research.md D11)**: o usuário apontou que os 7 atômicos revertidos para
+> arquivo único (`badge.tsx`, `button.tsx`, `input.tsx`, `label.tsx`, `separator.tsx`, `skeleton.tsx`,
+> `textarea.tsx`) ficavam visivelmente fora do padrão dos outros 13, que são pasta. Reverte só esse
+> ponto de D10: os 7 voltam a ser pasta com `index.tsx` único (mesma forma de `avatar`/`card`/`kbd`) —
+> a regra de sub-parte trivial em `<nome>-primitives.tsx` (o outro ponto de D10) não muda. Resultado: a
+> forma descrita no restante desta seção (`## Project Structure` abaixo) — pasta universal para os 20 —
+> volta a ser exata; total continua **60 arquivos** (os 7 só mudam de `<nome>.tsx` para
+> `<nome>/index.tsx`, nenhum arquivo novo). Ver `research.md` D11 para o porquê.
 
 ## Technical Context
 

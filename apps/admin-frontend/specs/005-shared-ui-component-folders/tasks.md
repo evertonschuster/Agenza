@@ -442,3 +442,22 @@ a correção feita em cima, não substitui o histórico.
   (reescrito) para refletir a regra revisada.
 
 **Resultado**: 112 → 60 arquivos (46% menos), mesmos portões verdes de antes.
+
+## Fase 10: Reversão parcial da Fase 9 (2026-09-17, mesmo dia — research.md D11)
+
+O usuário revisou o resultado de T042 (os 7 atômicos de volta a arquivo único na raiz) e pediu que
+voltassem a ter pasta própria, para não ficarem visivelmente fora do padrão dos outros 13 componentes.
+Reverte só T042/T043 — T039–T041 (bundle de sub-partes triviais em `<nome>-primitives.tsx`) não mudam.
+
+- [X] T046 [P] Mover `badge.tsx`, `button.tsx`, `input.tsx`, `label.tsx`, `separator.tsx`,
+  `skeleton.tsx`, `textarea.tsx` para `<nome>/index.tsx` (mesma forma de `avatar/`, `card/`, `kbd/`) —
+  `git mv` puro, conteúdo inalterado.
+- [X] T047 Atualizar `vitest.config.ts`: as 7 entradas revertidas em T043 voltam a glob de pasta
+  (`<nome>/**`) — as 16 entradas de `shared/ui/` ficam todas glob de pasta.
+- [X] T048 Revalidar `tsc --noEmit`, `lint`, `format:check`, `test:coverage` — mesmo resultado de T044
+  (6 avisos pré-existentes, 0 erros; 39/196 testes; 91.27/86.34/85.96/92.21%, idêntico).
+- [X] T049 Atualizar `spec.md` (FR-001/002/004, SC-004, Assumptions), `research.md` (D11), `data-model.md`
+  e `plan.md` (nota de correção) para refletir a regra revisada.
+
+**Resultado**: pasta volta a ser universal para os 20 componentes; contagem de arquivos inalterada em
+60 (os 7 só mudam de local, nenhum arquivo novo), mesmos portões verdes de antes.

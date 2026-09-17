@@ -100,16 +100,20 @@ outside. Two more files exist only when there is real content for them, mirrorin
 "`components/` subfolder created only when a page actually grows them" rule: `<name>.types.ts` holds
 only type declarations and is skipped when a component has no bespoke type (a `cva()` call's derived
 `VariantProps` stays with the component that defines it, never in the types file — moving it would
-just relocate style logic into a file meant to hold none); `components/` holds one file per
-tightly-coupled sub-part and is skipped when a component exports nothing but itself. A component
-qualifies for `components/` when it exports more than one coupled component (`Dialog` +
-`DialogContent` + …) **or** when a single exported component's render logic and type surface are
-complex enough to hurt readability as one file (`confirm-dialog`, five type declarations and two
-conditional render branches, still a single export) — judged qualitatively in review, the same
-judgment call already used for D5 below, deliberately with no line-count or type-count threshold.
-Sub-parts inside `components/` are never imported from outside their own component's folder — only
-through `index.tsx`. `FullScreenMessage/` is the one folder that keeps its source file's exact
-PascalCase instead of kebab-case, because renaming it would change its import path.
+just relocate style logic into a file meant to hold none); `components/` is skipped when a component
+exports nothing but itself. A component qualifies for `components/` when it exports more than one
+coupled component (`Dialog` + `DialogContent` + …) **or** when a single exported component's render
+logic and type surface are complex enough to hurt readability as one file (`confirm-dialog`, five type
+declarations and two conditional render branches, still a single export) — judged qualitatively in
+review, the same judgment call already used for D5 below, deliberately with no line-count or
+type-count threshold. Inside `components/`, only a sub-part with real weight gets its own file —
+composing other components, owning local state/handlers/refs, or a className long enough to justify
+isolation on its own; sub-parts without that weight (a single-element wrapper, a static or
+CSS-selector-only className, no JS conditionals) are bundled together in one `<name>-primitives.tsx`
+instead of one file each. Sub-parts inside `components/` are never imported from outside their own
+component's folder — only through `index.tsx`. `FullScreenMessage/` is the one folder that keeps its
+source file's exact PascalCase instead of kebab-case, because renaming it would change its import
+path.
 
 ---
 
