@@ -229,14 +229,20 @@ Story 3). Não depende das Fases 3/4/6 estarem completas — pode rodar em paral
   `components/` só quando há conteúdo real para cada um; (b) §5 (tabela de decisões), nova linha no
   mesmo padrão das linhas já existentes sobre `confirm-dialog` e `color-swatch-picker`, citando
   `specs/005-shared-ui-component-folders/`.
-- [ ] T023 [P] [US3] Localizar o arquivo físico da skill `agenza-ui-primitive` (não encontrado em disco
+- [X] T023 [P] [US3] Localizar o arquivo físico da skill `agenza-ui-primitive` (não encontrado em disco
   a partir deste projeto durante o planejamento — research.md D8; verificar via gerenciador de plugins
   ou perguntar à pessoa responsável) e atualizá-lo para apontar para a entrada de
-  `docs/ARCHITECTURE.md` criada em T022, em vez de duplicar a convenção ali. **Não concluída**: busca
-  em disco (repositório, `~/.claude/skills`, `~/.claude/plugins`, e uma varredura mais ampla do
-  sistema de arquivos) não localizou o arquivo — mesma conclusão de research.md D8. `docs/ARCHITECTURE.md`
-  (T022) já é a fonte da verdade e não depende desta tarefa; fica pendente para quem tiver acesso ao
-  gerenciador de plugins ou souber onde a skill está registrada.
+  `docs/ARCHITECTURE.md` criada em T022, em vez de duplicar a convenção ali. **Concluída em
+  2026-09-17**: localizada em `D:\Agenza\.claude\skills\agenza-ui-primitive\SKILL.md` — na raiz do
+  monorepo, fora de `apps/admin-frontend` e fora de `~/.claude/skills`, por isso as buscas anteriores
+  (research.md D8) não a encontraram. Atualizada: (a) referência cruzada para
+  `specs/005-shared-ui-component-folders/` ao lado da já existente para `specs/002-ui-foundation/`;
+  (b) novo parágrafo apontando para `docs/ARCHITECTURE.md` §1 em vez de duplicar a convenção de pasta;
+  (c) `src/shared/ui/button.tsx` → `src/shared/ui/button/index.tsx` (referência ficou desatualizada
+  pela própria migração desta feature); (d) novo aviso na seção do `npx shadcn add`: a CLI ainda
+  escreve arquivo plano porque `components.json` não conhece a pasta, então quem gerar um componente
+  precisa mover o resultado para `<nome>/index.tsx` manualmente antes de seguir para as passagens de
+  tipo/estilo.
 
 **Checkpoint**: Convenção documentada num lugar só, referenciada (não duplicada) por quem mexe em
 `shared/ui/` no dia a dia.

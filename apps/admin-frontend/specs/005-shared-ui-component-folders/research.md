@@ -187,6 +187,13 @@ caminho e seção exatos (§1 e §5, já existentes) e não depende de encontrar
 skill pode ser uma tarefa separada em `tasks.md`, sinalizada como dependente de localizar o arquivo
 primeiro.
 
+**Resolução (2026-09-17)**: o arquivo existe em `D:\Agenza\.claude\skills\agenza-ui-primitive\SKILL.md`
+— na raiz do monorepo, um nível acima de `apps/admin-frontend/`. A busca original checou
+`apps/admin-frontend/.claude/skills/`, `~/.claude/skills/` e `~/.claude/plugins/`, mas não o
+`.claude/skills/` da raiz do monorepo — um projeto multi-app com `.claude/` só no root (skills
+compartilhadas entre todos os apps) e não em cada subprojeto é um layout que a busca não cobriu.
+Atualizado conforme T023.
+
 ## D10 — Revisão pós-implementação (2026-09-17): segregação exagerada em dois pontos
 
 **Contexto**: Depois da primeira implementação completa (D1–D9, todos os 20 componentes migrados,
