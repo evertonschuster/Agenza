@@ -195,23 +195,21 @@ _"`Result` é a moeda interna; a fronteira do framework é o caixa."_
 
 **A list-loading hook has four states, not two.** A boolean `isLoading` plus "empty means
 `items.length === 0`" conflates "hasn't loaded yet" with "loaded and empty" with "failed to load" —
-the last two look identical to the reader if the code doesn't keep them apart. The page's own hook
-tracks the full `status: 'loading' | 'error' | 'empty' | 'ready'`, set only inside the `result.ok`
-branch for `'empty'`/`'ready'` and only in the failure branch for `'error'` — never inferred from
-`items.length` alone regardless of how the fetch went. `Session.Missing` and
-`Authorization.Unauthorized` are a fifth outcome in practice, not a variant of `'error'`: they
-redirect to `/login` (the same destination `ProtectedRoute` sends an already-dead session to)
-instead of rendering anything, because a retry control on an expired session fails identically
-every time. `features/tags` (`useTagsPage.ts`) is the reference implementation.
+the last two look identical to the reader if the code doesn't keep them apart.
+`shared/ui/list-section` takes an explicit `status: 'loading' | 'error' | 'empty' | 'ready'`, set
+only inside the `result.ok` branch for `'empty'`/`'ready'` and only in the failure branch for
+`'error'` — never inferred from `items.length` alone regardless of how the fetch went.
+`Session.Missing` and `Authorization.Unauthorized` are a fifth outcome in practice, not a variant
+of `'error'`: they redirect to `/login` (the same destination `ProtectedRoute` sends an
+already-dead session to) instead of rendering anything, because a retry control on an expired
+session fails identically every time. `features/tags` (`useTagsPage.ts`) is the reference
+implementation.
 
-**`shared/ui/list-section` itself only renders two of those four** — `'loading'` (the skeleton) and
-`'ready'` (the rows/table) — and its own `status` prop is typed to match
-(`Extract<ListSectionStatus, 'loading' | 'ready'>`), not the full union. `'empty'` and `'error'` are
-rendered by the page directly, as `shared/ui/empty-state`/`shared/ui/error-state` sitting beside
-`list-section` rather than nested inside it — search, empty copy, and error copy are all
-page-specific, so `list-section` never receives them as props at all. A page mounts `list-section`
-only when `status` is `'loading'` or `'ready'`; TypeScript enforces the same split at the call site
-(narrowing `status` before it reaches the component).
+`list-section` takes `empty`/`error` as config objects (`EmptyStateProps`/`ErrorStateProps`), not
+raw `ApiProblem` — the page builds the curated copy (via `extractErrorMessage`, never raw
+`detail`/`title`) and hands it down, so `list-section` renders the right thing for `status` without
+knowing anything about `shared/api`. Search stays page-owned too: `toolbar` is not a `list-section`
+prop, so a search box sits beside the component in the page's own markup, not inside it.
 
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
 Exemplos reais de request/response — sucesso, validação, conflito, 404, autenticação/tenant —

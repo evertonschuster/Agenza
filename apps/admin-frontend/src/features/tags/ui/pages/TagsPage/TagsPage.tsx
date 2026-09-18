@@ -8,8 +8,6 @@ import {
 } from '@/shared/ui/input-group';
 import { Kbd } from '@/shared/ui/kbd';
 import { ListSection } from '@/shared/ui/list-section';
-import { EmptyState } from '@/shared/ui/empty-state';
-import { ErrorState } from '@/shared/ui/error-state';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { useShortcutHint } from '@/shared/keyboard/shortcuts';
 import { extractErrorMessage } from '@/shared/api/servicesFacade';
@@ -71,42 +69,38 @@ export function TagsPage() {
         </InputGroup>
       </form>
 
-      {status === 'empty' &&
-        (query === '' ? (
-          <EmptyState
-            title="Nenhuma etiqueta cadastrada"
-            description="Crie a primeira etiqueta para começar a organizar seus serviços."
-          />
-        ) : (
-          <EmptyState
-            title="Nenhuma etiqueta encontrada"
-            description={`Nenhum resultado para "${query}". Tente outro termo.`}
-            action={
-              <Button variant="outline" onClick={clearSearch}>
-                Limpar busca
-              </Button>
-            }
-          />
-        ))}
-
-      {status === 'error' && error && (
-        <ErrorState
-          title="Não foi possível carregar as etiquetas"
-          description={extractErrorMessage(error)}
-          code={error.code ?? undefined}
-          onRetry={refresh}
-        />
-      )}
-
-      {(status === 'loading' || status === 'ready') && (
-        <ListSection
-          status={status}
-          items={tags}
-          getKey={(tag) => tag.id}
-          aria-label="Etiquetas"
-          columns={tagColumns(openEditDialog, openDeleteDialog)}
-        />
-      )}
+      <ListSection
+        status={status}
+        items={tags}
+        getKey={(tag) => tag.id}
+        aria-label="Etiquetas"
+        columns={tagColumns(openEditDialog, openDeleteDialog)}
+        empty={
+          query === ''
+            ? {
+                title: 'Nenhuma etiqueta cadastrada',
+              }
+            : {
+                title: 'Nenhuma etiqueta encontrada',
+                description: `Nenhum resultado para "${query}". Tente outro termo.`,
+                action: (
+                  <Button variant="outline" onClick={clearSearch}>
+                    Limpar busca
+                  </Button>
+                ),
+              }
+        }
+        error={
+          error
+            ? {
+                title: 'Não foi possível carregar as etiquetas',
+                description: extractErrorMessage(error),
+                code: error.code ?? undefined,
+                onRetry: refresh,
+              }
+            : undefined
+        }
+      />
 
       {(dialog.kind === 'create' || dialog.kind === 'edit') && (
         <TagFormDialog
