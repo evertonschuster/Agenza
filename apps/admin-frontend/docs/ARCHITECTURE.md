@@ -193,23 +193,30 @@ _"`Result` é a moeda interna; a fronteira do framework é o caixa."_
 > The third row is the one that gets misread. A dead network is exceptional; "name already taken"
 > is not. Routing both down the rejection path turns validation into an error screen.
 
-**A list-loading hook has four states, not two.** A boolean `isLoading` plus "empty means
-`items.length === 0`" conflates "hasn't loaded yet" with "loaded and empty" with "failed to load" —
-the last two look identical to the reader if the code doesn't keep them apart.
-`shared/ui/list-section` takes an explicit `status: 'loading' | 'error' | 'empty' | 'ready'`, set
-only inside the `result.ok` branch for `'empty'`/`'ready'` and only in the failure branch for
-`'error'` — never inferred from `items.length` alone regardless of how the fetch went.
-`Session.Missing` and `Authorization.Unauthorized` are a fifth outcome in practice, not a variant
-of `'error'`: they redirect to `/login` (the same destination `ProtectedRoute` sends an
-already-dead session to) instead of rendering anything, because a retry control on an expired
-session fails identically every time. `features/tags` (`useTagsPage.ts`) is the reference
-implementation.
+**A list-loading hook must not confuse "hasn't loaded yet" with "failed to load."** A boolean
+`isLoading` plus "empty means `items.length === 0`" conflates those with "loaded and empty" — the
+first two look identical to the reader if the code doesn't keep them apart.
+`shared/ui/list-section` takes an explicit `status: 'loading' | 'error' | 'ready'`, set only inside
+the `result.ok` branch for `'ready'` and only in the failure branch for `'error'` — `'ready'` is
+never set, and `'error'` is never skipped, based on `items.length`. `Session.Missing` and
+`Authorization.Unauthorized` are a fourth outcome in practice, not a variant of `'error'`: they
+redirect to `/login` (the same destination `ProtectedRoute` sends an already-dead session to)
+instead of rendering anything, because a retry control on an expired session fails identically
+every time. `features/tags` (`useTagsPage.ts`) is the reference implementation.
 
-`list-section` takes `empty`/`error` as config objects (`EmptyStateProps`/`ErrorStateProps`), not
-raw `ApiProblem` — the page builds the curated copy (via `extractErrorMessage`, never raw
-`detail`/`title`) and hands it down, so `list-section` renders the right thing for `status` without
-knowing anything about `shared/api`. Search stays page-owned too: `toolbar` is not a `list-section`
-prop, so a search box sits beside the component in the page's own markup, not inside it.
+**Empty is not a status the page computes — `list-section` detects it.** Once `status` says
+`'ready'`, `list-section` checks `items.length` itself and shows one fixed, generic empty message
+(no title/description/action props to configure it) instead of the rows or table. This is safe in
+a way inferring emptiness from `items.length` alone is not: the page has already confirmed success
+via `status`, so a zero-length ready list is unambiguous — unlike inferring "empty" before knowing
+whether the fetch even succeeded, which is the original bug this component exists to prevent. The
+tradeoff is explicit: no per-feature empty copy (a "never created" catalog and a "search matched
+nothing" case now read identically), and no action slot — a per-feature "limpar busca" affordance
+would need to live in the page's own toolbar area, not inside the empty message. `error` stays a
+config object (`ErrorStateProps`, not raw `ApiProblem`) since its copy is genuinely page-specific —
+the page builds it via `extractErrorMessage` (never raw `detail`/`title`) and hands it down. Search
+also stays page-owned: `toolbar` is not a `list-section` prop, so a search box sits beside the
+component in the page's own markup, not inside it.
 
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
 Exemplos reais de request/response — sucesso, validação, conflito, 404, autenticação/tenant —

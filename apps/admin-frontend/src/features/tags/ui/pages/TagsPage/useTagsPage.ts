@@ -23,7 +23,7 @@ export function useTagsPage() {
         if (result.ok) {
           setTags(result.data);
           setError(null);
-          setStatus(result.data.length === 0 ? 'empty' : 'ready');
+          setStatus('ready');
         } else if (
           result.error.code === 'Session.Missing' ||
           result.error.code === 'Authorization.Unauthorized'
@@ -48,13 +48,6 @@ export function useTagsPage() {
     void load(nextQuery);
   }
 
-  function clearSearch() {
-    if (searchInputRef.current) searchInputRef.current.value = '';
-    setQuery('');
-    setStatus('loading');
-    void load('');
-  }
-
   function refresh() {
     setStatus('loading');
     void load(query);
@@ -62,13 +55,11 @@ export function useTagsPage() {
 
   return {
     tags,
-    query,
     status,
     error,
     searchInputRef,
     dialog,
     submitSearch,
-    clearSearch,
     refresh,
     openCreateDialog: () => setDialog({ kind: 'create' }),
     openEditDialog: (tag: Tag) => setDialog({ kind: 'edit', tag }),

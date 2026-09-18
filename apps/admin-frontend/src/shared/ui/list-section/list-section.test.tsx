@@ -44,19 +44,32 @@ describe('ListSection', () => {
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
-  it('delegates to EmptyState when status is empty', () => {
+  it('shows a generic empty state when ready with zero items, in list mode', () => {
     render(
       <ListSection
-        status="empty"
+        status="ready"
         items={[] as Item[]}
         getKey={(item) => item.id}
         renderItem={(item) => item.name}
-        empty={{ title: 'Nenhum item ainda' }}
       />,
     );
 
-    expect(screen.getByText('Nenhum item ainda')).toBeInTheDocument();
+    expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
+  });
+
+  it('shows a generic empty state when ready with zero items, in table mode', () => {
+    render(
+      <ListSection
+        status="ready"
+        items={[] as Item[]}
+        getKey={(item) => item.id}
+        columns={[{ key: 'name', header: 'Nome', cell: (item) => item.name }]}
+      />,
+    );
+
+    expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument();
+    expect(screen.queryByRole('table')).not.toBeInTheDocument();
   });
 
   it('renders one listitem per item via renderItem in list mode', () => {

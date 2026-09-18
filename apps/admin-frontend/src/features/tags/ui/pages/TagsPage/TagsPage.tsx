@@ -19,13 +19,11 @@ import { useTagsPage } from './useTagsPage';
 export function TagsPage() {
   const {
     tags,
-    query,
     status,
     error,
     searchInputRef,
     dialog,
     submitSearch,
-    clearSearch,
     refresh,
     openCreateDialog,
     openEditDialog,
@@ -75,21 +73,6 @@ export function TagsPage() {
         getKey={(tag) => tag.id}
         aria-label="Etiquetas"
         columns={tagColumns(openEditDialog, openDeleteDialog)}
-        empty={
-          query === ''
-            ? {
-                title: 'Nenhuma etiqueta cadastrada',
-              }
-            : {
-                title: 'Nenhuma etiqueta encontrada',
-                description: `Nenhum resultado para "${query}". Tente outro termo.`,
-                action: (
-                  <Button variant="outline" onClick={clearSearch}>
-                    Limpar busca
-                  </Button>
-                ),
-              }
-        }
         error={
           error
             ? {

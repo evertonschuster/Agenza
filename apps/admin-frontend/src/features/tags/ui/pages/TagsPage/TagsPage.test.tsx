@@ -70,7 +70,7 @@ describe('TagsPage', () => {
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Não foi possível carregar as etiquetas');
     expect(alert).toHaveTextContent('O servidor está instável. Tente novamente em instantes.');
-    expect(screen.queryByText('Nenhuma etiqueta cadastrada')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhum item encontrado.')).not.toBeInTheDocument();
   });
 
   it('retries the failed load when Tentar novamente is clicked', async () => {
@@ -165,38 +165,20 @@ describe('TagsPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
-  it('shows a distinct message when the catalog is empty (spec US1)', async () => {
+  it('shows a generic empty message when the catalog is empty (spec US1)', async () => {
     renderPage([]);
 
-    expect(await screen.findByText('Nenhuma etiqueta cadastrada')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum item encontrado.')).toBeInTheDocument();
   });
 
-  it('shows a distinct message when a submitted search finds nothing, not the empty-catalog message (spec US1)', async () => {
+  it('shows the same generic empty message when a submitted search finds nothing (spec US1)', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
 
     await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'zzz{Enter}');
 
-    await waitFor(() =>
-      expect(screen.getByText('Nenhuma etiqueta encontrada')).toBeInTheDocument(),
-    );
-    expect(screen.queryByText('Nenhuma etiqueta cadastrada')).not.toBeInTheDocument();
-  });
-
-  it('shows a Limpar busca action when a search matches nothing, and clicking it reloads the unfiltered list', async () => {
-    const user = userEvent.setup();
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'zzz{Enter}');
-    await screen.findByText('Nenhuma etiqueta encontrada');
-
-    await user.click(screen.getByRole('button', { name: 'Limpar busca' }));
-
-    expect(await screen.findByText('Promoção')).toBeInTheDocument();
-    expect(screen.getByText('VIP')).toBeInTheDocument();
-    expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('');
+    await waitFor(() => expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument());
   });
 
   it('opens the create dialog from the primary action (spec US2)', async () => {

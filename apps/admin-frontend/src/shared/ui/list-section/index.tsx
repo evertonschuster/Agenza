@@ -11,7 +11,6 @@ function ListSection<T>(props: ListSectionProps<T>) {
     items,
     getKey,
     error,
-    empty,
     skeletonRowCount = 3,
     'aria-label': ariaLabel,
     className,
@@ -19,7 +18,9 @@ function ListSection<T>(props: ListSectionProps<T>) {
 
   let readyContent: ReactNode = null;
   if (status === 'ready') {
-    if (props.columns) {
+    if (items.length === 0) {
+      readyContent = <EmptyState title="Nenhum item encontrado." />;
+    } else if (props.columns) {
       const columns = props.columns;
       readyContent = (
         <div className="overflow-x-auto rounded-xl border border-border">
@@ -100,7 +101,6 @@ function ListSection<T>(props: ListSectionProps<T>) {
       )}
 
       {status === 'error' && error && <ErrorState {...error} />}
-      {status === 'empty' && empty && <EmptyState {...empty} />}
       {readyContent}
     </div>
   );
