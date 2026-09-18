@@ -84,14 +84,14 @@ them.
 **A page's `loader` and `action` live in `ui/pages/<Page>/route.ts`** and are re-exported from the
 slice barrel, so `app/routes.tsx` wires them by importing `@/features/<slice>` — the dependency
 still runs `app → features`. Server data reaches the shell through `useLoaderData()` /
-`useActionData()` / `useFetcher()`, never through page-owned state.
-`features/tags/ui/pages/TagsPage/route.ts` is the first slice to implement this
-(`specs/003-tags-crud/`): `tagsLoader` calls `unwrapOrThrow` (an unexpected list-fetch failure has no
-sensible inline treatment); `tagsAction` returns its `ApiResult` straight through, never unwrapped —
-a validation or conflict response is expected flow for the create/edit/delete dialogs, not an error
-boundary. Each dialog owns its own `useFetcher()` rather than the page holding one shared fetcher,
-so reopening a dialog for a different tag starts from a clean `fetcher.data` instead of carrying a
-stale error from an unrelated earlier submission.
+`useActionData()` / `useFetcher()`, never through page-owned state. **Nothing implements this
+today** — `features/tags/ui/pages/TagsPage/route.ts` was built this way first
+(`specs/003-tags-crud/`) and then removed (commit `5e48593`); see §5's decisions log for why.
+`TagsPage` currently calls `tagsRepository` directly from its own hook (`useTagsPage.ts`), with an
+explicit `refresh()` passed to each dialog after a successful save/delete, and a `status`/`error`
+pair — not a boolean — driving `shared/ui/list-section`'s four states; see §2 for the success/error
+contract a list-loading hook should follow. `route.ts` stays the documented shape for the day a
+page genuinely needs cross-route revalidation, not a mandate every list page implements it.
 
 **Every `shared/ui/` component is a folder, not a flat file** — the same pasta-por-unidade instinct
 as the page pattern above, extended to primitives (`specs/005-shared-ui-component-folders/`).
@@ -193,6 +193,17 @@ _"`Result` é a moeda interna; a fronteira do framework é o caixa."_
 > The third row is the one that gets misread. A dead network is exceptional; "name already taken"
 > is not. Routing both down the rejection path turns validation into an error screen.
 
+**A list-loading hook has four states, not two.** A boolean `isLoading` plus "empty means
+`items.length === 0`" conflates "hasn't loaded yet" with "loaded and empty" with "failed to load" —
+the last two look identical to the reader if the code doesn't keep them apart.
+`shared/ui/list-section` takes an explicit `status: 'loading' | 'error' | 'empty' | 'ready'`, set
+only inside the `result.ok` branch for `'empty'`/`'ready'` and only in the failure branch for
+`'error'` — never inferred from `items.length` alone regardless of how the fetch went.
+`Session.Missing` and `Authorization.Unauthorized` are a fifth outcome in practice, not a variant of
+`'error'`: they redirect to `/login` (the same destination `ProtectedRoute` sends an already-dead
+session to) instead of rendering anything, because a retry control on an expired session fails
+identically every time. `features/tags` (`useTagsPage.ts`) is the reference implementation.
+
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
 Exemplos reais de request/response — sucesso, validação, conflito, 404, autenticação/tenant —
 verificados ao vivo contra o `services-service`, incluindo formas de erro que o `services-api.d.ts`
@@ -268,6 +279,8 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | `shared/ui/confirm-dialog.tsx` extracted from `DeleteTagDialog.tsx`; presentational only, no `useFetcher`/`toast` of its own                         | The dialog's confirm/blocked/transient-retry state machine wasn't tag-specific to begin with — only the copy and the submit call were. The component receives already-derived state (`isSubmitting`, a classified `failure`) instead of owning submission, because `useFetcher<typeof action>()` is typed per route and can't be generic inside a shared component; each consumer keeps its own fetcher + success toast, same pattern `TagFormDialog.tsx` already used. `isTransientProblem` (the network/session/server-vs-everything-else split, already generic) moved alongside the sentinels it reads in `shared/api/servicesFacade.ts`. Not added to `coverage.exclude` — real logic, real consumer from day one, same precedent as `color-swatch-picker.tsx` — `specs/004-shared-confirm-dialog/`. |
 | Every `shared/ui/` component is a folder (`index.tsx` + conditional `<name>.types.ts` + conditional `components/`), not just the ones with sub-parts | Started as a request to segregate only compound components; widened mid-feature to all 20, so `shared/ui/` wouldn't have some components in a folder and others as a flat file depending on an internal-only distinction. `kbd.tsx` was first classified as a simple atom and left flat — wrong, it exports `Kbd` + `KbdGroup`, same shape as `avatar`/`card` — caught by re-deriving the export list from source instead of trusting the file's line count. All 16 `coverage.exclude` entries for `shared/ui/` became folder globs (`shared/ui/<name>/**`) in the same pass, so no component's coverage status moved as a side effect of the file move — `specs/005-shared-ui-component-folders/`.                                                                                                       |
 
+| `shared/ui/list-section.tsx` (+ `empty-state`, `error-state`) extracted from `TagsPage.tsx`; `route.ts`/`loader`/`action` for tags removed in the same lineage | The loader/action/`useFetcher()` pattern §1 used to describe was real for a short time, then reverted (commit `5e48593`): indirection for a single feature with no shared list to revalidate beyond itself. `useTagsPage` now calls `tagsRepository` directly. Meanwhile the loading/empty/error/row rendering that _was_ inline in `TagsPage.tsx` moved to three small presentational primitives, since none of it was tag-specific — only the copy and the row's own markup were. `list-section` ships two rendering modes, decided after comparing both against a many-column mockup: `columns` (a real `<table>` with `<th>` headers) and a simpler `renderItem` mode (a plain `<ul>`, no header). `TagsPage` renders its three fields (Nome/Descrição/Ações) through `columns` — Etiquetas has real, named fields, so a header row earns its keep; `renderItem` currently has no consumer, kept for a future listing that isn't naturally columnar (a feed, a timeline). All three primitives are excluded from the coverage gate by name, same reasoning as `button`/`badge` — pure prop-driven renderers, no state or effects of their own. |
+
 ---
 
 ## 6. Deferred, provisional & not-yet-built
@@ -310,6 +323,9 @@ because it didn't need to be yet. This is the compiled view across the whole app
 | ESLint rule banning bare `fetch` outside `shared/api/` | Small surface, caught in review                                                                 | The surface grows, or a bare `fetch` slips in           |
 | `identity-service` typed client                        | Consumed purely through the OIDC protocol                                                       | Never — it's protocol, not REST                         |
 | External telemetry / observability backend             | `shared/logger.ts` → `console` is enough                                                        | A real ops requirement appears                          |
+
+| Pagination / infinite scroll in `list-section` | `/tags` has no `page`/`pageSize` on the backend yet, and its spec explicitly excludes pagination (small catalog) | A second real list screen needs it — `/services` already returns `page`/`pageSize`/`totalCount`, unconsumed today |
+| `list-section`'s `renderItem` (list, no header) mode exercised by a real screen | `TagsPage` moved to the `columns` mode for its own three-field table | A listing without natural columns (e.g. a simple feed or timeline) needs it |
 
 ---
 

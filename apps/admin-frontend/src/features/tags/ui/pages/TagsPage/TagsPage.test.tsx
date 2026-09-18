@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
-import { toast } from '@/shared/ui/toast';
 import { TagsPage } from './TagsPage';
 import type { Tag } from '../../../model/tag';
 
@@ -23,7 +23,11 @@ function renderPage(tags: Tag[]) {
     const filtered = needle ? tags.filter((tag) => tag.name.toLowerCase().includes(needle)) : tags;
     return Promise.resolve({ ok: true, data: filtered });
   });
-  render(<TagsPage />);
+  render(
+    <MemoryRouter>
+      <TagsPage />
+    </MemoryRouter>,
+  );
 }
 
 describe('TagsPage', () => {
@@ -51,26 +55,66 @@ describe('TagsPage', () => {
     expect(screen.getByText('Sem descrição')).toBeInTheDocument();
   });
 
-  it('shows a toast and stops the loading state when the initial fetch fails', async () => {
+  it('shows an inline failure with a retry, not the empty-catalog message, when the initial fetch fails', async () => {
     mockList.mockResolvedValue({
       ok: false,
       error: { title: 'O servidor está instável. Tente novamente em instantes.' },
     });
-    const toastAddSpy = vi.spyOn(toast, 'add');
 
-    render(<TagsPage />);
-
-    await waitFor(() =>
-      expect(toastAddSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Não foi possível carregar as etiquetas',
-          description: 'O servidor está instável. Tente novamente em instantes.',
-          type: 'error',
-        }),
-      ),
+    render(
+      <MemoryRouter>
+        <TagsPage />
+      </MemoryRouter>,
     );
-    expect(screen.getByText('Nenhuma etiqueta cadastrada')).toBeInTheDocument();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Não foi possível carregar as etiquetas');
+    expect(alert).toHaveTextContent('O servidor está instável. Tente novamente em instantes.');
+    expect(screen.queryByText('Nenhuma etiqueta cadastrada')).not.toBeInTheDocument();
   });
+
+  it('retries the failed load when Tentar novamente is clicked', async () => {
+    const user = userEvent.setup();
+    mockList.mockResolvedValueOnce({
+      ok: false,
+      error: { title: 'O servidor está instável. Tente novamente em instantes.' },
+    });
+    mockList.mockResolvedValueOnce({ ok: true, data: TAGS });
+
+    render(
+      <MemoryRouter>
+        <TagsPage />
+      </MemoryRouter>,
+    );
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByText('Promoção')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
+  it.each([['Session.Missing'], ['Authorization.Unauthorized']] as const)(
+    'redirects to /login without rendering an error, for code %s',
+    async (code) => {
+      mockList.mockResolvedValue({
+        ok: false,
+        error: { code, title: 'Sua sessão expirou. Entre novamente.' },
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/tags']}>
+          <Routes>
+            <Route path="/login" element={<div>Login Screen</div>} />
+            <Route path="/tags" element={<TagsPage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('Login Screen')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    },
+  );
 
   it('does not filter while typing — search only runs once submitted (backend-driven, not frontend)', async () => {
     const user = userEvent.setup();
@@ -138,6 +182,21 @@ describe('TagsPage', () => {
       expect(screen.getByText('Nenhuma etiqueta encontrada')).toBeInTheDocument(),
     );
     expect(screen.queryByText('Nenhuma etiqueta cadastrada')).not.toBeInTheDocument();
+  });
+
+  it('shows a Limpar busca action when a search matches nothing, and clicking it reloads the unfiltered list', async () => {
+    const user = userEvent.setup();
+    renderPage(TAGS);
+    await screen.findByText('Promoção');
+
+    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'zzz{Enter}');
+    await screen.findByText('Nenhuma etiqueta encontrada');
+
+    await user.click(screen.getByRole('button', { name: 'Limpar busca' }));
+
+    expect(await screen.findByText('Promoção')).toBeInTheDocument();
+    expect(screen.getByText('VIP')).toBeInTheDocument();
+    expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('');
   });
 
   it('opens the create dialog from the primary action (spec US2)', async () => {

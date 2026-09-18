@@ -7,9 +7,11 @@ import {
   InputGroupInput,
 } from '@/shared/ui/input-group';
 import { Kbd } from '@/shared/ui/kbd';
+import { ListSection } from '@/shared/ui/list-section';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { useShortcutHint } from '@/shared/keyboard/shortcuts';
-import { TagRow } from './TagRow';
+import { extractErrorMessage } from '@/shared/api/servicesFacade';
+import { tagColumns } from './tagColumns';
 import { TagFormDialog } from './TagFormDialog';
 import { DeleteTagDialog } from './DeleteTagDialog';
 import { useTagsPage } from './useTagsPage';
@@ -18,12 +20,12 @@ export function TagsPage() {
   const {
     tags,
     query,
-    isLoading,
+    status,
+    error,
     searchInputRef,
-    isEmptyCatalog,
-    isEmptySearch,
     dialog,
     submitSearch,
+    clearSearch,
     refresh,
     openCreateDialog,
     openEditDialog,
@@ -45,55 +47,62 @@ export function TagsPage() {
         </Button>
       </div>
 
-      <form
-        role="search"
-        onSubmit={(event) => {
-          event.preventDefault();
-          submitSearch();
-        }}
-      >
-        <InputGroup>
-          <InputGroupAddon>
-            <SearchIcon aria-hidden="true" />
-          </InputGroupAddon>
-          <InputGroupInput
-            ref={searchInputRef}
-            placeholder="Buscar etiquetas por nome..."
-            aria-label="Buscar etiquetas por nome"
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton type="submit">Buscar</InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-      </form>
-
-      {isLoading && <p className="px-1 text-sm text-muted-foreground">Carregando etiquetas…</p>}
-
-      {isEmptyCatalog && (
-        <div className="rounded-xl border border-dashed border-border px-6 py-14 text-center">
-          <p className="text-sm font-medium">Nenhuma etiqueta cadastrada</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Crie a primeira etiqueta para começar a organizar seus serviços.
-          </p>
-        </div>
-      )}
-
-      {isEmptySearch && (
-        <div className="rounded-xl border border-dashed border-border px-6 py-14 text-center">
-          <p className="text-sm font-medium">Nenhuma etiqueta encontrada</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Nenhum resultado para "{query}". Tente outro termo.
-          </p>
-        </div>
-      )}
-
-      {tags.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          {tags.map((tag) => (
-            <TagRow key={tag.id} tag={tag} onEdit={openEditDialog} onDelete={openDeleteDialog} />
-          ))}
-        </div>
-      )}
+      <ListSection
+        status={status}
+        items={tags}
+        getKey={(tag) => tag.id}
+        aria-label="Etiquetas"
+        columns={tagColumns(openEditDialog, openDeleteDialog)}
+        toolbar={
+          <form
+            role="search"
+            onSubmit={(event) => {
+              event.preventDefault();
+              submitSearch();
+            }}
+          >
+            <InputGroup>
+              <InputGroupAddon>
+                <SearchIcon aria-hidden="true" />
+              </InputGroupAddon>
+              <InputGroupInput
+                ref={searchInputRef}
+                placeholder="Buscar etiquetas por nome..."
+                aria-label="Buscar etiquetas por nome"
+              />
+              <InputGroupAddon align="inline-end">
+                <InputGroupButton type="submit">Buscar</InputGroupButton>
+              </InputGroupAddon>
+            </InputGroup>
+          </form>
+        }
+        empty={
+          query === ''
+            ? {
+                title: 'Nenhuma etiqueta cadastrada',
+                description: 'Crie a primeira etiqueta para começar a organizar seus serviços.',
+              }
+            : {
+                title: 'Nenhuma etiqueta encontrada',
+                description: `Nenhum resultado para "${query}". Tente outro termo.`,
+                action: (
+                  <Button variant="outline" onClick={clearSearch}>
+                    Limpar busca
+                  </Button>
+                ),
+              }
+        }
+        error={
+          error
+            ? {
+                title: 'Não foi possível carregar as etiquetas',
+                description: extractErrorMessage(error),
+                code: error.code ?? undefined,
+                onRetry: refresh,
+              }
+            : undefined
+        }
+      />
 
       {(dialog.kind === 'create' || dialog.kind === 'edit') && (
         <TagFormDialog
