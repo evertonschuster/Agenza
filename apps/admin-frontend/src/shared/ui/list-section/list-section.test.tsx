@@ -20,45 +20,13 @@ describe('ListSection', () => {
         items={[] as Item[]}
         getKey={(item) => item.id}
         renderItem={(item) => item.name}
-        toolbar={<div>Busca</div>}
         skeletonRowCount={2}
       />,
     );
 
-    expect(screen.getByText('Busca')).toBeInTheDocument();
     const busyRegion = container.querySelector('[aria-busy="true"]');
     expect(busyRegion).not.toBeNull();
     expect(busyRegion?.children).toHaveLength(2);
-  });
-
-  it('delegates to ErrorState when status is error', () => {
-    render(
-      <ListSection
-        status="error"
-        items={[] as Item[]}
-        getKey={(item) => item.id}
-        renderItem={(item) => item.name}
-        error={{ title: 'Não foi possível carregar' }}
-      />,
-    );
-
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar');
-    expect(screen.queryByRole('list')).not.toBeInTheDocument();
-  });
-
-  it('delegates to EmptyState when status is empty', () => {
-    render(
-      <ListSection
-        status="empty"
-        items={[] as Item[]}
-        getKey={(item) => item.id}
-        renderItem={(item) => item.name}
-        empty={{ title: 'Nenhum item ainda' }}
-      />,
-    );
-
-    expect(screen.getByText('Nenhum item ainda')).toBeInTheDocument();
-    expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 
   it('renders one listitem per item via renderItem in list mode', () => {
@@ -109,21 +77,5 @@ describe('ListSection', () => {
     );
 
     expect(screen.getByRole('table', { name: 'Itens' })).toBeInTheDocument();
-  });
-
-  it('renders the toolbar regardless of status', () => {
-    render(
-      <ListSection
-        status="error"
-        items={[] as Item[]}
-        getKey={(item) => item.id}
-        renderItem={(item) => item.name}
-        toolbar={<div>Busca</div>}
-        error={{ title: 'Falhou' }}
-      />,
-    );
-
-    expect(screen.getByText('Busca')).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toBeInTheDocument();
   });
 });

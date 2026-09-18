@@ -1,6 +1,4 @@
 import type { ReactNode } from 'react';
-import type { EmptyStateProps } from '../empty-state/empty-state.types';
-import type { ErrorStateProps } from '../error-state/error-state.types';
 
 type ListSectionStatus = 'loading' | 'error' | 'empty' | 'ready';
 
@@ -16,12 +14,9 @@ type ListSectionRenderMode<T> =
   | { columns: ListSectionColumn<T>[]; renderItem?: never };
 
 type ListSectionProps<T> = ListSectionRenderMode<T> & {
-  status: ListSectionStatus;
+  status: Extract<ListSectionStatus, 'loading' | 'ready'>;
   items: readonly T[];
   getKey: (item: T) => string;
-  toolbar?: ReactNode | undefined;
-  error?: ErrorStateProps | undefined;
-  empty?: EmptyStateProps | undefined;
   skeletonRowCount?: number | undefined;
   'aria-label'?: string | undefined;
   className?: string | undefined;

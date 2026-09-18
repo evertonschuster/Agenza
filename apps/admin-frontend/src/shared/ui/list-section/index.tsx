@@ -1,22 +1,10 @@
 import type { ReactNode } from 'react';
 import { Skeleton } from '@/shared/ui/skeleton';
-import { EmptyState } from '@/shared/ui/empty-state';
-import { ErrorState } from '@/shared/ui/error-state';
 import { cn } from '@/shared/lib/utils';
 import type { ListSectionProps } from './list-section.types';
 
 function ListSection<T>(props: ListSectionProps<T>) {
-  const {
-    status,
-    items,
-    getKey,
-    toolbar,
-    error,
-    empty,
-    skeletonRowCount = 3,
-    'aria-label': ariaLabel,
-    className,
-  } = props;
+  const { status, items, getKey, skeletonRowCount = 3, 'aria-label': ariaLabel, className } = props;
 
   let readyContent: ReactNode = null;
   if (status === 'ready') {
@@ -81,9 +69,7 @@ function ListSection<T>(props: ListSectionProps<T>) {
   }
 
   return (
-    <div className={cn('space-y-4', className)}>
-      {toolbar}
-
+    <div className={cn(className)}>
       {status === 'loading' && (
         <div
           aria-busy="true"
@@ -101,9 +87,6 @@ function ListSection<T>(props: ListSectionProps<T>) {
           ))}
         </div>
       )}
-
-      {status === 'error' && error && <ErrorState {...error} />}
-      {status === 'empty' && empty && <EmptyState {...empty} />}
       {readyContent}
     </div>
   );
