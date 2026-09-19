@@ -126,4 +126,53 @@ describe('ListSection', () => {
 
     expect(screen.getByRole('table', { name: 'Itens' })).toBeInTheDocument();
   });
+
+  it('right-aligns the header and cells for a column with align: "end", not the default column', () => {
+    render(
+      <ListSection
+        status="ready"
+        items={ITEMS}
+        getKey={(item) => item.id}
+        columns={[
+          { key: 'name', header: 'Nome', cell: (item) => item.name },
+          { key: 'id', header: 'ID', align: 'end', cell: (item) => item.id },
+        ]}
+        aria-label="Itens"
+      />,
+    );
+
+    expect(screen.getByRole('columnheader', { name: 'Nome' })).not.toHaveClass('text-right');
+    expect(screen.getByRole('columnheader', { name: 'ID' })).toHaveClass('text-right');
+    expect(screen.getByRole('cell', { name: '1' })).toHaveClass('text-right');
+  });
+
+  it('applies the className prop to the wrapper element', () => {
+    const { container } = render(
+      <ListSection
+        status="ready"
+        items={ITEMS}
+        getKey={(item) => item.id}
+        renderItem={(item) => item.name}
+        aria-label="Itens"
+        className="custom-wrapper"
+      />,
+    );
+
+    expect(container.firstChild).toHaveClass('custom-wrapper');
+  });
+
+  it('defaults to 3 skeleton rows when skeletonRowCount is omitted', () => {
+    const { container } = render(
+      <ListSection
+        status="loading"
+        items={[] as Item[]}
+        getKey={(item) => item.id}
+        renderItem={(item) => item.name}
+        aria-label="Itens"
+      />,
+    );
+
+    const busyRegion = container.querySelector('[aria-busy="true"]');
+    expect(busyRegion?.children).toHaveLength(3);
+  });
 });
