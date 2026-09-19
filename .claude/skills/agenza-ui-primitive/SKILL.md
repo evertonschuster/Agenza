@@ -23,13 +23,14 @@ inline across five same-day commits before anyone re-asked the question — don'
 change pushes an existing `index.tsx` past §1's criteria, default to extracting into `components/`,
 not to leaving it inline "for now."
 
-**§1 also covers the shape *inside* `components/`, not just when to create the folder** — early
-returns over a mutable accumulator, passing a discriminated union whole instead of destructuring it
-in the parent, extracting a shared prop base at three-plus repeats, no dead literal-union values,
-required over optional for accessible-name props, and asserting a prop's effect instead of just its
-presence in tests. `list-section`'s full retrofit is the worked example for all of it — read §1
-before writing the render logic or the prop types for a new sub-part, not only before deciding
-whether it gets its own file.
+**§1 also covers the shape *inside* `components/`, not just when to create the folder** — general
+rules, not tied to any one component: early returns over a mutable accumulator, passing a
+discriminated union whole instead of destructuring it in the parent, extracting a shared prop base at
+three-plus repeats, no dead literal-union values, required over optional for accessible-name props,
+and asserting a prop's effect instead of just its presence in tests. Read §1 before writing the render
+logic or the prop types for a new sub-part, not only before deciding whether it gets its own file —
+`list-section` (§5 in ARCHITECTURE.md) is one worked trail through those rules, not the boundary of
+where they apply.
 
 ## 0. Base UI, not Radix — read this before pasting anything
 
