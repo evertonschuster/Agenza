@@ -66,6 +66,30 @@ describe('sessionStore', () => {
       });
     });
 
+    it('logs missing_tenant_claim when a fresh USER_LOADED resolves without a tenant claim', () => {
+      sessionStore.dispatch({ type: 'USER_LOADED', principal: makePrincipal() });
+
+      expect(logger.warn).toHaveBeenCalledWith('auth.missing_tenant_claim', {
+        tenantId: null,
+        timestamp: NOW,
+      });
+    });
+
+    it('logs missing_tenant_claim with the outgoing tenant when an authenticated session renews without one', () => {
+      sessionStore.dispatch({
+        type: 'USER_LOADED',
+        principal: makePrincipal({ tenantId: TENANT }),
+      });
+      vi.clearAllMocks();
+
+      sessionStore.dispatch({ type: 'USER_LOADED', principal: makePrincipal() });
+
+      expect(logger.warn).toHaveBeenCalledWith('auth.missing_tenant_claim', {
+        tenantId: TENANT,
+        timestamp: NOW,
+      });
+    });
+
     it('logs renewal_failure on a silent renew error', () => {
       sessionStore.dispatch({ type: 'SILENT_RENEW_ERROR' });
 
