@@ -18,7 +18,7 @@ type ListSectionProps<T> = ListSectionRenderMode<T> & {
   items: readonly T[];
   getKey: (item: T) => string;
   skeletonRowCount?: number | undefined;
-  'aria-label'?: string | undefined;
+  'aria-label': string;
   className?: string | undefined;
 };
 
@@ -29,7 +29,7 @@ interface ListSectionSkeletonProps {
 interface ListSectionItemsProps<T> {
   items: readonly T[];
   getKey: (item: T) => string;
-  ariaLabel?: string | undefined;
+  ariaLabel: string;
 }
 
 interface ListSectionReadyProps<T> extends ListSectionItemsProps<T> {

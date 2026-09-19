@@ -21,6 +21,7 @@ describe('ListSection', () => {
         getKey={(item) => item.id}
         renderItem={(item) => item.name}
         skeletonRowCount={2}
+        aria-label="Itens"
       />,
     );
 
@@ -36,6 +37,7 @@ describe('ListSection', () => {
         items={[] as Item[]}
         getKey={(item) => item.id}
         renderItem={(item) => item.name}
+        aria-label="Itens"
       />,
     );
 
@@ -51,6 +53,7 @@ describe('ListSection', () => {
         items={[] as Item[]}
         getKey={(item) => item.id}
         renderItem={(item) => item.name}
+        aria-label="Itens"
       />,
     );
 
@@ -65,6 +68,7 @@ describe('ListSection', () => {
         items={[] as Item[]}
         getKey={(item) => item.id}
         columns={[{ key: 'name', header: 'Nome', cell: (item) => item.name }]}
+        aria-label="Itens"
       />,
     );
 
@@ -100,6 +104,7 @@ describe('ListSection', () => {
           { key: 'name', header: 'Nome', cell: (item) => item.name },
           { key: 'id', header: 'ID', align: 'end', cell: (item) => item.id },
         ]}
+        aria-label="Itens"
       />,
     );
 
