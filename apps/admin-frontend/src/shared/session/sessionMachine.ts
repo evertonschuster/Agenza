@@ -39,7 +39,6 @@ export function isTransientStatus(status: SessionStatus): boolean {
   switch (status) {
     case 'checking':
     case 'authenticating':
-    case 'renewing':
     case 'loggingOut':
       return true;
     case 'unauthenticated':
