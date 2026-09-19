@@ -5,7 +5,7 @@ type ListSectionStatus = 'loading' | 'error' | 'ready';
 interface ListSectionColumn<T> {
   key: string;
   header: string;
-  align?: 'start' | 'end' | undefined;
+  align?: 'end' | undefined;
   cell: (item: T) => ReactNode;
 }
 
@@ -26,25 +26,22 @@ interface ListSectionSkeletonProps {
   rowCount: number;
 }
 
-interface ListSectionReadyProps<T> {
+interface ListSectionItemsProps<T> {
   items: readonly T[];
   getKey: (item: T) => string;
+  ariaLabel?: string | undefined;
+}
+
+interface ListSectionReadyProps<T> extends ListSectionItemsProps<T> {
   renderMode: ListSectionRenderMode<T>;
-  ariaLabel?: string | undefined;
 }
 
-interface ListSectionTableProps<T> {
-  items: readonly T[];
+interface ListSectionTableProps<T> extends ListSectionItemsProps<T> {
   columns: ListSectionColumn<T>[];
-  getKey: (item: T) => string;
-  ariaLabel?: string | undefined;
 }
 
-interface ListSectionListProps<T> {
-  items: readonly T[];
+interface ListSectionListProps<T> extends ListSectionItemsProps<T> {
   renderItem: (item: T) => ReactNode;
-  getKey: (item: T) => string;
-  ariaLabel?: string | undefined;
 }
 
 export type {
@@ -53,6 +50,7 @@ export type {
   ListSectionRenderMode,
   ListSectionStatus,
   ListSectionSkeletonProps,
+  ListSectionItemsProps,
   ListSectionReadyProps,
   ListSectionTableProps,
   ListSectionListProps,
