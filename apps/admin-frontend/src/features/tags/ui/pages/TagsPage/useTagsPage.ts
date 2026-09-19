@@ -1,64 +1,58 @@
-import { useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router';
 import { tagsRepository } from '../../../api/tagsRepository';
-import { toast } from '@/shared/ui/toast';
-import { extractErrorMessage, type ApiProblem } from '@/shared/api/servicesFacade';
+import type { ListSectionStatus } from '@/shared/ui/list-section';
 import type { Tag } from '../../../model/tag';
 
 type DialogState =
   { kind: 'none' } | { kind: 'create' } | { kind: 'edit'; tag: Tag } | { kind: 'delete'; tag: Tag };
 
-function notifyLoadFailure(error: ApiProblem) {
-  toast.add({
-    title: 'Não foi possível carregar as etiquetas',
-    description: extractErrorMessage(error),
-    type: 'error',
-  });
-}
-
 export function useTagsPage() {
+  const navigate = useNavigate();
   const [tags, setTags] = useState<Tag[]>([]);
   const [query, setQuery] = useState('');
-  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState<ListSectionStatus>('loading');
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' });
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => {
-    void tagsRepository.list(undefined).then((result) => {
-      if (result.ok) {
-        setTags(result.data);
-      } else {
-        notifyLoadFailure(result.error);
-      }
-      setIsLoading(false);
-    });
-  }, []);
+  const load = useCallback(
+    (nextQuery: string) =>
+      tagsRepository.list(nextQuery || undefined).then((result) => {
+        if (result.ok) {
+          setTags(result.data);
+          setStatus('ready');
+        } else if (
+          result.error.code === 'Session.Missing' ||
+          result.error.code === 'Authorization.Unauthorized'
+        ) {
+          void navigate('/login', { replace: true });
+        } else {
+          setStatus('error');
+        }
+      }),
+    [navigate],
+  );
 
-  async function search(nextQuery: string) {
-    const result = await tagsRepository.list(nextQuery || undefined);
-    if (result.ok) {
-      setTags(result.data);
-    } else {
-      notifyLoadFailure(result.error);
-    }
-  }
+  useEffect(() => {
+    void load('');
+  }, [load]);
 
   function submitSearch() {
     const nextQuery = searchInputRef.current?.value ?? '';
     setQuery(nextQuery);
-    void search(nextQuery);
+    setStatus('loading');
+    void load(nextQuery);
   }
 
   function refresh() {
-    void search(query);
+    setStatus('loading');
+    void load(query);
   }
 
   return {
     tags,
-    query,
-    isLoading,
+    status,
     searchInputRef,
-    isEmptyCatalog: !isLoading && tags.length === 0 && query === '',
-    isEmptySearch: !isLoading && tags.length === 0 && query !== '',
     dialog,
     submitSearch,
     refresh,

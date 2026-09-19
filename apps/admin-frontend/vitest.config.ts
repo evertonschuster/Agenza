@@ -42,6 +42,10 @@ export default defineConfig({
         'src/shared/ui/skeleton/**',
         'src/shared/ui/textarea/**',
         'src/shared/ui/FullScreenMessage/**',
+        // Same reasoning: pure prop-driven renderers, no state or effects of their own.
+        'src/shared/ui/list-section/**',
+        'src/shared/ui/empty-state/**',
+        'src/shared/ui/error-state/**',
         // No consumer anywhere yet (T160 in tasks.md) — 0% here is dead-code noise, not a gap.
         'src/shared/ui/dialog/**',
         // Real behaviour, but most of each file is shadcn scaffold with no product consumer yet

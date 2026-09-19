@@ -84,14 +84,14 @@ them.
 **A page's `loader` and `action` live in `ui/pages/<Page>/route.ts`** and are re-exported from the
 slice barrel, so `app/routes.tsx` wires them by importing `@/features/<slice>` — the dependency
 still runs `app → features`. Server data reaches the shell through `useLoaderData()` /
-`useActionData()` / `useFetcher()`, never through page-owned state.
-`features/tags/ui/pages/TagsPage/route.ts` is the first slice to implement this
-(`specs/003-tags-crud/`): `tagsLoader` calls `unwrapOrThrow` (an unexpected list-fetch failure has no
-sensible inline treatment); `tagsAction` returns its `ApiResult` straight through, never unwrapped —
-a validation or conflict response is expected flow for the create/edit/delete dialogs, not an error
-boundary. Each dialog owns its own `useFetcher()` rather than the page holding one shared fetcher,
-so reopening a dialog for a different tag starts from a clean `fetcher.data` instead of carrying a
-stale error from an unrelated earlier submission.
+`useActionData()` / `useFetcher()`, never through page-owned state. **Nothing implements this
+today** — `features/tags/ui/pages/TagsPage/route.ts` was built this way first
+(`specs/003-tags-crud/`) and then removed (commit `5e48593`); see §5's decisions log for why.
+`TagsPage` currently calls `tagsRepository` directly from its own hook (`useTagsPage.ts`), with an
+explicit `refresh()` passed to each dialog after a successful save/delete, and a `status`/`error`
+pair — not a boolean — driving `shared/ui/list-section`'s four states; see §2 for the success/error
+contract a list-loading hook should follow. `route.ts` stays the documented shape for the day a
+page genuinely needs cross-route revalidation, not a mandate every list page implements it.
 
 **Every `shared/ui/` component is a folder, not a flat file** — the same pasta-por-unidade instinct
 as the page pattern above, extended to primitives (`specs/005-shared-ui-component-folders/`).
@@ -106,7 +106,13 @@ coupled component (`Dialog` + `DialogContent` + …) **or** when a single export
 logic and type surface are complex enough to hurt readability as one file (`confirm-dialog`, five type
 declarations and two conditional render branches, still a single export) — judged qualitatively in
 review, the same judgment call already used for D5 below, deliberately with no line-count or
-type-count threshold. Inside `components/`, only a sub-part with real weight gets its own file —
+type-count threshold. **That judgment call reruns on every edit, not only at creation** — a render
+branch, prop, or conditional added to an existing `index.tsx` is checked against the file's whole
+current shape, not just the diff introducing it. `list-section` is the counter-example: it grew all
+five of loading/error/empty/table/list inline, across five same-day commits, because each commit's
+review looked only at its own diff, never at the accumulated file — see §5. When a change pushes an
+existing `index.tsx` past this criteria, default to extracting into `components/`, not to leaving it
+inline "for now." Inside `components/`, only a sub-part with real weight gets its own file —
 composing other components, owning local state/handlers/refs, or a className long enough to justify
 isolation on its own; sub-parts without that weight (a single-element wrapper, a static or
 CSS-selector-only className, no JS conditionals) are bundled together in one `<name>-primitives.tsx`
@@ -114,6 +120,41 @@ instead of one file each. Sub-parts inside `components/` are never imported from
 component's folder — only through `index.tsx`. `FullScreenMessage/` is the one folder that keeps its
 source file's exact PascalCase instead of kebab-case, because renaming it would change its import
 path.
+
+**Inside `components/`, some shapes read better than others.** General rules, independent of what the
+component does or how many sub-parts it has:
+
+- **Early return over a mutable accumulator.** `let result = null; if (...) { result = ... } else if
+(...) { result = ... }` forces the reader to hold reassignable state in their head, and tends to
+  nest a level deeper than the same branches written as early returns in whichever component owns
+  them.
+- **Pass a discriminated union whole; don't destructure it in the parent.** When a prop type is a
+  discriminated union (an `a?: never` / `b?: never` pair, or any tagged-variant shape), hand the
+  whole union to the component that actually branches on it, as one prop, and narrow it there.
+  Picking a member out in the parent and passing it down as a separate optional prop is how a manual
+  capture (`const x = props.x`, assigned just to survive narrowing lost across a closure) ends up
+  looking necessary — narrowing the union at its own point of use needs no such workaround, because
+  there's nothing deferred between the check and the read.
+- **Extract a shared base prop interface once three or more sibling types repeat the same fields, not
+  before.** At two repetitions the `extends` indirection costs more than the line it saves.
+- **A prop's declared type is part of the contract — audit it, don't just trust it.** A literal-union
+  value that no branch of the component ever reads is dead API surface pretending to be a feature.
+  Grep every read of a prop before trusting its type, on every edit, not only when the type is first
+  written.
+- **A prop whose absence is an accessibility gap is required, not optional.** An accessible name on
+  anything with a list, table, dialog, or similar role, with no other source of a name, is exactly
+  this case — optional-by-default ships a silently unlabeled region the type system will never flag.
+- **A test asserts the effect a prop causes, not just that passing it doesn't crash.** Rendering with
+  a prop set and asserting on unrelated output tests that the component tolerates the prop, not what
+  the prop actually does.
+- **When a component has more than one mutually exclusive presentation, compare their visual
+  treatment deliberately — don't assume consistency.** Two variants of the same visual family (a
+  table and a list, two `cva` variants, a light and a dark rendering) drifting apart in surface,
+  border, or elevation is easy to miss, because no single diff ever shows both at once.
+
+`list-section`'s retrofit (§5) is one worked trail through all seven — read that row for the
+component-specific before/after; the rules above are what should carry over to the next component,
+whatever it renders.
 
 ---
 
@@ -193,6 +234,37 @@ _"`Result` é a moeda interna; a fronteira do framework é o caixa."_
 > The third row is the one that gets misread. A dead network is exceptional; "name already taken"
 > is not. Routing both down the rejection path turns validation into an error screen.
 
+**A list-loading hook must not confuse "hasn't loaded yet" with "failed to load."** A boolean
+`isLoading` plus "empty means `items.length === 0`" conflates those with "loaded and empty" — the
+first two look identical to the reader if the code doesn't keep them apart.
+`shared/ui/list-section` takes an explicit `status: 'loading' | 'error' | 'ready'`, set only inside
+the `result.ok` branch for `'ready'` and only in the failure branch for `'error'` — `'ready'` is
+never set, and `'error'` is never skipped, based on `items.length`. `Session.Missing` and
+`Authorization.Unauthorized` are a fourth outcome in practice, not a variant of `'error'`: they
+redirect to `/login` (the same destination `ProtectedRoute` sends an already-dead session to)
+instead of rendering anything, because a retry control on an expired session fails identically
+every time. `features/tags` (`useTagsPage.ts`) is the reference implementation.
+
+**`list-section` renders its own empty and error states — neither is a prop the page configures.**
+Once `status` says `'ready'`, it checks `items.length` itself and shows one fixed "Nenhum item
+encontrado." instead of the rows or table; inferring emptiness this way is safe here specifically
+because the page has already confirmed success via `status` first — unlike inferring "empty" before
+knowing whether the fetch even succeeded, which is the original bug this component exists to
+prevent. `status === 'error'` renders one fixed "Não foi possível carregar." the same way, with no
+retry control at all.
+
+This is a deliberate departure from ADR 0020's failure standard (a stable code, a curated
+explanation, a recovery action) — a generic, reusable table component doesn't know a per-feature
+error message, code, or what "retry" should even do, so `list-section` doesn't attempt any of it.
+The cost is real and explicit: a failed `list-section` load has no code, no specific explanation,
+and no way to recover short of a full page reload; a "never created" catalog and a "search matched
+nothing" empty case now read identically, and there's no action slot for a per-feature "limpar
+busca". A feature that needs ADR 0020's fuller treatment builds it directly with
+`shared/ui/error-state` (the same primitive `list-section` uses internally) instead of routing it
+through `list-section`'s `status` prop. Search stays page-owned too: `toolbar` is not a
+`list-section` prop, so a search box sits beside the component in the page's own markup, not
+inside it.
+
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
 Exemplos reais de request/response — sucesso, validação, conflito, 404, autenticação/tenant —
 verificados ao vivo contra o `services-service`, incluindo formas de erro que o `services-api.d.ts`
@@ -268,6 +340,10 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | `shared/ui/confirm-dialog.tsx` extracted from `DeleteTagDialog.tsx`; presentational only, no `useFetcher`/`toast` of its own                         | The dialog's confirm/blocked/transient-retry state machine wasn't tag-specific to begin with — only the copy and the submit call were. The component receives already-derived state (`isSubmitting`, a classified `failure`) instead of owning submission, because `useFetcher<typeof action>()` is typed per route and can't be generic inside a shared component; each consumer keeps its own fetcher + success toast, same pattern `TagFormDialog.tsx` already used. `isTransientProblem` (the network/session/server-vs-everything-else split, already generic) moved alongside the sentinels it reads in `shared/api/servicesFacade.ts`. Not added to `coverage.exclude` — real logic, real consumer from day one, same precedent as `color-swatch-picker.tsx` — `specs/004-shared-confirm-dialog/`. |
 | Every `shared/ui/` component is a folder (`index.tsx` + conditional `<name>.types.ts` + conditional `components/`), not just the ones with sub-parts | Started as a request to segregate only compound components; widened mid-feature to all 20, so `shared/ui/` wouldn't have some components in a folder and others as a flat file depending on an internal-only distinction. `kbd.tsx` was first classified as a simple atom and left flat — wrong, it exports `Kbd` + `KbdGroup`, same shape as `avatar`/`card` — caught by re-deriving the export list from source instead of trusting the file's line count. All 16 `coverage.exclude` entries for `shared/ui/` became folder globs (`shared/ui/<name>/**`) in the same pass, so no component's coverage status moved as a side effect of the file move — `specs/005-shared-ui-component-folders/`.                                                                                                       |
 
+| `shared/ui/list-section.tsx` (+ `empty-state`, `error-state`) extracted from `TagsPage.tsx`; `route.ts`/`loader`/`action` for tags removed in the same lineage | The loader/action/`useFetcher()` pattern §1 used to describe was real for a short time, then reverted (commit `5e48593`): indirection for a single feature with no shared list to revalidate beyond itself. `useTagsPage` now calls `tagsRepository` directly. Meanwhile the loading/empty/error/row rendering that _was_ inline in `TagsPage.tsx` moved to three small presentational primitives, since none of it was tag-specific — only the copy and the row's own markup were. `list-section` ships two rendering modes, decided after comparing both against a many-column mockup: `columns` (a real `<table>` with `<th>` headers) and a simpler `renderItem` mode (a plain `<ul>`, no header). `TagsPage` renders its three fields (Nome/Descrição/Ações) through `columns` — Etiquetas has real, named fields, so a header row earns its keep; `renderItem` currently has no consumer, kept for a future listing that isn't naturally columnar (a feed, a timeline). All three primitives are excluded from the coverage gate by name, same reasoning as `button`/`badge` — pure prop-driven renderers, no state or effects of their own. |
+| `shared/ui/list-section/` retrofitted into `index.tsx` + `components/list-section-{skeleton,ready,table,list}.tsx`; §1's `components/` criteria now rechecked on every edit, not only at creation | `index.tsx` grew loading/error/empty/table/list all inline across five same-day commits, each reviewed for its own behavior diff only, never for the file's accumulated shape — the same shape `confirm-dialog` had before its own retrofit two days earlier (`specs/005-shared-ui-component-folders/`), except `list-section` was born the day _after_ that sweep and so never got one of its own. Rather than rely on the next periodic reorganize pass to catch it, §1's judgment call now reruns per edit so the next accretion is caught before it needs a retrofit. A first pass left the `status === 'ready'` branch (empty vs. `columns` vs. `renderItem`, a mutable `let` plus manual narrowing captures to survive the JSX closure) inline in `index.tsx`; `list-section-ready.tsx` now owns that dispatch as three sibling early returns over a single `renderMode: ListSectionRenderMode<T>` prop, which narrows cleanly without the capture workaround because it's a plain parameter, not a property access re-read through a closure. `index.tsx` is left a flat three-way `status` switch with no branching logic of its own. |
+| `shared/ui/list-section`'s prop contract tightened: `aria-label` required, dead `align: 'start'` removed, `ListSectionItemsProps<T>` extracted, `bg-card` added to table mode; §1 gained shape/contract guidance (early returns over an accumulator, pass a discriminated union whole, extract a shared base prop type at 3+ repeats, no dead literal values, required over optional for accessible names, assert a prop's effect not just its presence) | Closing pass after the retrofit above, done deliberately front-to-back rather than fixing issues as they were noticed. `align: 'start'` was checked nowhere in `list-section-table.tsx` and had zero consumers — same effect as omitting the field. `ListSectionReadyProps`/`ListSectionTableProps`/`ListSectionListProps` each repeated `items`/`getKey`/`ariaLabel` verbatim — three repetitions, the point at which this codebase extracts rather than tolerates it, so `ListSectionItemsProps<T>` now holds the three fields and the others `extends` it. `aria-label` being optional meant a table could ship with no accessible name and nothing would catch it. `align: 'end'`, `className`, and the `skeletonRowCount` default all rendered under test already but had no assertion on the behavior itself. The `bg-card` gap between table and list mode predates every commit above (present since `cdff745`) and was only confirmed by rendering both against the compiled `dist/assets/*.css` — this app doesn't run outside Aspire, so that's the lightest way to check a pure-CSS change without the full stack. §1's new guidance exists so the next `components/` split starts from this shape instead of re-discovering it, stated generically there — this row is where the component-specific receipts live. |
+
 ---
 
 ## 6. Deferred, provisional & not-yet-built
@@ -310,6 +386,9 @@ because it didn't need to be yet. This is the compiled view across the whole app
 | ESLint rule banning bare `fetch` outside `shared/api/` | Small surface, caught in review                                                                 | The surface grows, or a bare `fetch` slips in           |
 | `identity-service` typed client                        | Consumed purely through the OIDC protocol                                                       | Never — it's protocol, not REST                         |
 | External telemetry / observability backend             | `shared/logger.ts` → `console` is enough                                                        | A real ops requirement appears                          |
+
+| Pagination / infinite scroll in `list-section` | `/tags` has no `page`/`pageSize` on the backend yet, and its spec explicitly excludes pagination (small catalog) | A second real list screen needs it — `/services` already returns `page`/`pageSize`/`totalCount`, unconsumed today |
+| `list-section`'s `renderItem` (list, no header) mode exercised by a real screen | `TagsPage` moved to the `columns` mode for its own three-field table | A listing without natural columns (e.g. a simple feed or timeline) needs it |
 
 ---
 

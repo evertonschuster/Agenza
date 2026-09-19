@@ -7,9 +7,10 @@ import {
   InputGroupInput,
 } from '@/shared/ui/input-group';
 import { Kbd } from '@/shared/ui/kbd';
+import { ListSection } from '@/shared/ui/list-section';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { useShortcutHint } from '@/shared/keyboard/shortcuts';
-import { TagRow } from './TagRow';
+import { tagColumns } from './tagColumns';
 import { TagFormDialog } from './TagFormDialog';
 import { DeleteTagDialog } from './DeleteTagDialog';
 import { useTagsPage } from './useTagsPage';
@@ -17,11 +18,8 @@ import { useTagsPage } from './useTagsPage';
 export function TagsPage() {
   const {
     tags,
-    query,
-    isLoading,
+    status,
     searchInputRef,
-    isEmptyCatalog,
-    isEmptySearch,
     dialog,
     submitSearch,
     refresh,
@@ -67,33 +65,13 @@ export function TagsPage() {
         </InputGroup>
       </form>
 
-      {isLoading && <p className="px-1 text-sm text-muted-foreground">Carregando etiquetas…</p>}
-
-      {isEmptyCatalog && (
-        <div className="rounded-xl border border-dashed border-border px-6 py-14 text-center">
-          <p className="text-sm font-medium">Nenhuma etiqueta cadastrada</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Crie a primeira etiqueta para começar a organizar seus serviços.
-          </p>
-        </div>
-      )}
-
-      {isEmptySearch && (
-        <div className="rounded-xl border border-dashed border-border px-6 py-14 text-center">
-          <p className="text-sm font-medium">Nenhuma etiqueta encontrada</p>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Nenhum resultado para "{query}". Tente outro termo.
-          </p>
-        </div>
-      )}
-
-      {tags.length > 0 && (
-        <div className="overflow-hidden rounded-xl border border-border bg-card">
-          {tags.map((tag) => (
-            <TagRow key={tag.id} tag={tag} onEdit={openEditDialog} onDelete={openDeleteDialog} />
-          ))}
-        </div>
-      )}
+      <ListSection
+        status={status}
+        items={tags}
+        getKey={(tag) => tag.id}
+        aria-label="Etiquetas"
+        columns={tagColumns(openEditDialog, openDeleteDialog)}
+      />
 
       {(dialog.kind === 'create' || dialog.kind === 'edit') && (
         <TagFormDialog

@@ -1,8 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MemoryRouter, Route, Routes } from 'react-router';
 import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
-import { toast } from '@/shared/ui/toast';
 import { TagsPage } from './TagsPage';
 import type { Tag } from '../../../model/tag';
 
@@ -23,7 +23,11 @@ function renderPage(tags: Tag[]) {
     const filtered = needle ? tags.filter((tag) => tag.name.toLowerCase().includes(needle)) : tags;
     return Promise.resolve({ ok: true, data: filtered });
   });
-  render(<TagsPage />);
+  render(
+    <MemoryRouter>
+      <TagsPage />
+    </MemoryRouter>,
+  );
 }
 
 describe('TagsPage', () => {
@@ -51,26 +55,44 @@ describe('TagsPage', () => {
     expect(screen.getByText('Sem descrição')).toBeInTheDocument();
   });
 
-  it('shows a toast and stops the loading state when the initial fetch fails', async () => {
+  it('shows a generic inline failure, not the empty-catalog message, when the initial fetch fails', async () => {
     mockList.mockResolvedValue({
       ok: false,
       error: { title: 'O servidor está instável. Tente novamente em instantes.' },
     });
-    const toastAddSpy = vi.spyOn(toast, 'add');
 
-    render(<TagsPage />);
-
-    await waitFor(() =>
-      expect(toastAddSpy).toHaveBeenCalledWith(
-        expect.objectContaining({
-          title: 'Não foi possível carregar as etiquetas',
-          description: 'O servidor está instável. Tente novamente em instantes.',
-          type: 'error',
-        }),
-      ),
+    render(
+      <MemoryRouter>
+        <TagsPage />
+      </MemoryRouter>,
     );
-    expect(screen.getByText('Nenhuma etiqueta cadastrada')).toBeInTheDocument();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Não foi possível carregar.');
+    expect(screen.queryByText('Nenhum item encontrado.')).not.toBeInTheDocument();
   });
+
+  it.each([['Session.Missing'], ['Authorization.Unauthorized']] as const)(
+    'redirects to /login without rendering an error, for code %s',
+    async (code) => {
+      mockList.mockResolvedValue({
+        ok: false,
+        error: { code, title: 'Sua sessão expirou. Entre novamente.' },
+      });
+
+      render(
+        <MemoryRouter initialEntries={['/tags']}>
+          <Routes>
+            <Route path="/login" element={<div>Login Screen</div>} />
+            <Route path="/tags" element={<TagsPage />} />
+          </Routes>
+        </MemoryRouter>,
+      );
+
+      expect(await screen.findByText('Login Screen')).toBeInTheDocument();
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    },
+  );
 
   it('does not filter while typing — search only runs once submitted (backend-driven, not frontend)', async () => {
     const user = userEvent.setup();
@@ -121,23 +143,20 @@ describe('TagsPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
-  it('shows a distinct message when the catalog is empty (spec US1)', async () => {
+  it('shows a generic empty message when the catalog is empty (spec US1)', async () => {
     renderPage([]);
 
-    expect(await screen.findByText('Nenhuma etiqueta cadastrada')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhum item encontrado.')).toBeInTheDocument();
   });
 
-  it('shows a distinct message when a submitted search finds nothing, not the empty-catalog message (spec US1)', async () => {
+  it('shows the same generic empty message when a submitted search finds nothing (spec US1)', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
 
     await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'zzz{Enter}');
 
-    await waitFor(() =>
-      expect(screen.getByText('Nenhuma etiqueta encontrada')).toBeInTheDocument(),
-    );
-    expect(screen.queryByText('Nenhuma etiqueta cadastrada')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument());
   });
 
   it('opens the create dialog from the primary action (spec US2)', async () => {
