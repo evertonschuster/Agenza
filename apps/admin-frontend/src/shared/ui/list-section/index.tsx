@@ -6,7 +6,14 @@ import { ListSectionSkeleton } from './components/list-section-skeleton';
 import { ListSectionReady } from './components/list-section-ready';
 
 function ListSection<T>(props: ListSectionProps<T>) {
-  const { status, items, getKey, skeletonRowCount = 10, 'aria-label': ariaLabel, className } = props;
+  const {
+    status,
+    items,
+    getKey,
+    skeletonRowCount = 10,
+    'aria-label': ariaLabel,
+    className,
+  } = props;
 
   return (
     <div className={cn(className)}>
