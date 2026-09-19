@@ -26,6 +26,13 @@ interface ListSectionSkeletonProps {
   rowCount: number;
 }
 
+interface ListSectionReadyProps<T> {
+  items: readonly T[];
+  getKey: (item: T) => string;
+  renderMode: ListSectionRenderMode<T>;
+  ariaLabel?: string | undefined;
+}
+
 interface ListSectionTableProps<T> {
   items: readonly T[];
   columns: ListSectionColumn<T>[];
@@ -46,6 +53,7 @@ export type {
   ListSectionRenderMode,
   ListSectionStatus,
   ListSectionSkeletonProps,
+  ListSectionReadyProps,
   ListSectionTableProps,
   ListSectionListProps,
 };
