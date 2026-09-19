@@ -1,8 +1,6 @@
 import { servicesApi } from '@/shared/api/servicesApi';
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import type { Tag } from '../model/tag';
-
-export type TagInput = Omit<Tag, 'id'>;
+import type { Tag, TagInput } from '../model/tag';
 
 function list(search?: string): Promise<ApiResult<Tag[]>> {
   return servicesApi.get('/api/v{version}/tags', {

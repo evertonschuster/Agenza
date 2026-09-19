@@ -3,10 +3,7 @@ import type { ListSectionColumn } from '@/shared/ui/list-section';
 import { TagActions } from './components/TagActions';
 import type { Tag } from '../../../model/tag';
 
-export function tagColumns(
-  onEdit: (tag: Tag) => void,
-  onDelete: (tag: Tag) => void,
-): ListSectionColumn<Tag>[] {
+export function tagColumns(): ListSectionColumn<Tag>[] {
   return [
     {
       key: 'name',
@@ -36,7 +33,7 @@ export function tagColumns(
       key: 'actions',
       header: 'Ações',
       align: 'end',
-      cell: (tag) => <TagActions tag={tag} onEdit={onEdit} onDelete={onDelete} />,
+      cell: (tag) => <TagActions tag={tag} />,
     },
   ];
 }

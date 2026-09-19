@@ -1,48 +1,65 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DeleteTagDialog } from './DeleteTagDialog';
+import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
 import { toast } from '@/shared/ui/toast';
+import { loader } from '../TagListPage/route';
+import { TagRemovePage } from './TagRemovePage';
 import type { Tag } from '../../../model/tag';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 
-const { mockRemove } = vi.hoisted(() => ({ mockRemove: vi.fn() }));
+const { mockList, mockRemove } = vi.hoisted(() => ({ mockList: vi.fn(), mockRemove: vi.fn() }));
 
 vi.mock('../../../api/tagsRepository', () => ({
-  tagsRepository: { remove: mockRemove, list: vi.fn(), create: vi.fn(), update: vi.fn() },
+  tagsRepository: { list: mockList, create: vi.fn(), update: vi.fn(), remove: mockRemove },
 }));
 
 const TAG: Tag = { id: 'tag-1', name: 'Sazonal', color: '#0ea5e9', description: null };
 
-function renderDialog() {
-  const onOpenChange = vi.fn();
-  const onDeleted = vi.fn();
-  render(<DeleteTagDialog tag={TAG} onOpenChange={onOpenChange} onDeleted={onDeleted} />);
-  return { onOpenChange, onDeleted };
+function buildRouter(initialEntry: string) {
+  return createMemoryRouter(
+    [
+      {
+        path: '/tags',
+        id: 'tags-list',
+        Component: () => <Outlet />,
+        loader,
+        children: [{ path: ':id/remove', Component: TagRemovePage }],
+      },
+    ],
+    { initialEntries: [initialEntry] },
+  );
 }
 
-describe('DeleteTagDialog', () => {
+function renderPage(id = TAG.id) {
+  const router = buildRouter(`/tags/${id}/remove`);
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+describe('TagRemovePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockList.mockResolvedValue({ ok: true, data: [TAG] });
   });
 
-  it('does not submit anything until the person confirms (spec US4)', () => {
-    renderDialog();
+  it('does not submit anything until the person confirms (spec US4)', async () => {
+    renderPage();
 
-    expect(screen.getByText(/Tem certeza que deseja excluir/)).toBeInTheDocument();
+    expect(await screen.findByText(/Tem certeza que deseja excluir/)).toBeInTheDocument();
     expect(mockRemove).not.toHaveBeenCalled();
   });
 
-  it('removes an unused tag, shows a success toast, and closes on confirm (spec US4)', async () => {
+  it('removes an unused tag, shows a success toast, navigates back, and revalidates the list (spec US4)', async () => {
     const user = userEvent.setup();
     mockRemove.mockResolvedValue({ ok: true, data: undefined });
     const toastAddSpy = vi.spyOn(toast, 'add');
-    const { onOpenChange, onDeleted } = renderDialog();
+    const router = renderPage();
+    await screen.findByText(/Tem certeza que deseja excluir/);
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
-    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
-    expect(onDeleted).toHaveBeenCalledTimes(1);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/tags'));
     expect(toastAddSpy).toHaveBeenCalledWith(
       expect.objectContaining({
         title: 'Excluído com sucesso',
@@ -50,6 +67,7 @@ describe('DeleteTagDialog', () => {
         type: 'success',
       }),
     );
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
   });
 
   it('shows the exact service count and blocks the delete when the tag is in use (spec FR-008)', async () => {
@@ -69,7 +87,8 @@ describe('DeleteTagDialog', () => {
       },
     };
     mockRemove.mockResolvedValue({ ok: false, error: blocked });
-    const { onOpenChange } = renderDialog();
+    const router = renderPage();
+    await screen.findByText(/Tem certeza que deseja excluir/);
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
@@ -79,13 +98,13 @@ describe('DeleteTagDialog', () => {
       ),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: 'Não é possível excluir' })).toBeInTheDocument();
-    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(router.state.location.pathname).toBe(`/tags/${TAG.id}/remove`);
 
     await user.click(screen.getByRole('button', { name: 'Entendi' }));
-    expect(onOpenChange).toHaveBeenCalledWith(false);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/tags'));
   });
 
-  it('shows the not-found message when the tag was already removed by someone else (edge case, spec FR-012)', async () => {
+  it('shows the not-found message when the tag was already removed by someone else during confirm (edge case, spec FR-012)', async () => {
     const user = userEvent.setup();
     const notFound: ApiProblem = {
       type: 'https://agenza/errors/application',
@@ -95,7 +114,8 @@ describe('DeleteTagDialog', () => {
       errors: { '': [{ code: 'Tag.NotFound', message: "Etiqueta 'tag-1' não foi encontrada." }] },
     };
     mockRemove.mockResolvedValue({ ok: false, error: notFound });
-    renderDialog();
+    renderPage();
+    await screen.findByText(/Tem certeza que deseja excluir/);
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
@@ -110,7 +130,8 @@ describe('DeleteTagDialog', () => {
       title: 'Sem conexão com o servidor. Tente novamente.',
     };
     mockRemove.mockResolvedValue({ ok: false, error: networkProblem });
-    const { onOpenChange } = renderDialog();
+    const router = renderPage();
+    await screen.findByText(/Tem certeza que deseja excluir/);
 
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
@@ -121,9 +142,21 @@ describe('DeleteTagDialog', () => {
     expect(
       screen.queryByRole('heading', { name: 'Não é possível excluir' }),
     ).not.toBeInTheDocument();
-    expect(onOpenChange).not.toHaveBeenCalledWith(false);
+    expect(router.state.location.pathname).toBe(`/tags/${TAG.id}/remove`);
 
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(mockRemove).toHaveBeenCalledTimes(2);
+  });
+
+  it('shows the not-found dialog, not a crash, when the id is not in the loaded list', async () => {
+    const router = renderPage('missing-id');
+
+    expect(
+      await screen.findByRole('heading', { name: 'Etiqueta não encontrada' }),
+    ).toBeInTheDocument();
+    expect(mockRemove).not.toHaveBeenCalled();
+
+    await userEvent.setup().click(screen.getByRole('button', { name: 'Voltar para a lista' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/tags'));
   });
 });

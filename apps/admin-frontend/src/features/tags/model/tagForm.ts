@@ -1,8 +1,10 @@
-export interface TagFormValues {
-  name: string;
+import { extractErrorMessage, type ApiResult } from '@/shared/api/servicesFacade';
+import type { TagInput } from './tag';
+
+export type TagFormValues = Omit<TagInput, 'color' | 'description'> & {
   color: string | null;
   description: string;
-}
+};
 
 export interface TagFormErrors {
   name?: string | undefined;
@@ -36,4 +38,23 @@ export function validateTagForm(values: TagFormValues): TagFormErrors {
 
 export function hasTagFormErrors(errors: TagFormErrors): boolean {
   return Object.keys(errors).length > 0;
+}
+
+export function tagFormErrorsFromResult<T>(result: ApiResult<T> | undefined): {
+  fieldErrors: TagFormErrors;
+  generalError: string | undefined;
+} {
+  if (!result || result.ok) {
+    return { fieldErrors: {}, generalError: undefined };
+  }
+  const byField = result.error.errors;
+  return {
+    fieldErrors: {
+      name: byField?.['Name']?.[0]?.message,
+      color: byField?.['Color']?.[0]?.message,
+      description: byField?.['Description']?.[0]?.message,
+    },
+    generalError:
+      byField?.['']?.[0]?.message ?? (byField ? undefined : extractErrorMessage(result.error)),
+  };
 }

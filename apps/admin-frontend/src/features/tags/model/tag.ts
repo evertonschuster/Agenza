@@ -5,6 +5,8 @@ export interface Tag {
   description: string | null;
 }
 
+export type TagInput = Omit<Tag, 'id'>;
+
 export interface TagColorOption {
   value: string;
   label: string;
@@ -20,3 +22,7 @@ export const TAG_COLOR_PALETTE: readonly TagColorOption[] = [
   { value: '#22c55e', label: 'Verde' },
   { value: '#64748b', label: 'Cinza' },
 ];
+
+export function findTagById(tags: readonly Tag[], id: string): Tag | undefined {
+  return tags.find((tag) => tag.id === id);
+}
