@@ -1,4 +1,4 @@
-import * as React from 'react';
+import type { ReactNode } from 'react';
 import {
   CircleCheckIcon,
   InfoIcon,
@@ -6,32 +6,22 @@ import {
   OctagonXIcon,
   Loader2Icon,
 } from 'lucide-react';
-import type { ToastIconProps } from '../toast.types';
+import type { ToastIconProps, ToastType } from '../toast.types';
+
+const TOAST_ICONS: Record<ToastType, ReactNode> = {
+  success: <CircleCheckIcon className="text-success" aria-hidden="true" />,
+  info: <InfoIcon aria-hidden="true" />,
+  warning: <TriangleAlertIcon aria-hidden="true" />,
+  error: <OctagonXIcon className="text-destructive" aria-hidden="true" />,
+  loading: <Loader2Icon className="animate-spin" aria-hidden="true" />,
+};
+
+function isToastType(type: string | undefined): type is ToastType {
+  return type !== undefined && Object.hasOwn(TOAST_ICONS, type);
+}
 
 function ToastIcon({ type }: ToastIconProps) {
-  let icon: React.ReactNode = null;
-
-  if (type === 'success') {
-    icon = <CircleCheckIcon className="text-success" aria-hidden="true" />;
-  }
-
-  if (type === 'info') {
-    icon = <InfoIcon aria-hidden="true" />;
-  }
-
-  if (type === 'warning') {
-    icon = <TriangleAlertIcon aria-hidden="true" />;
-  }
-
-  if (type === 'error') {
-    icon = <OctagonXIcon className="text-destructive" aria-hidden="true" />;
-  }
-
-  if (type === 'loading') {
-    icon = <Loader2Icon className="animate-spin" aria-hidden="true" />;
-  }
-
-  if (!icon) {
+  if (!isToastType(type)) {
     return null;
   }
 
@@ -40,7 +30,7 @@ function ToastIcon({ type }: ToastIconProps) {
       data-slot="toast-icon"
       className="shrink-0 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4"
     >
-      {icon}
+      {TOAST_ICONS[type]}
     </span>
   );
 }
