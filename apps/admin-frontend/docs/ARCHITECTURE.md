@@ -121,6 +121,43 @@ component's folder — only through `index.tsx`. `FullScreenMessage/` is the one
 source file's exact PascalCase instead of kebab-case, because renaming it would change its import
 path.
 
+**Once inside `components/`, some internal shapes read better than others** — `list-section`'s own
+retrofit (five same-day commits inline, then split, then split again a second time once the first
+split still left a nested branch in `index.tsx`) is the worked example both ways. Prefer a chain of
+early `return`s over a mutable accumulator (`let result = null; if (...) { result = ... } else if
+(...) { result = ... }`): the accumulator forces the reader to hold reassignable state in their head
+and tends to nest a level deeper than the same branches written as siblings — `list-section-ready.tsx`
+is three early returns, not a `let readyContent` reassigned twice. When a prop type is a discriminated
+union (the `columns?: never` / `renderItem?: never` trick `ListSectionRenderMode<T>` uses), pass the
+whole union into whichever component actually branches on it, as one prop — don't pick a member out in
+the parent and hand it down as a separate optional prop. `list-section`'s original `const columns =
+props.columns` / `const renderItem = props.renderItem` captures existed only to survive narrowing
+lost across a `.map()` closure; passing the union whole (`renderMode={props}` down to
+`list-section-ready.tsx`, narrowed at `renderMode.columns`) needs no such capture, because the check
+and the read are the same expression with nothing deferred between them. Once three or more sibling
+prop types in the same `components/` folder repeat the same fields, extract a shared base interface
+and `extends` it (`ListSectionItemsProps<T>` — `items`/`getKey`/`ariaLabel` — under
+`ListSectionReadyProps`/`ListSectionTableProps`/`ListSectionListProps`); don't extract at two
+repetitions, where the `extends` indirection costs more than the line it saves.
+
+**A component's exported prop types are part of its contract, not an implementation detail** — review
+them with the same scrutiny as the render logic, and re-review on every edit per the rule above. A
+literal-union value that no branch in the component ever reads is dead API surface pretending to be a
+feature (`ListSectionColumn.align` briefly carried `'start'`, indistinguishable from omitting the
+field entirely since only `=== 'end'` was ever checked) — grep every read of a prop before trusting
+its declared type. A prop whose absence is an accessibility gap — an accessible name on anything with
+`role="list"`, `<table>`, or similar — is required, not optional; optional-by-default ships a silently
+unlabeled region that the type system will never flag (`ListSectionProps['aria-label']` moved from
+optional to required for exactly this reason). A test that renders a prop without asserting the effect
+that prop's value causes isn't coverage of that prop, only of the fact that passing it doesn't crash —
+`align: 'end'` was exercised by a test for two rounds of review before any assertion checked that it
+actually right-aligned anything. And when a component has more than one mutually exclusive render mode
+with its own container (`list-section`'s `columns` table vs. `renderItem` list), their visual treatment
+is worth comparing deliberately, not assumed consistent — the table wrapper shipped without the
+`bg-card` its list sibling had from day one, unnoticed until a dedicated pass rendered both against the
+compiled theme tokens directly (`dist/assets/*.css` — this app doesn't run outside Aspire, so that's
+the lightest way to check a pure-CSS change without the full stack).
+
 ---
 
 ## 2. Talking to the backend
@@ -307,6 +344,7 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 
 | `shared/ui/list-section.tsx` (+ `empty-state`, `error-state`) extracted from `TagsPage.tsx`; `route.ts`/`loader`/`action` for tags removed in the same lineage | The loader/action/`useFetcher()` pattern §1 used to describe was real for a short time, then reverted (commit `5e48593`): indirection for a single feature with no shared list to revalidate beyond itself. `useTagsPage` now calls `tagsRepository` directly. Meanwhile the loading/empty/error/row rendering that _was_ inline in `TagsPage.tsx` moved to three small presentational primitives, since none of it was tag-specific — only the copy and the row's own markup were. `list-section` ships two rendering modes, decided after comparing both against a many-column mockup: `columns` (a real `<table>` with `<th>` headers) and a simpler `renderItem` mode (a plain `<ul>`, no header). `TagsPage` renders its three fields (Nome/Descrição/Ações) through `columns` — Etiquetas has real, named fields, so a header row earns its keep; `renderItem` currently has no consumer, kept for a future listing that isn't naturally columnar (a feed, a timeline). All three primitives are excluded from the coverage gate by name, same reasoning as `button`/`badge` — pure prop-driven renderers, no state or effects of their own. |
 | `shared/ui/list-section/` retrofitted into `index.tsx` + `components/list-section-{skeleton,ready,table,list}.tsx`; §1's `components/` criteria now rechecked on every edit, not only at creation | `index.tsx` grew loading/error/empty/table/list all inline across five same-day commits, each reviewed for its own behavior diff only, never for the file's accumulated shape — the same shape `confirm-dialog` had before its own retrofit two days earlier (`specs/005-shared-ui-component-folders/`), except `list-section` was born the day _after_ that sweep and so never got one of its own. Rather than rely on the next periodic reorganize pass to catch it, §1's judgment call now reruns per edit so the next accretion is caught before it needs a retrofit. A first pass left the `status === 'ready'` branch (empty vs. `columns` vs. `renderItem`, a mutable `let` plus manual narrowing captures to survive the JSX closure) inline in `index.tsx`; `list-section-ready.tsx` now owns that dispatch as three sibling early returns over a single `renderMode: ListSectionRenderMode<T>` prop, which narrows cleanly without the capture workaround because it's a plain parameter, not a property access re-read through a closure. `index.tsx` is left a flat three-way `status` switch with no branching logic of its own. |
+| `shared/ui/list-section`'s prop contract tightened: `aria-label` required, dead `align: 'start'` removed, `bg-card` added to table mode; §1 gained shape/contract guidance (early returns over an accumulator, pass a discriminated union whole, extract a shared base prop type at 3+ repeats, no dead literal values, required over optional for accessible names, assert a prop's effect not just its presence) | Closing pass after the retrofit above, done deliberately front-to-back rather than fixing issues as they were noticed. `align: 'start'` was checked nowhere in `list-section-table.tsx` and had zero consumers — same effect as omitting the field. `aria-label` being optional meant a table could ship with no accessible name and nothing would catch it. `align: 'end'`, `className`, and the `skeletonRowCount` default all rendered under test already but had no assertion on the behavior itself. The `bg-card` gap between table and list mode predates every commit above (present since `cdff745`) and was only confirmed by rendering both against the compiled `dist/assets/*.css` — this app doesn't run outside Aspire, so that's the lightest way to check a pure-CSS change without the full stack. §1's new guidance exists so the next `components/` split starts from this shape instead of re-discovering it. |
 
 ---
 

@@ -23,6 +23,14 @@ inline across five same-day commits before anyone re-asked the question — don'
 change pushes an existing `index.tsx` past §1's criteria, default to extracting into `components/`,
 not to leaving it inline "for now."
 
+**§1 also covers the shape *inside* `components/`, not just when to create the folder** — early
+returns over a mutable accumulator, passing a discriminated union whole instead of destructuring it
+in the parent, extracting a shared prop base at three-plus repeats, no dead literal-union values,
+required over optional for accessible-name props, and asserting a prop's effect instead of just its
+presence in tests. `list-section`'s full retrofit is the worked example for all of it — read §1
+before writing the render logic or the prop types for a new sub-part, not only before deciding
+whether it gets its own file.
+
 ## 0. Base UI, not Radix — read this before pasting anything
 
 The primitive layer is `@base-ui/react` (ADR 0039). **A Radix snippet from a tutorial does not
@@ -166,10 +174,16 @@ behaviour belongs: **anything with logic goes in `shared/` proper** (`shared/the
 `shared/keyboard/`, a hook), where it is measured, and the primitive stays a dumb renderer of it.
 A test is still worth writing for an accessible name that a regression could silently break.
 
+**Assert the effect a prop causes, not just that passing it doesn't crash.** A test that renders with
+`align: 'end'` but never checks that anything actually right-aligned isn't testing `align` — it's
+testing that the component tolerates an extra prop. Query for the thing the prop is supposed to
+change (a class, an attribute, an accessible name) and assert on that directly.
+
 ## 7. Before you push
 
 `npm run lint && npm run format:check && npm run build && npm run test:coverage`, from
 `apps/admin-frontend/`. New visible strings are pt-BR; identifiers stay English. Every interactive
 control has an accessible name; decorative icons carry `aria-hidden`. If this change touched an
-existing component's `index.tsx`, re-read it whole against §1's `components/` criteria before
-committing — not just the lines you changed.
+existing component's `index.tsx` or anything in its `components/` folder, re-read the whole component
+— render logic, prop types, and tests — against §1's guidance before committing, not just the lines
+you changed.
