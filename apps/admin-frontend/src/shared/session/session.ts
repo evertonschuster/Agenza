@@ -24,7 +24,7 @@ export interface AuthenticatedUser {
 }
 
 export interface AuthEvent {
-  type: 'login_success' | 'login_failure' | 'renewal_failure' | 'logout';
+  type: 'login_success' | 'login_failure' | 'renewal_failure' | 'logout' | 'missing_tenant_claim';
   timestamp: number;
   tenantId: string | null;
 }

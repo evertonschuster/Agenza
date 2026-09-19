@@ -5,7 +5,10 @@ import type { AuthEvent } from './session';
 type Listener = () => void;
 
 function logAuthEvent(type: AuthEvent['type'], tenantId: string | null): void {
-  const level = type === 'login_failure' || type === 'renewal_failure' ? 'warn' : 'info';
+  const level =
+    type === 'login_failure' || type === 'renewal_failure' || type === 'missing_tenant_claim'
+      ? 'warn'
+      : 'info';
   logger[level](`auth.${type}`, { tenantId, timestamp: Date.now() });
 }
 
@@ -38,6 +41,9 @@ class SessionStore {
       !wasAuthenticated
     ) {
       logAuthEvent('login_success', next.tenant?.tenantId ?? null);
+    }
+    if (event.type === 'USER_LOADED' && next.session.failureReason === 'missing_tenant_claim') {
+      logAuthEvent('missing_tenant_claim', prev.tenant?.tenantId ?? null);
     }
     if (event.type === 'SILENT_RENEW_ERROR') {
       logAuthEvent('renewal_failure', prev.tenant?.tenantId ?? null);
