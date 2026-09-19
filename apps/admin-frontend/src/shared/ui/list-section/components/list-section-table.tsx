@@ -3,7 +3,7 @@ import type { ListSectionTableProps } from '../list-section.types';
 
 function ListSectionTable<T>({ items, columns, getKey, ariaLabel }: ListSectionTableProps<T>) {
   return (
-    <div className="overflow-x-auto rounded-xl border border-border">
+    <div className="overflow-x-auto rounded-xl border border-border bg-card">
       <table className="w-full text-sm" aria-label={ariaLabel}>
         <thead>
           <tr>
