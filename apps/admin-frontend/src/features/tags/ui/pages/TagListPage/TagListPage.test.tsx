@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
+import { createMemoryRouter, RouterProvider } from 'react-router';
 import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
-import { TagsPage } from './TagsPage';
+import { TagListPage } from './TagListPage';
+import { loader } from './route';
 import type { Tag } from '../../../model/tag';
 
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
@@ -17,20 +18,26 @@ const TAGS: Tag[] = [
   { id: '2', name: 'VIP', color: '#8b5cf6', description: null },
 ];
 
+function buildRouter() {
+  return createMemoryRouter(
+    [
+      { path: '/login', Component: () => <div>Login Screen</div> },
+      { path: '/tags', id: 'tags-list', Component: TagListPage, loader },
+    ],
+    { initialEntries: ['/tags'] },
+  );
+}
+
 function renderPage(tags: Tag[]) {
   mockList.mockImplementation((search?: string) => {
     const needle = search?.toLowerCase();
     const filtered = needle ? tags.filter((tag) => tag.name.toLowerCase().includes(needle)) : tags;
     return Promise.resolve({ ok: true, data: filtered });
   });
-  render(
-    <MemoryRouter>
-      <TagsPage />
-    </MemoryRouter>,
-  );
+  render(<RouterProvider router={buildRouter()} />);
 }
 
-describe('TagsPage', () => {
+describe('TagListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
@@ -61,11 +68,7 @@ describe('TagsPage', () => {
       error: { title: 'O servidor está instável. Tente novamente em instantes.' },
     });
 
-    render(
-      <MemoryRouter>
-        <TagsPage />
-      </MemoryRouter>,
-    );
+    render(<RouterProvider router={buildRouter()} />);
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Não foi possível carregar.');
@@ -80,14 +83,7 @@ describe('TagsPage', () => {
         error: { code, title: 'Sua sessão expirou. Entre novamente.' },
       });
 
-      render(
-        <MemoryRouter initialEntries={['/tags']}>
-          <Routes>
-            <Route path="/login" element={<div>Login Screen</div>} />
-            <Route path="/tags" element={<TagsPage />} />
-          </Routes>
-        </MemoryRouter>,
-      );
+      render(<RouterProvider router={buildRouter()} />);
 
       expect(await screen.findByText('Login Screen')).toBeInTheDocument();
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -159,38 +155,47 @@ describe('TagsPage', () => {
     await waitFor(() => expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument());
   });
 
-  it('opens the create dialog from the primary action (spec US2)', async () => {
-    const user = userEvent.setup();
+  it('the primary action links to /tags/new, preserving no query when there is none (spec US2)', async () => {
     renderPage(TAGS);
     await screen.findByText('Promoção');
 
-    await user.click(screen.getByRole('button', { name: 'Nova etiqueta' }));
-
-    expect(screen.getByRole('heading', { name: 'Nova etiqueta' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
+      'href',
+      '/tags/new',
+    );
   });
 
-  it('opens the edit dialog pre-filled from a row action (spec US3)', async () => {
-    const user = userEvent.setup();
+  it('the row edit action links to /tags/:id/edit (spec US3)', async () => {
     renderPage(TAGS);
     await screen.findByText('Promoção');
 
-    await user.click(screen.getByRole('button', { name: 'Editar Promoção' }));
-
-    expect(screen.getByRole('heading', { name: 'Editar etiqueta' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Nome')).toHaveValue('Promoção');
+    expect(screen.getByRole('link', { name: 'Editar Promoção' })).toHaveAttribute(
+      'href',
+      '/tags/1/edit',
+    );
   });
 
-  it('opens the delete confirmation from a row action (spec US4)', async () => {
+  it('the row delete action links to /tags/:id/remove (spec US4)', async () => {
+    renderPage(TAGS);
+    await screen.findByText('Promoção');
+
+    expect(screen.getByRole('link', { name: 'Excluir Promoção' })).toHaveAttribute(
+      'href',
+      '/tags/1/remove',
+    );
+  });
+
+  it('the primary action link preserves the active search in the URL', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
 
-    await user.click(screen.getByRole('button', { name: 'Excluir Promoção' }));
+    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'vip{Enter}');
+    await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
 
-    expect(
-      screen.getByText(
-        'Tem certeza que deseja excluir a etiqueta "Promoção"? Essa ação não pode ser desfeita.',
-      ),
-    ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
+      'href',
+      '/tags/new?q=vip',
+    );
   });
 });

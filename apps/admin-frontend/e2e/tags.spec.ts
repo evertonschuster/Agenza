@@ -26,7 +26,7 @@ test.describe('Tags CRUD', () => {
     const name = uniqueName('Promoção');
     await page.goto('/tags');
 
-    await page.getByRole('button', { name: 'Nova etiqueta' }).click();
+    await page.getByRole('link', { name: 'Nova etiqueta' }).click();
     await page.getByLabel('Nome', { exact: true }).fill(name);
     await page.getByRole('radio', { name: 'Âmbar', exact: true }).click();
     await page.getByRole('button', { name: 'Salvar' }).click();
@@ -34,7 +34,7 @@ test.describe('Tags CRUD', () => {
     await expect(page.getByRole('heading', { name: 'Nova etiqueta' })).not.toBeVisible();
     await expect(page.getByText(name, { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: 'Nova etiqueta' }).click();
+    await page.getByRole('link', { name: 'Nova etiqueta' }).click();
     await page.getByLabel('Nome', { exact: true }).fill(name);
     await page.getByRole('radio', { name: 'Verde', exact: true }).click();
     await page.getByRole('button', { name: 'Salvar' }).click();
@@ -53,7 +53,7 @@ test.describe('Tags CRUD', () => {
     const renamedTo = uniqueName('Sazonal Editado');
     await page.goto('/tags');
 
-    await page.getByRole('button', { name: 'Nova etiqueta' }).click();
+    await page.getByRole('link', { name: 'Nova etiqueta' }).click();
     await page.getByLabel('Nome', { exact: true }).fill(originalName);
     await page.getByRole('radio', { name: 'Azul', exact: true }).click();
     await page.getByRole('button', { name: 'Salvar' }).click();
@@ -61,10 +61,10 @@ test.describe('Tags CRUD', () => {
 
     // Resting-state visibility, no hover/focus first — this app is mobile-first (no :hover),
     // so a row action that only reveals on hover is effectively undiscoverable there.
-    await expect(page.getByRole('button', { name: `Editar ${originalName}` })).toBeVisible();
-    await expect(page.getByRole('button', { name: `Excluir ${originalName}` })).toBeVisible();
+    await expect(page.getByRole('link', { name: `Editar ${originalName}` })).toBeVisible();
+    await expect(page.getByRole('link', { name: `Excluir ${originalName}` })).toBeVisible();
 
-    await page.getByRole('button', { name: `Editar ${originalName}` }).click();
+    await page.getByRole('link', { name: `Editar ${originalName}` }).click();
     await page.getByLabel('Nome', { exact: true }).fill(renamedTo);
     await page.getByRole('button', { name: 'Salvar' }).click();
 
@@ -76,13 +76,13 @@ test.describe('Tags CRUD', () => {
     const name = uniqueName('Descartável');
     await page.goto('/tags');
 
-    await page.getByRole('button', { name: 'Nova etiqueta' }).click();
+    await page.getByRole('link', { name: 'Nova etiqueta' }).click();
     await page.getByLabel('Nome', { exact: true }).fill(name);
     await page.getByRole('radio', { name: 'Cinza', exact: true }).click();
     await page.getByRole('button', { name: 'Salvar' }).click();
     await expect(page.getByText(name, { exact: true })).toBeVisible();
 
-    await page.getByRole('button', { name: `Excluir ${name}` }).click();
+    await page.getByRole('link', { name: `Excluir ${name}` }).click();
     await page.getByRole('button', { name: 'Excluir' }).click();
 
     await expect(page.getByText(name, { exact: true })).not.toBeVisible();
@@ -99,8 +99,8 @@ test.describe('Tags CRUD', () => {
     const searchInput = page.getByLabel('Buscar etiquetas por nome');
     await searchInput.fill(name);
     await searchInput.press('Enter');
-    await expect(page.getByRole('button', { name: `Excluir ${name}` })).toBeVisible();
-    await page.getByRole('button', { name: `Excluir ${name}` }).click();
+    await expect(page.getByRole('link', { name: `Excluir ${name}` })).toBeVisible();
+    await page.getByRole('link', { name: `Excluir ${name}` }).click();
     await page.getByRole('button', { name: 'Excluir' }).click();
 
     await expect(
