@@ -161,7 +161,7 @@ describe('ListSection', () => {
     expect(container.firstChild).toHaveClass('custom-wrapper');
   });
 
-  it('defaults to 3 skeleton rows when skeletonRowCount is omitted', () => {
+  it('defaults to 10 skeleton rows when skeletonRowCount is omitted', () => {
     const { container } = render(
       <ListSection
         status="loading"
@@ -173,6 +173,6 @@ describe('ListSection', () => {
     );
 
     const busyRegion = container.querySelector('[aria-busy="true"]');
-    expect(busyRegion?.children).toHaveLength(3);
+    expect(busyRegion?.children).toHaveLength(10);
   });
 });
