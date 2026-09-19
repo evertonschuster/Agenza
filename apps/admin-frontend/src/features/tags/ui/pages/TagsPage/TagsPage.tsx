@@ -10,7 +10,6 @@ import { Kbd } from '@/shared/ui/kbd';
 import { ListSection } from '@/shared/ui/list-section';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { useShortcutHint } from '@/shared/keyboard/shortcuts';
-import { extractErrorMessage } from '@/shared/api/servicesFacade';
 import { tagColumns } from './tagColumns';
 import { TagFormDialog } from './TagFormDialog';
 import { DeleteTagDialog } from './DeleteTagDialog';
@@ -20,7 +19,6 @@ export function TagsPage() {
   const {
     tags,
     status,
-    error,
     searchInputRef,
     dialog,
     submitSearch,
@@ -73,16 +71,6 @@ export function TagsPage() {
         getKey={(tag) => tag.id}
         aria-label="Etiquetas"
         columns={tagColumns(openEditDialog, openDeleteDialog)}
-        error={
-          error
-            ? {
-                title: 'Não foi possível carregar as etiquetas',
-                description: extractErrorMessage(error),
-                code: error.code ?? undefined,
-                onRetry: refresh,
-              }
-            : undefined
-        }
       />
 
       {(dialog.kind === 'create' || dialog.kind === 'edit') && (

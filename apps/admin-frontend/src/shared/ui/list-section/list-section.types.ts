@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react';
-import type { ErrorStateProps } from '../error-state/error-state.types';
 
 type ListSectionStatus = 'loading' | 'error' | 'ready';
 
@@ -18,7 +17,6 @@ type ListSectionProps<T> = ListSectionRenderMode<T> & {
   status: ListSectionStatus;
   items: readonly T[];
   getKey: (item: T) => string;
-  error?: ErrorStateProps | undefined;
   skeletonRowCount?: number | undefined;
   'aria-label'?: string | undefined;
   className?: string | undefined;

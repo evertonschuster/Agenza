@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { tagsRepository } from '../../../api/tagsRepository';
-import type { ApiProblem } from '@/shared/api/servicesFacade';
 import type { ListSectionStatus } from '@/shared/ui/list-section';
 import type { Tag } from '../../../model/tag';
 
@@ -13,7 +12,6 @@ export function useTagsPage() {
   const [tags, setTags] = useState<Tag[]>([]);
   const [query, setQuery] = useState('');
   const [status, setStatus] = useState<ListSectionStatus>('loading');
-  const [error, setError] = useState<ApiProblem | null>(null);
   const [dialog, setDialog] = useState<DialogState>({ kind: 'none' });
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -22,7 +20,6 @@ export function useTagsPage() {
       tagsRepository.list(nextQuery || undefined).then((result) => {
         if (result.ok) {
           setTags(result.data);
-          setError(null);
           setStatus('ready');
         } else if (
           result.error.code === 'Session.Missing' ||
@@ -30,7 +27,6 @@ export function useTagsPage() {
         ) {
           void navigate('/login', { replace: true });
         } else {
-          setError(result.error);
           setStatus('error');
         }
       }),
@@ -56,7 +52,6 @@ export function useTagsPage() {
   return {
     tags,
     status,
-    error,
     searchInputRef,
     dialog,
     submitSearch,

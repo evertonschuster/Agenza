@@ -29,18 +29,18 @@ describe('ListSection', () => {
     expect(busyRegion?.children).toHaveLength(2);
   });
 
-  it('delegates to ErrorState when status is error', () => {
+  it('shows a generic error state when status is error', () => {
     render(
       <ListSection
         status="error"
         items={[] as Item[]}
         getKey={(item) => item.id}
         renderItem={(item) => item.name}
-        error={{ title: 'Não foi possível carregar' }}
       />,
     );
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar');
+    expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar.');
+    expect(screen.queryByRole('button')).not.toBeInTheDocument();
     expect(screen.queryByRole('list')).not.toBeInTheDocument();
   });
 

@@ -204,19 +204,25 @@ redirect to `/login` (the same destination `ProtectedRoute` sends an already-dea
 instead of rendering anything, because a retry control on an expired session fails identically
 every time. `features/tags` (`useTagsPage.ts`) is the reference implementation.
 
-**Empty is not a status the page computes — `list-section` detects it.** Once `status` says
-`'ready'`, `list-section` checks `items.length` itself and shows one fixed, generic empty message
-(no title/description/action props to configure it) instead of the rows or table. This is safe in
-a way inferring emptiness from `items.length` alone is not: the page has already confirmed success
-via `status`, so a zero-length ready list is unambiguous — unlike inferring "empty" before knowing
-whether the fetch even succeeded, which is the original bug this component exists to prevent. The
-tradeoff is explicit: no per-feature empty copy (a "never created" catalog and a "search matched
-nothing" case now read identically), and no action slot — a per-feature "limpar busca" affordance
-would need to live in the page's own toolbar area, not inside the empty message. `error` stays a
-config object (`ErrorStateProps`, not raw `ApiProblem`) since its copy is genuinely page-specific —
-the page builds it via `extractErrorMessage` (never raw `detail`/`title`) and hands it down. Search
-also stays page-owned: `toolbar` is not a `list-section` prop, so a search box sits beside the
-component in the page's own markup, not inside it.
+**`list-section` renders its own empty and error states — neither is a prop the page configures.**
+Once `status` says `'ready'`, it checks `items.length` itself and shows one fixed "Nenhum item
+encontrado." instead of the rows or table; inferring emptiness this way is safe here specifically
+because the page has already confirmed success via `status` first — unlike inferring "empty" before
+knowing whether the fetch even succeeded, which is the original bug this component exists to
+prevent. `status === 'error'` renders one fixed "Não foi possível carregar." the same way, with no
+retry control at all.
+
+This is a deliberate departure from ADR 0020's failure standard (a stable code, a curated
+explanation, a recovery action) — a generic, reusable table component doesn't know a per-feature
+error message, code, or what "retry" should even do, so `list-section` doesn't attempt any of it.
+The cost is real and explicit: a failed `list-section` load has no code, no specific explanation,
+and no way to recover short of a full page reload; a "never created" catalog and a "search matched
+nothing" empty case now read identically, and there's no action slot for a per-feature "limpar
+busca". A feature that needs ADR 0020's fuller treatment builds it directly with
+`shared/ui/error-state` (the same primitive `list-section` uses internally) instead of routing it
+through `list-section`'s `status` prop. Search stays page-owned too: `toolbar` is not a
+`list-section` prop, so a search box sits beside the component in the page's own markup, not
+inside it.
 
 Full wiring detail: [`contracts/api-client-contract.md`](../specs/001-oidc-shell-scaffold/contracts/api-client-contract.md).
 Exemplos reais de request/response — sucesso, validação, conflito, 404, autenticação/tenant —

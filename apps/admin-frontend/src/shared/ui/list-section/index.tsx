@@ -6,15 +6,7 @@ import { cn } from '@/shared/lib/utils';
 import type { ListSectionProps } from './list-section.types';
 
 function ListSection<T>(props: ListSectionProps<T>) {
-  const {
-    status,
-    items,
-    getKey,
-    error,
-    skeletonRowCount = 3,
-    'aria-label': ariaLabel,
-    className,
-  } = props;
+  const { status, items, getKey, skeletonRowCount = 3, 'aria-label': ariaLabel, className } = props;
 
   let readyContent: ReactNode = null;
   if (status === 'ready') {
@@ -100,7 +92,7 @@ function ListSection<T>(props: ListSectionProps<T>) {
         </div>
       )}
 
-      {status === 'error' && error && <ErrorState {...error} />}
+      {status === 'error' && <ErrorState title="Não foi possível carregar." />}
       {readyContent}
     </div>
   );

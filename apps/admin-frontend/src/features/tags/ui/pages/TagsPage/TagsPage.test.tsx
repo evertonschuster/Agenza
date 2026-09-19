@@ -55,7 +55,7 @@ describe('TagsPage', () => {
     expect(screen.getByText('Sem descrição')).toBeInTheDocument();
   });
 
-  it('shows an inline failure with a retry, not the empty-catalog message, when the initial fetch fails', async () => {
+  it('shows a generic inline failure, not the empty-catalog message, when the initial fetch fails', async () => {
     mockList.mockResolvedValue({
       ok: false,
       error: { title: 'O servidor está instável. Tente novamente em instantes.' },
@@ -68,30 +68,8 @@ describe('TagsPage', () => {
     );
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Não foi possível carregar as etiquetas');
-    expect(alert).toHaveTextContent('O servidor está instável. Tente novamente em instantes.');
+    expect(alert).toHaveTextContent('Não foi possível carregar.');
     expect(screen.queryByText('Nenhum item encontrado.')).not.toBeInTheDocument();
-  });
-
-  it('retries the failed load when Tentar novamente is clicked', async () => {
-    const user = userEvent.setup();
-    mockList.mockResolvedValueOnce({
-      ok: false,
-      error: { title: 'O servidor está instável. Tente novamente em instantes.' },
-    });
-    mockList.mockResolvedValueOnce({ ok: true, data: TAGS });
-
-    render(
-      <MemoryRouter>
-        <TagsPage />
-      </MemoryRouter>,
-    );
-    await screen.findByRole('alert');
-
-    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
-
-    expect(await screen.findByText('Promoção')).toBeInTheDocument();
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it.each([['Session.Missing'], ['Authorization.Unauthorized']] as const)(
