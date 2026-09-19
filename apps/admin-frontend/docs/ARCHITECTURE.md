@@ -106,7 +106,13 @@ coupled component (`Dialog` + `DialogContent` + …) **or** when a single export
 logic and type surface are complex enough to hurt readability as one file (`confirm-dialog`, five type
 declarations and two conditional render branches, still a single export) — judged qualitatively in
 review, the same judgment call already used for D5 below, deliberately with no line-count or
-type-count threshold. Inside `components/`, only a sub-part with real weight gets its own file —
+type-count threshold. **That judgment call reruns on every edit, not only at creation** — a render
+branch, prop, or conditional added to an existing `index.tsx` is checked against the file's whole
+current shape, not just the diff introducing it. `list-section` is the counter-example: it grew all
+five of loading/error/empty/table/list inline, across five same-day commits, because each commit's
+review looked only at its own diff, never at the accumulated file — see §5. When a change pushes an
+existing `index.tsx` past this criteria, default to extracting into `components/`, not to leaving it
+inline "for now." Inside `components/`, only a sub-part with real weight gets its own file —
 composing other components, owning local state/handlers/refs, or a className long enough to justify
 isolation on its own; sub-parts without that weight (a single-element wrapper, a static or
 CSS-selector-only className, no JS conditionals) are bundled together in one `<name>-primitives.tsx`
@@ -300,6 +306,7 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | Every `shared/ui/` component is a folder (`index.tsx` + conditional `<name>.types.ts` + conditional `components/`), not just the ones with sub-parts | Started as a request to segregate only compound components; widened mid-feature to all 20, so `shared/ui/` wouldn't have some components in a folder and others as a flat file depending on an internal-only distinction. `kbd.tsx` was first classified as a simple atom and left flat — wrong, it exports `Kbd` + `KbdGroup`, same shape as `avatar`/`card` — caught by re-deriving the export list from source instead of trusting the file's line count. All 16 `coverage.exclude` entries for `shared/ui/` became folder globs (`shared/ui/<name>/**`) in the same pass, so no component's coverage status moved as a side effect of the file move — `specs/005-shared-ui-component-folders/`.                                                                                                       |
 
 | `shared/ui/list-section.tsx` (+ `empty-state`, `error-state`) extracted from `TagsPage.tsx`; `route.ts`/`loader`/`action` for tags removed in the same lineage | The loader/action/`useFetcher()` pattern §1 used to describe was real for a short time, then reverted (commit `5e48593`): indirection for a single feature with no shared list to revalidate beyond itself. `useTagsPage` now calls `tagsRepository` directly. Meanwhile the loading/empty/error/row rendering that _was_ inline in `TagsPage.tsx` moved to three small presentational primitives, since none of it was tag-specific — only the copy and the row's own markup were. `list-section` ships two rendering modes, decided after comparing both against a many-column mockup: `columns` (a real `<table>` with `<th>` headers) and a simpler `renderItem` mode (a plain `<ul>`, no header). `TagsPage` renders its three fields (Nome/Descrição/Ações) through `columns` — Etiquetas has real, named fields, so a header row earns its keep; `renderItem` currently has no consumer, kept for a future listing that isn't naturally columnar (a feed, a timeline). All three primitives are excluded from the coverage gate by name, same reasoning as `button`/`badge` — pure prop-driven renderers, no state or effects of their own. |
+| `shared/ui/list-section/` retrofitted into `index.tsx` + `components/list-section-{skeleton,table,list}.tsx`; §1's `components/` criteria now rechecked on every edit, not only at creation | `index.tsx` grew loading/error/empty/table/list all inline across five same-day commits, each reviewed for its own behavior diff only, never for the file's accumulated shape — the same shape `confirm-dialog` had before its own retrofit two days earlier (`specs/005-shared-ui-component-folders/`), except `list-section` was born the day _after_ that sweep and so never got one of its own. Rather than rely on the next periodic reorganize pass to catch it, §1's judgment call now reruns per edit so the next accretion is caught before it needs a retrofit. |
 
 ---
 

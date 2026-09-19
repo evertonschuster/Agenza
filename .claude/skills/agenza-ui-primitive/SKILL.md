@@ -16,6 +16,13 @@ folder-per-component convention: [`specs/005-shared-ui-component-folders/`](../.
 `<name>.types.ts` and a `components/` subfolder only when there's real content for either. Full
 criteria and rationale live in `docs/ARCHITECTURE.md` §1; not repeated here.
 
+**The `components/` check is not a one-time gate at creation — it reruns on every edit.** A render
+branch, prop, or conditional added to an existing `index.tsx` is judged against the file's whole
+current shape, not just the diff adding it. `list-section` grew loading/error/empty/table/list all
+inline across five same-day commits before anyone re-asked the question — don't repeat that. When a
+change pushes an existing `index.tsx` past §1's criteria, default to extracting into `components/`,
+not to leaving it inline "for now."
+
 ## 0. Base UI, not Radix — read this before pasting anything
 
 The primitive layer is `@base-ui/react` (ADR 0039). **A Radix snippet from a tutorial does not
@@ -163,4 +170,6 @@ A test is still worth writing for an accessible name that a regression could sil
 
 `npm run lint && npm run format:check && npm run build && npm run test:coverage`, from
 `apps/admin-frontend/`. New visible strings are pt-BR; identifiers stay English. Every interactive
-control has an accessible name; decorative icons carry `aria-hidden`.
+control has an accessible name; decorative icons carry `aria-hidden`. If this change touched an
+existing component's `index.tsx`, re-read it whole against §1's `components/` criteria before
+committing — not just the lines you changed.

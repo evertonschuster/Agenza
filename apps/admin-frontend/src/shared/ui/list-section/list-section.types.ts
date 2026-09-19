@@ -22,4 +22,30 @@ type ListSectionProps<T> = ListSectionRenderMode<T> & {
   className?: string | undefined;
 };
 
-export type { ListSectionColumn, ListSectionProps, ListSectionRenderMode, ListSectionStatus };
+interface ListSectionSkeletonProps {
+  rowCount: number;
+}
+
+interface ListSectionTableProps<T> {
+  items: readonly T[];
+  columns: ListSectionColumn<T>[];
+  getKey: (item: T) => string;
+  ariaLabel?: string | undefined;
+}
+
+interface ListSectionListProps<T> {
+  items: readonly T[];
+  renderItem: (item: T) => ReactNode;
+  getKey: (item: T) => string;
+  ariaLabel?: string | undefined;
+}
+
+export type {
+  ListSectionColumn,
+  ListSectionProps,
+  ListSectionRenderMode,
+  ListSectionStatus,
+  ListSectionSkeletonProps,
+  ListSectionTableProps,
+  ListSectionListProps,
+};
