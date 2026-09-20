@@ -1,9 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { createMemoryRouter, RouterProvider } from 'react-router';
+import { MemoryRouter, useLocation } from 'react-router';
 import { TagListPage } from './TagListPage';
-import { loader } from './route';
 import type { Tag } from '../../../model/tag';
 
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
@@ -17,28 +16,52 @@ const TAGS: Tag[] = [
   { id: '2', name: 'VIP', color: '#8b5cf6', description: null },
 ];
 
-function buildRouter() {
-  return createMemoryRouter(
-    [
-      { path: '/login', Component: () => <div>Login Screen</div> },
-      { path: '/tags', Component: TagListPage, loader },
-    ],
-    { initialEntries: ['/tags'] },
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{`location: ${location.pathname}${location.search}`}</div>;
+}
+
+function renderTagListPage(initialEntries: string[] = ['/tags']) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <TagListPage />
+      <LocationProbe />
+    </MemoryRouter>,
   );
 }
 
-function renderPage(tags: Tag[]) {
+function renderPage(tags: Tag[], initialEntries?: string[]) {
   mockList.mockImplementation((search?: string) => {
     const needle = search?.toLowerCase();
     const filtered = needle ? tags.filter((tag) => tag.name.toLowerCase().includes(needle)) : tags;
     return Promise.resolve({ ok: true, data: filtered });
   });
-  render(<RouterProvider router={buildRouter()} />);
+  return renderTagListPage(initialEntries);
 }
 
 describe('TagListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('shows the table loading skeleton on first render, before the initial fetch resolves', async () => {
+    let resolveInitial!: (value: { ok: true; data: Tag[] }) => void;
+    mockList.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveInitial = resolve;
+        }),
+    );
+
+    const { container } = renderTagListPage();
+
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryByText('Não foi possível carregar.')).not.toBeInTheDocument();
+
+    resolveInitial({ ok: true, data: TAGS });
+
+    await waitFor(() => expect(screen.getByText('Promoção')).toBeInTheDocument());
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it('renders the title with no route indicator or subtitle (spec FR-015)', async () => {
@@ -63,7 +86,7 @@ describe('TagListPage', () => {
       error: { title: 'O servidor está instável. Tente novamente em instantes.' },
     });
 
-    render(<RouterProvider router={buildRouter()} />);
+    renderTagListPage();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Não foi possível carregar.');
@@ -71,17 +94,17 @@ describe('TagListPage', () => {
   });
 
   it.each([['Session.Missing'], ['Authorization.Unauthorized']] as const)(
-    'redirects to /login without rendering an error, for code %s',
+    "shows the same generic inline failure for code %s, with no redirect — session handling is not this component's job",
     async (code) => {
       mockList.mockResolvedValue({
         ok: false,
         error: { code, title: 'Sua sessão expirou. Entre novamente.' },
       });
 
-      render(<RouterProvider router={buildRouter()} />);
+      renderTagListPage();
 
-      expect(await screen.findByText('Login Screen')).toBeInTheDocument();
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent('Não foi possível carregar.');
     },
   );
 
@@ -107,10 +130,41 @@ describe('TagListPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
+  it('adds the submitted search term to the URL as ?q=', async () => {
+    const user = userEvent.setup();
+    renderPage(TAGS);
+    await screen.findByText('Promoção');
+
+    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'vip{Enter}');
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/tags?q=vip'));
+  });
+
+  it('reads the initial search term from the URL, pre-filling the field and filtering the fetch', async () => {
+    renderPage(TAGS, ['/tags?q=vip']);
+
+    expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('vip');
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith('vip'));
+    expect(await screen.findByText('VIP')).toBeInTheDocument();
+    expect(screen.queryByText('Promoção')).not.toBeInTheDocument();
+  });
+
+  it('clears the ?q= param instead of leaving it empty, when the search is submitted blank', async () => {
+    const user = userEvent.setup();
+    renderPage(TAGS, ['/tags?q=vip']);
+    await screen.findByText('VIP');
+
+    await user.clear(screen.getByLabelText('Buscar etiquetas por nome'));
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/tags'));
+    expect(screen.getByTestId('location')).not.toHaveTextContent('?q=');
+  });
+
   it('shows the table loading skeleton while a search re-fetch is in flight, replacing the stale rows', async () => {
     const user = userEvent.setup();
     mockList.mockResolvedValueOnce({ ok: true, data: TAGS });
-    const { container } = render(<RouterProvider router={buildRouter()} />);
+    const { container } = renderTagListPage();
     await screen.findByText('Promoção');
 
     let resolveSearch!: (value: { ok: true; data: Tag[] }) => void;

@@ -1,5 +1,4 @@
 import { SearchIcon } from 'lucide-react';
-import { Form } from 'react-router';
 import {
   InputGroup,
   InputGroupAddon,
@@ -11,18 +10,19 @@ import { tagColumns } from './tagColumns';
 import { useTagListPage } from './useTagListPage';
 
 export function TagListPage() {
-  const { tags, status, query } = useTagListPage();
+  const { tags, status, query, searchInputRef, onSearchSubmit } = useTagListPage();
 
   return (
     <div className="space-y-4">
       <h1 className="text-2xl font-semibold tracking-tight">Etiquetas</h1>
 
-      <Form method="get" replace role="search">
+      <form onSubmit={onSearchSubmit} role="search">
         <InputGroup>
           <InputGroupAddon>
             <SearchIcon aria-hidden="true" />
           </InputGroupAddon>
           <InputGroupInput
+            ref={searchInputRef}
             name="q"
             defaultValue={query}
             placeholder="Buscar etiquetas por nome..."
@@ -32,7 +32,7 @@ export function TagListPage() {
             <InputGroupButton type="submit">Buscar</InputGroupButton>
           </InputGroupAddon>
         </InputGroup>
-      </Form>
+      </form>
 
       <ListSection
         status={status}

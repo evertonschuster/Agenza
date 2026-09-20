@@ -9,33 +9,38 @@ still governs `/login`, `/callback`, and the authenticated catch-all this nests 
 
 Create, edit and delete were built against this contract (`/tags/new`, `/tags/:id/edit`,
 `/tags/:id/remove`, their own pages, and a shared `tagByIdLoader`) and later removed — `/tags` only
-lists today. `docs/ARCHITECTURE.md` §5 has the full history, including why the removed pieces came
-out entirely instead of staying as unreferenced code. This feature does not add or change any
-public/unauthenticated route.
+lists today. This route also went through, and backed out of, a `route.ts` `loader` twice — most
+recently because a blocking loader can't show its own page's loading state (the page doesn't exist
+yet while the loader runs). `docs/ARCHITECTURE.md` §5 has the full history for both. This feature
+does not add or change any public/unauthenticated route.
 
-## `route.ts` data contract
+## Data contract
 
-`features/tags/ui/pages/TagListPage/route.ts` exports the list's `loader`, re-exported as
-`tagListLoader` through the feature's `index.ts` barrel and wired into `app/routes.tsx`'s `lazy: () =>
-import('@/features/tags').then((m) => ({ Component: m.TagListPage, loader: m.tagListLoader }))`.
-No other route in this slice exists, so there is no second loader and no `action`.
+`/tags` has no `route.ts`, no `loader`, and no `action`. `TagListPage`'s own hook
+(`useTagListPage.ts`) calls `tagsRepository.list(query)` directly from a `useEffect`, keyed on the
+submitted search query.
 
-### `tagListLoader`
-
-- **Input**: the `q` query-string param (`/tags?q=...`), forwarded to `tagsRepository.list(query)`.
-- **Behavior**: does **not** `unwrapOrThrow` on an ordinary failure — the app has exactly one
-  root-level `errorElement`, so throwing here would blow away the whole shell for a failure
-  `shared/ui/list-section`'s `status` contract already handles in-page (`docs/ARCHITECTURE.md` §2).
-  It resolves a discriminated `{status:'ready', tags, query} | {status:'error', query}` instead. The
-  one case it does throw for is an expired session: `Session.Missing` / `Authorization.Unauthorized`
-  → `throw redirect('/login')`, an uncontroversial loader redirect, not an error-boundary case.
-- **Returns**: `TagListLoaderData` (the discriminated union above), read only by `TagListPage`'s own
-  hook via `useLoaderData()`.
+- **Input**: the `q` URL search param (`/tags?q=...`), read and written via `useSearchParams()` — not
+  a `useState`. Submitting the search form sets it (dropping the param entirely when the field is
+  cleared, rather than leaving `?q=` empty); loading `/tags?q=...` directly pre-fills the field and
+  seeds the first fetch with it.
+- **Behavior**: never `unwrapOrThrow`s — a repository failure resolves as `status: 'error'` in the
+  hook's own state, rendered in-page by `shared/ui/list-section` (`docs/ARCHITECTURE.md` §2), **every**
+  failure treated alike. This hook deliberately does not special-case `Session.Missing` /
+  `Authorization.Unauthorized` or redirect anywhere — a listing hook's job is listing, not session
+  lifecycle. That is a known, accepted gap, not a claim that something else catches it: nothing else
+  in the app reacts to those two codes today (`docs/ARCHITECTURE.md` §5/§6 has the audit trail).
+- **Loading**: `status` is derived by comparing the query currently in flight against the last one a
+  response resolved for, not stored as its own `setState` — true for both the first fetch on mount
+  and every re-search, so `list-section`'s loading skeleton actually shows both times. An `ignore`
+  flag in the effect's cleanup discards a stale response if a newer search has since superseded it.
 
 ## Contract rules
 
-- No tenant identifier appears in any `/tags` path or in `tagListLoader`'s params — tenant scoping is
+- No tenant identifier appears in any `/tags` path or in the search request — tenant scoping is
   entirely the existing `apiClient` middleware's job (constitution Principle II).
-- `tagListLoader` MUST NOT `unwrapOrThrow` for an ordinary fetch failure — that would defeat
-  `list-section`'s in-page handling; it MUST `throw redirect('/login')` for `Session.Missing` /
-  `Authorization.Unauthorized` specifically, and nothing else.
+- The list fetch MUST NOT `unwrapOrThrow` for an ordinary failure — that would defeat
+  `list-section`'s in-page handling. It MUST NOT branch on the failure's code either, session-related
+  or otherwise — every failure renders the same generic `'error'` state.
+- A response for a superseded search MUST NOT overwrite a newer one still in flight or already
+  resolved.
