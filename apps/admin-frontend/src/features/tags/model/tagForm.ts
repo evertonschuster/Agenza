@@ -6,6 +6,8 @@ export type TagFormValues = Omit<TagInput, 'color' | 'description'> & {
   description: string;
 };
 
+export const EMPTY_TAG_FORM_VALUES: TagFormValues = { name: '', color: null, description: '' };
+
 export interface TagFormErrors {
   name?: string | undefined;
   color?: string | undefined;
