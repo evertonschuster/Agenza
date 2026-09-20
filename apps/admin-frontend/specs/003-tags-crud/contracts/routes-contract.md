@@ -3,52 +3,44 @@
 Adds one entry to the existing route table (`specs/001-oidc-shell-scaffold/contracts/routes-contract.md`
 still governs `/login`, `/callback`, and the authenticated catch-all this nests under).
 
-| Route | Access | Renders | Notes |
-|---|---|---|---|
-| `/tags` | Authenticated (nested under the same `ProtectedRoute`-guarded shell as every other business route) | `TagsPage` (`features/tags`) | Reached only via the command palette or direct navigation (spec FR-014) — no sidebar/bottom-nav icon, no link from `/servicos`. |
+| Route   | Access                                                                                             | Renders                     | Notes                                                            |
+| ------- | --------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------- |
+| `/tags` | Authenticated (nested under the same `ProtectedRoute`-guarded shell as every other business route) | `TagListPage` (`features/tags`) | Reached via the command palette, direct navigation, or the primary-nav destination (spec FR-014). |
 
-This feature does not add or change any public/unauthenticated route.
+Create, edit and delete were built against this contract (`/tags/new`, `/tags/:id/edit`,
+`/tags/:id/remove`, their own pages, and a shared `tagByIdLoader`) and later removed — `/tags` only
+lists today. This route also went through, and backed out of, a `route.ts` `loader` twice — most
+recently because a blocking loader can't show its own page's loading state (the page doesn't exist
+yet while the loader runs). `docs/ARCHITECTURE.md` §5 has the full history for both. This feature
+does not add or change any public/unauthenticated route.
 
-## `route.ts` data contract
+## Data contract
 
-`features/tags/ui/pages/TagsPage/route.ts` is the single place `loader`/`action` are defined,
-re-exported through the feature's `index.ts` barrel and wired into `app/routes.tsx`'s existing
-`lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagsPage, loader: m.tagsLoader,
-action: m.tagsAction }))` — React Router's `lazy` already supports returning `loader`/`action`
-alongside `Component` from one dynamic import; no change to how `routes.tsx` is structured otherwise.
+`/tags` has no `route.ts`, no `loader`, and no `action`. `TagListPage`'s own hook
+(`useTagListPage.ts`) calls `tagsRepository.list(query)` directly from a `useEffect`, keyed on the
+submitted search query.
 
-### `tagsLoader`
-
-- **Input**: none (no path/query params on `/tags`).
-- **Behavior**: calls `tagsRepository.list()`, then `unwrapOrThrow` at this boundary (`AGENTS.md`: the
-  loader/`queryFn` boundary is where `Result` becomes a rejection) — a failure throws
-  `ApiProblemError`, caught by the existing route-level `errorElement` (`AppRouteError`).
-- **Returns**: `Tag[]`.
-
-### `tagsAction`
-
-- **Input**: a submitted `FormData` with an `intent` field of `'create' | 'update' | 'delete'`, plus:
-  - `create`: `name`, `color`, `description` (may be empty string → sent as `null`)
-  - `update`: `id`, `name`, `color`, `description`
-  - `delete`: `id`
-- **Behavior**: branches on `intent`, calls the matching `tagsRepository` method, and returns its
-  `ApiResult<Tag>` (create/update) or `ApiResult<void>` (delete) **without unwrapping** — a 400/409
-  is expected flow here, not an error boundary (`AGENTS.md`; spec FR-012). Successful mutations rely
-  on React Router's automatic revalidation of `tagsLoader` after the action settles — no manual
-  refetch.
-- **Returns**: the raw `ApiResult<T>`, read by the calling dialog via `useFetcher().data` to decide
-  what to render — `result.error.errors['']` for a general/banner message (duplicate name, in-use,
-  not-found), `result.error.errors[<field>]` to place a message under that specific form field, both
-  rendered verbatim (spec FR-012).
+- **Input**: the `q` URL search param (`/tags?q=...`), read and written via `useSearchParams()` — not
+  a `useState`. Submitting the search form sets it (dropping the param entirely when the field is
+  cleared, rather than leaving `?q=` empty); loading `/tags?q=...` directly pre-fills the field and
+  seeds the first fetch with it.
+- **Behavior**: never `unwrapOrThrow`s — a repository failure resolves as `status: 'error'` in the
+  hook's own state, rendered in-page by `shared/ui/list-section` (`docs/ARCHITECTURE.md` §2), **every**
+  failure treated alike. This hook deliberately does not special-case `Session.Missing` /
+  `Authorization.Unauthorized` or redirect anywhere — a listing hook's job is listing, not session
+  lifecycle. That is a known, accepted gap, not a claim that something else catches it: nothing else
+  in the app reacts to those two codes today (`docs/ARCHITECTURE.md` §5/§6 has the audit trail).
+- **Loading**: `status` is derived by comparing the query currently in flight against the last one a
+  response resolved for, not stored as its own `setState` — true for both the first fetch on mount
+  and every re-search, so `list-section`'s loading skeleton actually shows both times. An `ignore`
+  flag in the effect's cleanup discards a stale response if a newer search has since superseded it.
 
 ## Contract rules
 
-- No tenant identifier appears in the `/tags` path, in `tagsLoader`'s params, or in any submitted
-  `FormData` field — tenant scoping is entirely the existing `apiClient` middleware's job
-  (constitution Principle II).
-- `tagsAction` MUST NOT call `unwrapOrThrow` — doing so would turn an expected 409 (duplicate name /
-  tag in use) into a thrown error and route to the error boundary instead of the inline UI spec
-  FR-004/FR-008/FR-012 require.
-- `tagsLoader` MUST call `unwrapOrThrow` — an unexpected list-fetch failure has no sensible inline
-  treatment and should fall through to the existing route error boundary, consistent with every other
-  `loader` this codebase will add.
+- No tenant identifier appears in any `/tags` path or in the search request — tenant scoping is
+  entirely the existing `apiClient` middleware's job (constitution Principle II).
+- The list fetch MUST NOT `unwrapOrThrow` for an ordinary failure — that would defeat
+  `list-section`'s in-page handling. It MUST NOT branch on the failure's code either, session-related
+  or otherwise — every failure renders the same generic `'error'` state.
+- A response for a superseded search MUST NOT overwrite a newer one still in flight or already
+  resolved.

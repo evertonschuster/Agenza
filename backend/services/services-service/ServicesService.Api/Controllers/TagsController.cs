@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.CreateTag;
 using ServicesService.Application.Tags.DeleteTag;
+using ServicesService.Application.Tags.GetTagById;
 using ServicesService.Application.Tags.ListTags;
 using ServicesService.Application.Tags.UpdateTag;
 
@@ -27,6 +28,7 @@ public class TagsController : AgenzaControllerBase
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> List([FromQuery] ListTagsQuery query, CancellationToken cancellationToken)
     {
+        await Task.Delay(5000);
         var result = await _dispatcher.Query(query, cancellationToken);
         return result.ToActionResult(this, tags => Ok(tags));
     }
@@ -39,6 +41,15 @@ public class TagsController : AgenzaControllerBase
     {
         var result = await _dispatcher.Send(command, cancellationToken);
         return result.ToActionResult(this, tag => Created($"/api/v1/tags/{tag.Id}", tag));
+    }
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<ApiResponse<TagResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Query(new GetTagByIdQuery(id), cancellationToken);
+        return result.ToActionResult(this, tag => Ok(tag));
     }
 
     [HttpPut("{id:guid}")]

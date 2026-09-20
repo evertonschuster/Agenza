@@ -1,15 +1,14 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes } from 'react-router';
-import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
-import { TagsPage } from './TagsPage';
+import { MemoryRouter, useLocation } from 'react-router';
+import { TagListPage } from './TagListPage';
 import type { Tag } from '../../../model/tag';
 
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
 
 vi.mock('../../../api/tagsRepository', () => ({
-  tagsRepository: { list: mockList, create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+  tagsRepository: { list: mockList },
 }));
 
 const TAGS: Tag[] = [
@@ -17,26 +16,52 @@ const TAGS: Tag[] = [
   { id: '2', name: 'VIP', color: '#8b5cf6', description: null },
 ];
 
-function renderPage(tags: Tag[]) {
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{`location: ${location.pathname}${location.search}`}</div>;
+}
+
+function renderTagListPage(initialEntries: string[] = ['/tags']) {
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <TagListPage />
+      <LocationProbe />
+    </MemoryRouter>,
+  );
+}
+
+function renderPage(tags: Tag[], initialEntries?: string[]) {
   mockList.mockImplementation((search?: string) => {
     const needle = search?.toLowerCase();
     const filtered = needle ? tags.filter((tag) => tag.name.toLowerCase().includes(needle)) : tags;
     return Promise.resolve({ ok: true, data: filtered });
   });
-  render(
-    <MemoryRouter>
-      <TagsPage />
-    </MemoryRouter>,
-  );
+  return renderTagListPage(initialEntries);
 }
 
-describe('TagsPage', () => {
+describe('TagListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
   });
 
-  afterEach(() => {
-    shortcutRegistry.reset();
+  it('shows the table loading skeleton on first render, before the initial fetch resolves', async () => {
+    let resolveInitial!: (value: { ok: true; data: Tag[] }) => void;
+    mockList.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveInitial = resolve;
+        }),
+    );
+
+    const { container } = renderTagListPage();
+
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(screen.queryByText('Não foi possível carregar.')).not.toBeInTheDocument();
+
+    resolveInitial({ ok: true, data: TAGS });
+
+    await waitFor(() => expect(screen.getByText('Promoção')).toBeInTheDocument());
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it('renders the title with no route indicator or subtitle (spec FR-015)', async () => {
@@ -61,11 +86,7 @@ describe('TagsPage', () => {
       error: { title: 'O servidor está instável. Tente novamente em instantes.' },
     });
 
-    render(
-      <MemoryRouter>
-        <TagsPage />
-      </MemoryRouter>,
-    );
+    renderTagListPage();
 
     const alert = await screen.findByRole('alert');
     expect(alert).toHaveTextContent('Não foi possível carregar.');
@@ -73,24 +94,17 @@ describe('TagsPage', () => {
   });
 
   it.each([['Session.Missing'], ['Authorization.Unauthorized']] as const)(
-    'redirects to /login without rendering an error, for code %s',
+    "shows the same generic inline failure for code %s, with no redirect — session handling is not this component's job",
     async (code) => {
       mockList.mockResolvedValue({
         ok: false,
         error: { code, title: 'Sua sessão expirou. Entre novamente.' },
       });
 
-      render(
-        <MemoryRouter initialEntries={['/tags']}>
-          <Routes>
-            <Route path="/login" element={<div>Login Screen</div>} />
-            <Route path="/tags" element={<TagsPage />} />
-          </Routes>
-        </MemoryRouter>,
-      );
+      renderTagListPage();
 
-      expect(await screen.findByText('Login Screen')).toBeInTheDocument();
-      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      const alert = await screen.findByRole('alert');
+      expect(alert).toHaveTextContent('Não foi possível carregar.');
     },
   );
 
@@ -114,6 +128,63 @@ describe('TagsPage', () => {
 
     await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
     expect(screen.getByText('VIP')).toBeInTheDocument();
+  });
+
+  it('adds the submitted search term to the URL as ?q=', async () => {
+    const user = userEvent.setup();
+    renderPage(TAGS);
+    await screen.findByText('Promoção');
+
+    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'vip{Enter}');
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/tags?q=vip'));
+  });
+
+  it('reads the initial search term from the URL, pre-filling the field and filtering the fetch', async () => {
+    renderPage(TAGS, ['/tags?q=vip']);
+
+    expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('vip');
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith('vip'));
+    expect(await screen.findByText('VIP')).toBeInTheDocument();
+    expect(screen.queryByText('Promoção')).not.toBeInTheDocument();
+  });
+
+  it('clears the ?q= param instead of leaving it empty, when the search is submitted blank', async () => {
+    const user = userEvent.setup();
+    renderPage(TAGS, ['/tags?q=vip']);
+    await screen.findByText('VIP');
+
+    await user.clear(screen.getByLabelText('Buscar etiquetas por nome'));
+    await user.keyboard('{Enter}');
+
+    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/tags'));
+    expect(screen.getByTestId('location')).not.toHaveTextContent('?q=');
+  });
+
+  it('shows the table loading skeleton while a search re-fetch is in flight, replacing the stale rows', async () => {
+    const user = userEvent.setup();
+    mockList.mockResolvedValueOnce({ ok: true, data: TAGS });
+    const { container } = renderTagListPage();
+    await screen.findByText('Promoção');
+
+    let resolveSearch!: (value: { ok: true; data: Tag[] }) => void;
+    mockList.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSearch = resolve;
+        }),
+    );
+
+    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'vip{Enter}');
+
+    await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
+    expect(screen.queryByText('Promoção')).not.toBeInTheDocument();
+    expect(screen.queryByText('VIP')).not.toBeInTheDocument();
+
+    resolveSearch({ ok: true, data: TAGS.filter((tag) => tag.name === 'VIP') });
+
+    await waitFor(() => expect(screen.getByText('VIP')).toBeInTheDocument());
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
   it('keeps keyboard focus on the search field after submitting, so the person can keep typing', async () => {
@@ -157,40 +228,5 @@ describe('TagsPage', () => {
     await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'zzz{Enter}');
 
     await waitFor(() => expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument());
-  });
-
-  it('opens the create dialog from the primary action (spec US2)', async () => {
-    const user = userEvent.setup();
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    await user.click(screen.getByRole('button', { name: 'Nova etiqueta' }));
-
-    expect(screen.getByRole('heading', { name: 'Nova etiqueta' })).toBeInTheDocument();
-  });
-
-  it('opens the edit dialog pre-filled from a row action (spec US3)', async () => {
-    const user = userEvent.setup();
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    await user.click(screen.getByRole('button', { name: 'Editar Promoção' }));
-
-    expect(screen.getByRole('heading', { name: 'Editar etiqueta' })).toBeInTheDocument();
-    expect(screen.getByLabelText('Nome')).toHaveValue('Promoção');
-  });
-
-  it('opens the delete confirmation from a row action (spec US4)', async () => {
-    const user = userEvent.setup();
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    await user.click(screen.getByRole('button', { name: 'Excluir Promoção' }));
-
-    expect(
-      screen.getByText(
-        'Tem certeza que deseja excluir a etiqueta "Promoção"? Essa ação não pode ser desfeita.',
-      ),
-    ).toBeInTheDocument();
   });
 });
