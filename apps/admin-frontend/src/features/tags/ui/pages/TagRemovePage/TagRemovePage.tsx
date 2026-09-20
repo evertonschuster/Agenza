@@ -1,12 +1,18 @@
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
-import { TagNotFoundDialog } from '../../components/TagNotFoundDialog';
+import { TagUnavailableDialog } from '../../components/TagUnavailableDialog';
 import { useTagRemovePage } from './useTagRemovePage';
 
 export function TagRemovePage() {
   const state = useTagRemovePage();
 
-  if (state.mode === 'not-found') {
-    return <TagNotFoundDialog onClose={state.onClose} />;
+  if (state.mode === 'not-found' || state.mode === 'error') {
+    return (
+      <TagUnavailableDialog
+        reason={state.mode}
+        onClose={state.onClose}
+        onRetry={state.mode === 'error' ? state.onRetry : undefined}
+      />
+    );
   }
 
   const { tag, onOpenChange, onConfirm } = state;

@@ -50,11 +50,19 @@ export const router = createBrowserRouter([
               },
               {
                 path: ':id/edit',
-                lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagFormPage })),
+                lazy: () =>
+                  import('@/features/tags').then((m) => ({
+                    Component: m.TagFormPage,
+                    loader: m.tagByIdLoader,
+                  })),
               },
               {
                 path: ':id/remove',
-                lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagRemovePage })),
+                lazy: () =>
+                  import('@/features/tags').then((m) => ({
+                    Component: m.TagRemovePage,
+                    loader: m.tagByIdLoader,
+                  })),
               },
             ],
           },

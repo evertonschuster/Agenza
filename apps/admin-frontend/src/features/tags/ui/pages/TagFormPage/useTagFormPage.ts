@@ -1,15 +1,9 @@
 import { useId, useState, type FormEvent } from 'react';
-import {
-  useLocation,
-  useNavigate,
-  useParams,
-  useRevalidator,
-  useRouteLoaderData,
-} from 'react-router';
+import { useLoaderData, useLocation, useNavigate, useRevalidator } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import type { ApiResult } from '@/shared/api/servicesFacade';
 import { tagsRepository } from '../../../api/tagsRepository';
-import { findTagById, type Tag } from '../../../model/tag';
+import type { Tag, TagLoadResult } from '../../../model/tag';
 import {
   hasTagFormErrors,
   tagFormErrorsFromResult,
@@ -17,7 +11,6 @@ import {
   type TagFormErrors,
   type TagFormValues,
 } from '../../../model/tagForm';
-import type { TagListLoaderData } from '../TagListPage/route';
 
 const EMPTY_VALUES: TagFormValues = { name: '', color: null, description: '' };
 
@@ -27,6 +20,7 @@ function valuesFromTag(tag: Tag): TagFormValues {
 
 export type TagFormPageState =
   | { mode: 'not-found'; onClose: () => void }
+  | { mode: 'error'; onClose: () => void; onRetry: () => void }
   | {
       mode: 'create' | 'edit';
       title: string;
@@ -42,17 +36,16 @@ export type TagFormPageState =
     };
 
 export function useTagFormPage(): TagFormPageState {
-  const { id } = useParams<'id'>();
-  const listData = useRouteLoaderData<TagListLoaderData>('tags-list');
+  // Only the ':id/edit' route entry has tagByIdLoader — 'new' has none, so this reads as
+  // undefined there (React Router's own behavior for a route with no loader).
+  const loaderData = useLoaderData<TagLoadResult | undefined>();
   const location = useLocation();
   const navigate = useNavigate();
   const revalidator = useRevalidator();
   const nameId = useId();
   const descriptionId = useId();
 
-  const tags = listData?.status === 'ready' ? listData.tags : [];
-  const tag = id ? findTagById(tags, id) : undefined;
-  const notFound = id !== undefined && tag === undefined;
+  const tag = loaderData?.status === 'ready' ? loaderData.tag : undefined;
 
   const [values, setValues] = useState<TagFormValues>(() =>
     tag ? valuesFromTag(tag) : EMPTY_VALUES,
@@ -67,8 +60,16 @@ export function useTagFormPage(): TagFormPageState {
     if (!open) void navigate(backTo);
   }
 
-  if (notFound) {
-    return { mode: 'not-found', onClose: () => void navigate({ pathname: '..', search: '' }) };
+  if (loaderData?.status === 'not-found') {
+    return { mode: 'not-found', onClose: () => void navigate(backTo) };
+  }
+
+  if (loaderData?.status === 'error') {
+    return {
+      mode: 'error',
+      onClose: () => void navigate(backTo),
+      onRetry: () => void revalidator.revalidate(),
+    };
   }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {

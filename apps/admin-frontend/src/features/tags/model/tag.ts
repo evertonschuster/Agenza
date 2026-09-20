@@ -1,3 +1,5 @@
+import type { ApiResult } from '@/shared/api/servicesFacade';
+
 export interface Tag {
   id: string;
   name: string;
@@ -23,6 +25,15 @@ export const TAG_COLOR_PALETTE: readonly TagColorOption[] = [
   { value: '#64748b', label: 'Cinza' },
 ];
 
-export function findTagById(tags: readonly Tag[], id: string): Tag | undefined {
-  return tags.find((tag) => tag.id === id);
+export type TagLoadResult =
+  { status: 'ready'; tag: Tag } | { status: 'not-found' } | { status: 'error' };
+
+export function classifyTagResult(result: ApiResult<Tag>): TagLoadResult {
+  if (result.ok) {
+    return { status: 'ready', tag: result.data };
+  }
+  if (result.error.code === 'Tag.NotFound') {
+    return { status: 'not-found' };
+  }
+  return { status: 'error' };
 }

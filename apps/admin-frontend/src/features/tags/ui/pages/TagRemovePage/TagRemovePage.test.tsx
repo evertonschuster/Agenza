@@ -3,15 +3,26 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
 import { toast } from '@/shared/ui/toast';
-import { loader } from '../TagListPage/route';
+import { loader as tagListLoader } from '../TagListPage/route';
+import { tagByIdLoader } from '../tagByIdLoader';
 import { TagRemovePage } from './TagRemovePage';
 import type { Tag } from '../../../model/tag';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 
-const { mockList, mockRemove } = vi.hoisted(() => ({ mockList: vi.fn(), mockRemove: vi.fn() }));
+const { mockList, mockGet, mockRemove } = vi.hoisted(() => ({
+  mockList: vi.fn(),
+  mockGet: vi.fn(),
+  mockRemove: vi.fn(),
+}));
 
 vi.mock('../../../api/tagsRepository', () => ({
-  tagsRepository: { list: mockList, create: vi.fn(), update: vi.fn(), remove: mockRemove },
+  tagsRepository: {
+    list: mockList,
+    get: mockGet,
+    create: vi.fn(),
+    update: vi.fn(),
+    remove: mockRemove,
+  },
 }));
 
 const TAG: Tag = { id: 'tag-1', name: 'Sazonal', color: '#0ea5e9', description: null };
@@ -23,8 +34,8 @@ function buildRouter(initialEntry: string) {
         path: '/tags',
         id: 'tags-list',
         Component: () => <Outlet />,
-        loader,
-        children: [{ path: ':id/remove', Component: TagRemovePage }],
+        loader: tagListLoader,
+        children: [{ path: ':id/remove', Component: TagRemovePage, loader: tagByIdLoader }],
       },
     ],
     { initialEntries: [initialEntry] },
@@ -40,7 +51,16 @@ function renderPage(id = TAG.id) {
 describe('TagRemovePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ ok: true, data: [TAG] });
+    mockList.mockResolvedValue({ ok: true, data: [] });
+    mockGet.mockResolvedValue({ ok: true, data: TAG });
+  });
+
+  it('loads the tag directly by id, not from the list already on screen (spec: backend is the source of truth)', async () => {
+    renderPage();
+
+    await screen.findByText(/Tem certeza que deseja excluir/);
+    expect(mockGet).toHaveBeenCalledWith('tag-1');
+    expect(mockList).toHaveBeenCalledTimes(1); // only the list route's own load
   });
 
   it('does not submit anything until the person confirms (spec US4)', async () => {
@@ -148,7 +168,11 @@ describe('TagRemovePage', () => {
     expect(mockRemove).toHaveBeenCalledTimes(2);
   });
 
-  it('shows the not-found dialog, not a crash, when the id is not in the loaded list', async () => {
+  it('shows the not-found dialog, not a crash, when the backend says the tag does not exist', async () => {
+    mockGet.mockResolvedValue({
+      ok: false,
+      error: { code: 'Tag.NotFound', title: "Etiqueta 'missing-id' não foi encontrada." },
+    });
     const router = renderPage('missing-id');
 
     expect(
@@ -158,5 +182,26 @@ describe('TagRemovePage', () => {
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Voltar para a lista' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/tags'));
+  });
+
+  it('shows a retryable error dialog, not the not-found copy, when the single-tag load fails generically', async () => {
+    const user = userEvent.setup();
+    mockGet.mockResolvedValue({
+      ok: false,
+      error: { code: 'Network.Unreachable', title: 'Sem conexão com o servidor. Tente novamente.' },
+    });
+    renderPage();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Não foi possível carregar' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Etiqueta não encontrada' }),
+    ).not.toBeInTheDocument();
+
+    mockGet.mockResolvedValue({ ok: true, data: TAG });
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByText(/Tem certeza que deseja excluir/)).toBeInTheDocument();
   });
 });

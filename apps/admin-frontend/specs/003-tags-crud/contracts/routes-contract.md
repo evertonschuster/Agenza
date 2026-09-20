@@ -17,12 +17,16 @@ This feature does not add or change any public/unauthenticated route.
 
 ## `route.ts` data contract
 
-Only `TagListPage` has a `route.ts` — `features/tags/ui/pages/TagListPage/route.ts` exports a
-`loader` only, re-exported as `tagListLoader` through the feature's `index.ts` barrel and wired into
-`app/routes.tsx`'s `lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagListPage,
-loader: m.tagListLoader }))`. `TagFormPage` and `TagRemovePage` have **no** `route.ts` — no loader (they
-read the already-loaded list via `useRouteLoaderData('tags-list')`, keyed by the route id set on the
-`/tags` route object) and no `action` (see below for why).
+`features/tags/ui/pages/TagListPage/route.ts` exports the list's `loader`, re-exported as
+`tagListLoader` through the feature's `index.ts` barrel and wired into `app/routes.tsx`'s `lazy: () =>
+import('@/features/tags').then((m) => ({ Component: m.TagListPage, loader: m.tagListLoader }))`.
+
+`TagFormPage` (edit mode only) and `TagRemovePage` are each wired to a second, **shared** loader —
+`features/tags/ui/pages/tagByIdLoader.ts`, re-exported as `tagByIdLoader` — on their own route
+entries (`:id/edit` and `:id/remove`; `/tags/new` has none, since create has no `:id` to load). It
+lives outside any single page's folder deliberately: the exact same loader is wired onto both route
+entries and belongs to neither `TagFormPage` nor `TagRemovePage` more than the other. Neither route
+has an `action` (see below for why).
 
 ### `tagListLoader`
 
@@ -33,11 +37,30 @@ read the already-loaded list via `useRouteLoaderData('tags-list')`, keyed by the
   It resolves a discriminated `{status:'ready', tags, query} | {status:'error', query}` instead. The
   one case it does throw for is an expired session: `Session.Missing` / `Authorization.Unauthorized`
   → `throw redirect('/login')`, an uncontroversial loader redirect, not an error-boundary case.
-- **Returns**: `TagListLoaderData` (the discriminated union above), read by `TagListPage`'s own hook
-  via `useLoaderData()`, and by `TagFormPage`/`TagRemovePage` via `useRouteLoaderData('tags-list')` to
-  resolve which tag they're acting on (`findTagById`, `model/tag.ts`) — the backend has no
-  single-tag `GET`, so this is the only source for "the tag behind this `:id`" short of a second,
-  redundant fetch.
+- **Returns**: `TagListLoaderData` (the discriminated union above), read only by `TagListPage`'s own
+  hook via `useLoaderData()`. Nothing else reads it — see `tagByIdLoader` below for how `TagFormPage`
+  (edit mode) and `TagRemovePage` resolve their own tag.
+
+### `tagByIdLoader`
+
+- **Backend**: `GET /api/v{version}/tags/{id}` (`ServicesService.Application/Tags/GetTagById/`,
+  `TagsController.GetById`) — added alongside this contract; previously this endpoint didn't exist
+  and `TagFormPage`/`TagRemovePage` resolved their tag from the list route's already-loaded data via
+  `useRouteLoaderData('tags-list')` instead. That was a workaround for a missing endpoint, not a
+  design goal — a search-filtered `/tags?q=...` load has no obligation to contain every tag a stale
+  `/tags/:id/edit` link points at, so once the endpoint existed, reading from the list stopped being
+  correct and not just impure.
+- **Input**: the route's `:id` param, forwarded to `tagsRepository.get(id)`.
+- **Behavior**: same non-throwing discipline as `tagListLoader`, extended with a third outcome —
+  resolves `{status:'ready', tag} | {status:'not-found'} | {status:'error'}` (`TagLoadResult`,
+  `model/tag.ts`; `classifyTagResult` does the `ok`/`Tag.NotFound`/anything-else mapping). Only
+  throws `redirect('/login')` for `Session.Missing` / `Authorization.Unauthorized`, identically to
+  `tagListLoader`.
+- **Returns**: `TagLoadResult`, read via `useLoaderData()` by whichever of `TagFormPage`/`TagRemovePage`
+  is mounted. `'not-found'` and `'error'` both render `TagUnavailableDialog` in place of the page's
+  normal content (form or confirmation) — `'error'` additionally offers a retry
+  (`onRetry` → `useRevalidator().revalidate()`), since a generic fetch failure is recoverable in a way
+  a genuinely deleted tag is not.
 
 ### Mutations: no `action`, direct repository calls + explicit revalidation
 
@@ -70,10 +93,13 @@ explicit `revalidate()` call per hook is worth.
 - A create/update/remove call MUST NOT call `unwrapOrThrow` on its result — doing so would turn an
   expected 409 (duplicate name / tag in use) or 404 (not found) into a thrown error instead of the
   inline UI spec FR-004/FR-008/FR-012 require.
-- `tagListLoader` MUST NOT `unwrapOrThrow` for an ordinary list-fetch failure — that would defeat
-  `list-section`'s in-page `status: 'error'` handling; it MUST `throw redirect('/login')` for
-  `Session.Missing` / `Authorization.Unauthorized` specifically.
-- `TagFormPage`/`TagRemovePage` MUST resolve their target tag from `useRouteLoaderData('tags-list')`,
-  never by re-fetching — the backend has no single-tag `GET` to re-fetch from. A `:id` that resolves
-  to no tag (removed by someone else, filtered out by an active search, or simply invalid) MUST render
-  a "não encontrada" state, never crash or silently no-op.
+- `tagListLoader`/`tagByIdLoader` MUST NOT `unwrapOrThrow` for an ordinary fetch failure — that would
+  defeat `list-section`'s (resp. `TagUnavailableDialog`'s) in-page handling; both MUST
+  `throw redirect('/login')` for `Session.Missing` / `Authorization.Unauthorized` specifically, and
+  nothing else.
+- `TagFormPage`/`TagRemovePage` MUST resolve their target tag from `tagByIdLoader` (a direct
+  `GET /tags/{id}` by the route's own `:id`), never from the list route's already-loaded data — the
+  only thing these routes may share with `TagListPage` is the `:id` in the URL. A `:id` that resolves
+  to no tag (removed by someone else, or simply invalid) MUST render a "não encontrada" state; a
+  fetch that fails for any other reason MUST render a distinct, retryable state — neither may crash
+  or silently no-op.

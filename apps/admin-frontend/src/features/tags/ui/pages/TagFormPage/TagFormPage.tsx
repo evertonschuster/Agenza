@@ -6,14 +6,20 @@ import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { ColorSwatchPicker } from '@/shared/ui/color-swatch-picker';
 import { TAG_COLOR_PALETTE } from '../../../model/tag';
-import { TagNotFoundDialog } from '../../components/TagNotFoundDialog';
+import { TagUnavailableDialog } from '../../components/TagUnavailableDialog';
 import { useTagFormPage } from './useTagFormPage';
 
 export function TagFormPage() {
   const state = useTagFormPage();
 
-  if (state.mode === 'not-found') {
-    return <TagNotFoundDialog onClose={state.onClose} />;
+  if (state.mode === 'not-found' || state.mode === 'error') {
+    return (
+      <TagUnavailableDialog
+        reason={state.mode}
+        onClose={state.onClose}
+        onRetry={state.mode === 'error' ? state.onRetry : undefined}
+      />
+    );
   }
 
   const {

@@ -3,19 +3,27 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, Outlet, RouterProvider } from 'react-router';
 import { toast } from '@/shared/ui/toast';
-import { loader } from '../TagListPage/route';
+import { loader as tagListLoader } from '../TagListPage/route';
+import { tagByIdLoader } from '../tagByIdLoader';
 import { TagFormPage } from './TagFormPage';
 import type { Tag } from '../../../model/tag';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 
-const { mockList, mockCreate, mockUpdate } = vi.hoisted(() => ({
+const { mockList, mockGet, mockCreate, mockUpdate } = vi.hoisted(() => ({
   mockList: vi.fn(),
+  mockGet: vi.fn(),
   mockCreate: vi.fn(),
   mockUpdate: vi.fn(),
 }));
 
 vi.mock('../../../api/tagsRepository', () => ({
-  tagsRepository: { list: mockList, create: mockCreate, update: mockUpdate, remove: vi.fn() },
+  tagsRepository: {
+    list: mockList,
+    get: mockGet,
+    create: mockCreate,
+    update: mockUpdate,
+    remove: vi.fn(),
+  },
 }));
 
 const EXISTING_TAG: Tag = {
@@ -32,10 +40,10 @@ function buildRouter(initialEntry: string) {
         path: '/tags',
         id: 'tags-list',
         Component: () => <Outlet />,
-        loader,
+        loader: tagListLoader,
         children: [
           { path: 'new', Component: TagFormPage },
-          { path: ':id/edit', Component: TagFormPage },
+          { path: ':id/edit', Component: TagFormPage, loader: tagByIdLoader },
         ],
       },
     ],
@@ -76,6 +84,13 @@ describe('TagFormPage — create (route: /tags/new)', () => {
 
     expect(await screen.findByText('A cor da etiqueta é obrigatória.')).toBeInTheDocument();
     expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('never calls the single-tag lookup — a new tag has no id to load (spec US2)', async () => {
+    renderCreate();
+    await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+    expect(mockGet).not.toHaveBeenCalled();
   });
 
   it('creates a tag, shows a success toast, navigates back to /tags, and revalidates the list (spec US2)', async () => {
@@ -163,7 +178,8 @@ describe('TagFormPage — create (route: /tags/new)', () => {
 describe('TagFormPage — edit (route: /tags/:id/edit)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ ok: true, data: [EXISTING_TAG] });
+    mockList.mockResolvedValue({ ok: true, data: [] });
+    mockGet.mockResolvedValue({ ok: true, data: EXISTING_TAG });
   });
 
   function renderEdit(id = EXISTING_TAG.id) {
@@ -171,6 +187,14 @@ describe('TagFormPage — edit (route: /tags/:id/edit)', () => {
     render(<RouterProvider router={router} />);
     return router;
   }
+
+  it('loads the tag directly by id, not from the list already on screen (spec: backend is the source of truth)', async () => {
+    renderEdit();
+
+    await screen.findByRole('heading', { name: 'Editar etiqueta' });
+    expect(mockGet).toHaveBeenCalledWith('tag-1');
+    expect(mockList).toHaveBeenCalledTimes(1); // only the list route's own load — never asked for the tag
+  });
 
   it('pre-fills the fields when editing an existing tag (spec US3)', async () => {
     renderEdit();
@@ -248,7 +272,11 @@ describe('TagFormPage — edit (route: /tags/:id/edit)', () => {
     expect(router.state.location.pathname).toBe(`/tags/${EXISTING_TAG.id}/edit`);
   });
 
-  it('shows the not-found dialog, not a crash, when the id is not in the loaded list', async () => {
+  it('shows the not-found dialog, not a crash, when the backend says the tag does not exist', async () => {
+    mockGet.mockResolvedValue({
+      ok: false,
+      error: { code: 'Tag.NotFound', title: "Etiqueta 'missing-id' não foi encontrada." },
+    });
     const router = renderEdit('missing-id');
 
     expect(
@@ -257,5 +285,26 @@ describe('TagFormPage — edit (route: /tags/:id/edit)', () => {
 
     await userEvent.setup().click(screen.getByRole('button', { name: 'Voltar para a lista' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/tags'));
+  });
+
+  it('shows a retryable error dialog, not the not-found copy, when the single-tag load fails generically', async () => {
+    const user = userEvent.setup();
+    mockGet.mockResolvedValue({
+      ok: false,
+      error: { code: 'Network.Unreachable', title: 'Sem conexão com o servidor. Tente novamente.' },
+    });
+    renderEdit();
+
+    expect(
+      await screen.findByRole('heading', { name: 'Não foi possível carregar' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('heading', { name: 'Etiqueta não encontrada' }),
+    ).not.toBeInTheDocument();
+
+    mockGet.mockResolvedValue({ ok: true, data: EXISTING_TAG });
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+    expect(await screen.findByRole('heading', { name: 'Editar etiqueta' })).toBeInTheDocument();
   });
 });

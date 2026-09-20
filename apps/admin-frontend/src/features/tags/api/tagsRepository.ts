@@ -8,6 +8,10 @@ function list(search?: string): Promise<ApiResult<Tag[]>> {
   });
 }
 
+function get(id: string): Promise<ApiResult<Tag>> {
+  return servicesApi.get('/api/v{version}/tags/{id}', { path: { id } });
+}
+
 function create(input: TagInput): Promise<ApiResult<Tag>> {
   return servicesApi.post('/api/v{version}/tags', { body: input });
 }
@@ -23,4 +27,4 @@ function remove(id: string): Promise<ApiResult<void>> {
   return servicesApi.del('/api/v{version}/tags/{id}', { path: { id } });
 }
 
-export const tagsRepository = { list, create, update, remove };
+export const tagsRepository = { list, get, create, update, remove };
