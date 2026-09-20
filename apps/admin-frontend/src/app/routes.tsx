@@ -37,7 +37,6 @@ export const router = createBrowserRouter([
           },
           {
             path: 'tags',
-            id: 'tags-list',
             lazy: () =>
               import('@/features/tags').then((m) => ({
                 Component: m.TagListPage,

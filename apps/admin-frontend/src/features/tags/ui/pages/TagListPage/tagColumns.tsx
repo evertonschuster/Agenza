@@ -1,6 +1,5 @@
 import type { CSSProperties } from 'react';
 import type { ListSectionColumn } from '@/shared/ui/list-section';
-import { TagActions } from './components/TagActions';
 import type { Tag } from '../../../model/tag';
 
 export function tagColumns(): ListSectionColumn<Tag>[] {
@@ -28,12 +27,6 @@ export function tagColumns(): ListSectionColumn<Tag>[] {
           {tag.description ?? 'Sem descrição'}
         </span>
       ),
-    },
-    {
-      key: 'actions',
-      header: 'Ações',
-      align: 'end',
-      cell: (tag) => <TagActions tag={tag} />,
     },
   ];
 }

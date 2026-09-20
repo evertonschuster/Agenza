@@ -5,7 +5,7 @@ import { loader } from './route';
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
 
 vi.mock('../../../api/tagsRepository', () => ({
-  tagsRepository: { list: mockList, create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+  tagsRepository: { list: mockList },
 }));
 
 function requestWithUrl(url: string): Request {

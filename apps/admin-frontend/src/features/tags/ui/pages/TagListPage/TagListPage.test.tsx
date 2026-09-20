@@ -1,8 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider } from 'react-router';
-import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
 import { TagListPage } from './TagListPage';
 import { loader } from './route';
 import type { Tag } from '../../../model/tag';
@@ -10,7 +9,7 @@ import type { Tag } from '../../../model/tag';
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
 
 vi.mock('../../../api/tagsRepository', () => ({
-  tagsRepository: { list: mockList, create: vi.fn(), update: vi.fn(), remove: vi.fn() },
+  tagsRepository: { list: mockList },
 }));
 
 const TAGS: Tag[] = [
@@ -22,7 +21,7 @@ function buildRouter() {
   return createMemoryRouter(
     [
       { path: '/login', Component: () => <div>Login Screen</div> },
-      { path: '/tags', id: 'tags-list', Component: TagListPage, loader },
+      { path: '/tags', Component: TagListPage, loader },
     ],
     { initialEntries: ['/tags'] },
   );
@@ -40,10 +39,6 @@ function renderPage(tags: Tag[]) {
 describe('TagListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-  });
-
-  afterEach(() => {
-    shortcutRegistry.reset();
   });
 
   it('renders the title with no route indicator or subtitle (spec FR-015)', async () => {
@@ -153,49 +148,5 @@ describe('TagListPage', () => {
     await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'zzz{Enter}');
 
     await waitFor(() => expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument());
-  });
-
-  it('the primary action links to /tags/new, preserving no query when there is none (spec US2)', async () => {
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
-      'href',
-      '/tags/new',
-    );
-  });
-
-  it('the row edit action links to /tags/:id/edit (spec US3)', async () => {
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    expect(screen.getByRole('link', { name: 'Editar Promoção' })).toHaveAttribute(
-      'href',
-      '/tags/1/edit',
-    );
-  });
-
-  it('the row delete action links to /tags/:id/remove (spec US4)', async () => {
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    expect(screen.getByRole('link', { name: 'Excluir Promoção' })).toHaveAttribute(
-      'href',
-      '/tags/1/remove',
-    );
-  });
-
-  it('the primary action link preserves the active search in the URL', async () => {
-    const user = userEvent.setup();
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'vip{Enter}');
-    await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
-
-    expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
-      'href',
-      '/tags/new?q=vip',
-    );
   });
 });
