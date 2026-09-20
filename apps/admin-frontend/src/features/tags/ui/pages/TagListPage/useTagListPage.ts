@@ -12,7 +12,6 @@ export function useTagListPage(): UseTagListPageResult {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const latestRequestRef = useRef(0);
 
-  
   const fetchTags = useCallback((forQuery: string) => {
     const requestId = ++latestRequestRef.current;
 

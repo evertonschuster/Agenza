@@ -7,7 +7,7 @@ import {
   InputGroupInput,
 } from '@/shared/ui/input-group';
 import { ListSection } from '@/shared/ui/list-section';
-import { tagColumns } from './tagColumns';
+import { tagColumns } from './components/tagColumns';
 import { useTagListPage } from './useTagListPage';
 import type { TagListOutletContext } from './useTagListPage.types';
 
