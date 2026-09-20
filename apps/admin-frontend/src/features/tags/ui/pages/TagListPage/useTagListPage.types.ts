@@ -12,7 +12,6 @@ export interface UseTagListPageResult {
 
 export interface LoadResult {
   query: string;
-  reloadToken: number;
   status: Exclude<ListSectionStatus, 'loading'>;
   tags: Tag[];
 }

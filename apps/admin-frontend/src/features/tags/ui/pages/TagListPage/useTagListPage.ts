@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type SubmitEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { useSearchParams } from 'react-router';
 import { useTopic } from '@/shared/pubsub/useTopic';
 import { tagsRepository } from '../../../api/tagsRepository';
@@ -9,27 +9,29 @@ export function useTagListPage(): UseTagListPageResult {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
   const [result, setResult] = useState<LoadResult | null>(null);
-  const [reloadToken, setReloadToken] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const latestRequestRef = useRef(0);
 
-  useEffect(() => {
-    let ignore = false;
+  
+  const fetchTags = useCallback((forQuery: string) => {
+    const requestId = ++latestRequestRef.current;
 
-    void tagsRepository.list(query || undefined).then((apiResult) => {
-      if (ignore) return;
+    void tagsRepository.list(forQuery || undefined).then((apiResult) => {
+      if (requestId !== latestRequestRef.current) return;
 
       setResult({
-        query,
-        reloadToken,
+        query: forQuery,
         status: apiResult.ok ? 'ready' : 'error',
         tags: apiResult.ok ? apiResult.data : [],
       });
     });
+  }, []);
 
-    return () => {
-      ignore = true;
-    };
-  }, [query, reloadToken]);
+  useEffect(() => {
+    fetchTags(query);
+  }, [query, fetchTags]);
+
+  useTopic(tagDeleted, () => fetchTags(query));
 
   function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -37,13 +39,7 @@ export function useTagListPage(): UseTagListPageResult {
     setSearchParams(nextQuery ? { q: nextQuery } : {});
   }
 
-  function reload() {
-    setReloadToken((token) => token + 1);
-  }
-
-  useTopic(tagDeleted, () => reload());
-
-  const isCurrent = result !== null && result.query === query && result.reloadToken === reloadToken;
+  const isCurrent = result !== null && result.query === query;
 
   return {
     status: isCurrent ? result.status : 'loading',

@@ -66,8 +66,8 @@ one was built, found obsolete, and removed — `docs/ARCHITECTURE.md` §5).
   blocked outcome with the backend's message shown verbatim, not an error boundary.
 - **On success**: `onConfirm` calls `tagDeleted.publish({ id: tag.id })` — a generic
   `shared/pubsub` topic owned by `features/tags/model/tagEvents.ts`, not an outlet-context callback.
-  `useTagListPage` self-subscribes via `useTopic(tagDeleted, () => reload())`, so the publish
-  synchronously triggers the same `reloadToken` bump the outlet-context `reload()` used to, before
+  `useTagListPage` self-subscribes via `useTopic(tagDeleted, () => fetchTags(query))`, so the publish
+  synchronously calls the same `fetchTags` function the `query`-change effect calls, before
   `ConfirmDialog` calls `onOpenChange(false)` — the list refetch is still guaranteed in flight before
   the navigation back to `/tags` fires, just via a signal `TagDeletePage` doesn't need to know anyone
   is listening to. `docs/ARCHITECTURE.md` §5 has the full reasoning for the switch.
