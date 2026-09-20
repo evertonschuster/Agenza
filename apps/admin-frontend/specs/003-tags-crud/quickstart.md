@@ -11,22 +11,18 @@
 
 ## Manual walkthrough (maps to spec.md's user stories)
 
+Create, edit and delete (US2–US4 below) were built and later removed — see `spec.md`'s Status line
+and `docs/ARCHITECTURE.md` §5. Steps 2–4 describe a UI that no longer exists; kept for the historical
+record, not as something to follow today. Only step 1 is currently walkable.
+
 1. **US1 — list & search**. Open the command palette (`Ctrl/⌘+K` or `/`) → "Etiquetas" (or navigate
    to `/tags` directly). Confirm every seeded tag shows name (as a colored chip), color, description.
    Type part of a name into the search field; confirm the list narrows to matches only. Clear it;
    confirm the full list returns.
-2. **US2 — create**. Click "Nova etiqueta" (or press `N`). Submit with no name → inline error under
-   the name field, verbatim backend copy ("O nome da etiqueta é obrigatório."). Pick a color, submit
-   a valid name → the tag appears in the list immediately, no reload. Re-submit the same name →
-   banner error verbatim ("Já existe uma etiqueta chamada '…'."), dialog stays open.
-3. **US3 — edit**. Open an existing tag, change its color, save → the list reflects the new color
-   immediately. Rename it to another existing tag's name → banner conflict error, nothing is saved.
-4. **US4 — delete**. Delete a tag with no service using it → confirm dialog → it disappears from the
-   list. Attempt to delete a tag that a service uses (see e2e fixture note in research.md Decision 8
-   for how to set this up without a Services UI) → dialog swaps to the blocked state with the exact
-   service count from the backend, no delete occurs.
-5. **Theme**: repeat step 1 in dark mode — every one of the 8 chip colors stays legible (spec
-   FR-010).
+2. ~~**US2 — create**. Click "Nova etiqueta" (or press `N`)...~~ — removed.
+3. ~~**US3 — edit**. Open an existing tag, change its color, save...~~ — removed.
+4. ~~**US4 — delete**. Delete a tag with no service using it...~~ — removed.
+5. **Theme**: repeat step 1 in dark mode — the chip colors stay legible (spec FR-010).
 
 ## Automated checks
 
@@ -39,5 +35,6 @@ npm run test:coverage
 npm run test:e2e -- tags.spec.ts
 ```
 
-All must pass before this feature is considered done (constitution Principle V) — none of these are
-new gates, `tags.spec.ts` is the only new file among them.
+All must pass before this feature is considered done (constitution Principle V). `tags.spec.ts` now
+only covers reaching `/tags` — the create/edit/delete scenarios it used to run went with the UI they
+exercised.
