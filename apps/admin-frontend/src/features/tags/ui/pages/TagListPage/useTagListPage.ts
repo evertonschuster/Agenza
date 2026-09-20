@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { useSearchParams } from 'react-router';
+import { useTopic } from '@/shared/pubsub/useTopic';
 import { tagsRepository } from '../../../api/tagsRepository';
+import { tagDeleted } from '../../../model/tagEvents';
 import type { LoadResult, UseTagListPageResult } from './useTagListPage.types';
 
 export function useTagListPage(): UseTagListPageResult {
@@ -35,6 +37,12 @@ export function useTagListPage(): UseTagListPageResult {
     setSearchParams(nextQuery ? { q: nextQuery } : {});
   }
 
+  function reload() {
+    setReloadToken((token) => token + 1);
+  }
+
+  useTopic(tagDeleted, () => reload());
+
   const isCurrent = result !== null && result.query === query && result.reloadToken === reloadToken;
 
   return {
@@ -43,6 +51,5 @@ export function useTagListPage(): UseTagListPageResult {
     query,
     searchInputRef,
     onSearchSubmit,
-    reload: () => setReloadToken((token) => token + 1),
   };
 }

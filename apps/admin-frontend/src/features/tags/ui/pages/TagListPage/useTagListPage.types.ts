@@ -8,7 +8,6 @@ export interface UseTagListPageResult {
   query: string;
   searchInputRef: RefObject<HTMLInputElement | null>;
   onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
-  reload: () => void;
 }
 
 export interface LoadResult {
@@ -20,5 +19,4 @@ export interface LoadResult {
 
 export interface TagListOutletContext {
   tags: Tag[];
-  reload: () => void;
 }

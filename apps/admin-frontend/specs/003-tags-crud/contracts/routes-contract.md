@@ -51,7 +51,7 @@ submitted search query.
 ## `/tags/:id/delete` data contract
 
 No `route.ts` here either — no `loader`, no `action`. `TagListPage` renders `<Outlet
-context={{ tags, reload }} />` only once its own `status` is `'ready'`; `TagDeletePage`'s hook
+context={{ tags }} />` only once its own `status` is `'ready'`; `TagDeletePage`'s hook
 (`useTagDeletePage.ts`) reads that context with `useOutletContext()` and looks `:id` up in `tags`
 with `model/tag.ts`'s `findTagById` — no fetch of its own, no shared tag-by-id loader (the earlier
 one was built, found obsolete, and removed — `docs/ARCHITECTURE.md` §5).
@@ -64,10 +64,13 @@ one was built, found obsolete, and removed — `docs/ARCHITECTURE.md` §5).
 - **Confirm**: `shared/ui/confirm-dialog`'s `onConfirm` calls `tagsRepository.delete(tag.id)`
   directly — a `Result`, not `unwrapOrThrow`n; a 409 (`Tag.InUse` — spec FR-008) reads as an ordinary
   blocked outcome with the backend's message shown verbatim, not an error boundary.
-- **On success**: the outlet-context `reload()` (bumps `useTagListPage`'s `reloadToken`, a second
-  dependency on its fetch effect alongside `query`) is called and awaited-in-order **before**
-  `ConfirmDialog` calls `onOpenChange(false)`, so the list refetch is already in flight before the
-  navigation back to `/tags` fires.
+- **On success**: `onConfirm` calls `tagDeleted.publish({ id: tag.id })` — a generic
+  `shared/pubsub` topic owned by `features/tags/model/tagEvents.ts`, not an outlet-context callback.
+  `useTagListPage` self-subscribes via `useTopic(tagDeleted, () => reload())`, so the publish
+  synchronously triggers the same `reloadToken` bump the outlet-context `reload()` used to, before
+  `ConfirmDialog` calls `onOpenChange(false)` — the list refetch is still guaranteed in flight before
+  the navigation back to `/tags` fires, just via a signal `TagDeletePage` doesn't need to know anyone
+  is listening to. `docs/ARCHITECTURE.md` §5 has the full reasoning for the switch.
 - **Cancel/close**: navigates to `{ pathname: '..', search: location.search }` — the active `?q=`
   search survives closing or completing the dialog either way.
 
@@ -79,3 +82,5 @@ one was built, found obsolete, and removed — `docs/ARCHITECTURE.md` §5).
 - A failed delete MUST NOT navigate away or reload the list — only a successful one does either.
 - The confirm dialog MUST show the backend's Problem message verbatim (FR-012) — never a rewritten
   or generic string for the blocked case.
+- The on-success signal MUST go through the generic `shared/pubsub` `tagDeleted` topic — never a
+  re-introduced outlet-context callback, and never a tags-aware topic/registry living in `shared/`.

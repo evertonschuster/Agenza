@@ -1,12 +1,13 @@
 import { useLocation, useNavigate, useOutletContext, useParams } from 'react-router';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { findTagById } from '../../../model/tag';
+import { tagDeleted } from '../../../model/tagEvents';
 import type { TagListOutletContext } from '../TagListPage/useTagListPage.types';
 import type { UseTagDeletePageResult } from './useTagDeletePage.types';
 
 export function useTagDeletePage(): UseTagDeletePageResult {
   const { id } = useParams<'id'>();
-  const { tags, reload } = useOutletContext<TagListOutletContext>();
+  const { tags } = useOutletContext<TagListOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -25,7 +26,7 @@ export function useTagDeletePage(): UseTagDeletePageResult {
     },
     onConfirm: async () => {
       const result = await tagsRepository.delete(tag.id);
-      if (result.ok) reload();
+      if (result.ok) tagDeleted.publish({ id: tag.id });
       return result;
     },
   };

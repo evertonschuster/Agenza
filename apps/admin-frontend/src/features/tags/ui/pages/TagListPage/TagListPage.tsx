@@ -12,7 +12,7 @@ import { useTagListPage } from './useTagListPage';
 import type { TagListOutletContext } from './useTagListPage.types';
 
 export function TagListPage() {
-  const { tags, status, query, searchInputRef, onSearchSubmit, reload } = useTagListPage();
+  const { tags, status, query, searchInputRef, onSearchSubmit } = useTagListPage();
 
   return (
     <div className="space-y-4">
@@ -44,7 +44,7 @@ export function TagListPage() {
         columns={tagColumns()}
       />
 
-      {status === 'ready' && <Outlet context={{ tags, reload } satisfies TagListOutletContext} />}
+      {status === 'ready' && <Outlet context={{ tags } satisfies TagListOutletContext} />}
     </div>
   );
 }
