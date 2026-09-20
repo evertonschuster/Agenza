@@ -5,8 +5,9 @@
 **Created**: 2026-09-13
 
 **Status**: Draft — User Story 1 (list & search) is implemented; User Stories 2–4 (create, edit,
-delete) were built, then pulled back out of the app on an explicit scope decision. `/tags` today only
-lists. `docs/ARCHITECTURE.md` §5 has the full history and current reality; this file is kept as the
+delete) were built, then pulled back out of the app on an explicit scope decision. User Story 4
+(delete) was later reintroduced on its own; User Stories 2–3 (create, edit) stay out.
+`docs/ARCHITECTURE.md` §5 has the full history and current reality; this file is kept as the
 original requirements record, not updated to match.
 
 **Input**: User description: "Creating CRUD for maintainer tags in my frontend app. The CRUD needs to

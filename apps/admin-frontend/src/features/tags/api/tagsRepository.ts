@@ -8,4 +8,8 @@ function list(search?: string): Promise<ApiResult<Tag[]>> {
   });
 }
 
-export const tagsRepository = { list };
+function deleteTag(id: string): Promise<ApiResult<void>> {
+  return servicesApi.del('/api/v{version}/tags/{id}', { path: { id } });
+}
+
+export const tagsRepository = { list, delete: deleteTag };

@@ -1,4 +1,5 @@
 import { SearchIcon } from 'lucide-react';
+import { Outlet } from 'react-router';
 import {
   InputGroup,
   InputGroupAddon,
@@ -8,9 +9,10 @@ import {
 import { ListSection } from '@/shared/ui/list-section';
 import { tagColumns } from './tagColumns';
 import { useTagListPage } from './useTagListPage';
+import type { TagListOutletContext } from './useTagListPage.types';
 
 export function TagListPage() {
-  const { tags, status, query, searchInputRef, onSearchSubmit } = useTagListPage();
+  const { tags, status, query, searchInputRef, onSearchSubmit, reload } = useTagListPage();
 
   return (
     <div className="space-y-4">
@@ -41,6 +43,8 @@ export function TagListPage() {
         aria-label="Etiquetas"
         columns={tagColumns()}
       />
+
+      {status === 'ready' && <Outlet context={{ tags, reload } satisfies TagListOutletContext} />}
     </div>
   );
 }

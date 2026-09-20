@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { TagListPage } from './TagListPage';
 import type { Tag } from '../../../model/tag';
 
@@ -37,6 +37,20 @@ function renderPage(tags: Tag[], initialEntries?: string[]) {
     return Promise.resolve({ ok: true, data: filtered });
   });
   return renderTagListPage(initialEntries);
+}
+
+// Only the row-link tests need a real `tags` Route match — relative link resolution needs it to
+// know `/tags` is the route's own base, which a bare, routeless `<TagListPage />` render can't give
+// it. Every other test above renders the page directly and never inspects an href.
+function renderAtTagsRoute(tags: Tag[], initialEntries: string[] = ['/tags']) {
+  mockList.mockResolvedValue({ ok: true, data: tags });
+  return render(
+    <MemoryRouter initialEntries={initialEntries}>
+      <Routes>
+        <Route path="tags" element={<TagListPage />} />
+      </Routes>
+    </MemoryRouter>,
+  );
 }
 
 describe('TagListPage', () => {
@@ -78,6 +92,28 @@ describe('TagListPage', () => {
     expect(screen.getByText('Desconto temporário')).toBeInTheDocument();
     expect(screen.getByText('VIP')).toBeInTheDocument();
     expect(screen.getByText('Sem descrição')).toBeInTheDocument();
+  });
+
+  it('renders a delete link per row, pointing at that tag under /delete (spec US4)', async () => {
+    renderAtTagsRoute(TAGS);
+    await screen.findByText('Promoção');
+
+    const deleteLink = screen.getByRole('link', { name: 'Excluir Promoção' });
+    expect(deleteLink).toHaveAttribute('href', '/tags/1/delete');
+    expect(screen.getByRole('link', { name: 'Excluir VIP' })).toHaveAttribute(
+      'href',
+      '/tags/2/delete',
+    );
+  });
+
+  it("carries the active search into a row's delete link", async () => {
+    renderAtTagsRoute(TAGS, ['/tags?q=promo']);
+    await screen.findByText('Promoção');
+
+    expect(screen.getByRole('link', { name: 'Excluir Promoção' })).toHaveAttribute(
+      'href',
+      '/tags/1/delete?q=promo',
+    );
   });
 
   it('shows a generic inline failure, not the empty-catalog message, when the initial fetch fails', async () => {

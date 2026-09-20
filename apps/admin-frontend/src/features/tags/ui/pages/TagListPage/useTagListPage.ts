@@ -7,6 +7,7 @@ export function useTagListPage(): UseTagListPageResult {
   const [searchParams, setSearchParams] = useSearchParams();
   const query = searchParams.get('q') ?? '';
   const [result, setResult] = useState<LoadResult | null>(null);
+  const [reloadToken, setReloadToken] = useState(0);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -17,6 +18,7 @@ export function useTagListPage(): UseTagListPageResult {
 
       setResult({
         query,
+        reloadToken,
         status: apiResult.ok ? 'ready' : 'error',
         tags: apiResult.ok ? apiResult.data : [],
       });
@@ -25,7 +27,7 @@ export function useTagListPage(): UseTagListPageResult {
     return () => {
       ignore = true;
     };
-  }, [query]);
+  }, [query, reloadToken]);
 
   function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -33,7 +35,7 @@ export function useTagListPage(): UseTagListPageResult {
     setSearchParams(nextQuery ? { q: nextQuery } : {});
   }
 
-  const isCurrent = result !== null && result.query === query;
+  const isCurrent = result !== null && result.query === query && result.reloadToken === reloadToken;
 
   return {
     status: isCurrent ? result.status : 'loading',
@@ -41,5 +43,6 @@ export function useTagListPage(): UseTagListPageResult {
     query,
     searchInputRef,
     onSearchSubmit,
+    reload: () => setReloadToken((token) => token + 1),
   };
 }
