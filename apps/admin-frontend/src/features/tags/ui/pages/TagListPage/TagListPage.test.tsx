@@ -107,6 +107,32 @@ describe('TagListPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
+  it('shows the table loading skeleton while a search re-fetch is in flight, replacing the stale rows', async () => {
+    const user = userEvent.setup();
+    mockList.mockResolvedValueOnce({ ok: true, data: TAGS });
+    const { container } = render(<RouterProvider router={buildRouter()} />);
+    await screen.findByText('Promoção');
+
+    let resolveSearch!: (value: { ok: true; data: Tag[] }) => void;
+    mockList.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSearch = resolve;
+        }),
+    );
+
+    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'vip{Enter}');
+
+    await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
+    expect(screen.queryByText('Promoção')).not.toBeInTheDocument();
+    expect(screen.queryByText('VIP')).not.toBeInTheDocument();
+
+    resolveSearch({ ok: true, data: TAGS.filter((tag) => tag.name === 'VIP') });
+
+    await waitFor(() => expect(screen.getByText('VIP')).toBeInTheDocument());
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
   it('keeps keyboard focus on the search field after submitting, so the person can keep typing', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);

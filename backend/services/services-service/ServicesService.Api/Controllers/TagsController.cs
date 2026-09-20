@@ -28,7 +28,7 @@ public class TagsController : AgenzaControllerBase
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> List([FromQuery] ListTagsQuery query, CancellationToken cancellationToken)
     {
-        await Task.Delay(1000);
+        await Task.Delay(5000);
         var result = await _dispatcher.Query(query, cancellationToken);
         return result.ToActionResult(this, tags => Ok(tags));
     }
