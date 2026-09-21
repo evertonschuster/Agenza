@@ -15,7 +15,3 @@ export interface LoadResult {
   status: Exclude<ListSectionStatus, 'loading'>;
   tags: Tag[];
 }
-
-export interface TagListOutletContext {
-  tags: Tag[];
-}

@@ -9,7 +9,6 @@ import {
 import { ListSection } from '@/shared/ui/list-section';
 import { tagColumns } from './components/tagColumns';
 import { useTagListPage } from './useTagListPage';
-import type { TagListOutletContext } from './useTagListPage.types';
 
 export function TagListPage() {
   const { tags, status, query, searchInputRef, onSearchSubmit } = useTagListPage();
@@ -44,7 +43,7 @@ export function TagListPage() {
         columns={tagColumns()}
       />
 
-      {status === 'ready' && <Outlet context={{ tags } satisfies TagListOutletContext} />}
+      {status === 'ready' && <Outlet />}
     </div>
   );
 }

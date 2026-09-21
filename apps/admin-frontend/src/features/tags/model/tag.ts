@@ -4,7 +4,3 @@ export interface Tag {
   color: string;
   description: string | null;
 }
-
-export function findTagById(tags: readonly Tag[], id: string): Tag | undefined {
-  return tags.find((tag) => tag.id === id);
-}

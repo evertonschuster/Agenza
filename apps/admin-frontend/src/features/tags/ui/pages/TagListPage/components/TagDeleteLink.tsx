@@ -13,6 +13,7 @@ function TagDeleteLink({ tag }: TagDeleteLinkProps) {
   return (
     <Link
       to={{ pathname: `${tag.id}/delete`, search: location.search }}
+      state={tag}
       className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
       aria-label={`Excluir ${tag.name}`}
     >

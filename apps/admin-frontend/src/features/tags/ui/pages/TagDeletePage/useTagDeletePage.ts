@@ -1,17 +1,14 @@
-import { useLocation, useNavigate, useOutletContext, useParams } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { tagsRepository } from '../../../api/tagsRepository';
-import { findTagById } from '../../../model/tag';
+import type { Tag } from '../../../model/tag';
 import { tagDeleted } from '../../../model/tagEvents';
-import type { TagListOutletContext } from '../TagListPage/useTagListPage.types';
 import type { UseTagDeletePageResult } from './useTagDeletePage.types';
 
 export function useTagDeletePage(): UseTagDeletePageResult {
-  const { id } = useParams<'id'>();
-  const { tags } = useOutletContext<TagListOutletContext>();
   const location = useLocation();
   const navigate = useNavigate();
 
-  const tag = id ? findTagById(tags, id) : undefined;
+  const tag = location.state as Tag | undefined;
   const backTo = { pathname: '..', search: location.search };
 
   if (!tag) {

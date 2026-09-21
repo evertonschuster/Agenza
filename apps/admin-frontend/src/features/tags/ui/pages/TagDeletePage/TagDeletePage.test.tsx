@@ -107,7 +107,7 @@ describe('TagDeletePage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('location: /tags?q=promo');
   });
 
-  it('shows a not-found dialog for a deep link to an id no longer in the loaded list', async () => {
+  it('shows a not-found dialog when there is no navigation state (deep link, refresh, or shared URL)', async () => {
     const user = userEvent.setup();
     renderAt(['/tags/missing-id/delete']);
 
