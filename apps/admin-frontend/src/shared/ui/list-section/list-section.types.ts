@@ -1,6 +1,12 @@
 import type { ReactNode } from 'react';
 
-type ListSectionStatus = 'loading' | 'error' | 'ready';
+export const ListSectionStatus = {
+  Loading: 'loading',
+  Error: 'error',
+  Ready: 'ready',
+} as const;
+
+export type ListSectionStatus = (typeof ListSectionStatus)[keyof typeof ListSectionStatus];
 
 interface ListSectionColumn<T> {
   key: string;
@@ -48,7 +54,6 @@ export type {
   ListSectionColumn,
   ListSectionProps,
   ListSectionRenderMode,
-  ListSectionStatus,
   ListSectionSkeletonProps,
   ListSectionItemsProps,
   ListSectionReadyProps,

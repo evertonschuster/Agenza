@@ -1,11 +1,12 @@
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
 import { TagNotFoundDialog } from './components/TagNotFoundDialog';
 import { useTagDeletePage } from './useTagDeletePage';
+import { TagDeleteMode } from './useTagDeletePage.types';
 
 export function TagDeletePage() {
   const state = useTagDeletePage();
 
-  if (state.mode === 'not-found') {
+  if (state.mode === TagDeleteMode.NotFound) {
     return <TagNotFoundDialog onClose={state.onClose} />;
   }
 
