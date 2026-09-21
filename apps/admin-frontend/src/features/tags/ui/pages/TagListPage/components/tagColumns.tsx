@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { ListSectionColumn } from '@/shared/ui/list-section';
-import type { Tag } from '../../../model/tag';
+import { TagDeleteLink } from './TagDeleteLink';
+import type { Tag } from '../../../../model/tag';
 
 export function tagColumns(): ListSectionColumn<Tag>[] {
   return [
@@ -27,6 +28,12 @@ export function tagColumns(): ListSectionColumn<Tag>[] {
           {tag.description ?? 'Sem descrição'}
         </span>
       ),
+    },
+    {
+      key: 'actions',
+      header: 'Ações',
+      align: 'end',
+      cell: (tag) => <TagDeleteLink tag={tag} />,
     },
   ];
 }

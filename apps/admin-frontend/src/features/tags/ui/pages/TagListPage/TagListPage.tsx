@@ -1,4 +1,5 @@
 import { SearchIcon } from 'lucide-react';
+import { Outlet } from 'react-router';
 import {
   InputGroup,
   InputGroupAddon,
@@ -6,7 +7,7 @@ import {
   InputGroupInput,
 } from '@/shared/ui/input-group';
 import { ListSection } from '@/shared/ui/list-section';
-import { tagColumns } from './tagColumns';
+import { tagColumns } from './components/tagColumns';
 import { useTagListPage } from './useTagListPage';
 
 export function TagListPage() {
@@ -41,6 +42,8 @@ export function TagListPage() {
         aria-label="Etiquetas"
         columns={tagColumns()}
       />
+
+      {status === 'ready' && <Outlet />}
     </div>
   );
 }

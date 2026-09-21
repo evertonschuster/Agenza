@@ -1,18 +1,21 @@
 # Contract: `/tags` Route
 
-Adds one entry to the existing route table (`specs/001-oidc-shell-scaffold/contracts/routes-contract.md`
+Adds two entries to the existing route table (`specs/001-oidc-shell-scaffold/contracts/routes-contract.md`
 still governs `/login`, `/callback`, and the authenticated catch-all this nests under).
 
-| Route   | Access                                                                                             | Renders                     | Notes                                                            |
-| ------- | --------------------------------------------------------------------------------------------------- | ---------------------------- | ----------------------------------------------------------------- |
-| `/tags` | Authenticated (nested under the same `ProtectedRoute`-guarded shell as every other business route) | `TagListPage` (`features/tags`) | Reached via the command palette, direct navigation, or the primary-nav destination (spec FR-014). |
+| Route                | Access                                                                                              | Renders                                        | Notes                                                                                              |
+| --------------------- | ---------------------------------------------------------------------------------------------------- | ----------------------------------------------- | ---------------------------------------------------------------------------------------------------- |
+| `/tags`               | Authenticated (nested under the same `ProtectedRoute`-guarded shell as every other business route)  | `TagListPage` (`features/tags`)                | Reached via the command palette, direct navigation, or the primary-nav destination (spec FR-014).  |
+| `/tags/:id/delete`    | Authenticated; nested under `/tags` as a child route                                                | `TagDeletePage` (`features/tags`), over the still-mounted list via `<Outlet/>` | Reached only from a row's "Excluir" link in `TagListPage` (spec FR-009, US4). |
 
-Create, edit and delete were built against this contract (`/tags/new`, `/tags/:id/edit`,
-`/tags/:id/remove`, their own pages, and a shared `tagByIdLoader`) and later removed — `/tags` only
-lists today. This route also went through, and backed out of, a `route.ts` `loader` twice — most
-recently because a blocking loader can't show its own page's loading state (the page doesn't exist
-yet while the loader runs). `docs/ARCHITECTURE.md` §5 has the full history for both. This feature
-does not add or change any public/unauthenticated route.
+Create and edit were built against this contract (`/tags/new`, `/tags/:id/edit`, a shared
+`tagByIdLoader`) and later removed on an explicit scope decision — `docs/ARCHITECTURE.md` §5/§6 has
+the history and the current gap. Delete was pulled out in the same decision and came back on its own
+afterwards, reusing the child-route-over-`<Outlet/>` shape the original four-route split established,
+but without the `route.ts` `loader` that split also tried — `/tags` itself still has no `loader`; it
+went through, and backed out of, one twice, most recently because a blocking loader can't show its
+own page's loading state (the page doesn't exist yet while the loader runs). `docs/ARCHITECTURE.md`
+§5 has the full history. This feature does not add or change any public/unauthenticated route.
 
 ## Data contract
 
@@ -44,3 +47,40 @@ submitted search query.
   or otherwise — every failure renders the same generic `'error'` state.
 - A response for a superseded search MUST NOT overwrite a newer one still in flight or already
   resolved.
+
+## `/tags/:id/delete` data contract
+
+No `route.ts` here either — no `loader`, no `action`. `TagListPage` renders `<Outlet
+context={{ tags }} />` only once its own `status` is `'ready'`; `TagDeletePage`'s hook
+(`useTagDeletePage.ts`) reads that context with `useOutletContext()` and looks `:id` up in `tags`
+with `model/tag.ts`'s `findTagById` — no fetch of its own, no shared tag-by-id loader (the earlier
+one was built, found obsolete, and removed — `docs/ARCHITECTURE.md` §5).
+
+- **Input**: the `:id` path param, resolved against the list `TagListPage` already loaded.
+- **Not-found**: `:id` missing from `tags` (a stale link, or a tag someone else deleted) renders
+  `TagNotFoundDialog` instead of the confirm dialog. Gating the `<Outlet>` on `status === 'ready'`
+  means this can only mean "genuinely not in the loaded list" — never "list hasn't loaded yet", which
+  would otherwise need a third state to rule out.
+- **Confirm**: `shared/ui/confirm-dialog`'s `onConfirm` calls `tagsRepository.delete(tag.id)`
+  directly — a `Result`, not `unwrapOrThrow`n; a 409 (`Tag.InUse` — spec FR-008) reads as an ordinary
+  blocked outcome with the backend's message shown verbatim, not an error boundary.
+- **On success**: `onConfirm` calls `tagDeleted.publish({ id: tag.id })` — a generic
+  `shared/pubsub` topic owned by `features/tags/model/tagEvents.ts`, not an outlet-context callback.
+  `useTagListPage` self-subscribes via `useTopic(tagDeleted, () => fetchTags(query))`, so the publish
+  synchronously calls the same `fetchTags` function the `query`-change effect calls, before
+  `ConfirmDialog` calls `onOpenChange(false)` — the list refetch is still guaranteed in flight before
+  the navigation back to `/tags` fires, just via a signal `TagDeletePage` doesn't need to know anyone
+  is listening to. `docs/ARCHITECTURE.md` §5 has the full reasoning for the switch.
+- **Cancel/close**: navigates to `{ pathname: '..', search: location.search }` — the active `?q=`
+  search survives closing or completing the dialog either way.
+
+### Contract rules
+
+- `:id` resolution MUST NOT trigger its own fetch — reading the already-loaded list via outlet
+  context is the point; a per-tag fetch here would reintroduce the shared tag-by-id loader this
+  feature deliberately doesn't bring back.
+- A failed delete MUST NOT navigate away or reload the list — only a successful one does either.
+- The confirm dialog MUST show the backend's Problem message verbatim (FR-012) — never a rewritten
+  or generic string for the blocked case.
+- The on-success signal MUST go through the generic `shared/pubsub` `tagDeleted` topic — never a
+  re-introduced outlet-context callback, and never a tags-aware topic/registry living in `shared/`.

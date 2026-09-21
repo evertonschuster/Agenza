@@ -11,9 +11,10 @@
 
 ## Manual walkthrough (maps to spec.md's user stories)
 
-Create, edit and delete (US2–US4 below) were built and later removed — see `spec.md`'s Status line
-and `docs/ARCHITECTURE.md` §5. Steps 2–4 describe a UI that no longer exists; kept for the historical
-record, not as something to follow today. Only step 1 is currently walkable.
+Create and edit (US2–US3 below) were built and later removed — see `spec.md`'s Status line and
+`docs/ARCHITECTURE.md` §5. Steps 2–3 describe a UI that no longer exists; kept for the historical
+record, not as something to follow today. Delete (US4) was pulled out alongside them and later
+reintroduced on its own — step 4 is walkable again.
 
 1. **US1 — list & search**. Open the command palette (`Ctrl/⌘+K` or `/`) → "Etiquetas" (or navigate
    to `/tags` directly). Confirm every seeded tag shows name (as a colored chip), color, description.
@@ -21,7 +22,11 @@ record, not as something to follow today. Only step 1 is currently walkable.
    confirm the full list returns.
 2. ~~**US2 — create**. Click "Nova etiqueta" (or press `N`)...~~ — removed.
 3. ~~**US3 — edit**. Open an existing tag, change its color, save...~~ — removed.
-4. ~~**US4 — delete**. Delete a tag with no service using it...~~ — removed.
+4. **US4 — delete**. Click a row's "Excluir" action; confirm it opens at `/tags/:id/delete` with the
+   list still visible behind the dialog, naming the tag ("Excluir a etiqueta "X"?"). Confirm; the tag
+   disappears from the list, refetched from the backend, and the dialog returns to `/tags`. Repeat for
+   a tag associated with a service; confirm the backend's conflict message is shown verbatim instead
+   (spec FR-008, FR-012) and the tag stays in the list.
 5. **Theme**: repeat step 1 in dark mode — the chip colors stay legible (spec FR-010).
 
 ## Automated checks

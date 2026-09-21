@@ -64,7 +64,9 @@ type CallOptions<O> = (QueryOf<O> extends never
   ? { query?: never }
   : { query?: QueryOf<O> | undefined }) &
   (keyof PathOf<O> extends never ? { path?: never } : { path: PathOf<O> }) &
-  (BodyOf<O> extends never ? { body?: never } : { body: BodyOf<O> });
+  (BodyOf<O> extends never ? { body?: never } : { body: BodyOf<O> }) & {
+    signal?: AbortSignal | undefined;
+  };
 
 type Payload<O> = O extends { responses: infer R extends Record<string | number, unknown> }
   ? SuccessResponse<R, MediaType> extends { data: infer D }
@@ -90,7 +92,14 @@ interface RawResult {
   response: Response;
 }
 
-type LooseOptions = { query?: unknown; path?: Record<string, unknown>; body?: unknown } | undefined;
+type LooseOptions =
+  | {
+      query?: unknown;
+      path?: Record<string, unknown>;
+      body?: unknown;
+      signal?: AbortSignal | undefined;
+    }
+  | undefined;
 
 type RawClient = Record<
   'GET' | 'POST' | 'PUT' | 'DELETE',
@@ -117,6 +126,7 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
       query: options?.query,
     },
     body: options?.body,
+    signal: options?.signal,
   });
 
   const call =
