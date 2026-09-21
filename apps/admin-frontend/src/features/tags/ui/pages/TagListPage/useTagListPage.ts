@@ -10,13 +10,15 @@ export function useTagListPage(): UseTagListPageResult {
   const query = searchParams.get('q') ?? '';
   const [result, setResult] = useState<LoadResult | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const latestRequestRef = useRef(0);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   const fetchTags = useCallback((forQuery: string) => {
-    const requestId = ++latestRequestRef.current;
+    abortControllerRef.current?.abort();
+    const controller = new AbortController();
+    abortControllerRef.current = controller;
 
-    void tagsRepository.list(forQuery || undefined).then((apiResult) => {
-      if (requestId !== latestRequestRef.current) return;
+    void tagsRepository.list(forQuery || undefined, controller.signal).then((apiResult) => {
+      if (controller.signal.aborted) return;
 
       setResult({
         query: forQuery,
@@ -28,6 +30,9 @@ export function useTagListPage(): UseTagListPageResult {
 
   useEffect(() => {
     fetchTags(query);
+    return () => {
+      abortControllerRef.current?.abort();
+    };
   }, [query, fetchTags]);
 
   useTopic(tagDeleted, () => fetchTags(query));

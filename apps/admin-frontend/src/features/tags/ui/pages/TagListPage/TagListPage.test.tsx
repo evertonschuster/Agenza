@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { TagListPage } from './TagListPage';
@@ -180,7 +180,7 @@ describe('TagListPage', () => {
     renderPage(TAGS, ['/tags?q=vip']);
 
     expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('vip');
-    await waitFor(() => expect(mockList).toHaveBeenCalledWith('vip'));
+    await waitFor(() => expect(mockList).toHaveBeenCalledWith('vip', expect.any(AbortSignal)));
     expect(await screen.findByText('VIP')).toBeInTheDocument();
     expect(screen.queryByText('Promoção')).not.toBeInTheDocument();
   });
@@ -221,6 +221,50 @@ describe('TagListPage', () => {
 
     await waitFor(() => expect(screen.getByText('VIP')).toBeInTheDocument());
     expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+  });
+
+  it('keeps the newer search result even if the older, superseded request resolves later (AbortController guard)', async () => {
+    const user = userEvent.setup();
+    renderPage(TAGS);
+    await screen.findByText('Promoção');
+
+    let resolveFirst!: (value: { ok: true; data: Tag[] }) => void;
+    mockList.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveFirst = resolve;
+        }),
+    );
+    const searchInput = screen.getByLabelText('Buscar etiquetas por nome');
+    await user.type(searchInput, 'vip{Enter}');
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+
+    let resolveSecond!: (value: { ok: true; data: Tag[] }) => void;
+    mockList.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveSecond = resolve;
+        }),
+    );
+    await user.clear(searchInput);
+    await user.type(searchInput, 'promo{Enter}');
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(3));
+
+    // Resolve the newer (second) search first.
+    await act(async () => {
+      resolveSecond({ ok: true, data: TAGS.filter((tag) => tag.name === 'Promoção') });
+      await Promise.resolve();
+    });
+    expect(screen.getByText('Promoção')).toBeInTheDocument();
+    expect(screen.queryByText('VIP')).not.toBeInTheDocument();
+
+    // The stale (first) request now resolves late — it must not clobber the newer result.
+    await act(async () => {
+      resolveFirst({ ok: true, data: TAGS.filter((tag) => tag.name === 'VIP') });
+      await Promise.resolve();
+    });
+    expect(screen.getByText('Promoção')).toBeInTheDocument();
+    expect(screen.queryByText('VIP')).not.toBeInTheDocument();
   });
 
   it('keeps keyboard focus on the search field after submitting, so the person can keep typing', async () => {
