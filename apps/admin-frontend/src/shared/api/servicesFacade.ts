@@ -27,6 +27,20 @@ export const SESSION_PROBLEM: ApiProblem = {
   title: 'Sua sessão expirou. Entre novamente.',
 };
 
+const TRANSIENT_PROBLEM_CODES = new Set(
+  [NETWORK_PROBLEM.code, SESSION_PROBLEM.code, SERVER_PROBLEM.code].filter(
+    (code): code is string => code != null,
+  ),
+);
+
+export function isTransientProblem(problem: ApiProblem): boolean {
+  return !!problem.code && TRANSIENT_PROBLEM_CODES.has(problem.code);
+}
+
+export function extractErrorMessage(problem: ApiProblem): string {
+  return problem.errors?.['']?.[0]?.message ?? problem.title ?? 'Algo deu errado. Tente novamente.';
+}
+
 const isProblem = (value: unknown): value is ApiProblem =>
   typeof value === 'object' &&
   value !== null &&
@@ -50,7 +64,9 @@ type CallOptions<O> = (QueryOf<O> extends never
   ? { query?: never }
   : { query?: QueryOf<O> | undefined }) &
   (keyof PathOf<O> extends never ? { path?: never } : { path: PathOf<O> }) &
-  (BodyOf<O> extends never ? { body?: never } : { body: BodyOf<O> });
+  (BodyOf<O> extends never ? { body?: never } : { body: BodyOf<O> }) & {
+    signal?: AbortSignal | undefined;
+  };
 
 type Payload<O> = O extends { responses: infer R extends Record<string | number, unknown> }
   ? SuccessResponse<R, MediaType> extends { data: infer D }
@@ -76,7 +92,14 @@ interface RawResult {
   response: Response;
 }
 
-type LooseOptions = { query?: unknown; path?: Record<string, unknown>; body?: unknown } | undefined;
+type LooseOptions =
+  | {
+      query?: unknown;
+      path?: Record<string, unknown>;
+      body?: unknown;
+      signal?: AbortSignal | undefined;
+    }
+  | undefined;
 
 type RawClient = Record<
   'GET' | 'POST' | 'PUT' | 'DELETE',
@@ -103,6 +126,7 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
       query: options?.query,
     },
     body: options?.body,
+    signal: options?.signal,
   });
 
   const call =

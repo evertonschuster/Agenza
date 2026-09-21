@@ -9,7 +9,28 @@ description: Use when adding, replacing or restyling anything under apps/admin-f
 `features/` import, no API call. Anything with behaviour worth testing does not belong here (§6).
 
 Architecture: [`docs/ARCHITECTURE.md`](../../../apps/admin-frontend/docs/ARCHITECTURE.md) §1.
-Decisions driving this layer: [`specs/002-ui-foundation/plan.md`](../../../apps/admin-frontend/specs/002-ui-foundation/plan.md) D1, D4, D5.
+Decisions driving this layer: [`specs/002-ui-foundation/plan.md`](../../../apps/admin-frontend/specs/002-ui-foundation/plan.md) D1, D4, D5;
+folder-per-component convention: [`specs/005-shared-ui-component-folders/`](../../../apps/admin-frontend/specs/005-shared-ui-component-folders/).
+
+**Every component under `shared/ui/` is a folder**, not a flat file — `<name>/index.tsx`, with
+`<name>.types.ts` and a `components/` subfolder only when there's real content for either. Full
+criteria and rationale live in `docs/ARCHITECTURE.md` §1; not repeated here.
+
+**The `components/` check is not a one-time gate at creation — it reruns on every edit.** A render
+branch, prop, or conditional added to an existing `index.tsx` is judged against the file's whole
+current shape, not just the diff adding it. `list-section` grew loading/error/empty/table/list all
+inline across five same-day commits before anyone re-asked the question — don't repeat that. When a
+change pushes an existing `index.tsx` past §1's criteria, default to extracting into `components/`,
+not to leaving it inline "for now."
+
+**§1 also covers the shape *inside* `components/`, not just when to create the folder** — general
+rules, not tied to any one component: early returns over a mutable accumulator, passing a
+discriminated union whole instead of destructuring it in the parent, extracting a shared prop base at
+three-plus repeats, no dead literal-union values, required over optional for accessible-name props,
+and asserting a prop's effect instead of just its presence in tests. Read §1 before writing the render
+logic or the prop types for a new sub-part, not only before deciding whether it gets its own file —
+`list-section` (§5 in ARCHITECTURE.md) is one worked trail through those rules, not the boundary of
+where they apply.
 
 ## 0. Base UI, not Radix — read this before pasting anything
 
@@ -32,15 +53,15 @@ way**. Style names follow `{library}-{preset}`; every `add` then resolves agains
 `https://ui.shadcn.com/r/styles/base-nova/{name}.json`. If a component ever shows up importing
 `@radix-ui/*`, check `components.json`'s `style` before anything else.
 
-`src/shared/ui/button.tsx` is the reference for the cva + `data-slot`/`data-variant`/`data-size`
+`src/shared/ui/button/index.tsx` is the reference for the cva + `data-slot`/`data-variant`/`data-size`
 conventions — read it for those, never for `asChild` (retired with T052; `radix-ui` is fully
 removed from `package.json`).
 
 ## 1. Check whether it already exists
 
-Look in `src/shared/ui/` and grep for the role, not the name (`grep -ri "role=\"dialog\"" src/shared/ui`).
-**Prefer a new cva variant on an existing primitive over a new file.** A second button-shaped
-component is the most common wrong answer here.
+Look in `src/shared/ui/` and grep for the role, not the name (`grep -ri "role=\"dialog\"" src/shared/ui`
+still searches every component's folder). **Prefer a new cva variant on an existing primitive over a
+new file.** A second button-shaped component is the most common wrong answer here.
 
 ## 2. Add it with the CLI, from `apps/admin-frontend/`
 
@@ -60,6 +81,14 @@ exit code as proof the files are safe to commit unread.
 `components.json` remaps components to `@/shared/ui` and hooks to `@/shared/hooks`. Do not hand-copy
 files from the docs — you lose that rewrite and end up with `@/components/ui` imports that fail the
 path check.
+
+**The CLI writes a flat file, not a folder.** `components.json` predates the folder-per-component
+convention and still targets `shared/ui/<name>.tsx` directly. After `add` finishes, move its output
+into `shared/ui/<name>/index.tsx` yourself before the typing/style passes below — otherwise you're
+back to the flat layout the rest of `shared/ui/` deliberately moved away from. Only split out
+`<name>.types.ts` or a `components/` subfolder if the generated file actually earns one by the
+criteria in `docs/ARCHITECTURE.md` §1 — most single-component `add` output doesn't, and stays a
+folder with just `index.tsx` (same shape as `avatar/`, `badge/`, `kbd/`).
 
 **`cn` is not rewritten to `@/shared/lib/utils` by the CLI.** Every `base-nova` file imports
 `from "cn"` — a real, wrong npm package the CLI also adds to `package.json` (`"cn": "^0.2.5"`). This
@@ -146,8 +175,16 @@ behaviour belongs: **anything with logic goes in `shared/` proper** (`shared/the
 `shared/keyboard/`, a hook), where it is measured, and the primitive stays a dumb renderer of it.
 A test is still worth writing for an accessible name that a regression could silently break.
 
+**Assert the effect a prop causes, not just that passing it doesn't crash.** A test that renders with
+`align: 'end'` but never checks that anything actually right-aligned isn't testing `align` — it's
+testing that the component tolerates an extra prop. Query for the thing the prop is supposed to
+change (a class, an attribute, an accessible name) and assert on that directly.
+
 ## 7. Before you push
 
 `npm run lint && npm run format:check && npm run build && npm run test:coverage`, from
 `apps/admin-frontend/`. New visible strings are pt-BR; identifiers stay English. Every interactive
-control has an accessible name; decorative icons carry `aria-hidden`.
+control has an accessible name; decorative icons carry `aria-hidden`. If this change touched an
+existing component's `index.tsx` or anything in its `components/` folder, re-read the whole component
+— render logic, prop types, and tests — against §1's guidance before committing, not just the lines
+you changed.

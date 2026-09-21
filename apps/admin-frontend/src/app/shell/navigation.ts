@@ -1,5 +1,5 @@
 import type { LucideIcon } from 'lucide-react';
-import { CalendarDays, Home, MessageCircle, Settings, Users, Wrench } from 'lucide-react';
+import { CalendarDays, Home, MessageCircle, Settings, Tag, Users, Wrench } from 'lucide-react';
 
 export interface NavDestination {
   label: string;
@@ -14,5 +14,6 @@ export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Clientes', href: '/clientes', icon: Users, comingSoon: true },
   { label: 'Conversas', href: '/conversas', icon: MessageCircle, comingSoon: true },
   { label: 'Serviços', href: '/servicos', icon: Wrench, comingSoon: false },
+  { label: 'Etiquetas', href: '/tags', icon: Tag, comingSoon: false },
   { label: 'Ajustes', href: '/ajustes', icon: Settings, comingSoon: true },
 ];
