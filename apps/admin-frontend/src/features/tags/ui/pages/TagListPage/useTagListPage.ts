@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { useSearchParams } from 'react-router';
 import { useTopic } from '@/shared/pubsub/useTopic';
+import { ListSectionStatus } from '@/shared/ui/list-section';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { tagDeleted } from '../../../model/tagEvents';
 import type { LoadResult, UseTagListPageResult } from './useTagListPage.types';
@@ -22,7 +23,7 @@ export function useTagListPage(): UseTagListPageResult {
 
       setResult({
         query: forQuery,
-        status: apiResult.ok ? 'ready' : 'error',
+        status: apiResult.ok ? ListSectionStatus.Ready : ListSectionStatus.Error,
         tags: apiResult.ok ? apiResult.data : [],
       });
     });
@@ -46,7 +47,7 @@ export function useTagListPage(): UseTagListPageResult {
   const isCurrent = result !== null && result.query === query;
 
   return {
-    status: isCurrent ? result.status : 'loading',
+    status: isCurrent ? result.status : ListSectionStatus.Loading,
     tags: isCurrent ? result.tags : [],
     query,
     searchInputRef,

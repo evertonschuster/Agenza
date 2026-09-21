@@ -2,7 +2,7 @@ import { useLocation, useNavigate } from 'react-router';
 import { tagsRepository } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
 import { tagDeleted } from '../../../model/tagEvents';
-import type { UseTagDeletePageResult } from './useTagDeletePage.types';
+import { TagDeleteMode, type UseTagDeletePageResult } from './useTagDeletePage.types';
 
 export function useTagDeletePage(): UseTagDeletePageResult {
   const location = useLocation();
@@ -12,11 +12,11 @@ export function useTagDeletePage(): UseTagDeletePageResult {
   const backTo = { pathname: '..', search: location.search };
 
   if (!tag) {
-    return { mode: 'not-found', onClose: () => void navigate(backTo) };
+    return { mode: TagDeleteMode.NotFound, onClose: () => void navigate(backTo) };
   }
 
   return {
-    mode: 'confirming',
+    mode: TagDeleteMode.Confirming,
     tag,
     onOpenChange: (open) => {
       if (!open) void navigate(backTo);

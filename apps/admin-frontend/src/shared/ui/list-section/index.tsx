@@ -1,6 +1,6 @@
 import { ErrorState } from '@/shared/ui/error-state';
 import { cn } from '@/shared/lib/utils';
-import type { ListSectionProps } from './list-section.types';
+import { ListSectionStatus, type ListSectionProps } from './list-section.types';
 
 import { ListSectionSkeleton } from './components/list-section-skeleton';
 import { ListSectionReady } from './components/list-section-ready';
@@ -17,9 +17,9 @@ function ListSection<T>(props: ListSectionProps<T>) {
 
   return (
     <div className={cn(className)}>
-      {status === 'loading' && <ListSectionSkeleton rowCount={skeletonRowCount} />}
-      {status === 'error' && <ErrorState title="Não foi possível carregar." />}
-      {status === 'ready' && (
+      {status === ListSectionStatus.Loading && <ListSectionSkeleton rowCount={skeletonRowCount} />}
+      {status === ListSectionStatus.Error && <ErrorState title="Não foi possível carregar." />}
+      {status === ListSectionStatus.Ready && (
         <ListSectionReady items={items} getKey={getKey} renderMode={props} ariaLabel={ariaLabel} />
       )}
     </div>
@@ -27,4 +27,5 @@ function ListSection<T>(props: ListSectionProps<T>) {
 }
 
 export { ListSection };
-export type { ListSectionColumn, ListSectionProps, ListSectionStatus } from './list-section.types';
+export { ListSectionStatus } from './list-section.types';
+export type { ListSectionColumn, ListSectionProps } from './list-section.types';
