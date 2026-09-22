@@ -7,16 +7,11 @@ import { Label } from '@/shared/ui/label';
 import { Textarea } from '@/shared/ui/textarea';
 import { TAG_COLOR_PALETTE } from '../../../model/tag';
 import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH } from '../../../model/tagForm';
-import { TagNotFoundDialog } from '../../components/TagNotFoundDialog';
 import { useTagFormPage } from './useTagFormPage';
-import { TagFormMode } from './useTagFormPage.types';
 
 export function TagFormPage() {
   const state = useTagFormPage();
-
-  if (state.mode === TagFormMode.NotFound) {
-    return <TagNotFoundDialog onClose={state.onClose} />;
-  }
+  if (!state) return null;
 
   const {
     tag,

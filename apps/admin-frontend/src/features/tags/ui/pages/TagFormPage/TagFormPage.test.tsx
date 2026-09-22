@@ -274,16 +274,23 @@ describe('TagFormPage', () => {
       expect(mockList).toHaveBeenCalledTimes(1);
     });
 
-    it('shows a not-found dialog when there is no navigation state (deep link, refresh, or shared URL)', async () => {
-      const user = userEvent.setup();
+    it('shows a toast and returns to the list when there is no navigation state (deep link, refresh, or shared URL)', async () => {
+      const toastModule = await import('@/shared/ui/toast');
+      const toastAddSpy = vi.spyOn(toastModule.toast, 'add');
       renderAt(['/tags/missing-id/edit']);
 
-      expect(
-        await screen.findByRole('heading', { name: 'Etiqueta não encontrada' }),
-      ).toBeInTheDocument();
-
-      await user.click(screen.getByRole('button', { name: 'Voltar para a lista' }));
-      expect(screen.getByTestId('location')).toHaveTextContent('location: /tags');
+      await waitFor(() =>
+        expect(toastAddSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            title: 'Etiqueta não encontrada',
+            description:
+              'Ela pode ter sido excluída por outra pessoa, ou não corresponde à busca ativa.',
+          }),
+        ),
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+      );
     });
   });
 });

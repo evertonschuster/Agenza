@@ -1,30 +1,39 @@
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { tagSaved } from '../../../model/tagEvents';
 import { toTagFormErrors, validateTagForm, type TagFormErrors } from '../../../model/tagForm';
 import type { Tag } from '../../../model/tag';
-import { TagFormMode, type UseTagFormPageResult } from './useTagFormPage.types';
+import type { UseTagFormPageResult } from './useTagFormPage.types';
 
-export function useTagFormPage(): UseTagFormPageResult {
+export function useTagFormPage(): UseTagFormPageResult | null {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
   const isEditRoute = params.id !== undefined;
   const stateTag = location.state as Tag | undefined;
-  const backTo = { pathname: '..', search: location.search };
+  const notFound = isEditRoute && !stateTag;
 
-  const [color, setColor] = useState<string | null>(isEditRoute ? (stateTag?.color ?? null) : null);
+  const [color, setColor] = useState<string | null>(stateTag?.color ?? null);
   const [fieldErrors, setFieldErrors] = useState<TagFormErrors>({});
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  if (isEditRoute && !stateTag) {
-    return { mode: TagFormMode.NotFound, onClose: () => void navigate(backTo) };
-  }
+  useEffect(() => {
+    if (!notFound) return;
+    toast.add({
+      title: 'Etiqueta não encontrada',
+      description: 'Ela pode ter sido excluída por outra pessoa, ou não corresponde à busca ativa.',
+      type: 'info',
+    });
+    void navigate({ pathname: '/tags', search: location.search });
+  }, [notFound, navigate, location.search]);
+
+  if (notFound) return null;
 
   const tag = stateTag ?? null;
+  const backTo = { pathname: '/tags', search: location.search };
 
   function onOpenChange(open: boolean) {
     if (!open) void navigate(backTo);
@@ -75,7 +84,6 @@ export function useTagFormPage(): UseTagFormPageResult {
   }
 
   return {
-    mode: TagFormMode.Form,
     tag,
     color,
     onColorChange: setColor,
