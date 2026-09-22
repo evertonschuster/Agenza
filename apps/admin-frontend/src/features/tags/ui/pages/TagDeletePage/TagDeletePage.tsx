@@ -1,5 +1,5 @@
 import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
-import { TagNotFoundDialog } from './components/TagNotFoundDialog';
+import { TagNotFoundDialog } from '../../components/TagNotFoundDialog';
 import { useTagDeletePage } from './useTagDeletePage';
 import { TagDeleteMode } from './useTagDeletePage.types';
 

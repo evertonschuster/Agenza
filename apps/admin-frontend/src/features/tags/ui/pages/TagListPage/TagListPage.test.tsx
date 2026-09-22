@@ -49,6 +49,7 @@ function renderAtTagsRoute(tags: Tag[], initialEntries: string[] = ['/tags']) {
       <Routes>
         <Route path="tags" element={<TagListPage />} />
       </Routes>
+      <LocationProbe />
     </MemoryRouter>,
   );
 }
@@ -114,6 +115,48 @@ describe('TagListPage', () => {
       'href',
       '/tags/1/delete?q=promo',
     );
+  });
+
+  it('renders an edit link per row, pointing at that tag under /edit (spec US3)', async () => {
+    renderAtTagsRoute(TAGS);
+    await screen.findByText('Promoção');
+
+    const editLink = screen.getByRole('link', { name: 'Editar Promoção' });
+    expect(editLink).toHaveAttribute('href', '/tags/1/edit');
+    expect(screen.getByRole('link', { name: 'Editar VIP' })).toHaveAttribute(
+      'href',
+      '/tags/2/edit',
+    );
+  });
+
+  it("carries the active search into a row's edit link", async () => {
+    renderAtTagsRoute(TAGS, ['/tags?q=promo']);
+    await screen.findByText('Promoção');
+
+    expect(screen.getByRole('link', { name: 'Editar Promoção' })).toHaveAttribute(
+      'href',
+      '/tags/1/edit?q=promo',
+    );
+  });
+
+  it('renders a "Nova etiqueta" link pointing at /tags/new, carrying the active search (spec US2)', async () => {
+    renderAtTagsRoute(TAGS, ['/tags?q=promo']);
+    await screen.findByText('Promoção');
+
+    expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
+      'href',
+      '/tags/new?q=promo',
+    );
+  });
+
+  it('pressing "n" navigates to /tags/new (spec US2)', async () => {
+    const user = userEvent.setup();
+    renderAtTagsRoute(TAGS);
+    await screen.findByText('Promoção');
+
+    await user.keyboard('n');
+
+    expect(await screen.findByTestId('location')).toHaveTextContent('location: /tags/new');
   });
 
   it('shows a generic inline failure, not the empty-catalog message, when the initial fetch fails', async () => {

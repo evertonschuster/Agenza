@@ -1,6 +1,7 @@
 import type { CSSProperties } from 'react';
 import type { ListSectionColumn } from '@/shared/ui/list-section';
 import { TagDeleteLink } from './TagDeleteLink';
+import { TagEditLink } from './TagEditLink';
 import type { Tag } from '../../../../model/tag';
 
 export function tagColumns(): ListSectionColumn<Tag>[] {
@@ -33,7 +34,12 @@ export function tagColumns(): ListSectionColumn<Tag>[] {
       key: 'actions',
       header: 'Ações',
       align: 'end',
-      cell: (tag) => <TagDeleteLink tag={tag} />,
+      cell: (tag) => (
+        <div className="flex items-center gap-1">
+          <TagEditLink tag={tag} />
+          <TagDeleteLink tag={tag} />
+        </div>
+      ),
     },
   ];
 }
