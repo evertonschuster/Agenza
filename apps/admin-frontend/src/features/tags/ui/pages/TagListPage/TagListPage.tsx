@@ -1,13 +1,12 @@
 import { PlusIcon, SearchIcon } from 'lucide-react';
-import { Link, Outlet } from 'react-router';
-import { buttonVariants } from '@/shared/ui/button';
+import { Outlet } from 'react-router';
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
 } from '@/shared/ui/input-group';
-import { Kbd } from '@/shared/ui/kbd';
+import { LinkButton } from '@/shared/ui/link-button';
 import { ListSection } from '@/shared/ui/list-section';
 import { tagColumns } from './components/tagColumns';
 import { useTagListPage } from './useTagListPage';
@@ -20,11 +19,9 @@ export function TagListPage() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Etiquetas</h1>
-        <Link to={newTagTo} className={buttonVariants()} aria-keyshortcuts="n">
-          <PlusIcon aria-hidden="true" />
+        <LinkButton to={newTagTo} icon={PlusIcon} hint={newTagHint}>
           Nova etiqueta
-          {newTagHint.visible && <Kbd className="ml-auto">{newTagHint.displayKey}</Kbd>}
-        </Link>
+        </LinkButton>
       </div>
 
       <form onSubmit={onSearchSubmit} role="search">
