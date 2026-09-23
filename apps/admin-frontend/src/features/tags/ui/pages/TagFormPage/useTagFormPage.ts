@@ -1,9 +1,17 @@
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
+import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from '@/shared/ui/toast';
+import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { tagSaved } from '../../../model/tagEvents';
-import { toTagFormErrors, validateTagForm, type TagFormErrors } from '../../../model/tagForm';
+import {
+  TAG_FORM_FIELDS,
+  tagFormSchema,
+  type TagFormFieldValues,
+  type TagFormValues,
+} from '../../../model/tagForm';
 import type { Tag } from '../../../model/tag';
 import type { UseTagFormPageResult } from './useTagFormPage.types';
 
@@ -14,11 +22,16 @@ export function useTagFormPage(): UseTagFormPageResult | null {
   const isEditRoute = params.id !== undefined;
   const stateTag = location.state as Tag | undefined;
   const notFound = isEditRoute && !stateTag;
+  const tag = stateTag ?? null;
 
-  const [color, setColor] = useState<string | null>(stateTag?.color ?? null);
-  const [fieldErrors, setFieldErrors] = useState<TagFormErrors>({});
-  const [formError, setFormError] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
+    resolver: zodResolver(tagFormSchema),
+    defaultValues: {
+      name: tag?.name ?? '',
+      color: tag?.color ?? null,
+      description: tag?.description ?? '',
+    },
+  });
 
   useEffect(() => {
     if (!notFound) return;
@@ -32,38 +45,16 @@ export function useTagFormPage(): UseTagFormPageResult | null {
 
   if (notFound) return null;
 
-  const tag = stateTag ?? null;
   const backTo = { pathname: '/tags', search: location.search };
 
   function onOpenChange(open: boolean) {
     if (!open) void navigate(backTo);
   }
 
-  async function onSubmit(event: FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const formData = new FormData(event.currentTarget);
-    const nameValue = formData.get('name');
-    const descriptionValue = formData.get('description');
-    const name = typeof nameValue === 'string' ? nameValue : '';
-    const description = typeof descriptionValue === 'string' ? descriptionValue : '';
-
-    const validationErrors = validateTagForm({ name, color, description });
-    if (Object.keys(validationErrors).length > 0 || color === null) {
-      setFieldErrors(validationErrors);
-      setFormError(null);
-      return;
-    }
-
-    setFieldErrors({});
-    setFormError(null);
-    setIsSubmitting(true);
-
-    const input = { name: name.trim(), color, description: description.trim() || null };
+  async function onValid(values: TagFormValues) {
     const result = tag
-      ? await tagsRepository.update(tag.id, input)
-      : await tagsRepository.create(input);
-
-    setIsSubmitting(false);
+      ? await tagsRepository.update(tag.id, values)
+      : await tagsRepository.create(values);
 
     if (result.ok) {
       tagSaved.publish({ id: result.data.id });
@@ -78,19 +69,15 @@ export function useTagFormPage(): UseTagFormPageResult | null {
       return;
     }
 
-    const mapped = toTagFormErrors(result.error);
-    setFieldErrors(mapped.fieldErrors);
-    setFormError(mapped.formError);
+    applyApiProblem<TagFormFieldValues>(result.error, TAG_FORM_FIELDS, methods.setError);
   }
+
+  const handleValidSubmit = methods.handleSubmit(onValid);
 
   return {
     tag,
-    color,
-    onColorChange: setColor,
-    fieldErrors,
-    formError,
-    isSubmitting,
+    methods,
     onOpenChange,
-    onSubmit: (event) => void onSubmit(event),
+    onSubmit: (event) => void handleValidSubmit(event),
   };
 }
