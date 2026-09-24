@@ -15,7 +15,6 @@ export interface FormFieldProps {
   label: string;
   hint?: string | undefined;
   error?: string | undefined;
-  /** false quando o controle não aceita `id`/`htmlFor` (ex.: um radiogroup). Default: true. */
   labelHtmlFor?: boolean | undefined;
   children: (controlProps: FormFieldControlProps) => ReactNode;
 }

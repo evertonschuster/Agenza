@@ -29,13 +29,9 @@ export const tagFormSchema = z.object({
       TAG_DESCRIPTION_MAX_LENGTH,
       `A descrição da etiqueta deve ter no máximo ${TAG_DESCRIPTION_MAX_LENGTH} caracteres.`,
     )
-    // Empty or whitespace-only means "no description" on the wire, not the literal empty string.
     .transform((value) => value || null),
 });
 
-// The form's own fields are typed by the schema's *input* shape (before .transform/.refine
-// narrow it) — that's what register()/Controller/defaultValues actually hold. onSubmit receives
-// the *output* shape (after Zod has run), which is what the repository expects.
 export type TagFormFieldValues = z.input<typeof tagFormSchema>;
 export type TagFormValues = z.output<typeof tagFormSchema>;
 

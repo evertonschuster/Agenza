@@ -1,7 +1,7 @@
-import { AlertCircleIcon } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { FormErrorBanner } from '@/shared/ui/form-field';
 import { TAG_COLOR_PALETTE } from '../../../model/tag';
 import {
   TAG_DESCRIPTION_MAX_LENGTH,
@@ -17,7 +17,7 @@ export function TagFormPage() {
   if (!state) return null;
 
   const { tag, methods, onOpenChange, onSubmit } = state;
-  const { errors, isSubmitting } = methods.formState;
+  const { isSubmitting } = methods.formState;
   const isEdit = tag !== null;
 
   return (
@@ -30,15 +30,7 @@ export function TagFormPage() {
             </DialogHeader>
 
             <div className="space-y-4">
-              {errors.root?.serverError && (
-                <div
-                  role="alert"
-                  className="flex items-start gap-2 rounded-md border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
-                >
-                  <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-                  <span>{errors.root.serverError.message}</span>
-                </div>
-              )}
+              <FormErrorBanner />
 
               <TagTextField
                 name="name"
