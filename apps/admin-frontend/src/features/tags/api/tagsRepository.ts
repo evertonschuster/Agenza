@@ -15,6 +15,10 @@ function list(search?: string, signal?: AbortSignal): Promise<ApiResult<Tag[]>> 
   });
 }
 
+function get(id: string): Promise<ApiResult<Tag>> {
+  return servicesApi.get('/api/v{version}/tags/{id}', { path: { id } });
+}
+
 function create(input: TagInput): Promise<ApiResult<Tag>> {
   return servicesApi.post('/api/v{version}/tags', { body: input });
 }
@@ -30,4 +34,4 @@ function deleteTag(id: string): Promise<ApiResult<void>> {
   return servicesApi.del('/api/v{version}/tags/{id}', { path: { id } });
 }
 
-export const tagsRepository = { list, create, update, delete: deleteTag };
+export const tagsRepository = { list, get, create, update, delete: deleteTag };

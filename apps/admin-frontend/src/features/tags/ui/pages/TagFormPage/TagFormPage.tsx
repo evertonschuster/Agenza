@@ -1,7 +1,7 @@
 import { FormProvider } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { FormErrorBanner } from '@/shared/ui/form-field';
+import { FormErrorBanner, FormFieldsSkeleton } from '@/shared/ui/form-field';
 import { TAG_COLOR_PALETTE } from '../../../model/tag';
 import {
   TAG_DESCRIPTION_MAX_LENGTH,
@@ -15,6 +15,27 @@ import { useTagFormPage } from './useTagFormPage';
 export function TagFormPage() {
   const state = useTagFormPage();
   if (!state) return null;
+
+  if (state.status === 'loading') {
+    return (
+      <Dialog open onOpenChange={state.onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Editar etiqueta</DialogTitle>
+          </DialogHeader>
+          <FormFieldsSkeleton fieldCount={3} />
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => state.onOpenChange(false)}>
+              Cancelar
+            </Button>
+            <Button type="button" disabled>
+              Salvar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    );
+  }
 
   const { tag, methods, onOpenChange, onSubmit } = state;
   const { isSubmitting } = methods.formState;

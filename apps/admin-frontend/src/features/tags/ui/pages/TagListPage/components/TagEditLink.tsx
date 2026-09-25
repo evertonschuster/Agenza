@@ -13,7 +13,6 @@ function TagEditLink({ tag }: TagEditLinkProps) {
   return (
     <Link
       to={{ pathname: `${tag.id}/edit`, search: location.search }}
-      state={tag}
       className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
       aria-label={`Editar ${tag.name}`}
     >

@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -19,37 +19,58 @@ export function useTagFormPage(): UseTagFormPageResult | null {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
-  const isEditRoute = params.id !== undefined;
-  const stateTag = location.state as Tag | undefined;
-  const notFound = isEditRoute && !stateTag;
-  const tag = stateTag ?? null;
+  const id = params.id;
+  const isEditRoute = id !== undefined;
+  const backTo = { pathname: '/tags', search: location.search };
+
+  const [tag, setTag] = useState<Tag | null>(null);
+  const [phase, setPhase] = useState<'loading' | 'ready' | 'redirecting'>(
+    isEditRoute ? 'loading' : 'ready',
+  );
 
   const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
     resolver: zodResolver(tagFormSchema),
-    defaultValues: {
-      name: tag?.name ?? '',
-      color: tag?.color ?? null,
-      description: tag?.description ?? '',
-    },
+    defaultValues: { name: '', color: null, description: '' },
   });
-
-  useEffect(() => {
-    if (!notFound) return;
-    toast.add({
-      title: 'Etiqueta não encontrada',
-      description: 'Ela pode ter sido excluída por outra pessoa, ou não corresponde à busca ativa.',
-      type: 'info',
-    });
-    void navigate({ pathname: '/tags', search: location.search });
-  }, [notFound, navigate, location.search]);
-
-  if (notFound) return null;
-
-  const backTo = { pathname: '/tags', search: location.search };
 
   function onOpenChange(open: boolean) {
     if (!open) void navigate(backTo);
   }
+
+  useEffect(() => {
+    if (!id) return;
+    let ignore = false;
+
+    void tagsRepository.get(id).then((result) => {
+      if (ignore) return;
+
+      if (result.ok) {
+        setTag(result.data);
+        methods.reset({
+          name: result.data.name,
+          color: result.data.color,
+          description: result.data.description ?? '',
+        });
+        setPhase('ready');
+        return;
+      }
+
+      setPhase('redirecting');
+      toast.add({
+        title: 'Não foi possível abrir a etiqueta',
+        description: result.error.title ?? undefined,
+        type: 'info',
+      });
+      void navigate({ pathname: '/tags', search: location.search });
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, [id, location.search, methods, navigate]);
+
+  if (phase === 'redirecting') return null;
+  if (phase === 'loading') return { status: 'loading', onOpenChange };
 
   async function onValid(values: TagFormValues) {
     const result = tag
@@ -75,6 +96,7 @@ export function useTagFormPage(): UseTagFormPageResult | null {
   const handleValidSubmit = methods.handleSubmit(onValid);
 
   return {
+    status: 'ready',
     tag,
     methods,
     onOpenChange,

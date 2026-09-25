@@ -10,9 +10,6 @@ export interface TagColorOption {
   label: string;
 }
 
-// Mirrors ServicesService.Domain.ValueObjects.TagColor.Palette exactly (backend source, verified
-// this session) — duplicated by necessity, since the frontend can't import backend C#. Keep in
-// sync by hand if the backend palette ever changes.
 export const TAG_COLOR_PALETTE: readonly TagColorOption[] = [
   { value: '#0d9488', label: 'Verde-azulado' },
   { value: '#0ea5e9', label: 'Azul' },

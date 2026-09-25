@@ -18,7 +18,7 @@ unproven with only one consumer.
 | --- | --- | --- |
 | Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
 | RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem<T>(problem, fields, setError)` — calls the above, then `setError` per field plus `setError('root.serverError', …)`. Knows both shapes; the only file that does. |
-| Field components | `shared/ui/form-field/` | `FormField` (base), `TextField`/`TextareaField`, `ControlledField`, `ColorField`. Presentational + RHF wiring, zero domain knowledge — same "no business logic" rule as the rest of `shared/ui/` (`agenza-ui-primitive`), just now also RHF-aware. |
+| Field components | `shared/ui/form-field/` | `FormField` (base), `TextField`/`TextareaField`, `ControlledField`, `ColorField`, `FormErrorBanner`. Presentational + RHF wiring, zero domain knowledge — same "no business logic" rule as the rest of `shared/ui/` (`agenza-ui-primitive`), just now also RHF-aware. |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (PascalCase
 keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s
@@ -64,8 +64,9 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    `@typescript-eslint/no-misused-promises`. `tsc` alone won't catch this; only `npm run lint` will.
 
 4. **The page shell** wraps its `<form>` in `<FormProvider {...methods}>` — every field component reads
-   `register`/`control`/`errors` via `useFormContext()`, not as props. A form-level error renders from
-   `methods.formState.errors.root?.serverError?.message`.
+   `register`/`control`/`errors` via `useFormContext()`, not as props. A form-level error is
+   `<FormErrorBanner />` — no props, it reads `root.serverError` from context itself and renders
+   nothing when there isn't one.
 
 5. **Fields are configuration**, not markup:
    ```tsx
@@ -75,6 +76,35 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    A native-input field (`register()`-bound) is `TextField`/`TextareaField`. A custom control needs
    `ControlledField` (pass a render function) or a named specialization built on top of it, per the
    rule below.
+
+## Editing an existing entity: fetch fresh, don't trust what the list already had
+
+An edit route fetches its own record from the backend on mount — it does not reuse whatever the list
+row happened to be holding (router navigation state, a cached list item). The list might be stale
+(paginated, or changed by someone else since); the edit form's job is to show what the backend has
+*now*. The hook's return type is a discriminated union with a `'loading'` member so the page can show
+a real loading state instead of either blank fields or briefly-wrong ones:
+
+```ts
+export type UseXFormPageResult =
+  | { status: 'loading'; onOpenChange: (open: boolean) => void }
+  | { status: 'ready'; methods: UseFormReturn<XFormFieldValues, unknown, XFormValues>; /* … */ };
+```
+
+`useForm`'s own `defaultValues` are captured once, synchronously, at mount — they can't wait for an
+async fetch. Fetch in a `useEffect` keyed on the id (the same `ignore`-flag-in-cleanup shape every
+other one-shot fetch in this app uses), and call `methods.reset(values)` once it resolves; don't reach
+for RHF's async-`defaultValues`-promise feature — it doesn't compose with this app's `ApiResult`
+never-throws model, and every other fetch here is a plain effect + explicit status, not a
+framework-owned loading flag. A failed fetch (not-found, or any other `ApiProblem`) is not an inline
+error state — same as everywhere else in this app that fetches, it toasts the backend's own `title`
+verbatim and navigates back, no retry affordance.
+
+The page renders `<FormFieldsSkeleton fieldCount={N} />` for the `'loading'` branch — one label+control
+skeleton row per field, matching `list-section`'s own skeleton convention (`aria-busy`, `aria-live`).
+Keep the dialog's Cancelar button working during loading (own `onOpenChange`, not gated on the form
+being ready) — the person should never be stuck in a dialog they can't close because a fetch hasn't
+resolved yet.
 
 ## When to build a new `XField` specialization vs. use `ControlledField` directly
 
@@ -130,7 +160,8 @@ function Harness({ withError = false }: { withError?: boolean }) {
 }
 ```
 
-Worked examples: `text-fields.test.tsx`, `controlled-field.test.tsx`, `color-field.test.tsx` in
+Worked examples: `text-fields.test.tsx`, `controlled-field.test.tsx`, `color-field.test.tsx`,
+`form-error-banner.test.tsx` in
 `shared/ui/form-field/components/`. A dummy `FieldValues` shape local to the test file is enough —
 these components are generic, so a real entity's schema is never needed to test them.
 

@@ -1,15 +1,37 @@
 import { describe, expect, it, vi } from 'vitest';
 import { tagsRepository } from './tagsRepository';
 
-const { mockDel, mockPost, mockPut } = vi.hoisted(() => ({
+const { mockDel, mockGet, mockPost, mockPut } = vi.hoisted(() => ({
   mockDel: vi.fn(),
+  mockGet: vi.fn(),
   mockPost: vi.fn(),
   mockPut: vi.fn(),
 }));
 
 vi.mock('@/shared/api/servicesApi', () => ({
-  servicesApi: { del: mockDel, post: mockPost, put: mockPut },
+  servicesApi: { del: mockDel, get: mockGet, post: mockPost, put: mockPut },
 }));
+
+describe('tagsRepository.get', () => {
+  it('sends the id as a path param to GET /tags/{id} and forwards the result verbatim', async () => {
+    const tag = { id: '1', name: 'Promoção', color: '#f59e0b', description: null };
+    mockGet.mockResolvedValue({ ok: true, data: tag });
+
+    const result = await tagsRepository.get('1');
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v{version}/tags/{id}', { path: { id: '1' } });
+    expect(result).toEqual({ ok: true, data: tag });
+  });
+
+  it('forwards a failed result verbatim (e.g. not found)', async () => {
+    const error = { status: 404, code: 'Tag.NotFound', title: "Etiqueta '1' não foi encontrada." };
+    mockGet.mockResolvedValue({ ok: false, error });
+
+    const result = await tagsRepository.get('1');
+
+    expect(result).toEqual({ ok: false, error });
+  });
+});
 
 describe('tagsRepository.create', () => {
   it('posts name/color/description to POST /tags and forwards the result verbatim', async () => {

@@ -49,3 +49,7 @@ export interface ColorFieldProps<T extends FieldValues> {
   options: readonly ColorSwatchPickerOption[];
   hint?: string | undefined;
 }
+
+export interface FormFieldsSkeletonProps {
+  fieldCount: number;
+}

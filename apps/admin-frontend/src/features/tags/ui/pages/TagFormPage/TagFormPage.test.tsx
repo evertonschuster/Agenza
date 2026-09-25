@@ -6,14 +6,15 @@ import { TagListPage } from '../TagListPage/TagListPage';
 import { TagFormPage } from './TagFormPage';
 import type { Tag } from '../../../model/tag';
 
-const { mockList, mockCreate, mockUpdate } = vi.hoisted(() => ({
+const { mockList, mockGet, mockCreate, mockUpdate } = vi.hoisted(() => ({
   mockList: vi.fn(),
+  mockGet: vi.fn(),
   mockCreate: vi.fn(),
   mockUpdate: vi.fn(),
 }));
 
 vi.mock('../../../api/tagsRepository', () => ({
-  tagsRepository: { list: mockList, create: mockCreate, update: mockUpdate },
+  tagsRepository: { list: mockList, get: mockGet, create: mockCreate, update: mockUpdate },
 }));
 
 const TAGS: Tag[] = [
@@ -44,6 +45,21 @@ describe('TagFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockList.mockResolvedValue({ ok: true, data: TAGS });
+    mockGet.mockImplementation((id: string) => {
+      const tag = TAGS.find((candidate) => candidate.id === id);
+      return Promise.resolve(
+        tag
+          ? { ok: true, data: tag }
+          : {
+              ok: false,
+              error: {
+                status: 404,
+                code: 'Tag.NotFound',
+                title: `Etiqueta '${id}' não foi encontrada.`,
+              },
+            },
+      );
+    });
   });
 
   describe('create mode (/tags/new)', () => {
@@ -187,7 +203,42 @@ describe('TagFormPage', () => {
   });
 
   describe('edit mode (/tags/:id/edit)', () => {
-    it('opens pre-filled with the clicked tag, titled "Editar etiqueta"', async () => {
+    it('shows a loading skeleton while the tag is being fetched, then reveals the form', async () => {
+      const user = userEvent.setup();
+      let resolveGet!: (result: { ok: true; data: Tag }) => void;
+      mockGet.mockReturnValue(new Promise((resolve) => (resolveGet = resolve)));
+
+      renderAt(['/tags']);
+      await screen.findByText('Promoção');
+      await user.click(screen.getByRole('link', { name: 'Editar Promoção' }));
+
+      expect(await screen.findByRole('heading', { name: 'Editar etiqueta' })).toBeInTheDocument();
+      expect(screen.queryByLabelText('Nome')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+
+      resolveGet({ ok: true, data: TAGS[0]! });
+
+      expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    });
+
+    it('closes back to the list when Cancelar is clicked while still loading', async () => {
+      const user = userEvent.setup();
+      mockGet.mockReturnValue(new Promise(() => {}));
+
+      renderAt(['/tags']);
+      await screen.findByText('Promoção');
+      await user.click(screen.getByRole('link', { name: 'Editar Promoção' }));
+      await screen.findByRole('heading', { name: 'Editar etiqueta' });
+
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+      );
+    });
+
+    it('opens pre-filled with the fetched tag, titled "Editar etiqueta" (fresh from the backend, not the clicked row)', async () => {
       const user = userEvent.setup();
       renderAt(['/tags']);
       await screen.findByText('Promoção');
@@ -195,9 +246,10 @@ describe('TagFormPage', () => {
       await user.click(screen.getByRole('link', { name: 'Editar Promoção' }));
 
       expect(await screen.findByRole('heading', { name: 'Editar etiqueta' })).toBeInTheDocument();
-      expect(screen.getByLabelText('Nome')).toHaveValue('Promoção');
+      expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
       expect(screen.getByLabelText('Descrição')).toHaveValue('Desconto temporário');
       expect(screen.getByRole('radio', { name: 'Âmbar' })).toHaveAttribute('aria-checked', 'true');
+      expect(mockGet).toHaveBeenCalledWith('1');
     });
 
     it('saves the change, refreshes the list and returns to /tags on success (spec US3 scenario 1)', async () => {
@@ -216,7 +268,7 @@ describe('TagFormPage', () => {
       await user.click(screen.getByRole('link', { name: 'Editar Promoção' }));
       await screen.findByRole('heading', { name: 'Editar etiqueta' });
 
-      const nameInput = screen.getByLabelText('Nome');
+      const nameInput = await screen.findByLabelText('Nome');
       await user.clear(nameInput);
       await user.type(nameInput, 'Promo relâmpago');
       mockList.mockResolvedValue({
@@ -263,7 +315,7 @@ describe('TagFormPage', () => {
       await user.click(screen.getByRole('link', { name: 'Editar Promoção' }));
       await screen.findByRole('heading', { name: 'Editar etiqueta' });
 
-      const nameInput = screen.getByLabelText('Nome');
+      const nameInput = await screen.findByLabelText('Nome');
       await user.clear(nameInput);
       await user.type(nameInput, 'VIP');
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
@@ -274,7 +326,7 @@ describe('TagFormPage', () => {
       expect(mockList).toHaveBeenCalledTimes(1);
     });
 
-    it('shows a toast and returns to the list when there is no navigation state (deep link, refresh, or shared URL)', async () => {
+    it('shows a toast with the backend message and returns to the list on a real 404 (deep link, refresh, shared URL, or a tag deleted meanwhile)', async () => {
       const toastModule = await import('@/shared/ui/toast');
       const toastAddSpy = vi.spyOn(toastModule.toast, 'add');
       renderAt(['/tags/missing-id/edit']);
@@ -282,9 +334,8 @@ describe('TagFormPage', () => {
       await waitFor(() =>
         expect(toastAddSpy).toHaveBeenCalledWith(
           expect.objectContaining({
-            title: 'Etiqueta não encontrada',
-            description:
-              'Ela pode ter sido excluída por outra pessoa, ou não corresponde à busca ativa.',
+            title: 'Não foi possível abrir a etiqueta',
+            description: "Etiqueta 'missing-id' não foi encontrada.",
           }),
         ),
       );
