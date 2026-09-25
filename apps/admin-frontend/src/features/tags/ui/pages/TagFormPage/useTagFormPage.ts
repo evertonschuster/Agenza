@@ -13,7 +13,7 @@ import {
   type TagFormValues,
 } from '../../../model/tagForm';
 import type { Tag } from '../../../model/tag';
-import type { UseTagFormPageResult } from './useTagFormPage.types';
+import { TagFormStatus, type UseTagFormPageResult } from './useTagFormPage.types';
 
 export function useTagFormPage(): UseTagFormPageResult {
   const location = useLocation();
@@ -24,7 +24,9 @@ export function useTagFormPage(): UseTagFormPageResult {
   const backTo = { pathname: '/tags', search: location.search };
 
   const [tag, setTag] = useState<Tag | null>(null);
-  const [phase, setPhase] = useState<'loading' | 'ready'>(isEditRoute ? 'loading' : 'ready');
+  const [phase, setPhase] = useState<TagFormStatus>(
+    isEditRoute ? TagFormStatus.Loading : TagFormStatus.Ready,
+  );
 
   const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
     resolver: zodResolver(tagFormSchema),
@@ -49,7 +51,7 @@ export function useTagFormPage(): UseTagFormPageResult {
           color: result.data.color,
           description: result.data.description ?? '',
         });
-        setPhase('ready');
+        setPhase(TagFormStatus.Ready);
         return;
       }
 

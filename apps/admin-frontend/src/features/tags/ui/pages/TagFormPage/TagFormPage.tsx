@@ -5,10 +5,11 @@ import { TagFormBody } from './components/TagFormBody';
 import { TagFormFooter } from './components/TagFormFooter';
 import { TagFormHeader } from './components/TagFormHeader';
 import { useTagFormPage } from './useTagFormPage';
+import { TagFormStatus } from './useTagFormPage.types';
 
 export function TagFormPage() {
   const { status, tag, methods, onOpenChange, onSubmit } = useTagFormPage();
-  const isLoading = status === 'loading';
+  const isLoading = status === TagFormStatus.Loading;
   const isEdit = isLoading || tag !== null;
 
   return (
