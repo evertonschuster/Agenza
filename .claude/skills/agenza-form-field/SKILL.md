@@ -36,15 +36,7 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    **Use `z.input`/`z.output`, never a single `z.infer`, the moment the schema has a `.refine()` or
    `.transform()`.** See Gotcha 1 below — this is not optional once either is present.
 
-2. **Type-instantiate the field components once**, next to the schema:
-   ```ts
-   export const XTextField = TextField<XFormFieldValues>;
-   export const XColorField = ColorField<XFormFieldValues>; // or ControlledField, if no specialization fits yet
-   ```
-   Pure type specialization, zero runtime cost — this is what lets `<XTextField name="…" label="…">`
-   work with no generic argument at every call site.
-
-3. **The page's hook** (`use<X>FormPage.ts`) calls RHF directly:
+2. **The page's hook** (`use<X>FormPage.ts`) calls RHF directly:
    ```ts
    const methods = useForm<XFormFieldValues, unknown, XFormValues>({
      resolver: zodResolver(xFormSchema),
@@ -63,17 +55,25 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    (a `Promise`-returning function) directly to `onSubmit` trips
    `@typescript-eslint/no-misused-promises`. `tsc` alone won't catch this; only `npm run lint` will.
 
-4. **The page shell** wraps its `<form>` in `<FormProvider {...methods}>` — every field component reads
+3. **The page shell** wraps its `<form>` in `<FormProvider {...methods}>` — every field component reads
    `register`/`control`/`errors` via `useFormContext()`, not as props. A form-level error is
    `<FormErrorBanner />` — no props, it reads `root.serverError` from context itself and renders
    nothing when there isn't one.
 
-5. **Fields are configuration**, not markup:
+4. **Fields are configuration**, not markup. Import the generic components straight from
+   `shared/ui/form-field` — there's no per-entity instantiation step — and give each one the form's
+   field-values type as an explicit JSX type argument:
    ```tsx
-   <XTextField name="name" label="Nome" hint="…" maxLength={40} placeholder="…" />
-   <XColorField name="color" label="Cor" aria-label="Cor…" options={PALETTE} />
+   import { ColorField, TextField } from '@/shared/ui/form-field';
+   import type { XFormFieldValues } from '../../model/xForm';
+
+   <TextField<XFormFieldValues> name="name" label="Nome" hint="…" maxLength={40} placeholder="…" />
+   <ColorField<XFormFieldValues> name="color" label="Cor" aria-label="Cor…" options={PALETTE} />
    ```
-   A native-input field (`register()`-bound) is `TextField`/`TextareaField`. A custom control needs
+   The type argument is what makes `name` type-check against `Path<XFormFieldValues>` — a bare
+   `<TextField name="name" …>` with no argument still compiles (`T` falls back to the unconstrained
+   `FieldValues`), but silently accepts any string as `name`, losing the one thing worth keeping. A
+   native-input field (`register()`-bound) is `TextField`/`TextareaField`. A custom control needs
    `ControlledField` (pass a render function) or a named specialization built on top of it, per the
    rule below.
 

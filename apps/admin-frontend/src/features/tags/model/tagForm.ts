@@ -1,6 +1,5 @@
 import { z } from 'zod';
 import type { Path } from 'react-hook-form';
-import { ColorField, TextField, TextareaField } from '@/shared/ui/form-field';
 
 // Mirrors backend length limits (ServicesService.Domain.Entities.Tag.NameMaxLength /
 // DescriptionMaxLength) so the maxLength attributes and messages below match what the backend
@@ -40,7 +39,3 @@ export type TagFormValues = z.output<typeof tagFormSchema>;
 export const TAG_FORM_FIELDS = Object.keys(
   tagFormSchema.shape,
 ) as readonly Path<TagFormFieldValues>[];
-
-export const TagTextField = TextField<TagFormFieldValues>;
-export const TagTextareaField = TextareaField<TagFormFieldValues>;
-export const TagColorField = ColorField<TagFormFieldValues>;
