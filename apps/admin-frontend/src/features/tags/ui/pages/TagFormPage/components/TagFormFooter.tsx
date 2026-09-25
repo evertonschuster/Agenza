@@ -1,20 +1,19 @@
 import { Loader2Icon } from 'lucide-react';
+import { useFormState } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
-import { DialogFooter } from '@/shared/ui/dialog';
+import { DialogClose, DialogFooter } from '@/shared/ui/dialog';
 
 interface TagFormFooterProps {
-  onCancel: () => void;
-  submitDisabled: boolean;
-  isSubmitting: boolean;
+  isLoading: boolean;
 }
 
-function TagFormFooter({ onCancel, submitDisabled, isSubmitting }: TagFormFooterProps) {
+function TagFormFooter({ isLoading }: TagFormFooterProps) {
+  const { isSubmitting } = useFormState();
+
   return (
     <DialogFooter>
-      <Button type="button" variant="outline" onClick={onCancel}>
-        Cancelar
-      </Button>
-      <Button type="submit" disabled={submitDisabled}>
+      <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
+      <Button type="submit" disabled={isLoading || isSubmitting}>
         {isSubmitting && <Loader2Icon aria-hidden="true" className="animate-spin" />}
         {isSubmitting ? 'Salvando…' : 'Salvar'}
       </Button>

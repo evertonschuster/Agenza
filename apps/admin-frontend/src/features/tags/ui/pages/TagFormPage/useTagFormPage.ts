@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -12,30 +12,25 @@ import {
   type TagFormFieldValues,
   type TagFormValues,
 } from '../../../model/tagForm';
-import type { Tag } from '../../../model/tag';
 import { TagFormStatus, type UseTagFormPageResult } from './useTagFormPage.types';
 
 export function useTagFormPage(): UseTagFormPageResult {
+  const { id } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const params = useParams();
-  const id = params.id;
-  const isEditRoute = id !== undefined;
-  const backTo = { pathname: '/tags', search: location.search };
-
-  const [tag, setTag] = useState<Tag | null>(null);
-  const [phase, setPhase] = useState<TagFormStatus>(
-    isEditRoute ? TagFormStatus.Loading : TagFormStatus.Ready,
-  );
+  const [loadedId, setLoadedId] = useState<string>();
+  const isEdit = id !== undefined;
+  const isLoading = isEdit && loadedId !== id;
 
   const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
     resolver: zodResolver(tagFormSchema),
     defaultValues: { name: '', color: null, description: '' },
   });
 
-  function onOpenChange(open: boolean) {
-    if (!open) void navigate(backTo);
-  }
+  const close = useCallback(
+    () => void navigate({ pathname: '/tags', search: location.search }),
+    [navigate, location.search],
+  );
 
   useEffect(() => {
     if (!id) return;
@@ -45,13 +40,12 @@ export function useTagFormPage(): UseTagFormPageResult {
       if (ignore) return;
 
       if (result.ok) {
-        setTag(result.data);
         methods.reset({
           name: result.data.name,
           color: result.data.color,
           description: result.data.description ?? '',
         });
-        setPhase(TagFormStatus.Ready);
+        setLoadedId(id);
         return;
       }
 
@@ -60,29 +54,29 @@ export function useTagFormPage(): UseTagFormPageResult {
         description: result.error.title ?? undefined,
         type: 'info',
       });
-      void navigate({ pathname: '/tags', search: location.search });
+      close();
     });
 
     return () => {
       ignore = true;
     };
-  }, [id, location.search, methods, navigate]);
+  }, [id, methods, close]);
 
   async function onValid(values: TagFormValues) {
-    const result = tag
-      ? await tagsRepository.update(tag.id, values)
+    const result = isEdit
+      ? await tagsRepository.update(id, values)
       : await tagsRepository.create(values);
 
     if (result.ok) {
       tagSaved.publish({ id: result.data.id });
       toast.add({
-        title: tag ? 'Etiqueta atualizada' : 'Etiqueta criada',
-        description: tag
+        title: isEdit ? 'Etiqueta atualizada' : 'Etiqueta criada',
+        description: isEdit
           ? `"${result.data.name}" foi atualizada.`
           : `"${result.data.name}" foi adicionada ao catálogo.`,
         type: 'success',
       });
-      void navigate(backTo);
+      close();
       return;
     }
 
@@ -92,10 +86,12 @@ export function useTagFormPage(): UseTagFormPageResult {
   const handleValidSubmit = methods.handleSubmit(onValid);
 
   return {
-    status: phase,
-    tag,
+    status: isLoading ? TagFormStatus.Loading : TagFormStatus.Ready,
+    isEdit,
     methods,
-    onOpenChange,
+    onOpenChange: (open) => {
+      if (!open) close();
+    },
     onSubmit: (event) => void handleValidSubmit(event),
   };
 }

@@ -1,10 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import {
+  createMemoryRouter,
+  MemoryRouter,
+  Outlet,
+  Route,
+  RouterProvider,
+  Routes,
+  useLocation,
+} from 'react-router';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagFormPage } from './TagFormPage';
 import type { Tag } from '../../../model/tag';
+import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH } from '../../../model/tagForm';
 
 const { mockList, mockGet, mockCreate, mockUpdate } = vi.hoisted(() => ({
   mockList: vi.fn(),
@@ -159,6 +168,22 @@ describe('TagFormPage', () => {
       );
     });
 
+    it(`caps typing at ${TAG_NAME_MAX_LENGTH} characters for the name and ${TAG_DESCRIPTION_MAX_LENGTH} for the description (spec FR-005)`, async () => {
+      const user = userEvent.setup();
+      renderAt(['/tags/new']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.click(screen.getByLabelText('Nome'));
+      await user.paste('a'.repeat(TAG_NAME_MAX_LENGTH + 1));
+      await user.click(screen.getByLabelText('Descrição'));
+      await user.paste('b'.repeat(TAG_DESCRIPTION_MAX_LENGTH + 1));
+
+      expect(screen.getByLabelText('Nome')).toHaveValue('a'.repeat(TAG_NAME_MAX_LENGTH));
+      expect(screen.getByLabelText('Descrição')).toHaveValue(
+        'b'.repeat(TAG_DESCRIPTION_MAX_LENGTH),
+      );
+    });
+
     it('shows a duplicate-name conflict verbatim as a form-level banner, without navigating away (spec US2 scenario 3)', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue({
@@ -274,6 +299,40 @@ describe('TagFormPage', () => {
       expect(screen.getByLabelText('Descrição')).toHaveValue('Desconto temporário');
       expect(screen.getByRole('radio', { name: 'Âmbar' })).toHaveAttribute('aria-checked', 'true');
       expect(mockGet).toHaveBeenCalledWith('1');
+    });
+
+    it('goes back to loading and saves to the new tag when the route switches ids without remounting the page', async () => {
+      const user = userEvent.setup();
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/tags',
+            element: <Outlet />,
+            children: [{ path: ':id/edit', element: <TagFormPage /> }],
+          },
+        ],
+        { initialEntries: ['/tags/1/edit'] },
+      );
+      render(<RouterProvider router={router} />);
+      expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
+
+      let resolveGet!: (result: { ok: true; data: Tag }) => void;
+      mockGet.mockReturnValueOnce(new Promise((resolve) => (resolveGet = resolve)));
+      await act(() => router.navigate('/tags/2/edit'));
+
+      expect(screen.queryByLabelText('Nome')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+
+      resolveGet({ ok: true, data: TAGS[1]! });
+      expect(await screen.findByLabelText('Nome')).toHaveValue('VIP');
+
+      mockUpdate.mockResolvedValue({ ok: true, data: TAGS[1] });
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+      expect(mockUpdate).toHaveBeenCalledWith('2', {
+        name: 'VIP',
+        color: '#8b5cf6',
+        description: null,
+      });
     });
 
     it('saves the change, refreshes the list and returns to /tags on success (spec US3 scenario 1)', async () => {

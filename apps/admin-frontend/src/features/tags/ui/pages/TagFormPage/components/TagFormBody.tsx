@@ -31,6 +31,7 @@ function TagFormBody() {
         name="description"
         label="Descrição"
         hint={`opcional · até ${TAG_DESCRIPTION_MAX_LENGTH} caracteres`}
+        maxLength={TAG_DESCRIPTION_MAX_LENGTH}
         placeholder="Para que serve esta etiqueta?"
       />
     </div>
