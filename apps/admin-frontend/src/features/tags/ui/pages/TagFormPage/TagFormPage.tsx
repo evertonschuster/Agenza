@@ -1,90 +1,31 @@
 import { FormProvider } from 'react-hook-form';
-import { Button } from '@/shared/ui/button';
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-import { FormErrorBanner, FormFieldsSkeleton } from '@/shared/ui/form-field';
-import { TAG_COLOR_PALETTE } from '../../../model/tag';
-import {
-  TAG_DESCRIPTION_MAX_LENGTH,
-  TAG_NAME_MAX_LENGTH,
-  TagColorField,
-  TagTextField,
-  TagTextareaField,
-} from '../../../model/tagForm';
+import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { FormFieldsSkeleton } from '@/shared/ui/form-field';
+import { TagFormBody } from './components/TagFormBody';
+import { TagFormFooter } from './components/TagFormFooter';
+import { TagFormHeader } from './components/TagFormHeader';
 import { useTagFormPage } from './useTagFormPage';
 
 export function TagFormPage() {
   const state = useTagFormPage();
   if (!state) return null;
 
-  if (state.status === 'loading') {
-    return (
-      <Dialog open onOpenChange={state.onOpenChange}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Editar etiqueta</DialogTitle>
-          </DialogHeader>
-          <FormFieldsSkeleton fieldCount={3} />
-          <DialogFooter>
-            <Button type="button" variant="outline" onClick={() => state.onOpenChange(false)}>
-              Cancelar
-            </Button>
-            <Button type="button" disabled>
-              Salvar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    );
-  }
-
-  const { tag, methods, onOpenChange, onSubmit } = state;
-  const { isSubmitting } = methods.formState;
-  const isEdit = tag !== null;
+  const { status, tag, methods, onOpenChange, onSubmit } = state;
+  const isLoading = status === 'loading';
+  const isEdit = isLoading || tag !== null;
 
   return (
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent>
         <FormProvider {...methods}>
           <form onSubmit={onSubmit} className="contents">
-            <DialogHeader>
-              <DialogTitle>{isEdit ? 'Editar etiqueta' : 'Nova etiqueta'}</DialogTitle>
-            </DialogHeader>
-
-            <div className="space-y-4">
-              <FormErrorBanner />
-
-              <TagTextField
-                name="name"
-                label="Nome"
-                hint={`até ${TAG_NAME_MAX_LENGTH} caracteres`}
-                maxLength={TAG_NAME_MAX_LENGTH}
-                placeholder="Ex.: Promoção"
-                autoComplete="off"
-              />
-
-              <TagColorField
-                name="color"
-                label="Cor"
-                aria-label="Cor da etiqueta"
-                options={TAG_COLOR_PALETTE}
-              />
-
-              <TagTextareaField
-                name="description"
-                label="Descrição"
-                hint={`opcional · até ${TAG_DESCRIPTION_MAX_LENGTH} caracteres`}
-                placeholder="Para que serve esta etiqueta?"
-              />
-            </div>
-
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
-                Cancelar
-              </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                Salvar
-              </Button>
-            </DialogFooter>
+            <TagFormHeader isEdit={isEdit} />
+            {isLoading ? <FormFieldsSkeleton fieldCount={3} /> : <TagFormBody />}
+            <TagFormFooter
+              onCancel={() => onOpenChange(false)}
+              submitDisabled={isLoading || methods.formState.isSubmitting}
+              isSubmitting={methods.formState.isSubmitting}
+            />
           </form>
         </FormProvider>
       </DialogContent>

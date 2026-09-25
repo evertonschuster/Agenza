@@ -69,9 +69,6 @@ export function useTagFormPage(): UseTagFormPageResult | null {
     };
   }, [id, location.search, methods, navigate]);
 
-  if (phase === 'redirecting') return null;
-  if (phase === 'loading') return { status: 'loading', onOpenChange };
-
   async function onValid(values: TagFormValues) {
     const result = tag
       ? await tagsRepository.update(tag.id, values)
@@ -95,8 +92,10 @@ export function useTagFormPage(): UseTagFormPageResult | null {
 
   const handleValidSubmit = methods.handleSubmit(onValid);
 
+  if (phase === 'redirecting') return null;
+
   return {
-    status: 'ready',
+    status: phase,
     tag,
     methods,
     onOpenChange,
