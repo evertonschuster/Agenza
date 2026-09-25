@@ -1,3 +1,4 @@
+import type { FocusEventHandler, Ref } from 'react';
 import { Radio } from '@base-ui/react/radio';
 import { RadioGroup } from '@base-ui/react/radio-group';
 import { CheckIcon } from 'lucide-react';
@@ -11,7 +12,10 @@ interface ColorSwatchPickerProps {
   options: readonly ColorSwatchPickerOption[];
   value: string | null;
   onValueChange: (value: string) => void;
+  onBlur?: FocusEventHandler<HTMLDivElement> | undefined;
+  ref?: Ref<HTMLElement> | undefined;
   'aria-label': string;
+  'aria-invalid'?: boolean | undefined;
   'aria-describedby'?: string | undefined;
 }
 
@@ -19,22 +23,30 @@ function ColorSwatchPicker({
   options,
   value,
   onValueChange,
+  onBlur,
+  ref,
   'aria-label': ariaLabel,
+  'aria-invalid': ariaInvalid,
   'aria-describedby': ariaDescribedBy,
 }: ColorSwatchPickerProps) {
+  const tabStop = options.find((option) => option.value === value) ?? options[0];
+
   return (
     <RadioGroup
       aria-label={ariaLabel}
+      aria-invalid={ariaInvalid}
       aria-describedby={ariaDescribedBy}
       value={value}
       onValueChange={(next) => {
         if (next !== null) onValueChange(next);
       }}
+      onBlur={onBlur}
       className="flex flex-wrap gap-2.5"
     >
       {options.map((option) => (
         <Radio.Root
           key={option.value}
+          ref={option === tabStop ? ref : undefined}
           value={option.value}
           aria-label={option.label}
           title={option.label}

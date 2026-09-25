@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import { Kbd } from '@/shared/ui/kbd';
+import { ShortcutKbd } from '@/shared/ui/kbd';
 import { ThemeToggle } from './ThemeToggle';
 
 function initialsOf(name: string | null): string {
@@ -34,10 +34,11 @@ export function AppHeader() {
         variant="outline"
         className="min-w-0 flex-1 justify-start text-muted-foreground sm:max-w-64"
         onClick={() => shortcutRegistry.getShortcut('command-palette-slash')?.handler()}
+        aria-keyshortcuts={searchHint.ariaKeyshortcuts}
       >
         <Search aria-hidden="true" />
         <span>Buscar</span>
-        {searchHint.visible && <Kbd className="ml-auto">{searchHint.displayKey}</Kbd>}
+        <ShortcutKbd hint={searchHint} />
       </Button>
 
       <div className="ml-auto flex items-center gap-1">

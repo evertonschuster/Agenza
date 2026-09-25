@@ -427,4 +427,101 @@ describe('TagFormPage', () => {
       );
     });
   });
+
+  describe('keyboard and focus (spec FR-016)', () => {
+    const SAVE_KEYS = '{Control>}s{/Control}';
+
+    it('saves with Ctrl+S from inside any field, exactly like clicking Salvar', async () => {
+      const user = userEvent.setup();
+      mockCreate.mockResolvedValue({
+        ok: true,
+        data: { id: '3', name: 'Sazonal', color: '#0ea5e9', description: null },
+      });
+      renderAt(['/tags/new']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.type(screen.getByLabelText('Nome'), 'Sazonal');
+      await user.click(screen.getByRole('radio', { name: 'Azul' }));
+      await user.click(screen.getByLabelText('Descrição'));
+      await user.keyboard(SAVE_KEYS);
+
+      await waitFor(() =>
+        expect(mockCreate).toHaveBeenCalledWith({
+          name: 'Sazonal',
+          color: '#0ea5e9',
+          description: null,
+        }),
+      );
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+      );
+    });
+
+    it('announces Ctrl+S on the Salvar button to assistive technology', async () => {
+      renderAt(['/tags/new']);
+
+      expect(await screen.findByRole('button', { name: 'Salvar' })).toHaveAttribute(
+        'aria-keyshortcuts',
+        'Control+s',
+      );
+    });
+
+    it('does not submit twice when Ctrl+S is pressed again while saving', async () => {
+      const user = userEvent.setup();
+      mockCreate.mockReturnValue(new Promise(() => {}));
+      renderAt(['/tags/new']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.type(screen.getByLabelText('Nome'), 'Sazonal');
+      await user.click(screen.getByRole('radio', { name: 'Azul' }));
+      await user.keyboard(SAVE_KEYS);
+      await screen.findByRole('button', { name: 'Salvando…' });
+      await user.keyboard(SAVE_KEYS);
+
+      expect(mockCreate).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores Ctrl+S while another tag is loading, so the previous values never overwrite it', async () => {
+      const user = userEvent.setup();
+      const router = createMemoryRouter(
+        [
+          {
+            path: '/tags',
+            element: <Outlet />,
+            children: [{ path: ':id/edit', element: <TagFormPage /> }],
+          },
+        ],
+        { initialEntries: ['/tags/1/edit'] },
+      );
+      render(<RouterProvider router={router} />);
+      await screen.findByLabelText('Nome');
+
+      mockGet.mockReturnValueOnce(new Promise(() => {}));
+      await act(() => router.navigate('/tags/2/edit'));
+      await user.keyboard(SAVE_KEYS);
+
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it('moves focus to Nome once the tag has loaded, so the keyboard lands in the form', async () => {
+      renderAt(['/tags/1/edit']);
+
+      const nameInput = await screen.findByLabelText('Nome');
+
+      await waitFor(() => expect(nameInput).toHaveFocus());
+    });
+
+    it('moves focus to the color picker when it is the only invalid field', async () => {
+      const user = userEvent.setup();
+      renderAt(['/tags/new']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.type(screen.getByLabelText('Nome'), 'Sazonal');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() =>
+        expect(screen.getByRole('radio', { name: 'Verde-azulado' })).toHaveFocus(),
+      );
+    });
+  });
 });

@@ -1,10 +1,18 @@
 import { describe, expect, it } from 'vitest';
-import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH, tagFormSchema } from './tagForm';
+import { z } from 'zod';
+import type { Tag } from './tag';
+import {
+  TAG_DESCRIPTION_MAX_LENGTH,
+  TAG_FORM_FIELDS,
+  TAG_NAME_MAX_LENGTH,
+  tagFormSchema,
+  toTagFormFieldValues,
+} from './tagForm';
 
 function fieldError(input: unknown, field: 'name' | 'color' | 'description') {
   const result = tagFormSchema.safeParse(input);
   if (result.success) return undefined;
-  return result.error.flatten().fieldErrors[field]?.[0];
+  return z.flattenError(result.error).fieldErrors[field]?.[0];
 }
 
 describe('tagFormSchema', () => {
@@ -75,9 +83,32 @@ describe('tagFormSchema', () => {
 
     expect(result.success).toBe(false);
     if (!result.success) {
-      const fieldErrors = result.error.flatten().fieldErrors;
+      const { fieldErrors } = z.flattenError(result.error);
       expect(fieldErrors.name).toBeDefined();
       expect(fieldErrors.color).toBeDefined();
     }
+  });
+
+  it('lists every schema field in TAG_FORM_FIELDS, so a backend error on any of them maps to its input', () => {
+    expect(TAG_FORM_FIELDS).toEqual(['name', 'color', 'description']);
+  });
+});
+
+describe('toTagFormFieldValues', () => {
+  it('returns the empty form when there is no tag', () => {
+    expect(toTagFormFieldValues()).toEqual({ name: '', color: null, description: '' });
+  });
+
+  it('round-trips a tag through the schema unchanged, null description included', () => {
+    const tag: Tag = { id: '2', name: 'VIP', color: '#8b5cf6', description: null };
+
+    const fieldValues = toTagFormFieldValues(tag);
+
+    expect(fieldValues.description).toBe('');
+    expect(tagFormSchema.parse(fieldValues)).toEqual({
+      name: tag.name,
+      color: tag.color,
+      description: tag.description,
+    });
   });
 });

@@ -1,3 +1,4 @@
+import { createRef } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -90,5 +91,52 @@ describe('ColorSwatchPicker', () => {
     await user.keyboard('{ArrowRight}');
 
     expect(onValueChange).toHaveBeenCalledWith('#0ea5e9');
+  });
+
+  it.each([
+    ['the checked option', '#8b5cf6', 'Violeta'],
+    ['the first option when none is checked', null, 'Verde-azulado'],
+    ['the first option when the value is outside the palette', '#123456', 'Verde-azulado'],
+  ])('points its ref at %s, the tab stop a focus call should land on', (_, value, label) => {
+    const ref = createRef<HTMLElement>();
+    render(
+      <ColorSwatchPicker
+        ref={ref}
+        options={OPTIONS}
+        value={value}
+        onValueChange={vi.fn()}
+        aria-label="Cor da etiqueta"
+      />,
+    );
+
+    expect(ref.current).toBe(screen.getByRole('radio', { name: label }));
+  });
+
+  it('forwards aria-invalid and onBlur to the radiogroup', async () => {
+    const user = userEvent.setup();
+    const onBlur = vi.fn();
+    render(
+      <>
+        <ColorSwatchPicker
+          options={OPTIONS}
+          value={null}
+          onValueChange={vi.fn()}
+          onBlur={onBlur}
+          aria-label="Cor da etiqueta"
+          aria-invalid
+        />
+        <button type="button">depois</button>
+      </>,
+    );
+
+    expect(screen.getByRole('radiogroup', { name: 'Cor da etiqueta' })).toHaveAttribute(
+      'aria-invalid',
+      'true',
+    );
+
+    await user.click(screen.getByRole('radio', { name: 'Azul' }));
+    await user.click(screen.getByRole('button', { name: 'depois' }));
+
+    expect(onBlur).toHaveBeenCalled();
   });
 });

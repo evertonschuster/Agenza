@@ -18,6 +18,7 @@ function TagFormBody() {
         maxLength={TAG_NAME_MAX_LENGTH}
         placeholder="Ex.: Promoção"
         autoComplete="off"
+        autoFocus
       />
 
       <ColorField<TagFormFieldValues>

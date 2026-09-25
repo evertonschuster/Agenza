@@ -11,7 +11,6 @@ export interface FormFieldControlProps {
 }
 
 export interface FormFieldProps {
-  name: string;
   label: string;
   hint?: string | undefined;
   error?: string | undefined;

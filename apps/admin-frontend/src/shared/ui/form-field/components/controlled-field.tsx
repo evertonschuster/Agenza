@@ -17,7 +17,6 @@ export function ControlledField<T extends FieldValues>({
       control={control}
       render={({ field, fieldState }) => (
         <FormField
-          name={name}
           label={label}
           hint={hint}
           error={fieldState.error?.message}

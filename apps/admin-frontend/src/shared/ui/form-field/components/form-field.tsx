@@ -1,15 +1,9 @@
+import { useId } from 'react';
 import { Label } from '@/shared/ui/label';
 import type { FormFieldControlProps, FormFieldProps } from '../form-field.types';
 
-export function FormField({
-  name,
-  label,
-  hint,
-  error,
-  labelHtmlFor = true,
-  children,
-}: FormFieldProps) {
-  const id = `field-${name}`;
+export function FormField({ label, hint, error, labelHtmlFor = true, children }: FormFieldProps) {
+  const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
   const describedBy = error ? errorId : hint ? hintId : undefined;

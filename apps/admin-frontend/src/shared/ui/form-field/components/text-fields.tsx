@@ -10,14 +10,11 @@ export function TextField<T extends FieldValues>({
   hint,
   ...inputProps
 }: TextFieldProps<T>) {
-  const {
-    register,
-    formState: { errors },
-  } = useFormContext<T>();
-  const message = errors[name]?.message as string | undefined;
+  const { register, getFieldState, formState } = useFormContext<T>();
+  const { error } = getFieldState(name, formState);
 
   return (
-    <FormField name={name} label={label} hint={hint} error={message}>
+    <FormField label={label} hint={hint} error={error?.message}>
       {(controlProps) => <Input {...controlProps} {...register(name)} {...inputProps} />}
     </FormField>
   );
@@ -29,14 +26,11 @@ export function TextareaField<T extends FieldValues>({
   hint,
   ...textareaProps
 }: TextareaFieldProps<T>) {
-  const {
-    register,
-    formState: { errors },
-  } = useFormContext<T>();
-  const message = errors[name]?.message as string | undefined;
+  const { register, getFieldState, formState } = useFormContext<T>();
+  const { error } = getFieldState(name, formState);
 
   return (
-    <FormField name={name} label={label} hint={hint} error={message}>
+    <FormField label={label} hint={hint} error={error?.message}>
       {(controlProps) => <Textarea {...controlProps} {...register(name)} {...textareaProps} />}
     </FormField>
   );

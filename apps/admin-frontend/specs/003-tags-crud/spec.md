@@ -37,6 +37,14 @@ have, following the backend contract: `string Name, string Color, string? Descri
   backend, disparada apenas quando a pessoa confirma explicitamente (tecla Enter ou um botão de
   busca) — nunca a cada tecla digitada.
 
+### Session 2026-09-24
+
+- Q: Os botões principais do fluxo de criar/editar etiqueta devem ter atalho de teclado? → A: Sim.
+  A ordem de salvar **DEVE** poder ser dada tanto pelo mouse quanto pelo teclado, e os demais botões
+  principais também **DEVEM** ter um caminho de teclado. Salvar usa `Ctrl+S` (`⌘S` no macOS), o
+  mnemônico que a W3C APG recomenda; `Ctrl+Enter` foi descartado porque a APG desaconselha
+  modificador + Enter (conflito com o sistema operacional).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — A pessoa vê e localiza as etiquetas existentes (Priority: P1)
@@ -192,6 +200,11 @@ explicação.
   inferior em telas estreitas); **NÃO DEVE** exigir passar pela tela de Serviços.
 - **FR-015**: O cabeçalho da tela **NÃO DEVE** exibir a rota nem um subtítulo descritivo; **DEVE**
   mostrar apenas o título "Etiquetas" e a ação primária "Nova etiqueta".
+- **FR-016**: O formulário de criação/edição **DEVE** permitir salvar com `Ctrl+S` (`⌘S` no macOS) a
+  partir de qualquer campo, com o mesmo efeito e as mesmas restrições do botão Salvar — sem efeito
+  enquanto o botão estiver desabilitado (carregando ou salvando). O atalho **DEVE** aparecer no
+  próprio botão e ser exposto a tecnologias assistivas. `Esc` **DEVE** fechar o formulário sem
+  salvar, como Cancelar.
 
 ### Key Entities
 

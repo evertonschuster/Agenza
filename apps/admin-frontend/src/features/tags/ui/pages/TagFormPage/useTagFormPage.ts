@@ -1,7 +1,9 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type SubmitEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useShortcutHint } from '@/shared/keyboard/shortcuts';
+import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
@@ -9,10 +11,13 @@ import { tagSaved } from '../../../model/tagEvents';
 import {
   TAG_FORM_FIELDS,
   tagFormSchema,
+  toTagFormFieldValues,
   type TagFormFieldValues,
   type TagFormValues,
 } from '../../../model/tagForm';
 import { TagFormStatus, type UseTagFormPageResult } from './useTagFormPage.types';
+
+const SAVE_SHORTCUT_ID = 'salvar-etiqueta';
 
 export function useTagFormPage(): UseTagFormPageResult {
   const { id } = useParams();
@@ -24,8 +29,9 @@ export function useTagFormPage(): UseTagFormPageResult {
 
   const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
     resolver: zodResolver(tagFormSchema),
-    defaultValues: { name: '', color: null, description: '' },
+    defaultValues: toTagFormFieldValues(),
   });
+  const canSubmit = !isLoading && !methods.formState.isSubmitting;
 
   const close = useCallback(
     () => void navigate({ pathname: '/tags', search: location.search }),
@@ -40,11 +46,7 @@ export function useTagFormPage(): UseTagFormPageResult {
       if (ignore) return;
 
       if (result.ok) {
-        methods.reset({
-          name: result.data.name,
-          color: result.data.color,
-          description: result.data.description ?? '',
-        });
+        methods.reset(toTagFormFieldValues(result.data));
         setLoadedId(id);
         return;
       }
@@ -83,15 +85,23 @@ export function useTagFormPage(): UseTagFormPageResult {
     applyApiProblem<TagFormFieldValues>(result.error, TAG_FORM_FIELDS, methods.setError);
   }
 
-  const handleValidSubmit = methods.handleSubmit(onValid);
+  function submit(event?: SubmitEvent<HTMLFormElement>) {
+    event?.preventDefault();
+    if (canSubmit) void methods.handleSubmit(onValid)(event);
+  }
+
+  useShortcut(SAVE_SHORTCUT_ID, 's', 'Salvar etiqueta', submit, { modified: true });
+  const saveHint = useShortcutHint(SAVE_SHORTCUT_ID);
 
   return {
     status: isLoading ? TagFormStatus.Loading : TagFormStatus.Ready,
     isEdit,
+    canSubmit,
+    saveHint,
     methods,
     onOpenChange: (open) => {
       if (!open) close();
     },
-    onSubmit: (event) => void handleValidSubmit(event),
+    onSubmit: submit,
   };
 }

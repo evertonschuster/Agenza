@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react';
 import { useShortcutHint } from '@/shared/keyboard/shortcuts';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { Button } from '@/shared/ui/button';
-import { Kbd } from '@/shared/ui/kbd';
+import { ShortcutKbd } from '@/shared/ui/kbd';
 import { toast } from '@/shared/ui/toast';
 
 function announceComingSoon(): void {
@@ -26,10 +26,10 @@ export function Services() {
             A lista dos seus serviços, com categorias e etiquetas, vai aparecer aqui.
           </p>
         </div>
-        <Button onClick={announceComingSoon}>
+        <Button onClick={announceComingSoon} aria-keyshortcuts={hint.ariaKeyshortcuts}>
           <Plus aria-hidden="true" />
           <span>Novo serviço</span>
-          {hint.visible && <Kbd className="ml-auto">{hint.displayKey}</Kbd>}
+          <ShortcutKbd hint={hint} />
         </Button>
       </div>
     </div>

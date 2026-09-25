@@ -9,7 +9,7 @@ import { useTagFormPage } from './useTagFormPage';
 import { TagFormStatus } from './useTagFormPage.types';
 
 export function TagFormPage() {
-  const { status, isEdit, methods, onOpenChange, onSubmit } = useTagFormPage();
+  const { status, isEdit, canSubmit, saveHint, methods, onOpenChange, onSubmit } = useTagFormPage();
   const isLoading = status === TagFormStatus.Loading;
 
   return (
@@ -23,7 +23,7 @@ export function TagFormPage() {
             ) : (
               <TagFormBody />
             )}
-            <TagFormFooter isLoading={isLoading} />
+            <TagFormFooter canSubmit={canSubmit} saveHint={saveHint} />
           </form>
         </FormProvider>
       </DialogContent>

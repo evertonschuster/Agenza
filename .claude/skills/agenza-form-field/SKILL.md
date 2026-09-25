@@ -31,29 +31,57 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    export const xFormSchema = z.object({ /* z.string().trim().min(1, '…') etc */ });
    export type XFormFieldValues = z.input<typeof xFormSchema>;
    export type XFormValues = z.output<typeof xFormSchema>;
-   export const X_FORM_FIELDS = Object.keys(xFormSchema.shape) as readonly Path<XFormFieldValues>[];
+   export const X_FORM_FIELDS = xFormSchema.keyof().options;
+
+   export function toXFormFieldValues(x?: X): XFormFieldValues {
+     return { name: x?.name ?? '', description: x?.description ?? '' };
+   }
    ```
    **Use `z.input`/`z.output`, never a single `z.infer`, the moment the schema has a `.refine()` or
    `.transform()`.** See Gotcha 1 below — this is not optional once either is present.
+   `keyof().options` is already typed as the key union, so the model needs no `as` cast and no
+   `react-hook-form` import — `model/` stays library-free. `toXFormFieldValues` is the inverse of the
+   schema's `.transform()`s (a `null` description back to `''`) and sits beside them: `useForm`'s
+   `defaultValues` is `toXFormFieldValues()`, the edit fetch's `reset` is `toXFormFieldValues(entity)`.
 
 2. **The page's hook** (`use<X>FormPage.ts`) calls RHF directly:
    ```ts
+   const { id } = useParams();
+   const isEdit = id !== undefined;
    const methods = useForm<XFormFieldValues, unknown, XFormValues>({
      resolver: zodResolver(xFormSchema),
-     defaultValues: { /* … */ },
+     defaultValues: toXFormFieldValues(),
    });
+   const canSubmit = !isLoading && !methods.formState.isSubmitting;
 
    async function onValid(values: XFormValues) {
-     const result = tag ? await xRepository.update(id, values) : await xRepository.create(values);
+     const result = isEdit ? await xRepository.update(id, values) : await xRepository.create(values);
      if (result.ok) { /* publish, toast, navigate */ return; }
      applyApiProblem<XFormFieldValues>(result.error, X_FORM_FIELDS, methods.setError);
    }
 
-   return { methods, onSubmit: (event) => void methods.handleSubmit(onValid)(event), /* … */ };
+   function submit(event?: SubmitEvent<HTMLFormElement>) {
+     event?.preventDefault();
+     if (canSubmit) void methods.handleSubmit(onValid)(event);
+   }
+
+   useShortcut('salvar-x', 's', 'Salvar x', submit, { modified: true });
+   const saveHint = useShortcutHint('salvar-x');
+
+   return { methods, canSubmit, saveHint, onSubmit: submit, /* … */ };
    ```
-   The `(event) => void handler(event)` wrap is not style — passing `methods.handleSubmit(onValid)`
-   (a `Promise`-returning function) directly to `onSubmit` trips
-   `@typescript-eslint/no-misused-promises`. `tsc` alone won't catch this; only `npm run lint` will.
+   The route's `id` — never a fetched copy of the entity — decides create vs. update, so the form
+   can't write to a record other than the one in the URL. The `void` inside `submit` is not style —
+   handing `methods.handleSubmit(onValid)` (a `Promise`-returning function) straight to `onSubmit`
+   trips `@typescript-eslint/no-misused-promises`; `tsc` alone won't catch it, only `npm run lint`.
+
+   **Save is `Ctrl+S` / `⌘S`, through the same `submit`.** Mnemonic per the W3C APG; `Ctrl+Enter` is
+   out, the APG lists modifier + Enter as an OS conflict. `canSubmit` is the one rule behind both the
+   button's `disabled` and the shortcut — a shortcut on a disabled control must be inert (MDN,
+   `aria-keyshortcuts`). The footer renders `disabled={!canSubmit}`,
+   `aria-keyshortcuts={saveHint.ariaKeyshortcuts}` and `<ShortcutKbd hint={saveHint} />` (a dialog's
+   confirm is a resting-keycap tier, `agenza-ui-primitive` §5); Cancelar is
+   `<DialogClose render={<Button variant="outline" />}>`, so it, `Esc` and the ✕ share one close path.
 
 3. **The page shell** wraps its `<form>` in `<FormProvider {...methods}>` — every field component reads
    `register`/`control`/`errors` via `useFormContext()`, not as props. A form-level error is
@@ -82,14 +110,11 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
 An edit route fetches its own record from the backend on mount — it does not reuse whatever the list
 row happened to be holding (router navigation state, a cached list item). The list might be stale
 (paginated, or changed by someone else since); the edit form's job is to show what the backend has
-*now*. The hook's return type is a discriminated union with a `'loading'` member so the page can show
-a real loading state instead of either blank fields or briefly-wrong ones:
-
-```ts
-export type UseXFormPageResult =
-  | { status: 'loading'; onOpenChange: (open: boolean) => void }
-  | { status: 'ready'; methods: UseFormReturn<XFormFieldValues, unknown, XFormValues>; /* … */ };
-```
+*now*. The hook returns a flat result whose `status` is **derived**, not stored: the hook keeps the id
+of the record currently in the form (`loadedId`) and reports `'loading'` while `isEdit && loadedId !==
+id` — the same "compare the in-flight key with the last resolved one" shape as `useTagListPage`. React
+Router keeps the page mounted when only `:id` changes, so a status set once at mount would keep the old
+record on screen, Salvar enabled, while the new one loads; the derived one can't.
 
 `useForm`'s own `defaultValues` are captured once, synchronously, at mount — they can't wait for an
 async fetch. Fetch in a `useEffect` keyed on the id (the same `ignore`-flag-in-cleanup shape every
@@ -100,11 +125,16 @@ framework-owned loading flag. A failed fetch (not-found, or any other `ApiProble
 error state — same as everywhere else in this app that fetches, it toasts the backend's own `title`
 verbatim and navigates back, no retry affordance.
 
-The page renders `<FormFieldsSkeleton fieldCount={N} />` for the `'loading'` branch — one label+control
-skeleton row per field, matching `list-section`'s own skeleton convention (`aria-busy`, `aria-live`).
-Keep the dialog's Cancelar button working during loading (own `onOpenChange`, not gated on the form
-being ready) — the person should never be stuck in a dialog they can't close because a fetch hasn't
-resolved yet.
+The page renders `<FormFieldsSkeleton fieldCount={X_FORM_FIELDS.length} />` for the `'loading'`
+branch — one label+control skeleton row per field, matching `list-section`'s own skeleton convention
+(`aria-busy`, `aria-live`). Keep the dialog's Cancelar button working during loading (own
+`onOpenChange`, not gated on the form being ready) — the person should never be stuck in a dialog
+they can't close because a fetch hasn't resolved yet. Give the first field `autoFocus`: in edit mode
+the fields mount only after the fetch, and without it keyboard focus stays on Cancelar.
+
+A custom control's specialization must forward `field.ref` (and `field.onBlur`) from `ControlledField`
+to the element that should receive focus — otherwise React Hook Form's focus-on-error silently skips
+it. `ColorField` → `ColorSwatchPicker` puts the ref on the radiogroup's tab stop.
 
 ## When to build a new `XField` specialization vs. use `ControlledField` directly
 

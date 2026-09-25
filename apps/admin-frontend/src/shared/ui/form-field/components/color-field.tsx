@@ -8,16 +8,19 @@ export function ColorField<T extends FieldValues>({
   label,
   options,
   hint,
-  ...rest
+  'aria-label': ariaLabel = label,
 }: ColorFieldProps<T>) {
   return (
     <ControlledField name={name} label={label} hint={hint} labelHtmlFor={false}>
       {(field, controlProps) => (
         <ColorSwatchPicker
+          ref={field.ref}
           options={options}
           value={field.value}
           onValueChange={field.onChange}
-          aria-label={rest['aria-label'] ?? label}
+          onBlur={field.onBlur}
+          aria-label={ariaLabel}
+          aria-invalid={controlProps['aria-invalid']}
           aria-describedby={controlProps['aria-describedby']}
         />
       )}

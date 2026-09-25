@@ -158,7 +158,10 @@ prop on the generic `Button`.
 
 Accessible name, non-negotiable: `<kbd aria-hidden="true">` inside the button plus
 `aria-keyshortcuts` on the button. `role="presentation"` does **not** work — name-from-content still
-traverses the subtree, and the button announces as "Novo serviço N".
+traverses the subtree, and the button announces as "Novo serviço N". Render the keycap with
+`<ShortcutKbd hint={hint} />` from `shared/ui/kbd` (it owns the visibility rule and the end slot)
+and put `aria-keyshortcuts={hint.ariaKeyshortcuts}` on the control itself — the pair travels
+together at every call site, `hint` coming from `useShortcutHint(id)`.
 
 Tiers, tooltip rules under WCAG 1.4.13, `event.key` vs `event.code`, focus:
 [`references/interaction.md`](references/interaction.md).

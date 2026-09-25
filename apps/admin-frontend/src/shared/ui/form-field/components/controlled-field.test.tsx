@@ -62,10 +62,8 @@ describe('ControlledField', () => {
   it('shows the field error and wires aria-describedby to it, without relying on htmlFor', () => {
     render(<Harness withError />);
 
-    expect(screen.getByText('Erro de teste')).toBeInTheDocument();
-    expect(screen.getByRole('group', { name: 'Escolha' })).toHaveAttribute(
-      'aria-describedby',
-      'field-choice-error',
+    expect(screen.getByRole('group', { name: 'Escolha' })).toHaveAccessibleDescription(
+      'Erro de teste',
     );
   });
 });

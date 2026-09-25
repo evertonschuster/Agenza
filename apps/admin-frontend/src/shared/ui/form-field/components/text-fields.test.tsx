@@ -8,19 +8,25 @@ import { TextField, TextareaField } from './text-fields';
 interface DummyValues {
   name: string;
   bio: string;
+  address: { city: string };
 }
 
 function Harness({ withError = false }: { withError?: boolean }) {
-  const methods = useForm<DummyValues>({ defaultValues: { name: '', bio: '' } });
+  const methods = useForm<DummyValues>({
+    defaultValues: { name: '', bio: '', address: { city: '' } },
+  });
 
   useEffect(() => {
-    if (withError) methods.setError('name', { type: 'test', message: 'Erro de teste' });
+    if (!withError) return;
+    methods.setError('name', { type: 'test', message: 'Erro de teste' });
+    methods.setError('address.city', { type: 'test', message: 'Cidade inválida' });
   }, [withError, methods]);
 
   return (
     <FormProvider {...methods}>
-      <TextField name="name" label="Nome" hint="até 40 caracteres" />
-      <TextareaField name="bio" label="Bio" />
+      <TextField<DummyValues> name="name" label="Nome" hint="até 40 caracteres" />
+      <TextareaField<DummyValues> name="bio" label="Bio" />
+      <TextField<DummyValues> name="address.city" label="Cidade" />
     </FormProvider>
   );
 }
@@ -31,8 +37,7 @@ describe('TextField', () => {
 
     const input = screen.getByLabelText('Nome');
     expect(input).toHaveAttribute('aria-invalid', 'false');
-    expect(input).toHaveAttribute('aria-describedby', 'field-name-hint');
-    expect(screen.getByText('até 40 caracteres')).toBeInTheDocument();
+    expect(input).toHaveAccessibleDescription('até 40 caracteres');
   });
 
   it('registers the field so typing updates the form value', async () => {
@@ -48,9 +53,16 @@ describe('TextField', () => {
     render(<Harness withError />);
 
     const input = screen.getByLabelText('Nome');
-    expect(screen.getByText('Erro de teste')).toBeInTheDocument();
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(input).toHaveAttribute('aria-describedby', 'field-name-error');
+    expect(input).toHaveAccessibleDescription('Erro de teste');
+  });
+
+  it('shows the error of a nested field path, not only of a top-level one', () => {
+    render(<Harness withError />);
+
+    const input = screen.getByLabelText('Cidade');
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(input).toHaveAccessibleDescription('Cidade inválida');
   });
 });
 

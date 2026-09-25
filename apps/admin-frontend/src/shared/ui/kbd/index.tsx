@@ -1,4 +1,5 @@
 import type * as React from 'react';
+import type { ShortcutHint } from '@/shared/keyboard/shortcuts';
 import { cn } from '@/shared/lib/utils';
 
 function Kbd({ className, ...props }: React.ComponentProps<'kbd'>) {
@@ -25,4 +26,9 @@ function KbdGroup({ className, ...props }: React.ComponentProps<'div'>) {
   );
 }
 
-export { Kbd, KbdGroup };
+function ShortcutKbd({ hint }: { hint?: ShortcutHint | undefined }) {
+  if (!hint?.visible) return null;
+  return <Kbd className="ml-auto">{hint.displayKey}</Kbd>;
+}
+
+export { Kbd, KbdGroup, ShortcutKbd };

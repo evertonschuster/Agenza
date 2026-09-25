@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Path } from 'react-hook-form';
+import type { Tag } from './tag';
 
 // Mirrors backend length limits (ServicesService.Domain.Entities.Tag.NameMaxLength /
 // DescriptionMaxLength) so the maxLength attributes and messages below match what the backend
@@ -31,11 +31,15 @@ export const tagFormSchema = z.object({
     .transform((value) => value || null),
 });
 
-//TODO: Add custom validation or transformation logic if needed in the future.
-
 export type TagFormFieldValues = z.input<typeof tagFormSchema>;
 export type TagFormValues = z.output<typeof tagFormSchema>;
 
-export const TAG_FORM_FIELDS = Object.keys(
-  tagFormSchema.shape,
-) as readonly Path<TagFormFieldValues>[];
+export const TAG_FORM_FIELDS = tagFormSchema.keyof().options;
+
+export function toTagFormFieldValues(tag?: Tag): TagFormFieldValues {
+  return {
+    name: tag?.name ?? '',
+    color: tag?.color ?? null,
+    description: tag?.description ?? '',
+  };
+}
