@@ -112,6 +112,30 @@ describe('TagFormPage', () => {
       expect(await screen.findByText('Sazonal')).toBeInTheDocument();
     });
 
+    it('shows saving feedback on the submit button while the request is in flight', async () => {
+      const user = userEvent.setup();
+      let resolveCreate!: (result: { ok: true; data: Tag }) => void;
+      mockCreate.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)));
+      renderAt(['/tags/new']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.type(screen.getByLabelText('Nome'), 'Sazonal');
+      await user.click(screen.getByRole('radio', { name: 'Azul' }));
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      const savingButton = await screen.findByRole('button', { name: 'Salvando…' });
+      expect(savingButton).toBeDisabled();
+
+      resolveCreate({
+        ok: true,
+        data: { id: '3', name: 'Sazonal', color: '#0ea5e9', description: null },
+      });
+
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+      );
+    });
+
     it('normalizes a whitespace-only description to null', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue({
