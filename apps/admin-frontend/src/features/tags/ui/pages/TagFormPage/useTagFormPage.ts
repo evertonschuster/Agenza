@@ -15,7 +15,7 @@ import {
 import type { Tag } from '../../../model/tag';
 import type { UseTagFormPageResult } from './useTagFormPage.types';
 
-export function useTagFormPage(): UseTagFormPageResult | null {
+export function useTagFormPage(): UseTagFormPageResult {
   const location = useLocation();
   const navigate = useNavigate();
   const params = useParams();
@@ -24,9 +24,7 @@ export function useTagFormPage(): UseTagFormPageResult | null {
   const backTo = { pathname: '/tags', search: location.search };
 
   const [tag, setTag] = useState<Tag | null>(null);
-  const [phase, setPhase] = useState<'loading' | 'ready' | 'redirecting'>(
-    isEditRoute ? 'loading' : 'ready',
-  );
+  const [phase, setPhase] = useState<'loading' | 'ready'>(isEditRoute ? 'loading' : 'ready');
 
   const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
     resolver: zodResolver(tagFormSchema),
@@ -55,7 +53,6 @@ export function useTagFormPage(): UseTagFormPageResult | null {
         return;
       }
 
-      setPhase('redirecting');
       toast.add({
         title: 'Não foi possível abrir a etiqueta',
         description: result.error.title ?? undefined,
@@ -91,8 +88,6 @@ export function useTagFormPage(): UseTagFormPageResult | null {
   }
 
   const handleValidSubmit = methods.handleSubmit(onValid);
-
-  if (phase === 'redirecting') return null;
 
   return {
     status: phase,

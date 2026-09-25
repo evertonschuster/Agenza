@@ -7,10 +7,7 @@ import { TagFormHeader } from './components/TagFormHeader';
 import { useTagFormPage } from './useTagFormPage';
 
 export function TagFormPage() {
-  const state = useTagFormPage();
-  if (!state) return null;
-
-  const { status, tag, methods, onOpenChange, onSubmit } = state;
+  const { status, tag, methods, onOpenChange, onSubmit } = useTagFormPage();
   const isLoading = status === 'loading';
   const isEdit = isLoading || tag !== null;
 
