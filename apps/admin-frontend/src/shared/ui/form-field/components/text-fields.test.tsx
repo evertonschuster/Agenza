@@ -49,12 +49,12 @@ describe('TextField', () => {
     expect(screen.getByLabelText('Nome')).toHaveValue('Ana');
   });
 
-  it('shows the field error instead of the hint, with aria wired to it', () => {
+  it('shows the field error next to the hint, with aria wired to both', () => {
     render(<Harness withError />);
 
     const input = screen.getByLabelText('Nome');
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(input).toHaveAccessibleDescription('Erro de teste');
+    expect(input).toHaveAccessibleDescription('até 40 caracteres Erro de teste');
   });
 
   it('shows the error of a nested field path, not only of a top-level one', () => {

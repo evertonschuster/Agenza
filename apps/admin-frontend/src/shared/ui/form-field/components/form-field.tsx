@@ -6,7 +6,7 @@ export function FormField({ label, hint, error, labelHtmlFor = true, children }:
   const id = useId();
   const hintId = `${id}-hint`;
   const errorId = `${id}-error`;
-  const describedBy = error ? errorId : hint ? hintId : undefined;
+  const describedBy = [hint && hintId, error && errorId].filter(Boolean).join(' ') || undefined;
   const controlProps: FormFieldControlProps = {
     id,
     'aria-invalid': !!error,

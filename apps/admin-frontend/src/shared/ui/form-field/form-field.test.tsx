@@ -44,7 +44,7 @@ describe('FormField', () => {
     expect(input).toHaveAttribute('aria-invalid', 'false');
   });
 
-  it('switches the description to the error, still showing the hint text visibly', () => {
+  it('keeps the hint in the description next to the error, in visual order', () => {
     render(
       <FormField label="Nome" hint="até 40 caracteres" error="Obrigatório.">
         {(controlProps) => <input {...controlProps} />}
@@ -52,9 +52,18 @@ describe('FormField', () => {
     );
 
     const input = screen.getByLabelText('Nome');
-    expect(input).toHaveAccessibleDescription('Obrigatório.');
+    expect(input).toHaveAccessibleDescription('até 40 caracteres Obrigatório.');
     expect(input).toHaveAttribute('aria-invalid', 'true');
-    expect(screen.getByText('até 40 caracteres')).toBeInTheDocument();
+  });
+
+  it('describes the control by the error alone when there is no hint', () => {
+    render(
+      <FormField label="Nome" error="Obrigatório.">
+        {(controlProps) => <input {...controlProps} />}
+      </FormField>,
+    );
+
+    expect(screen.getByLabelText('Nome')).toHaveAccessibleDescription('Obrigatório.');
   });
 
   it('has no description when there is neither hint nor error', () => {
