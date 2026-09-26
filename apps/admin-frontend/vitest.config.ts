@@ -43,7 +43,7 @@ export default defineConfig({
         'src/shared/ui/textarea/**',
         'src/shared/ui/FullScreenMessage/**',
         // Same reasoning: pure prop-driven renderers, no state or effects of their own.
-        'src/shared/ui/list-section/**',
+        'src/widgets/list-section/**',
         'src/shared/ui/empty-state/**',
         'src/shared/ui/error-state/**',
         'src/shared/ui/form-field/**',

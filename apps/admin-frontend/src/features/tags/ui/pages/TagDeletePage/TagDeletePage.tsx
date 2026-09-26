@@ -1,4 +1,4 @@
-import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
+import { ConfirmDialog } from '@/widgets/confirm-dialog';
 import { useTagDeletePage } from './useTagDeletePage';
 
 export function TagDeletePage() {

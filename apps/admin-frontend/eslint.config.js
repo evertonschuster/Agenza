@@ -45,8 +45,8 @@ export default tseslint.config(
       ],
     },
   },
-  // Dependency direction (ARCHITECTURE.md §1): app -> features -> shared, never the reverse.
-  // Flat-config note: `no-restricted-imports` in a later matching block REPLACES the base
+  // Dependency direction (ARCHITECTURE.md §1): app -> features -> widgets -> shared, never the
+  // reverse. Flat-config note: `no-restricted-imports` in a later matching block REPLACES the base
   // definition for those files — it does not merge — so each block below restates every
   // pattern it needs.
   {
@@ -57,9 +57,26 @@ export default tseslint.config(
         {
           patterns: [
             {
+              group: ['@/features/*', '@/features/*/*', '@/widgets/*', '@/app/*'],
+              message:
+                '`shared/` is the bottom layer — it must not import from `@/features`, `@/widgets` or `@/app`.',
+            },
+          ],
+        },
+      ],
+    },
+  },
+  {
+    files: ['src/widgets/**/*.{ts,tsx}'],
+    rules: {
+      'no-restricted-imports': [
+        'error',
+        {
+          patterns: [
+            {
               group: ['@/features/*', '@/features/*/*', '@/app/*'],
               message:
-                '`shared/` is the bottom layer — it must not import from `@/features` or `@/app`.',
+                '`widgets/` sits below `features/` — it must not import from `@/features` or `@/app`.',
             },
           ],
         },

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { ApiResult } from '../../api/servicesFacade';
+import type { ApiResult } from '@/shared/api/servicesFacade';
 
 interface ConfirmDialogFailure {
   message: string;

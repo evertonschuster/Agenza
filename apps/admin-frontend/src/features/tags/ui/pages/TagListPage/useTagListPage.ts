@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'reac
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { useTopic } from '@/shared/pubsub/useTopic';
-import { ListSectionStatus } from '@/shared/ui/list-section';
+import { ListSectionStatus } from '@/widgets/list-section';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { tagDeleted, tagSaved } from '../../../model/tagEvents';
 import type { LoadResult, UseTagListPageResult } from './useTagListPage.types';

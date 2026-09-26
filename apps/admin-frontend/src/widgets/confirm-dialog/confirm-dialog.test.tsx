@@ -183,7 +183,7 @@ describe('ConfirmDialog', () => {
 
   it('fires a success toast built from the success copy when confirm succeeds', async () => {
     const user = userEvent.setup();
-    const toastModule = await import('../toast');
+    const toastModule = await import('@/shared/ui/toast');
     const toastAddSpy = vi.spyOn(toastModule.toast, 'add');
     const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
     render(

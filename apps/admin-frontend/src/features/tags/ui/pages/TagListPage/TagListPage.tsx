@@ -7,7 +7,7 @@ import {
   InputGroupInput,
 } from '@/shared/ui/input-group';
 import { LinkButton } from '@/shared/ui/link-button';
-import { ListSection } from '@/shared/ui/list-section';
+import { ListSection } from '@/widgets/list-section';
 import { tagColumns } from './components/tagColumns';
 import { NEW_TAG_SHORTCUT_ID, useTagListPage } from './useTagListPage';
 
