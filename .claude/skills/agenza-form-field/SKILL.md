@@ -52,7 +52,8 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
      resolver: zodResolver(xFormSchema),
      defaultValues: toXFormFieldValues(),
    });
-   const canSubmit = !isLoading && !methods.formState.isSubmitting;
+   const isSaving = methods.formState.isSubmitting;
+   const canSubmit = !isLoading && !isSaving;
 
    async function onValid(values: XFormValues) {
      const result = isEdit ? await xRepository.update(id, values) : await xRepository.create(values);
@@ -65,11 +66,12 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
      if (canSubmit) void methods.handleSubmit(onValid)(event);
    }
 
-   useShortcut('salvar-x', 's', 'Salvar x', submit, { modified: true });
-   const saveHint = useShortcutHint('salvar-x');
+   useShortcut(SAVE_SHORTCUT_ID, 's', 'Salvar x', submit, { modified: true });
 
-   return { methods, canSubmit, saveHint, onSubmit: submit, /* … */ };
+   return { methods, isSaving, canSubmit, onSubmit: submit, /* … */ };
    ```
+   `SAVE_SHORTCUT_ID` is a module-level `export const` of the hook file — the hook registers it, the
+   footer hands the same id to `ActionButton`.
    The route's `id` — never a fetched copy of the entity — decides create vs. update, so the form
    can't write to a record other than the one in the URL. The `void` inside `submit` is not style —
    handing `methods.handleSubmit(onValid)` (a `Promise`-returning function) straight to `onSubmit`
@@ -78,10 +80,23 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    **Save is `Ctrl+S` / `⌘S`, through the same `submit`.** Mnemonic per the W3C APG; `Ctrl+Enter` is
    out, the APG lists modifier + Enter as an OS conflict. `canSubmit` is the one rule behind both the
    button's `disabled` and the shortcut — a shortcut on a disabled control must be inert (MDN,
-   `aria-keyshortcuts`). The footer renders `disabled={!canSubmit}`,
-   `aria-keyshortcuts={saveHint.ariaKeyshortcuts}` and `<ShortcutKbd hint={saveHint} />` (a dialog's
-   confirm is a resting-keycap tier, `agenza-ui-primitive` §5); Cancelar is
-   `<DialogClose render={<Button variant="outline" />}>`, so it, `Esc` and the ✕ share one close path.
+   `aria-keyshortcuts`). The footer is two lines of configuration:
+   ```tsx
+   <DialogClose disabled={isSaving} render={<Button variant="outline" />}>Cancelar</DialogClose>
+   <ActionButton type="submit" disabled={!canSubmit} pending={isSaving} shortcutId={SAVE_SHORTCUT_ID}>
+     {isSaving ? 'Salvando…' : 'Salvar'}
+   </ActionButton>
+   ```
+   `ActionButton` reads the keycap and `aria-keyshortcuts` from the registry by id (a dialog's confirm
+   is a resting-keycap tier, `agenza-ui-primitive` §5) and turns `pending` into spinner + disabled.
+
+   **While saving, the dialog offers no way out** — a Cancelar clicked mid-request would close the
+   dialog while the save still lands, a Cancel that doesn't cancel. Three lines, all with APIs the
+   dialog already had: the hook's `onOpenChange` ignores a close while `isSaving` (a controlled dialog
+   stays open when its handler doesn't close it, which covers Esc and outside press), Cancelar is
+   `<DialogClose disabled={isSaving}>`, and the shell passes `showCloseButton={!isSaving}` to
+   `DialogContent`. `shared/ui/dialog` itself stays a plain wrapper — a `busy` prop with a context was
+   tried there and reverted as more machinery than three lines per dialog.
 
 3. **The page shell** wraps its `<form>` in `<FormProvider {...methods}>` — every field component reads
    `register`/`control`/`errors` via `useFormContext()`, not as props. A form-level error is

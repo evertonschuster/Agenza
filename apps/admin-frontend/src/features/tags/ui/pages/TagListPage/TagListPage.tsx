@@ -9,17 +9,16 @@ import {
 import { LinkButton } from '@/shared/ui/link-button';
 import { ListSection } from '@/shared/ui/list-section';
 import { tagColumns } from './components/tagColumns';
-import { useTagListPage } from './useTagListPage';
+import { NEW_TAG_SHORTCUT_ID, useTagListPage } from './useTagListPage';
 
 export function TagListPage() {
-  const { tags, status, query, searchInputRef, onSearchSubmit, newTagTo, newTagHint } =
-    useTagListPage();
+  const { tags, status, query, searchInputRef, onSearchSubmit, newTagTo } = useTagListPage();
 
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Etiquetas</h1>
-        <LinkButton to={newTagTo} icon={PlusIcon} hint={newTagHint}>
+        <LinkButton to={newTagTo} icon={PlusIcon} shortcutId={NEW_TAG_SHORTCUT_ID}>
           Nova etiqueta
         </LinkButton>
       </div>

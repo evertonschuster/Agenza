@@ -2,7 +2,6 @@ import { useCallback, useEffect, useState, type SubmitEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useShortcutHint } from '@/shared/keyboard/shortcuts';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
@@ -17,7 +16,7 @@ import {
 } from '../../../model/tagForm';
 import { TagFormStatus, type UseTagFormPageResult } from './useTagFormPage.types';
 
-const SAVE_SHORTCUT_ID = 'salvar-etiqueta';
+export const SAVE_SHORTCUT_ID = 'salvar-etiqueta';
 
 export function useTagFormPage(): UseTagFormPageResult {
   const { id } = useParams();
@@ -31,7 +30,8 @@ export function useTagFormPage(): UseTagFormPageResult {
     resolver: zodResolver(tagFormSchema),
     defaultValues: toTagFormFieldValues(),
   });
-  const canSubmit = !isLoading && !methods.formState.isSubmitting;
+  const isSaving = methods.formState.isSubmitting;
+  const canSubmit = !isLoading && !isSaving;
 
   const close = useCallback(
     () => void navigate({ pathname: '/tags', search: location.search }),
@@ -91,16 +91,15 @@ export function useTagFormPage(): UseTagFormPageResult {
   }
 
   useShortcut(SAVE_SHORTCUT_ID, 's', 'Salvar etiqueta', submit, { modified: true });
-  const saveHint = useShortcutHint(SAVE_SHORTCUT_ID);
 
   return {
     status: isLoading ? TagFormStatus.Loading : TagFormStatus.Ready,
     isEdit,
+    isSaving,
     canSubmit,
-    saveHint,
     methods,
     onOpenChange: (open) => {
-      if (!open) close();
+      if (!open && !isSaving) close();
     },
     onSubmit: submit,
   };

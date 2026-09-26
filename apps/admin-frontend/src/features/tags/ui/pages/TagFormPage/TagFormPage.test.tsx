@@ -116,7 +116,7 @@ describe('TagFormPage', () => {
       });
       await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
       await waitFor(() =>
-        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
       expect(await screen.findByText('Sazonal')).toBeInTheDocument();
     });
@@ -141,8 +141,53 @@ describe('TagFormPage', () => {
       });
 
       await waitFor(() =>
-        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
+    });
+
+    it('offers no way out while saving — Cancelar disabled, ✕ hidden, Esc ignored — because the save finishes anyway (spec FR-018)', async () => {
+      const user = userEvent.setup();
+      let resolveCreate!: (result: { ok: true; data: Tag }) => void;
+      mockCreate.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)));
+      renderAt(['/tags/new?q=promo']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.type(screen.getByLabelText('Nome'), 'Sazonal');
+      await user.click(screen.getByRole('radio', { name: 'Azul' }));
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+      await screen.findByRole('button', { name: 'Salvando…' });
+
+      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Fechar' })).not.toBeInTheDocument();
+      await user.keyboard('{Escape}');
+      expect(screen.getByTestId('location')).toHaveTextContent('location: /tags/new?q=promo');
+
+      resolveCreate({
+        ok: true,
+        data: { id: '3', name: 'Sazonal', color: '#0ea5e9', description: null },
+      });
+      await waitFor(() =>
+        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags?q=promo'),
+      );
+    });
+
+    it('hands the way out back once a save fails, so the person is never stuck', async () => {
+      const user = userEvent.setup();
+      mockCreate.mockResolvedValue({
+        ok: false,
+        error: { status: 0, code: 'Network.Unreachable', title: 'Sem conexão com o servidor.' },
+      });
+      renderAt(['/tags/new']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.type(screen.getByLabelText('Nome'), 'Sazonal');
+      await user.click(screen.getByRole('radio', { name: 'Azul' }));
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+      await screen.findByRole('alert');
+
+      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
     });
 
     it('normalizes a whitespace-only description to null', async () => {
@@ -283,7 +328,7 @@ describe('TagFormPage', () => {
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
       await waitFor(() =>
-        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
     });
 
@@ -375,7 +420,7 @@ describe('TagFormPage', () => {
       });
       await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
       await waitFor(() =>
-        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
       expect(await screen.findByText('Promo relâmpago')).toBeInTheDocument();
     });
@@ -423,7 +468,7 @@ describe('TagFormPage', () => {
         ),
       );
       await waitFor(() =>
-        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
     });
   });
@@ -453,7 +498,7 @@ describe('TagFormPage', () => {
         }),
       );
       await waitFor(() =>
-        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
     });
 

@@ -1,9 +1,9 @@
 import { Plus } from 'lucide-react';
-import { useShortcutHint } from '@/shared/keyboard/shortcuts';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
-import { Button } from '@/shared/ui/button';
-import { ShortcutKbd } from '@/shared/ui/kbd';
+import { ActionButton } from '@/shared/ui/action-button';
 import { toast } from '@/shared/ui/toast';
+
+const NEW_SERVICE_SHORTCUT_ID = 'novo-servico';
 
 function announceComingSoon(): void {
   toast.add({
@@ -13,9 +13,7 @@ function announceComingSoon(): void {
 }
 
 export function Services() {
-  const hint = useShortcutHint('novo-servico');
-
-  useShortcut('novo-servico', 'n', 'Novo serviço', announceComingSoon);
+  useShortcut(NEW_SERVICE_SHORTCUT_ID, 'n', 'Novo serviço', announceComingSoon);
 
   return (
     <div className="space-y-4">
@@ -26,11 +24,9 @@ export function Services() {
             A lista dos seus serviços, com categorias e etiquetas, vai aparecer aqui.
           </p>
         </div>
-        <Button onClick={announceComingSoon} aria-keyshortcuts={hint.ariaKeyshortcuts}>
-          <Plus aria-hidden="true" />
-          <span>Novo serviço</span>
-          <ShortcutKbd hint={hint} />
-        </Button>
+        <ActionButton icon={Plus} shortcutId={NEW_SERVICE_SHORTCUT_ID} onClick={announceComingSoon}>
+          Novo serviço
+        </ActionButton>
       </div>
     </div>
   );

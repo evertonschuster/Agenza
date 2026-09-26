@@ -39,7 +39,6 @@ interface ConfirmDialogBlockedViewProps {
   blockedTitle: string;
   message: string;
   dismissLabel: string;
-  onDismiss: () => void;
 }
 
 interface ConfirmDialogConfirmViewProps {
@@ -51,7 +50,7 @@ interface ConfirmDialogConfirmViewProps {
   retryLabel: string;
   failure: ConfirmDialogFailure | undefined;
   isSubmitting: boolean;
-  onCancel: () => void;
+  shortcutId: string;
   onConfirm: () => void;
 }
 

@@ -1,5 +1,11 @@
 import { AlertCircleIcon } from 'lucide-react';
-import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import {
+  DialogClose,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
 import type { ConfirmDialogBlockedViewProps } from '../confirm-dialog.types';
 
@@ -7,7 +13,6 @@ function ConfirmDialogBlockedView({
   blockedTitle,
   message,
   dismissLabel,
-  onDismiss,
 }: ConfirmDialogBlockedViewProps) {
   return (
     <>
@@ -19,9 +24,7 @@ function ConfirmDialogBlockedView({
         <DialogDescription>{message}</DialogDescription>
       </DialogHeader>
       <DialogFooter>
-        <Button variant="outline" onClick={onDismiss}>
-          {dismissLabel}
-        </Button>
+        <DialogClose render={<Button variant="outline" />}>{dismissLabel}</DialogClose>
       </DialogFooter>
     </>
   );

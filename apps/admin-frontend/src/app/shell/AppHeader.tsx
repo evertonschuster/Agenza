@@ -1,6 +1,7 @@
 import { LogOut, Search } from 'lucide-react';
 import { useAuth } from '@/features/auth';
-import { shortcutRegistry, useShortcutHint } from '@/shared/keyboard/shortcuts';
+import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
+import { ActionButton } from '@/shared/ui/action-button';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
 import {
@@ -12,8 +13,9 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/shared/ui/dropdown-menu';
-import { ShortcutKbd } from '@/shared/ui/kbd';
 import { ThemeToggle } from './ThemeToggle';
+
+const SEARCH_SHORTCUT_ID = 'command-palette-slash';
 
 function initialsOf(name: string | null): string {
   if (!name) return '?';
@@ -25,21 +27,19 @@ function initialsOf(name: string | null): string {
 
 export function AppHeader() {
   const { user, tenant, logout } = useAuth();
-  const searchHint = useShortcutHint('command-palette-slash');
 
   return (
     <header className="flex h-14 shrink-0 items-center gap-3 border-b border-border bg-background px-4">
       <span className="shrink-0 text-sm font-semibold">Agenza Admin</span>
-      <Button
+      <ActionButton
         variant="outline"
         className="min-w-0 flex-1 justify-start text-muted-foreground sm:max-w-64"
-        onClick={() => shortcutRegistry.getShortcut('command-palette-slash')?.handler()}
-        aria-keyshortcuts={searchHint.ariaKeyshortcuts}
+        icon={Search}
+        shortcutId={SEARCH_SHORTCUT_ID}
+        onClick={() => shortcutRegistry.getShortcut(SEARCH_SHORTCUT_ID)?.handler()}
       >
-        <Search aria-hidden="true" />
-        <span>Buscar</span>
-        <ShortcutKbd hint={searchHint} />
-      </Button>
+        Buscar
+      </ActionButton>
 
       <div className="ml-auto flex items-center gap-1">
         <ThemeToggle />
@@ -52,6 +52,7 @@ export function AppHeader() {
               <AvatarFallback>{initialsOf(user?.displayName ?? null)}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
+          
           <DropdownMenuContent align="end">
             {(user?.displayName || tenant) && (
               <DropdownMenuGroup>

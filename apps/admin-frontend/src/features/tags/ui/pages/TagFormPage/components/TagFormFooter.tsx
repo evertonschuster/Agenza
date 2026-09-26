@@ -1,26 +1,25 @@
-import { Loader2Icon } from 'lucide-react';
-import { useFormState } from 'react-hook-form';
-import type { ShortcutHint } from '@/shared/keyboard/shortcuts';
+import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import { DialogClose, DialogFooter } from '@/shared/ui/dialog';
-import { ShortcutKbd } from '@/shared/ui/kbd';
+import { SAVE_SHORTCUT_ID } from '../useTagFormPage';
 
 interface TagFormFooterProps {
   canSubmit: boolean;
-  saveHint: ShortcutHint;
+  isSaving: boolean;
 }
 
-function TagFormFooter({ canSubmit, saveHint }: TagFormFooterProps) {
-  const { isSubmitting } = useFormState();
-
+function TagFormFooter({ canSubmit, isSaving }: TagFormFooterProps) {
   return (
     <DialogFooter>
       <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
-      <Button type="submit" disabled={!canSubmit} aria-keyshortcuts={saveHint.ariaKeyshortcuts}>
-        {isSubmitting && <Loader2Icon aria-hidden="true" className="animate-spin" />}
-        {isSubmitting ? 'Salvando…' : 'Salvar'}
-        <ShortcutKbd hint={saveHint} />
-      </Button>
+      <ActionButton
+        type="submit"
+        disabled={!canSubmit}
+        pending={isSaving}
+        shortcutId={SAVE_SHORTCUT_ID}
+      >
+        {isSaving ? 'Salvando…' : 'Salvar'}
+      </ActionButton>
     </DialogFooter>
   );
 }

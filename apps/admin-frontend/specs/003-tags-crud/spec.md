@@ -45,6 +45,30 @@ have, following the backend contract: `string Name, string Color, string? Descri
   mnemônico que a W3C APG recomenda; `Ctrl+Enter` foi descartado porque a APG desaconselha
   modificador + Enter (conflito com o sistema operacional).
 
+### Session 2026-09-25
+
+- Q: A exclusão também deve ter atalho de teclado? → A: Sim. `Delete` com o foco numa linha da
+  lista **DEVE** abrir a confirmação de exclusão daquela etiqueta — nunca excluir direto. Por ser
+  destrutivo, o atalho não ganha keycap nem tooltip (fica só na folha `?`), e a confirmação abre com
+  o foco em Cancelar: excluir continua exigindo uma escolha explícita.
+- Q: Enquanto o backend processa o salvamento, a pessoa pode clicar em Cancelar — mas a operação
+  termina do mesmo jeito. Cancelar deve continuar disponível? → A: Não. Um Cancelar que não cancela
+  engana; durante o salvamento (e, pelo mesmo motivo, durante a exclusão) nenhuma saída do diálogo
+  fica disponível — Cancelar desabilitado, ✕ oculto, `Esc` e clique fora ignorados — até a
+  resposta chegar.
+- Q: A confirmação de exclusão deve apresentar um atalho para excluir? → A: Sim. O botão Excluir da
+  confirmação mostra `Ctrl+Delete` (`⌘Delete` no macOS), que confirma a exclusão. `Delete` sozinho
+  **não** confirma: ele já é a tecla que abre a confirmação, e repeti-lo (ou segurá-lo) não pode
+  virar uma exclusão de um gesto só. A confirmação continua abrindo com o foco em Cancelar.
+
+### Session 2026-09-26
+
+- Q: O atalho `Delete` com o foco numa linha da lista deve continuar? → A: Não. Foi implementado
+  por engano e foi removido (FR-017 reescrita): a exclusão começa pelo botão da linha, com clique ou
+  `Tab` + `Enter`. O `Ctrl+Delete` da confirmação (FR-019) permanece; `Delete` sozinho continua sem
+  confirmar, agora porque uma tecla sem modificador numa confirmação destrutiva é fácil demais de
+  disparar por engano.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — A pessoa vê e localiza as etiquetas existentes (Priority: P1)
@@ -205,6 +229,17 @@ explicação.
   enquanto o botão estiver desabilitado (carregando ou salvando). O atalho **DEVE** aparecer no
   próprio botão e ser exposto a tecnologias assistivas. `Esc` **DEVE** fechar o formulário sem
   salvar, como Cancelar.
+- **FR-017**: *Removida em 2026-09-26 (ver Clarifications).* A lista **NÃO DEVE** ter atalho de
+  teclado para excluir a linha em foco; a exclusão começa pelo botão da linha (clique, ou `Tab` +
+  `Enter`). A confirmação **DEVE** abrir com o foco em Cancelar.
+- **FR-018**: Enquanto um salvamento (criação/edição) ou uma exclusão estiver em andamento, o
+  diálogo **NÃO DEVE** poder ser fechado: Cancelar **DEVE** ficar desabilitado, o ✕ **DEVE** ficar
+  oculto e `Esc` e o clique fora **DEVEM** ser ignorados. Quando a resposta chegar, com sucesso o diálogo fecha sozinho;
+  com erro, as saídas voltam a funcionar.
+- **FR-019**: Na confirmação de exclusão, `Ctrl+Delete` (`⌘Delete` no macOS) **DEVE** confirmar a
+  exclusão, com o mesmo efeito e as mesmas restrições do botão Excluir (sem efeito durante a
+  exclusão ou depois de um bloqueio), e **DEVE** aparecer no próprio botão e ser exposto a
+  tecnologias assistivas. `Delete` sem modificador **NÃO DEVE** confirmar.
 
 ### Key Entities
 

@@ -72,7 +72,7 @@ describe('TagDeletePage', () => {
     expect(mockDelete).toHaveBeenCalledWith('1');
     await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
-    expect(screen.getByTestId('location')).toHaveTextContent('location: /tags');
+    expect(screen.getByTestId('location').textContent).toBe('location: /tags');
     expect(screen.queryByRole('heading', { name: 'Excluir etiqueta?' })).not.toBeInTheDocument();
   });
 
@@ -121,8 +121,45 @@ describe('TagDeletePage', () => {
         }),
       ),
     );
-    await waitFor(() =>
-      expect(screen.getByTestId('location')).toHaveTextContent('location: /tags'),
-    );
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
+  });
+
+  describe('keyboard (spec FR-019)', () => {
+    it('keeps deleting deliberate: the confirmation opens on Cancelar, so a following Enter cancels', async () => {
+      const user = userEvent.setup();
+      renderAt(['/tags']);
+      await screen.findByText('Promoção');
+
+      screen.getByRole('link', { name: 'Excluir Promoção' }).focus();
+      await user.keyboard('{Enter}');
+      await screen.findByRole('heading', { name: 'Excluir etiqueta?' });
+      await waitFor(() => expect(screen.getByRole('button', { name: 'Cancelar' })).toHaveFocus());
+      await user.keyboard('{Enter}');
+
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
+      );
+      expect(mockDelete).not.toHaveBeenCalled();
+    });
+
+    it('deletes with Ctrl+Delete from the confirmation, which a plain Delete never does', async () => {
+      const user = userEvent.setup();
+      mockDelete.mockResolvedValue({ ok: true, data: undefined });
+      renderAt(['/tags']);
+      await screen.findByText('VIP');
+
+      screen.getByRole('link', { name: 'Excluir VIP' }).focus();
+      await user.keyboard('{Enter}');
+      await screen.findByRole('heading', { name: 'Excluir etiqueta?' });
+      await user.keyboard('{Delete}');
+      expect(mockDelete).not.toHaveBeenCalled();
+
+      await user.keyboard('{Control>}{Delete}{/Control}');
+
+      await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('2'));
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
+      );
+    });
   });
 });

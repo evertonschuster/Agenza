@@ -46,10 +46,7 @@ export default defineConfig({
         'src/shared/ui/list-section/**',
         'src/shared/ui/empty-state/**',
         'src/shared/ui/error-state/**',
-        'src/shared/ui/link-button/**',
         'src/shared/ui/form-field/**',
-        // No consumer anywhere yet (T160 in tasks.md) — 0% here is dead-code noise, not a gap.
-        'src/shared/ui/dialog/**',
         // Real behaviour, but most of each file is shadcn scaffold with no product consumer yet
         // (submenus, checkbox items, chips, groups — see D5 in plan.md). The consumed subset is
         // exercised for real by ThemeToggle/CommandPalette/ShortcutHelpSheet tests; file-level
