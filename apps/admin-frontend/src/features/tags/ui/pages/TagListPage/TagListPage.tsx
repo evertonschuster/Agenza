@@ -49,7 +49,7 @@ export function TagListPage() {
         columns={tagColumns()}
       />
 
-      {status === 'ready' && <Outlet />}
+      <Outlet />
     </div>
   );
 }

@@ -339,6 +339,25 @@ describe('TagFormPage', () => {
       expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
     });
 
+    it('fetches the tag on a deep link without waiting for the list to load', async () => {
+      mockList.mockReturnValue(new Promise(() => {}));
+      renderAt(['/tags/1/edit']);
+
+      expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
+      expect(mockGet).toHaveBeenCalledWith('1');
+    });
+
+    it('still opens on a deep link when the list fails to load', async () => {
+      mockList.mockResolvedValue({
+        ok: false,
+        error: { status: 0, code: 'Network.Unreachable', title: 'Sem conexão com o servidor.' },
+      });
+      renderAt(['/tags/1/edit']);
+
+      expect(await screen.findByText('Não foi possível carregar.')).toBeInTheDocument();
+      expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
+    });
+
     it('closes back to the list when Cancelar is clicked while still loading', async () => {
       const user = userEvent.setup();
       mockGet.mockReturnValue(new Promise(() => {}));
