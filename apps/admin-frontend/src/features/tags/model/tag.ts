@@ -5,6 +5,8 @@ export interface Tag {
   description: string | null;
 }
 
+export type TagInput = Pick<Tag, 'name' | 'color' | 'description'>;
+
 export interface TagColorOption {
   value: string;
   label: string;

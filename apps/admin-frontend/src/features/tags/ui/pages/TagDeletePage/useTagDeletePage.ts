@@ -2,8 +2,8 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
+import { deleteTag } from '../../../application/tagUseCases';
 import type { Tag } from '../../../model/tag';
-import { tagDeleted } from '../../../model/tagEvents';
 import type { UseTagDeletePageResult } from './useTagDeletePage.types';
 
 export function useTagDeletePage(): UseTagDeletePageResult {
@@ -52,10 +52,6 @@ export function useTagDeletePage(): UseTagDeletePageResult {
     onOpenChange: (open) => {
       if (!open) close();
     },
-    onConfirm: async () => {
-      const result = await tagsRepository.delete(id);
-      if (result.ok) tagDeleted.publish({ id });
-      return result;
-    },
+    onConfirm: () => deleteTag(id),
   };
 }
