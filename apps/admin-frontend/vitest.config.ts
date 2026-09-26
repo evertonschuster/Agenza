@@ -47,6 +47,7 @@ export default defineConfig({
         'src/shared/ui/empty-state/**',
         'src/shared/ui/error-state/**',
         'src/shared/ui/form-field/**',
+        'src/shared/form/fields/**',
         // Real behaviour, but most of each file is shadcn scaffold with no product consumer yet
         // (submenus, checkbox items, chips, groups — see D5 in plan.md). The consumed subset is
         // exercised for real by ThemeToggle/CommandPalette/ShortcutHelpSheet tests; file-level

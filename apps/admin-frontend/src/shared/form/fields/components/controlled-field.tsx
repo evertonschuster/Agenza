@@ -1,6 +1,6 @@
 import { Controller, useFormContext, type FieldValues } from 'react-hook-form';
-import type { ControlledFieldProps } from '../form-field.types';
-import { FormField } from './form-field';
+import { FormField } from '@/shared/ui/form-field';
+import type { ControlledFieldProps } from '../fields.types';
 
 export function ControlledField<T extends FieldValues>({
   name,

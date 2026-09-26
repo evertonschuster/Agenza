@@ -1,6 +1,6 @@
 import type { FieldValues } from 'react-hook-form';
 import { ColorSwatchPicker } from '@/shared/ui/color-swatch-picker';
-import type { ColorFieldProps } from '../form-field.types';
+import type { ColorFieldProps } from '../fields.types';
 import { ControlledField } from './controlled-field';
 
 export function ColorField<T extends FieldValues>({

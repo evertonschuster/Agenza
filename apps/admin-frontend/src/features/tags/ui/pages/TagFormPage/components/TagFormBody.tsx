@@ -1,4 +1,4 @@
-import { ColorField, FormErrorBanner, TextField, TextareaField } from '@/shared/ui/form-field';
+import { ColorField, FormErrorBanner, TextField, TextareaField } from '@/shared/form/fields';
 import { TAG_COLOR_PALETTE } from '../../../../model/tag';
 import {
   TAG_DESCRIPTION_MAX_LENGTH,
