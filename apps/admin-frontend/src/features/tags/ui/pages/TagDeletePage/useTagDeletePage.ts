@@ -1,15 +1,17 @@
-import { useCallback, useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
 import { tagDeleted } from '../../../model/tagEvents';
 import type { UseTagDeletePageResult } from './useTagDeletePage.types';
 
-export function useTagDeletePage(): UseTagDeletePageResult | null {
+export function useTagDeletePage(): UseTagDeletePageResult {
+  const { id = '' } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const tag = location.state as Tag | undefined;
+  const [loaded, setLoaded] = useState<{ id: string; tag: Tag }>();
+  const tag = loaded?.id === id ? loaded.tag : undefined;
 
   // Going back instead of pushing /tags keeps the browser's Back from reopening a closed dialog;
   // a first history entry (deep link, new tab) has nothing to go back to, so it is replaced.
@@ -22,16 +24,28 @@ export function useTagDeletePage(): UseTagDeletePageResult | null {
   }, [navigate, location.key, location.search]);
 
   useEffect(() => {
-    if (tag) return;
-    toast.add({
-      title: 'Etiqueta não encontrada',
-      description: 'Ela pode ter sido excluída por outra pessoa, ou não corresponde à busca ativa.',
-      type: 'info',
-    });
-    close();
-  }, [tag, close]);
+    let ignore = false;
 
-  if (!tag) return null;
+    void tagsRepository.get(id).then((result) => {
+      if (ignore) return;
+
+      if (result.ok) {
+        setLoaded({ id, tag: result.data });
+        return;
+      }
+
+      toast.add({
+        title: 'Não foi possível abrir a etiqueta',
+        description: result.error.title ?? undefined,
+        type: 'info',
+      });
+      close();
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, [id, close]);
 
   return {
     tag,
@@ -39,8 +53,8 @@ export function useTagDeletePage(): UseTagDeletePageResult | null {
       if (!open) close();
     },
     onConfirm: async () => {
-      const result = await tagsRepository.delete(tag.id);
-      if (result.ok) tagDeleted.publish({ id: tag.id });
+      const result = await tagsRepository.delete(id);
+      if (result.ok) tagDeleted.publish({ id });
       return result;
     },
   };
