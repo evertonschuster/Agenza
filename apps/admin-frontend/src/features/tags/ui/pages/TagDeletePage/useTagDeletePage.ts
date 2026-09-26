@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useCallback, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
@@ -11,6 +11,16 @@ export function useTagDeletePage(): UseTagDeletePageResult | null {
   const navigate = useNavigate();
   const tag = location.state as Tag | undefined;
 
+  // Going back instead of pushing /tags keeps the browser's Back from reopening a closed dialog;
+  // a first history entry (deep link, new tab) has nothing to go back to, so it is replaced.
+  const close = useCallback(() => {
+    if (location.key === 'default') {
+      void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+      return;
+    }
+    void navigate(-1);
+  }, [navigate, location.key, location.search]);
+
   useEffect(() => {
     if (tag) return;
     toast.add({
@@ -18,17 +28,15 @@ export function useTagDeletePage(): UseTagDeletePageResult | null {
       description: 'Ela pode ter sido excluída por outra pessoa, ou não corresponde à busca ativa.',
       type: 'info',
     });
-    void navigate({ pathname: '/tags', search: location.search });
-  }, [tag, navigate, location.search]);
+    close();
+  }, [tag, close]);
 
   if (!tag) return null;
-
-  const backTo = { pathname: '/tags', search: location.search };
 
   return {
     tag,
     onOpenChange: (open) => {
-      if (!open) void navigate(backTo);
+      if (!open) close();
     },
     onConfirm: async () => {
       const result = await tagsRepository.delete(tag.id);

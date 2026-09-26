@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import {
+  createMemoryRouter,
+  MemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+  useLocation,
+} from 'react-router';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagDeletePage } from './TagDeletePage';
 import type { Tag } from '../../../model/tag';
@@ -93,6 +100,37 @@ describe('TagDeletePage', () => {
     ).toBeInTheDocument();
     expect(mockList).toHaveBeenCalledTimes(1);
     expect(screen.getByText('Promoção')).toBeInTheDocument();
+  });
+
+  it('goes back to the list after deleting, so the browser Back button does not reopen the confirmation', async () => {
+    const user = userEvent.setup();
+    mockDelete.mockResolvedValue({ ok: true, data: undefined });
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/tags',
+          element: (
+            <>
+              <TagListPage />
+              <LocationProbe />
+            </>
+          ),
+          children: [{ path: ':id/delete', element: <TagDeletePage /> }],
+        },
+      ],
+      { initialEntries: ['/tags'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByText('VIP');
+
+    await user.click(screen.getByRole('link', { name: 'Excluir VIP' }));
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
+
+    await act(() => router.navigate(-1));
+
+    expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+    expect(screen.queryByRole('heading', { name: 'Excluir etiqueta?' })).not.toBeInTheDocument();
   });
 
   it('closes without deleting when Cancelar is clicked, preserving the active search (spec US4 scenario 3)', async () => {
