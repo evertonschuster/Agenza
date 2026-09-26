@@ -68,6 +68,41 @@ describe('ConfirmDialog', () => {
     );
   });
 
+  describe('while what it confirms is still loading', () => {
+    it('announces the load in place of the description and keeps confirm disabled', () => {
+      render(<ConfirmDialog {...BASE_PROPS} loading onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
+
+      expect(screen.getByRole('heading', { name: 'Desativar promoção?' })).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
+      expect(screen.queryByText(/desativar a promoção "Verão"/)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Desativar' })).toBeDisabled();
+    });
+
+    it('ignores Ctrl+Delete, like the disabled button', async () => {
+      const user = userEvent.setup();
+      const onConfirm = vi.fn();
+      render(
+        <ConfirmDialog {...BASE_PROPS} loading onOpenChange={vi.fn()} onConfirm={onConfirm} />,
+      );
+
+      await user.keyboard('{Control>}{Delete}{/Control}');
+
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('still lets the person leave with Cancelar', async () => {
+      const user = userEvent.setup();
+      const onOpenChange = vi.fn();
+      render(
+        <ConfirmDialog {...BASE_PROPS} loading onOpenChange={onOpenChange} onConfirm={vi.fn()} />,
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
   describe('keyboard', () => {
     const CONFIRM_KEYS = '{Control>}{Delete}{/Control}';
 

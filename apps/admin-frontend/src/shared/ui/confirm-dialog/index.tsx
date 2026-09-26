@@ -12,6 +12,7 @@ import { ConfirmDialogConfirmView } from './components/confirm-dialog-confirm-vi
 const CONFIRM_SHORTCUT_ID = 'confirm-dialog-confirm';
 
 function ConfirmDialog<T>({
+  loading = false,
   onOpenChange,
   onConfirm,
   onSuccess,
@@ -59,7 +60,7 @@ function ConfirmDialog<T>({
     'Delete',
     confirmLabel,
     () => {
-      if (!isSubmitting && !isBlocked) void handleConfirm();
+      if (!loading && !isSubmitting && !isBlocked) void handleConfirm();
     },
     { modified: true },
   );
@@ -87,6 +88,7 @@ function ConfirmDialog<T>({
             cancelLabel={cancelLabel}
             retryLabel={retryLabel}
             failure={failure}
+            loading={loading}
             isSubmitting={isSubmitting}
             shortcutId={CONFIRM_SHORTCUT_ID}
             onConfirm={() => void handleConfirm()}

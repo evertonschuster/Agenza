@@ -8,6 +8,7 @@ import {
 } from '@/shared/ui/dialog';
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
+import { Skeleton } from '@/shared/ui/skeleton';
 import type { ConfirmDialogConfirmViewProps } from '../confirm-dialog.types';
 
 function ConfirmDialogConfirmView({
@@ -18,6 +19,7 @@ function ConfirmDialogConfirmView({
   cancelLabel,
   retryLabel,
   failure,
+  loading,
   isSubmitting,
   shortcutId,
   onConfirm,
@@ -26,7 +28,15 @@ function ConfirmDialogConfirmView({
     <>
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        {loading ? (
+          <div role="status" className="space-y-2">
+            <span className="sr-only">Carregando…</span>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        ) : (
+          <DialogDescription>{description}</DialogDescription>
+        )}
       </DialogHeader>
       {failure?.transient && (
         <div
@@ -44,6 +54,7 @@ function ConfirmDialogConfirmView({
         <ActionButton
           variant="destructive"
           icon={ConfirmIcon}
+          disabled={loading}
           pending={isSubmitting}
           shortcutId={shortcutId}
           onClick={onConfirm}
