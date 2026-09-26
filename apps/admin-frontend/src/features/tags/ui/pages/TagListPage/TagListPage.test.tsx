@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import {
+  createMemoryRouter,
+  MemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+  useLocation,
+} from 'react-router';
 import { TagListPage } from './TagListPage';
 import type { Tag } from '../../../model/tag';
 
@@ -323,6 +330,35 @@ describe('TagListPage', () => {
 
     await user.keyboard('!');
     expect(searchInput).toHaveValue('vip!');
+  });
+
+  it('shows the search term of the current URL again when Back/Forward change ?q=', async () => {
+    const user = userEvent.setup();
+    mockList.mockImplementation((search?: string) =>
+      Promise.resolve({
+        ok: true,
+        data: search ? TAGS.filter((tag) => tag.name.toLowerCase().includes(search)) : TAGS,
+      }),
+    );
+    const router = createMemoryRouter([{ path: '/tags', element: <TagListPage /> }], {
+      initialEntries: ['/tags'],
+    });
+    render(<RouterProvider router={router} />);
+    await screen.findByText('Promoção');
+
+    const searchInput = screen.getByLabelText('Buscar etiquetas por nome');
+    await user.type(searchInput, 'vip{Enter}');
+    await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
+
+    await act(() => router.navigate(-1));
+
+    expect(await screen.findByText('Promoção')).toBeInTheDocument();
+    expect(searchInput).toHaveValue('');
+
+    await act(() => router.navigate(1));
+
+    await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
+    expect(searchInput).toHaveValue('vip');
   });
 
   it('narrows the list to tags whose name contains the search term after clicking the search button, case-insensitively (spec US1)', async () => {
