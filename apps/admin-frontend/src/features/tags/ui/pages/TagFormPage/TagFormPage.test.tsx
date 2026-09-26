@@ -210,7 +210,9 @@ describe('TagFormPage', () => {
 
       expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
-      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
+      );
     });
 
     it('normalizes a whitespace-only description to null', async () => {
@@ -315,7 +317,9 @@ describe('TagFormPage', () => {
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
       expect(mockCreate).not.toHaveBeenCalled();
-      expect(screen.getByTestId('location')).toHaveTextContent('location: /tags?q=promo');
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo'),
+      );
     });
   });
 

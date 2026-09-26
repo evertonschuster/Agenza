@@ -163,7 +163,9 @@ describe('TagListPage', () => {
 
     await user.keyboard('n');
 
-    expect(await screen.findByTestId('location')).toHaveTextContent('location: /tags/new');
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags/new'),
+    );
   });
 
   it('shows a generic inline failure, not the empty-catalog message, when the initial fetch fails', async () => {
@@ -243,8 +245,7 @@ describe('TagListPage', () => {
     await user.clear(screen.getByLabelText('Buscar etiquetas por nome'));
     await user.keyboard('{Enter}');
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/tags'));
-    expect(screen.getByTestId('location')).not.toHaveTextContent('?q=');
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
   });
 
   it('shows the table loading skeleton while a search re-fetch is in flight, replacing the stale rows', async () => {

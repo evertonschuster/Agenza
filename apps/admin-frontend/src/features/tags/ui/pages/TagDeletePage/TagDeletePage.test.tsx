@@ -126,7 +126,7 @@ describe('TagDeletePage', () => {
     expect(mockDelete).toHaveBeenCalledWith('1');
     await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
     await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
-    expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
     expect(screen.queryByRole('heading', { name: 'Excluir etiqueta?' })).not.toBeInTheDocument();
   });
 
@@ -191,7 +191,9 @@ describe('TagDeletePage', () => {
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(mockDelete).not.toHaveBeenCalled();
-    expect(screen.getByTestId('location')).toHaveTextContent('location: /tags?q=promo');
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo'),
+    );
   });
 
   it('shows the backend message in a toast and returns to the list when the tag does not exist', async () => {
