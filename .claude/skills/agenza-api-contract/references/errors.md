@@ -72,34 +72,48 @@ A form that iterates `errors` and matches keys to inputs will therefore **silent
 
 ## Mapping to a form
 
-Case-insensitive lookup against the form's own field names, unmatched keys promoted to form level:
+**Promoted, not a reference snippet anymore.** `tags` (`specs/003-tags-crud/`) was the first form;
+`toFormErrors` now lives in `shared/api/formErrors.ts`, promoted the moment a second form was staged
+for — see `docs/ARCHITECTURE.md` §5 ("Tag create/edit UI reintroduced on React Hook Form + Zod") for
+the promotion itself, and the `agenza-form-field` skill for how a new form actually wires it in.
+
+Case-insensitive lookup against the form's own field names, unmatched keys promoted to form level —
+the same algorithm this file described before promotion, with one deliberate shape change from what
+was sketched here: **one message per field** (`Partial<Record<F, string>>` / `string | null`), not
+arrays. Nothing in the app has ever needed more than one message per field or per form, and the
+render side (one `<p>` per field) only ever showed the first anyway — an array return would have been
+speculative. Revisit if a real case needs multiple messages per field; don't build it ahead of that.
 
 ```ts
-import type { ApiProblem } from '@/shared/api/servicesFacade';
-
-export function toFormErrors(problem: ApiProblem, fields: readonly string[]) {
+// shared/api/formErrors.ts (verbatim)
+export function toFormErrors<F extends string>(
+  problem: ApiProblem,
+  fields: readonly F[],
+): { fieldErrors: Partial<Record<F, string>>; formError: string | null } {
   const byField = new Map(fields.map((field) => [field.toLowerCase(), field]));
-  const perField: Record<string, string[]> = {};
+  const fieldErrors: Partial<Record<F, string>> = {};
   const formLevel: string[] = [];
 
   for (const [key, entries] of Object.entries(problem.errors ?? {})) {
-    const messages = entries.flatMap((entry) => (entry.message ? [entry.message] : []));
-    if (messages.length === 0) continue;
+    const message = entries[0]?.message;
+    if (!message) continue;
     const field = byField.get(key.toLowerCase());
-    if (field) (perField[field] ??= []).push(...messages);
-    else formLevel.push(...messages);
+    if (field) fieldErrors[field] = message;
+    else formLevel.push(message);
   }
 
-  if (formLevel.length === 0 && Object.keys(perField).length === 0 && problem.title) {
+  if (formLevel.length === 0 && Object.keys(fieldErrors).length === 0 && problem.title) {
     formLevel.push(problem.title);
   }
-  return { perField, formLevel };
+  const [formError = null] = formLevel;
+  return { fieldErrors, formError };
 }
 ```
 
-The live example belongs next to the first form that needs it — put it in that slice's `model/`,
-where it is testable with a Problem fixture and no mocks, not in `shared/`. Promote it to `shared/`
-only when a second form needs the same thing.
+`toFormErrors` only ever produces data — it never calls a setter or knows a state library exists.
+Feeding its output into React Hook Form's `setError` is `shared/form/applyApiProblem.ts`'s one job,
+not this function's; see `agenza-form-field` for that bridge and for `root.serverError`, the RHF
+convention for the form-level message.
 
 Rendering rules that belong with it: field messages go on the input via `aria-describedby` and
 `aria-invalid`; the form-level list goes in a live region above the submit button so a screen reader

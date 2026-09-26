@@ -8,6 +8,7 @@ export interface UseTagListPageResult {
   query: string;
   searchInputRef: RefObject<HTMLInputElement | null>;
   onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
+  newTagTo: { pathname: string; search: string };
 }
 
 export interface LoadResult {

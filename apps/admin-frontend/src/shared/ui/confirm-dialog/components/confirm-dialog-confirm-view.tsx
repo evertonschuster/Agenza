@@ -1,5 +1,12 @@
 import { AlertCircleIcon } from 'lucide-react';
-import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import {
+  DialogClose,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog';
+import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import type { ConfirmDialogConfirmViewProps } from '../confirm-dialog.types';
 
@@ -12,7 +19,7 @@ function ConfirmDialogConfirmView({
   retryLabel,
   failure,
   isSubmitting,
-  onCancel,
+  shortcutId,
   onConfirm,
 }: ConfirmDialogConfirmViewProps) {
   return (
@@ -31,13 +38,18 @@ function ConfirmDialogConfirmView({
         </div>
       )}
       <DialogFooter>
-        <Button variant="outline" onClick={onCancel}>
+        <DialogClose disabled={isSubmitting} render={<Button variant="outline" />}>
           {cancelLabel}
-        </Button>
-        <Button variant="destructive" onClick={onConfirm} disabled={isSubmitting}>
-          <ConfirmIcon aria-hidden="true" />
+        </DialogClose>
+        <ActionButton
+          variant="destructive"
+          icon={ConfirmIcon}
+          pending={isSubmitting}
+          shortcutId={shortcutId}
+          onClick={onConfirm}
+        >
           {failure?.transient ? retryLabel : confirmLabel}
-        </Button>
+        </ActionButton>
       </DialogFooter>
     </>
   );
