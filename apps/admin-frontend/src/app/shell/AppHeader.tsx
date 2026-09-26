@@ -52,7 +52,7 @@ export function AppHeader() {
               <AvatarFallback>{initialsOf(user?.displayName ?? null)}</AvatarFallback>
             </Avatar>
           </DropdownMenuTrigger>
-          
+
           <DropdownMenuContent align="end">
             {(user?.displayName || tenant) && (
               <DropdownMenuGroup>
