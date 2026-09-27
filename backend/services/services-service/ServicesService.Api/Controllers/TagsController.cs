@@ -47,7 +47,6 @@ public class TagsController : AgenzaControllerBase
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
     {
-        await Task.Delay(2033);
         var result = await _dispatcher.Query(new GetTagByIdQuery(id), cancellationToken);
         return result.ToActionResult(this, tag => Ok(tag));
     }
@@ -59,7 +58,6 @@ public class TagsController : AgenzaControllerBase
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
     public async Task<IActionResult> Update(Guid id, UpdateTagCommand command, CancellationToken cancellationToken)
     {
-        await Task.Delay(2033);
         var result = await _dispatcher.Send(command with { TagId = id }, cancellationToken);
         return result.ToActionResult(this, tag => Ok(tag));
     }
