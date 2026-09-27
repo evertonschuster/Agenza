@@ -17,8 +17,20 @@ keycaps on a list screen teach nobody anything and make the screen look like a k
 | **C** | Everything else that has a shortcut | Command palette right-rail and the `?` help sheet only |
 | **D** | No shortcut | Nothing |
 
-**Never tier A or B on**: destructive actions, row actions inside a list or table, navigation items.
-A destructive action should be slower to reach, not faster.
+**Never tier A or B on**: destructive actions reached directly (a row's delete, a toolbar's
+"excluir"), row actions inside a list or table, navigation items. A destructive action should be
+slower to reach, not faster.
+
+Row actions get **no shortcut at all** — not even tier C. They are reached by focus: `Tab` to the
+row's button, `Enter`. A `Delete`-on-the-focused-row shortcut was built for the tag list and removed
+as a mistake (ARCHITECTURE §5); don't bring it back.
+
+**The one destructive control that is tier A: a confirmation dialog's confirm.** Reaching it is
+already the slow path — it exists only after the confirmation opened — so its keycap tells the
+person how to finish, not how to skip a step. Two conditions keep it slow: the key is **modified**
+(`ConfirmDialog` binds `Ctrl/⌘+Delete`; a bare key on a destructive confirm is too easy to fire by
+accident, and the registry already refuses bare keys while a dialog is open), and the dialog still
+opens on Cancelar.
 
 The keycap is **derived from the shortcut registry** (`shared/keyboard/`), never typed by hand, and
 there is no `shortcut` prop on the generic `Button`. That is what makes it structurally impossible to

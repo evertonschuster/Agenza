@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatShortcutKey, shortcutRegistry } from './shortcuts';
+import { formatAriaKeyshortcuts, formatShortcutKey, shortcutRegistry } from './shortcuts';
 
 vi.mock('./platform', () => ({
   modifierGlyph: () => 'Ctrl' as const,
@@ -137,6 +137,16 @@ describe('shortcutRegistry', () => {
 
     it('leaves a non-letter key as-is when unmodified', () => {
       expect(formatShortcutKey({ key: '?', modified: false })).toBe('?');
+    });
+  });
+
+  describe('formatAriaKeyshortcuts', () => {
+    it('is the bare key, lowercase, when unmodified', () => {
+      expect(formatAriaKeyshortcuts({ key: 'n', modified: false })).toBe('n');
+    });
+
+    it('prefixes a modified key with the canonical "Control+", never the display glyph', () => {
+      expect(formatAriaKeyshortcuts({ key: 'k', modified: true })).toBe('Control+k');
     });
   });
 });

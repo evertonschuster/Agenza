@@ -1,14 +1,18 @@
 import { useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
+import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { extractErrorMessage, isTransientProblem } from '../../api/servicesFacade';
-import { toast } from '../toast';
+import { extractErrorMessage, isTransientProblem } from '@/shared/api/servicesFacade';
+import { toast } from '@/shared/ui/toast';
 import type { ConfirmDialogProps, ConfirmDialogFailure } from './confirm-dialog.types';
 
 import { ConfirmDialogBlockedView } from './components/confirm-dialog-blocked-view';
 import { ConfirmDialogConfirmView } from './components/confirm-dialog-confirm-view';
 
+const CONFIRM_SHORTCUT_ID = 'confirm-dialog-confirm';
+
 function ConfirmDialog<T>({
+  loading = false,
   onOpenChange,
   onConfirm,
   onSuccess,
@@ -31,6 +35,7 @@ function ConfirmDialog<T>({
 }: ConfirmDialogProps<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [failure, setFailure] = useState<ConfirmDialogFailure>();
+  const isBlocked = failure !== undefined && !failure.transient;
 
   async function handleConfirm() {
     setIsSubmitting(true);
@@ -50,15 +55,29 @@ function ConfirmDialog<T>({
     });
   }
 
+  useShortcut(
+    CONFIRM_SHORTCUT_ID,
+    'Delete',
+    confirmLabel,
+    () => {
+      if (!loading && !isSubmitting && !isBlocked) void handleConfirm();
+    },
+    { modified: true },
+  );
+
   return (
-    <Dialog open onOpenChange={onOpenChange}>
-      <DialogContent>
-        {failure && !failure.transient ? (
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!isSubmitting) onOpenChange(open);
+      }}
+    >
+      <DialogContent showCloseButton={!isSubmitting}>
+        {isBlocked ? (
           <ConfirmDialogBlockedView
             blockedTitle={blockedTitle}
             message={failure.message}
             dismissLabel={dismissLabel}
-            onDismiss={() => onOpenChange(false)}
           />
         ) : (
           <ConfirmDialogConfirmView
@@ -69,8 +88,9 @@ function ConfirmDialog<T>({
             cancelLabel={cancelLabel}
             retryLabel={retryLabel}
             failure={failure}
+            loading={loading}
             isSubmitting={isSubmitting}
-            onCancel={() => onOpenChange(false)}
+            shortcutId={CONFIRM_SHORTCUT_ID}
             onConfirm={() => void handleConfirm()}
           />
         )}

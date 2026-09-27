@@ -143,7 +143,39 @@ describe('ListSection', () => {
 
     expect(screen.getByRole('columnheader', { name: 'Nome' })).not.toHaveClass('text-right');
     expect(screen.getByRole('columnheader', { name: 'ID' })).toHaveClass('text-right');
-    expect(screen.getByRole('cell', { name: '1' })).toHaveClass('text-right');
+    expect(screen.getByRole('cell', { name: 'Primeiro' }).firstElementChild).not.toHaveClass(
+      'justify-end',
+    );
+    expect(screen.getByRole('cell', { name: '1' }).firstElementChild).toHaveClass(
+      'flex',
+      'justify-end',
+    );
+  });
+
+  it('right-aligns block-level cell content too, not only text (regression: an actions row stayed left under a right-aligned header)', () => {
+    render(
+      <ListSection
+        status="ready"
+        items={ITEMS}
+        getKey={(item) => item.id}
+        columns={[
+          {
+            key: 'actions',
+            header: 'Ações',
+            align: 'end',
+            cell: (item) => (
+              <div className="flex gap-1">
+                <button type="button">{`Editar ${item.name}`}</button>
+              </div>
+            ),
+          },
+        ]}
+        aria-label="Itens"
+      />,
+    );
+
+    const actionsRow = screen.getByRole('button', { name: 'Editar Primeiro' }).parentElement;
+    expect(actionsRow?.parentElement).toHaveClass('flex', 'justify-end');
   });
 
   it('applies the className prop to the wrapper element', () => {

@@ -173,9 +173,17 @@ export function formatShortcutKey(shortcut: Pick<Shortcut, 'key' | 'modified'>):
   return glyph === '⌘' ? `${glyph}${upperKey}` : `${glyph}+${upperKey}`;
 }
 
+// Canonical form for the `aria-keyshortcuts` attribute — always "Control", never the
+// platform-adaptive glyph `formatShortcutKey` uses for display (the registry itself accepts
+// either Ctrl or Cmd at the handling level; aria-keyshortcuts is authored as one fixed string).
+export function formatAriaKeyshortcuts(shortcut: Pick<Shortcut, 'key' | 'modified'>): string {
+  return shortcut.modified ? `Control+${shortcut.key}` : shortcut.key;
+}
+
 export interface ShortcutHint {
   displayKey: string | undefined;
   visible: boolean;
+  ariaKeyshortcuts: string | undefined;
 }
 
 export function useShortcutHint(id: string): ShortcutHint {
@@ -185,5 +193,6 @@ export function useShortcutHint(id: string): ShortcutHint {
   return {
     displayKey: shortcut ? formatShortcutKey(shortcut) : undefined,
     visible,
+    ariaKeyshortcuts: shortcut ? formatAriaKeyshortcuts(shortcut) : undefined,
   };
 }

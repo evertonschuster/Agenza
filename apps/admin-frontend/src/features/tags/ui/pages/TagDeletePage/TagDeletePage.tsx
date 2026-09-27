@@ -1,28 +1,26 @@
-import { ConfirmDialog } from '@/shared/ui/confirm-dialog';
-import { TagNotFoundDialog } from './components/TagNotFoundDialog';
+import { ConfirmDialog } from '@/widgets/confirm-dialog';
 import { useTagDeletePage } from './useTagDeletePage';
-import { TagDeleteMode } from './useTagDeletePage.types';
 
 export function TagDeletePage() {
-  const state = useTagDeletePage();
-
-  if (state.mode === TagDeleteMode.NotFound) {
-    return <TagNotFoundDialog onClose={state.onClose} />;
-  }
-
-  const { tag, onOpenChange, onConfirm } = state;
+  const { tag, onOpenChange, onConfirm } = useTagDeletePage();
 
   return (
     <ConfirmDialog
+      loading={!tag}
       onOpenChange={onOpenChange}
       onConfirm={onConfirm}
       confirmation={{
         title: 'Excluir etiqueta?',
-        description: `Tem certeza que deseja excluir a etiqueta "${tag.name}"? Essa ação não pode ser desfeita.`,
+        description: tag && (
+          <>
+            <span className="block">Tem certeza que deseja excluir a etiqueta "{tag.name}"?</span>
+            <span className="block">Essa ação não pode ser desfeita.</span>
+          </>
+        ),
       }}
       success={{
         title: 'Etiqueta excluída',
-        description: `"${tag.name}" foi excluída do catálogo.`,
+        description: tag && `"${tag.name}" foi excluída do catálogo.`,
       }}
     />
   );

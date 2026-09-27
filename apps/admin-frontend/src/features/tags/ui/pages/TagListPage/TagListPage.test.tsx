@@ -1,7 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import {
+  createMemoryRouter,
+  MemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+  useLocation,
+} from 'react-router';
 import { TagListPage } from './TagListPage';
 import type { Tag } from '../../../model/tag';
 
@@ -49,6 +56,7 @@ function renderAtTagsRoute(tags: Tag[], initialEntries: string[] = ['/tags']) {
       <Routes>
         <Route path="tags" element={<TagListPage />} />
       </Routes>
+      <LocationProbe />
     </MemoryRouter>,
   );
 }
@@ -113,6 +121,50 @@ describe('TagListPage', () => {
     expect(screen.getByRole('link', { name: 'Excluir Promoção' })).toHaveAttribute(
       'href',
       '/tags/1/delete?q=promo',
+    );
+  });
+
+  it('renders an edit link per row, pointing at that tag under /edit (spec US3)', async () => {
+    renderAtTagsRoute(TAGS);
+    await screen.findByText('Promoção');
+
+    const editLink = screen.getByRole('link', { name: 'Editar Promoção' });
+    expect(editLink).toHaveAttribute('href', '/tags/1/edit');
+    expect(screen.getByRole('link', { name: 'Editar VIP' })).toHaveAttribute(
+      'href',
+      '/tags/2/edit',
+    );
+  });
+
+  it("carries the active search into a row's edit link", async () => {
+    renderAtTagsRoute(TAGS, ['/tags?q=promo']);
+    await screen.findByText('Promoção');
+
+    expect(screen.getByRole('link', { name: 'Editar Promoção' })).toHaveAttribute(
+      'href',
+      '/tags/1/edit?q=promo',
+    );
+  });
+
+  it('renders a "Nova etiqueta" link pointing at /tags/new, carrying the active search (spec US2)', async () => {
+    renderAtTagsRoute(TAGS, ['/tags?q=promo']);
+    await screen.findByText('Promoção');
+
+    expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
+      'href',
+      '/tags/new?q=promo',
+    );
+  });
+
+  it('pressing "n" navigates to /tags/new (spec US2)', async () => {
+    const user = userEvent.setup();
+    renderAtTagsRoute(TAGS);
+    await screen.findByText('Promoção');
+
+    await user.keyboard('n');
+
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags/new'),
     );
   });
 
@@ -193,8 +245,7 @@ describe('TagListPage', () => {
     await user.clear(screen.getByLabelText('Buscar etiquetas por nome'));
     await user.keyboard('{Enter}');
 
-    await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/tags'));
-    expect(screen.getByTestId('location')).not.toHaveTextContent('?q=');
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
   });
 
   it('shows the table loading skeleton while a search re-fetch is in flight, replacing the stale rows', async () => {
@@ -280,6 +331,35 @@ describe('TagListPage', () => {
 
     await user.keyboard('!');
     expect(searchInput).toHaveValue('vip!');
+  });
+
+  it('shows the search term of the current URL again when Back/Forward change ?q=', async () => {
+    const user = userEvent.setup();
+    mockList.mockImplementation((search?: string) =>
+      Promise.resolve({
+        ok: true,
+        data: search ? TAGS.filter((tag) => tag.name.toLowerCase().includes(search)) : TAGS,
+      }),
+    );
+    const router = createMemoryRouter([{ path: '/tags', element: <TagListPage /> }], {
+      initialEntries: ['/tags'],
+    });
+    render(<RouterProvider router={router} />);
+    await screen.findByText('Promoção');
+
+    const searchInput = screen.getByLabelText('Buscar etiquetas por nome');
+    await user.type(searchInput, 'vip{Enter}');
+    await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
+
+    await act(() => router.navigate(-1));
+
+    expect(await screen.findByText('Promoção')).toBeInTheDocument();
+    expect(searchInput).toHaveValue('');
+
+    await act(() => router.navigate(1));
+
+    await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
+    expect(searchInput).toHaveValue('vip');
   });
 
   it('narrows the list to tags whose name contains the search term after clicking the search button, case-insensitively (spec US1)', async () => {

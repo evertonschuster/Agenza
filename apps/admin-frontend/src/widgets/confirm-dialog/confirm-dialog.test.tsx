@@ -68,9 +68,122 @@ describe('ConfirmDialog', () => {
     );
   });
 
+  describe('while what it confirms is still loading', () => {
+    it('announces the load in place of the description and keeps confirm disabled', () => {
+      render(<ConfirmDialog {...BASE_PROPS} loading onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
+
+      expect(screen.getByRole('heading', { name: 'Desativar promoção?' })).toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Carregando…');
+      expect(screen.queryByText(/desativar a promoção "Verão"/)).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Desativar' })).toBeDisabled();
+    });
+
+    it('ignores Ctrl+Delete, like the disabled button', async () => {
+      const user = userEvent.setup();
+      const onConfirm = vi.fn();
+      render(
+        <ConfirmDialog {...BASE_PROPS} loading onOpenChange={vi.fn()} onConfirm={onConfirm} />,
+      );
+
+      await user.keyboard('{Control>}{Delete}{/Control}');
+
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('still lets the person leave with Cancelar', async () => {
+      const user = userEvent.setup();
+      const onOpenChange = vi.fn();
+      render(
+        <ConfirmDialog {...BASE_PROPS} loading onOpenChange={onOpenChange} onConfirm={vi.fn()} />,
+      );
+
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(onOpenChange).toHaveBeenCalledWith(false);
+    });
+  });
+
+  describe('keyboard', () => {
+    const CONFIRM_KEYS = '{Control>}{Delete}{/Control}';
+
+    it('confirms with Ctrl+Delete, exactly like the confirm button, and announces it on that button', async () => {
+      const user = userEvent.setup();
+      const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
+      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+      expect(screen.getByRole('button', { name: 'Desativar' })).toHaveAttribute(
+        'aria-keyshortcuts',
+        'Control+Delete',
+      );
+      await user.keyboard(CONFIRM_KEYS);
+
+      await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
+    });
+
+    it('never confirms on a plain Delete, so a repeated or held Delete cannot turn open-then-confirm into one gesture', async () => {
+      const user = userEvent.setup();
+      const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
+      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+      await user.keyboard('{Delete}{Delete}');
+
+      expect(onConfirm).not.toHaveBeenCalled();
+    });
+
+    it('ignores Ctrl+Delete while a confirm is in flight, like the disabled button', async () => {
+      const user = userEvent.setup();
+      const onConfirm = vi.fn(() => new Promise<ApiResult<void>>(() => {}));
+      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+      await user.keyboard(CONFIRM_KEYS);
+      await user.keyboard(CONFIRM_KEYS);
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('ignores Ctrl+Delete once the action is blocked, where no confirm button remains', async () => {
+      const user = userEvent.setup();
+      const onConfirm = vi.fn().mockResolvedValue({
+        ok: false,
+        error: { title: 'Esta promoção está em uso.', code: 'Promotion.InUse' },
+      });
+      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+      await user.keyboard(CONFIRM_KEYS);
+      await screen.findByRole('heading', { name: 'Não é possível desativar' });
+      await user.keyboard(CONFIRM_KEYS);
+
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  it('offers no way out while a confirm is in flight — Cancelar disabled, ✕ hidden, Esc ignored — since the action finishes anyway', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    let resolveConfirm: (result: ApiResult<void>) => void = () => {};
+    const onConfirm = vi.fn(
+      () =>
+        new Promise<ApiResult<void>>((resolve) => {
+          resolveConfirm = resolve;
+        }),
+    );
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={onOpenChange} onConfirm={onConfirm} />);
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+    expect(screen.queryByRole('button', { name: 'Fechar' })).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    expect(onOpenChange).not.toHaveBeenCalled();
+
+    resolveConfirm({ ok: true, data: undefined });
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
+  });
+
   it('fires a success toast built from the success copy when confirm succeeds', async () => {
     const user = userEvent.setup();
-    const toastModule = await import('../toast');
+    const toastModule = await import('@/shared/ui/toast');
     const toastAddSpy = vi.spyOn(toastModule.toast, 'add');
     const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
     render(

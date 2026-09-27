@@ -1,6 +1,14 @@
 import { AlertCircleIcon } from 'lucide-react';
-import { DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import {
+  DialogClose,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/shared/ui/dialog';
+import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
+import { Skeleton } from '@/shared/ui/skeleton';
 import type { ConfirmDialogConfirmViewProps } from '../confirm-dialog.types';
 
 function ConfirmDialogConfirmView({
@@ -11,15 +19,24 @@ function ConfirmDialogConfirmView({
   cancelLabel,
   retryLabel,
   failure,
+  loading,
   isSubmitting,
-  onCancel,
+  shortcutId,
   onConfirm,
 }: ConfirmDialogConfirmViewProps) {
   return (
     <>
       <DialogHeader>
         <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
+        {loading ? (
+          <div role="status" className="space-y-2">
+            <span className="sr-only">Carregando…</span>
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-2/3" />
+          </div>
+        ) : (
+          <DialogDescription>{description}</DialogDescription>
+        )}
       </DialogHeader>
       {failure?.transient && (
         <div
@@ -31,13 +48,19 @@ function ConfirmDialogConfirmView({
         </div>
       )}
       <DialogFooter>
-        <Button variant="outline" onClick={onCancel}>
+        <DialogClose disabled={isSubmitting} render={<Button variant="outline" />}>
           {cancelLabel}
-        </Button>
-        <Button variant="destructive" onClick={onConfirm} disabled={isSubmitting}>
-          <ConfirmIcon aria-hidden="true" />
+        </DialogClose>
+        <ActionButton
+          variant="destructive"
+          icon={ConfirmIcon}
+          disabled={loading}
+          pending={isSubmitting}
+          shortcutId={shortcutId}
+          onClick={onConfirm}
+        >
           {failure?.transient ? retryLabel : confirmLabel}
-        </Button>
+        </ActionButton>
       </DialogFooter>
     </>
   );

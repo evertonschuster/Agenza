@@ -25,11 +25,10 @@ function ListSectionTable<T>({ items, columns, getKey, ariaLabel }: ListSectionT
           {items.map((item) => (
             <tr key={getKey(item)} className="border-t border-border hover:bg-accent">
               {columns.map((column) => (
-                <td
-                  key={column.key}
-                  className={cn('px-4 py-2.5', column.align === 'end' && 'text-right')}
-                >
-                  {column.cell(item)}
+                <td key={column.key} className="px-4 py-2.5">
+                  <div className={cn(column.align === 'end' && 'flex justify-end')}>
+                    {column.cell(item)}
+                  </div>
                 </td>
               ))}
             </tr>

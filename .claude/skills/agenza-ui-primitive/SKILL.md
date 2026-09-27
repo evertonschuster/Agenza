@@ -151,14 +151,34 @@ Full token system, focus ring, dark elevation, and the backend-hex technique: al
 
 A **resting** keycap only on a control that occurs at most once per screen: the header search, the
 screen's single primary CTA, a dialog's confirm. Everything else is tooltip on hover **and** focus,
-or palette/help-sheet only. **Never** on destructive actions, row actions, or nav items.
+or palette/help-sheet only. **Never** on destructive actions reached directly, row actions, or nav
+items — the exception is a confirmation dialog's confirm, which may carry a **modified** key
+(`ConfirmDialog`: `Ctrl/⌘+Delete`); see `references/interaction.md`.
 
 The keycap is **derived from the shortcut registry**, never typed by hand — there is no `shortcut`
-prop on the generic `Button`.
+prop on the generic `Button`. A control that advertises a shortcut is an **`ActionButton`**
+(`shared/ui/action-button`) or a **`LinkButton`** (`shared/ui/link-button`) given the registry id:
+
+```tsx
+<ActionButton icon={Plus} shortcutId="novo-servico" onClick={announceComingSoon}>Novo serviço</ActionButton>
+<ActionButton type="submit" pending={isSaving} disabled={!canSubmit} shortcutId="salvar-etiqueta">…</ActionButton>
+<LinkButton to={newTagTo} icon={PlusIcon} shortcutId="nova-etiqueta">Nova etiqueta</LinkButton>
+```
+
+Both read the shortcut from the registry by that id, so an id nobody registered renders no keycap
+and no `aria-keyshortcuts` — advertising a key that does nothing is structurally impossible. The
+registration itself (`useShortcut`) stays with whoever owns the action (a page hook, the command
+palette); the button only advertises it. `ActionButton` also owns the pending look — `pending`
+swaps the icon for a spinner and disables the button — so a "Salvar"/"Excluir" in flight looks the
+same everywhere.
 
 Accessible name, non-negotiable: `<kbd aria-hidden="true">` inside the button plus
 `aria-keyshortcuts` on the button. `role="presentation"` does **not** work — name-from-content still
-traverses the subtree, and the button announces as "Novo serviço N".
+traverses the subtree, and the button announces as "Novo serviço N". Both components already do
+this; hand-rolling `aria-keyshortcuts` + a `<Kbd>` on a plain `Button` is how two call sites once
+lost the attribute. For the same reason the shortcut-aware keycap is not exported on its own — a
+standalone `ShortcutKbd` kept that path looking sanctioned and was removed (ARCHITECTURE.md §5);
+don't bring it back. `Kbd` stays the plain visual primitive.
 
 Tiers, tooltip rules under WCAG 1.4.13, `event.key` vs `event.code`, focus:
 [`references/interaction.md`](references/interaction.md).

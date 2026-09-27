@@ -1,30 +1,55 @@
-import { useLocation, useNavigate } from 'react-router';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router';
+import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
+import { deleteTag } from '../../../application/tagUseCases';
 import type { Tag } from '../../../model/tag';
-import { tagDeleted } from '../../../model/tagEvents';
-import { TagDeleteMode, type UseTagDeletePageResult } from './useTagDeletePage.types';
+import type { UseTagDeletePageResult } from './useTagDeletePage.types';
 
 export function useTagDeletePage(): UseTagDeletePageResult {
+  const { id = '' } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
+  const [tag, setTag] = useState<Tag>();
+  const canGoBack = location.key !== 'default';
 
-  const tag = location.state as Tag | undefined;
-  const backTo = { pathname: '..', search: location.search };
+  const close = useCallback(() => {
+    if (canGoBack) {
+      void navigate(-1);
+      return;
+    }
+    void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+  }, [navigate, canGoBack, location.search]);
 
-  if (!tag) {
-    return { mode: TagDeleteMode.NotFound, onClose: () => void navigate(backTo) };
-  }
+  useEffect(() => {
+    let ignore = false;
+
+    void tagsRepository.get(id).then((result) => {
+      if (ignore) return;
+
+      if (result.ok) {
+        setTag(result.data);
+        return;
+      }
+
+      toast.add({
+        title: 'Não foi possível abrir a etiqueta',
+        description: result.error.title ?? undefined,
+        type: 'info',
+      });
+      close();
+    });
+
+    return () => {
+      ignore = true;
+    };
+  }, [id, close]);
 
   return {
-    mode: TagDeleteMode.Confirming,
     tag,
     onOpenChange: (open) => {
-      if (!open) void navigate(backTo);
+      if (!open) close();
     },
-    onConfirm: async () => {
-      const result = await tagsRepository.delete(tag.id);
-      if (result.ok) tagDeleted.publish({ id: tag.id });
-      return result;
-    },
+    onConfirm: () => deleteTag(id),
   };
 }
