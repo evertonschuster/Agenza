@@ -31,8 +31,6 @@ export default tseslint.config(
       '@typescript-eslint/no-explicit-any': 'error',
     },
   },
-  // Dependency direction (ARCHITECTURE.md §1) and the slice barrel (FR-014), checked on the path
-  // each import resolves to, so a relative import cannot slip past what an alias import would hit.
   {
     files: ['src/**/*.{ts,tsx}'],
     plugins: {

@@ -41,7 +41,6 @@ export function useTagListPage(): UseTagListPageResult {
     };
   }, [query, fetchTags]);
 
-  // The field is uncontrolled so typing never refetches; Back/Forward change ?q= under it.
   useEffect(() => {
     const input = searchInputRef.current;
     if (input && input.value !== query) input.value = query;

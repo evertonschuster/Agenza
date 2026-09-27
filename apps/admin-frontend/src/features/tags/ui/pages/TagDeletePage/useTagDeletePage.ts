@@ -12,16 +12,15 @@ export function useTagDeletePage(): UseTagDeletePageResult {
   const navigate = useNavigate();
   const [loaded, setLoaded] = useState<{ id: string; tag: Tag }>();
   const tag = loaded?.id === id ? loaded.tag : undefined;
+  const canGoBack = location.key !== 'default';
 
-  // Going back instead of pushing /tags keeps the browser's Back from reopening a closed dialog;
-  // a first history entry (deep link, new tab) has nothing to go back to, so it is replaced.
   const close = useCallback(() => {
-    if (location.key === 'default') {
-      void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+    if (canGoBack) {
+      void navigate(-1);
       return;
     }
-    void navigate(-1);
-  }, [navigate, location.key, location.search]);
+    void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+  }, [navigate, canGoBack, location.search]);
 
   useEffect(() => {
     let ignore = false;
