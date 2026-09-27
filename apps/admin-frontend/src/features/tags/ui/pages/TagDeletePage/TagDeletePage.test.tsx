@@ -29,8 +29,7 @@ const TAGS: Tag[] = [
   { id: '2', name: 'VIP', color: '#8b5cf6', description: null },
 ];
 
-const PROMOCAO_CONFIRMATION =
-  'Tem certeza que deseja excluir a etiqueta "Promoção"? Essa ação não pode ser desfeita.';
+const PROMOCAO_CONFIRMATION = 'Tem certeza que deseja excluir a etiqueta "Promoção"?';
 
 function LocationProbe() {
   const location = useLocation();
@@ -92,6 +91,13 @@ describe('TagDeletePage', () => {
 
     expect(await screen.findByText(PROMOCAO_CONFIRMATION)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Excluir' })).toBeEnabled();
+  });
+
+  it('shows the question and the warning on separate lines', async () => {
+    renderAt(['/tags/1/delete']);
+
+    expect(await screen.findByText(PROMOCAO_CONFIRMATION)).toBeInTheDocument();
+    expect(screen.getByText('Essa ação não pode ser desfeita.')).toBeInTheDocument();
   });
 
   it('announces the load and keeps Excluir disabled until the tag arrives', async () => {

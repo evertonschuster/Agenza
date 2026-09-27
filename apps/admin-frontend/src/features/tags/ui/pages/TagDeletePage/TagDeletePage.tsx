@@ -11,9 +11,12 @@ export function TagDeletePage() {
       onConfirm={onConfirm}
       confirmation={{
         title: 'Excluir etiqueta?',
-        description:
-          tag &&
-          `Tem certeza que deseja excluir a etiqueta "${tag.name}"? Essa ação não pode ser desfeita.`,
+        description: tag && (
+          <>
+            <span className="block">Tem certeza que deseja excluir a etiqueta "{tag.name}"?</span>
+            <span className="block">Essa ação não pode ser desfeita.</span>
+          </>
+        ),
       }}
       success={{
         title: 'Etiqueta excluída',
