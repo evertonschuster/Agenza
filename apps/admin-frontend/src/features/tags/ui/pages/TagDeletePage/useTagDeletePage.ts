@@ -10,8 +10,7 @@ export function useTagDeletePage(): UseTagDeletePageResult {
   const { id = '' } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const [loaded, setLoaded] = useState<{ id: string; tag: Tag }>();
-  const tag = loaded?.id === id ? loaded.tag : undefined;
+  const [tag, setTag] = useState<Tag>();
   const canGoBack = location.key !== 'default';
 
   const close = useCallback(() => {
@@ -29,7 +28,7 @@ export function useTagDeletePage(): UseTagDeletePageResult {
       if (ignore) return;
 
       if (result.ok) {
-        setLoaded({ id, tag: result.data });
+        setTag(result.data);
         return;
       }
 
