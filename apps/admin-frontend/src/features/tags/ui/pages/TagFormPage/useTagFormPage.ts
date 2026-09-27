@@ -6,7 +6,7 @@ import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
-import { tagSaved } from '../../../model/tagEvents';
+import { createTag, updateTag } from '../../../application/tagUseCases';
 import {
   TAG_FORM_FIELDS,
   tagFormSchema,
@@ -32,11 +32,15 @@ export function useTagFormPage(): UseTagFormPageResult {
   });
   const isSaving = methods.formState.isSubmitting;
   const canSubmit = !isLoading && !isSaving;
+  const canGoBack = location.key !== 'default';
 
-  const close = useCallback(
-    () => void navigate({ pathname: '/tags', search: location.search }),
-    [navigate, location.search],
-  );
+  const close = useCallback(() => {
+    if (canGoBack) {
+      void navigate(-1);
+      return;
+    }
+    void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+  }, [navigate, canGoBack, location.search]);
 
   useEffect(() => {
     if (!id) return;
@@ -65,12 +69,9 @@ export function useTagFormPage(): UseTagFormPageResult {
   }, [id, methods, close]);
 
   async function onValid(values: TagFormValues) {
-    const result = isEdit
-      ? await tagsRepository.update(id, values)
-      : await tagsRepository.create(values);
+    const result = isEdit ? await updateTag(id, values) : await createTag(values);
 
     if (result.ok) {
-      tagSaved.publish({ id: result.data.id });
       toast.add({
         title: isEdit ? 'Etiqueta atualizada' : 'Etiqueta criada',
         description: isEdit

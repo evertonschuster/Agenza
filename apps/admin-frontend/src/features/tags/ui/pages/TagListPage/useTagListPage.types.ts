@@ -1,5 +1,5 @@
 import type { RefObject, SubmitEvent } from 'react';
-import type { ListSectionStatus } from '@/shared/ui/list-section';
+import type { ListSectionStatus } from '@/widgets/list-section';
 import type { Tag } from '../../../model/tag';
 
 export interface UseTagListPageResult {

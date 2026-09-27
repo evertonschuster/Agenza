@@ -1,39 +1,55 @@
-import { useEffect } from 'react';
-import { useLocation, useNavigate } from 'react-router';
+import { useCallback, useEffect, useState } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
+import { deleteTag } from '../../../application/tagUseCases';
 import type { Tag } from '../../../model/tag';
-import { tagDeleted } from '../../../model/tagEvents';
 import type { UseTagDeletePageResult } from './useTagDeletePage.types';
 
-export function useTagDeletePage(): UseTagDeletePageResult | null {
+export function useTagDeletePage(): UseTagDeletePageResult {
+  const { id = '' } = useParams();
   const location = useLocation();
   const navigate = useNavigate();
-  const tag = location.state as Tag | undefined;
+  const [tag, setTag] = useState<Tag>();
+  const canGoBack = location.key !== 'default';
+
+  const close = useCallback(() => {
+    if (canGoBack) {
+      void navigate(-1);
+      return;
+    }
+    void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+  }, [navigate, canGoBack, location.search]);
 
   useEffect(() => {
-    if (tag) return;
-    toast.add({
-      title: 'Etiqueta não encontrada',
-      description: 'Ela pode ter sido excluída por outra pessoa, ou não corresponde à busca ativa.',
-      type: 'info',
+    let ignore = false;
+
+    void tagsRepository.get(id).then((result) => {
+      if (ignore) return;
+
+      if (result.ok) {
+        setTag(result.data);
+        return;
+      }
+
+      toast.add({
+        title: 'Não foi possível abrir a etiqueta',
+        description: result.error.title ?? undefined,
+        type: 'info',
+      });
+      close();
     });
-    void navigate({ pathname: '/tags', search: location.search });
-  }, [tag, navigate, location.search]);
 
-  if (!tag) return null;
-
-  const backTo = { pathname: '/tags', search: location.search };
+    return () => {
+      ignore = true;
+    };
+  }, [id, close]);
 
   return {
     tag,
     onOpenChange: (open) => {
-      if (!open) void navigate(backTo);
+      if (!open) close();
     },
-    onConfirm: async () => {
-      const result = await tagsRepository.delete(tag.id);
-      if (result.ok) tagDeleted.publish({ id: tag.id });
-      return result;
-    },
+    onConfirm: () => deleteTag(id),
   };
 }

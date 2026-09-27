@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { ApiResult } from '../../api/servicesFacade';
+import type { ApiResult } from '@/shared/api/servicesFacade';
 
 interface ConfirmDialogFailure {
   message: string;
@@ -23,10 +23,11 @@ interface ConfirmDialogError {
 
 interface ConfirmDialogSuccess {
   title?: string;
-  description?: string;
+  description?: string | undefined;
 }
 
 interface ConfirmDialogProps<T> {
+  loading?: boolean | undefined;
   onOpenChange: (open: boolean) => void;
   onConfirm: () => Promise<ApiResult<T>>;
   onSuccess?: (data: T) => void;
@@ -49,6 +50,7 @@ interface ConfirmDialogConfirmViewProps {
   cancelLabel: string;
   retryLabel: string;
   failure: ConfirmDialogFailure | undefined;
+  loading: boolean;
   isSubmitting: boolean;
   shortcutId: string;
   onConfirm: () => void;

@@ -1,8 +1,8 @@
 import { useFormContext, type FieldValues } from 'react-hook-form';
+import { FormField } from '@/shared/ui/form-field';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
-import type { TextFieldProps, TextareaFieldProps } from '../form-field.types';
-import { FormField } from './form-field';
+import type { TextFieldProps, TextareaFieldProps } from '../fields.types';
 
 export function TextField<T extends FieldValues>({
   name,

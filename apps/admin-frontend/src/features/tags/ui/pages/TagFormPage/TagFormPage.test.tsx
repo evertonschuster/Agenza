@@ -50,6 +50,29 @@ function renderAt(initialEntries: string[]) {
   );
 }
 
+function renderRouterAt(initialEntries: string[]) {
+  const router = createMemoryRouter(
+    [
+      {
+        path: '/tags',
+        element: (
+          <>
+            <TagListPage />
+            <LocationProbe />
+          </>
+        ),
+        children: [
+          { path: 'new', element: <TagFormPage /> },
+          { path: ':id/edit', element: <TagFormPage /> },
+        ],
+      },
+    ],
+    { initialEntries },
+  );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
 describe('TagFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -187,7 +210,9 @@ describe('TagFormPage', () => {
 
       expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
-      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
+      );
     });
 
     it('normalizes a whitespace-only description to null', async () => {
@@ -292,7 +317,9 @@ describe('TagFormPage', () => {
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
       expect(mockCreate).not.toHaveBeenCalled();
-      expect(screen.getByTestId('location')).toHaveTextContent('location: /tags?q=promo');
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo'),
+      );
     });
   });
 
@@ -314,6 +341,25 @@ describe('TagFormPage', () => {
 
       expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
       expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+    });
+
+    it('fetches the tag on a deep link without waiting for the list to load', async () => {
+      mockList.mockReturnValue(new Promise(() => {}));
+      renderAt(['/tags/1/edit']);
+
+      expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
+      expect(mockGet).toHaveBeenCalledWith('1');
+    });
+
+    it('still opens on a deep link when the list fails to load', async () => {
+      mockList.mockResolvedValue({
+        ok: false,
+        error: { status: 0, code: 'Network.Unreachable', title: 'Sem conexão com o servidor.' },
+      });
+      renderAt(['/tags/1/edit']);
+
+      expect(await screen.findByText('Não foi possível carregar.')).toBeInTheDocument();
+      expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
     });
 
     it('closes back to the list when Cancelar is clicked while still loading', async () => {
@@ -470,6 +516,43 @@ describe('TagFormPage', () => {
       await waitFor(() =>
         expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
+    });
+  });
+
+  describe('closing and browser history', () => {
+    it('goes back to the list after saving, so the browser Back button does not reopen the dialog', async () => {
+      const user = userEvent.setup();
+      mockUpdate.mockResolvedValue({ ok: true, data: TAGS[0] });
+      const router = renderRouterAt(['/tags']);
+      await screen.findByText('Promoção');
+
+      await user.click(screen.getByRole('link', { name: 'Editar Promoção' }));
+      await screen.findByLabelText('Nome');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
+      );
+
+      await act(() => router.navigate(-1));
+
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+      expect(screen.queryByRole('heading', { name: 'Editar etiqueta' })).not.toBeInTheDocument();
+    });
+
+    it('replaces a deep-linked dialog with the list on close, so Back does not reopen it either', async () => {
+      const user = userEvent.setup();
+      const router = renderRouterAt(['/tags/new?q=promo']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo'),
+      );
+
+      await act(() => router.navigate(-1));
+
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo');
+      expect(screen.queryByRole('heading', { name: 'Nova etiqueta' })).not.toBeInTheDocument();
     });
   });
 

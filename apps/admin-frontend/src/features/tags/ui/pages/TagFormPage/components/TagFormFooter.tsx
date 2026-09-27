@@ -11,7 +11,9 @@ interface TagFormFooterProps {
 function TagFormFooter({ canSubmit, isSaving }: TagFormFooterProps) {
   return (
     <DialogFooter>
-      <DialogClose render={<Button variant="outline" />}>Cancelar</DialogClose>
+      <DialogClose disabled={isSaving} render={<Button variant="outline" />}>
+        Cancelar
+      </DialogClose>
       <ActionButton
         type="submit"
         disabled={!canSubmit}

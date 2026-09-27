@@ -1,12 +1,6 @@
 import { servicesApi } from '@/shared/api/servicesApi';
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import type { Tag } from '../model/tag';
-
-interface TagInput {
-  name: string;
-  color: string;
-  description: string | null;
-}
+import type { Tag, TagInput } from '../model/tag';
 
 function list(search?: string, signal?: AbortSignal): Promise<ApiResult<Tag[]>> {
   return servicesApi.get('/api/v{version}/tags', {

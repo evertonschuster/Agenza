@@ -2,8 +2,8 @@ import { useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { extractErrorMessage, isTransientProblem } from '../../api/servicesFacade';
-import { toast } from '../toast';
+import { extractErrorMessage, isTransientProblem } from '@/shared/api/servicesFacade';
+import { toast } from '@/shared/ui/toast';
 import type { ConfirmDialogProps, ConfirmDialogFailure } from './confirm-dialog.types';
 
 import { ConfirmDialogBlockedView } from './components/confirm-dialog-blocked-view';
@@ -12,6 +12,7 @@ import { ConfirmDialogConfirmView } from './components/confirm-dialog-confirm-vi
 const CONFIRM_SHORTCUT_ID = 'confirm-dialog-confirm';
 
 function ConfirmDialog<T>({
+  loading = false,
   onOpenChange,
   onConfirm,
   onSuccess,
@@ -59,7 +60,7 @@ function ConfirmDialog<T>({
     'Delete',
     confirmLabel,
     () => {
-      if (!isSubmitting && !isBlocked) void handleConfirm();
+      if (!loading && !isSubmitting && !isBlocked) void handleConfirm();
     },
     { modified: true },
   );
@@ -87,6 +88,7 @@ function ConfirmDialog<T>({
             cancelLabel={cancelLabel}
             retryLabel={retryLabel}
             failure={failure}
+            loading={loading}
             isSubmitting={isSubmitting}
             shortcutId={CONFIRM_SHORTCUT_ID}
             onConfirm={() => void handleConfirm()}

@@ -16,7 +16,6 @@ export function TagFormPage() {
     <Dialog open onOpenChange={onOpenChange}>
       <DialogContent showCloseButton={!isSaving}>
         <FormProvider {...methods}>
-
           <form onSubmit={onSubmit} className="contents">
             <TagFormHeader isEdit={isEdit} />
             {isLoading ? (
@@ -26,7 +25,6 @@ export function TagFormPage() {
             )}
             <TagFormFooter canSubmit={canSubmit} isSaving={isSaving} />
           </form>
-          
         </FormProvider>
       </DialogContent>
     </Dialog>

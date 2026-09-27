@@ -1,5 +1,5 @@
 import type { CSSProperties } from 'react';
-import type { ListSectionColumn } from '@/shared/ui/list-section';
+import type { ListSectionColumn } from '@/widgets/list-section';
 import { TagDeleteLink } from './TagDeleteLink';
 import { TagEditLink } from './TagEditLink';
 import type { Tag } from '../../../../model/tag';
