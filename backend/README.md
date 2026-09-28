@@ -42,6 +42,9 @@ the migration chain to a fresh PostgreSQL database and exercises the real
 OIDC boundary; there is no dedicated Testcontainers or in-process HTTP test
 project (docs/adr/0026). See `../docs/QUALITY.md`.
 
+Convenções de request/response (envelope de sucesso, formas de erro, status HTTP, casos de borda de
+roteamento) verificadas ao vivo: [`../docs/API.md`](../docs/API.md).
+
 ## Known gaps
 
 - `ServicesService` has three real verticals (Tags `/api/v1/tags`,

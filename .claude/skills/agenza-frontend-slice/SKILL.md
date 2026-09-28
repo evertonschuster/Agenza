@@ -49,16 +49,15 @@ slice needs the same entity — not in anticipation.
 ## 2. The barrel is the only door
 
 `index.ts` re-exports pages, providers and each page's `loader`/`action`. Nothing outside the slice
-may import `@/features/<slice>/ui/...`; ESLint bans the `@/features/*/*` pattern.
+may import `features/<slice>/…` past its `index.ts`, whether written as `@/…` or relative. The custom
+ESLint rule `agenza/layer-boundaries`
+([`eslint-rules/layerBoundaries.js`](../../../apps/admin-frontend/eslint-rules/layerBoundaries.js))
+enforces it together with the layer direction. It only inspects files inside `app/`, `features/`,
+`widgets/` and `shared/` — `src/main.tsx`, `src/test/`, `e2e/` and config files are on review.
 
-> **Flat-config trap.** In `eslint.config.js`, a later matching block **replaces**
-> `no-restricted-imports` rather than merging it. That is why the `src/features/**` block restates
-> the `@/features/*/*` barrel ban next to its `@/app/*` ban. Add a block, forget to restate, and the
-> barrel silently stops being enforced for every file the new block matches. The config carries a
-> comment saying so — keep it true.
-
-Direction is `app → features → shared`, and inside a slice `ui → model | api`, `api → model`. A
-domain type never lives in `api/`. `shared/` may import neither.
+Direction is `app → features → widgets → shared`, and inside a slice `ui → model | api`,
+`api → model`. A domain type never lives in `api/`. `widgets/` imports only `shared/`; `shared/`
+imports none of the others.
 
 ## 3. Route wiring
 
@@ -91,6 +90,9 @@ branch on `result.error.code`. Full shape, boundary table and testing:
   Radix's `asChild` + `Slot` snippets do not compile here
   ([ADR 0039](../../../docs/adr/0039-admin-frontend-base-ui-primitives.md)). Use
   `agenza-ui-primitive` before adding anything to `shared/ui/`.
+- A page with a form uses `shared/form/fields/` (`TextField`/`TextareaField`/`ControlledField`/
+  `ColorField`) + React Hook Form + Zod, not a hand-rolled `useState` per field — see
+  `agenza-form-field`.
 - Semantic tokens only (`bg-background`, `text-muted-foreground`).
 - Tests are colocated, Vitest + RTL, module mocks via `vi.mock` / `vi.hoisted` — no network mocking.
   Coverage thresholds in `vitest.config.ts` are a real gate: `shared/ui/` and slice barrels are

@@ -40,4 +40,41 @@ describe('useRouteScrollReset', () => {
     expect(shell.scrollTop).toBe(0);
     expect(shell.scrollLeft).toBe(0);
   });
+
+  it('keeps the scroll position while navigation stays in the same section, like a dialog route opening and closing over its list', async () => {
+    const user = userEvent.setup();
+
+    function ListShell() {
+      const ref = useRouteScrollReset<HTMLDivElement>();
+      return (
+        <div ref={ref} data-testid="shell">
+          <Link to="/tags/1/edit">open dialog</Link>
+          <Link to="/tags">close dialog</Link>
+          <Outlet />
+        </div>
+      );
+    }
+
+    render(
+      <MemoryRouter initialEntries={['/tags']}>
+        <Routes>
+          <Route element={<ListShell />}>
+            <Route path="/tags" element={<Outlet />}>
+              <Route path=":id/edit" element={<div>dialog</div>} />
+            </Route>
+          </Route>
+        </Routes>
+      </MemoryRouter>,
+    );
+
+    const shell = screen.getByTestId('shell');
+    Object.defineProperty(shell, 'scrollTop', { value: 200, writable: true });
+
+    await user.click(screen.getByRole('link', { name: 'open dialog' }));
+    expect(screen.getByText('dialog')).toBeInTheDocument();
+    expect(shell.scrollTop).toBe(200);
+
+    await user.click(screen.getByRole('link', { name: 'close dialog' }));
+    expect(shell.scrollTop).toBe(200);
+  });
 });

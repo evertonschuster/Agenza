@@ -50,3 +50,22 @@ the change to that endpoint rather than retrofitting the whole facade.
   for that endpoint, not a reason to add cancellation everywhere.
 - The `useApiResource` hook shape is spent: if cancellation returns, it should
   not come back as a hook that also owns fetching and state.
+
+## Amendment (2026-09-20)
+
+`servicesFacade.ts`'s `CallOptions`/`LooseOptions`/`buildInit` now accept an optional `signal`,
+and `features/tags/ui/pages/TagListPage/useTagListPage.ts`'s `fetchTags` uses it — requested
+directly, not because a bug appeared; the `latestRequestRef` counter it replaced already fully
+closed the out-of-order-response race this ADR's own `ignore`-flag guidance describes. `/tags`
+still meets neither of the two conditions this ADR names for revisiting ("search-as-you-type, or
+a large export/report") — this is not that concrete need arriving, it's a deliberate exception
+made without one, kept narrow on purpose. It does not repeat either problem this ADR's Context
+section blames for the earlier revert: `signal` is one optional field threaded through three
+points in one shared file, not a parameter grown on every repository method (only `tagsRepository.list`
+passes one; `delete` doesn't, since a single confirm-click has no overlapping-call race to guard
+against), and there is no `useApiResource`-style hook — `fetchTags` owns fetching, cancellation
+and local state together, in one function, the shape this ADR's last Consequence still asks for.
+The decision above — no blanket cancellation layer, scope any exception to the one endpoint that
+asks for it — stands as the default; this is that scoped exception, not a reversal. Full reasoning:
+`apps/admin-frontend/docs/ARCHITECTURE.md` §5 (search "AbortController") and §6 (the accepted,
+narrow gap in how `run()` classifies an aborted request's own `AbortError`).

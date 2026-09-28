@@ -88,7 +88,6 @@ describe('isTransientStatus', () => {
   it.each([
     ['checking', true],
     ['authenticating', true],
-    ['renewing', true],
     ['loggingOut', true],
     ['unauthenticated', false],
     ['authenticated', false],

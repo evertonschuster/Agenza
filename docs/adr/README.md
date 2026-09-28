@@ -57,5 +57,6 @@ Git-hook evolution · 0032 stable runtime/toolchain pins · 0033 no request
 cancellation layer · 0034 custom Result type · 0035 no server-state library ·
 0036 OIDC session in localStorage · 0037 session core in shared · 0038 categories
 harness removed · 0039 Base UI primitives · 0040 three-state theme · 0041 AI
-instruction files reinstated.
+instruction files reinstated · 0042 widgets layer and layer-boundaries lint rule
+(proposed).
 

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { formatShortcutKey, shortcutRegistry } from './shortcuts';
+import { formatAriaKeyshortcuts, formatShortcutKey, shortcutRegistry } from './shortcuts';
 
 vi.mock('./platform', () => ({
   modifierGlyph: () => 'Ctrl' as const,
@@ -72,6 +72,51 @@ describe('shortcutRegistry', () => {
     expect(handler).not.toHaveBeenCalled();
   });
 
+  it('does not fire a modified shortcut when shiftKey is also held, so a browser chord like Ctrl+Shift+Delete never confirms a Ctrl+Delete', () => {
+    const handler = vi.fn();
+    shortcutRegistry.register({
+      id: 'confirm',
+      key: 'Delete',
+      description: 'Excluir',
+      handler,
+      modified: true,
+    });
+
+    dispatchKeydown(document, 'Delete', { ctrlKey: true, shiftKey: true });
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
+  it('fires a modified Delete shortcut from ⌘ plus the Mac key printed "delete", which reports Backspace (spec FR-019)', () => {
+    const handler = vi.fn();
+    shortcutRegistry.register({
+      id: 'confirm',
+      key: 'Delete',
+      description: 'Excluir',
+      handler,
+      modified: true,
+    });
+
+    dispatchKeydown(document, 'Backspace', { metaKey: true });
+
+    expect(handler).toHaveBeenCalledTimes(1);
+  });
+
+  it('does not treat Ctrl+Backspace as Ctrl+Delete, since off macOS it deletes the previous word', () => {
+    const handler = vi.fn();
+    shortcutRegistry.register({
+      id: 'confirm',
+      key: 'Delete',
+      description: 'Excluir',
+      handler,
+      modified: true,
+    });
+
+    dispatchKeydown(document, 'Backspace', { ctrlKey: true });
+
+    expect(handler).not.toHaveBeenCalled();
+  });
+
   it('does not suppress a modified shortcut while a dialog is open', () => {
     const handler = vi.fn();
     shortcutRegistry.register({
@@ -137,6 +182,16 @@ describe('shortcutRegistry', () => {
 
     it('leaves a non-letter key as-is when unmodified', () => {
       expect(formatShortcutKey({ key: '?', modified: false })).toBe('?');
+    });
+  });
+
+  describe('formatAriaKeyshortcuts', () => {
+    it('is the bare key, lowercase, when unmodified', () => {
+      expect(formatAriaKeyshortcuts({ key: 'n', modified: false })).toBe('n');
+    });
+
+    it('prefixes a modified key with the canonical "Control+", never the display glyph', () => {
+      expect(formatAriaKeyshortcuts({ key: 'k', modified: true })).toBe('Control+k');
     });
   });
 });

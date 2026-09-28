@@ -55,4 +55,12 @@ describe('CommandPalette', () => {
     const helpOption = screen.getByRole('option', { name: 'Abrir ajuda' });
     expect(helpOption.querySelector('[data-slot="kbd"]')).toHaveTextContent('?');
   });
+
+  it('lists "Etiquetas" among the fixed navigation destinations (spec FR-014)', () => {
+    renderPalette();
+
+    fireEvent.keyDown(document, { key: '/' });
+
+    expect(screen.getByRole('option', { name: 'Etiquetas' })).toBeInTheDocument();
+  });
 });

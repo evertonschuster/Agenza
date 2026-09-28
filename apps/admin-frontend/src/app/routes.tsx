@@ -36,6 +36,24 @@ export const router = createBrowserRouter([
             lazy: () => import('./pages/Services').then((m) => ({ Component: m.Services })),
           },
           {
+            path: 'tags',
+            lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagListPage })),
+            children: [
+              {
+                path: 'new',
+                lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagFormPage })),
+              },
+              {
+                path: ':id/edit',
+                lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagFormPage })),
+              },
+              {
+                path: ':id/delete',
+                lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagDeletePage })),
+              },
+            ],
+          },
+          {
             path: 'ajustes',
             lazy: () => import('./pages/Settings').then((m) => ({ Component: m.Settings })),
           },
