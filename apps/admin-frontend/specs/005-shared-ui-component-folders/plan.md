@@ -13,16 +13,17 @@ tem um `index.tsx` como ponto de entrada público (reexportando tudo que o arqui
 preservando `@/shared/ui/<nome>` sem mudança para nenhum consumidor). Os outros dois arquivos são
 condicionais, não automáticos:
 
-- `<nome>.types.ts` só existe quando há um tipo próprio real para extrair. 10 dos 20 ganham esse
-  arquivo: 8 dos 11 componentes compostos — `avatar`, `card`, `combobox`, `confirm-dialog`, `dialog`,
-  `dropdown-menu`, `sheet`, `toast` (`input-group`, `kbd` e `tooltip` não têm tipo próprio real, só
-  `React.ComponentProps` ou variantes `cva` que ficam com o componente — ficam sem esse arquivo) — mais
-  `color-swatch-picker` e `FullScreenMessage` (únicos atômicos com tipo próprio de verdade). Os outros 7
-  atômicos (`badge`, `button`, `input`, `label`, `separator`, `skeleton`, `textarea`) ficam só com
-  `index.tsx`.
-- `components/` só existe para os 11 componentes compostos já identificados (`avatar`, `card`,
-  `combobox`, `confirm-dialog`, `dialog`, `dropdown-menu`, `input-group`, `kbd`, `sheet`, `toast`,
-  `tooltip`) — critério do FR-004, inalterado por esta ampliação de escopo.
+- `<nome>.types.ts` só existe quando há um tipo próprio real para extrair. 8 dos 20 ganham esse
+  arquivo: `combobox`, `confirm-dialog`, `dialog`, `dropdown-menu`, `sheet`, `toast`,
+  `color-swatch-picker` e `FullScreenMessage`. Os demais (`avatar`, `card`, `input-group`, `kbd`,
+  `tooltip` e os 7 atômicos `badge`, `button`, `input`, `label`, `separator`, `skeleton`, `textarea`)
+  não têm tipo próprio real, só `React.ComponentProps`, variantes `cva` ou um alias inline que fica com
+  o componente (research.md D10).
+- `components/` só existe para os 8 componentes com sub-parte de peso real (`combobox`,
+  `confirm-dialog`, `dialog`, `dropdown-menu`, `input-group`, `sheet`, `toast`, `tooltip`) — critério
+  do FR-004. Dentro dela, sub-parte com peso real ganha arquivo próprio; as triviais ficam juntas em
+  `<nome>-primitives.tsx`. `avatar`, `card` e `kbd` só têm sub-partes triviais e ficam só com
+  `index.tsx` (D10).
 
 A migração é puramente mecânica — mover JSX/lógica para o novo local, sem alterar comportamento — mas
 três coisas precisam de atenção real: (1) os 4 imports relativos hoje existentes dentro de `shared/ui/`
@@ -40,8 +41,8 @@ de hoje — não normalizada para kebab-case, para não quebrar FR-005.
 > **Revisão pós-implementação (mesmo dia, research.md D10)**: depois de implementar o parágrafo acima
 > (112 arquivos), uma revisão encontrou segregação exagerada em dois pontos — sub-parte trivial ganhando
 > arquivo próprio mesmo sem peso real (19 arquivos de ≤10 linhas), e as 7 pastas atômicas sem nenhum
-> `types.ts`/`components/` dentro (ceremônia sem organização). Os números acima ficaram desatualizados
-> por essa revisão: **a regra final é pasta só quando o componente se qualifica** (critério de
+> `types.ts`/`components/` dentro (ceremônia sem organização). Os números acima já foram atualizados
+> para essa revisão: **a regra final é pasta só quando o componente se qualifica** (critério de
 > `components/` **ou** de `types.ts`), e dentro da pasta, sub-parte só ganha arquivo próprio quando tem
 > peso real — as triviais vão para um `<nome>-primitives.tsx` único. Resultado: `avatar`/`card`/`kbd`
 > perdem `components/` e `types.ts` (dissolvem em `index.tsx`); os 7 atômicos sem tipo voltam a ser
@@ -168,23 +169,15 @@ src/shared/ui/
 ├── combobox/                          # composto — exemplo mais rico
 │   ├── index.tsx                    # ponto de entrada público: Combobox (raiz) + reexporta components/* + useComboboxAnchor
 │   ├── combobox.types.ts            # só tipos: ComboboxInputProps, ComboboxChipProps, etc.
-│   └── components/
-│       ├── combobox-value.tsx
-│       ├── combobox-trigger.tsx
-│       ├── combobox-clear.tsx
-│       ├── combobox-input.tsx
-│       ├── combobox-content.tsx
-│       ├── combobox-palette-content.tsx
-│       ├── combobox-list.tsx
-│       ├── combobox-item.tsx
-│       ├── combobox-group.tsx
-│       ├── combobox-label.tsx
-│       ├── combobox-collection.tsx
-│       ├── combobox-empty.tsx
-│       ├── combobox-separator.tsx
-│       ├── combobox-chips.tsx
+│   └── components/                  # arquivo próprio só para sub-parte com peso real (D10)
 │       ├── combobox-chip.tsx
-│       └── combobox-chips-input.tsx
+│       ├── combobox-clear.tsx
+│       ├── combobox-content.tsx
+│       ├── combobox-input.tsx
+│       ├── combobox-item.tsx
+│       ├── combobox-palette-content.tsx
+│       ├── combobox-trigger.tsx
+│       └── combobox-primitives.tsx  # as triviais juntas: Value, List, Group, Label, Collection, Empty, Separator, Chips, ChipsInput
 ├── confirm-dialog/                    # composto — exportação única, mas complexo (FR-004, cláusula qualitativa)
 │   ├── index.tsx                    # ConfirmDialog<T> — mantém useState/handleConfirm, escolhe a view
 │   ├── confirm-dialog.types.ts      # ConfirmDialogProps, ConfirmDialogFailure, ConfirmDialogConfirmation, ConfirmDialogError, ConfirmDialogSuccess
@@ -206,10 +199,10 @@ src/shared/ui/
 projeto/pacote. **Todos os 20** componentes ganham pasta própria (FR-001, ampliado em 2026-09-17 a
 pedido do usuário para cobrir também os atômicos, seguindo o mesmo padrão de pasta-por-unidade de
 `features/*/ui/pages/<Page>/`). Dentro disso, dois arquivos continuam condicionais, no mesmo espírito
-que já valia para `components/`: o componente qualificado pelo FR-004 (11, lista em `spec.md`
-§Assumptions) também ganha `components/`; qualquer componente com tipo próprio real (8 dos 11 compostos
-— todos menos `input-group`, `kbd` e `tooltip` — mais `color-swatch-picker` e `FullScreenMessage`, 10 no
-total) também ganha `<nome>.types.ts`. O mapeamento completo
+que já valia para `components/`: o componente qualificado pelo FR-004 (8, lista em `spec.md`
+§Assumptions) também ganha `components/`; qualquer componente com tipo próprio real (6 dos 8 — todos
+menos `input-group` e `tooltip` — mais `color-swatch-picker` e `FullScreenMessage`, 8 no total) também
+ganha `<nome>.types.ts`. O mapeamento completo
 arquivo-a-arquivo, incluindo os 4 imports relativos que mudam de profundidade e as 16 entradas de
 `vitest.config.ts` a atualizar, está em [data-model.md](./data-model.md).
 

@@ -1,5 +1,12 @@
 # Contract: `/tags` Route
 
+> **Status (2026-09-28)**: partly historical. Create and edit came back (`/tags/new` and
+> `/tags/:id/edit`, both rendering `TagFormPage` over the list), and the edit and delete dialogs now
+> load their tag with `GET /tags/{id}` when they open. The `/tags/:id/delete` data contract below
+> (outlet context, `findTagById`, "no fetch of its own", `TagNotFoundDialog`) is superseded, and the
+> list fetch now drops a superseded search with an `AbortController` instead of an `ignore` flag.
+> `docs/ARCHITECTURE.md` §5 has the current design.
+
 Adds two entries to the existing route table (`specs/001-oidc-shell-scaffold/contracts/routes-contract.md`
 still governs `/login`, `/callback`, and the authenticated catch-all this nests under).
 

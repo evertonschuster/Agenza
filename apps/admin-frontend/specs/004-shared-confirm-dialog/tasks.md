@@ -80,6 +80,9 @@ transient failure — all four match today's behavior exactly (spec US1 Acceptan
       with Etiquetas' config — `title="Excluir etiqueta?"`, `confirmLabel="Excluir"`,
       `confirmIcon={Trash2Icon}`, `blockedTitle="Não é possível excluir"` — per
       contracts/confirm-dialog-contract.md's Consumer contract. Depends on T002, T004.
+      **Superseded later**: the fetcher adapter is gone — the delete flow's `onConfirm` calls the
+      repository and returns its `ApiResult`, and `ConfirmDialog` owns the submission and the success
+      toast (see the contract's status note).
 
 ### Verification for User Story 1
 

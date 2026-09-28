@@ -46,6 +46,7 @@ function ConfirmDialog<T>({
   }, []);
 
   async function handleConfirm() {
+    setFailure(undefined);
     setIsSubmitting(true);
     const result = await onConfirm();
     setIsSubmitting(false);

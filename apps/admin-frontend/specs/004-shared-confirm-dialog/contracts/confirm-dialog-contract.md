@@ -1,5 +1,13 @@
 # Contract: `ConfirmDialog` (`shared/ui/confirm-dialog.tsx`)
 
+> **Status (2026-09-28)**: superseded design record. `ConfirmDialog`, now in
+> `src/widgets/confirm-dialog/`, owns the submission: `onConfirm: () => Promise<ApiResult<T>>` returns
+> the result, and the dialog keeps the in-flight state, classifies a failure with `isTransientProblem`
+> (which now also treats `status >= 500` as transient) and fires the success toast from its `success`
+> config. The props, consumer steps and rules below that say otherwise describe the original
+> presentational design, not the current API — `confirm-dialog.types.ts` has that, and
+> `docs/ARCHITECTURE.md` §5 has why it changed.
+
 A presentational primitive. It owns rendering the three states spec FR-003 requires; it owns nothing
 about *how* the confirmed action is submitted, classified, or reported as a success (research.md
 Decisions 1, 2, 5). This is a UI contract (props in, events out), not an API contract — the feature

@@ -321,18 +321,22 @@ de todas as fases anteriores que forem executadas nesta rodada.
   incluído/excluído como efeito colateral (data-model.md, mapeamento de `vitest.config.ts`). **Resultado**:
   91.27/86.34/85.96/92.21% (stmts/branch/funcs/lines) — praticamente idêntico à referência
   (91.25/86.34/85.84/92.19%), 39 arquivos/196 testes passando, igual à referência.
-- [ ] T036 [P] Rodar `npm run generate:api-types:check` — sem drift (esta feature não toca contrato de
-  backend). **Não executável nesta sessão**: falha com `ECONNREFUSED` na porta 5080 — o script precisa
-  do stack Aspire (backend) rodando, que não está disponível aqui. Não é regressão desta feature (o
-  script não toca `shared/ui/`); precisa rodar de novo com o Aspire de pé antes do merge.
-- [ ] T037 Rodar `npm run test:e2e` — mesmos cenários de antes passando sem alteração de spec de teste
-  (prova mais forte de FR-009). **Não executável nesta sessão**: Playwright roda contra o stack Aspire
-  real (login semeado, sem mocks — Constitution Principle V), que não está disponível aqui; precisa
-  rodar antes do merge.
-- [ ] T038 Conferência manual via navegador, seguindo quickstart.md §4: `/tags` (confirm-dialog,
+- [X] T036 [P] Rodar `npm run generate:api-types:check` — sem drift (esta feature não toca contrato de
+  backend). Não executável na sessão da migração (`ECONNREFUSED` na porta 5080, sem o stack Aspire).
+  **Sem drift** no CI do PR #125: job `api-contract-check`, passo "Check generated API types are up to
+  date", commit `63ab797`.
+- [X] T037 Rodar `npm run test:e2e` — mesmos cenários de antes passando sem alteração de spec de teste
+  (prova mais forte de FR-009). Não executável na sessão da migração (Playwright roda contra o stack
+  Aspire real). **Passou** no CI do PR #125: job `api-contract-check`, passo "Browser tests", commit
+  `63ab797`.
+- [X] T038 Conferência manual via navegador, seguindo quickstart.md §4: `/tags` (confirm-dialog,
   dialog, input-group, toast), menu de tema (dropdown-menu), paleta de comando (combobox, sheet) — zero
-  diferença visual perceptível. **Não executável nesta sessão**: exige o app rodando via Aspire
-  (`npm run dev` orquestrado, porta 5173 + backend); precisa ser feita manualmente antes do merge.
+  diferença visual perceptível. Não executável na sessão da migração (exige o app rodando via Aspire).
+  **Conferido em 2026-09-28** (PR #125), já sobre o código atual, com o stack Aspire real: busca em
+  `/tags`, `ConfirmDialog` com falha passageira e nova tentativa, diálogo "Nova etiqueta", toast de
+  etiqueta inexistente, menu de tema, paleta de comandos, a ajuda de atalhos (`?`) e o "Mais" da
+  navegação inferior (sheet) em 375px — tudo renderiza e responde. A comparação antes/depois da
+  migração já não se aplica: as telas mudaram desde então.
 
 ---
 

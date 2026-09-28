@@ -253,9 +253,10 @@ real, ver D5 de `docs/ARCHITECTURE.md`) e não ganham entrada nova.
 
 ## Documentação a atualizar (FR-010)
 
-1. **`docs/ARCHITECTURE.md` §1** — regra para `shared/ui/`: pasta só quando o componente se qualifica
-   (critério de `components/` ou de `types.ts`); dentro da pasta, sub-parte só ganha arquivo próprio
-   quando tem peso real, senão vai para `<nome>-primitives.tsx`.
+1. **`docs/ARCHITECTURE.md` §1** — regra para `shared/ui/`: todo componente tem pasta própria, sem
+   exceção (D11); só o conteúdo dela é condicional — `components/` e `<nome>.types.ts` aparecem quando
+   o componente se qualifica pelos critérios acima; dentro de `components/`, sub-parte só ganha arquivo
+   próprio quando tem peso real, senão vai para `<nome>-primitives.tsx`.
 2. **`docs/ARCHITECTURE.md` §5** — nova linha na tabela de decisões, citando `specs/005-shared-ui-component-folders/`.
 3. **Skill `agenza-ui-primitive`** — apontar para a entrada acima. Arquivo físico não localizado em
    disco a partir deste projeto (research.md D8) — pendente.

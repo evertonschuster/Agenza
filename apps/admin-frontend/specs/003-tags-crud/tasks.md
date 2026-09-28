@@ -55,7 +55,10 @@ implementable, testable, and demoable.
 - [x] T009 Wire the `/tags` route into `src/app/routes.tsx` (`lazy` returning
   `Component`/`loader`/`action` together, contracts/routes-contract.md) (depends on T008)
 - [x] T010 [P] Add the "Etiquetas" entry to `src/app/shell/CommandPalette.tsx`, kept out of
-  `NAV_DESTINATIONS` (research.md Decision 7; spec FR-014) (depends on T008)
+  `NAV_DESTINATIONS` (research.md Decision 7; spec FR-014) (depends on T008). **Superseded
+  2026-09-14** (FR-014 revised): "Etiquetas" is a `NAV_DESTINATIONS` entry in
+  `src/app/shell/navigation.ts`, reached from the sidebar, the bottom nav's "Mais" and the command
+  palette.
 
 **Checkpoint**: `/tags` renders (empty body). User story work can begin.
 
@@ -63,19 +66,22 @@ implementable, testable, and demoable.
 
 ## Phase 3: User Story 1 — List & search (Priority: P1) 🎯 MVP
 
-**Goal**: the person sees every existing tag and narrows the list by typing part of a name (spec
+**Goal**: the person sees every existing tag and narrows the list by searching part of a name (spec
 US1).
 
 **Independent Test**: seed tags directly via API, open `/tags`, confirm each renders (chip, color,
-description); type a name substring, confirm the list narrows; clear it, confirm the full list
-returns; with zero tags, confirm the empty state (not an error).
+description); submit a name substring (Enter or "Buscar"), confirm the list narrows; clear it and
+submit again, confirm the full list returns; with zero tags, confirm the empty state (not an error).
 
 ### Tests for User Story 1
 
 - [x] T011 [P] [US1] Component test — list rendering, empty-catalog state, empty-search state in
   `src/features/tags/ui/pages/TagsPage/TagsPage.test.tsx`
 - [x] T012 [P] [US1] Hook test — search filter is a case-insensitive substring match over the
-  already-loaded list in `src/features/tags/ui/pages/TagsPage/useTagsPage.test.ts`
+  already-loaded list in `src/features/tags/ui/pages/TagsPage/useTagsPage.test.ts`. **Superseded
+  2026-09-14** (FR-002 revised): the search runs on the backend once submitted, never while typing —
+  `TagListPage.test.tsx` covers the submitted search, the `?q=` param and the "no search while typing"
+  rule.
 
 ### Implementation for User Story 1
 

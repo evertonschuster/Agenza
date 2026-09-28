@@ -11,17 +11,17 @@
 
 ## Manual walkthrough (maps to spec.md's user stories)
 
-Create and edit (US2–US3 below) were built and later removed — see `spec.md`'s Status line and
-`docs/ARCHITECTURE.md` §5. Steps 2–3 describe a UI that no longer exists; kept for the historical
-record, not as something to follow today. Delete (US4) was pulled out alongside them and later
-reintroduced on its own — step 4 is walkable again.
-
-1. **US1 — list & search**. Open the command palette (`Ctrl/⌘+K` or `/`) → "Etiquetas" (or navigate
-   to `/tags` directly). Confirm every seeded tag shows name (as a colored chip), color, description.
-   Type part of a name into the search field; confirm the list narrows to matches only. Clear it;
-   confirm the full list returns.
-2. ~~**US2 — create**. Click "Nova etiqueta" (or press `N`)...~~ — removed.
-3. ~~**US3 — edit**. Open an existing tag, change its color, save...~~ — removed.
+1. **US1 — list & search**. Open "Etiquetas" from the sidebar (the bottom nav's "Mais" on narrow
+   screens) or the command palette (`Ctrl/⌘+K` or `/`), or navigate to `/tags` directly. Confirm
+   every seeded tag shows name (as a colored chip), color, description. Type part of a name into the
+   search field and submit it with Enter or "Buscar"; confirm the list narrows to matches only, and
+   that typing alone never searches (spec FR-002). Clear the field and submit again; confirm the full
+   list returns.
+2. **US2 — create**. Click "Nova etiqueta" (or press `N`), fill name and color, save (or
+   `Ctrl/⌘+S`); confirm the dialog closes and the tag shows in the list. Repeat with a name already
+   in use; confirm the backend's duplicate-name message is shown verbatim (spec FR-004, FR-012).
+3. **US3 — edit**. Click a row's "Editar" action, change its color, save; confirm the list shows the
+   new color.
 4. **US4 — delete**. Click a row's "Excluir" action; confirm it opens at `/tags/:id/delete` with the
    list still visible behind the dialog, naming the tag ("Excluir a etiqueta "X"?"). Confirm; the tag
    disappears from the list, refetched from the backend, and the dialog returns to `/tags`. Repeat for

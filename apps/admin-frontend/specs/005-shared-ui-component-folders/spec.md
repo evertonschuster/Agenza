@@ -217,9 +217,10 @@ apenas lendo a convenção documentada, sem perguntar a outra pessoa da equipe.
 
 ### Measurable Outcomes
 
-- **SC-001**: Toda sub-parte interna de um componente restruturado é localizável em um arquivo próprio
-  dentro de `components/`, identificável pelo nome da sub-parte, sem abrir nenhum arquivo que também
-  contenha sub-partes não relacionadas.
+- **SC-001**: Toda sub-parte interna com peso real de um componente restruturado é localizável em um
+  arquivo próprio dentro de `components/`, identificável pelo nome da sub-parte; as triviais ficam
+  juntas no `<nome>-primitives.tsx` do mesmo componente (SC-004), nunca num arquivo com sub-partes de
+  outro componente.
 - **SC-002**: O contrato de tipos de qualquer componente restruturado pode ser lido inteiramente a
   partir de um único arquivo, sem abrir o arquivo de implementação.
 - **SC-003**: Depois da reorganização, a suíte completa de portões de CI (tipo, lint, formatação,

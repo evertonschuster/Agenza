@@ -1,5 +1,10 @@
 # Implementation Plan: Diálogo de Confirmação Reutilizável
 
+> **Status (2026-09-28)**: o desenho abaixo (primitivo apresentacional + adaptador com `useFetcher`)
+> foi substituído depois da implementação: o `ConfirmDialog`, hoje em `src/widgets/confirm-dialog/`,
+> passou a ser dono do envio (`onConfirm` devolve o `ApiResult`) e do toast de sucesso. Ver a nota de
+> status em `contracts/confirm-dialog-contract.md`.
+
 **Branch**: `004-shared-confirm-dialog` | **Date**: 2026-09-14 | **Spec**: [spec.md](./spec.md)
 
 **Input**: Feature specification from `/specs/004-shared-confirm-dialog/spec.md`

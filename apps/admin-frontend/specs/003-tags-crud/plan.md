@@ -50,8 +50,9 @@ Principle III) — no new target.
 `apps/admin-frontend`.
 
 **Performance Goals**: Spec's own Success Criteria (SC-001 create <30s, SC-004 locate among 50 in
-<5s) — both satisfied by loading the full (unpaginated, per spec Assumptions) list once and filtering
-client-side; no separate performance target.
+<5s); no separate performance target. This plan first met SC-004 by loading the full list once and
+filtering client-side — superseded by the 2026-09-14 clarification (spec FR-002): the search runs on
+the backend, only when the person submits it (Enter or "Buscar"), never on each keystroke.
 
 **Constraints**: FSD dependency direction (`app → features → shared`), mechanically enforced by
 `eslint.config.js`'s `no-restricted-imports` blocks (constitution + `AGENTS.md`); all backend calls
@@ -132,8 +133,8 @@ apps/admin-frontend/src/
 ├── app/
 │   ├── routes.tsx                         # + one lazy route: path 'tags' → features/tags
 │   └── shell/
-│       └── CommandPalette.tsx             # + one "Etiquetas" entry, kept OUT of NAV_DESTINATIONS
-│                                          # (navigation.ts unchanged — still exactly 6 destinations)
+│       └── navigation.ts                  # + "Etiquetas" in NAV_DESTINATIONS — sidebar, bottom-nav
+│                                          # "Mais" and CommandPalette all read it (FR-014, 2026-09-14)
 └── app/globals.css                        # unchanged — reuses the existing `.tag` chip class
 ```
 
@@ -145,6 +146,8 @@ spec is new: `e2e/tags.spec.ts`.
 repository), `ui/pages/TagsPage` (the page + its one hook + subcomponents + `route.ts`), `index.ts`
 as the only public surface. Two things intentionally touch shared code outside the slice: a new
 `shared/ui/color-swatch-picker.tsx` (generic, business-free — the 8 actual hex values stay in the
-feature's `model/tag.ts`) and one new entry in `CommandPalette.tsx` (kept structurally separate from
-`NAV_DESTINATIONS`, per FR-014, so the fixed 6-item primary nav is untouched). No `pages/` top-level
-or `entities/` directory — still just one feature needing them (`AGENTS.md`).
+feature's `model/tag.ts`) and one new `NAV_DESTINATIONS` entry in `navigation.ts`, which puts
+"Etiquetas" in the sidebar, in the bottom nav's "Mais" and in the command palette. This plan first
+kept it out of `NAV_DESTINATIONS`, as a command-palette-only entry; the 2026-09-14 clarification
+(spec FR-014) reversed that. No `pages/` top-level or `entities/` directory — still just one feature
+needing them (`AGENTS.md`).

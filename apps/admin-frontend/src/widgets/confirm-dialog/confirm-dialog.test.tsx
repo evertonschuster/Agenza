@@ -238,6 +238,40 @@ describe('ConfirmDialog', () => {
     expect(onConfirm).toHaveBeenCalledTimes(2);
   });
 
+  it('clears the previous failure while retrying, so a repeated failure is announced again', async () => {
+    const user = userEvent.setup();
+    const failure: ApiResult<void> = {
+      ok: false,
+      error: {
+        status: 0,
+        code: 'Network.Unreachable',
+        title: 'Sem conexão com o servidor. Tente novamente.',
+      },
+    };
+    let resolveRetry: (result: ApiResult<void>) => void = () => {};
+    const onConfirm = vi
+      .fn<() => Promise<ApiResult<void>>>()
+      .mockResolvedValueOnce(failure)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveRetry = resolve;
+          }),
+      );
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    await screen.findByRole('alert');
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    resolveRetry(failure);
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Sem conexão com o servidor. Tente novamente.',
+    );
+  });
+
   it('swaps to the blocked state with a single dismiss button and no retry, for a non-transient failure', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();

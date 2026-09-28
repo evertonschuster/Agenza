@@ -167,13 +167,13 @@
     @apply text-base font-semibold;
   }
 
-  button:not(:disabled),
+  button:not(:disabled):not([aria-disabled='true']),
   [role='button']:not([aria-disabled='true']),
   [role='radio']:not([aria-disabled='true']),
   [role='tab']:not([aria-disabled='true']),
   [role='menuitem']:not([aria-disabled='true']),
-  [role='option'],
-  a[href] {
+  [role='option']:not([aria-disabled='true']),
+  a[href]:not([aria-disabled='true']) {
     cursor: pointer;
   }
 

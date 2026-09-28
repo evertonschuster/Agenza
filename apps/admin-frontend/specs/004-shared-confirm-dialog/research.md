@@ -1,5 +1,10 @@
 # Phase 0 Research: Diálogo de Confirmação Reutilizável
 
+> **Status (2026-09-28)**: Decisions 1 and 5 were reversed after implementation. Once the tags flow
+> dropped `useFetcher`, the typing problem behind Decision 1 went away, and `ConfirmDialog` took over
+> the submission (`onConfirm` returns the `ApiResult`) and the success toast. See the status note in
+> `contracts/confirm-dialog-contract.md`.
+
 No `[NEEDS CLARIFICATION]` left — scope was already resolved in the spec (4 rounds under
 `## Clarifications`). What's left here is **how**, deliberately kept out of the spec (Quick
 Guidelines: WHAT/WHY, not HOW).
