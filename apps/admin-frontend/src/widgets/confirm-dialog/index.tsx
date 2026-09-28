@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
@@ -35,7 +35,15 @@ function ConfirmDialog<T>({
 }: ConfirmDialogProps<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [failure, setFailure] = useState<ConfirmDialogFailure>();
+  const isMountedRef = useRef(true);
   const isBlocked = failure !== undefined && !failure.transient;
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   async function handleConfirm() {
     setIsSubmitting(true);
@@ -45,7 +53,7 @@ function ConfirmDialog<T>({
     if (result.ok) {
       toast.add({ title: successTitle, description: successDescription, type: 'success' });
       onSuccess?.(result.data);
-      onOpenChange(false);
+      if (isMountedRef.current) onOpenChange(false);
       return;
     }
 

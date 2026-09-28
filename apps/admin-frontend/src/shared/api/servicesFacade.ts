@@ -34,7 +34,8 @@ const TRANSIENT_PROBLEM_CODES = new Set(
 );
 
 export function isTransientProblem(problem: ApiProblem): boolean {
-  return !!problem.code && TRANSIENT_PROBLEM_CODES.has(problem.code);
+  if (problem.code && TRANSIENT_PROBLEM_CODES.has(problem.code)) return true;
+  return Number(problem.status) >= 500;
 }
 
 export function extractErrorMessage(problem: ApiProblem): string {

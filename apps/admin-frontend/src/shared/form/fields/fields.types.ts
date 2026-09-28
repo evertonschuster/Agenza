@@ -11,11 +11,14 @@ interface BaseFieldProps<T extends FieldValues> {
   hint?: string | undefined;
 }
 
+type RegisterOwnedProps = 'name' | 'onChange' | 'onBlur' | 'ref';
+type FormFieldOwnedProps = 'id' | 'aria-invalid' | 'aria-describedby';
+
 export type TextFieldProps<T extends FieldValues> = BaseFieldProps<T> &
-  Omit<ComponentProps<typeof Input>, 'id' | 'name' | 'aria-invalid' | 'aria-describedby'>;
+  Omit<ComponentProps<typeof Input>, RegisterOwnedProps | FormFieldOwnedProps>;
 
 export type TextareaFieldProps<T extends FieldValues> = BaseFieldProps<T> &
-  Omit<ComponentProps<typeof Textarea>, 'id' | 'name' | 'aria-invalid' | 'aria-describedby'>;
+  Omit<ComponentProps<typeof Textarea>, RegisterOwnedProps | FormFieldOwnedProps>;
 
 export interface ControlledFieldProps<T extends FieldValues> {
   name: Path<T>;

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router';
+import { extractErrorMessage } from '@/shared/api/servicesFacade';
 import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { useTopic } from '@/shared/pubsub/useTopic';
 import { ListSectionStatus } from '@/widgets/list-section';
@@ -30,6 +31,7 @@ export function useTagListPage(): UseTagListPageResult {
         query: forQuery,
         status: apiResult.ok ? ListSectionStatus.Ready : ListSectionStatus.Error,
         tags: apiResult.ok ? apiResult.data : [],
+        problem: apiResult.ok ? null : apiResult.error,
       });
     });
   }, []);
@@ -59,13 +61,19 @@ export function useTagListPage(): UseTagListPageResult {
   }
 
   const isCurrent = result !== null && result.query === query;
+  const problem = isCurrent ? result.problem : null;
 
   return {
     status: isCurrent ? result.status : ListSectionStatus.Loading,
     tags: isCurrent ? result.tags : [],
+    failure: problem && { message: extractErrorMessage(problem), code: problem.code ?? undefined },
     query,
     searchInputRef,
     onSearchSubmit,
+    onRetry: () => {
+      setResult(null);
+      fetchTags(query);
+    },
     newTagTo,
   };
 }

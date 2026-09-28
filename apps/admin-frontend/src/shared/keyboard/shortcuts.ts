@@ -22,6 +22,11 @@ function isDialogOpen(): boolean {
   return document.querySelector('[role="dialog"][data-open]') !== null;
 }
 
+// The Mac key printed "delete" reports Backspace; held with ⌘ it is the ⌘Delete the keycap shows.
+function pressedKey(event: KeyboardEvent): string {
+  return event.metaKey && event.key === 'Backspace' ? 'delete' : event.key.toLowerCase();
+}
+
 const KEYS_NEVER_FROM_A_TOUCH_KEYBOARD = new Set(['Tab', 'Escape']);
 
 // A touch-only device can only ever fire keydown from its on-screen keyboard, which requires a
@@ -91,13 +96,14 @@ class ShortcutRegistry {
     }
 
     for (const shortcut of this.shortcuts.values()) {
-      if (event.key.toLowerCase() !== shortcut.key.toLowerCase()) continue;
+      if (pressedKey(event) !== shortcut.key.toLowerCase()) continue;
 
       if (shortcut.modified) {
         // AltGr reports as ctrlKey (+ altKey) on some layouts while typing an ordinary
         // character (e.g. ABNT2's Alt Gr+Q for "/") — excluding altKey keeps that from
-        // firing a Ctrl-modified shortcut.
-        if (!(event.ctrlKey || event.metaKey) || event.altKey) continue;
+        // firing a Ctrl-modified shortcut. Excluding shiftKey keeps a browser chord such as
+        // Ctrl+Shift+Delete from landing on Ctrl+Delete.
+        if (!(event.ctrlKey || event.metaKey) || event.altKey || event.shiftKey) continue;
       } else {
         if (event.ctrlKey || event.metaKey || event.altKey) continue;
         if (isTypingTarget(event.target)) continue;

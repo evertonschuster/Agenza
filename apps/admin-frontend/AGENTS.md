@@ -19,17 +19,17 @@ deste app.
 ## Forma
 
 Feature-Sliced Design. `app/` é o composition root, `features/<slice>/{model,api,ui}/` são as fatias
-verticais com `index.ts` como **única** superfície pública, `shared/` é transversal e sem regra de
-negócio.
+verticais com `index.ts` como **única** superfície pública, `widgets/` guarda composições de UI
+genéricas, com comportamento mas sem domínio (`confirm-dialog`, `list-section`), e `shared/` é
+transversal e sem regra de negócio.
 
-**A direção de dependência é mecanicamente imposta**, não apenas pretendida: três blocos de
-`no-restricted-imports` em `eslint.config.js` garantem `app → features → shared`. `shared/` não pode
-importar `features/` nem `app/`; `features/` não pode importar `app/`; ninguém importa
-`@/features/*/*` passando por cima do barril.
-
-> Pegadinha do flat config, já anotada no próprio `eslint.config.js`: um bloco posterior
-> **substitui** `no-restricted-imports` em vez de mesclar. Cada bloco reafirma todos os padrões que
-> precisa manter.
+**A direção de dependência é mecanicamente imposta**, não apenas pretendida: a regra
+`agenza/layer-boundaries` ([`eslint-rules/layerBoundaries.js`](eslint-rules/layerBoundaries.js),
+ligada em `eslint.config.js`) garante `app → features → widgets → shared` e barra quem, de fora de
+uma fatia, importa `features/<slice>/…` passando por cima do barril, seja via `@/` ou relativo. Ela
+só inspeciona arquivos dentro dessas quatro camadas: `src/main.tsx`, `src/test/`, `e2e/` e os
+arquivos de configuração ficam de fora. Decisão em
+[ADR 0042](../../docs/adr/0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md).
 
 `entities/` e um `pages/` de topo **não existem de propósito** — nada é compartilhado entre features
 ainda. Crie-os quando uma segunda feature precisar da mesma entidade, não antes.

@@ -72,11 +72,24 @@ describe('ActionButton', () => {
 
     const button = screen.getByRole('button', { name: 'Salvando…' });
     await user.click(button);
+    await user.keyboard('{Enter}');
 
-    expect(button).toBeDisabled();
+    expect(button).toHaveAttribute('aria-disabled', 'true');
     expect(button.querySelector('svg')).toHaveClass('animate-spin');
     expect(button.querySelectorAll('svg')).toHaveLength(1);
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  it('keeps a pending button focusable, so the person who pressed it keeps their place while it runs', () => {
+    const { rerender } = render(<ActionButton>Excluir</ActionButton>);
+    const button = screen.getByRole('button', { name: 'Excluir' });
+    button.focus();
+
+    rerender(<ActionButton pending>Excluir</ActionButton>);
+
+    expect(button).not.toHaveAttribute('disabled');
+    expect(button).toHaveAttribute('aria-disabled', 'true');
+    expect(button).toHaveFocus();
   });
 
   it('stays disabled when asked to, even while not pending', () => {

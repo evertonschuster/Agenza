@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type SubmitEvent } from 'react';
+import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -23,6 +23,7 @@ export function useTagFormPage(): UseTagFormPageResult {
   const location = useLocation();
   const navigate = useNavigate();
   const [loadedId, setLoadedId] = useState<string>();
+  const isMountedRef = useRef(true);
   const isEdit = id !== undefined;
   const isLoading = isEdit && loadedId !== id;
 
@@ -41,6 +42,13 @@ export function useTagFormPage(): UseTagFormPageResult {
     }
     void navigate({ pathname: '/tags', search: location.search }, { replace: true });
   }, [navigate, canGoBack, location.search]);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   useEffect(() => {
     if (!id) return;
@@ -79,7 +87,7 @@ export function useTagFormPage(): UseTagFormPageResult {
           : `"${result.data.name}" foi adicionada ao catálogo.`,
         type: 'success',
       });
-      close();
+      if (isMountedRef.current) close();
       return;
     }
 

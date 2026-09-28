@@ -132,9 +132,19 @@ describe('isTransientProblem', () => {
     expect(isTransientProblem(problem)).toBe(false);
   });
 
-  it('treats a missing code as not transient', () => {
-    const problem: ApiProblem = { status: 500, title: '…' };
+  it('treats a 4xx with no code, like ASP.NET native model binding, as not transient', () => {
+    const problem: ApiProblem = { status: 400, title: '…' };
 
     expect(isTransientProblem(problem)).toBe(false);
+  });
+
+  it.each([
+    ['a backend 500 carrying its own problem body', { status: 500, code: 'Unexpected.Error' }],
+    ['a 503 with no code', { status: 503 }],
+    ['a status sent as a string', { status: '502' }],
+  ])('treats %s as transient, so it can be retried', (_name, fields) => {
+    const problem: ApiProblem = { ...fields, title: '…' };
+
+    expect(isTransientProblem(problem)).toBe(true);
   });
 });

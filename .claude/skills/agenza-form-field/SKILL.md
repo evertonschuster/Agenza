@@ -1,9 +1,9 @@
 ---
 name: agenza-form-field
-description: Use when building or changing a form in admin-frontend — wiring React Hook Form + Zod for a new entity, adding a field with shared/ui/form-field/ (TextField, TextareaField, ControlledField, ColorField), deciding whether a custom control needs its own XField specialization, or feeding a backend ApiProblem back into the form via applyApiProblem.
+description: Use when building or changing a form in admin-frontend — wiring React Hook Form + Zod for a new entity, adding a field with shared/form/fields/ (TextField, TextareaField, ControlledField, ColorField), deciding whether a custom control needs its own XField specialization, or feeding a backend ApiProblem back into the form via applyApiProblem.
 ---
 
-# Forms — React Hook Form + Zod + `shared/ui/form-field/`
+# Forms — React Hook Form + Zod + `shared/form/fields/`
 
 `TagFormPage` (`src/features/tags/ui/pages/TagFormPage/`) is the reference implementation and, as of
 this writing, the **only** consumer of everything described here. Read
@@ -18,7 +18,7 @@ unproven with only one consumer.
 | --- | --- | --- |
 | Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
 | RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem<T>(problem, fields, setError)` — calls the above, then `setError` per field plus `setError('root.serverError', …)`. Knows both shapes; the only file that does. |
-| Field components | `shared/ui/form-field/` | `FormField` (base), `TextField`/`TextareaField`, `ControlledField`, `ColorField`, `FormErrorBanner`. Presentational + RHF wiring, zero domain knowledge — same "no business logic" rule as the rest of `shared/ui/` (`agenza-ui-primitive`), just now also RHF-aware. |
+| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero domain knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (PascalCase
 keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s
@@ -104,10 +104,10 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    nothing when there isn't one.
 
 4. **Fields are configuration**, not markup. Import the generic components straight from
-   `shared/ui/form-field` — there's no per-entity instantiation step — and give each one the form's
+   `shared/form/fields` — there's no per-entity instantiation step — and give each one the form's
    field-values type as an explicit JSX type argument:
    ```tsx
-   import { ColorField, TextField } from '@/shared/ui/form-field';
+   import { ColorField, TextField } from '@/shared/form/fields';
    import type { XFormFieldValues } from '../../model/xForm';
 
    <TextField<XFormFieldValues> name="name" label="Nome" hint="…" maxLength={40} placeholder="…" />
@@ -207,13 +207,13 @@ function Harness({ withError = false }: { withError?: boolean }) {
 
 Worked examples: `text-fields.test.tsx`, `controlled-field.test.tsx`, `color-field.test.tsx`,
 `form-error-banner.test.tsx` in
-`shared/ui/form-field/components/`. A dummy `FieldValues` shape local to the test file is enough —
+`shared/form/fields/components/`. A dummy `FieldValues` shape local to the test file is enough —
 these components are generic, so a real entity's schema is never needed to test them.
 
 ## Before you push
 
 `npm run lint && npx tsc --noEmit && npm run format:check && npm run test:coverage`, from
-`apps/admin-frontend/`. `shared/ui/form-field/**` is in `vitest.config.ts`'s `coverage.exclude` (pure
+`apps/admin-frontend/`. `shared/form/fields/**` and `shared/ui/form-field/**` are in `vitest.config.ts`'s `coverage.exclude` (pure
 prop-driven renderers, same reasoning as `link-button`/`empty-state`) — `shared/api/formErrors.ts` and
 `shared/form/applyApiProblem.ts` are not, and carry real logic, so they're expected to show up in the
 coverage number like any other `shared/` file with behaviour.

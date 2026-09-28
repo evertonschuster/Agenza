@@ -75,6 +75,15 @@ describe('sessionStore', () => {
       });
     });
 
+    it('logs missing_tenant_claim when a reload restores a stored user without a tenant claim', () => {
+      sessionStore.dispatch({ type: 'INITIAL_USER', principal: makePrincipal() });
+
+      expect(logger.warn).toHaveBeenCalledWith('auth.missing_tenant_claim', {
+        tenantId: null,
+        timestamp: NOW,
+      });
+    });
+
     it('logs missing_tenant_claim with the outgoing tenant when an authenticated session renews without one', () => {
       sessionStore.dispatch({
         type: 'USER_LOADED',

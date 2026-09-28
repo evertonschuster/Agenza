@@ -1,5 +1,6 @@
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { Outlet } from 'react-router';
+import { ErrorState } from '@/shared/ui/error-state';
 import {
   InputGroup,
   InputGroupAddon,
@@ -12,7 +13,8 @@ import { tagColumns } from './components/tagColumns';
 import { NEW_TAG_SHORTCUT_ID, useTagListPage } from './useTagListPage';
 
 export function TagListPage() {
-  const { tags, status, query, searchInputRef, onSearchSubmit, newTagTo } = useTagListPage();
+  const { tags, status, failure, query, searchInputRef, onSearchSubmit, onRetry, newTagTo } =
+    useTagListPage();
 
   return (
     <div className="space-y-4">
@@ -41,13 +43,22 @@ export function TagListPage() {
         </InputGroup>
       </form>
 
-      <ListSection
-        status={status}
-        items={tags}
-        getKey={(tag) => tag.id}
-        aria-label="Etiquetas"
-        columns={tagColumns()}
-      />
+      {failure ? (
+        <ErrorState
+          title="Não foi possível carregar as etiquetas."
+          description={failure.message}
+          code={failure.code}
+          onRetry={onRetry}
+        />
+      ) : (
+        <ListSection
+          status={status}
+          items={tags}
+          getKey={(tag) => tag.id}
+          aria-label="Etiquetas"
+          columns={tagColumns()}
+        />
+      )}
 
       <Outlet />
     </div>

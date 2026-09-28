@@ -4,6 +4,12 @@
     {
       "name": "admin-frontend",
       "url": "http://localhost:5173"
+    },
+    {
+      "name": "aspire",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "../../backend/AppHost", "--launch-profile", "http"],
+      "port": 5173
     }
   ]
 }

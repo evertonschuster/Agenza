@@ -188,6 +188,43 @@ describe('TagDeletePage', () => {
     expect(screen.queryByRole('heading', { name: 'Excluir etiqueta?' })).not.toBeInTheDocument();
   });
 
+  it('stays where the person went when they leave with Back while the deletion is still in flight', async () => {
+    const user = userEvent.setup();
+    let resolveDelete!: (result: { ok: true; data: undefined }) => void;
+    mockDelete.mockReturnValue(new Promise((resolve) => (resolveDelete = resolve)));
+    const router = createMemoryRouter(
+      [
+        {
+          path: '/tags',
+          element: (
+            <>
+              <TagListPage />
+              <LocationProbe />
+            </>
+          ),
+          children: [{ path: ':id/delete', element: <TagDeletePage /> }],
+        },
+      ],
+      { initialEntries: ['/tags?q=vip', '/tags'] },
+    );
+    render(<RouterProvider router={router} />);
+    await screen.findByText('VIP');
+
+    await user.click(screen.getByRole('link', { name: 'Excluir VIP' }));
+    await screen.findByText(/excluir a etiqueta "VIP"/);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('2'));
+    await act(() => router.navigate(-1));
+    expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+    const navigate = vi.spyOn(router, 'navigate');
+
+    resolveDelete({ ok: true, data: undefined });
+    await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+
+    expect(navigate).not.toHaveBeenCalled();
+    expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+  });
+
   it('closes without deleting when Cancelar is clicked, preserving the active search (spec US4 scenario 3)', async () => {
     const user = userEvent.setup();
     renderAt(['/tags?q=promo']);

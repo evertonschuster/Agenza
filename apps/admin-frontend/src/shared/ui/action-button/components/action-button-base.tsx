@@ -11,7 +11,7 @@ function ActionButtonBase({
   ...buttonProps
 }: ActionButtonBaseProps) {
   return (
-    <Button {...buttonProps} disabled={disabled || pending}>
+    <Button {...buttonProps} disabled={disabled || pending} focusableWhenDisabled={pending}>
       {pending ? (
         <Loader2Icon aria-hidden="true" className="animate-spin" />
       ) : (

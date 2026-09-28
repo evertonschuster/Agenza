@@ -156,7 +156,7 @@ describe('TagFormPage', () => {
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       const savingButton = await screen.findByRole('button', { name: 'Salvando…' });
-      expect(savingButton).toBeDisabled();
+      expect(savingButton).toHaveAttribute('aria-disabled', 'true');
 
       resolveCreate({
         ok: true,
@@ -358,7 +358,9 @@ describe('TagFormPage', () => {
       });
       renderAt(['/tags/1/edit']);
 
-      expect(await screen.findByText('Não foi possível carregar.')).toBeInTheDocument();
+      expect(
+        await screen.findByText('Não foi possível carregar as etiquetas.'),
+      ).toBeInTheDocument();
       expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
     });
 
@@ -537,6 +539,28 @@ describe('TagFormPage', () => {
 
       expect(screen.getByTestId('location').textContent).toBe('location: /tags');
       expect(screen.queryByRole('heading', { name: 'Editar etiqueta' })).not.toBeInTheDocument();
+    });
+
+    it('stays where the person went when they leave with Back while the save is still in flight', async () => {
+      const user = userEvent.setup();
+      let resolveUpdate!: (result: { ok: true; data: Tag }) => void;
+      mockUpdate.mockReturnValue(new Promise((resolve) => (resolveUpdate = resolve)));
+      const router = renderRouterAt(['/tags?q=promo', '/tags']);
+      await screen.findByText('Promoção');
+
+      await user.click(screen.getByRole('link', { name: 'Editar Promoção' }));
+      await screen.findByLabelText('Nome');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+      await waitFor(() => expect(mockUpdate).toHaveBeenCalled());
+      await act(() => router.navigate(-1));
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+      const navigate = vi.spyOn(router, 'navigate');
+
+      resolveUpdate({ ok: true, data: TAGS[0]! });
+      await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+
+      expect(navigate).not.toHaveBeenCalled();
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
     });
 
     it('replaces a deep-linked dialog with the list on close, so Back does not reopen it either', async () => {

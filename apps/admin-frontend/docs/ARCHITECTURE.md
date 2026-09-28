@@ -31,6 +31,8 @@ src/
 │   │   └── pages/<Page>/    One folder per route: <Page>.tsx (shell) + use<Page>.ts (form
 │   │                        state) + route.ts (loader/action), all re-exported by index.ts
 │   └── index.ts             The slice's ONLY public surface
+├── widgets/                 Generic UI compositions with behaviour but no domain (confirm-dialog,
+│                            list-section); import shared/ only, consumed by features (ADR 0042)
 └── shared/                  Cross-cutting, no business logic
     ├── api/                 servicesFacade, servicesApi (its composition), apiClient,
     │                        unwrap (Result → exception at the framework boundary), formErrors
@@ -48,9 +50,10 @@ src/
     │                        domain knowledge; a concrete topic (e.g. tagDeleted) lives in the
     │                        feature that owns it, never here
     ├── form/                applyApiProblem — the one place ApiProblem meets React Hook Form's
-    │                        setError; no domain knowledge, no state of its own (§5)
-    ├── ui/                  Base UI primitives (owned source), lib/utils.ts (cn()); form-field/ adds
-    │                        RHF-bound field components on the same presentational-only footing (§5)
+    │                        setError — and fields/, the RHF-bound TextField/TextareaField/
+    │                        ControlledField/ColorField/FormErrorBanner; no domain knowledge (§5)
+    ├── ui/                  Base UI primitives (owned source), lib/utils.ts (cn()); form-field/ is
+    │                        the presentational label/hint/error frame those fields render into
     ├── env.ts               Fail-fast loader for the six VITE_* vars
     └── logger.ts            Minimal structured console wrapper
 ```
@@ -61,8 +64,8 @@ proven by its mock-free tests, not by its folder name.
 
 **Dependency direction** — enforced, not just intended:
 
-- `app` → `features` → `shared`. Never up: `shared/` imports neither `features/` nor `app/`, and
-  `features/` never imports `app/`.
+- `app` → `features` → `widgets` → `shared`. Never up: `shared/` imports none of the other three,
+  `widgets/` imports only `shared/`, and `features/` never imports `app/`.
 - Within a slice: `ui` → `model` / `api`, and `api` → `model`. The domain entity is defined in
   `model/` and imported by the layers that use it — the wire layer never owns it.
 - **Functional core, imperative shell** — and the one `model → api` edge it still needs. The pure
@@ -74,13 +77,14 @@ proven by its mock-free tests, not by its folder name.
   inside `auth`. The core dropping a layer is exactly what lets `shared/api/servicesApi.ts` compose
   the facade over `getAuthCredentials` with nothing reaching up
   ([ADR 0037](../../../docs/adr/0037-admin-frontend-session-core-in-shared.md)).
-- The whole direction is mechanically enforced, not just the barrel. Three `no-restricted-imports`
-  blocks in the flat config: the base bans `@/features/*/*` (reaching past a slice's `index.ts`)
-  everywhere; `src/shared/**` additionally may not import `@/features/*` or `@/app/*`; `src/features/**`
-  may not import `@/app/*`. Relative imports inside a slice are unaffected. Flat-config gotcha (noted
-  in `eslint.config.js`): a later block's `no-restricted-imports` **replaces** the base one for
-  matching files rather than merging, so each block restates every pattern it must keep — the
-  `src/features/**` block repeats the `@/features/*/*` barrel ban.
+- The whole direction is mechanically enforced, not just the barrel, by one custom ESLint rule,
+  `agenza/layer-boundaries` (`eslint-rules/layerBoundaries.js`, with its own RuleTester test): an
+  import resolving into a higher layer is an error, and so is a file outside `features/<slice>`
+  importing that slice past its `index.ts` — whether written as `@/…` or as a relative path.
+  Imports inside a slice are unaffected. It replaced three `no-restricted-imports` blocks and their
+  flat-config replace-not-merge trap. It only inspects files that live in one of the four layers:
+  `src/main.tsx`, `src/test/**`, `e2e/**` and config files are not checked
+  ([ADR 0042](../../../docs/adr/0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md)).
 
 **Route pages are shells.** `<Page>.tsx` holds no `useEffect`/`useState`/`useRef` of its own; all
 effect and state logic lives in that page's **own** hook (`useLoginRedirect`, `useAuthCallback`,
@@ -253,7 +257,7 @@ _"`Result` é a moeda interna; a fronteira do framework é o caixa."_
 **A list-loading hook must not confuse "hasn't loaded yet" with "failed to load."** A boolean
 `isLoading` plus "empty means `items.length === 0`" conflates those with "loaded and empty" — the
 first two look identical to the reader if the code doesn't keep them apart.
-`shared/ui/list-section` takes an explicit `status: 'loading' | 'error' | 'ready'`, set only inside
+`widgets/list-section` takes an explicit `status: 'loading' | 'error' | 'ready'`, set only inside
 the `result.ok` branch for `'ready'` and only in the failure branch for `'error'` — `'ready'` is
 never set, and `'error'` is never skipped, based on `items.length`. `features/tags` is the reference
 implementation: `useTagListPage.ts` derives `status` by comparing the query currently in flight
@@ -279,7 +283,10 @@ and no way to recover short of a full page reload; a "never created" catalog and
 nothing" empty case now read identically, and there's no action slot for a per-feature "limpar
 busca". A feature that needs ADR 0020's fuller treatment builds it directly with
 `shared/ui/error-state` (the same primitive `list-section` uses internally) instead of routing it
-through `list-section`'s `status` prop. Search stays page-owned too: `toolbar` is not a
+through `list-section`'s `status` prop. `TagListPage` does exactly that: on a failure it renders
+`ErrorState` itself — "Não foi possível carregar as etiquetas.", the problem's message and `code`,
+and **Tentar novamente**, which drops the failed result (back to the skeleton) and refetches the same
+query — and hands `list-section` only the loading and ready states (§5). Search stays page-owned too: `toolbar` is not a
 `list-section` prop, so a search box sits beside the component in the page's own markup, not
 inside it.
 
@@ -381,6 +388,11 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | `Dialog`'s `busy` reverted: `shared/ui/dialog` is back to the plain Base UI wrapper, and each dialog blocks its own exits while its request is in flight | Asked for directly — the `busy` mechanism (a context module, a `Dialog` wrapper intercepting `onOpenChange`, a context-reading `DialogClose`, and the ✕ and footer close rerouted through it) was more machinery than the problem. The same behaviour is three lines per dialog with APIs the dialog already had: the consumer's `onOpenChange` skips the close while its request is in flight (a controlled dialog simply stays open, so Esc and outside press need no `eventDetails.cancel()`), Cancelar is a `DialogClose` with `disabled`, and `DialogContent`'s existing `showCloseButton` hides the ✕ meanwhile instead of disabling it — no new prop. Two consumers today (`TagFormPage`, `ConfirmDialog`), each written out. `ConfirmDialog`'s wrapper passes only `open` on, so its `onOpenChange` no longer receives Base UI's event details. `dialog/**` stays out of `coverage.exclude`: its consumers exercise it for real, the same reason `tooltip` is measured. Found on the way: twelve `toHaveTextContent('location: /tags')` assertions matched as substrings, so `/tags/1/edit` passed for `/tags` — one of them stayed green with Cancelar locked disabled; they compare the exact text now. |
 | `Delete` on a focused tag row removed | Asked for directly: it was implemented by mistake. Deleting from the list starts at the row's 🗑️ — a click, or `Tab` + `Enter` — and the confirmation keeps its `Ctrl/⌘+Delete`. Removed with it: the registration in `useTagListPage`, `focusedTagId()` and the `data-tag-id` attribute it read, and the two tests that only covered the row key. The two keyboard tests that guard the confirmation itself (opens on Cancelar; `Ctrl+Delete` confirms, a bare `Delete` doesn't) stay, now opening it with `Enter` on the 🗑️. The confirm key stays modified for its own reason: a bare key on a destructive confirm is too easy to fire by accident, and the registry refuses bare keys while a dialog is open anyway. `interaction.md` had used this shortcut as its example of a tier-C row action; it now says row actions get no shortcut at all. |
 | `ShortcutKbd` removed; `ActionButton`/`LinkButton` render the keycap themselves and `shared/ui/kbd` is back to the plain `Kbd`/`KbdGroup` | Asked for directly. It was extracted (the "Tag form reviewed end to end" row) to replace four hand-copied keycap lines; `ActionButton`/`LinkButton` later absorbed all four call sites, leaving their two `*WithShortcut` parts, which exist to turn a `ShortcutHint` into keycap + `aria-keyshortcuts`, as its only consumers. It held no rule of its own (`useShortcutHint` already decides visibility), and exporting it kept the path `agenza-ui-primitive` §5 warns about, a keycap hand-rolled on a plain `Button` with the attribute forgotten, looking sanctioned. Each part now writes the one line, `hint.visible && <Kbd className="ml-auto">…</Kbd>`; rendering is unchanged, and `kbd/index.tsx` is byte-identical to its pre-`ShortcutKbd` version, so it no longer imports `shared/keyboard`. |
+| `TagFormPage`/`TagDeletePage` load the tag with `GET /tags/{id}` on open; the `<Link state={tag}>` hand-off recorded above is gone | Recorded after the fact, in the PR #125 review — the code had already switched. The dialog shows the backend's current data and behaves the same from a row click, a deep link, a refresh or a shared URL; the cost is one request and a short skeleton per open. |
+| Review fixes on the tag dialogs (PR #125) | Two defects, one line of reasoning each. (1) `useRouteScrollReset` keys on the **section** (first path segment), not the whole `pathname`: `new`, `:id/edit` and `:id/delete` are child routes of `/tags`, so every dialog open/close used to reset `<main>`'s scroll and throw the list back to the top. (2) `useTagFormPage.onValid` and `ConfirmDialog.handleConfirm` skip closing when the dialog already unmounted mid-request (browser Back): react-router's `useNavigate` stays live after unmount, so the stale `navigate(-1)` used to pop one entry too many — out of the app, when `/tags` was the tab's first entry. FR-018 still does not block browser Back; no `useBlocker`, since the request finishes anyway and the toast still reports it. Deliberately left as is, both judged not worth the code: a row someone else already removed stays listed after its `Tag.NotFound` until the next reload or search — the spec's edge case only asks for the "não encontrada" message, which already shows; and `TagDeletePage` keeps its loaded tag if `:id` changed without a remount, because no UI path goes from `/tags/A/delete` straight to `/tags/B/delete` — the modal blocks the list, and closing it goes back to `/tags` first. A `key={id}` on the confirmation is the fix if a flow like "excluir a próxima" ever appears. |
+| `TagListPage` renders its own failure with a retry (`ErrorState`: title, the problem's message and `code`, **Tentar novamente**) instead of `list-section`'s fixed "Não foi possível carregar." | Asked for directly, reverting the accepted cost in §2 for tags only — a failed load had no way back short of a full reload, and resubmitting the same search did nothing because `?q=` didn't change. Done the way §2 already prescribed: the page builds the failure with `shared/ui/error-state` and passes `list-section` only loading/ready; `list-section` itself is unchanged. Retry drops the failed result so the skeleton shows while the same query reloads. |
+| Shortcut registry: `⌘`+`Backspace` counts as `⌘`+`Delete`; a modified shortcut no longer fires with `Shift` held | The Mac key printed "delete" reports `Backspace`, so the `⌘Delete` keycap on the confirm button only worked as `fn`+`⌘`+`⌫` (the `ConfirmDialog` row above accepted that); aliasing it under `⌘` makes the keycap true. Only under `⌘`: off macOS, `Ctrl`+`Backspace` deletes the previous word. `Shift` is excluded so a browser chord like `Ctrl+Shift+Delete` (clear browsing data) never lands on the confirm. |
+| `isTransientProblem` also treats `status >= 500` as transient | A real backend 500 arrives with its own problem body and code, which the three client-side sentinels never matched — `ConfirmDialog` classified it as a permanent block ("Não é possível excluir", no retry) instead of offering **Tentar novamente**. A 4xx without a code (ASP.NET's native model-binding 400) stays non-transient. |
 
 ---
 
@@ -410,7 +422,7 @@ because it didn't need to be yet. This is the compiled view across the whole app
   is its first real consumer (`specs/003-tags-crud/`); see
   [ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md) for why the layer
   was kept standing in the meantime.
-- **`shared/ui/form-field/`'s genericity is asserted, not yet proven by a second caller.**
+- **`shared/form/fields/`'s genericity is asserted, not yet proven by a second caller.**
   `TextField`/`TextareaField`/`ControlledField` are written generic over any RHF `FieldValues`, and
   `ColorField` was deliberately kept as a specialization of `ControlledField` rather than the only
   shape the family supports — but `TagFormPage` is still the one consumer exercising any of it.
@@ -451,8 +463,8 @@ React 19 · Vite · strict TypeScript (`exactOptionalPropertyTypes`, `verbatimMo
 `noUnusedLocals`) · Tailwind 4 · `react-router` v8 for client-side routing.
 
 CI gates (all must pass): `tsc --noEmit`, ESLint (`recommendedTypeChecked` + `react-hooks` +
-`no-explicit-any` as error + `no-restricted-imports` enforcing both the feature barrel and the
-`app → features → shared` layer direction), Prettier `--check`,
+`no-explicit-any` as error + the custom `agenza/layer-boundaries` rule enforcing both the feature
+barrel and the `app → features → widgets → shared` layer direction), Prettier `--check`,
 the Vitest run (CI invokes `test:coverage`, whose `vitest.config.ts` thresholds are a real gate —
 85% statements, lines and functions, 80% branches, chosen with headroom so a genuine regression
 fails CI without tripping on small-file noise), `generate:api-types:check` (regenerate the

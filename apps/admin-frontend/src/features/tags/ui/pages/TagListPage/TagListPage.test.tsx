@@ -78,7 +78,7 @@ describe('TagListPage', () => {
     const { container } = renderTagListPage();
 
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(screen.queryByText('Não foi possível carregar.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Não foi possível carregar as etiquetas.')).not.toBeInTheDocument();
 
     resolveInitial({ ok: true, data: TAGS });
 
@@ -168,21 +168,53 @@ describe('TagListPage', () => {
     );
   });
 
-  it('shows a generic inline failure, not the empty-catalog message, when the initial fetch fails', async () => {
+  it('shows the failure with the backend message and its code, not the empty-catalog message, when the initial fetch fails (spec FR-012)', async () => {
     mockList.mockResolvedValue({
       ok: false,
-      error: { title: 'O servidor está instável. Tente novamente em instantes.' },
+      error: {
+        status: 0,
+        code: 'Server.Unavailable',
+        title: 'O servidor está instável. Tente novamente em instantes.',
+      },
     });
 
     renderTagListPage();
 
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('Não foi possível carregar.');
+    expect(alert).toHaveTextContent('Não foi possível carregar as etiquetas.');
+    expect(alert).toHaveTextContent('O servidor está instável. Tente novamente em instantes.');
+    expect(alert).toHaveTextContent('Código: Server.Unavailable');
     expect(screen.queryByText('Nenhum item encontrado.')).not.toBeInTheDocument();
   });
 
+  it('retries the same search from the failure, showing the skeleton while it reloads', async () => {
+    const user = userEvent.setup();
+    mockList.mockResolvedValueOnce({
+      ok: false,
+      error: { title: 'Sem conexão com o servidor. Tente novamente.' },
+    });
+    let resolveRetry!: (value: { ok: true; data: Tag[] }) => void;
+    mockList.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveRetry = resolve;
+        }),
+    );
+    const { container } = renderTagListPage(['/tags?q=vip']);
+
+    await user.click(await screen.findByRole('button', { name: 'Tentar novamente' }));
+
+    expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
+    expect(mockList).toHaveBeenLastCalledWith('vip', expect.any(AbortSignal));
+
+    resolveRetry({ ok: true, data: [TAGS[1]!] });
+
+    expect(await screen.findByText('VIP')).toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+
   it.each([['Session.Missing'], ['Authorization.Unauthorized']] as const)(
-    "shows the same generic inline failure for code %s, with no redirect — session handling is not this component's job",
+    "shows the same inline failure for code %s, with no redirect — session handling is not this component's job",
     async (code) => {
       mockList.mockResolvedValue({
         ok: false,
@@ -192,7 +224,9 @@ describe('TagListPage', () => {
       renderTagListPage();
 
       const alert = await screen.findByRole('alert');
-      expect(alert).toHaveTextContent('Não foi possível carregar.');
+      expect(alert).toHaveTextContent('Não foi possível carregar as etiquetas.');
+      expect(alert).toHaveTextContent('Sua sessão expirou. Entre novamente.');
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
     },
   );
 

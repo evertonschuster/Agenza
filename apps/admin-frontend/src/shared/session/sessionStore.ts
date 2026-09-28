@@ -42,7 +42,10 @@ class SessionStore {
     ) {
       logAuthEvent('login_success', next.tenant?.tenantId ?? null);
     }
-    if (event.type === 'USER_LOADED' && next.session.failureReason === 'missing_tenant_claim') {
+    if (
+      (event.type === 'USER_LOADED' || event.type === 'INITIAL_USER') &&
+      next.session.failureReason === 'missing_tenant_claim'
+    ) {
       logAuthEvent('missing_tenant_claim', prev.tenant?.tenantId ?? null);
     }
     if (event.type === 'SILENT_RENEW_ERROR') {

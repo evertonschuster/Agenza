@@ -60,11 +60,17 @@ describe('ConfirmDialog', () => {
     render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
 
     await user.click(screen.getByRole('button', { name: 'Desativar' }));
-    expect(screen.getByRole('button', { name: 'Desativar' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: 'Desativar' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
 
     resolveConfirm({ ok: true, data: undefined });
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Desativar' })).not.toBeDisabled(),
+      expect(screen.getByRole('button', { name: 'Desativar' })).not.toHaveAttribute(
+        'aria-disabled',
+        'true',
+      ),
     );
   });
 
