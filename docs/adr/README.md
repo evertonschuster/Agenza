@@ -16,7 +16,7 @@ superseded is historical evidence, not current implementation guidance.
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032 |
 | admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
-| admin-frontend UI foundation | 0039, 0040 |
+| admin-frontend UI foundation | 0039, 0040, 0043 |
 | AI agent instruction files | 0041 |
 
 ## Superseded decisions
@@ -59,4 +59,3 @@ cancellation layer · 0034 custom Result type · 0035 no server-state library ·
 harness removed · 0039 Base UI primitives · 0040 three-state theme · 0041 AI
 instruction files reinstated · 0042 widgets layer and layer-boundaries lint rule
 (proposed).
-

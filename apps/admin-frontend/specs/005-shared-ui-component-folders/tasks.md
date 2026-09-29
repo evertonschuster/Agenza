@@ -59,14 +59,14 @@ já ocupam no template (trabalho real, mas não amarrado a uma User Story nomead
 
 ## Phase 2: Foundational
 
-**Purpose**: Não há infraestrutura nova compartilhada bloqueando as User Stories — cada um dos 20
+**Purpose**: Não há infraestrutura nova compartilhada bloqueando as User Stories — cada um dos 19
 componentes migra de forma independente (FR-005 garante que `@/shared/ui/<nome>` resolve igual antes e
 depois, então a ordem de migração entre componentes não importa). A única checagem genuinamente
 bloqueante é confirmar que o mapeamento já fechado em `data-model.md` ainda bate com o código real.
 
 **⚠️ CRITICAL**: Completar antes de iniciar qualquer tarefa de migração (Fases 3, 4, 6).
 
-- [X] T002 Conferir que os 20 arquivos de `src/shared/ui/` ainda têm exatamente os exports e a forma
+- [X] T002 Conferir que os 19 arquivos de `src/shared/ui/` ainda têm exatamente os exports e a forma
   descritos em [data-model.md](./data-model.md) (nenhum commit recente em `shared/ui/` mudou algo desde
   que o mapeamento foi feito em 2026-09-16/17). Se algo mudou, atualizar `data-model.md` antes de seguir.
   **Confirmado**: `git status --short src/shared/ui/` limpo; commit mais recente ali (`f4c9f53`) é o
@@ -125,7 +125,7 @@ que também contenha as demais sub-partes (spec.md, User Story 1).
   `dialog/**`. Apagar `src/shared/ui/dialog.tsx`.
 - [X] T008 [P] [US1] Restruturar `dropdown-menu` em `src/shared/ui/dropdown-menu/`: `index.tsx` com
   `DropdownMenu` (raiz) reexportando `components/*`; 14 arquivos em `components/`
-  (`dropdown-menu-portal.tsx` até `dropdown-menu-shortcut.tsx`, tipos `…ItemProps`/`…LabelProps`/etc.
+  (`dropdown-menu-portal.tsx` e demais partes, tipos `…ItemProps`/`…LabelProps`/etc.
   ainda inline) — mapeamento completo em data-model.md §dropdown-menu/.
   `components/dropdown-menu-sub-content.tsx` importa `dropdown-menu-content.tsx` do próprio
   `components/`. Atualizar a entrada `dropdown-menu.tsx` de `vitest.config.ts` para `dropdown-menu/**`.
@@ -137,10 +137,6 @@ que também contenha as demais sub-partes (spec.md, User Story 1).
   data-model.md §input-group/. Sem `input-group.types.ts` (nenhum tipo próprio real — data-model.md).
   **Mover** `input-group.test.tsx` para `input-group/input-group.test.tsx`, ajustando
   `from './input-group'` → `from '.'`. Apagar os dois arquivos originais na raiz de `shared/ui/`.
-- [X] T010 [P] [US1] Restruturar `kbd` em `src/shared/ui/kbd/`: `index.tsx` com `Kbd` (raiz)
-  reexportando `components/kbd-group.tsx` (`KbdGroup`) — mapeamento completo em data-model.md §kbd/. Sem
-  `kbd.types.ts` (nenhum tipo próprio real). Atualizar a entrada `kbd.tsx` de `vitest.config.ts` para
-  `kbd/**`. Apagar `src/shared/ui/kbd.tsx`.
 - [X] T011 [P] [US1] Restruturar `sheet` em `src/shared/ui/sheet/`: `index.tsx` com `Sheet` (raiz)
   reexportando `components/*`; `components/sheet-trigger.tsx`, `sheet-close.tsx`, `sheet-portal.tsx`,
   `sheet-overlay.tsx`, `sheet-content.tsx` (tipos `SheetSide`/`SheetContentProps` ainda inline),
@@ -171,7 +167,7 @@ referência de T001. MVP entregue — já resolve a dor central do pedido origin
 
 **Goal**: Extrair, para os 8 componentes compostos que têm tipo próprio real, os tipos hoje inline
 (deixados assim na Fase 3) para `<nome>.types.ts`, atualizando os arquivos que os usam para importar de
-lá. `input-group`, `kbd` e `tooltip` não entram aqui — não têm tipo próprio para extrair
+lá. `input-group` e `tooltip` não entram aqui — não têm tipo próprio para extrair
 (data-model.md).
 
 **Independent Test**: Abrir só o arquivo de tipos de um dos 8 componentes e confirmar que todo prop/tipo
@@ -296,7 +292,7 @@ por antecipação.
   conteúdo). Sem `textarea.types.ts`. Atualizar a entrada `textarea.tsx` de `vitest.config.ts` para
   `textarea/**`. Apagar `src/shared/ui/textarea.tsx`.
 
-**Checkpoint**: `shared/ui/` não tem mais nenhum arquivo `.tsx` solto na raiz — os 20 componentes são
+**Checkpoint**: `shared/ui/` não tem mais nenhum arquivo `.tsx` solto na raiz — os 19 componentes são
 pasta.
 
 ---
@@ -334,7 +330,7 @@ de todas as fases anteriores que forem executadas nesta rodada.
   diferença visual perceptível. Não executável na sessão da migração (exige o app rodando via Aspire).
   **Conferido em 2026-09-28** (PR #125), já sobre o código atual, com o stack Aspire real: busca em
   `/tags`, `ConfirmDialog` com falha passageira e nova tentativa, diálogo "Nova etiqueta", toast de
-  etiqueta inexistente, menu de tema, paleta de comandos, a ajuda de atalhos (`?`) e o "Mais" da
+  etiqueta inexistente, menu de tema, paleta de comandos, e o "Mais" da
   navegação inferior (sheet) em 375px — tudo renderiza e responde. A comparação antes/depois da
   migração já não se aplica: as telas mudaram desde então.
 
@@ -423,7 +419,7 @@ nenhum momento.
 
 ## Fase 9: Revisão pós-implementação (2026-09-17, mesmo dia — research.md D10)
 
-Depois de T001–T038 completas (112 arquivos, todos os portões verdes), uma revisão apontou segregação
+Depois de T001–T038 completas (110 arquivos, todos os portões verdes), uma revisão apontou segregação
 exagerada em dois pontos concretos: 19 arquivos de ≤10 linhas dentro de `components/` (wrappers triviais
 de uma sub-parte só) e 7 pastas atômicas (`badge`, `button`, `input`, `label`, `separator`, `skeleton`,
 `textarea`) sem nenhum `types.ts` nem `components/` — ceremônia sem organização. As tarefas T003–T032
@@ -433,8 +429,6 @@ a correção feita em cima, não substitui o histórico.
 - [X] T039 [P] Dissolver `avatar/` e `card/` inteiramente em `index.tsx` (nenhuma sub-parte tinha peso
   real) — remove `avatar.types.ts`, `card.types.ts` e as duas pastas `components/`. Conteúdo final
   idêntico ao arquivo original pré-migração, só que dentro da pasta.
-- [X] T040 [P] Dissolver `kbd/` inteiramente em `index.tsx` (`KbdGroup` é trivial) — remove
-  `components/kbd-group.tsx`.
 - [X] T041 [P] Agrupar as sub-partes triviais de `tooltip/`, `dialog/`, `sheet/`, `toast/`,
   `dropdown-menu/`, `combobox/` e `input-group/` num único `components/<nome>-primitives.tsx` por
   componente, mantendo isoladas só as sub-partes com peso real (composição, estado/handler/ref,
@@ -451,7 +445,7 @@ a correção feita em cima, não substitui o histórico.
 - [X] T045 Atualizar `spec.md` (FR-001–004, SC-004, Assumptions), `research.md` (D10) e `data-model.md`
   (reescrito) para refletir a regra revisada.
 
-**Resultado**: 112 → 60 arquivos (46% menos), mesmos portões verdes de antes.
+**Resultado**: 110 → 59 arquivos (46% menos), mesmos portões verdes de antes.
 
 ## Fase 10: Reversão parcial da Fase 9 (2026-09-17, mesmo dia — research.md D11)
 
@@ -460,14 +454,14 @@ voltassem a ter pasta própria, para não ficarem visivelmente fora do padrão d
 Reverte só T042/T043 — T039–T041 (bundle de sub-partes triviais em `<nome>-primitives.tsx`) não mudam.
 
 - [X] T046 [P] Mover `badge.tsx`, `button.tsx`, `input.tsx`, `label.tsx`, `separator.tsx`,
-  `skeleton.tsx`, `textarea.tsx` para `<nome>/index.tsx` (mesma forma de `avatar/`, `card/`, `kbd/`) —
+  `skeleton.tsx`, `textarea.tsx` para `<nome>/index.tsx` (mesma forma de `avatar/`, `card/`) —
   `git mv` puro, conteúdo inalterado.
 - [X] T047 Atualizar `vitest.config.ts`: as 7 entradas revertidas em T043 voltam a glob de pasta
-  (`<nome>/**`) — as 16 entradas de `shared/ui/` ficam todas glob de pasta.
+  (`<nome>/**`) — as 15 entradas de `shared/ui/` ficam todas glob de pasta.
 - [X] T048 Revalidar `tsc --noEmit`, `lint`, `format:check`, `test:coverage` — mesmo resultado de T044
   (6 avisos pré-existentes, 0 erros; 39/196 testes; 91.27/86.34/85.96/92.21%, idêntico).
 - [X] T049 Atualizar `spec.md` (FR-001/002/004, SC-004, Assumptions), `research.md` (D11), `data-model.md`
   e `plan.md` (nota de correção) para refletir a regra revisada.
 
-**Resultado**: pasta volta a ser universal para os 20 componentes; contagem de arquivos inalterada em
-60 (os 7 só mudam de local, nenhum arquivo novo), mesmos portões verdes de antes.
+**Resultado**: pasta volta a ser universal para os 19 componentes; contagem de arquivos inalterada em
+59 (os 7 só mudam de local, nenhum arquivo novo), mesmos portões verdes de antes.

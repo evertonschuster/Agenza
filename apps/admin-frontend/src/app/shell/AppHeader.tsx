@@ -1,6 +1,5 @@
 import { LogOut, Search } from 'lucide-react';
 import { useAuth } from '@/features/auth';
-import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
 import { ActionButton } from '@/shared/ui/action-button';
 import { Avatar, AvatarFallback } from '@/shared/ui/avatar';
 import { Button } from '@/shared/ui/button';
@@ -15,7 +14,9 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
 
-const SEARCH_SHORTCUT_ID = 'command-palette-slash';
+interface AppHeaderProps {
+  onOpenSearch: () => void;
+}
 
 function initialsOf(name: string | null): string {
   if (!name) return '?';
@@ -25,7 +26,7 @@ function initialsOf(name: string | null): string {
   return (first + last).toUpperCase();
 }
 
-export function AppHeader() {
+export function AppHeader({ onOpenSearch }: AppHeaderProps) {
   const { user, tenant, logout } = useAuth();
 
   return (
@@ -35,8 +36,7 @@ export function AppHeader() {
         variant="outline"
         className="min-w-0 flex-1 justify-start text-muted-foreground sm:max-w-64"
         icon={Search}
-        shortcutId={SEARCH_SHORTCUT_ID}
-        onClick={() => shortcutRegistry.getShortcut(SEARCH_SHORTCUT_ID)?.handler()}
+        onClick={onOpenSearch}
       >
         Buscar
       </ActionButton>

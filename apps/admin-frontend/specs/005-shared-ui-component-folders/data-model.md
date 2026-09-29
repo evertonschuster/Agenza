@@ -6,8 +6,8 @@ exporta, e de quem ele depende. Este documento é o mapeamento completo, compone
 implementação (D1–D9) deu um arquivo a cada sub-parte sem exceção e uma pasta a todo componente sem
 exceção; uma revisão encontrou 19 arquivos de ≤10 linhas dentro de `components/` e apertou essa regra
 (D10), inclusive revertendo 7 pastas para arquivo único por não terem `components/` nem `types.ts`; uma
-segunda revisão (D11) reverteu só essa segunda parte — os 20 componentes voltam a ter pasta, sempre. O
-resultado final tem 60 arquivos (era 112 depois de D1–D9, 60 depois de D10, 60 ainda depois de D11 — a
+segunda revisão (D11) reverteu só essa segunda parte — os 19 componentes voltam a ter pasta, sempre. O
+resultado final tem 59 arquivos (era 110 depois de D1–D9, 59 depois de D10, 59 ainda depois de D11 — a
 reversão só move arquivo, não cria nem remove).
 
 Convenção final (research.md D1–D2, D4, D9, D10, D11):
@@ -48,14 +48,6 @@ em `index.tsx`; `CardSize` volta a ser tipo inline.
 | Símbolo | Local |
 |---|---|
 | `Card`, `CardHeader`, `CardTitle`, `CardDescription`, `CardAction`, `CardContent`, `CardFooter` | `index.tsx` |
-
-## kbd/ — 1 arquivo
-
-`KbdGroup` é um wrapper trivial de `<div>`. Dissolve em `index.tsx`.
-
-| Símbolo | Local |
-|---|---|
-| `Kbd`, `KbdGroup` | `index.tsx` |
 
 ## tooltip/ — 3 arquivos
 
@@ -133,7 +125,7 @@ isolamento mesmo sem condicional em JS), `SubContent` (compõe `Content`), `Chec
 | `DropdownMenuSubContent` | `components/dropdown-menu-sub-content.tsx` (importa `dropdown-menu-content.tsx`) |
 | `DropdownMenuCheckboxItem` | `components/dropdown-menu-checkbox-item.tsx` |
 | `DropdownMenuRadioItem` | `components/dropdown-menu-radio-item.tsx` |
-| `DropdownMenuPortal`, `DropdownMenuTrigger`, `DropdownMenuGroup`, `DropdownMenuLabel`, `DropdownMenuSub`, `DropdownMenuRadioGroup`, `DropdownMenuSeparator`, `DropdownMenuShortcut` | `components/dropdown-menu-primitives.tsx` |
+| `DropdownMenuPortal`, `DropdownMenuTrigger`, `DropdownMenuGroup`, `DropdownMenuLabel`, `DropdownMenuSub`, `DropdownMenuRadioGroup`, `DropdownMenuSeparator` | `components/dropdown-menu-primitives.tsx` |
 
 `dropdown-menu.types.ts`: `DropdownMenuLabelProps`, `DropdownMenuItemProps`, `DropdownMenuSubTriggerProps`,
 `DropdownMenuCheckboxItemProps`, `DropdownMenuRadioItemProps`.
@@ -195,7 +187,7 @@ Imports ajustados (research.md D6): `from '../api/servicesFacade'` → `from '..
 
 ## badge/, button/, input/, label/, separator/, skeleton/, textarea/ — 1 arquivo cada (D11)
 
-Mesmo caso de `avatar/`/`card/`/`kbd/`: exportação única (ou única + variantes de estilo), sem tipo
+Mesmo caso de `avatar/`/`card/`: exportação única (ou única + variantes de estilo), sem tipo
 próprio real, sem sub-parte para segregar — não se qualificam pelo critério de `components/` nem pelo
 de `types.ts`. Diferente de D10 (que por isso os deixava arquivo único na raiz), D11 dá pasta mesmo
 assim, por uniformidade estrutural: o conteúdo de `index.tsx` é idêntico ao arquivo antigo, só movido.
@@ -222,14 +214,13 @@ Diferente dos 7 acima: exportação única, mas **com** tipo próprio real — q
 
 ## Mapeamento de `vitest.config.ts` (`coverage.exclude`)
 
-Das 16 entradas hoje existentes para `shared/ui/`, **todas as 16 viram glob de pasta** (D11 elimina a
+Das 15 entradas hoje existentes para `shared/ui/`, **todas as 15 viram glob de pasta** (D11 elimina a
 última entrada de arquivo exato, ao dar pasta também para os 7 que D10 tinha deixado na raiz).
 
 | Entrada atual | Nova entrada | Motivo documentado (inalterado) |
 |---|---|---|
 | `src/shared/ui/avatar.tsx` | `src/shared/ui/avatar/**` | "Presentational cva wrappers with no logic of their own" |
 | `src/shared/ui/card.tsx` | `src/shared/ui/card/**` | idem |
-| `src/shared/ui/kbd.tsx` | `src/shared/ui/kbd/**` | idem |
 | `src/shared/ui/FullScreenMessage.tsx` | `src/shared/ui/FullScreenMessage/**` | idem (grafia PascalCase preservada) |
 | `src/shared/ui/badge.tsx` | `src/shared/ui/badge/**` | idem |
 | `src/shared/ui/button.tsx` | `src/shared/ui/button/**` | idem |

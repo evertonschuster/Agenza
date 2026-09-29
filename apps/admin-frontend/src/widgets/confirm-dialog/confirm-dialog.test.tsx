@@ -39,6 +39,18 @@ describe('ConfirmDialog', () => {
     expect(onConfirm).toHaveBeenCalledTimes(1);
   });
 
+  it('confirms by click without a Ctrl+Delete binding', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+    await user.keyboard('{Control>}{Delete}{/Control}');
+    expect(onConfirm).not.toHaveBeenCalled();
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+  });
+
   it('calls onOpenChange(false) when Cancelar is clicked', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
@@ -84,18 +96,6 @@ describe('ConfirmDialog', () => {
       expect(screen.getByRole('button', { name: 'Desativar' })).toBeDisabled();
     });
 
-    it('ignores Ctrl+Delete, like the disabled button', async () => {
-      const user = userEvent.setup();
-      const onConfirm = vi.fn();
-      render(
-        <ConfirmDialog {...BASE_PROPS} loading onOpenChange={vi.fn()} onConfirm={onConfirm} />,
-      );
-
-      await user.keyboard('{Control>}{Delete}{/Control}');
-
-      expect(onConfirm).not.toHaveBeenCalled();
-    });
-
     it('still lets the person leave with Cancelar', async () => {
       const user = userEvent.setup();
       const onOpenChange = vi.fn();
@@ -106,60 +106,6 @@ describe('ConfirmDialog', () => {
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
       expect(onOpenChange).toHaveBeenCalledWith(false);
-    });
-  });
-
-  describe('keyboard', () => {
-    const CONFIRM_KEYS = '{Control>}{Delete}{/Control}';
-
-    it('confirms with Ctrl+Delete, exactly like the confirm button, and announces it on that button', async () => {
-      const user = userEvent.setup();
-      const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
-      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
-
-      expect(screen.getByRole('button', { name: 'Desativar' })).toHaveAttribute(
-        'aria-keyshortcuts',
-        'Control+Delete',
-      );
-      await user.keyboard(CONFIRM_KEYS);
-
-      await waitFor(() => expect(onConfirm).toHaveBeenCalledTimes(1));
-    });
-
-    it('never confirms on a plain Delete, so a repeated or held Delete cannot turn open-then-confirm into one gesture', async () => {
-      const user = userEvent.setup();
-      const onConfirm = vi.fn().mockResolvedValue({ ok: true, data: undefined });
-      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
-
-      await user.keyboard('{Delete}{Delete}');
-
-      expect(onConfirm).not.toHaveBeenCalled();
-    });
-
-    it('ignores Ctrl+Delete while a confirm is in flight, like the disabled button', async () => {
-      const user = userEvent.setup();
-      const onConfirm = vi.fn(() => new Promise<ApiResult<void>>(() => {}));
-      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
-
-      await user.keyboard(CONFIRM_KEYS);
-      await user.keyboard(CONFIRM_KEYS);
-
-      expect(onConfirm).toHaveBeenCalledTimes(1);
-    });
-
-    it('ignores Ctrl+Delete once the action is blocked, where no confirm button remains', async () => {
-      const user = userEvent.setup();
-      const onConfirm = vi.fn().mockResolvedValue({
-        ok: false,
-        error: { title: 'Esta promoção está em uso.', code: 'Promotion.InUse' },
-      });
-      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
-
-      await user.keyboard(CONFIRM_KEYS);
-      await screen.findByRole('heading', { name: 'Não é possível desativar' });
-      await user.keyboard(CONFIRM_KEYS);
-
-      expect(onConfirm).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -61,34 +61,27 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
      applyApiProblem<XFormFieldValues>(result.error, X_FORM_FIELDS, methods.setError);
    }
 
-   function submit(event?: SubmitEvent<HTMLFormElement>) {
-     event?.preventDefault();
+   function submit(event: SubmitEvent<HTMLFormElement>) {
+     event.preventDefault();
      if (canSubmit) void methods.handleSubmit(onValid)(event);
    }
 
-   useShortcut(SAVE_SHORTCUT_ID, 's', 'Salvar x', submit, { modified: true });
-
    return { methods, isSaving, canSubmit, onSubmit: submit, /* … */ };
    ```
-   `SAVE_SHORTCUT_ID` is a module-level `export const` of the hook file — the hook registers it, the
-   footer hands the same id to `ActionButton`.
    The route's `id` — never a fetched copy of the entity — decides create vs. update, so the form
    can't write to a record other than the one in the URL. The `void` inside `submit` is not style —
    handing `methods.handleSubmit(onValid)` (a `Promise`-returning function) straight to `onSubmit`
    trips `@typescript-eslint/no-misused-promises`; `tsc` alone won't catch it, only `npm run lint`.
 
-   **Save is `Ctrl+S` / `⌘S`, through the same `submit`.** Mnemonic per the W3C APG; `Ctrl+Enter` is
-   out, the APG lists modifier + Enter as an OS conflict. `canSubmit` is the one rule behind both the
-   button's `disabled` and the shortcut — a shortcut on a disabled control must be inert (MDN,
-   `aria-keyshortcuts`). The footer is two lines of configuration:
+   `canSubmit` is the rule behind the **Salvar** button's `disabled` state. The form's
+   `onSubmit` calls `submit`. The footer uses:
    ```tsx
    <DialogClose disabled={isSaving} render={<Button variant="outline" />}>Cancelar</DialogClose>
-   <ActionButton type="submit" disabled={!canSubmit} pending={isSaving} shortcutId={SAVE_SHORTCUT_ID}>
+   <ActionButton type="submit" disabled={!canSubmit} pending={isSaving}>
      {isSaving ? 'Salvando…' : 'Salvar'}
    </ActionButton>
    ```
-   `ActionButton` reads the keycap and `aria-keyshortcuts` from the registry by id (a dialog's confirm
-   is a resting-keycap tier, `agenza-ui-primitive` §5) and turns `pending` into spinner + disabled.
+   `ActionButton` turns `pending` into a spinner and disables the button.
 
    **While saving, the dialog offers no way out** — a Cancelar clicked mid-request would close the
    dialog while the save still lands, a Cancel that doesn't cancel. Three lines, all with APIs the
@@ -214,7 +207,7 @@ these components are generic, so a real entity's schema is never needed to test 
 
 `npm run lint && npx tsc --noEmit && npm run format:check && npm run test:coverage`, from
 `apps/admin-frontend/`. `shared/form/fields/**` and `shared/ui/form-field/**` are in `vitest.config.ts`'s `coverage.exclude` (pure
-prop-driven renderers, same reasoning as `link-button`/`empty-state`) — `shared/api/formErrors.ts` and
+prop-driven renderers, same reasoning as `empty-state`) — `shared/api/formErrors.ts` and
 `shared/form/applyApiProblem.ts` are not, and carry real logic, so they're expected to show up in the
 coverage number like any other `shared/` file with behaviour.
 

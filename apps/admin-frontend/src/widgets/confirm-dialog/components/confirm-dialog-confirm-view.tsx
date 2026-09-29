@@ -21,7 +21,6 @@ function ConfirmDialogConfirmView({
   failure,
   loading,
   isSubmitting,
-  shortcutId,
   onConfirm,
 }: ConfirmDialogConfirmViewProps) {
   return (
@@ -56,7 +55,6 @@ function ConfirmDialogConfirmView({
           icon={ConfirmIcon}
           disabled={loading}
           pending={isSubmitting}
-          shortcutId={shortcutId}
           onClick={onConfirm}
         >
           {failure?.transient ? retryLabel : confirmLabel}

@@ -101,15 +101,12 @@ describe('TagDeletePage', () => {
   });
 
   it('announces the load and keeps Excluir disabled until the tag arrives', async () => {
-    const user = userEvent.setup();
     let resolveGet!: (result: { ok: true; data: Tag }) => void;
     mockGet.mockReturnValue(new Promise((resolve) => (resolveGet = resolve)));
     renderAt(['/tags/1/delete']);
 
     expect(await screen.findByRole('status')).toHaveTextContent('Carregando…');
     expect(screen.getByRole('button', { name: 'Excluir' })).toBeDisabled();
-    await user.keyboard('{Control>}{Delete}{/Control}');
-    expect(mockDelete).not.toHaveBeenCalled();
 
     resolveGet({ ok: true, data: TAGS[0]! });
 
@@ -273,7 +270,7 @@ describe('TagDeletePage', () => {
     toastAddSpy.mockRestore();
   });
 
-  describe('keyboard (spec FR-019)', () => {
+  describe('native keyboard focus', () => {
     it('keeps deleting deliberate: the confirmation opens on Cancelar, so a following Enter cancels', async () => {
       const user = userEvent.setup();
       renderAt(['/tags']);
@@ -289,26 +286,6 @@ describe('TagDeletePage', () => {
         expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
       expect(mockDelete).not.toHaveBeenCalled();
-    });
-
-    it('deletes with Ctrl+Delete from the confirmation, which a plain Delete never does', async () => {
-      const user = userEvent.setup();
-      mockDelete.mockResolvedValue({ ok: true, data: undefined });
-      renderAt(['/tags']);
-      await screen.findByText('VIP');
-
-      screen.getByRole('link', { name: 'Excluir VIP' }).focus();
-      await user.keyboard('{Enter}');
-      await screen.findByText(/excluir a etiqueta "VIP"/);
-      await user.keyboard('{Delete}');
-      expect(mockDelete).not.toHaveBeenCalled();
-
-      await user.keyboard('{Control>}{Delete}{/Control}');
-
-      await waitFor(() => expect(mockDelete).toHaveBeenCalledWith('2'));
-      await waitFor(() =>
-        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
-      );
     });
   });
 });

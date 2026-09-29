@@ -237,10 +237,9 @@ apenas lendo a convenção documentada, sem perguntar a outra pessoa da equipe.
 
 ## Assumptions
 
-- **Todo componente ganha pasta** (FR-001), sem exceção — 20 no total. O que varia é o conteúdo dentro
-  dela: `avatar`, `card`, `kbd` (exporta `Kbd` + `KbdGroup` — mesma forma de `avatar`/`card`, corrigido
-  em 2026-09-17 após classificação inicial errada), `badge`, `button`, `input`, `label`, `separator`,
-  `skeleton` e `textarea` — 10 no total — não se qualificam nem pelo FR-004 nem pelo FR-002, então têm
+- **Todo componente ganha pasta** (FR-001), sem exceção — 19 no total. O que varia é o conteúdo dentro
+  dela: `avatar`, `card`, `badge`, `button`, `input`, `label`, `separator`,
+  `skeleton` e `textarea` — 9 no total — não se qualificam nem pelo FR-004 nem pelo FR-002, então têm
   só `index.tsx`. `color-swatch-picker` e `FullScreenMessage` têm tipo próprio real (FR-002) mas não se
   qualificam pelo FR-004, então têm `index.tsx` + `<nome>.types.ts`, sem `components/`. `combobox`,
   `confirm-dialog`, `dialog`, `dropdown-menu`, `input-group`, `sheet`, `toast` e `tooltip` — 8 no total —
@@ -284,7 +283,7 @@ apenas lendo a convenção documentada, sem perguntar a outra pessoa da equipe.
   precisa resolvê-la.
 - A lista de exclusão de cobertura em `vitest.config.ts` é atualizada como parte desta feature para
   refletir os novos caminhos, sem mudar o status (incluído/excluído) nem o motivo já documentado de
-  nenhum componente. Das 16 entradas hoje existentes para `shared/ui/`, todas as 16 viram glob de pasta
+  nenhum componente. Das 15 entradas hoje existentes para `shared/ui/`, todas as 15 viram glob de pasta
   (`<nome>/**`) — incluindo `badge`, `button`, `input`, `label`, `separator`, `skeleton` e `textarea`,
   que numa revisão intermediária (research.md D10) chegaram a apontar para o arquivo exato, mas voltaram
   a glob de pasta quando a revisão seguinte (research.md D11) reverteu essa restrição.

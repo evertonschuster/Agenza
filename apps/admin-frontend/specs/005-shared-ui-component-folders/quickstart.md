@@ -76,12 +76,11 @@ demonstrar (é reorganização, não feature nova), a prova é a ausência de mu
    baixo do `input-group/` de busca, e o `toast/` de sucesso) — mesmas 3 telas de confirmação descritas
    em `specs/004-shared-confirm-dialog/spec.md`, resultado visual idêntico.
 2. Abrir o menu de tema (`ThemeToggle`, no cabeçalho) — exercita `dropdown-menu/`.
-3. Abrir a paleta de comando (atalho já documentado em `ShortcutHelpSheet`) — exercita `combobox/` (o
-   `ComboboxPaletteContent`) e `sheet/` (o próprio `ShortcutHelpSheet`).
+3. Clicar em **Buscar** no cabeçalho para abrir a paleta de comando — exercita
+   `combobox/` (`ComboboxPaletteContent`).
 
-Em todos os três, o resultado esperado é "nada perceptível mudou" — a tela, o foco, a animação e o
-texto são pixel-a-pixel os mesmos de antes da migração. Qualquer diferença visual é regressão de FR-009,
-não uma melhoria incidental a manter.
+Em todos os três, os controles, o foco, a animação e o texto das ações mantidas devem funcionar como
+antes.
 
 ## 5. Playwright (gate final)
 

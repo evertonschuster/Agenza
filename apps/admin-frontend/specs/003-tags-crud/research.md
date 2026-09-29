@@ -61,8 +61,7 @@ single request/response shape the dialogs read via `fetcher.data`, instead of ha
 **Decision**: Add `shared/ui/color-swatch-picker.tsx` — takes `options: {value, label}[]` and a
 selected value, renders as a `role="radiogroup"` of swatch buttons. It has no knowledge of Tags or
 of the specific 8 hex values; those stay in `features/tags/model/tag.ts`. Build it through the
-`agenza-ui-primitive` skill (its own trigger list names exactly this: "rendering a backend-supplied
-tag colour," "deciding whether a control gets a resting keycap") rather than deciding its final
+`agenza-ui-primitive` skill (its trigger list includes rendering a backend-supplied tag colour) rather than deciding its final
 shape unilaterally here.
 
 **Rationale**: `shared/ui/` is explicitly for cross-cutting, business-rule-free UI (`AGENTS.md`); a

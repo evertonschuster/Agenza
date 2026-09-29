@@ -52,7 +52,6 @@ interface ConfirmDialogConfirmViewProps {
   failure: ConfirmDialogFailure | undefined;
   loading: boolean;
   isSubmitting: boolean;
-  shortcutId: string;
   onConfirm: () => void;
 }
 

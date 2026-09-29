@@ -12,7 +12,7 @@ did not ask for a system; she asked for her day to run. Write to her.
 Two rules decide most questions:
 
 - **Visible text is pt-BR; code identifiers are English.** Key names — `Ctrl`, `Esc`, `Enter`,
-  `Shift`, `Tab`, `⌘` — are **not** translated: that is what is printed on the ABNT2 keyboard in
+  `Shift`, `Tab` — are **not** translated: that is what is printed on the ABNT2 keyboard in
   front of her. Everything around them is pt-BR — "Pressione Esc para fechar", never "Pressione
   Escape".
 - **Never surface a raw backend message.** Branch on the stable `code`, write the pt-BR yourself.
@@ -54,7 +54,7 @@ Never on an error.
 ## Recurring vocabulary
 
 Consistency beats cleverness: the same action must read identically on every screen, in the command
-palette, and in the shortcut help sheet.
+palette.
 
 | Use | Never | Note |
 | --- | --- | --- |
@@ -95,10 +95,5 @@ exactly the pure functions that make the gate easy.
   assertion bug. → [`references/formatting.md`](references/formatting.md)
 - **A date-only value shifts a day.** `new Date('2026-09-04')` is UTC midnight, which is 3 September
   in São Paulo. → [`references/formatting.md`](references/formatting.md)
-- **Shortcut matching reads `event.key`, never `event.code`.** On ABNT2 the physical key positions do
-  not match a US layout, so `code`-based matching binds the wrong key.
-- **Rendering a load failure as an empty state** tells the owner she has no clients when in fact the
-  network is down. → [`references/states.md`](references/states.md)
-- **`aria-label` must not carry the keyboard shortcut.** The shortcut goes in `aria-keyshortcuts` and
-  a `<kbd aria-hidden>`; a screen reader reading "Novo serviço, tecla N" as the name is noise. The
-  accessible name must equal the visible label.
+- **An icon-only control needs an accessible name.** Other controls should expose the same
+  action in their visible label and accessible name.

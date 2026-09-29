@@ -88,7 +88,7 @@ Ver [constitution](.specify/memory/constitution.md), princípio III.
 | `npm run generate:api-types`       | Regenera os tipos do OpenAPI a partir do services-service em execução |
 | `npm run generate:api-types:check` | Falha se os tipos gerados divergirem do backend                       |
 
-Da raiz, use os atalhos de workspace: `npm run dev:frontend`, `build:frontend`, `test:frontend`,
+Da raiz, use os comandos de workspace: `npm run dev:frontend`, `build:frontend`, `test:frontend`,
 `lint:frontend`.
 
 ### Reproduzindo o CI localmente

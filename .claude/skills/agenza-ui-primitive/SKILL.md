@@ -1,6 +1,6 @@
 ---
 name: agenza-ui-primitive
-description: Use when adding, replacing or restyling anything under apps/admin-frontend/src/shared/ui/ — running `npx shadcn add`, writing a cva variant, wiring a Base UI part, choosing between semantic tokens, rendering a backend-supplied tag colour, or deciding whether a control gets a resting keycap.
+description: Use when adding, replacing or restyling anything under apps/admin-frontend/src/shared/ui/ — running `npx shadcn add`, writing a cva variant, wiring a Base UI part, choosing between semantic tokens, rendering a backend-supplied tag colour, or choosing an accessible action control.
 ---
 
 # Adding or changing a primitive in `shared/ui/`
@@ -9,7 +9,7 @@ description: Use when adding, replacing or restyling anything under apps/admin-f
 `features/` import, no API call. Anything with behaviour worth testing does not belong here (§6).
 
 Architecture: [`docs/ARCHITECTURE.md`](../../../apps/admin-frontend/docs/ARCHITECTURE.md) §1.
-Decisions driving this layer: [`specs/002-ui-foundation/plan.md`](../../../apps/admin-frontend/specs/002-ui-foundation/plan.md) D1, D4, D5;
+Decisions driving this layer: [`specs/002-ui-foundation/plan.md`](../../../apps/admin-frontend/specs/002-ui-foundation/plan.md) D1 and D5;
 folder-per-component convention: [`specs/005-shared-ui-component-folders/`](../../../apps/admin-frontend/specs/005-shared-ui-component-folders/).
 
 **Every component under `shared/ui/` is a folder**, not a flat file — `<name>/index.tsx`, with
@@ -88,7 +88,7 @@ into `shared/ui/<name>/index.tsx` yourself before the typing/style passes below 
 back to the flat layout the rest of `shared/ui/` deliberately moved away from. Only split out
 `<name>.types.ts` or a `components/` subfolder if the generated file actually earns one by the
 criteria in `docs/ARCHITECTURE.md` §1 — most single-component `add` output doesn't, and stays a
-folder with just `index.tsx` (same shape as `avatar/`, `badge/`, `kbd/`).
+folder with just `index.tsx` (same shape as `avatar/` and `badge/`).
 
 **`cn` is not rewritten to `@/shared/lib/utils` by the CLI.** Every `base-nova` file imports
 `from "cn"` — a real, wrong npm package the CLI also adds to `package.json` (`"cn": "^0.2.5"`). This
@@ -117,8 +117,8 @@ deliberate (a bare `node:22` is mutable) and needs an occasional manual refresh 
 whose value may be `undefined` **fails to assign**. This is routine, not occasional:
 
 ```tsx
-type KbdProps = { keys: string[]; tone?: 'muted' | 'brand' };
-<Kbd keys={keys} tone={maybeTone} />   // Type 'undefined' is not assignable to '"muted" | "brand"'
+type ButtonProps = { tone?: 'muted' | 'brand' };
+<Button tone={maybeTone} />   // Type 'undefined' is not assignable to '"muted" | "brand"'
 ```
 
 Write the `| undefined` explicitly: `tone?: 'muted' | 'brand' | undefined`.
@@ -147,40 +147,26 @@ to make the stock classes work — rewrite the class list instead. Details and w
 Full token system, focus ring, dark elevation, and the backend-hex technique: also in
 [`references/tokens.md`](references/tokens.md).
 
-## 5. If it is an action — pick its keycap tier
+## 5. Actions, labels and focus
 
-A **resting** keycap only on a control that occurs at most once per screen: the header search, the
-screen's single primary CTA, a dialog's confirm. Everything else is tooltip on hover **and** focus,
-or palette/help-sheet only. **Never** on destructive actions reached directly, row actions, or nav
-items — the exception is a confirmation dialog's confirm, which may carry a **modified** key
-(`ConfirmDialog`: `Ctrl/⌘+Delete`); see `references/interaction.md`.
-
-The keycap is **derived from the shortcut registry**, never typed by hand — there is no `shortcut`
-prop on the generic `Button`. A control that advertises a shortcut is an **`ActionButton`**
-(`shared/ui/action-button`) or a **`LinkButton`** (`shared/ui/link-button`) given the registry id:
+Use `ActionButton` for button actions needing an icon or pending state. For a navigation
+link styled as a button, use `Link` with `buttonVariants`; a dedicated `LinkButton` wrapper
+was removed when its only consumer could use `Link` directly.
 
 ```tsx
-<ActionButton icon={Plus} shortcutId="novo-servico" onClick={announceComingSoon}>Novo serviço</ActionButton>
-<ActionButton type="submit" pending={isSaving} disabled={!canSubmit} shortcutId="salvar-etiqueta">…</ActionButton>
-<LinkButton to={newTagTo} icon={PlusIcon} shortcutId="nova-etiqueta">Nova etiqueta</LinkButton>
+<ActionButton icon={Plus} onClick={announceComingSoon}>Novo serviço</ActionButton>
+<ActionButton type="submit" pending={isSaving} disabled={!canSubmit}>Salvar</ActionButton>
+<Link to={newTagTo} className={buttonVariants()}>
+  <PlusIcon aria-hidden="true" />
+  Nova etiqueta
+</Link>
 ```
 
-Both read the shortcut from the registry by that id, so an id nobody registered renders no keycap
-and no `aria-keyshortcuts` — advertising a key that does nothing is structurally impossible. The
-registration itself (`useShortcut`) stays with whoever owns the action (a page hook, the command
-palette); the button only advertises it. `ActionButton` also owns the pending look — `pending`
-swaps the icon for a spinner and disables the button — so a "Salvar"/"Excluir" in flight looks the
-same everywhere.
+`ActionButton` swaps the icon for a spinner and disables the button while `pending`. Every
+interactive control needs a visible label or accessible name and a visible focus indicator. Keep
+Base UI's native focus, dialog and menu behaviour.
 
-Accessible name, non-negotiable: `<kbd aria-hidden="true">` inside the button plus
-`aria-keyshortcuts` on the button. `role="presentation"` does **not** work — name-from-content still
-traverses the subtree, and the button announces as "Novo serviço N". Both components already do
-this; hand-rolling `aria-keyshortcuts` + a `<Kbd>` on a plain `Button` is how two call sites once
-lost the attribute. For the same reason the shortcut-aware keycap is not exported on its own — a
-standalone `ShortcutKbd` kept that path looking sanctioned and was removed (ARCHITECTURE.md §5);
-don't bring it back. `Kbd` stays the plain visual primitive.
-
-Tiers, tooltip rules under WCAG 1.4.13, `event.key` vs `event.code`, focus:
+Tooltip rules under WCAG 1.4.13 and focus details:
 [`references/interaction.md`](references/interaction.md).
 
 ## 6. Tests and coverage
@@ -191,8 +177,8 @@ assume a new primitive is exempt from coverage; read the exclude list itself, or
 `specs/002-ui-foundation/plan.md` for the current reasoning, before skipping its tests.
 
 The exclusion is not permission to skip testing behaviour. It is the boundary that tells you where
-behaviour belongs: **anything with logic goes in `shared/` proper** (`shared/theme/`,
-`shared/keyboard/`, a hook), where it is measured, and the primitive stays a dumb renderer of it.
+behaviour belongs: **anything with logic goes in `shared/` proper** (`shared/theme/`, a
+hook), where it is measured, and the primitive stays a dumb renderer of it.
 A test is still worth writing for an accessible name that a regression could silently break.
 
 **Assert the effect a prop causes, not just that passing it doesn't crash.** A test that renders with

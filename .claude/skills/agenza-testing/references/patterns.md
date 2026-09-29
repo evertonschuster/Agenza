@@ -171,18 +171,17 @@ sequence, including focus.
 
 ---
 
-## 6. A keyboard shortcut
+## 6. A visible action
 
-`event.key`, never `event.code` — on an ABNT2 layout `code` lies about which character was typed.
+Use `userEvent.setup()` to click the same control a person uses. Assert both the resulting
+state and the accessible name of the action; a render-only assertion does not prove the
+control works.
 
 ```ts
 const user = userEvent.setup();
-await user.keyboard('{Control>}k{/Control}');
+await user.click(screen.getByRole('button', { name: 'Buscar' }));
+expect(screen.getByRole('dialog')).toBeInTheDocument();
 ```
-
-Assert the observable outcome (the palette opened, focus landed inside it), and separately that the
-control announcing the shortcut carries `aria-keyshortcuts` — the announcement and the handler are
-two different bugs.
 
 ---
 

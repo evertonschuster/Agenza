@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'reac
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
@@ -15,8 +14,6 @@ import {
   type TagFormValues,
 } from '../../../model/tagForm';
 import { TagFormStatus, type UseTagFormPageResult } from './useTagFormPage.types';
-
-export const SAVE_SHORTCUT_ID = 'salvar-etiqueta';
 
 export function useTagFormPage(): UseTagFormPageResult {
   const { id } = useParams();
@@ -94,12 +91,10 @@ export function useTagFormPage(): UseTagFormPageResult {
     applyApiProblem<TagFormFieldValues>(result.error, TAG_FORM_FIELDS, methods.setError);
   }
 
-  function submit(event?: SubmitEvent<HTMLFormElement>) {
-    event?.preventDefault();
+  function submit(event: SubmitEvent<HTMLFormElement>) {
+    event.preventDefault();
     if (canSubmit) void methods.handleSubmit(onValid)(event);
   }
-
-  useShortcut(SAVE_SHORTCUT_ID, 's', 'Salvar etiqueta', submit, { modified: true });
 
   return {
     status: isLoading ? TagFormStatus.Loading : TagFormStatus.Ready,

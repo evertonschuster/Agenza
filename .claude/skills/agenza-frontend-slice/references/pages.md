@@ -86,10 +86,7 @@ export { loader as clientsLoader, action as clientsAction } from './ui/pages/Cli
 - Semantic tokens only: `bg-background`, `text-muted-foreground`, `border-border`. A raw palette
   class breaks light/dark/system, which is a real three-state theme in `shared/theme/`.
 - Prefer the primitive's own keyboard behaviour to a hand-written key handler.
-- A resting `<kbd>` keycap belongs only on a control that occurs at most **once per screen** — the
-  header search, the screen's single primary CTA, a modal's confirm. Row actions, nav items and
-  anything destructive get tooltip-on-hover-and-focus or the palette's right rail instead.
-- Shortcut matching uses `event.key`, never `event.code` — ABNT2 keyboards.
+- Put each business action on a visible button or link with an accessible name.
 - All visible strings pt-BR, including empty states and error copy; key names (`Ctrl`, `Esc`,
   `Enter`) are not translated. See `agenza-ptbr-copy`.
 

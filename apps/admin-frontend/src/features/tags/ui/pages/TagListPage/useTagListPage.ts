@@ -1,14 +1,11 @@
 import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { useLocation, useNavigate, useSearchParams } from 'react-router';
+import { useLocation, useSearchParams } from 'react-router';
 import { extractErrorMessage } from '@/shared/api/servicesFacade';
-import { useShortcut } from '@/shared/keyboard/useShortcut';
 import { useTopic } from '@/shared/pubsub/useTopic';
 import { ListSectionStatus } from '@/widgets/list-section';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { tagDeleted, tagSaved } from '../../../model/tagEvents';
 import type { LoadResult, UseTagListPageResult } from './useTagListPage.types';
-
-export const NEW_TAG_SHORTCUT_ID = 'nova-etiqueta';
 
 export function useTagListPage(): UseTagListPageResult {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -17,7 +14,6 @@ export function useTagListPage(): UseTagListPageResult {
   const searchInputRef = useRef<HTMLInputElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const location = useLocation();
-  const navigate = useNavigate();
 
   const fetchTags = useCallback((forQuery: string) => {
     abortControllerRef.current?.abort();
@@ -52,7 +48,6 @@ export function useTagListPage(): UseTagListPageResult {
   useTopic(tagSaved, () => fetchTags(query));
 
   const newTagTo = { pathname: 'new', search: location.search };
-  useShortcut(NEW_TAG_SHORTCUT_ID, 'n', 'Nova etiqueta', () => void navigate(newTagTo));
 
   function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();

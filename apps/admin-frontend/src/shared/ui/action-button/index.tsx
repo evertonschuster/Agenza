@@ -1,14 +1,30 @@
-import type { ActionButtonProps } from './action-button.types';
-import { ActionButtonBase } from './components/action-button-base';
-import { ActionButtonWithShortcut } from './components/action-button-with-shortcut';
+import type { ComponentProps } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import { Loader2Icon } from 'lucide-react';
+import { Button } from '@/shared/ui/button';
 
-function ActionButton({ shortcutId, ...props }: ActionButtonProps) {
-  return shortcutId ? (
-    <ActionButtonWithShortcut shortcutId={shortcutId} {...props} />
-  ) : (
-    <ActionButtonBase {...props} />
+export type ActionButtonProps = ComponentProps<typeof Button> & {
+  icon?: LucideIcon | undefined;
+  pending?: boolean | undefined;
+};
+
+function ActionButton({
+  icon: Icon,
+  pending = false,
+  disabled,
+  children,
+  ...buttonProps
+}: ActionButtonProps) {
+  return (
+    <Button {...buttonProps} disabled={disabled || pending} focusableWhenDisabled={pending}>
+      {pending ? (
+        <Loader2Icon aria-hidden="true" className="animate-spin" />
+      ) : (
+        Icon && <Icon aria-hidden="true" />
+      )}
+      {children}
+    </Button>
   );
 }
 
 export { ActionButton };
-export type { ActionButtonProps };

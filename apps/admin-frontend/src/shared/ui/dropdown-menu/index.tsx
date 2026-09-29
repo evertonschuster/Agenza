@@ -8,7 +8,6 @@ import {
   DropdownMenuSub,
   DropdownMenuRadioGroup,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
 } from './components/dropdown-menu-primitives';
 import { DropdownMenuContent } from './components/dropdown-menu-content';
 import { DropdownMenuItem } from './components/dropdown-menu-item';
@@ -33,7 +32,6 @@ export {
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
   DropdownMenuSeparator,
-  DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubTrigger,
   DropdownMenuSubContent,

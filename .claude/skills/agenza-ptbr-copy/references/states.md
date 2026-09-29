@@ -111,4 +111,4 @@ on screen, a toast is noise — skip it. No exclamation mark on a routine save.
 - Empty-because-none and empty-because-failed are different renders.
 - The button verb, the dialog title verb and the toast verb are the same word.
 - Sentence case everywhere; keys (`Ctrl`, `Esc`, `Enter`) untranslated.
-- The accessible name equals the visible label, and the shortcut is not inside it.
+- The accessible name equals the visible label.

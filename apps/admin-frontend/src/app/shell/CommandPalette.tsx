@@ -1,15 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { LucideIcon } from 'lucide-react';
-import { HelpCircle, LogOut, Monitor, Moon, Sun } from 'lucide-react';
+import { LogOut, Monitor, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { useTheme } from '@/shared/theme/useTheme';
-import {
-  formatShortcutKey,
-  shortcutRegistry,
-  useRegisteredShortcut,
-} from '@/shared/keyboard/shortcuts';
-import { useShortcut } from '@/shared/keyboard/useShortcut';
 import {
   Combobox,
   ComboboxEmpty,
@@ -20,7 +14,6 @@ import {
   ComboboxList,
   ComboboxPaletteContent,
 } from '@/shared/ui/combobox';
-import { Kbd } from '@/shared/ui/kbd';
 import { NAV_DESTINATIONS } from './navigation';
 
 interface Command {
@@ -28,26 +21,18 @@ interface Command {
   label: string;
   icon: LucideIcon;
   run: () => void;
-  shortcutId?: string;
 }
 
-function CommandKeycap({ shortcutId }: { shortcutId: string }) {
-  const shortcut = useRegisteredShortcut(shortcutId);
-  if (!shortcut) return null;
-  return <Kbd className="ml-auto">{formatShortcutKey(shortcut)}</Kbd>;
+interface CommandPaletteProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
 }
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
   const { setTheme } = useTheme();
   const { logout } = useAuth();
-
-  useShortcut('command-palette-mod-k', 'k', 'Abrir a paleta de comandos', () => setOpen(true), {
-    modified: true,
-  });
-  useShortcut('command-palette-slash', '/', 'Abrir a paleta de comandos', () => setOpen(true));
 
   const groups: { label: string; commands: Command[] }[] = [
     {
@@ -74,16 +59,7 @@ export function CommandPalette() {
     },
     {
       label: 'Outros',
-      commands: [
-        {
-          id: 'help',
-          label: 'Abrir ajuda',
-          icon: HelpCircle,
-          shortcutId: 'shortcut-help',
-          run: () => shortcutRegistry.getShortcut('shortcut-help')?.handler(),
-        },
-        { id: 'logout', label: 'Sair', icon: LogOut, run: () => void logout() },
-      ],
+      commands: [{ id: 'logout', label: 'Sair', icon: LogOut, run: () => void logout() }],
     },
   ];
 
@@ -102,11 +78,11 @@ export function CommandPalette() {
   return (
     <Combobox
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       value={null}
       onValueChange={(id: string | null) => {
         const command = groups.flatMap((group) => group.commands).find((c) => c.id === id);
-        setOpen(false);
+        onOpenChange(false);
         setQuery('');
         command?.run();
       }}
@@ -116,7 +92,6 @@ export function CommandPalette() {
       <ComboboxPaletteContent aria-label="Paleta de comandos">
         <ComboboxInput
           placeholder="Buscar destinos e comandos..."
-          showTrigger={false}
           className="rounded-none border-x-0 border-t-0"
         />
         <ComboboxEmpty className="p-4">Nada encontrado.</ComboboxEmpty>
@@ -128,7 +103,6 @@ export function CommandPalette() {
                 <ComboboxItem key={command.id} value={command.id}>
                   <command.icon aria-hidden="true" />
                   <span>{command.label}</span>
-                  {command.shortcutId && <CommandKeycap shortcutId={command.shortcutId} />}
                 </ComboboxItem>
               ))}
             </ComboboxGroup>

@@ -6,8 +6,8 @@
 
 Substitui o shell provisório (`AppLayout` + `HomePage`) por uma fundação de UI completa: sistema de
 tokens em dois temas, tema de três estados com handoff para o identity-service, camada de primitivos
-sobre Base UI, shell responsivo com barra lateral e barra inferior, seis destinos de navegação, e um
-sistema de atalhos com paleta de comandos. Nenhuma tela de negócio é construída aqui.
+sobre Base UI, shell responsivo com barra lateral e barra inferior, seis destinos de navegação, e uma
+paleta de comandos. Nenhuma tela de negócio é construída aqui.
 
 ## Constitution Check
 
@@ -54,26 +54,10 @@ CSS `transition` + `@starting-style` + os atributos `data-*` de estado do Base U
 ~31 KB gzip no build React, e a persona usa Android intermediário. Reavaliar apenas se uma animação
 de layout específica exigir.
 
-### D4 — Regra de evidência de atalhos (`docs/ARCHITECTURE.md` §5)
-
-> Um keycap em repouso só pode aparecer num controle que ocorre **no máximo uma vez por tela**.
-
-O benefício da descoberta é uma vez por usuário; o custo do ruído é por instância, para sempre.
-
-| Nível | Onde | Como |
-| --- | --- | --- |
-| A | Controle de busca do cabeçalho; ação primária única da tela; confirmar de diálogo | keycap em repouso, no slot final, nunca dentro do rótulo |
-| B | Botões de ícone e ações secundárias com atalho | tooltip em hover **e** foco, 250 ms |
-| C | O resto que tem atalho | apenas paleta, trilho do menu e folha `?` |
-| D | Sem atalho | nada |
-
-Sem prop `shortcut` no `Button` genérico: o chip vive em três componentes e é **derivado do registro
-de atalhos**, nunca digitado à mão. Isso torna estruturalmente impossível anunciar um atalho inexistente.
-
 ### D5 — Cobertura mede lógica, não marcação (`docs/ARCHITECTURE.md` §5, ADR 0039)
 
 Primitivos apresentativos com `cva` e sem comportamento próprio (`avatar`, `badge`, `button`, `card`,
-`input`, `kbd`, `label`, `separator`, `skeleton`, `textarea`, `visually-hidden`, `FullScreenMessage`)
+`input`, `label`, `separator`, `skeleton`, `textarea`, `visually-hidden`, `FullScreenMessage`)
 entram em `coverage.exclude` — não têm lógica a testar e derrubariam o percentual, empurrando o time a
 escrever testes cerimoniais. `dialog.tsx` entra pelo mesmo mecanismo, mas por um motivo diferente e
 temporário: não tem consumidor (T160 em `tasks.md`), então cobrança de cobertura ali seria ruído de
@@ -83,8 +67,8 @@ código morto, não lacuna real — sai da lista quando o T160 resolver.
 bastante), mas porque cada arquivo é um scaffold do shadcn com vários subcomponentes e só um subconjunto
 tem consumidor hoje: `dropdown-menu.tsx` carrega submenu e checkbox-item que nada usa; `combobox.tsx`
 carrega chips e groups que nada usa; idem partes de `sheet.tsx`/`toast.tsx`. O subconjunto realmente
-consumido **é** exercitado de verdade por quem o usa (`ThemeToggle.test.tsx`, `CommandPalette.test.tsx`,
-`ShortcutHelpSheet.test.tsx`), mas cobertura por arquivo não separa "export usado, ramo sem teste" de
+consumido **é** exercitado de verdade por quem o usa (`ThemeToggle.test.tsx`, `CommandPalette.test.tsx`),
+mas cobertura por arquivo não separa "export usado, ramo sem teste" de
 "export sem nenhum uso" — forçar o percentual aqui só compraria teste cerimonial para o scaffold morto.
 O gate para esses cinco arquivos é o review, não o agregado: uma linha de comportamento nova num export
 já consumido precisa de teste na revisão, mesmo sem contar para o número.
@@ -96,7 +80,7 @@ arquivo inteiro de verdade, então excluí-lo esconderia cobertura real em vez d
 `InputGroupText`/`InputGroupTextarea` seguem sem consumidor, mesma categoria do parágrafo acima, mas o
 arquivo é pequeno o bastante para não derrubar o agregado sozinho.
 
-`shared/theme/**`, `shared/keyboard/**` e a lógica de navegação são testados de verdade — não há
+`shared/theme/**` e a lógica de navegação são testados de verdade — não há
 scaffold não-usado nesses módulos, então a cobertura de arquivo inteiro é honesta ali.
 
 **Esta alteração é feita antes de qualquer primitivo ser adicionado**, ou o CI fica vermelho e parece
@@ -125,7 +109,7 @@ backend existir.
 ### Deliberadamente não adotar
 
 `sonner` (Base UI Toast) · `cmdk` (Base UI Combobox) · `next-themes` (D2) · `motion` (D3) ·
-`vaul` (Base UI Dialog como sheet) · `react-hotkeys-hook` (registro próprio) ·
+`vaul` (Base UI Dialog como sheet) ·
 `@tanstack/react-table` (sem tela de tabela ainda) · `react-hook-form` + `zod` (entram com o primeiro
 formulário real, não com a fundação).
 
@@ -138,14 +122,13 @@ src/
 │   ├── routes.tsx                   seis rotas
 │   ├── shell/                       NOVO — composition root do layout
 │   │   ├── AppShell.tsx  SidebarNav.tsx  BottomNav.tsx  AppHeader.tsx
-│   │   ├── ThemeToggle.tsx  CommandPalette.tsx  ShortcutHelpSheet.tsx
+│   │   ├── ThemeToggle.tsx  CommandPalette.tsx
 │   │   └── navigation.ts            destinos como dado
 │   └── pages/                       NOVO — telas sem fatia
 │       ├── ComingSoon.tsx
 │       └── Home.tsx  Schedule.tsx  Clients.tsx  Conversations.tsx  Services.tsx  Settings.tsx
 └── shared/
     ├── theme/                       NOVO — theme.ts  themeStore.ts  useTheme.ts
-    ├── keyboard/                    NOVO — shortcuts.ts  useShortcut.ts  platform.ts
     ├── hooks/                       NOVO — declarado em components.json, nunca criado
     └── ui/                          conjunto de fundação
 ```
@@ -163,7 +146,7 @@ Cada fase termina com CI verde. Ordem é dependência real, não preferência.
 | 2 | Camada de primitivos (Base UI in, Radix out) + ajuste de cobertura | 3, 4, 5 |
 | 3 | Shell responsivo | 4, 5 |
 | 4 | Seis rotas + telas "Em breve" | 5 |
-| 5 | Atalhos, paleta de comandos, evidência | — |
+| 5 | Paleta de comandos | — |
 | 6 | Documentação + ADRs | — |
 
 ## Risks
@@ -173,7 +156,6 @@ Cada fase termina com CI verde. Ordem é dependência real, não preferência.
 | `npm ci` quebra no CI após adicionar dependências | Regerar o lockfile em container Linux — comando completo (imagem pinada por digest, `npm@12.0.2`, `--allow-remote=all`) na seção "Portões de CI" de [`AGENTS.md`](../../AGENTS.md), não repetido aqui para não virar uma terceira cópia para desalinhar |
 | `exactOptionalPropertyTypes` atrita com componentes gerados pelo shadcn | Passe de tipagem por componente; esperado, não eventual |
 | Gate de cobertura fica vermelho ao adicionar primitivos | D5 é feito **antes** de qualquer primitivo |
-| Chip de atalho sobre o violeta lê como botão dentro de botão | Revisar a 100% de zoom em Windows 1366×768 real; se a borda não sobreviver, enviar sem chip — nível B mais a linha na paleta ainda supera o estado atual |
 | Snippet Radix copiado não compila com Base UI | Skill `agenza-ui-primitive` documenta a diferença `render` vs `asChild` |
 
 ## Verification
