@@ -61,8 +61,8 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
      applyApiProblem<XFormFieldValues>(result.error, X_FORM_FIELDS, methods.setError);
    }
 
-   function submit(event?: SubmitEvent<HTMLFormElement>) {
-     event?.preventDefault();
+   function submit(event: SubmitEvent<HTMLFormElement>) {
+     event.preventDefault();
      if (canSubmit) void methods.handleSubmit(onValid)(event);
    }
 
@@ -207,7 +207,7 @@ these components are generic, so a real entity's schema is never needed to test 
 
 `npm run lint && npx tsc --noEmit && npm run format:check && npm run test:coverage`, from
 `apps/admin-frontend/`. `shared/form/fields/**` and `shared/ui/form-field/**` are in `vitest.config.ts`'s `coverage.exclude` (pure
-prop-driven renderers, same reasoning as `link-button`/`empty-state`) — `shared/api/formErrors.ts` and
+prop-driven renderers, same reasoning as `empty-state`) — `shared/api/formErrors.ts` and
 `shared/form/applyApiProblem.ts` are not, and carry real logic, so they're expected to show up in the
 coverage number like any other `shared/` file with behaviour.
 

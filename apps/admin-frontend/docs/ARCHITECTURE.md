@@ -392,7 +392,7 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | Shortcut registry: `⌘`+`Backspace` counts as `⌘`+`Delete`; a modified shortcut no longer fires with `Shift` held | The Mac key printed "delete" reports `Backspace`, so the `⌘Delete` keycap on the confirm button only worked as `fn`+`⌘`+`⌫` (the `ConfirmDialog` row above accepted that); aliasing it under `⌘` makes the keycap true. Only under `⌘`: off macOS, `Ctrl`+`Backspace` deletes the previous word. `Shift` is excluded so a browser chord like `Ctrl+Shift+Delete` (clear browsing data) never lands on the confirm. |
 | `isTransientProblem` also treats `status >= 500` as transient | A real backend 500 arrives with its own problem body and code, which the three client-side sentinels never matched — `ConfirmDialog` classified it as a permanent block ("Não é possível excluir", no retry) instead of offering **Tentar novamente**. A 4xx without a code (ASP.NET's native model-binding 400) stays non-transient. |
 
-The custom shortcut system described in earlier rows was removed in [ADR 0043](../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). The palette now opens from the header click, and business actions remain on their visible controls.
+The custom shortcut system described in earlier rows was removed in [ADR 0043](../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). The palette now opens from the header click, and business actions remain on their visible controls. The single-use `LinkButton` wrapper was removed; its remaining link uses `buttonVariants` directly.
 
 ---
 

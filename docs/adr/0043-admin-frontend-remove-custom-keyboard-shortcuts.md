@@ -13,7 +13,7 @@ A decisão de produto é retirar os atalhos personalizados e manter os fluxos po
 - Não registrar atalhos globais para navegação, ajuda, criação, salvamento ou exclusão.
 - Controlar a paleta no `AppShell` e abri-la diretamente pelo botão Buscar do cabeçalho.
 - Manter a paleta, os controles de ação, as regras de formulário e os estados de confirmação.
-- Remover a folha dedicada aos atalhos, seus keycaps e a infraestrutura compartilhada sem consumidores.
+- Remover a folha dedicada aos atalhos, seus keycaps e a infraestrutura compartilhada sem consumidores. O `LinkButton` de uso único é substituído por `Link` com `buttonVariants`.
 - Preservar a operação nativa por teclado de HTML e Base UI, inclusive foco e fechamento de sobreposições. Nenhuma ação passa a exigir mouse exclusivamente.
 
 ## Consequências

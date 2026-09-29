@@ -149,13 +149,17 @@ Full token system, focus ring, dark elevation, and the backend-hex technique: al
 
 ## 5. Actions, labels and focus
 
-Use `ActionButton` for button actions needing an icon or pending state, and `LinkButton` for
-navigation styled as a button:
+Use `ActionButton` for button actions needing an icon or pending state. For a navigation
+link styled as a button, use `Link` with `buttonVariants`; a dedicated `LinkButton` wrapper
+was removed when its only consumer no longer needed shortcut hints.
 
 ```tsx
 <ActionButton icon={Plus} onClick={announceComingSoon}>Novo serviço</ActionButton>
 <ActionButton type="submit" pending={isSaving} disabled={!canSubmit}>Salvar</ActionButton>
-<LinkButton to={newTagTo} icon={PlusIcon}>Nova etiqueta</LinkButton>
+<Link to={newTagTo} className={buttonVariants()}>
+  <PlusIcon aria-hidden="true" />
+  Nova etiqueta
+</Link>
 ```
 
 `ActionButton` swaps the icon for a spinner and disables the button while `pending`. Every

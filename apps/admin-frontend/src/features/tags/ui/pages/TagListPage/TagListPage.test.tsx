@@ -150,10 +150,10 @@ describe('TagListPage', () => {
     renderAtTagsRoute(TAGS, ['/tags?q=promo']);
     await screen.findByText('Promoção');
 
-    expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
-      'href',
-      '/tags/new?q=promo',
-    );
+    const newTag = screen.getByRole('link', { name: 'Nova etiqueta' });
+    expect(newTag).toHaveAttribute('href', '/tags/new?q=promo');
+    expect(newTag).toHaveClass('bg-primary');
+    expect(newTag.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
   it('clicking Nova etiqueta navigates to /tags/new (spec US2)', async () => {

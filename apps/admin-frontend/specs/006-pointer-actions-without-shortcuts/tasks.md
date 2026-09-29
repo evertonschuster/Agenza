@@ -11,7 +11,7 @@
 
 - [x] T003 [US2] Retirar os registros de Serviços, lista e formulário de Etiquetas e confirmação de exclusão.
 - [x] T004 [US2] Preservar clique, validação, estados pendentes e fechamento dos diálogos.
-- [x] T005 [US3] Simplificar `ActionButton` e `LinkButton`, retirando props e subcomponentes exclusivos de atalhos.
+- [x] T005 [US3] Simplificar `ActionButton` e remover `LinkButton` de uso único, retirando props e subcomponentes exclusivos de atalhos.
 - [x] T006 [US3] Retirar a folha de ajuda, `shared/keyboard/`, keycaps sem consumidores e exportações mortas.
 - [x] T007 [US1–US3] Trocar testes exclusivos de atalhos por cobertura dos fluxos por clique.
 

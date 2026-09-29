@@ -23,7 +23,7 @@ Manter a paleta e todos os fluxos de negócio acessíveis por clique, removendo 
 ## Sequência de implementação
 
 1. Controlar a paleta em `AppShell` e abrir pelo clique em `AppHeader`; testar o caminho.
-2. Retirar registros das telas e do diálogo. Simplificar `ActionButton` e `LinkButton`, preservando ícones, estados pendentes e acessibilidade.
+2. Retirar registros das telas e do diálogo. Simplificar `ActionButton` e substituir o `LinkButton` de uso único por `Link` com `buttonVariants`, preservando ícones, estados pendentes e acessibilidade.
 3. Remover a infraestrutura sem consumidores, a folha e os testes exclusivos dos atalhos. Ajustar testes para comportamento por clique.
 4. Atualizar arquitetura, specs históricas e instruções locais; executar todos os portões aplicáveis.
 
@@ -31,4 +31,4 @@ Manter a paleta e todos os fluxos de negócio acessíveis por clique, removendo 
 
 - A paleta continua como superfície de navegação e comandos, mesmo sem combinação para abri-la.
 - `Tab`, `Enter`, `Esc` e a digitação normal não são atalhos personalizados e permanecem disponíveis.
-- A decisão anterior permanece documentada como história; a retirada é registrada na [ADR 0043](../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md).
+- A decisão anterior permanece documentada como história; a retirada é registrada na [ADR 0043](../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md).
