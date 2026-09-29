@@ -24,7 +24,7 @@ Manter a paleta e todos os fluxos de negócio acessíveis por clique, removendo 
 
 1. Controlar a paleta em `AppShell` e abrir pelo clique em `AppHeader`; testar o caminho.
 2. Retirar registros das telas e do diálogo. Simplificar `ActionButton` e substituir o `LinkButton` de uso único por `Link` com `buttonVariants`, preservando ícones, estados pendentes e acessibilidade.
-3. Remover a infraestrutura sem consumidores, a folha e os testes exclusivos dos atalhos. Ajustar testes para comportamento por clique.
+3. Remover a infraestrutura sem consumidores, a folha e os testes exclusivos dos atalhos. Reduzir o combobox às partes usadas pela paleta e ajustar testes para comportamento por clique.
 4. Atualizar arquitetura, specs históricas e instruções locais; executar todos os portões aplicáveis.
 
 ## Decisões

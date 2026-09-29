@@ -92,7 +92,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
       <ComboboxPaletteContent aria-label="Paleta de comandos">
         <ComboboxInput
           placeholder="Buscar destinos e comandos..."
-          showTrigger={false}
           className="rounded-none border-x-0 border-t-0"
         />
         <ComboboxEmpty className="p-4">Nada encontrado.</ComboboxEmpty>

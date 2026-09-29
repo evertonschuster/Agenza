@@ -18,7 +18,7 @@ A decisão de produto é retirar os atalhos personalizados e manter os fluxos po
 
 ## Consequências
 
-O painel tem menos estado global, listeners, wrappers e caminhos indiretos entre componentes. A descoberta das operações passa pelos rótulos e controles visíveis. Os testes verificam os caminhos por clique e os estados de negócio. O material da fundação que descreve atalhos fica identificado como decisão substituída, sem reescrever os fatos históricos.
+O painel tem menos estado global, listeners, wrappers e caminhos indiretos entre componentes. O combobox mantém somente as partes usadas pela paleta; peças de seleção e chips sem consumidor saem, e o código restante entra na cobertura. A descoberta das operações passa pelos rótulos e controles visíveis. Os testes verificam os caminhos por clique e os estados de negócio. O material da fundação que descreve atalhos fica identificado como decisão substituída, sem reescrever os fatos históricos.
 
 ## Alternativas consideradas
 

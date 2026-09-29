@@ -47,14 +47,11 @@ export default defineConfig({
         'src/shared/ui/error-state/**',
         'src/shared/ui/form-field/**',
         'src/shared/form/fields/**',
-        // Real behaviour, but most of each file is shadcn scaffold with no product consumer yet
-        // (submenus, checkbox items, chips, groups — see D5 in plan.md). The consumed subset is
-        // exercised for real by ThemeToggle, CommandPalette and BottomNav tests; file-level
-        // coverage can't separate that from the unused rest, so this gate is enforced by review,
-        // not by the aggregate number. tooltip.tsx is deliberately not here: SidebarNav.test.tsx
-        // and AppShell.test.tsx already exercise all of it for real.
+        // Real behaviour, but these files still include unconsumed shadcn subcomponents
+        // (submenus, checkbox/radio items and extra sheet/toast parts — see D5 in plan.md).
+        // File coverage cannot separate those from the parts exercised by app callers.
+        // Combobox and tooltip stay in the gate because their current code has real consumers.
         'src/shared/ui/dropdown-menu/**',
-        'src/shared/ui/combobox/**',
         'src/shared/ui/sheet/**',
         'src/shared/ui/toast/**',
         'src/vite-env.d.ts',

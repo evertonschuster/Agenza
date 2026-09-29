@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
 import { AuthContext, type AuthContextValue } from '@/features/auth';
 import { INITIAL_SESSION } from '@/shared/session/session';
@@ -49,6 +50,17 @@ describe('CommandPalette', () => {
     fireEvent.click(screen.getByRole('option', { name: 'Etiquetas' }));
 
     expect(screen.getByTestId('location')).toHaveTextContent('/tags');
+  });
+
+  it('filters destinations when the person types in Buscar', async () => {
+    const user = userEvent.setup();
+    renderPalette();
+
+    const search = screen.getByPlaceholderText('Buscar destinos e comandos...');
+    await user.type(search, 'eti');
+
+    expect(screen.getByRole('option', { name: 'Etiquetas' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Início' })).not.toBeInTheDocument();
   });
 
   it('keeps theme and account commands available by click', () => {

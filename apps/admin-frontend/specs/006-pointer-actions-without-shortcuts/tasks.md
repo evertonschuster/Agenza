@@ -20,3 +20,4 @@
 - [x] T008 Atualizar arquitetura, specs históricas, índice de ADRs e skills locais sem apagar decisões anteriores.
 - [x] T009 Rodar TypeScript, lint, Prettier, Vitest com cobertura e o E2E aplicável.
 - [x] T010 Confirmar ausência de listeners, dicas e ids de atalhos personalizados no código de produção.
+- [x] T011 Remover partes sem consumidor do combobox da paleta e incluí-lo na cobertura.
