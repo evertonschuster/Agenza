@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { createMemoryRouter, RouterProvider } from 'react-router';
 import { AuthContext, type AuthContextValue } from '@/features/auth';
 import { INITIAL_SESSION } from '@/shared/session/session';
@@ -73,6 +73,14 @@ describe('AppShell', () => {
 
     expect(screen.getByText('routed content')).toBeInTheDocument();
     expect(screen.getByRole('main')).toBeInTheDocument();
+  });
+
+  it('opens the command palette from the header search button', () => {
+    renderShell();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    expect(screen.getByRole('option', { name: 'Etiquetas' })).toBeInTheDocument();
   });
 
   it('shows the sidebar and no bottom bar at desktop width', () => {

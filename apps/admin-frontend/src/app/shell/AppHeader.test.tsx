@@ -22,7 +22,7 @@ function registerSearchShortcut(): void {
   });
 }
 
-function renderHeader(logout = vi.fn()) {
+function renderHeader(logout = vi.fn(), onOpenSearch = vi.fn()) {
   const value: AuthContextValue = {
     session: { ...INITIAL_SESSION, status: 'authenticated', accessToken: 'token' },
     tenant: { tenantId: '019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120' },
@@ -33,7 +33,7 @@ function renderHeader(logout = vi.fn()) {
 
   return render(
     <AuthContext.Provider value={value}>
-      <AppHeader />
+      <AppHeader onOpenSearch={onOpenSearch} />
     </AuthContext.Provider>,
   );
 }
@@ -47,6 +47,15 @@ describe('AppHeader', () => {
     renderHeader();
 
     expect(screen.getByText('Agenza Admin')).toBeInTheDocument();
+  });
+
+  it('opens search directly when Buscar is clicked', () => {
+    const onOpenSearch = vi.fn();
+    renderHeader(vi.fn(), onOpenSearch);
+
+    fireEvent.click(screen.getByRole('button', { name: 'Buscar' }));
+
+    expect(onOpenSearch).toHaveBeenCalledOnce();
   });
 
   it('shows the initials of the signed-in user on the account menu trigger', () => {

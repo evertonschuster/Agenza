@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Outlet } from 'react-router';
 import { AppHeader } from './AppHeader';
 import { BottomNav } from './BottomNav';
@@ -8,6 +9,7 @@ import { useRouteScrollReset } from './useRouteScrollReset';
 import { useViewportKind } from './useViewportKind';
 
 export function AppShell() {
+  const [paletteOpen, setPaletteOpen] = useState(false);
   const viewportKind = useViewportKind();
   const mainRef = useRouteScrollReset<HTMLElement>();
 
@@ -16,14 +18,14 @@ export function AppShell() {
       {viewportKind !== 'bottom' && <SidebarNav compact={viewportKind === 'rail'} />}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <AppHeader />
+        <AppHeader onOpenSearch={() => setPaletteOpen(true)} />
         <main ref={mainRef} className="flex-1 overflow-y-auto overscroll-contain p-4 pb-20 md:pb-4">
           <Outlet />
         </main>
       </div>
 
       {viewportKind === 'bottom' && <BottomNav />}
-      <CommandPalette />
+      <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
       <ShortcutHelpSheet />
     </div>
   );

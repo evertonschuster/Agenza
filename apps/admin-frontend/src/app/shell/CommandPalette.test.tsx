@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
@@ -15,6 +16,11 @@ function registerHelpShortcut(): void {
   });
 }
 
+function PaletteHarness() {
+  const [open, setOpen] = useState(false);
+  return <CommandPalette open={open} onOpenChange={setOpen} />;
+}
+
 function renderPalette() {
   const value: AuthContextValue = {
     session: { ...INITIAL_SESSION, status: 'authenticated', accessToken: 'token' },
@@ -27,7 +33,7 @@ function renderPalette() {
   return render(
     <AuthContext.Provider value={value}>
       <MemoryRouter>
-        <CommandPalette />
+        <PaletteHarness />
       </MemoryRouter>
     </AuthContext.Provider>,
   );

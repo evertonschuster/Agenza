@@ -31,23 +31,33 @@ interface Command {
   shortcutId?: string;
 }
 
+interface CommandPaletteProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
 function CommandKeycap({ shortcutId }: { shortcutId: string }) {
   const shortcut = useRegisteredShortcut(shortcutId);
   if (!shortcut) return null;
   return <Kbd className="ml-auto">{formatShortcutKey(shortcut)}</Kbd>;
 }
 
-export function CommandPalette() {
-  const [open, setOpen] = useState(false);
+export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
   const { setTheme } = useTheme();
   const { logout } = useAuth();
 
-  useShortcut('command-palette-mod-k', 'k', 'Abrir a paleta de comandos', () => setOpen(true), {
-    modified: true,
-  });
-  useShortcut('command-palette-slash', '/', 'Abrir a paleta de comandos', () => setOpen(true));
+  useShortcut(
+    'command-palette-mod-k',
+    'k',
+    'Abrir a paleta de comandos',
+    () => onOpenChange(true),
+    {
+      modified: true,
+    },
+  );
+  useShortcut('command-palette-slash', '/', 'Abrir a paleta de comandos', () => onOpenChange(true));
 
   const groups: { label: string; commands: Command[] }[] = [
     {
@@ -102,11 +112,11 @@ export function CommandPalette() {
   return (
     <Combobox
       open={open}
-      onOpenChange={setOpen}
+      onOpenChange={onOpenChange}
       value={null}
       onValueChange={(id: string | null) => {
         const command = groups.flatMap((group) => group.commands).find((c) => c.id === id);
-        setOpen(false);
+        onOpenChange(false);
         setQuery('');
         command?.run();
       }}
