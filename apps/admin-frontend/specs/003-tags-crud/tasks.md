@@ -1,7 +1,5 @@
 ---
 
-> **Histórico:** os requisitos de atalhos personalizados deste documento foram substituídos pela [spec 006](../006-pointer-actions-without-shortcuts/spec.md) e pela [ADR 0043](../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). As decisões originais permanecem aqui como registro.
-
 description: "Task list for Service Tags CRUD"
 ---
 
@@ -122,9 +120,8 @@ confirm nothing was created.
 - [x] T017 [US2] Implement `TagFormDialog.tsx` create mode — name input, `color-swatch-picker`,
   description textarea, backend error rendering by structure (field vs. general) never by parsing
   message text, in `src/features/tags/ui/pages/TagsPage/TagFormDialog.tsx` (depends on T005, T004)
-- [x] T018 [US2] Wire "Nova etiqueta" (button + `n` shortcut, mirroring `Services.tsx`'s
-  `useShortcut` pattern) in `TagsPage.tsx` to open `TagFormDialog` and submit `intent=create` via
-  `useFetcher` (depends on T015, T017)
+- [x] T018 [US2] Wire "Nova etiqueta" in `TagsPage.tsx` to open `TagFormDialog` and submit
+  `intent=create` via `useFetcher` (depends on T015, T017)
 
 **Checkpoint**: US1 + US2 — a real catalog can be built through the UI. This is the feature's MVP
 (spec.md assigns both P1; US2 alone has nothing to list, US1 alone has nothing to show).

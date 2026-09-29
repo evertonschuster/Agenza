@@ -74,7 +74,7 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    trips `@typescript-eslint/no-misused-promises`; `tsc` alone won't catch it, only `npm run lint`.
 
    `canSubmit` is the rule behind the **Salvar** button's `disabled` state. The form's
-   `onSubmit` calls `submit`; there is no product-specific save shortcut. The footer uses:
+   `onSubmit` calls `submit`. The footer uses:
    ```tsx
    <DialogClose disabled={isSaving} render={<Button variant="outline" />}>Cancelar</DialogClose>
    <ActionButton type="submit" disabled={!canSubmit} pending={isSaving}>

@@ -20,9 +20,6 @@ perguntas de qualidade de requisito — decidir se algo precisa virar edição e
 
 ## Requirement Consistency (achado I2)
 
-- [ ] CHK003 A afirmação em `plan.md` §Technical Context de que `@base-ui/react` está por trás de
-  "todos os 11" componentes compostos é consistente com o código-fonte de cada um, ou existe exceção
-  (`kbd`, sem nenhum import de `@base-ui/react`) não refletida no texto? [Consistency, Plan §Technical Context]
 
 ## Scenario Coverage (achado I3)
 

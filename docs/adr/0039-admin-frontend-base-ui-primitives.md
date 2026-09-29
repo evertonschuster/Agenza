@@ -39,7 +39,7 @@ is the part of it worth keeping: owned source over a black-box dependency.
 
 `sonner` and `cmdk` are not adopted. Toast and Combobox come from Base UI.
 
-The foundation set is deliberately small — surfaces, overlays, inputs, and a keycap
+The foundation set is deliberately small — surfaces, overlays and inputs
 component. Everything else is added when a screen actually needs it.
 
 ## Consequences

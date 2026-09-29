@@ -1,7 +1,5 @@
 # Feature Specification: Admin Panel UI Foundation
 
-> **Histórico:** os requisitos de atalhos personalizados deste documento foram substituídos pela [spec 006](../006-pointer-actions-without-shortcuts/spec.md) e pela [ADR 0043](../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). As decisões originais permanecem aqui como registro.
-
 **Feature Branch**: `002-ui-foundation`
 
 **Created**: 2026-09-04
@@ -9,7 +7,7 @@
 **Status**: Draft
 
 **Input**: User description (pt-BR, transcrito de voz): montar o plano de instalação e configuração do
-layout da aplicação. Tema claro/escuro **e** automático conforme o sistema operacional. Atalhos de teclado para as operações do sistema. Visual moderno, suave, muito clean —
+layout da aplicação. Tema claro/escuro **e** automático conforme o sistema operacional. Visual moderno, suave, muito clean —
 sem excesso de opções ou usabilidade complicada; interface fluida como Mercado Livre e Nubank,
 totalmente intuitiva. Responsivo para mobile. Respeitar a arquitetura existente sem pedir demais dela.
 A interface atual pode ser inteiramente descartada, mantendo apenas o esqueleto do projeto.
@@ -27,12 +25,7 @@ A interface atual pode ser inteiramente descartada, mantendo apenas o esqueleto 
 - Q: Só Serviços/Categorias/Tags têm backend. O que a navegação mostra no dia 1? →
   A: **Navegação completa** com os 6 destinos desde o início; os 4 sem backend abrem uma tela
   "Em breve" honesta.
-- Q: Qual a profundidade do sistema de atalhos, dado que a persona é dona de salão e não usuária
-  avançada? → A: **Essenciais + paleta de comandos.** `Ctrl/⌘+K`, `/`, `?`, `Esc`, `n`.
 - Q: Aprovar o visual antes de escrever código? → A: **Sim**, protótipo clicável primeiro. Concluído.
-- Q: Após revisar o protótipo, alguma correção? → A: **Uma.** A dica de atalho precisa ser mais
-  evidente nas ações que possuem atalho. O chip `Ctrl K` dentro do campo de busca funcionou; o botão
-  "Novo serviço" não tinha equivalente e o atalho foi difícil de descobrir.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -91,25 +84,17 @@ encoberto.
 
 ---
 
-### User Story 4 — A pessoa descobre que existe um caminho mais rápido (Priority: P2)
+### User Story 4 — A pessoa encontra comandos do painel (Priority: P2)
 
-Quem trabalha no desktop percebe, olhando para a tela, que as ações principais têm atalho. Uma paleta
-de comandos concentra navegação e ações num só lugar, e existe uma folha de ajuda listando tudo.
+A paleta de comandos reúne navegação e ações do painel. O botão Buscar no cabeçalho abre a paleta,
+inclusive em dispositivos de toque.
 
-**Why this priority**: Pedido explicitamente, mas é acelerador — o painel precisa ser inteiramente
-operável sem nenhum atalho. Depende de US2 estar pronta.
-
-**Independent Test**: Sem ler documentação, olhar a tela de Serviços no desktop e identificar que
-criar um serviço tem atalho.
+**Independent Test**: Clicar em Buscar, selecionar um destino e confirmar a navegação.
 
 **Acceptance Scenarios**:
 
-1. **Given** a tela de Serviços num dispositivo com teclado, **When** a pessoa olha a ação primária,
-   **Then** o atalho está visível em repouso, sem exigir hover.
-2. **Given** um dispositivo somente de toque, **When** a pessoa abre qualquer tela, **Then** nenhuma
-   dica de atalho é exibida.
-3. **Given** o foco num campo de texto, **When** a pessoa digita `n`, **Then** o caractere é inserido
-   e nenhuma ação de atalho dispara.
+1. **Given** qualquer tela do painel, **When** a pessoa clica em Buscar, **Then** a paleta abre.
+2. **Given** a paleta aberta, **When** a pessoa seleciona um destino, **Then** navega até ele.
 
 ---
 
@@ -148,13 +133,7 @@ próprio escopo, sem texto genérico repetido.
   **NÃO DEVEM** ser apresentados como funcionais.
 - **FR-007**: O shell **DEVE** apresentar barra lateral em telas largas e barra inferior em telas
   estreitas, sem rolagem horizontal em nenhuma largura a partir de 320 px.
-- **FR-011**: O painel **DEVE** oferecer os atalhos `Ctrl/⌘+K`, `/`, `?`, `Esc` e `n`.
-- **FR-012**: Atalhos de caractere único **NÃO DEVEM** disparar enquanto o foco estiver em campo de
-  texto.
-- **FR-013**: Ações com atalho **DEVEM** expor a tecla visivelmente em repouso quando forem a ação
-  primária única da tela; demais ações com atalho expõem por tooltip em hover **e** foco, ou apenas
-  na paleta e na folha de ajuda.
-- **FR-014**: Nenhuma dica de atalho **DEVE** ser exibida em dispositivos sem teclado plausível.
+- **FR-011**: O painel **DEVE** abrir a paleta de comandos pelo botão Buscar no cabeçalho.
 - **FR-015**: Os textos visíveis **DEVEM** estar em pt-BR; identificadores de código permanecem em inglês.
 - **FR-016**: As cores de etiqueta vindas do backend **DEVEM** ser renderizadas de forma legível nos
   dois temas, sem alterar o valor recebido da API.
@@ -174,8 +153,6 @@ próprio escopo, sem texto genérico repetido.
 - **SC-002**: Em 375 px, nenhuma rota apresenta rolagem horizontal e todos os alvos de toque da
   navegação têm ao menos 44 px na menor dimensão.
 - **SC-003**: Recarregar com tema escuro salvo não produz nenhum quadro em tema claro.
-- **SC-005**: Olhando a tela de Serviços no desktop, sem instrução prévia, é possível identificar que
-  a criação de serviço tem atalho.
 - **SC-006**: Todos os portões de CI passam.
 
 ## Assumptions

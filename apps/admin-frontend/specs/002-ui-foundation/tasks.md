@@ -1,7 +1,5 @@
 # Tasks: Admin Panel UI Foundation
 
-> **Histórico:** os requisitos de atalhos personalizados deste documento foram substituídos pela [spec 006](../006-pointer-actions-without-shortcuts/spec.md) e pela [ADR 0043](../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). As decisões originais permanecem aqui como registro.
-
 **Input**: [spec.md](./spec.md), [plan.md](./plan.md) · **Feature**: `002-ui-foundation`
 
 ## Format: `[ID] [P?] [Story] Descrição`
@@ -131,7 +129,6 @@ mudar o tema do SO em modo automático, recarregar sem lampejo, e conferir o log
 - [x] T055 [P] [FND] Primitivos de superfície: `card`, `badge`, `separator`, `skeleton`, `avatar`
 - [x] T056 [P] [FND] Primitivos de sobreposição: `dialog`, `sheet`, `dropdown-menu`, `tooltip`, `toast`
 - [x] T057 [P] [FND] Primitivos de entrada: `input`, `label`, `visually-hidden`
-- [x] T058 [FND] `src/shared/ui/kbd.tsx` — o keycap, com as variantes de nível A e B da decisão D4
 - [x] T059 [FND] Reescrever `src/shared/ui/FullScreenMessage.tsx` sobre os novos tokens
 - [x] T060 [FND] Passe de `exactOptionalPropertyTypes` em todos os primitivos adicionados
 - [x] T061 [FND] Regerar `package-lock.json` em container Linux
@@ -191,58 +188,9 @@ a partir do lockfile regerado.
 
 ---
 
-## Fase 5 — Atalhos, paleta e evidência
+## Fase 5 — Paleta de comandos
 
-**Depende de**: Fases 3 e 4.
-
-- [x] T100 [US4] `src/shared/keyboard/platform.ts` — glifo `⌘` ou `Ctrl`; na dúvida, `Ctrl`
-- [x] T101 [US4] `src/shared/keyboard/shortcuts.ts` — registro pequeno; comparação por `event.key`,
-      **nunca** `event.code` (ABNT2). A supressão automática (`input`, `textarea`, `contenteditable`,
-      `[role="textbox"]`, diálogo aberto) vale só para os atalhos de caractere único **não
-      modificados** registrados aqui — `Esc` nunca passa por este registro; quem fecha diálogo, folha
-      e paleta é o próprio Base UI, nativamente, e continua funcionando com qualquer um deles aberto
-- [x] T102 [US4] `src/shared/keyboard/useShortcut.ts` — assinatura e limpeza
-- [x] T103 [US4] Marcação de teclado: `data-kbd` no `<html>` ao primeiro keydown real, para resgatar
-      tablet com teclado acoplado (reportado como `pointer: coarse`). **Nunca** `navigator.maxTouchPoints`.
-      _Revisão (7b/T147) achou `markKeyboardDevice()` chamado incondicionalmente em todo keydown —
-      um toque em campo de texto num Android/iPhone (via teclado virtual) também marcava `data-kbd`,
-      liberando dicas num aparelho só de toque, contra a regra D4. Corrigido com
-      `looksLikeRealKeyboard(event)`: conta como teclado real se houver modificador, se a tecla for
-      Tab/Escape, ou se o alvo não for um campo de digitação — um toque puro só produz keydown via
-      teclado virtual, e isso exige um campo focado, então um caractere simples ali nunca conta
-      sozinho. Testes novos em `shortcuts.test.ts` cobrem as quatro combinações._
-- [x] T105 [US4] `src/app/shell/CommandPalette.tsx` sobre o Base UI Combobox — navegar aos seis
-      destinos, trocar tema, abrir ajuda, sair; trilho direito com a tecla de cada item. _Revisão
-      (7b/T145) achou o trilho ausente — `CommandPalette.tsx` nem importava `Kbd`. Corrigido: `Command`
-      ganhou `shortcutId?`, e um `CommandKeycap` interno lê o atalho do registro
-      (`useRegisteredShortcut` + `formatShortcutKey`, nunca digitado à mão — D4/T110) e mostra o
-      trilho sem depender do gate de visibilidade (Nível C do D4: a paleta sempre mostra). Só "Abrir
-      ajuda" tem atalho de verdade hoje (`?`); navegação/tema/sair não têm um registrado. Verificado
-      no Aspire real: o item mostra "?" corretamente._
-- [x] T106 [US4] `src/app/shell/ShortcutHelpSheet.tsx` — a folha `?`, agrupada, com o modificador
-      correto da plataforma
-- [x] T107 [US4] Nível A: keycap em repouso no controle de busca, na ação primária única da tela e no
-      confirmar de diálogo. _Busca e CTA de Serviços feitos; nenhum diálogo com confirmar existe ainda
-      nesta fase — o padrão fica pronto para quando um aparecer._
-- [x] T108 [US4] Nível B: tooltip em hover **e** foco a 250 ms nos botões de ícone com atalho.
-      _Nenhum botão de ícone com atalho próprio existe ainda (itens de navegação são excluídos por
-      decisão D4) — o `Tooltip` + `Kbd` que o padrão usaria já existe e roda no modo compacto do
-      `SidebarNav`; revisitar quando surgir uma instância concreta._ **Revisão (7b/T146)**: achou o
-      bug real por trás dessa espera — `TooltipProvider`'s `delay` valia `0`, não os 250 ms da
-      decisão D4, então mesmo quando um consumidor aparecer o tooltip abriria instantâneo.
-      Corrigido o default para `250`. Verificado no Aspire real: hover no `SidebarNav` compacto abre
-      o tooltip (mecanismo confirmado ponta a ponta); o limite exato de 250 ms não deu para cronometrar
-      com precisão neste ambiente de automação — a aba fica "hidden" para o host e por isso os timers
-      rodam sob throttling, então a fonte (`delay = 250`, sem nenhum override) é a evidência que sustenta
-      o número, não um cronômetro no browser
-- [x] T109 [US4] Portão de renderização das dicas:
-      `shortcutsEnabled AND ((hover:hover) and (pointer:fine) OR html[data-kbd])`
-- [x] T110 [US4] O keycap é **derivado do registro de atalhos**, não digitado à mão; sem prop
-      `shortcut` no `Button` genérico (decisão D4)
-- [x] T111 [US4] Testes: `event.key` em teclas de caractere único, supressão durante digitação
-
-**Checkpoint 5**: sem instrução prévia, é possível identificar na tela de Serviços que criar serviço
-tem atalho; CI verde.
+- [x] T105 [US4] `src/app/shell/CommandPalette.tsx` sobre o Base UI Combobox para navegar aos destinos, trocar tema e sair.
 
 ---
 
@@ -252,8 +200,7 @@ tem atalho; CI verde.
       Decisions da constitution. _Já existia; conferida a precisão contra o código enviado._
 - [x] T131 ADR 0040 — tema de três estados e o contrato de handoff com o identity-service. _Já
       existia; conferida a precisão contra o código enviado._
-- [x] T132 Atualizar `docs/ARCHITECTURE.md`: §1 (novas pastas `shared/theme`, `shared/keyboard`,
-      `app/shell`, `app/pages`), §5 (Base UI, tema próprio, exclusão de cobertura, a regra D4, e o que
+- [x] T132 Atualizar `docs/ARCHITECTURE.md`: §1 (novas pastas `shared/theme`, `app/shell`, `app/pages`), §5 (Base UI, tema próprio, exclusão de cobertura e o que
       não foi adotado e por quê), §6 (remover `HomePage` da lista de provisórios)
 - [x] T133 Atualizar `.specify/memory/constitution.md` — marcar "UI component library" como resolvido
       apontando para a ADR 0039
@@ -298,16 +245,6 @@ o que não pode continuar é a marcação mentir.
       `var(--control-h-*)`**. Os únicos 44 px reais são `min-h-11` escrito à mão no `BottomNav`. Ou
       os primitivos passam a consumir os tokens, ou remova os tokens e a promessa. **Desmarcado T018**
       — ver a nota lá; a segunda opção da tarefa foi a escolhida
-- [x] T145 [US4] **T105 — a paleta não tem trilho de atalho.** `CommandPalette.tsx` sequer importa
-      `Kbd`. Nenhum item mostra tecla — e a paleta era, pela pesquisa, a superfície de maior retorno
-      para descoberta de atalhos. **Entregue** — ver T105 acima
-- [x] T146 [US4] **T108 — tooltip abre com 0 ms**, não os 250 ms da decisão D4
-      (`src/shared/ui/tooltip.tsx:6`). Os 250 ms existiam justamente porque hover lento foi a queixa
-      original do produto. **Entregue** — ver T108 acima
-- [x] T147 [US4] **T103 — `data-kbd` é marcado por qualquer keydown**, inclusive de teclado virtual
-      (`shortcuts.ts:109` chama `markKeyboardDevice()` incondicionalmente). Digitar num campo no
-      Android libera os keycaps num aparelho só de toque, contra a regra D4 de que no toque a dica é
-      **ausente**. **Entregue** — ver T103 acima
 - [x] T148 [FND] **T017 — a classe `.tag` não tem nenhum consumidor** (`globals.css:189`). A técnica
       de `color-mix` sobre o hex do backend está correta e não é exercida por nada. **Desmarcado
       T017** — ver a nota lá; a classe fica, sem consumidor, até uma feature de negócio real precisar
@@ -317,11 +254,7 @@ o que não pode continuar é a marcação mentir.
 - [x] T149 [US5] **FR-015 — texto em inglês na interface pt-BR.** `"Close"` em `dialog.tsx:65`,
       `dialog.tsx:98`, `sheet.tsx:66`, e `aria-label="Close toast"` em `toast.tsx:124`. Texto
       `sr-only` é conteúdo de usuário. _As quatro strings viraram "Fechar" / "Fechar notificação".
-      `ShortcutHelpSheet` é quem consome `SheetContent` de verdade hoje — o novo teste em
-      `ShortcutHelpSheet.test.tsx` confirma o botão de fechar real com nome acessível "Fechar"._
-- [x] T150 [FND] **Dois blocos JSDoc em `shortcuts.ts:187` e `:211`**, contra a regra de "sem
-      comentário de o-quê, sem JSDoc". Um deles ancora em `T109`, um id de tarefa que perde sentido
-      quando a feature fechar. _Os dois blocos removidos; os nomes das funções já bastam._
+      O teste do componente confirma o botão de fechar com nome acessível "Fechar"._
 - [x] T151 [FND] **Diretivas `'use client'` em 5 primitivos** (`avatar`, `combobox`, `dialog`,
       `toast`, `tooltip`) — artefato de Next.js, morto no Vite. _Removida dos cinco arquivos;
       confirmado por busca que nenhuma outra permanece em `src/`._
@@ -365,8 +298,7 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
       login com `owner@demo.local`. Isso resolve de uma vez as tres alegacoes que nao
       consegui verificar sem navegador: contraste AA de 2 das 8 cores de tag no tema claro, se a
       elevacao no escuro e mesmo inerte, e se o trilho de icones (768–1023 px) distingue destino
-      indisponivel. Confira tambem o risco visual que o plano nomeou: o keycap sobre o violeta a 100%
-      de zoom em 1366×768 real. O MCP `chrome-devtools` esta configurado — use `lighthouse_audit` e
+      indisponivel. O MCP `chrome-devtools` esta configurado — use `lighthouse_audit` e
       `performance_start_trace` com CPU estrangulada para medir como a persona veria.
 
       _O stack já estava de pé (Aspire do usuário, não iniciado por mim) — login real feito contra
@@ -394,14 +326,6 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
          tooltip (ambos invisíveis sem hover/foco). Corrigido: o mesmo ponto, no mesmo lugar, agora
          em `SidebarNav.tsx`. Teste novo confirma; verificado visualmente no rail (768–1023 px) do
          Aspire real._
-
-      _**Risco do keycap sobre o violeta**: avaliado a 1366×768 real (Aspire), tema claro e escuro,
-      no botão "Novo serviço". `bg-muted`/`text-muted-foreground` do `Kbd` ficam bem mais claros que
-      o `--primary` violeta (L 0.965 vs 0.525) — o chip se destaca com força. Isso é exatamente o
-      efeito de "keycap", não ilegibilidade, mas é uma leitura estética (o plano previu "lê como
-      botão dentro de botão"), não um número que dá para computar. Ficou como está — na minha
-      leitura não ficou confuso — mas é o tipo de chamada que vale o dono do produto olhar o
-      screenshot antes de aceitar; não decidi isso sozinho._
 
       _**Lighthouse** (mobile, `owner@demo.local` autenticado): Boas Práticas 100. As 3 reprovações
       são todas SEO/Agentic Browsing (`meta-description`, `robots.txt`, `llms.txt`) — corretamente
@@ -481,7 +405,7 @@ alias `cn` tem proposito documentado em `vite.config.ts:11`. Nao "corrija" nenhu
 
 ```
 Fase 0 (ambiente)  ─── independente, habilita as demais
-Fase 1 (tokens/tema) ──> Fase 2 (primitivos) ──> Fase 3 (shell) ──> Fase 4 (rotas) ──> Fase 5 (atalhos)
+Fase 1 (tokens/tema) ──> Fase 2 (primitivos) ──> Fase 3 (shell) ──> Fase 4 (rotas) ──> Fase 5 (paleta)
                                                                                   └──> Fase 6 (gates/docs)
 ```
 
@@ -492,8 +416,7 @@ T050 é **pré-requisito rígido** de T055–T059: a exclusão de cobertura vem 
 1. `npm run dev --workspace=apps/admin-frontend` (ou via Aspire, que injeta as seis `VITE_*`)
 2. **Tema** — alternar claro → escuro → automático; mudar o tema do SO com automático ativo; recarregar
    e confirmar zero lampejo; ir a `/login` e conferir o mesmo tema
-3. **Teclado** — login → painel → diálogo → logout apenas com teclado; `Ctrl+K`, `/`, `?`, `n`, `Esc`
-   funcionam
+3. **Teclado** — login → painel → diálogo → logout apenas com a navegação padrão por teclado
 4. **Mobile** — 375×812: barra inferior, folha "Mais", safe area, sem rolagem horizontal, campos sem
    zoom ao focar
 5. `npm run lint && npm run format:check && npm run build && npm run test:coverage`

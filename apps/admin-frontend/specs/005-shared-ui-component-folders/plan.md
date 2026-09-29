@@ -6,56 +6,50 @@
 
 ## Summary
 
-Dar a **todos os 20 componentes** de `src/shared/ui/` uma pasta própria no lugar do arquivo único de
+Dar a **todos os 19 componentes** de `src/shared/ui/` uma pasta própria no lugar do arquivo único de
 hoje, para que a pasta siga o mesmo padrão de pasta-por-unidade já usado em
 `features/*/ui/pages/<Page>/`, sem parte de `shared/ui/` em pasta e parte em arquivo solto. Toda pasta
 tem um `index.tsx` como ponto de entrada público (reexportando tudo que o arquivo já exporta hoje,
 preservando `@/shared/ui/<nome>` sem mudança para nenhum consumidor). Os outros dois arquivos são
 condicionais, não automáticos:
 
-- `<nome>.types.ts` só existe quando há um tipo próprio real para extrair. 8 dos 20 ganham esse
+- `<nome>.types.ts` só existe quando há um tipo próprio real para extrair. 8 dos 19 ganham esse
   arquivo: `combobox`, `confirm-dialog`, `dialog`, `dropdown-menu`, `sheet`, `toast`,
-  `color-swatch-picker` e `FullScreenMessage`. Os demais (`avatar`, `card`, `input-group`, `kbd`,
+  `color-swatch-picker` e `FullScreenMessage`. Os demais (`avatar`, `card`, `input-group`,
   `tooltip` e os 7 atômicos `badge`, `button`, `input`, `label`, `separator`, `skeleton`, `textarea`)
   não têm tipo próprio real, só `React.ComponentProps`, variantes `cva` ou um alias inline que fica com
   o componente (research.md D10).
 - `components/` só existe para os 8 componentes com sub-parte de peso real (`combobox`,
   `confirm-dialog`, `dialog`, `dropdown-menu`, `input-group`, `sheet`, `toast`, `tooltip`) — critério
   do FR-004. Dentro dela, sub-parte com peso real ganha arquivo próprio; as triviais ficam juntas em
-  `<nome>-primitives.tsx`. `avatar`, `card` e `kbd` só têm sub-partes triviais e ficam só com
+  `<nome>-primitives.tsx`. `avatar` e `card` só têm sub-partes triviais e ficam só com
   `index.tsx` (D10).
 
 A migração é puramente mecânica — mover JSX/lógica para o novo local, sem alterar comportamento — mas
 três coisas precisam de atenção real: (1) os 4 imports relativos hoje existentes dentro de `shared/ui/`
 mudam de profundidade quando o arquivo que os contém passa a viver uma pasta mais fundo; (2) a lista de
-exclusão de cobertura em `vitest.config.ts` referencia as 16 entradas de `shared/ui/` por caminho de
+exclusão de cobertura em `vitest.config.ts` referencia as 15 entradas de `shared/ui/` por caminho de
 arquivo exato e todas precisam virar glob de pasta; (3) `FullScreenMessage/` mantém a grafia PascalCase
 de hoje — não normalizada para kebab-case, para não quebrar FR-005.
 
-> **Notas de correção**: `kbd.tsx` entrou na lista de componentes compostos em 2026-09-17 — foi
-> classificado por engano como atômico na versão inicial deste plano (contagem de linhas baixa, sem
-> conferir os exports reais); exporta `Kbd` + `KbdGroup`, mesma forma de `avatar`/`card`. Na mesma data,
-> o escopo foi ampliado de "só os compostos" (10, depois 11 com a correção do `kbd`) para "todos os 20",
-> a pedido explícito do usuário, para seguir o padrão de pasta-por-unidade já usado no resto do projeto.
->
 > **Revisão pós-implementação (mesmo dia, research.md D10)**: depois de implementar o parágrafo acima
-> (112 arquivos), uma revisão encontrou segregação exagerada em dois pontos — sub-parte trivial ganhando
+> (110 arquivos), uma revisão encontrou segregação exagerada em dois pontos — sub-parte trivial ganhando
 > arquivo próprio mesmo sem peso real (19 arquivos de ≤10 linhas), e as 7 pastas atômicas sem nenhum
 > `types.ts`/`components/` dentro (ceremônia sem organização). Os números acima já foram atualizados
 > para essa revisão: **a regra final é pasta só quando o componente se qualifica** (critério de
 > `components/` **ou** de `types.ts`), e dentro da pasta, sub-parte só ganha arquivo próprio quando tem
-> peso real — as triviais vão para um `<nome>-primitives.tsx` único. Resultado: `avatar`/`card`/`kbd`
+> peso real — as triviais vão para um `<nome>-primitives.tsx` único. Resultado: `avatar`/`card`
 > perdem `components/` e `types.ts` (dissolvem em `index.tsx`); os 7 atômicos sem tipo voltam a ser
-> arquivo único; `color-swatch-picker`/`FullScreenMessage` continuam pasta (têm tipo real). Total: 60
+> arquivo único; `color-swatch-picker`/`FullScreenMessage` continuam pasta (têm tipo real). Total: 59
 > arquivos. Ver `data-model.md` (reescrito) para o mapeamento final e `research.md` D10 para o porquê.
 >
 > **Segunda revisão (mesmo dia, research.md D11)**: o usuário apontou que os 7 atômicos revertidos para
 > arquivo único (`badge.tsx`, `button.tsx`, `input.tsx`, `label.tsx`, `separator.tsx`, `skeleton.tsx`,
 > `textarea.tsx`) ficavam visivelmente fora do padrão dos outros 13, que são pasta. Reverte só esse
-> ponto de D10: os 7 voltam a ser pasta com `index.tsx` único (mesma forma de `avatar`/`card`/`kbd`) —
+> ponto de D10: os 7 voltam a ser pasta com `index.tsx` único (mesma forma de `avatar`/`card`) —
 > a regra de sub-parte trivial em `<nome>-primitives.tsx` (o outro ponto de D10) não muda. Resultado: a
-> forma descrita no restante desta seção (`## Project Structure` abaixo) — pasta universal para os 20 —
-> volta a ser exata; total continua **60 arquivos** (os 7 só mudam de `<nome>.tsx` para
+> forma descrita no restante desta seção (`## Project Structure` abaixo) — pasta universal para os 19 —
+> volta a ser exata; total continua **59 arquivos** (os 7 só mudam de `<nome>.tsx` para
 > `<nome>/index.tsx`, nenhum arquivo novo). Ver `research.md` D11 para o porquê.
 
 ## Technical Context
@@ -85,7 +79,7 @@ runtime (FR-009); nenhum orçamento de performance novo se aplica
 inclusão/exclusão de cobertura de cada componente (FR-008); zero mudança de comportamento/saída visual
 (FR-009); todos os portões de CI hoje verdes continuam verdes (NFR-001)
 
-**Scale/Scope**: 20 componentes ganham pasta (11 compostos com `components/`, 9 atômicos só com
+**Scale/Scope**: 19 componentes ganham pasta (11 compostos com `components/`, 9 atômicos só com
 `index.tsx` — 2 desses 9 também ganham `<nome>.types.ts`), ~61 sub-partes internas ao todo dentro dos 11
 compostos (contagem exata em [data-model.md](./data-model.md)), 2 arquivos de teste colocalizados
 migrados, ~15 arquivos consumidores fora de `shared/ui/` que não precisam de nenhuma alteração, 16
@@ -100,7 +94,7 @@ nenhum outro app do monorepo nem o backend são tocados.
 | Princípio | Aplica? | Avaliação |
 |---|---|---|
 | I. Strict TypeScript | Sim | PASS — mover/extrair tipos para `<nome>.types.ts` não afrouxa `strict`; nenhum `any` implícito pode ser introduzido pela extração (ver research.md, regra de que tipos derivados de `cva`/`VariantProps` ficam com o componente, não no arquivo de tipos, para não forçar um tipo mais fraco só para "caber" no arquivo de tipos). |
-| II. Multi-Tenant Safety Server-Side | Não | N/A — nenhum dos 20 componentes lê tenant, token ou dado de cliente; são primitivos de apresentação. |
+| II. Multi-Tenant Safety Server-Side | Não | N/A — nenhum dos 19 componentes lê tenant, token ou dado de cliente; são primitivos de apresentação. |
 | III. Auth via identity-service | Não | N/A — não tocado. |
 | IV. Generated OpenAPI Client Only | Não | N/A — `confirm-dialog` importa tipos de `shared/api/servicesFacade` hoje e continua importando exatamente os mesmos, só ajustando a profundidade do caminho relativo (ver research.md); nenhuma chamada nova a backend. |
 | V. CI Quality Gates Non-Negotiable | Sim | PASS, com obrigação explícita — `tsc`, ESLint, Prettier, limiares de cobertura do Vitest e Playwright precisam continuar verdes. É o gate central desta feature; ver FR-008/NFR-001 e o mapeamento exato de `vitest.config.ts` em data-model.md. |
@@ -128,7 +122,7 @@ specs/005-shared-ui-component-folders/
 └── tasks.md              # Phase 2 output (/speckit-tasks — ainda não criado)
 ```
 
-Sem `contracts/`: os 20 componentes são consumidos só dentro do próprio `apps/admin-frontend` (nenhum
+Sem `contracts/`: os 19 componentes são consumidos só dentro do próprio `apps/admin-frontend` (nenhum
 outro serviço ou app do monorepo os importa); o contrato relevante é a própria assinatura TypeScript,
 já verificada por `tsc --noEmit` (Constitution Principle I) — não há um formato de contrato adicional
 (endpoint, schema de CLI, etc.) para documentar à parte.
@@ -139,7 +133,7 @@ Estrutura atual (achatada) e estrutura alvo, restritas a `src/shared/ui/` — ne
 repositório muda de forma:
 
 ```text
-# Antes (20 arquivos achatados + 2 testes colocalizados)
+# Antes (19 arquivos achatados + 2 testes colocalizados)
 src/shared/ui/
 ├── avatar.tsx
 ├── badge.tsx
@@ -155,7 +149,6 @@ src/shared/ui/
 ├── input.tsx
 ├── input-group.tsx
 ├── input-group.test.tsx
-├── kbd.tsx
 ├── label.tsx
 ├── separator.tsx
 ├── sheet.tsx
@@ -190,20 +183,20 @@ src/shared/ui/
 │   └── color-swatch-picker.types.ts # ColorSwatchOption, ColorSwatchPickerProps
 ├── button/                            # atômico, sem tipo próprio (buttonVariants fica com o componente)
 │   └── index.tsx                    # Button + buttonVariants — sem types.ts, sem components/
-└── … (avatar/, card/, dialog/, dropdown-menu/, input-group/, kbd/, sheet/, toast/, tooltip/,
+└── … (avatar/, card/, dialog/, dropdown-menu/, input-group/, sheet/, toast/, tooltip/,
       FullScreenMessage/, badge/, input/, label/, separator/, skeleton/, textarea/ — mesma lógica,
       detalhe completo em data-model.md)
 ```
 
 **Structure Decision**: Migração no lugar dentro do mesmo app (`apps/admin-frontend`), sem novo
-projeto/pacote. **Todos os 20** componentes ganham pasta própria (FR-001, ampliado em 2026-09-17 a
+projeto/pacote. **Todos os 19** componentes ganham pasta própria (FR-001, ampliado em 2026-09-17 a
 pedido do usuário para cobrir também os atômicos, seguindo o mesmo padrão de pasta-por-unidade de
 `features/*/ui/pages/<Page>/`). Dentro disso, dois arquivos continuam condicionais, no mesmo espírito
 que já valia para `components/`: o componente qualificado pelo FR-004 (8, lista em `spec.md`
 §Assumptions) também ganha `components/`; qualquer componente com tipo próprio real (6 dos 8 — todos
 menos `input-group` e `tooltip` — mais `color-swatch-picker` e `FullScreenMessage`, 8 no total) também
 ganha `<nome>.types.ts`. O mapeamento completo
-arquivo-a-arquivo, incluindo os 4 imports relativos que mudam de profundidade e as 16 entradas de
+arquivo-a-arquivo, incluindo os 4 imports relativos que mudam de profundidade e as 15 entradas de
 `vitest.config.ts` a atualizar, está em [data-model.md](./data-model.md).
 
 ## Complexity Tracking

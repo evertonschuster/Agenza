@@ -69,8 +69,6 @@ ser aberto para entender/alterar o chip removível do combobox.
 **User Story 2 (ler o contrato de tipos)** — abra `src/shared/ui/confirm-dialog/confirm-dialog.types.ts`
 sozinho e confirme que dá para responder "quais props o `ConfirmDialog` aceita?" sem abrir `index.tsx`.
 
-> **Atualização:** a [spec 006](../006-pointer-actions-without-shortcuts/spec.md) retirou as dicas e a folha de atalhos; compare os fluxos e o comportamento dos componentes que continuam em uso.
-
 **User Story 3 (comportamento em tela, zero regressão)** — como não há nenhuma sub-parte nova para
 demonstrar (é reorganização, não feature nova), a prova é a ausência de mudança:
 
@@ -82,7 +80,7 @@ demonstrar (é reorganização, não feature nova), a prova é a ausência de mu
    `combobox/` (`ComboboxPaletteContent`).
 
 Em todos os três, os controles, o foco, a animação e o texto das ações mantidas devem funcionar como
-antes. A retirada das dicas de atalho e da folha de ajuda está documentada na spec 006.
+antes.
 
 ## 5. Playwright (gate final)
 

@@ -111,9 +111,9 @@ casos existentes agora evita que a migração dependa de descobrir isso só quan
 
 ## D7 — `vitest.config.ts`: de caminho de arquivo para glob de pasta
 
-**Decision**: **Todas as 16 entradas** de `coverage.exclude` hoje escritas como arquivo exato para
-`shared/ui/` — as 11 do grupo "presentational cva wrappers" (`avatar`, `badge`, `button`, `card`,
-`input`, `kbd`, `label`, `separator`, `skeleton`, `textarea`, `FullScreenMessage`), a de `dialog`
+**Decision**: **Todas as 15 entradas** de `coverage.exclude` hoje escritas como arquivo exato para
+`shared/ui/` — as 10 do grupo "presentational cva wrappers" (`avatar`, `badge`, `button`, `card`,
+`input`, `label`, `separator`, `skeleton`, `textarea`, `FullScreenMessage`), a de `dialog`
 ("no consumer"), e as 4 do grupo "shadcn scaffold" (`dropdown-menu`, `combobox`, `sheet`, `toast`) —
 viram glob de pasta (`src/shared/ui/avatar/**`, etc.), mantendo o comentário/motivo já escrito acima de
 cada bloco. Isso vale mesmo para os 7 atômicos que não ganham `components/` nem `types.ts` (D9): o
@@ -121,12 +121,6 @@ arquivo continua indo para dentro de uma pasta, então o caminho no `vitest.conf
 forma. `input-group`, `tooltip`, `confirm-dialog` e `color-swatch-picker` não têm e não ganham entrada
 nova: já não estavam na lista de exclusão (cobertura real, ver D5 de `docs/ARCHITECTURE.md`) e o glob
 genérico `src/**/*.test.{ts,tsx}` já cobre o teste migrado de cada um sem precisar de entrada própria.
-
-> `kbd.tsx` entrou na lista de componentes compostos em 2026-09-17, depois da versão inicial de D1–D8 —
-> foi classificado por engano como atômico (exporta na verdade `Kbd` + `KbdGroup`, mesma forma de
-> `avatar`/`card`; ver correção em `spec.md` §Assumptions e `data-model.md` §kbd/). Na mesma data, D9
-> ampliou o escopo desta decisão de "as 7-8 entradas dos componentes compostos" para "todas as 16",
-> porque os atômicos também passaram a virar pasta.
 
 **Rationale**: É a leitura literal do FR-008 — preservar o status atual de cada componente, só
 atualizando o caminho. Um glob de pasta (`/**`) em vez de listar `index.tsx` +
@@ -140,7 +134,7 @@ manter manualmente, um custo que o glob de pasta evita sem mudar o resultado.
 ## D9 — Escopo ampliado em 2026-09-17: todo componente vira pasta, não só os compostos
 
 **Decision**: A pedido explícito do usuário ("para seguirmos o padrão do projeto"), FR-001 deixou de se
-aplicar só aos 11 componentes compostos e passou a valer para os 20 — os 9 hoje atômicos
+aplicar só aos 10 componentes compostos e passou a valer para os 19 — os 9 hoje atômicos
 (`badge`, `button`, `color-swatch-picker`, `FullScreenMessage`, `input`, `label`, `separator`,
 `skeleton`, `textarea`) também ganham pasta própria com `index.tsx`. O critério do FR-004 não muda de
 significado — só deixa de decidir "ganha pasta ou não" e passa a decidir só "ganha `components/` ou
@@ -159,7 +153,7 @@ arquivo `.types.ts` vazio ou com um tipo reexportado artificialmente só para n�
 ruído, não organização.
 
 **Alternatives considered**:
-- Manter `<nome>.types.ts` obrigatório em todas as 20 pastas, mesmo vazio — rejeitado por criar até 7
+- Manter `<nome>.types.ts` obrigatório em todas as 19 pastas, mesmo vazio — rejeitado por criar até 7
   arquivos sem nenhum conteúdo real, o oposto do que a feature busca (menos ruído, não mais).
 - Normalizar `FullScreenMessage.tsx` para `full-screen-message/` (kebab-case) já que a pasta está sendo
   criada mesmo assim — rejeitado porque mudaria o caminho de import (`@/shared/ui/FullScreenMessage` →
@@ -196,9 +190,9 @@ Atualizado conforme T023.
 
 ## D10 — Revisão pós-implementação (2026-09-17): segregação exagerada em dois pontos
 
-**Contexto**: Depois da primeira implementação completa (D1–D9, todos os 20 componentes migrados,
+**Contexto**: Depois da primeira implementação completa (D1–D9, todos os 19 componentes migrados,
 `tsc`/lint/format/cobertura verdes), uma revisão apontou dois excessos concretos antes de abrir o PR:
-112 arquivos para ~2100 linhas originais, com 19 arquivos de ≤10 linhas dentro de `components/` (a
+110 arquivos para ~2100 linhas originais, com 19 arquivos de ≤10 linhas dentro de `components/` (a
 maioria com exatamente 7 — um wrapper de uma linha em torno de um primitivo) e 7 pastas atômicas
 (`badge`, `button`, `input`, `label`, `separator`, `skeleton`, `textarea`) contendo só `index.tsx`
 idêntico ao arquivo antigo, sem `types.ts` nem `components/` — ceremônia sem organização.
@@ -212,7 +206,7 @@ idêntico ao arquivo antigo, sem `types.ts` nem `components/` — ceremônia sem
    ou só orientada por seletor CSS (`data-inset`, `group-data-*`), sem composição, sem condicional —
    ficam juntas num único `components/<nome>-primitives.tsx`. Reduz `combobox` de 18→10 arquivos,
    `dropdown-menu` de 16→9, `toast` de 13→5, `dialog`/`sheet` de 11→5/4, `input-group` de 7→5.
-   `avatar`/`card`/`kbd` não tinham nenhuma sub-parte com peso real — dissolvem inteiramente em
+   `avatar`/`card` não tinham nenhuma sub-parte com peso real — dissolvem inteiramente em
    `index.tsx`, sem `components/` nenhum (voltam a ser, em conteúdo, idênticos ao arquivo original,
    só que dentro de uma pasta).
 2. **Pasta só existe quando o componente se qualifica pelo FR-004 (critério de `components/`) ou tem
@@ -221,7 +215,7 @@ idêntico ao arquivo antigo, sem `types.ts` nem `components/` — ceremônia sem
    `badge.tsx`, `button.tsx`, etc. na raiz. `color-swatch-picker` e `FullScreenMessage` continuam pasta
    — são exportação única, mas COM tipo próprio real, então diferente dos outros 7.
 
-Resultado: **112 → 60 arquivos** (46% menos), com os mesmos `tsc`/lint (6 avisos pré-existentes,
+Resultado: **110 → 59 arquivos** (46% menos), com os mesmos `tsc`/lint (6 avisos pré-existentes,
 inalterados)/format/cobertura (91.27/86.34/85.96/92.21%, idêntico) verdes de antes.
 
 **Rationale**: O pedido original era não precisar abrir um arquivo de 300 linhas para mexer numa
@@ -234,7 +228,7 @@ exports, sem considerar que exportar muitos wrappers triviais não é o mesmo pr
 muitos wrappers complexos.
 
 **Alternatives considered**:
-- Manter os 112 arquivos e só documentar a razão de cada um — rejeitado; documentar por que um arquivo
+- Manter os 110 arquivos e só documentar a razão de cada um — rejeitado; documentar por que um arquivo
   de 3 linhas existe não resolve o problema de navegação que ele cria.
 - Dobrar no critério de linha (ex. "sub-parte ganha arquivo só acima de N linhas") em vez do critério
   qualitativo (composição/estado/condicional/classe longa) — rejeitado pela mesma razão que FR-004 já
@@ -252,13 +246,13 @@ consistência que já tinha motivado D9.
 
 **Decision**: Reverte só o ponto 2 de D10 (a condição "pasta só existe quando o componente se qualifica
 pelo FR-004 ou tem tipo próprio real"). Os 7 voltam a ser pasta com `index.tsx` único — sem
-`components/`, sem `types.ts` — mesma forma que `avatar/`, `card/`, `kbd/` já tinham antes e depois de
+`components/`, sem `types.ts` — mesma forma que `avatar/` e `card/` já tinham antes e depois de
 D10. O ponto 1 de D10 (bundle de sub-partes triviais em `<nome>-primitives.tsx`) continua valendo sem
 alteração; a reversão é só sobre a pasta de nível superior, não sobre a segregação interna dos
 componentes compostos.
 
-Resultado: pasta volta a ser universal para os 20 componentes de `shared/ui/` (D9 restaurado
-integralmente), com a segregação interna de D10 mantida. Contagem de arquivos **inalterada em 60** — os
+Resultado: pasta volta a ser universal para os 19 componentes de `shared/ui/` (D9 restaurado
+integralmente), com a segregação interna de D10 mantida. Contagem de arquivos **inalterada em 59** — os
 7 arquivos só mudam de `shared/ui/<nome>.tsx` para `shared/ui/<nome>/index.tsx`, nenhum arquivo novo é
 criado nem conteúdo alterado. `tsc`/lint (6 avisos pré-existentes, inalterados)/format/cobertura
 (91.27/86.34/85.96/92.21%, 196 testes) idênticos a antes da reversão.

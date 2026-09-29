@@ -1,7 +1,5 @@
 # Checklist de aceite — 002-ui-foundation
 
-> **Histórico:** os requisitos de atalhos personalizados deste documento foram substituídos pela [spec 006](../../006-pointer-actions-without-shortcuts/spec.md) e pela [ADR 0043](../../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). As decisões originais permanecem aqui como registro.
-
 Passa por inteiro antes de considerar a feature entregue. Cada item mapeia um critério do
 [spec.md](../spec.md). O que é verificável por máquina está marcado como tal; o resto exige olho
 humano e não pode ser delegado a um teste verde.
@@ -29,16 +27,10 @@ humano e não pode ser delegado a um teste verde.
 - [ ] Alvos de toque da navegação com ≥44 px na menor dimensão
 - [ ] Safe area respeitada num aparelho com notch — padding real, não `0px` presumido
 
-## Atalhos (US4 · SC-005)
+## Paleta de comandos (US4)
 
-- [ ] Sem instrução prévia, olhando a tela de Serviços no desktop, dá para identificar que criar
-      serviço tem atalho
-- [ ] `Ctrl/⌘+K`, `/`, `?`, `n`, `Esc` funcionam conforme a folha de ajuda
-- [ ] Digitando num campo, `n` insere o caractere e **não** dispara a ação
-- [ ] Num dispositivo só de toque, nenhuma dica de atalho aparece
-- [ ] Num tablet com teclado acoplado, as dicas **aparecem** após a primeira tecla
-- [ ] O modificador exibido corresponde à plataforma (`⌘` no macOS, `Ctrl` no resto)
-- [ ] Nenhum keycap em ação destrutiva, item de lista ou item de navegação
+- [ ] Clicar em Buscar no cabeçalho abre a paleta em desktop e celular
+- [ ] Selecionar um destino na paleta abre a tela correspondente
 
 ## "Em breve" (US5)
 
@@ -60,9 +52,3 @@ humano e não pode ser delegado a um teste verde.
 - [ ] Nenhuma classe de paleta crua no código — só tokens semânticos
 - [ ] `docs/ARCHITECTURE.md` §1, §5 e §6 refletem o estado real
 - [ ] ADR 0039 e 0040 escritas; constitution marca "UI component library" como resolvido
-
-## Risco visual específico
-
-- [ ] O chip de atalho sobre o violeta revisado a **100% de zoom em hardware Windows 1366×768 real**,
-      não no monitor onde foi desenhado. A borda de 32% de branco pode sumir ou franjar. Se não
-      sobreviver, enviar **sem** chip — nível B mais a linha na paleta ainda supera o estado atual

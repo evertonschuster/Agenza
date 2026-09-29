@@ -1,9 +1,6 @@
 # Actions, tooltips and focus
 
-The [ADR 0043](../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md)
-removed the application's custom keyboard shortcuts. Actions stay on visible controls. For
-example, the header's **Buscar** button opens the command palette, a row's **Excluir** action
-opens its confirmation, and the confirmation's **Excluir** button performs the request.
+Actions stay on visible controls. The header's **Buscar** button opens the command palette, a row's **Excluir** action opens its confirmation, and the confirmation's **Excluir** button performs the request.
 
 ## Accessible names
 

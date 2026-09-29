@@ -9,7 +9,7 @@ description: Use when adding, replacing or restyling anything under apps/admin-f
 `features/` import, no API call. Anything with behaviour worth testing does not belong here (§6).
 
 Architecture: [`docs/ARCHITECTURE.md`](../../../apps/admin-frontend/docs/ARCHITECTURE.md) §1.
-Decisions driving this layer: [`specs/002-ui-foundation/plan.md`](../../../apps/admin-frontend/specs/002-ui-foundation/plan.md) D1 and D5, plus [ADR 0043](../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md) for actions;
+Decisions driving this layer: [`specs/002-ui-foundation/plan.md`](../../../apps/admin-frontend/specs/002-ui-foundation/plan.md) D1 and D5;
 folder-per-component convention: [`specs/005-shared-ui-component-folders/`](../../../apps/admin-frontend/specs/005-shared-ui-component-folders/).
 
 **Every component under `shared/ui/` is a folder**, not a flat file — `<name>/index.tsx`, with
@@ -88,7 +88,7 @@ into `shared/ui/<name>/index.tsx` yourself before the typing/style passes below 
 back to the flat layout the rest of `shared/ui/` deliberately moved away from. Only split out
 `<name>.types.ts` or a `components/` subfolder if the generated file actually earns one by the
 criteria in `docs/ARCHITECTURE.md` §1 — most single-component `add` output doesn't, and stays a
-folder with just `index.tsx` (same shape as `avatar/`, `badge/`, `kbd/`).
+folder with just `index.tsx` (same shape as `avatar/` and `badge/`).
 
 **`cn` is not rewritten to `@/shared/lib/utils` by the CLI.** Every `base-nova` file imports
 `from "cn"` — a real, wrong npm package the CLI also adds to `package.json` (`"cn": "^0.2.5"`). This
@@ -117,8 +117,8 @@ deliberate (a bare `node:22` is mutable) and needs an occasional manual refresh 
 whose value may be `undefined` **fails to assign**. This is routine, not occasional:
 
 ```tsx
-type KbdProps = { keys: string[]; tone?: 'muted' | 'brand' };
-<Kbd keys={keys} tone={maybeTone} />   // Type 'undefined' is not assignable to '"muted" | "brand"'
+type ButtonProps = { tone?: 'muted' | 'brand' };
+<Button tone={maybeTone} />   // Type 'undefined' is not assignable to '"muted" | "brand"'
 ```
 
 Write the `| undefined` explicitly: `tone?: 'muted' | 'brand' | undefined`.
@@ -151,7 +151,7 @@ Full token system, focus ring, dark elevation, and the backend-hex technique: al
 
 Use `ActionButton` for button actions needing an icon or pending state. For a navigation
 link styled as a button, use `Link` with `buttonVariants`; a dedicated `LinkButton` wrapper
-was removed when its only consumer no longer needed shortcut hints.
+was removed when its only consumer could use `Link` directly.
 
 ```tsx
 <ActionButton icon={Plus} onClick={announceComingSoon}>Novo serviço</ActionButton>
@@ -164,7 +164,7 @@ was removed when its only consumer no longer needed shortcut hints.
 
 `ActionButton` swaps the icon for a spinner and disables the button while `pending`. Every
 interactive control needs a visible label or accessible name and a visible focus indicator. Keep
-Base UI's native focus, dialog and menu behaviour; do not register application-wide shortcuts.
+Base UI's native focus, dialog and menu behaviour.
 
 Tooltip rules under WCAG 1.4.13 and focus details:
 [`references/interaction.md`](references/interaction.md).

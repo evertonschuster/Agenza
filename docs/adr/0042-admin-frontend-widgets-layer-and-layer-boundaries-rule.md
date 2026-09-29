@@ -9,7 +9,7 @@ Status: proposed (2026-09)
 ## Context
 
 Two generic pieces of UI came out of the tags work: `ConfirmDialog` (confirm / blocked /
-transient-retry states, the success toast, the `Ctrl/⌘+Delete` shortcut) and `ListSection`
+transient-retry states and the success toast) and `ListSection`
 (loading / error / empty / ready, table or list rendering). Both started under `shared/ui/`.
 
 Neither fits there. `shared/ui/` holds presentational primitives over Base UI and is excluded from

@@ -12,7 +12,7 @@ did not ask for a system; she asked for her day to run. Write to her.
 Two rules decide most questions:
 
 - **Visible text is pt-BR; code identifiers are English.** Key names — `Ctrl`, `Esc`, `Enter`,
-  `Shift`, `Tab`, `⌘` — are **not** translated: that is what is printed on the ABNT2 keyboard in
+  `Shift`, `Tab` — are **not** translated: that is what is printed on the ABNT2 keyboard in
   front of her. Everything around them is pt-BR — "Pressione Esc para fechar", never "Pressione
   Escape".
 - **Never surface a raw backend message.** Branch on the stable `code`, write the pt-BR yourself.

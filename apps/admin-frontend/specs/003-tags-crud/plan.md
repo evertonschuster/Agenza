@@ -30,7 +30,7 @@ React 19.2.7.
 `openapi-typescript` ^7.13.0 generated client (`servicesApi`, already covers the `/tags` endpoints —
 no `npm run generate:api-types` regeneration needed, only the existing `:check` drift gate);
 `@base-ui/react` ^1.8.0 via the existing shadcn-CLI-owned primitives in `src/shared/ui/`
-(`dialog`, `button`, `input`, `textarea`, `card`, `kbd`) — no new UI library. One likely new
+(`dialog`, `button`, `input`, `textarea`, `card`) — no new UI library. One likely new
 `shared/ui` primitive: a small fixed-option color-swatch picker (research.md Decision 4) — build it
 through the `agenza-ui-primitive` skill, not ad hoc.
 
