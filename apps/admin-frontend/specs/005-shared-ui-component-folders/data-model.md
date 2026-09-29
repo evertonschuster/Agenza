@@ -1,5 +1,7 @@
 # Phase 1 Data Model: Pastas por Componente Composto em shared/ui
 
+> **Histórico:** os requisitos de atalhos personalizados deste documento foram substituídos pela [spec 006](../006-pointer-actions-without-shortcuts/spec.md) e pela [ADR 0043](../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). As decisões originais permanecem aqui como registro.
+
 Esta feature não tem entidade de domínio — o "modelo" aqui é estrutural: qual arquivo existe, o que ele
 exporta, e de quem ele depende. Este documento é o mapeamento completo, componente a componente,
 **já refletindo a revisão pós-implementação de 2026-09-17** (research.md D10 e D11) — a primeira

@@ -22,7 +22,7 @@ Two rules of thumb behind everything here:
 src/
 ├── app/                     Composition root — providers, route table, ErrorBoundary
 │   ├── shell/               AppShell chrome: responsive nav (sidebar/rail/bottom), header,
-│   │                        command palette, shortcut help sheet
+│   │                        command palette
 │   └── pages/               One stub per route (§6) — not feature slices; no model, no api
 ├── features/<slice>/        One vertical slice per user-facing capability (auth, tags, …)
 │   ├── model/               Types + rules. No React. ( = domain + application )
@@ -44,8 +44,6 @@ src/
     │   └── tenant.ts           decode the tenant_id claim from the access token
     ├── theme/               Three-state (light/dark/system) store, shaped like shared/session's
     │                        snapshot/subscribe/reducer; data-theme, handed to identity-service
-    ├── keyboard/            Shortcut registry: single-character + modified, keyboard-device
-    │                        detection for when a resting keycap may render
     ├── pubsub/              Generic createTopic/useTopic — publish/subscribe with a payload, no
     │                        domain knowledge; a concrete topic (e.g. tagDeleted) lives in the
     │                        feature that owns it, never here
@@ -394,6 +392,8 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | Shortcut registry: `⌘`+`Backspace` counts as `⌘`+`Delete`; a modified shortcut no longer fires with `Shift` held | The Mac key printed "delete" reports `Backspace`, so the `⌘Delete` keycap on the confirm button only worked as `fn`+`⌘`+`⌫` (the `ConfirmDialog` row above accepted that); aliasing it under `⌘` makes the keycap true. Only under `⌘`: off macOS, `Ctrl`+`Backspace` deletes the previous word. `Shift` is excluded so a browser chord like `Ctrl+Shift+Delete` (clear browsing data) never lands on the confirm. |
 | `isTransientProblem` also treats `status >= 500` as transient | A real backend 500 arrives with its own problem body and code, which the three client-side sentinels never matched — `ConfirmDialog` classified it as a permanent block ("Não é possível excluir", no retry) instead of offering **Tentar novamente**. A 4xx without a code (ASP.NET's native model-binding 400) stays non-transient. |
 
+The custom shortcut system described in earlier rows was removed in [ADR 0043](../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). The palette now opens from the header click, and business actions remain on their visible controls.
+
 ---
 
 ## 6. Deferred, provisional & not-yet-built
@@ -410,7 +410,7 @@ because it didn't need to be yet. This is the compiled view across the whole app
   ([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)): the app is back
   to a shell with no business feature, aligned with FR-013 again.
 - **`src/app/pages/` holds provisional placeholders, not features** — no `model`, no `api`, no
-  state beyond what a page's own hook needs (`Services`' keyboard shortcut). Same criterion as the
+  state beyond what a page's own hook needs. Same criterion as the
   `HomePage` it replaces: none of them meet this doc's definition of a slice (§1). Building the
   full shell and all six destinations before any real feature slice exists was
   `specs/002-ui-foundation/`'s explicit scope (D6) — chrome, theme, routing and "Em breve" stubs
@@ -429,13 +429,6 @@ because it didn't need to be yet. This is the compiled view across the whole app
   Whether the family's actual shape holds (in particular whether `ControlledField`'s render-function
   escape hatch is what the next custom control needs, or whether it wants its own specialization
   immediately) is untested until the next entity's form is built — see `agenza-form-field`.
-- **Single-key shortcuts (`n`, `/`, `?`) don't meet WCAG 2.1.4 Character Key Shortcuts (Level A)
-  yet.** The criterion asks for a way to turn them off, remap them onto a modifier, or keep them
-  active only while their control has focus; the registry does none of the three. Suppressing them
-  in text fields and under an open dialog protects typing, not speech-input users, who trigger a
-  single-key shortcut by dictating an ordinary word. Modified shortcuts (`Ctrl+K`, `Ctrl+S`) are
-  exempt. Cheapest compliant fix: a turn-off switch under Ajustes, persisted the way `shared/theme`
-  persists its preference, read by `shortcutRegistry` before firing an unmodified shortcut.
 
 ### Deliberately not built — no need yet
 

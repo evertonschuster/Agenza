@@ -69,6 +69,8 @@ ser aberto para entender/alterar o chip removível do combobox.
 **User Story 2 (ler o contrato de tipos)** — abra `src/shared/ui/confirm-dialog/confirm-dialog.types.ts`
 sozinho e confirme que dá para responder "quais props o `ConfirmDialog` aceita?" sem abrir `index.tsx`.
 
+> **Atualização:** a [spec 006](../006-pointer-actions-without-shortcuts/spec.md) retirou as dicas e a folha de atalhos; compare os fluxos e o comportamento dos componentes que continuam em uso.
+
 **User Story 3 (comportamento em tela, zero regressão)** — como não há nenhuma sub-parte nova para
 demonstrar (é reorganização, não feature nova), a prova é a ausência de mudança:
 
@@ -76,12 +78,11 @@ demonstrar (é reorganização, não feature nova), a prova é a ausência de mu
    baixo do `input-group/` de busca, e o `toast/` de sucesso) — mesmas 3 telas de confirmação descritas
    em `specs/004-shared-confirm-dialog/spec.md`, resultado visual idêntico.
 2. Abrir o menu de tema (`ThemeToggle`, no cabeçalho) — exercita `dropdown-menu/`.
-3. Abrir a paleta de comando (atalho já documentado em `ShortcutHelpSheet`) — exercita `combobox/` (o
-   `ComboboxPaletteContent`) e `sheet/` (o próprio `ShortcutHelpSheet`).
+3. Clicar em **Buscar** no cabeçalho para abrir a paleta de comando — exercita
+   `combobox/` (`ComboboxPaletteContent`).
 
-Em todos os três, o resultado esperado é "nada perceptível mudou" — a tela, o foco, a animação e o
-texto são pixel-a-pixel os mesmos de antes da migração. Qualquer diferença visual é regressão de FR-009,
-não uma melhoria incidental a manter.
+Em todos os três, os controles, o foco, a animação e o texto das ações mantidas devem funcionar como
+antes. A retirada das dicas de atalho e da folha de ajuda está documentada na spec 006.
 
 ## 5. Playwright (gate final)
 

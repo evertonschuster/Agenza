@@ -1,5 +1,7 @@
 # Feature Specification: Service Tags CRUD
 
+> **Histórico:** os requisitos de atalhos personalizados deste documento foram substituídos pela [spec 006](../006-pointer-actions-without-shortcuts/spec.md) e pela [ADR 0043](../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). As decisões originais permanecem aqui como registro.
+
 **Feature Branch**: `003-tags-crud`
 
 **Created**: 2026-09-13

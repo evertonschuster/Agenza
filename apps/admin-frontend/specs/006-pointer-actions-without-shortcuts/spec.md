@@ -2,7 +2,7 @@
 
 **Feature Branch**: `codex/remove-keyboard-shortcuts`
 **Created**: 2026-09-29
-**Status**: Em implementação
+**Status**: Implementado
 
 ## Objetivo
 

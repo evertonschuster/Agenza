@@ -58,7 +58,6 @@ fixtures precisely because it carries no `oidc-client-ts` reference, not even `i
   Identifiers stay English.
 - Test names state the behaviour and, when it exists, the requirement it pins
   (`(spec FR-009)`). Grep-ability is the point.
-- Shortcut tests must match on `event.key`, never `event.code` — ABNT2 keyboards.
 
 ## 3. The coverage gate
 
@@ -75,9 +74,9 @@ What is excluded, and the reasoning behind each class — the actual list is in 
 | generated OpenAPI types, fixtures under `src/test/` | not authored logic |
 
 **The corollary matters more than the rule: if a thing has behaviour, it does not belong in
-`shared/ui/`.** Put it in `shared/` (`shared/theme/`, `shared/keyboard/`, `shared/hooks/`) where it
+`shared/ui/`.** Put it in `shared/` (`shared/theme/`, `shared/hooks/`) where it
 is measured and must be tested. A primitive that grew a `useEffect`, a store subscription or a
-keyboard handler is telling you the logic wants to move out, not that the exclusion should widen.
+event handler is telling you the logic wants to move out, not that the exclusion should widen.
 
 **Named failure mode:** the `src/shared/ui/**` exclusion is
 [T050](../../../apps/admin-frontend/specs/002-ui-foundation/tasks.md) and lands **before the first

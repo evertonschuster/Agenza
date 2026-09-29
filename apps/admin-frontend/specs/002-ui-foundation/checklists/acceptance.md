@@ -1,5 +1,7 @@
 # Checklist de aceite — 002-ui-foundation
 
+> **Histórico:** os requisitos de atalhos personalizados deste documento foram substituídos pela [spec 006](../../006-pointer-actions-without-shortcuts/spec.md) e pela [ADR 0043](../../../../../docs/adr/0043-admin-frontend-remove-custom-keyboard-shortcuts.md). As decisões originais permanecem aqui como registro.
+
 Passa por inteiro antes de considerar a feature entregue. Cada item mapeia um critério do
 [spec.md](../spec.md). O que é verificável por máquina está marcado como tal; o resto exige olho
 humano e não pode ser delegado a um teste verde.

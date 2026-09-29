@@ -12,13 +12,12 @@
 ## Manual walkthrough (maps to spec.md's user stories)
 
 1. **US1 — list & search**. Open "Etiquetas" from the sidebar (the bottom nav's "Mais" on narrow
-   screens) or the command palette (`Ctrl/⌘+K` or `/`), or navigate to `/tags` directly. Confirm
+   screens) or open **Buscar** in the header and choose **Etiquetas**, or navigate to `/tags` directly. Confirm
    every seeded tag shows name (as a colored chip), color, description. Type part of a name into the
    search field and submit it with Enter or "Buscar"; confirm the list narrows to matches only, and
    that typing alone never searches (spec FR-002). Clear the field and submit again; confirm the full
    list returns.
-2. **US2 — create**. Click "Nova etiqueta" (or press `N`), fill name and color, save (or
-   `Ctrl/⌘+S`); confirm the dialog closes and the tag shows in the list. Repeat with a name already
+2. **US2 — create**. Click "Nova etiqueta", fill name and color, click "Salvar"; confirm the dialog closes and the tag shows in the list. Repeat with a name already
    in use; confirm the backend's duplicate-name message is shown verbatim (spec FR-004, FR-012).
 3. **US3 — edit**. Click a row's "Editar" action, change its color, save; confirm the list shows the
    new color.
