@@ -1,26 +1,8 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, fireEvent } from '@testing-library/react';
+import { describe, expect, it, vi } from 'vitest';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { AuthContext, type AuthContextValue } from '@/features/auth';
 import { INITIAL_SESSION } from '@/shared/session/session';
-import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
 import { AppHeader } from './AppHeader';
-
-function markKeyboardDevice(): void {
-  act(() => {
-    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Tab', bubbles: true }));
-  });
-}
-
-// AppHeader reads this shortcut's hint but doesn't register it — in the app it's registered by
-// the sibling <CommandPalette>, absent here since AppHeader renders alone in this file.
-function registerSearchShortcut(): void {
-  shortcutRegistry.register({
-    id: 'command-palette-slash',
-    key: '/',
-    description: 'Abrir a paleta de comandos',
-    handler: () => {},
-  });
-}
 
 function renderHeader(logout = vi.fn(), onOpenSearch = vi.fn()) {
   const value: AuthContextValue = {
@@ -39,10 +21,6 @@ function renderHeader(logout = vi.fn(), onOpenSearch = vi.fn()) {
 }
 
 describe('AppHeader', () => {
-  afterEach(() => {
-    shortcutRegistry.reset();
-  });
-
   it('shows the app name, so the panel is identifiable regardless of viewport kind', () => {
     renderHeader();
 
@@ -82,13 +60,5 @@ describe('AppHeader', () => {
     fireEvent.click(screen.getByRole('menuitem', { name: 'Sair' }));
 
     expect(logout).toHaveBeenCalledTimes(1);
-  });
-
-  it('shows the search shortcut hint once a keyboard is detected', () => {
-    registerSearchShortcut();
-    renderHeader();
-    markKeyboardDevice();
-
-    expect(screen.getByRole('button', { name: 'Buscar' })).toHaveTextContent('/');
   });
 });

@@ -1,7 +1,6 @@
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import { DialogClose, DialogFooter } from '@/shared/ui/dialog';
-import { SAVE_SHORTCUT_ID } from '../useTagFormPage';
 
 interface TagFormFooterProps {
   canSubmit: boolean;
@@ -14,12 +13,7 @@ function TagFormFooter({ canSubmit, isSaving }: TagFormFooterProps) {
       <DialogClose disabled={isSaving} render={<Button variant="outline" />}>
         Cancelar
       </DialogClose>
-      <ActionButton
-        type="submit"
-        disabled={!canSubmit}
-        pending={isSaving}
-        shortcutId={SAVE_SHORTCUT_ID}
-      >
+      <ActionButton type="submit" disabled={!canSubmit} pending={isSaving}>
         {isSaving ? 'Salvando…' : 'Salvar'}
       </ActionButton>
     </DialogFooter>

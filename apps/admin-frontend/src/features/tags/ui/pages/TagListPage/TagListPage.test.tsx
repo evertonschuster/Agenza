@@ -156,12 +156,14 @@ describe('TagListPage', () => {
     );
   });
 
-  it('pressing "n" navigates to /tags/new (spec US2)', async () => {
+  it('clicking Nova etiqueta navigates to /tags/new (spec US2)', async () => {
     const user = userEvent.setup();
     renderAtTagsRoute(TAGS);
     await screen.findByText('Promoção');
 
     await user.keyboard('n');
+    expect(screen.getByTestId('location')).toHaveTextContent('/tags');
+    await user.click(screen.getByRole('link', { name: 'Nova etiqueta' }));
 
     await waitFor(() =>
       expect(screen.getByTestId('location').textContent).toBe('location: /tags/new'),

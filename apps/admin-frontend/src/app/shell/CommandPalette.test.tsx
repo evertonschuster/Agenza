@@ -1,24 +1,19 @@
 import { useState } from 'react';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
+import { MemoryRouter, useLocation } from 'react-router';
 import { AuthContext, type AuthContextValue } from '@/features/auth';
 import { INITIAL_SESSION } from '@/shared/session/session';
-import { shortcutRegistry } from '@/shared/keyboard/shortcuts';
 import { CommandPalette } from './CommandPalette';
 
-function registerHelpShortcut(): void {
-  shortcutRegistry.register({
-    id: 'shortcut-help',
-    key: '?',
-    description: 'Abrir a ajuda de atalhos',
-    handler: () => {},
-  });
+function PaletteHarness() {
+  const [open, setOpen] = useState(true);
+  return <CommandPalette open={open} onOpenChange={setOpen} />;
 }
 
-function PaletteHarness() {
-  const [open, setOpen] = useState(false);
-  return <CommandPalette open={open} onOpenChange={setOpen} />;
+function LocationProbe() {
+  const location = useLocation();
+  return <span data-testid="location">{location.pathname}</span>;
 }
 
 function renderPalette() {
@@ -34,39 +29,33 @@ function renderPalette() {
     <AuthContext.Provider value={value}>
       <MemoryRouter>
         <PaletteHarness />
+        <LocationProbe />
       </MemoryRouter>
     </AuthContext.Provider>,
   );
 }
 
 describe('CommandPalette', () => {
-  afterEach(() => {
-    shortcutRegistry.reset();
-  });
-
-  it('opens on "/" and lists the navigation destinations', () => {
+  it('lists the navigation destinations when opened by the shell', () => {
     renderPalette();
-
-    fireEvent.keyDown(document, { key: '/' });
 
     expect(screen.getByRole('option', { name: 'Início' })).toBeInTheDocument();
-  });
-
-  it('shows the trailing keycap for a command with a registered shortcut', () => {
-    registerHelpShortcut();
-    renderPalette();
-
-    fireEvent.keyDown(document, { key: '/' });
-
-    const helpOption = screen.getByRole('option', { name: 'Abrir ajuda' });
-    expect(helpOption.querySelector('[data-slot="kbd"]')).toHaveTextContent('?');
-  });
-
-  it('lists "Etiquetas" among the fixed navigation destinations (spec FR-014)', () => {
-    renderPalette();
-
-    fireEvent.keyDown(document, { key: '/' });
-
     expect(screen.getByRole('option', { name: 'Etiquetas' })).toBeInTheDocument();
+  });
+
+  it('navigates to Etiquetas when its option is clicked', () => {
+    renderPalette();
+
+    fireEvent.click(screen.getByRole('option', { name: 'Etiquetas' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent('/tags');
+  });
+
+  it('keeps theme and account commands available by click', () => {
+    renderPalette();
+
+    expect(screen.getByRole('option', { name: 'Tema claro' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Sair' })).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Abrir ajuda' })).not.toBeInTheDocument();
   });
 });

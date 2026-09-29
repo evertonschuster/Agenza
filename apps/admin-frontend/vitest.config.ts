@@ -36,7 +36,6 @@ export default defineConfig({
         'src/shared/ui/button/**',
         'src/shared/ui/card/**',
         'src/shared/ui/input/**',
-        'src/shared/ui/kbd/**',
         'src/shared/ui/label/**',
         'src/shared/ui/separator/**',
         'src/shared/ui/skeleton/**',

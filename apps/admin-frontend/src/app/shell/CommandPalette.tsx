@@ -1,15 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import type { LucideIcon } from 'lucide-react';
-import { HelpCircle, LogOut, Monitor, Moon, Sun } from 'lucide-react';
+import { LogOut, Monitor, Moon, Sun } from 'lucide-react';
 import { useAuth } from '@/features/auth';
 import { useTheme } from '@/shared/theme/useTheme';
-import {
-  formatShortcutKey,
-  shortcutRegistry,
-  useRegisteredShortcut,
-} from '@/shared/keyboard/shortcuts';
-import { useShortcut } from '@/shared/keyboard/useShortcut';
 import {
   Combobox,
   ComboboxEmpty,
@@ -20,7 +14,6 @@ import {
   ComboboxList,
   ComboboxPaletteContent,
 } from '@/shared/ui/combobox';
-import { Kbd } from '@/shared/ui/kbd';
 import { NAV_DESTINATIONS } from './navigation';
 
 interface Command {
@@ -28,7 +21,6 @@ interface Command {
   label: string;
   icon: LucideIcon;
   run: () => void;
-  shortcutId?: string;
 }
 
 interface CommandPaletteProps {
@@ -36,28 +28,11 @@ interface CommandPaletteProps {
   onOpenChange: (open: boolean) => void;
 }
 
-function CommandKeycap({ shortcutId }: { shortcutId: string }) {
-  const shortcut = useRegisteredShortcut(shortcutId);
-  if (!shortcut) return null;
-  return <Kbd className="ml-auto">{formatShortcutKey(shortcut)}</Kbd>;
-}
-
 export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const [query, setQuery] = useState('');
   const navigate = useNavigate();
   const { setTheme } = useTheme();
   const { logout } = useAuth();
-
-  useShortcut(
-    'command-palette-mod-k',
-    'k',
-    'Abrir a paleta de comandos',
-    () => onOpenChange(true),
-    {
-      modified: true,
-    },
-  );
-  useShortcut('command-palette-slash', '/', 'Abrir a paleta de comandos', () => onOpenChange(true));
 
   const groups: { label: string; commands: Command[] }[] = [
     {
@@ -84,16 +59,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     },
     {
       label: 'Outros',
-      commands: [
-        {
-          id: 'help',
-          label: 'Abrir ajuda',
-          icon: HelpCircle,
-          shortcutId: 'shortcut-help',
-          run: () => shortcutRegistry.getShortcut('shortcut-help')?.handler(),
-        },
-        { id: 'logout', label: 'Sair', icon: LogOut, run: () => void logout() },
-      ],
+      commands: [{ id: 'logout', label: 'Sair', icon: LogOut, run: () => void logout() }],
     },
   ];
 
@@ -138,7 +104,6 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                 <ComboboxItem key={command.id} value={command.id}>
                   <command.icon aria-hidden="true" />
                   <span>{command.label}</span>
-                  {command.shortcutId && <CommandKeycap shortcutId={command.shortcutId} />}
                 </ComboboxItem>
               ))}
             </ComboboxGroup>

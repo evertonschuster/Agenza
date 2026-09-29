@@ -10,7 +10,7 @@ import {
 import { LinkButton } from '@/shared/ui/link-button';
 import { ListSection } from '@/widgets/list-section';
 import { tagColumns } from './components/tagColumns';
-import { NEW_TAG_SHORTCUT_ID, useTagListPage } from './useTagListPage';
+import { useTagListPage } from './useTagListPage';
 
 export function TagListPage() {
   const { tags, status, failure, query, searchInputRef, onSearchSubmit, onRetry, newTagTo } =
@@ -20,7 +20,7 @@ export function TagListPage() {
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Etiquetas</h1>
-        <LinkButton to={newTagTo} icon={PlusIcon} shortcutId={NEW_TAG_SHORTCUT_ID}>
+        <LinkButton to={newTagTo} icon={PlusIcon}>
           Nova etiqueta
         </LinkButton>
       </div>

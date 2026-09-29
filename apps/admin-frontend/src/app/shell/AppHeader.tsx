@@ -14,8 +14,6 @@ import {
 } from '@/shared/ui/dropdown-menu';
 import { ThemeToggle } from './ThemeToggle';
 
-const SEARCH_SHORTCUT_ID = 'command-palette-slash';
-
 interface AppHeaderProps {
   onOpenSearch: () => void;
 }
@@ -38,7 +36,6 @@ export function AppHeader({ onOpenSearch }: AppHeaderProps) {
         variant="outline"
         className="min-w-0 flex-1 justify-start text-muted-foreground sm:max-w-64"
         icon={Search}
-        shortcutId={SEARCH_SHORTCUT_ID}
         onClick={onOpenSearch}
       >
         Buscar

@@ -3,7 +3,6 @@ import { Outlet } from 'react-router';
 import { AppHeader } from './AppHeader';
 import { BottomNav } from './BottomNav';
 import { CommandPalette } from './CommandPalette';
-import { ShortcutHelpSheet } from './ShortcutHelpSheet';
 import { SidebarNav } from './SidebarNav';
 import { useRouteScrollReset } from './useRouteScrollReset';
 import { useViewportKind } from './useViewportKind';
@@ -26,7 +25,6 @@ export function AppShell() {
 
       {viewportKind === 'bottom' && <BottomNav />}
       <CommandPalette open={paletteOpen} onOpenChange={setPaletteOpen} />
-      <ShortcutHelpSheet />
     </div>
   );
 }
