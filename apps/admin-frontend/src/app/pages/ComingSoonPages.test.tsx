@@ -3,12 +3,10 @@ import { render } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { Schedule } from './Schedule';
 import { Settings } from './Settings';
-import { Clients } from './Clients';
 import { Conversations } from './Conversations';
 
 const PAGES = [
   { name: 'Agenda', Component: Schedule },
-  { name: 'Clientes', Component: Clients },
   { name: 'Conversas', Component: Conversations },
   { name: 'Ajustes', Component: Settings },
 ];

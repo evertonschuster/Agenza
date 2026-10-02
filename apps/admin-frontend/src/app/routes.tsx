@@ -23,8 +23,18 @@ export const router = createBrowserRouter([
             lazy: () => import('./pages/Schedule').then((m) => ({ Component: m.Schedule })),
           },
           {
-            path: 'clientes',
-            lazy: () => import('./pages/Clients').then((m) => ({ Component: m.Clients })),
+            path: 'pessoas',
+            children: [
+              {
+                index: true,
+                lazy: () => import('./pages/Clients').then((m) => ({ Component: m.Clients })),
+              },
+              {
+                path: 'nova',
+                lazy: () =>
+                  import('@/features/clients').then((m) => ({ Component: m.ClientFormPage })),
+              },
+            ],
           },
           {
             path: 'conversas',

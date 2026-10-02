@@ -52,17 +52,23 @@ not read as "sem conexão", because the user's actual next step is entirely diff
 
 ## `errors` is not always field errors
 
-This is the trap. `errors` is `Record<string, { code?, message? }[]>` and gets filled **two
+This is the trap. `errors` is `Record<string, { code?, message?, meta? }[]>` and gets filled **two
 different ways** (`ApiProblemDetailsFactory`):
 
 1. **Validation (400).** Keys come from FluentValidation's `PropertyName`, grouped in
    `Dispatcher.cs` — so they are **PascalCase C# property names** (`Name`, `DurationMinutes`), not
    the camelCase your JSON body and form fields use. A cross-field rule can be re-keyed onto one
    field with `OverridePropertyName` (see `CreateServiceCommandValidator.cs`), so the key set is not
-   mechanically the command's properties either.
+   mechanically the command's properties either. An item of a list inside the command carries its
+   index: `Guardians[1].Name` (`toFormErrors` turns that into `guardians.1.name`).
 2. **Any other application error** (Conflict, NotFound, Failure). `CreateSingleErrorDictionary`
    puts the error itself under the **empty-string key `""`**. So a 409 arrives with a populated
-   `errors` that maps to no field at all.
+   `errors` that maps to no field at all. The exception: a handler may build the `Error` with its own
+   `FieldErrors`, and then the 409 is keyed by field (`Cpf`, `Email` in `CreateClient`).
+
+`meta` is an optional string map on one entry, absent when empty. It carries context for the client,
+never prose: the CPF conflict puts `clientId` there (and only when that record can be opened), read in
+`features/clients/api/existingClientId.ts`. Branch on the entry's `code` before trusting a `meta` key.
 
 Authorization and unexpected problems carry an empty `errors` object, never `null` in practice —
 but the type says nullable, so guard anyway.

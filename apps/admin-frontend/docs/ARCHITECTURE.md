@@ -24,7 +24,7 @@ src/
 │   ├── shell/               AppShell chrome: responsive nav (sidebar/rail/bottom), header,
 │   │                        command palette
 │   └── pages/               One stub per route (§6) — not feature slices; no model, no api
-├── features/<slice>/        One vertical slice per user-facing capability (auth, tags, …)
+├── features/<slice>/        One vertical slice per user-facing capability (auth, tags, clients, …)
 │   ├── model/               Types + rules. No React. ( = domain + application )
 │   ├── api/                 Backend gateway — repositories. ( = infrastructure )
 │   ├── ui/                  Everything that imports React
@@ -382,6 +382,7 @@ Chosen, and — just as important — tried and backed out of, so nobody re-liti
 | Review fixes on the tag dialogs (PR #125) | Two defects, one line of reasoning each. (1) `useRouteScrollReset` keys on the **section** (first path segment), not the whole `pathname`: `new`, `:id/edit` and `:id/delete` are child routes of `/tags`, so every dialog open/close used to reset `<main>`'s scroll and throw the list back to the top. (2) `useTagFormPage.onValid` and `ConfirmDialog.handleConfirm` skip closing when the dialog already unmounted mid-request (browser Back): react-router's `useNavigate` stays live after unmount, so the stale `navigate(-1)` used to pop one entry too many — out of the app, when `/tags` was the tab's first entry. FR-018 still does not block browser Back; no `useBlocker`, since the request finishes anyway and the toast still reports it. Deliberately left as is, both judged not worth the code: a row someone else already removed stays listed after its `Tag.NotFound` until the next reload or search — the spec's edge case only asks for the "não encontrada" message, which already shows; and `TagDeletePage` keeps its loaded tag if `:id` changed without a remount, because no UI path goes from `/tags/A/delete` straight to `/tags/B/delete` — the modal blocks the list, and closing it goes back to `/tags` first. A `key={id}` on the confirmation is the fix if a flow like "excluir a próxima" ever appears. |
 | `TagListPage` renders its own failure with a retry (`ErrorState`: title, the problem's message and `code`, **Tentar novamente**) instead of `list-section`'s fixed "Não foi possível carregar." | Asked for directly, reverting the accepted cost in §2 for tags only — a failed load had no way back short of a full reload, and resubmitting the same search did nothing because `?q=` didn't change. Done the way §2 already prescribed: the page builds the failure with `shared/ui/error-state` and passes `list-section` only loading/ready; `list-section` itself is unchanged. Retry drops the failed result so the skeleton shows while the same query reloads. |
 | `isTransientProblem` also treats `status >= 500` as transient | A real backend 500 arrives with its own problem body and code, which the three client-side sentinels never matched — `ConfirmDialog` classified it as a permanent block ("Não é possível excluir", no retry) instead of offering **Tentar novamente**. A 4xx without a code (ASP.NET's native model-binding 400) stays non-transient. |
+| `features/clients` — the Pessoas registration form (`/pessoas/nova`, issue #154), on a full page rather than a dialog; nav destination "Clientes" renamed **Pessoas** (`/pessoas`) and no longer "Em breve" | Second real slice and second consumer of `shared/form/fields`. A page, not a dialog like Tags: the form holds two dynamic lists (guardians, reference contacts) built with RHF `useFieldArray`. What it added to `shared/`: `MaskedField` (a specialization of `ControlledField` once CPF, guardian CPF and birth date made three call sites), a `CheckboxGroup` primitive for the contact purposes, `toFormErrors` mapping indexed backend keys (`Guardians[1].Name` → `guardians.1.name`), and `shared/format/date.ts`'s `todayInSaoPaulo()` for the minor rule. Birth date is a masked `dd/mm/aaaa` text field, not `<input type="date">`: a half-typed native date reads as `''`, which would silently skip the minor rule. The form sets `noValidate` so the browser's own English bubbles never replace the pt-BR messages. A CPF conflict reads the existing record's id from the typed `FieldError.meta` and links to `/pessoas/{id}` in a new tab, so the typed values survive; that page arrives with #155. Full contract and the backend half: [ADR 0044](../../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md). |
 
 The palette opens from the header button. The single-use `LinkButton` wrapper was removed; its remaining link uses `buttonVariants` directly. The combobox keeps only the parts used by the palette, and those parts are in the coverage gate.
 
@@ -407,19 +408,21 @@ because it didn't need to be yet. This is the compiled view across the whole app
   `specs/002-ui-foundation/`'s explicit scope (D6) — chrome, theme, routing and "Em breve" stubs
   first. Retirement trigger, per page: **the first real feature slice replaces the stub it
   corresponds to** (e.g. a `features/services/` slice replaces `app/pages/Services.tsx` and moves
-  under `ui/pages/<Page>/` per §1), once its backend exists.
+  under `ui/pages/<Page>/` per §1), once its backend exists. `app/pages/Clients.tsx` is already
+  half-way: it is the Pessoas hub (title plus a **Nova pessoa** link), no longer an "Em breve" screen,
+  while the registration form lives in `features/clients`; the list from issue #155 replaces its body.
 - **The API layer (`servicesApi`, `apiClient`, `unwrap`, `servicesFacade`, the generated types) stood
   with zero call sites for a while, on purpose — not dead code.** `features/tags/api/tagsRepository.ts`
   is its first real consumer (`specs/003-tags-crud/`); see
   [ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md) for why the layer
   was kept standing in the meantime.
-- **`shared/form/fields/`'s genericity is asserted, not yet proven by a second caller.**
-  `TextField`/`TextareaField`/`ControlledField` are written generic over any RHF `FieldValues`, and
-  `ColorField` was deliberately kept as a specialization of `ControlledField` rather than the only
-  shape the family supports — but `TagFormPage` is still the one consumer exercising any of it.
-  Whether the family's actual shape holds (in particular whether `ControlledField`'s render-function
-  escape hatch is what the next custom control needs, or whether it wants its own specialization
-  immediately) is untested until the next entity's form is built — see `agenza-form-field`.
+- **`shared/form/fields/`'s genericity now has a second caller.** `ClientFormPage` uses
+  `TextField`/`TextareaField`/`ControlledField` over a different schema, including nested field-array
+  paths (`guardians.${number}.name`), and it is what justified `MaskedField` as the second
+  specialization of `ControlledField` (three call sites) while the purposes checkboxes stay a plain
+  `ControlledField` render function (one call site) — see `agenza-form-field`. Still unproven: a form
+  that loads an existing record in a page rather than a dialog (Tags covers edit; Clients is
+  create-only until issue #156).
 
 ### Deliberately not built — no need yet
 

@@ -27,6 +27,14 @@ A interface atual pode ser inteiramente descartada, mantendo apenas o esqueleto 
   "Em breve" honesta.
 - Q: Aprovar o visual antes de escrever código? → A: **Sim**, protótipo clicável primeiro. Concluído.
 
+### Session 2026-10-02
+
+- Q: O destino "Clientes" mantém o nome quando o cadastro de pessoas atendidas chega (issues #139 e
+  #154)? → A: **Não.** O destino passa a se chamar **"Pessoas"**, na rota `/pessoas`, e deixa de ser
+  "Em breve" porque já tem backend (`POST /api/v1/clients`) e o formulário de cadastro em
+  `/pessoas/nova`. O identificador de código continua em inglês (`clients`). A lista e o detalhe
+  chegam com a issue #155.
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — A pessoa escolhe como o painel se apresenta, e o painel obedece (Priority: P1)
@@ -128,7 +136,8 @@ próprio escopo, sem texto genérico repetido.
 - **FR-004**: A preferência de tema **DEVE** ser compartilhada com o identity-service, de modo que a
   página de credenciais abra no mesmo tema (fecha a lacuna da ADR 0020).
 - **FR-005**: A navegação **DEVE** expor seis destinos — Início, Agenda, Clientes, Conversas,
-  Serviços, Ajustes — desde a primeira entrega.
+  Serviços, Ajustes — desde a primeira entrega. _(Desde 2026-10-02 o destino "Clientes" chama-se
+  "Pessoas"; ver Clarifications.)_
 - **FR-006**: Destinos sem backend **DEVEM** renderizar uma explicação específica do destino, e
   **NÃO DEVEM** ser apresentados como funcionais.
 - **FR-007**: O shell **DEVE** apresentar barra lateral em telas largas e barra inferior em telas
