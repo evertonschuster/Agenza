@@ -47,7 +47,9 @@ roteamento) verificadas ao vivo: [`../docs/API.md`](../docs/API.md).
 
 ## Known gaps
 
-- `ServicesService` has three real verticals (Tags `/api/v1/tags`,
-  Categories `/api/v1/categories`, Services `/api/v1/services`) — the
-  Appointments/Clients verticals mentioned in
-  `apps/admin-frontend/docs/STATUS.md` are still unbuilt.
+- `ServicesService` has three complete verticals (Tags `/api/v1/tags`,
+  Categories `/api/v1/categories`, Services `/api/v1/services`) and one
+  partial one: Clients (`/api/v1/clients`) only creates a person with its
+  linked contacts for now (`docs/adr/0044`); querying, editing and the
+  situation changes arrive with issues #155–#159. The Appointments vertical
+  mentioned in `apps/admin-frontend/docs/STATUS.md` is still unbuilt.

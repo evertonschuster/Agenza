@@ -1,0 +1,278 @@
+using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
+using ServicesService.Application.Abstractions;
+using ServicesService.Application.Clients;
+using ServicesService.Application.Clients.CreateClient;
+using ServicesService.Domain.Entities;
+
+namespace ServicesService.Tests.Clients.CreateClient;
+
+public class CreateClientCommandHandlerTests
+{
+    private static readonly DateTimeOffset NoonInSaoPaulo = new(2026, 10, 2, 15, 0, 0, TimeSpan.Zero);
+
+    private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
+    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly ILogger<CreateClientCommandHandler> _logger = Substitute.For<ILogger<CreateClientCommandHandler>>();
+
+    public CreateClientCommandHandlerTests()
+    {
+        _repository.FindByCpfAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<ClientCpfMatch?>(null));
+        _repository.ActiveEmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
+    }
+
+    private CreateClientCommandHandler Handler(DateTimeOffset? utcNow = null) =>
+        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonInSaoPaulo), _logger);
+
+    private static CreateClientCommand Command(
+        string fullName = "Maria Souza",
+        DateOnly? birthDate = null,
+        string? phone = null,
+        string? email = null,
+        string? cpf = null,
+        string? notes = null,
+        IReadOnlyList<GuardianInput>? guardians = null,
+        IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
+        new(fullName, birthDate, phone, email, cpf, notes, guardians, referenceContacts);
+
+    private static GuardianInput Guardian() => new("Ana Souza", "Mãe", "(11) 98888-0000", null);
+
+    private static PersistenceResult<int> UniqueViolation(string? constraint) =>
+        PersistenceResult.Failure<int>(new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, constraint));
+
+    [Fact]
+    public async Task Handle_WithOnlyTheName_PersistsAnActiveClientAndReturnsIt()
+    {
+        var result = await Handler().Handle(Command(), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var response = result.Value;
+        response.Id.Should().NotBe(Guid.Empty);
+        response.FullName.Should().Be("Maria Souza");
+        response.Status.Should().Be("active");
+        response.BirthDate.Should().BeNull();
+        response.Guardians.Should().BeEmpty();
+        response.ReferenceContacts.Should().BeEmpty();
+        _repository.Received(1).Add(Arg.Is<Client>(client => client.Id == response.Id));
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsTheNormalizedDataAndEveryContact()
+    {
+        var command = Command(
+            fullName: "  Maria Souza ",
+            birthDate: new DateOnly(2015, 3, 10),
+            phone: " (11) 99999-0000 ",
+            email: " Maria@Example.com ",
+            cpf: ClientTestData.ValidCpf,
+            notes: " Prefere contato por WhatsApp pela manhã. ",
+            guardians: [new GuardianInput("Ana Souza", "Mãe", "(11) 98888-0000", ClientTestData.OtherValidCpf)],
+            referenceContacts:
+            [
+                new ReferenceContactInput("Carlos Lima", "Tio", "11 4000-1000", ["emergency", "dailyCommunication"]),
+            ]);
+
+        var result = await Handler().Handle(command, CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        var response = result.Value;
+        response.FullName.Should().Be("Maria Souza");
+        response.BirthDate.Should().Be(new DateOnly(2015, 3, 10));
+        response.Phone.Should().Be("(11) 99999-0000");
+        response.Email.Should().Be("maria@example.com");
+        response.Cpf.Should().Be(ClientTestData.ValidCpfDigits);
+        response.AdministrativeNotes.Should().Be("Prefere contato por WhatsApp pela manhã.");
+        var guardian = response.Guardians.Should().ContainSingle().Subject;
+        guardian.Name.Should().Be("Ana Souza");
+        guardian.Relationship.Should().Be("Mãe");
+        guardian.Phone.Should().Be("(11) 98888-0000");
+        guardian.Cpf.Should().Be("12345678909");
+        guardian.Id.Should().NotBe(Guid.Empty);
+        var reference = response.ReferenceContacts.Should().ContainSingle().Subject;
+        reference.Name.Should().Be("Carlos Lima");
+        reference.Purposes.Should().Equal("emergency", "dailyCommunication");
+    }
+
+    [Fact]
+    public async Task Handle_WithoutBirthDate_SavesWithoutAnyGuardian()
+    {
+        var result = await Handler().Handle(Command(birthDate: null, guardians: null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Guardians.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Handle_WithMinorBirthDateAndNoGuardian_FailsValidationAndDoesNotPersist()
+    {
+        var result = await Handler().Handle(Command(birthDate: new DateOnly(2015, 3, 10)), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        result.Error.Code.Should().Be("Client.Invalid");
+        _repository.DidNotReceive().Add(Arg.Any<Client>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithMinorBirthDateAndAGuardian_Persists()
+    {
+        var result = await Handler().Handle(
+            Command(birthDate: new DateOnly(2015, 3, 10), guardians: [Guardian()]),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Guardians.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task Handle_DecidesMinorityOnTheBusinessDayNotTheUtcDay()
+    {
+        var tenPmInSaoPaulo = new DateTimeOffset(2026, 10, 3, 1, 0, 0, TimeSpan.Zero);
+
+        var result = await Handler(tenPmInSaoPaulo).Handle(
+            Command(birthDate: new DateOnly(2008, 10, 3)),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Client.Invalid");
+    }
+
+    [Fact]
+    public async Task Handle_WithInvalidContact_FailsAndDoesNotPersist()
+    {
+        var invalidGuardian = new GuardianInput("A", "Mãe", null, null);
+
+        var result = await Handler().Handle(Command(guardians: [invalidGuardian]), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        _repository.DidNotReceive().Add(Arg.Any<Client>());
+    }
+
+    [Fact]
+    public async Task Handle_ChecksUniquenessWithTheNormalizedCpfAndEmail()
+    {
+        await Handler().Handle(Command(email: " Maria@Example.COM ", cpf: ClientTestData.ValidCpf), CancellationToken.None);
+
+        await _repository.Received(1).FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>());
+        await _repository.Received(1).ActiveEmailExistsAsync("maria@example.com", Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithoutCpfOrEmail_SkipsTheUniquenessChecks()
+    {
+        await Handler().Handle(Command(), CancellationToken.None);
+
+        await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().ActiveEmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithCpfOfAnExistingClient_ReturnsAConflictPointingAtIt()
+    {
+        var existingId = Guid.NewGuid();
+        _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<ClientCpfMatch?>(new ClientCpfMatch(existingId, IsDeleted: false)));
+
+        var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Client.DuplicateCpf");
+        var fieldError = result.Error.FieldErrors!["Cpf"].Should().ContainSingle().Subject;
+        fieldError.Code.Should().Be("Client.DuplicateCpf");
+        fieldError.Message.Should().Be("Já existe uma pessoa cadastrada com este CPF.");
+        fieldError.Meta.Should().ContainKey("clientId").WhoseValue.Should().Be(existingId.ToString());
+        _repository.DidNotReceive().Add(Arg.Any<Client>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithCpfOfADeletedClient_ReturnsAConflictWithoutALinkToIt()
+    {
+        _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<ClientCpfMatch?>(new ClientCpfMatch(Guid.NewGuid(), IsDeleted: true)));
+
+        var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
+
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        var fieldError = result.Error.FieldErrors!["Cpf"].Should().ContainSingle().Subject;
+        fieldError.Message.Should().Contain("excluído");
+        fieldError.Meta.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WithEmailOfAnActiveClient_ReturnsAConflictOnTheEmailField()
+    {
+        _repository.ActiveEmailExistsAsync("maria@example.com", Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await Handler().Handle(Command(email: "Maria@Example.com"), CancellationToken.None);
+
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Client.DuplicateEmail");
+        result.Error.FieldErrors!.Keys.Should().Equal("Email");
+        _repository.DidNotReceive().Add(Arg.Any<Client>());
+    }
+
+    [Fact]
+    public async Task Handle_WithBothConflicts_ReportsEveryField()
+    {
+        _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<ClientCpfMatch?>(new ClientCpfMatch(Guid.NewGuid(), IsDeleted: false)));
+        _repository.ActiveEmailExistsAsync("maria@example.com", Arg.Any<CancellationToken>()).Returns(true);
+
+        var result = await Handler().Handle(
+            Command(email: "maria@example.com", cpf: ClientTestData.ValidCpf),
+            CancellationToken.None);
+
+        result.Error.Code.Should().Be("Client.DuplicateCpf");
+        result.Error.FieldErrors!.Keys.Should().Equal("Cpf", "Email");
+    }
+
+    [Fact]
+    public async Task Handle_WhenAConcurrentRequestTookTheCpf_ReturnsAConflictPointingAtTheWinner()
+    {
+        var winnerId = Guid.NewGuid();
+        _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
+            .Returns(
+                Task.FromResult<ClientCpfMatch?>(null),
+                Task.FromResult<ClientCpfMatch?>(new ClientCpfMatch(winnerId, IsDeleted: false)));
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(UniqueViolation("IX_Clients_TenantId_Cpf"));
+
+        var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
+
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Client.DuplicateCpf");
+        result.Error.FieldErrors!["Cpf"][0].Meta!["clientId"].Should().Be(winnerId.ToString());
+    }
+
+    [Fact]
+    public async Task Handle_WhenAConcurrentRequestTookTheEmail_ReturnsAConflictOnTheEmailField()
+    {
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
+            .Returns(UniqueViolation("IX_Clients_TenantId_Email"));
+
+        var result = await Handler().Handle(Command(email: "maria@example.com"), CancellationToken.None);
+
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Client.DuplicateEmail");
+        result.Error.FieldErrors!.Keys.Should().Equal("Email");
+    }
+
+    [Fact]
+    public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsAGenericConflict()
+    {
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(UniqueViolation("some_other_unique_constraint"));
+
+        var result = await Handler().Handle(Command(), CancellationToken.None);
+
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Client.DuplicateConflict");
+        result.Error.FieldErrors.Should().BeNull();
+    }
+}

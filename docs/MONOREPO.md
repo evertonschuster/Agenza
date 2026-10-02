@@ -18,7 +18,8 @@ admin/
 │   └── services/
 │       ├── identity-service/   OIDC provider (OpenIddict), tenants, users, M2M tokens
 │       └── services-service/   the business's offerings — Tags,
-│                               Categories, and Services verticals
+│                               Categories, and Services verticals,
+│                               plus Clients (served persons)
 ├── ai-services/
 │   └── assistant-service/  placeholder Python/FastAPI AI service
 ├── infra/
