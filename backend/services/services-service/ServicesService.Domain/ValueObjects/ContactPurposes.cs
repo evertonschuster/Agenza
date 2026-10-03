@@ -22,6 +22,14 @@ public static class ContactPurposes
 
     public static IReadOnlyList<string> Names { get; } = Catalog.Select(entry => entry.Name).ToList();
 
+    public static readonly DomainError Unknown = new(
+        "ContactPurposes.Unknown",
+        $"A finalidade deve ser uma das seguintes: {string.Join(", ", Names)}.");
+
+    public static readonly DomainError Required = new(
+        "ContactPurposes.Required",
+        "Informe ao menos uma finalidade de contato.");
+
     public static bool IsKnown(string name) =>
         Catalog.Any(entry => string.Equals(entry.Name, name?.Trim(), StringComparison.OrdinalIgnoreCase));
 
@@ -36,9 +44,7 @@ public static class ContactPurposes
 
             if (match.Name is null)
             {
-                return DomainResult.Failure<ContactPurpose>(new DomainError(
-                    "Client.Invalid",
-                    $"A finalidade deve ser uma das seguintes: {string.Join(", ", Names)}."));
+                return DomainResult.Failure<ContactPurpose>(Unknown);
             }
 
             purposes |= match.Purpose;
@@ -46,9 +52,7 @@ public static class ContactPurposes
 
         if (purposes == ContactPurpose.None)
         {
-            return DomainResult.Failure<ContactPurpose>(new DomainError(
-                "Client.Invalid",
-                "Informe ao menos uma finalidade para a pessoa de referência."));
+            return DomainResult.Failure<ContactPurpose>(Required);
         }
 
         return DomainResult.Success(purposes);

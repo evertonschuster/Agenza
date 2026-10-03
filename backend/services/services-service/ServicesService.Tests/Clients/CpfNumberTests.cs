@@ -48,7 +48,7 @@ public class CpfNumberTests
         var result = CpfNumber.Create(raw);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
+        result.Error.Code.Should().Be("CpfNumber.Invalid");
         CpfNumber.IsValid(raw).Should().BeFalse();
     }
 

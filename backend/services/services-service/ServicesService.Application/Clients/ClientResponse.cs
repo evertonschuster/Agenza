@@ -19,7 +19,7 @@ public sealed record ClientResponse(
         new(
             client.Id,
             client.FullName.Value,
-            client.BirthDate,
+            client.BirthDate?.Value,
             client.Phone?.Value,
             client.Email?.Value,
             client.Cpf?.Value,

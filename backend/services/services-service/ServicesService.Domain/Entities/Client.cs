@@ -11,7 +11,7 @@ public class Client : TenantOwnedEntity
     public const int MaxReferenceContacts = 10;
 
     public FullName FullName { get; private set; }
-    public DateOnly? BirthDate { get; private set; }
+    public BirthDate? BirthDate { get; private set; }
     public PhoneNumber? Phone { get; private set; }
     public EmailAddress? Email { get; private set; }
     public CpfNumber? Cpf { get; private set; }
@@ -33,7 +33,7 @@ public class Client : TenantOwnedEntity
     private Client(
         Guid id,
         FullName fullName,
-        DateOnly? birthDate,
+        BirthDate? birthDate,
         PhoneNumber? phone,
         EmailAddress? email,
         CpfNumber? cpf,
@@ -52,7 +52,7 @@ public class Client : TenantOwnedEntity
     public static DomainResult<Client> Create(
         Guid id,
         FullName fullName,
-        DateOnly? birthDate,
+        BirthDate? birthDate,
         PhoneNumber? phone,
         EmailAddress? email,
         CpfNumber? cpf,
@@ -61,15 +61,6 @@ public class Client : TenantOwnedEntity
         IReadOnlyCollection<ClientGuardian> guardians,
         IReadOnlyCollection<ClientReferenceContact> referenceContacts)
     {
-        if (birthDate is { } date)
-        {
-            var birthDateResult = BirthDateRules.Validate(date, today);
-            if (birthDateResult.IsFailure)
-            {
-                return DomainResult.Failure<Client>(birthDateResult.Error);
-            }
-        }
-
         var contactsResult = ValidateContacts(birthDate, today, guardians, referenceContacts);
         if (contactsResult.IsFailure)
         {
@@ -100,7 +91,7 @@ public class Client : TenantOwnedEntity
     }
 
     private static DomainResult ValidateContacts(
-        DateOnly? birthDate,
+        BirthDate? birthDate,
         DateOnly today,
         IReadOnlyCollection<ClientGuardian> guardians,
         IReadOnlyCollection<ClientReferenceContact> referenceContacts)
@@ -119,11 +110,11 @@ public class Client : TenantOwnedEntity
                 $"Informe no máximo {MaxReferenceContacts} pessoas de referência."));
         }
 
-        if (birthDate is { } date && BirthDateRules.IsMinorOn(date, today) && guardians.Count == 0)
+        if (birthDate is not null && birthDate.IsMinorOn(today) && guardians.Count == 0)
         {
             return DomainResult.Failure(new DomainError(
                 "Client.Invalid",
-                $"Informe ao menos um responsável para pessoas menores de {BirthDateRules.AdultAgeInYears} anos."));
+                $"Informe ao menos um responsável para pessoas menores de {BirthDate.AdultAgeInYears} anos."));
         }
 
         return DomainResult.Success();

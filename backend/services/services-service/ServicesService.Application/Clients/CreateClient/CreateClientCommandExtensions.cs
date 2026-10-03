@@ -16,6 +16,12 @@ public static class CreateClientCommandExtensions
             return DomainResult.Failure<Client>(fullNameResult.Error);
         }
 
+        var birthDateResult = BirthDate.Create(command.BirthDate, today);
+        if (birthDateResult.IsFailure)
+        {
+            return DomainResult.Failure<Client>(birthDateResult.Error);
+        }
+
         var phoneResult = PhoneNumber.Create(command.Phone);
         if (phoneResult.IsFailure)
         {
@@ -55,7 +61,7 @@ public static class CreateClientCommandExtensions
         return Client.Create(
             Guid.CreateVersion7(),
             fullNameResult.Value,
-            command.BirthDate,
+            birthDateResult.Value,
             phoneResult.Value,
             emailResult.Value,
             cpfResult.Value,

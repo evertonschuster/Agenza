@@ -6,6 +6,8 @@ public sealed record CpfNumber
 {
     public const int Length = 11;
 
+    public static readonly DomainError Invalid = new("CpfNumber.Invalid", "O CPF informado é inválido.");
+
     public string Value { get; }
 
     private CpfNumber(string value)
@@ -26,7 +28,7 @@ public sealed record CpfNumber
 
         if (!HasValidCheckDigits(digits))
         {
-            return DomainResult.Failure<CpfNumber?>(new DomainError("Client.Invalid", "O CPF informado é inválido."));
+            return DomainResult.Failure<CpfNumber?>(Invalid);
         }
 
         return DomainResult.Success<CpfNumber?>(new CpfNumber(digits));

@@ -15,7 +15,7 @@ public class ClientTests
         Client.Create(
             Guid.NewGuid(),
             ClientTestData.Name(),
-            birthDate,
+            BirthDate.Create(birthDate, Today).Value,
             null,
             null,
             null,
@@ -54,7 +54,7 @@ public class ClientTests
         var client = Client.Create(
             Guid.NewGuid(),
             ClientTestData.Name(),
-            new DateOnly(1990, 5, 20),
+            BirthDate.Restore(new DateOnly(1990, 5, 20)),
             ClientTestData.Phone(),
             ClientTestData.Email(),
             ClientTestData.Cpf(),
@@ -63,7 +63,7 @@ public class ClientTests
             [],
             []).Value;
 
-        client.BirthDate.Should().Be(new DateOnly(1990, 5, 20));
+        client.BirthDate!.Value.Should().Be(new DateOnly(1990, 5, 20));
         client.Phone.Should().Be(ClientTestData.Phone());
         client.Email.Should().Be(ClientTestData.Email());
         client.Cpf!.Value.Should().Be(ClientTestData.ValidCpfDigits);
@@ -124,29 +124,6 @@ public class ClientTests
     public void Create_WithAdultBirthDate_DoesNotRequireAGuardian()
     {
         Create(birthDate: new DateOnly(1985, 1, 31)).IsSuccess.Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData(2026, 10, 2)]
-    [InlineData(2026, 10, 3)]
-    [InlineData(2027, 1, 1)]
-    public void Create_WithBirthDateTodayOrInTheFuture_Fails(int year, int month, int day)
-    {
-        var result = Create(birthDate: new DateOnly(year, month, day), guardians: [ClientTestData.Guardian()]);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("passado");
-    }
-
-    [Fact]
-    public void Create_WithBirthDateImplyingMoreThanOneHundredTwentyYears_Fails()
-    {
-        Create(birthDate: new DateOnly(1906, 10, 2)).IsSuccess.Should().BeTrue();
-
-        var result = Create(birthDate: new DateOnly(1905, 10, 2));
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("120");
     }
 
     [Fact]

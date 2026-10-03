@@ -34,10 +34,16 @@ ignores a row that is either not `Active` or soft-deleted.
 **Normalized storage.** The domain stores CPF as 11 digits, e-mail trimmed and lowercase, and phone trimmed, so the
 unique indexes compare plain stored values (no generated column for them).
 
-**Value objects.** `FullName`, `CpfNumber`, `EmailAddress`, `PhoneNumber` and `AdministrativeNotes` are `record`s built
-through `Create`, which validates and normalizes (the `DurationRange` pattern); the optional ones return `null` for a
-blank input. `Client` and its contacts receive them already valid, so the aggregate only checks what depends on the
-whole: birth date against today, a guardian for a minor and the contact limits. The use case's `ToModel` builds them
+**Value objects.** `FullName`, `BirthDate`, `CpfNumber`, `EmailAddress`, `PhoneNumber` and `AdministrativeNotes` are
+`record`s built through `Create`, which validates and normalizes (the `DurationRange` pattern); the optional ones
+return `null` for a blank input. `Client` and its contacts receive them already valid, so the aggregate only checks
+what depends on the whole: a guardian for a minor and the contact limits. `BirthDate` is the one whose rules depend on
+the day they are checked ("in the past", "at most 120 years"), so `Create(value, today)` applies them to new input and
+`Restore(value)` rebuilds a stored date without them; every other value object re-validates when EF reads it back.
+A value object names its own errors after its type and talks about the value, not the entity using it
+(`CpfNumber.Invalid`, `BirthDate.TooOld`, `ContactPurposes.Required`), each a `static readonly DomainError` on the
+type, so it can be reused outside clients. `Client.Invalid` stays for the rules that belong to the entity (a
+guardian for a minor, the contact limits, a contact's name and relationship). The use case's `ToModel` builds them
 from the command. EF stores each as its plain text column through `HasConversion`, so the schema is unchanged.
 Complex types were rejected because the persistence tests run on the InMemory provider, which does not support them.
 The cost: a query cannot reach into `.Value` (it is not translatable through a converter); compare whole value objects

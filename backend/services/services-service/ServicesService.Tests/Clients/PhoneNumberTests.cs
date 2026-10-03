@@ -55,6 +55,6 @@ public class PhoneNumberTests
         var result = PhoneNumber.Create(raw);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
+        result.Error.Code.Should().Be("PhoneNumber.Invalid");
     }
 }

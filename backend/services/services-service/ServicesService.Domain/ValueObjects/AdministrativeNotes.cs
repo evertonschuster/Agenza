@@ -6,6 +6,10 @@ public sealed record AdministrativeNotes
 {
     public const int MaxLength = 500;
 
+    public static readonly DomainError TooLong = new(
+        "AdministrativeNotes.TooLong",
+        $"As observações administrativas devem ter no máximo {MaxLength} caracteres.");
+
     public string Value { get; }
 
     private AdministrativeNotes(string value)
@@ -24,9 +28,7 @@ public sealed record AdministrativeNotes
 
         if (trimmed.Length > MaxLength)
         {
-            return DomainResult.Failure<AdministrativeNotes?>(new DomainError(
-                "Client.Invalid",
-                $"As observações administrativas devem ter no máximo {MaxLength} caracteres."));
+            return DomainResult.Failure<AdministrativeNotes?>(TooLong);
         }
 
         return DomainResult.Success<AdministrativeNotes?>(new AdministrativeNotes(trimmed));

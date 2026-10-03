@@ -31,6 +31,6 @@ public class AdministrativeNotesTests
         var result = AdministrativeNotes.Create(new string('n', AdministrativeNotes.MaxLength + 1));
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
+        result.Error.Code.Should().Be("AdministrativeNotes.TooLong");
     }
 }

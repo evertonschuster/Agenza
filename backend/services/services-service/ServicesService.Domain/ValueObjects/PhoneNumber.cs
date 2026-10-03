@@ -6,6 +6,10 @@ public sealed record PhoneNumber
 {
     public const int MaxLength = 20;
 
+    public static readonly DomainError Invalid = new(
+        "PhoneNumber.Invalid",
+        $"O telefone deve ter no máximo {MaxLength} caracteres, entre dígitos, espaços, +, parênteses e hífen.");
+
     public string Value { get; }
 
     private PhoneNumber(string value)
@@ -24,9 +28,7 @@ public sealed record PhoneNumber
 
         if (!HasValidShape(trimmed))
         {
-            return DomainResult.Failure<PhoneNumber?>(new DomainError(
-                "Client.Invalid",
-                $"O telefone deve ter no máximo {MaxLength} caracteres, entre dígitos, espaços, +, parênteses e hífen."));
+            return DomainResult.Failure<PhoneNumber?>(Invalid);
         }
 
         return DomainResult.Success<PhoneNumber?>(new PhoneNumber(trimmed));

@@ -21,7 +21,7 @@ public class FullNameTests
         var result = FullName.Create(raw);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
+        result.Error.Code.Should().Be("FullName.InvalidLength");
     }
 
     [Fact]

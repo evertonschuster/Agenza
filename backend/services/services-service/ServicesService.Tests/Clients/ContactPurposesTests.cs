@@ -27,14 +27,14 @@ public class ContactPurposesTests
         var result = ContactPurposes.Parse(["emergency", "billing"]);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
+        result.Error.Code.Should().Be("ContactPurposes.Unknown");
     }
 
     [Fact]
     public void Parse_WithoutNames_Fails()
     {
-        ContactPurposes.Parse(null).IsFailure.Should().BeTrue();
-        ContactPurposes.Parse([]).IsFailure.Should().BeTrue();
+        ContactPurposes.Parse(null).Error.Code.Should().Be("ContactPurposes.Required");
+        ContactPurposes.Parse([]).Error.Code.Should().Be("ContactPurposes.Required");
     }
 
     [Fact]

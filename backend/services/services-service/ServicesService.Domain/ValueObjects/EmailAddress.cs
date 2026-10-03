@@ -6,6 +6,10 @@ public sealed record EmailAddress
 {
     public const int MaxLength = 254;
 
+    public static readonly DomainError Invalid = new(
+        "EmailAddress.Invalid",
+        $"O e-mail informado é inválido ou tem mais de {MaxLength} caracteres.");
+
     public string Value { get; }
 
     private EmailAddress(string value)
@@ -24,9 +28,7 @@ public sealed record EmailAddress
 
         if (!HasValidShape(normalized))
         {
-            return DomainResult.Failure<EmailAddress?>(new DomainError(
-                "Client.Invalid",
-                $"O e-mail informado é inválido ou tem mais de {MaxLength} caracteres."));
+            return DomainResult.Failure<EmailAddress?>(Invalid);
         }
 
         return DomainResult.Success<EmailAddress?>(new EmailAddress(normalized));
