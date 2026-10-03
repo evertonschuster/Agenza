@@ -32,16 +32,15 @@ internal static class ClientTestData
         return PhoneNumber.Create(value).Value!;
     }
 
-    public static ClientGuardian Guardian(string name = "Ana Souza", string relationship = "Mãe") =>
-        ClientGuardian.Create(Guid.NewGuid(), name, relationship, null, null).Value;
+    public static GuardianData Guardian(string name = "Ana Souza", string relationship = "Mãe")
+    {
+        return new GuardianData(name, relationship, null, null);
+    }
 
-    public static ClientReferenceContact ReferenceContact(params string[] purposes) =>
-        ClientReferenceContact.Create(
-            Guid.NewGuid(),
-            "Carlos Lima",
-            "Tio",
-            null,
-            purposes.Length == 0 ? ["emergency"] : purposes).Value;
+    public static ReferenceContactData ReferenceContact(ContactPurpose purposes = ContactPurpose.Emergency)
+    {
+        return new ReferenceContactData("Carlos Lima", "Tio", null, ContactPurposes.Create(purposes).Value);
+    }
 
     public static ClientMatch ExistingClient()
     {

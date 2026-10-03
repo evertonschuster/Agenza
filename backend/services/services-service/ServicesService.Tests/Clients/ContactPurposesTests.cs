@@ -5,57 +5,26 @@ namespace ServicesService.Tests.Clients;
 public class ContactPurposesTests
 {
     [Fact]
-    public void Parse_CombinesEveryPurpose()
+    public void Create_KeepsEveryPurposeGiven()
     {
-        var result = ContactPurposes.Parse(["emergency", "dailyCommunication"]);
+        var result = ContactPurposes.Create(ContactPurpose.Emergency | ContactPurpose.DailyCommunication);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(ContactPurpose.Emergency | ContactPurpose.DailyCommunication);
+        result.Value.Value.Should().Be(ContactPurpose.Emergency | ContactPurpose.DailyCommunication);
     }
 
     [Fact]
-    public void Parse_IsCaseInsensitiveAndIgnoresRepeatedNames()
+    public void Create_WithoutAnyPurpose_Fails()
     {
-        var result = ContactPurposes.Parse([" EMERGENCY ", "emergency", "OperationalSupport"]);
-
-        result.Value.Should().Be(ContactPurpose.Emergency | ContactPurpose.OperationalSupport);
-    }
-
-    [Fact]
-    public void Parse_WithAnUnknownName_Fails()
-    {
-        var result = ContactPurposes.Parse(["emergency", "billing"]);
+        var result = ContactPurposes.Create(ContactPurpose.None);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("ContactPurposes.Unknown");
+        result.Error.Code.Should().Be("ContactPurposes.Required");
     }
 
     [Fact]
-    public void Parse_WithoutNames_Fails()
+    public void Restore_AcceptsAValueThatCreateWouldReject()
     {
-        ContactPurposes.Parse(null).Error.Code.Should().Be("ContactPurposes.Required");
-        ContactPurposes.Parse([]).Error.Code.Should().Be("ContactPurposes.Required");
-    }
-
-    [Fact]
-    public void ToNames_ListsPurposesInCatalogOrder()
-    {
-        var purposes = ContactPurpose.DailyCommunication | ContactPurpose.Emergency;
-
-        ContactPurposes.ToNames(purposes).Should().Equal("emergency", "dailyCommunication");
-    }
-
-    [Theory]
-    [InlineData("billing")]
-    [InlineData("")]
-    public void Parse_WithANameOutsideTheCatalog_Fails(string name)
-    {
-        ContactPurposes.Parse([name]).Error.Code.Should().Be("ContactPurposes.Unknown");
-    }
-
-    [Fact]
-    public void Unknown_ListsTheAllowedPurposesInCatalogOrder()
-    {
-        ContactPurposes.Unknown.Message.Should().Contain("emergency, operationalSupport, dailyCommunication");
+        ContactPurposes.Restore(ContactPurpose.None).Value.Should().Be(ContactPurpose.None);
     }
 }

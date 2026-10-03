@@ -3,6 +3,8 @@ using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Domain.Entities;
 
+public sealed record GuardianData(string Name, string Relationship, PhoneNumber? Phone, CpfNumber? Cpf);
+
 // CPF uniqueness is a rule between clients only - a guardian's CPF never takes part in it.
 public class ClientGuardian : ClientContact
 {
@@ -13,26 +15,21 @@ public class ClientGuardian : ClientContact
     {
     }
 
-    private ClientGuardian(Guid id, string name, string relationship, PhoneNumber? phone, CpfNumber? cpf)
-        : base(id, name, relationship, phone)
+    private ClientGuardian(Guid id, Guid clientId, string name, string relationship, PhoneNumber? phone, CpfNumber? cpf)
+        : base(id, clientId, name, relationship, phone)
     {
         Cpf = cpf;
     }
 
-    public static DomainResult<ClientGuardian> Create(
-        Guid id,
-        string name,
-        string relationship,
-        PhoneNumber? phone,
-        CpfNumber? cpf)
+    internal static DomainResult<ClientGuardian> Create(Guid id, Guid clientId, GuardianData data)
     {
-        var nameResult = ValidateName(name);
+        var nameResult = ValidateName(data.Name);
         if (nameResult.IsFailure)
         {
             return DomainResult.Failure<ClientGuardian>(nameResult.Error);
         }
 
-        var relationshipResult = ValidateRelationship(relationship);
+        var relationshipResult = ValidateRelationship(data.Relationship);
         if (relationshipResult.IsFailure)
         {
             return DomainResult.Failure<ClientGuardian>(relationshipResult.Error);
@@ -40,9 +37,10 @@ public class ClientGuardian : ClientContact
 
         return DomainResult.Success(new ClientGuardian(
             id,
+            clientId,
             nameResult.Value,
             relationshipResult.Value,
-            phone,
-            cpf));
+            data.Phone,
+            data.Cpf));
     }
 }

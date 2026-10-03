@@ -70,8 +70,8 @@ public class Client : TenantOwnedEntity
         CpfNumber? cpf,
         AdministrativeNotes? administrativeNotes,
         DateOnly today,
-        IReadOnlyCollection<ClientGuardian> guardians,
-        IReadOnlyCollection<ClientReferenceContact> referenceContacts)
+        IReadOnlyCollection<GuardianData> guardians,
+        IReadOnlyCollection<ReferenceContactData> referenceContacts)
     {
         var guardiansResult = ValidateGuardians(birthDate?.Value, today, guardians.Count);
         if (guardiansResult.IsFailure)
@@ -86,26 +86,43 @@ public class Client : TenantOwnedEntity
         }
 
         var client = new Client(id, fullName, birthDate, phone, email, cpf, administrativeNotes);
-        client.AddContacts(guardians, referenceContacts);
+
+        var contactsResult = client.AddContacts(guardians, referenceContacts);
+        if (contactsResult.IsFailure)
+        {
+            return DomainResult.Failure<Client>(contactsResult.Error);
+        }
 
         return DomainResult.Success(client);
     }
 
-    private void AddContacts(
-        IReadOnlyCollection<ClientGuardian> guardians,
-        IReadOnlyCollection<ClientReferenceContact> referenceContacts)
+    private DomainResult AddContacts(
+        IReadOnlyCollection<GuardianData> guardians,
+        IReadOnlyCollection<ReferenceContactData> referenceContacts)
     {
-        foreach (var guardian in guardians)
+        foreach (var data in guardians)
         {
-            guardian.AssignClient(Id);
-            _guardians.Add(guardian);
+            var guardianResult = ClientGuardian.Create(Guid.CreateVersion7(), Id, data);
+            if (guardianResult.IsFailure)
+            {
+                return DomainResult.Failure(guardianResult.Error);
+            }
+
+            _guardians.Add(guardianResult.Value);
         }
 
-        foreach (var referenceContact in referenceContacts)
+        foreach (var data in referenceContacts)
         {
-            referenceContact.AssignClient(Id);
-            _referenceContacts.Add(referenceContact);
+            var referenceContactResult = ClientReferenceContact.Create(Guid.CreateVersion7(), Id, data);
+            if (referenceContactResult.IsFailure)
+            {
+                return DomainResult.Failure(referenceContactResult.Error);
+            }
+
+            _referenceContacts.Add(referenceContactResult.Value);
         }
+
+        return DomainResult.Success();
     }
 
     public static DomainResult ValidateGuardians(DateOnly? birthDate, DateOnly today, int guardianCount)

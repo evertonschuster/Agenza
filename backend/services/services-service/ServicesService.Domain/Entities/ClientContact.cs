@@ -35,15 +35,14 @@ public abstract class ClientContact : TenantOwnedEntity
         Relationship = string.Empty;
     }
 
-    protected ClientContact(Guid id, string name, string relationship, PhoneNumber? phone)
+    protected ClientContact(Guid id, Guid clientId, string name, string relationship, PhoneNumber? phone)
         : base(id)
     {
+        ClientId = clientId;
         Name = name;
         Relationship = relationship;
         Phone = phone;
     }
-
-    internal void AssignClient(Guid clientId) => ClientId = clientId;
 
     public static DomainResult<string> ValidateName(string name)
     {

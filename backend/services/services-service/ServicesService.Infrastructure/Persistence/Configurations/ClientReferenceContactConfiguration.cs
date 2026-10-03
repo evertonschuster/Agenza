@@ -21,6 +21,8 @@ public class ClientReferenceContactConfiguration : IEntityTypeConfiguration<Clie
         builder.Property(r => r.Phone)
             .HasConversion(phone => phone!.Value, value => PhoneNumber.Restore(value))
             .HasMaxLength(PhoneNumber.MaxLength);
-        builder.Property(r => r.Purposes).IsRequired();
+        builder.Property(r => r.Purposes)
+            .HasConversion(purposes => (int)purposes.Value, value => ContactPurposes.Restore((ContactPurpose)value))
+            .IsRequired();
     }
 }

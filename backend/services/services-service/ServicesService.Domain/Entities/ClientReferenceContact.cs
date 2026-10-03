@@ -3,51 +3,50 @@ using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Domain.Entities;
 
+public sealed record ReferenceContactData(string Name, string Relationship, PhoneNumber? Phone, ContactPurposes Purposes);
+
 public class ClientReferenceContact : ClientContact
 {
-    public ContactPurpose Purposes { get; private set; }
+    public ContactPurposes Purposes { get; private set; }
 
     // EF Core materialization only.
     private ClientReferenceContact()
     {
+        Purposes = null!;
     }
 
-    private ClientReferenceContact(Guid id, string name, string relationship, PhoneNumber? phone, ContactPurpose purposes)
-        : base(id, name, relationship, phone)
+    private ClientReferenceContact(
+        Guid id,
+        Guid clientId,
+        string name,
+        string relationship,
+        PhoneNumber? phone,
+        ContactPurposes purposes)
+        : base(id, clientId, name, relationship, phone)
     {
         Purposes = purposes;
     }
 
-    public static DomainResult<ClientReferenceContact> Create(
-        Guid id,
-        string name,
-        string relationship,
-        PhoneNumber? phone,
-        IEnumerable<string>? purposes)
+    internal static DomainResult<ClientReferenceContact> Create(Guid id, Guid clientId, ReferenceContactData data)
     {
-        var nameResult = ValidateName(name);
+        var nameResult = ValidateName(data.Name);
         if (nameResult.IsFailure)
         {
             return DomainResult.Failure<ClientReferenceContact>(nameResult.Error);
         }
 
-        var relationshipResult = ValidateRelationship(relationship);
+        var relationshipResult = ValidateRelationship(data.Relationship);
         if (relationshipResult.IsFailure)
         {
             return DomainResult.Failure<ClientReferenceContact>(relationshipResult.Error);
         }
 
-        var purposesResult = ContactPurposes.Parse(purposes);
-        if (purposesResult.IsFailure)
-        {
-            return DomainResult.Failure<ClientReferenceContact>(purposesResult.Error);
-        }
-
         return DomainResult.Success(new ClientReferenceContact(
             id,
+            clientId,
             nameResult.Value,
             relationshipResult.Value,
-            phone,
-            purposesResult.Value));
+            data.Phone,
+            data.Purposes));
     }
 }

@@ -27,6 +27,13 @@ insists they are separate records. Children reference the root through the compo
 `(TenantId, ClientId) → Clients(TenantId, Id)` ([ADR 0024](0024-database-enforced-data-ownership.md)). One
 `SaveChanges` is one transaction, so a failure leaves no partial person.
 
+Only the root creates its children: `Client.Create` receives the contacts as data (`GuardianData`,
+`ReferenceContactData`, records carrying the value objects) and builds each child through an `internal` factory that
+already gets the client's id, so nothing outside the domain can create a contact or move one to another person. The
+context has no `DbSet` for the children; they are read and written through `Clients`. Editing contacts (#156) goes
+through the root as well: one operation that synchronizes the lists by id and re-checks the guardian and limit rules on
+the result.
+
 **Situation.** The three situations of the issue map onto two mechanisms. Active and inactive are
 `ClientStatus { Active, Inactive }`, stored as text with a `CHECK`; creation sets `Active` and no transition exists
 yet. Deleted is **only** `BaseEntity`'s soft delete (`Remove` → `DeletedAt`): the global query filter already hides a
@@ -38,8 +45,8 @@ that is not `Active`.
 **Normalized storage.** The domain stores CPF as 11 digits, e-mail trimmed and lowercase, and phone trimmed, so the
 unique indexes compare plain stored values (no generated column for them).
 
-**Value objects.** `FullName`, `BirthDate`, `CpfNumber`, `EmailAddress`, `PhoneNumber` and `AdministrativeNotes` are
-`record`s built through `Create`, which validates and normalizes (the `DurationRange` pattern); the optional ones
+**Value objects.** `FullName`, `BirthDate`, `CpfNumber`, `EmailAddress`, `PhoneNumber`, `AdministrativeNotes` and
+`ContactPurposes` are `record`s built through `Create`, which validates and normalizes (the `DurationRange` pattern); the optional ones
 return `null` for a blank input. `Client` and its contacts receive them already valid, so the aggregate only checks
 what depends on the whole: a guardian for a minor and the contact limits. `Create` is for new input; `Restore(value)`
 rebuilds a stored value without re-validating it and is what EF's conversions call, so a row stays readable after a rule
@@ -85,8 +92,11 @@ field ([ADR 0047](0047-validation-rules-live-in-the-domain.md)), and the use cas
 aggregate. List sizes are capped
 (10 guardians, 10 reference contacts) because the issue sets no bound and an unbounded array in a body is an abuse
 vector: items of a list over the cap are not validated one by one, and the endpoint reads at most 64 KB of body
-(`[RequestSizeLimit]`), above which it answers `413 Request.TooLarge`. Reference-contact purposes are strings (`emergency`, `operationalSupport`, `dailyCommunication`) validated
-like `TagColor`, not a JSON enum: a bad enum value fails in the framework's binder with an English message and no code.
+(`[RequestSizeLimit]`), above which it answers `413 Request.TooLarge`. On the wire, reference-contact purposes are
+strings (`emergency`, `operationalSupport`, `dailyCommunication`), not a JSON enum: a bad enum value fails in the
+framework's binder with an English message and no code. Those names exist only in the Application
+(`ContactPurposeNames`), which translates them into the domain's `ContactPurpose` flags; a name it does not know is a
+structural validator rule (`ContactPurposes.Unknown`), and "at least one" is the `ContactPurposes` value object's.
 
 **"Today".** The minor rule needs a calendar day, and it is the UTC date ([ADR 0045](0045-backend-works-in-utc.md)).
 Age is completed years (a leap-day birthday counts on February 28 in common years), "in the past" is strictly before
@@ -130,6 +140,8 @@ stored values and the index definitions).
   by `Restore`: a stored value that failed a later rule threw on every read of its row.
 - **The aggregate as the result of the uniqueness lookups** — replaced before merge by `ClientMatch`: it returned a
   `Client` without its contacts that looked complete.
+- **Children built outside the root and handed to `Client.Create`** — the first version of this change, with public
+  child factories and an `AssignClient` any domain type could call; replaced before merge by the root creating them.
 - **The existing id as a top-level problem extension** — not visible in the generated OpenAPI schema, so untyped.
 - **Sending the user to a CPF search instead of the record** — an extra step, and no such search exists yet.
 - **JSON enums for purposes and status** — see the validation note above.

@@ -60,6 +60,11 @@ public sealed class ReferenceContactInputValidator : AbstractValidator<Reference
         RuleFor(contact => contact.Name).MustBeValid(ClientContact.ValidateName);
         RuleFor(contact => contact.Relationship).MustBeValid(ClientContact.ValidateRelationship);
         RuleFor(contact => contact.Phone).MustBeValid(PhoneNumber.Create);
-        RuleFor(contact => contact.Purposes).MustBeValid(ContactPurposes.Parse);
+        RuleFor(contact => contact.Purposes)
+            .Cascade(CascadeMode.Stop)
+            .Must(ContactPurposeNames.AreKnown)
+            .WithErrorCode(ContactPurposeNames.UnknownCode)
+            .WithMessage(ContactPurposeNames.UnknownMessage)
+            .MustBeValid(purposes => ContactPurposes.Create(ContactPurposeNames.ToPurposes(purposes)));
     }
 }

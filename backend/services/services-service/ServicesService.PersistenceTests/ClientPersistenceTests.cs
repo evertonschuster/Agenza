@@ -43,8 +43,8 @@ public class ClientPersistenceTests
         string? cpf = null,
         string? email = null,
         DateOnly? birthDate = null,
-        IReadOnlyCollection<ClientGuardian>? guardians = null,
-        IReadOnlyCollection<ClientReferenceContact>? referenceContacts = null) =>
+        IReadOnlyCollection<GuardianData>? guardians = null,
+        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null) =>
         Client.Create(
             Guid.NewGuid(),
             FullName.Create(fullName).Value,
@@ -56,6 +56,16 @@ public class ClientPersistenceTests
             Today,
             guardians ?? [],
             referenceContacts ?? []).Value;
+
+    private static GuardianData Guardian()
+    {
+        return new GuardianData("Ana Souza", "Mãe", null, null);
+    }
+
+    private static ReferenceContactData ReferenceContact()
+    {
+        return new ReferenceContactData("Carlos Lima", "Tio", null, ContactPurposes.Create(ContactPurpose.Emergency).Value);
+    }
 
     private static CpfNumber Cpf(string digits)
     {
@@ -94,9 +104,10 @@ public class ClientPersistenceTests
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
-        var guardian = ClientGuardian.Create(Guid.NewGuid(), "Ana Souza", "Mãe", null, null).Value;
-        var reference = ClientReferenceContact.Create(Guid.NewGuid(), "Carlos Lima", "Tio", null, ["emergency"]).Value;
-        var client = NewClient(birthDate: new DateOnly(2015, 3, 10), guardians: [guardian], referenceContacts: [reference]);
+        var client = NewClient(
+            birthDate: new DateOnly(2015, 3, 10),
+            guardians: [Guardian()],
+            referenceContacts: [ReferenceContact()]);
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
@@ -104,8 +115,8 @@ public class ClientPersistenceTests
         }
 
         client.TenantId.Should().Be(tenantId);
-        guardian.TenantId.Should().Be(tenantId);
-        reference.TenantId.Should().Be(tenantId);
+        client.Guardians.Should().ContainSingle().Which.TenantId.Should().Be(tenantId);
+        client.ReferenceContacts.Should().ContainSingle().Which.TenantId.Should().Be(tenantId);
         client.CreatedAt.Should().NotBe(default);
 
         await using (var context = CreateContext(databaseName, tenantId))
@@ -118,7 +129,7 @@ public class ClientPersistenceTests
             loaded.Status.Should().Be(ClientStatus.Active);
             loaded.TenantId.Should().Be(tenantId);
             loaded.Guardians.Should().ContainSingle().Which.ClientId.Should().Be(client.Id);
-            loaded.ReferenceContacts.Should().ContainSingle().Which.Purposes.Should().Be(ContactPurpose.Emergency);
+            loaded.ReferenceContacts.Should().ContainSingle().Which.Purposes.Value.Should().Be(ContactPurpose.Emergency);
         }
     }
 
@@ -133,8 +144,7 @@ public class ClientPersistenceTests
             .AddInterceptors(new AuditableEntitySaveChangesInterceptor(currentUserAccessor, tenantProvider, TimeProvider.System))
             .Options;
         await using var context = new ServicesDataContext(options, tenantProvider);
-        var guardian = ClientGuardian.Create(Guid.NewGuid(), "Ana Souza", "Mãe", null, null).Value;
-        context.Clients.Add(NewClient(guardians: [guardian]));
+        context.Clients.Add(NewClient(guardians: [Guardian()]));
 
         var act = async () => await context.SaveChangesAsync();
 
@@ -147,9 +157,7 @@ public class ClientPersistenceTests
         var databaseName = Guid.NewGuid().ToString();
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
-        var guardian = ClientGuardian.Create(Guid.NewGuid(), "Ana Souza", "Mãe", null, null).Value;
-        var reference = ClientReferenceContact.Create(Guid.NewGuid(), "Carlos Lima", "Tio", null, ["emergency"]).Value;
-        var client = NewClient(guardians: [guardian], referenceContacts: [reference]);
+        var client = NewClient(guardians: [Guardian()], referenceContacts: [ReferenceContact()]);
 
         await using (var context = CreateContext(databaseName, tenantA))
         {
@@ -165,15 +173,15 @@ public class ClientPersistenceTests
         {
             (await context.Clients.Select(c => c.FullName).ToListAsync()).Should().Equal(FullName.Create("João Pereira").Value);
             (await context.Clients.AnyAsync(c => c.Id == client.Id)).Should().BeFalse();
-            (await context.ClientGuardians.AnyAsync()).Should().BeFalse();
-            (await context.ClientReferenceContacts.AnyAsync()).Should().BeFalse();
+            (await context.Set<ClientGuardian>().AnyAsync()).Should().BeFalse();
+            (await context.Set<ClientReferenceContact>().AnyAsync()).Should().BeFalse();
         }
 
         await using (var context = CreateContext(databaseName, tenantA))
         {
             (await context.Clients.Select(c => c.FullName).ToListAsync()).Should().Equal(FullName.Create("Maria Souza").Value);
-            (await context.ClientGuardians.CountAsync()).Should().Be(1);
-            (await context.ClientReferenceContacts.CountAsync()).Should().Be(1);
+            (await context.Set<ClientGuardian>().CountAsync()).Should().Be(1);
+            (await context.Set<ClientReferenceContact>().CountAsync()).Should().Be(1);
         }
     }
 

@@ -43,5 +43,10 @@ public sealed record ReferenceContactResponse(
     IReadOnlyList<string> Purposes)
 {
     public static ReferenceContactResponse FromReferenceContact(ClientReferenceContact contact) =>
-        new(contact.Id, contact.Name, contact.Relationship, contact.Phone?.Value, ContactPurposes.ToNames(contact.Purposes));
+        new(
+            contact.Id,
+            contact.Name,
+            contact.Relationship,
+            contact.Phone?.Value,
+            ContactPurposeNames.ToNames(contact.Purposes.Value));
 }

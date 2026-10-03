@@ -11,50 +11,31 @@ public enum ContactPurpose
     DailyCommunication = 4,
 }
 
-public static class ContactPurposes
+public sealed record ContactPurposes
 {
-    private static readonly IReadOnlyList<(string Name, ContactPurpose Purpose)> Catalog =
-    [
-        ("emergency", ContactPurpose.Emergency),
-        ("operationalSupport", ContactPurpose.OperationalSupport),
-        ("dailyCommunication", ContactPurpose.DailyCommunication),
-    ];
-
-    private static IReadOnlyList<string> Names { get; } = Catalog.Select(entry => entry.Name).ToList();
-
-    public static readonly DomainError Unknown = new(
-        "ContactPurposes.Unknown",
-        $"A finalidade deve ser uma das seguintes: {string.Join(", ", Names)}.");
-
     public static readonly DomainError Required = new(
         "ContactPurposes.Required",
         "Informe ao menos uma finalidade de contato.");
 
-    public static DomainResult<ContactPurpose> Parse(IEnumerable<string>? names)
+    public ContactPurpose Value { get; }
+
+    private ContactPurposes(ContactPurpose value)
     {
-        var purposes = ContactPurpose.None;
-
-        foreach (var name in names ?? [])
-        {
-            var match = Catalog.FirstOrDefault(entry =>
-                string.Equals(entry.Name, name?.Trim(), StringComparison.OrdinalIgnoreCase));
-
-            if (match.Name is null)
-            {
-                return DomainResult.Failure<ContactPurpose>(Unknown);
-            }
-
-            purposes |= match.Purpose;
-        }
-
-        if (purposes == ContactPurpose.None)
-        {
-            return DomainResult.Failure<ContactPurpose>(Required);
-        }
-
-        return DomainResult.Success(purposes);
+        Value = value;
     }
 
-    public static IReadOnlyList<string> ToNames(ContactPurpose purposes) =>
-        Catalog.Where(entry => purposes.HasFlag(entry.Purpose)).Select(entry => entry.Name).ToList();
+    public static DomainResult<ContactPurposes> Create(ContactPurpose value)
+    {
+        if (value == ContactPurpose.None)
+        {
+            return DomainResult.Failure<ContactPurposes>(Required);
+        }
+
+        return DomainResult.Success(new ContactPurposes(value));
+    }
+
+    public static ContactPurposes Restore(ContactPurpose value)
+    {
+        return new ContactPurposes(value);
+    }
 }

@@ -10,8 +10,8 @@ public class ClientTests
 
     private static DomainResult<Client> Create(
         DateOnly? birthDate = null,
-        ClientGuardian[]? guardians = null,
-        ClientReferenceContact[]? referenceContacts = null) =>
+        GuardianData[]? guardians = null,
+        ReferenceContactData[]? referenceContacts = null) =>
         Client.Create(
             Guid.NewGuid(),
             ClientTestData.Name(),
@@ -90,22 +90,22 @@ public class ClientTests
     }
 
     [Fact]
-    public void Create_WithMinorBirthDateAndAGuardian_SucceedsAndLinksTheContacts()
+    public void Create_WithMinorBirthDateAndAGuardian_CreatesTheContactsLinkedToTheClient()
     {
-        var guardian = ClientTestData.Guardian();
-        var reference = ClientTestData.ReferenceContact("emergency", "operationalSupport");
-
         var result = Create(
             birthDate: new DateOnly(2015, 3, 10),
-            guardians: [guardian],
-            referenceContacts: [reference]);
+            guardians: [ClientTestData.Guardian()],
+            referenceContacts: [ClientTestData.ReferenceContact(ContactPurpose.Emergency | ContactPurpose.OperationalSupport)]);
 
         result.IsSuccess.Should().BeTrue();
         var client = result.Value;
-        client.Guardians.Should().ContainSingle().Which.Should().BeSameAs(guardian);
-        client.ReferenceContacts.Should().ContainSingle().Which.Should().BeSameAs(reference);
+        var guardian = client.Guardians.Should().ContainSingle().Subject;
+        guardian.Id.Should().NotBe(Guid.Empty);
         guardian.ClientId.Should().Be(client.Id);
+        guardian.Name.Should().Be("Ana Souza");
+        var reference = client.ReferenceContacts.Should().ContainSingle().Subject;
         reference.ClientId.Should().Be(client.Id);
+        reference.Purposes.Value.Should().Be(ContactPurpose.Emergency | ContactPurpose.OperationalSupport);
     }
 
     [Fact]

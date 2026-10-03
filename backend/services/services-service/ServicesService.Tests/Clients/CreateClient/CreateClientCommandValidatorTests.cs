@@ -1,4 +1,5 @@
 using FluentValidation.Results;
+using ServicesService.Application.Clients;
 using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
@@ -12,6 +13,8 @@ public class CreateClientCommandValidatorTests
     private static readonly DomainError GuardianMissing = new("Client.GuardianMissing", "Informe os dados do responsável.");
     private static readonly DomainError ReferenceContactMissing =
         new("Client.ReferenceContactMissing", "Informe os dados da pessoa de referência.");
+    private static readonly DomainError UnknownPurpose =
+        new(ContactPurposeNames.UnknownCode, ContactPurposeNames.UnknownMessage);
 
     private readonly CreateClientCommandValidator _validator = new(Clock);
 
@@ -75,7 +78,7 @@ public class CreateClientCommandValidatorTests
             { "guardian phone", Command(guardians: [Guardian(phone: "x")]), "Guardians[0].Phone", PhoneNumber.Invalid },
             { "guardian cpf", Command(guardians: [Guardian(cpf: "123")]), "Guardians[0].Cpf", CpfNumber.Invalid },
             { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput("Carlos Lima", "Tio", null, [])]), "ReferenceContacts[0].Purposes", ContactPurposes.Required },
-            { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", ContactPurposes.Unknown },
+            { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", UnknownPurpose },
         };
     }
 

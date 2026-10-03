@@ -24,7 +24,8 @@ RuleFor(command => command.Cpf).MustBeValid(CpfNumber.Create);
 ```
 
 The validator keeps what only it can do: name the field (`Cpf`, `Guardians[0].Name`) and collect every problem in one
-answer. Rules of its own are structural only, with no domain counterpart (a `null` item in a list).
+answer. Rules of its own are structural only, with no domain counterpart (a `null` item in a list, a purpose name the
+API does not know).
 
 The use case still builds the aggregate through the same functions (`ToModel`), so the domain remains the last check.
 They are pure and cheap; running them twice is the price of naming the field.

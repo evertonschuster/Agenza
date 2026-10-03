@@ -1,3 +1,4 @@
+using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 
@@ -5,16 +6,29 @@ namespace ServicesService.Tests.Clients;
 
 public class ClientContactTests
 {
-    [Fact]
-    public void Guardian_Create_WithRequiredFieldsOnly_StoresNullOptionals()
+    private static DomainResult<Client> CreateClient(
+        GuardianData[]? guardians = null,
+        ReferenceContactData[]? referenceContacts = null)
     {
-        var id = Guid.NewGuid();
+        return Client.Create(
+            Guid.NewGuid(),
+            ClientTestData.Name(),
+            null,
+            null,
+            null,
+            null,
+            null,
+            ClientTestData.Today,
+            guardians ?? [],
+            referenceContacts ?? []);
+    }
 
-        var result = ClientGuardian.Create(id, "  Ana Souza ", " Mãe  ", null, null);
+    [Fact]
+    public void Guardian_WithRequiredFieldsOnly_IsTrimmedAndKeepsNullOptionals()
+    {
+        var client = CreateClient(guardians: [new GuardianData("  Ana Souza ", " Mãe  ", null, null)]).Value;
 
-        result.IsSuccess.Should().BeTrue();
-        var guardian = result.Value;
-        guardian.Id.Should().Be(id);
+        var guardian = client.Guardians.Should().ContainSingle().Subject;
         guardian.TenantId.Should().Be(Guid.Empty);
         guardian.Name.Should().Be("Ana Souza");
         guardian.Relationship.Should().Be("Mãe");
@@ -23,11 +37,12 @@ public class ClientContactTests
     }
 
     [Fact]
-    public void Guardian_Create_KeepsThePhoneAndCpf()
+    public void Guardian_KeepsThePhoneAndCpf()
     {
-        var guardian = ClientGuardian.Create(
-            Guid.NewGuid(), "Ana Souza", "Mãe", ClientTestData.Phone(), ClientTestData.Cpf()).Value;
+        var client = CreateClient(
+            guardians: [new GuardianData("Ana Souza", "Mãe", ClientTestData.Phone(), ClientTestData.Cpf())]).Value;
 
+        var guardian = client.Guardians.Should().ContainSingle().Subject;
         guardian.Phone.Should().Be(ClientTestData.Phone());
         guardian.Cpf.Should().Be(ClientTestData.Cpf());
     }
@@ -38,63 +53,53 @@ public class ClientContactTests
     [InlineData("A", "Mãe", "ClientContact.InvalidNameLength")]
     [InlineData("Ana Souza", "", "ClientContact.RelationshipRequired")]
     [InlineData("Ana Souza", "   ", "ClientContact.RelationshipRequired")]
-    public void Guardian_Create_WithoutNameOrRelationship_Fails(string name, string relationship, string expectedCode)
+    public void Guardian_WithoutNameOrRelationship_FailsTheClient(string name, string relationship, string expectedCode)
     {
-        var result = ClientGuardian.Create(Guid.NewGuid(), name, relationship, null, null);
+        var result = CreateClient(guardians: [new GuardianData(name, relationship, null, null)]);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be(expectedCode);
     }
 
     [Fact]
-    public void Guardian_Create_EnforcesTheLengthLimits()
+    public void ValidateName_EnforcesTheLengthLimits()
     {
-        ClientGuardian.Create(Guid.NewGuid(), new string('a', ClientContact.NameMaxLength), "Mãe", null, null)
-            .IsSuccess.Should().BeTrue();
-        ClientGuardian.Create(Guid.NewGuid(), new string('a', ClientContact.NameMaxLength + 1), "Mãe", null, null)
-            .IsFailure.Should().BeTrue();
-        ClientGuardian.Create(Guid.NewGuid(), "Ana", new string('a', ClientContact.RelationshipMaxLength), null, null)
-            .IsSuccess.Should().BeTrue();
-        ClientGuardian.Create(Guid.NewGuid(), "Ana", new string('a', ClientContact.RelationshipMaxLength + 1), null, null)
-            .IsFailure.Should().BeTrue();
+        ClientContact.ValidateName(new string('a', ClientContact.NameMaxLength)).IsSuccess.Should().BeTrue();
+        ClientContact.ValidateName(new string('a', ClientContact.NameMaxLength + 1)).IsFailure.Should().BeTrue();
     }
 
     [Fact]
-    public void ReferenceContact_Create_StoresThePurposesAsFlags()
+    public void ValidateRelationship_EnforcesTheLengthLimit()
     {
-        var result = ClientReferenceContact.Create(
-            Guid.NewGuid(), " Carlos Lima ", " Tio ", ClientTestData.Phone("11 4000-1000"), ["emergency", "dailyCommunication"]);
+        ClientContact.ValidateRelationship(new string('a', ClientContact.RelationshipMaxLength)).IsSuccess.Should().BeTrue();
+        ClientContact.ValidateRelationship(new string('a', ClientContact.RelationshipMaxLength + 1)).IsFailure.Should().BeTrue();
+    }
 
-        result.IsSuccess.Should().BeTrue();
-        var contact = result.Value;
+    [Fact]
+    public void ReferenceContact_KeepsItsPurposes()
+    {
+        var purposes = ContactPurposes.Create(ContactPurpose.Emergency | ContactPurpose.DailyCommunication).Value;
+
+        var client = CreateClient(referenceContacts:
+        [
+            new ReferenceContactData(" Carlos Lima ", " Tio ", ClientTestData.Phone("11 4000-1000"), purposes),
+        ]).Value;
+
+        var contact = client.ReferenceContacts.Should().ContainSingle().Subject;
         contact.Name.Should().Be("Carlos Lima");
         contact.Relationship.Should().Be("Tio");
         contact.Phone!.Value.Should().Be("11 4000-1000");
-        contact.Purposes.Should().Be(ContactPurpose.Emergency | ContactPurpose.DailyCommunication);
-    }
-
-    [Fact]
-    public void ReferenceContact_Create_WithoutAnyPurpose_Fails()
-    {
-        var result = ClientReferenceContact.Create(Guid.NewGuid(), "Carlos Lima", "Tio", null, []);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Message.Should().Contain("finalidade");
-    }
-
-    [Fact]
-    public void ReferenceContact_Create_WithAnUnknownPurpose_Fails()
-    {
-        ClientReferenceContact.Create(Guid.NewGuid(), "Carlos Lima", "Tio", null, ["billing"])
-            .IsFailure.Should().BeTrue();
+        contact.Purposes.Should().Be(purposes);
     }
 
     [Theory]
     [InlineData("", "Tio")]
     [InlineData("Carlos Lima", "")]
-    public void ReferenceContact_Create_WithoutNameOrRelationship_Fails(string name, string relationship)
+    public void ReferenceContact_WithoutNameOrRelationship_FailsTheClient(string name, string relationship)
     {
-        ClientReferenceContact.Create(Guid.NewGuid(), name, relationship, null, ["emergency"])
+        var purposes = ContactPurposes.Create(ContactPurpose.Emergency).Value;
+
+        CreateClient(referenceContacts: [new ReferenceContactData(name, relationship, null, purposes)])
             .IsFailure.Should().BeTrue();
     }
 }
