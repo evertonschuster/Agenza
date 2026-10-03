@@ -24,9 +24,6 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.Property(c => c.AdministrativeNotes).HasMaxLength(Client.AdministrativeNotesMaxLength);
         builder.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
 
-        builder.Property<string>("FullNameNormalized").HasComputedColumnSql("lower(\"FullName\")", stored: true);
-        builder.HasIndex("TenantId", "FullNameNormalized", nameof(Client.Id));
-
         // CPF is never reused, so its index has no situation filter; e-mail only collides among live active
         // clients. The database decides concurrent writes (docs/adr/0044).
         builder.HasIndex(c => new { c.TenantId, c.Cpf })

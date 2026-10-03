@@ -158,6 +158,19 @@ public class CreateClientCommandValidatorTests
     }
 
     [Fact]
+    public async Task Validate_WithNullContactItems_ReportsEachItem()
+    {
+        var result = await Validate(Command(
+            birthDate: new DateOnly(2015, 3, 10),
+            guardians: [null!],
+            referenceContacts: [Reference(), null!]));
+
+        MessagesFor(result, "Guardians[0]").Should().Equal("Informe os dados do responsável.");
+        MessagesFor(result, "ReferenceContacts[1]").Should().Equal("Informe os dados da pessoa de referência.");
+        MessagesFor(result, "ReferenceContacts[0]").Should().BeEmpty();
+    }
+
+    [Fact]
     public async Task Validate_UsesTheBusinessDayToDecideWhoIsAMinor()
     {
         var lateEvening = new CreateClientCommandValidator(

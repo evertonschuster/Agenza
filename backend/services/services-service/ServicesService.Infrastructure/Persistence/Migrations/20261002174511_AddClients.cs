@@ -24,7 +24,6 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                     Cpf = table.Column<string>(type: "character varying(11)", maxLength: 11, nullable: true),
                     AdministrativeNotes = table.Column<string>(type: "character varying(500)", maxLength: 500, nullable: true),
                     Status = table.Column<string>(type: "character varying(16)", maxLength: 16, nullable: false),
-                    FullNameNormalized = table.Column<string>(type: "text", nullable: true, computedColumnSql: "lower(\"FullName\")", stored: true),
                     CreatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: false),
                     CreatedBy = table.Column<Guid>(type: "uuid", nullable: true),
                     UpdatedAt = table.Column<DateTimeOffset>(type: "timestamp with time zone", nullable: true),
@@ -166,12 +165,6 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                 columns: new[] { "TenantId", "Email" },
                 unique: true,
                 filter: "\"Email\" IS NOT NULL AND \"Status\" = 'Active' AND \"DeletedAt\" IS NULL");
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Clients_TenantId_FullNameNormalized_Id",
-                schema: "services",
-                table: "Clients",
-                columns: new[] { "TenantId", "FullNameNormalized", "Id" });
         }
 
         /// <inheritdoc />

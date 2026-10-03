@@ -51,13 +51,17 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
             .When(command => command.BirthDate is { } birthDate
                 && BirthDateRules.IsMinorOn(birthDate, timeProvider.GetBusinessToday()));
 
-        RuleForEach(command => command.Guardians).SetValidator(new GuardianInputValidator());
+        RuleForEach(command => command.Guardians)
+            .NotNull().WithMessage("Informe os dados do responsável.")
+            .SetValidator(new GuardianInputValidator());
 
         RuleFor(command => command.ReferenceContacts)
             .Must(contacts => contacts is null || contacts.Count <= Client.MaxReferenceContacts)
             .WithMessage($"Informe no máximo {Client.MaxReferenceContacts} pessoas de referência.");
 
-        RuleForEach(command => command.ReferenceContacts).SetValidator(new ReferenceContactInputValidator());
+        RuleForEach(command => command.ReferenceContacts)
+            .NotNull().WithMessage("Informe os dados da pessoa de referência.")
+            .SetValidator(new ReferenceContactInputValidator());
     }
 }
 

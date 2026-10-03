@@ -5,9 +5,9 @@ Status: accepted (2026-10)
 ## Context
 
 Issue #139 introduces the "pessoa atendida" (served person, `Client` in code, `/api/v1/clients`, the
-**Pessoas** area in the UI). #154 is the first slice of that work: it creates the persisted model and the
-contract that #155 (query), #156 (update), #157 (deactivate), #158 (reactivate) and #159 (delete) build on.
-The rules that shape the model are stricter than anything Tags, Categories or Services needed:
+**Pessoas** area in the UI). #154 is the first slice of that work: it creates the persisted model and the creation
+contract. Query, editing, situation changes and deletion are out of its scope (#155–#159). The rules that shape
+the model are stricter than anything Tags, Categories or Services needed:
 
 - CPF is unique per tenant across **every** situation — active, inactive and deleted — and must never be
   reused; e-mail is unique only among **active** persons of the tenant. Both must hold under concurrent
@@ -28,14 +28,11 @@ insists they are separate records. Children reference the root through the compo
 `SaveChanges` is one transaction, so a failure leaves no partial person.
 
 **Situation.** `ClientStatus { Active, Inactive, Deleted }`, stored as text with a `CHECK`. Creation sets `Active`;
-the transitions belong to #157–#159. A person that becomes `Deleted` must **also** be soft-deleted through the
-existing `BaseEntity` mechanism (`Remove` → `DeletedAt`), because the global query filter is what makes a deleted
-record invisible — and answer 404 — in every read path by default. The e-mail index ignores a row that is either
-not `Active` or soft-deleted, so it stays correct whichever of the two a future operation sets.
+no transition exists yet. `Client` also inherits `BaseEntity`'s soft delete (`DeletedAt`), so the e-mail index
+ignores a row that is either not `Active` or soft-deleted.
 
 **Normalized storage.** The domain stores CPF as 11 digits, e-mail trimmed and lowercase, and phone trimmed, so the
-unique indexes compare plain stored values (no generated column for them). `FullNameNormalized` (`lower("FullName")`,
-the convention of ADR 0012) exists for #155's stable ordering.
+unique indexes compare plain stored values (no generated column for them).
 
 **Uniqueness.**
 
@@ -58,8 +55,7 @@ soft-deleted. A new read path must not copy it.
 validation keys), so a form can show each under its input. `FieldError` gained an optional `Meta` string map
 (omitted from the JSON when null, so no existing response changes). The CPF conflict puts `clientId` there — and
 only when the existing person is not deleted, since a deleted record cannot be opened; the message already tells the
-user why. A client reads it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`); the id is the one
-`GET /api/v1/clients/{id}` will serve once #155 lands.
+user why. A client reads it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`).
 
 **Validation layers.** Per-field pt-BR messages come from FluentValidation (the only place that can name the field);
 the domain re-checks the same invariants and its messages are not meant to reach the user. List sizes are capped
@@ -78,16 +74,8 @@ is ignored by the binder (tested at the DTO and verified against the running API
 
 ## Consequences
 
-What #155–#159 can rely on:
-
-- Read paths go through `ServicesDataContext`'s filter: deleted persons never appear and unknown ids answer 404 with no
-  extra predicate. Only the CPF lookup bypasses it.
 - Wire shape: camelCase English fields; `status` is `active | inactive | deleted`; dates are `yyyy-MM-dd`; CPF is
-  returned as digits (masking lists is #155's job).
-- Deleting must go through `Remove` (soft delete) **and** set `Status = Deleted`; reactivating must re-check the e-mail
-  rule with `ActiveEmailExistsAsync` (it will need an exclusion for the person itself, which Create does not).
-- `Client.Create`/`ClientGuardian.Create` are the factories to extend with `Update` for #156; the contact-id rules
-  are theirs to add.
+  returned as digits.
 - This change is deliverable on its own: it commits the regenerated OpenAPI types
   (`apps/admin-frontend/src/shared/api/generated/services-api.d.ts`) because `generate:api-types:check` compares them
   with the live document, and it adds no consumer. The admin-frontend form is a separate change that depends on it.
@@ -102,11 +90,9 @@ tests cover the EF side (tenant assignment across the graph, isolation, the filt
 
 - **One contacts table with a discriminator** — nullable columns that only apply to one kind, and a purposes column
   that is meaningless for guardians.
-- **Deletion as a status only (no `DeletedAt`)** — every read path would need its own `Status <> Deleted` predicate;
-  one forgotten predicate exposes deleted people. The soft-delete filter is already the default everywhere.
 - **Named query filters / changing `ApplyAuditableConventions` to split tenant from soft delete** — would remove the
   hand-written tenant predicate, but touches the highest-consequence mechanism ([ADR 0006](0006-tenant-header-base-entity-generic-repository.md))
   for one lookup.
 - **The existing id as a top-level problem extension** — not visible in the generated OpenAPI schema, so untyped.
-- **Sending the user to a CPF search instead of the record** — an extra step, and it depends on #155's search.
+- **Sending the user to a CPF search instead of the record** — an extra step, and no such search exists yet.
 - **JSON enums for purposes and status** — see the validation note above.

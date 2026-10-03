@@ -132,11 +132,6 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .HasMaxLength(150)
                         .HasColumnType("character varying(150)");
 
-                    b.Property<string>("FullNameNormalized")
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("text")
-                        .HasComputedColumnSql("lower(\"FullName\")", true);
-
                     b.Property<string>("Phone")
                         .HasMaxLength(20)
                         .HasColumnType("character varying(20)");
@@ -168,8 +163,6 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                     b.HasIndex("TenantId", "Email")
                         .IsUnique()
                         .HasFilter("\"Email\" IS NOT NULL AND \"Status\" = 'Active' AND \"DeletedAt\" IS NULL");
-
-                    b.HasIndex("TenantId", "FullNameNormalized", "Id");
 
                     b.ToTable("Clients", "services", t =>
                         {
