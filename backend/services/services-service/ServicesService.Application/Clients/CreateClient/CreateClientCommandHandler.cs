@@ -95,7 +95,8 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
 
         return FieldConflict("Email", new FieldError(
             "Client.DuplicateEmail",
-            "Já existe uma pessoa ativa cadastrada com este e-mail."));
+            "Já existe uma pessoa ativa cadastrada com este e-mail.",
+            new Dictionary<string, string> { ["clientId"] = activeClientWithSameEmail.Id.ToString() }));
     }
 
     private static Error FieldConflict(string field, FieldError fieldError)

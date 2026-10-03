@@ -210,16 +210,19 @@ public class CreateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithEmailOfAnActiveClient_ReturnsAConflictOnTheEmailField()
+    public async Task Handle_WithEmailOfAnActiveClient_ReturnsAConflictPointingAtIt()
     {
+        var existing = ClientTestData.ExistingClient();
         _repository.FindActiveByEmailAsync("maria@example.com", Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
+            .Returns(Task.FromResult<Client?>(existing));
 
         var result = await Handler().Handle(Command(email: "Maria@Example.com"), CancellationToken.None);
 
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Client.DuplicateEmail");
         result.Error.FieldErrors!.Keys.Should().Equal("Email");
+        result.Error.FieldErrors["Email"][0].Meta.Should().ContainKey("clientId")
+            .WhoseValue.Should().Be(existing.Id.ToString());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
     }
 

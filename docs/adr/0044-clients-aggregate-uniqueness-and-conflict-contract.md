@@ -56,7 +56,8 @@ soft-deleted. A new read path must not copy it.
 validation keys), so a form can show each under its input. `FieldError` gained an optional `Meta` string map
 (omitted from the JSON when null, so no existing response changes). The CPF conflict puts `clientId` there — and
 only when the existing person is not deleted, since a deleted record cannot be opened; the message already tells the
-user why. A client reads it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`).
+user why. The e-mail conflict carries `clientId` too, always, since only active persons match it. A client reads
+it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`, `errors.Email[0].meta.clientId`).
 
 **Validation layers.** Per-field pt-BR messages come from FluentValidation (the only place that can name the field);
 the domain re-checks the same invariants and its messages are not meant to reach the user. List sizes are capped

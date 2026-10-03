@@ -128,8 +128,9 @@ de formulário: é o mesmo formato reaproveitado para carregar um erro sem campo
 **Conflito por campo, com `meta`** — um handler pode devolver o `Conflict` já chaveado pelo campo (em vez da
 chave `""`), para o formulário mostrar a mensagem sob o input certo. Cada entrada de `errors` aceita um `meta`
 opcional (mapa string→string, **omitido quando nulo**, então nenhuma resposta anterior muda) com contexto para
-máquina. O conflito de CPF de `POST /api/v1/clients` coloca ali o `clientId` do cadastro existente, e só quando
-ele não está excluído (um cadastro excluído não pode ser aberto; a mensagem explica o motivo). `code` no nível
+máquina. Os conflitos de CPF e de e-mail de `POST /api/v1/clients` colocam ali o `clientId` do cadastro existente;
+o de CPF só quando ele não está excluído (um cadastro excluído não pode ser aberto; a mensagem explica o motivo).
+O de e-mail sempre traz o id, porque só considera pessoas ativas. `code` no nível
 raiz é o do primeiro campo em conflito; CPF e e-mail em conflito juntos chegam juntos em `errors`. No backend,
 cada verificação devolve o seu `Error` e `Error.Combine(...)` (`Admin.SharedKernel`) junta todos nessa forma: o
 `code`, a mensagem e o tipo vêm do primeiro, e os `errors` de todos são mesclados por campo.
@@ -224,7 +225,7 @@ exatamente um `201` e os demais `409`.
 | Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`Page`: `GreaterThanOrEqualValidator`) |
 | Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`PageSize`: `InclusiveBetweenValidator`) |
 | CPF já cadastrado (qualquer situação) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.Cpf[0].meta.clientId`) |
-| E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.Email`) |
+| E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.Email[0].meta.clientId`) |
 | Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`Guardians`: `PredicateValidator`) |
 | Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`Guardians[0].Name`, `Guardians[0].Cpf`, `ReferenceContacts[0].Purposes`…) |
 | `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (forma §4.3, inglês, sem `code`) | — |
