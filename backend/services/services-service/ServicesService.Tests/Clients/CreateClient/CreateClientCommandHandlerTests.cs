@@ -189,7 +189,11 @@ public class CreateClientCommandHandlerTests
         var fieldError = result.Error.FieldErrors!["Cpf"].Should().ContainSingle().Subject;
         fieldError.Code.Should().Be("Client.DuplicateCpf");
         fieldError.Message.Should().Be("Já existe uma pessoa cadastrada com este CPF.");
-        fieldError.Meta.Should().ContainKey("clientId").WhoseValue.Should().Be(existing.Id.ToString());
+        fieldError.Meta.Should().BeEquivalentTo(new Dictionary<string, string>
+        {
+            ["clientId"] = existing.Id.ToString(),
+            ["clientName"] = "Paula Rocha",
+        });
         _repository.DidNotReceive().Add(Arg.Any<Client>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -222,8 +226,11 @@ public class CreateClientCommandHandlerTests
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Client.DuplicateEmail");
         result.Error.FieldErrors!.Keys.Should().Equal("Email");
-        result.Error.FieldErrors["Email"][0].Meta.Should().ContainKey("clientId")
-            .WhoseValue.Should().Be(existing.Id.ToString());
+        result.Error.FieldErrors["Email"][0].Meta.Should().BeEquivalentTo(new Dictionary<string, string>
+        {
+            ["clientId"] = existing.Id.ToString(),
+            ["clientName"] = "Paula Rocha",
+        });
         _repository.DidNotReceive().Add(Arg.Any<Client>());
     }
 

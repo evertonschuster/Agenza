@@ -132,7 +132,7 @@ de formulário: é o mesmo formato reaproveitado para carregar um erro sem campo
 **Conflito por campo, com `meta`** — um handler pode devolver o `Conflict` já chaveado pelo campo (em vez da
 chave `""`), para o formulário mostrar a mensagem sob o input certo. Cada entrada de `errors` aceita um `meta`
 opcional (mapa string→string, **omitido quando nulo**, então nenhuma resposta anterior muda) com contexto para
-máquina. Os conflitos de CPF e de e-mail de `POST /api/v1/clients` colocam ali o `clientId` do cadastro existente;
+máquina. Os conflitos de CPF e de e-mail de `POST /api/v1/clients` colocam ali o `clientId` e o `clientName` do cadastro existente;
 o de CPF só quando ele não está excluído (um cadastro excluído não pode ser aberto; a mensagem explica o motivo).
 O de e-mail sempre traz o id, porque só considera pessoas ativas. `code` no nível
 raiz é o do primeiro campo em conflito; CPF e e-mail em conflito juntos chegam juntos em `errors`. No backend,
@@ -141,7 +141,7 @@ mesmo `code` e mensagem no topo e no campo. Cada verificação devolve o seu `Er
 nessa forma: o `code`, a mensagem e o tipo vêm do primeiro, e os `errors` de todos são mesclados por campo.
 
 ```json
-{"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"Cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478"}}]}}
+{"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"Cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478","clientName":"Maria Souza"}}]}}
 ```
 
 ### 4.2 Forma reduzida do filtro de tenant

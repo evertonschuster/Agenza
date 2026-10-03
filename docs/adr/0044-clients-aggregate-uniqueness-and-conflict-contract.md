@@ -71,9 +71,9 @@ soft-deleted. A new read path must not copy it.
 
 **Conflict contract.** A duplicate answers `409` with the errors keyed by field (`Cpf`, `Email`, PascalCase like
 validation keys), so a form can show each under its input. `FieldError` gained an optional `Meta` string map
-(omitted from the JSON when null, so no existing response changes). The CPF conflict puts `clientId` there — and
+(omitted from the JSON when null, so no existing response changes). The CPF conflict puts `clientId` and `clientName` (so the UI can say whose record it is) there — and
 only when the existing person is not deleted, since a deleted record cannot be opened; the message already tells the
-user why. The e-mail conflict carries `clientId` too, always, since only active persons match it. A client reads
+user why. The e-mail conflict carries both too, always, since only active persons match it. A client reads
 it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`, `errors.Email[0].meta.clientId`).
 
 **Validation layers.** Per-field pt-BR messages come from FluentValidation (the only place that can name the field);

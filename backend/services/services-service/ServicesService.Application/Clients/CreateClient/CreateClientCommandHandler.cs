@@ -68,7 +68,7 @@ public sealed class CreateClientCommandHandler(
             "Client.DuplicateCpf",
             "Já existe uma pessoa cadastrada com este CPF.",
             field: "Cpf",
-            meta: new Dictionary<string, string> { ["clientId"] = clientWithSameCpf.Id.ToString() });
+            meta: ExistingClientMeta(clientWithSameCpf));
     }
 
     private async Task<Error?> FindEmailConflictAsync(Client client, CancellationToken cancellationToken)
@@ -88,6 +88,15 @@ public sealed class CreateClientCommandHandler(
             "Client.DuplicateEmail",
             "Já existe uma pessoa ativa cadastrada com este e-mail.",
             field: "Email",
-            meta: new Dictionary<string, string> { ["clientId"] = activeClientWithSameEmail.Id.ToString() });
+            meta: ExistingClientMeta(activeClientWithSameEmail));
+    }
+
+    private static Dictionary<string, string> ExistingClientMeta(Client existing)
+    {
+        return new Dictionary<string, string>
+        {
+            ["clientId"] = existing.Id.ToString(),
+            ["clientName"] = existing.FullName.Value,
+        };
     }
 }
