@@ -11,7 +11,7 @@ namespace ServicesService.Infrastructure.Repositories;
 public class ClientRepository : RepositoryBase<Client>, IClientRepository
 {
     private static readonly Expression<Func<Client, ClientMatch>> ToMatch =
-        client => new ClientMatch(client.Id, client.FullName, client.DeletedAt != null);
+        client => new ClientMatch(client.Id, client.FullName);
 
     public ClientRepository(ServicesDataContext dbContext)
         : base(dbContext)
@@ -20,7 +20,7 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
 
     public Task<ClientMatch?> FindByCpfAsync(CpfNumber cpf, CancellationToken cancellationToken)
     {
-        return SetIncludingDeleted
+        return Set
             .Where(c => c.Cpf == cpf)
             .Select(ToMatch)
             .FirstOrDefaultAsync(cancellationToken);

@@ -9,10 +9,10 @@ Issue #139 introduces the "pessoa atendida" (served person, `Client` in code, `/
 contract. Query, editing, situation changes and deletion are out of its scope (#155–#159). The rules that shape
 the model are stricter than anything Tags, Categories or Services needed:
 
-- CPF is unique per tenant across **every** situation — active, inactive and deleted — and must never be
-  reused; e-mail is unique only among **active** persons of the tenant. Both must hold under concurrent
-  writes ([ADR 0012](0012-revert-cross-aggregate-checks-to-handlers-and-domain.md) already says the database,
-  not a pre-check, is the final authority).
+- CPF is unique per tenant among persons that are not deleted, active or inactive: deleting a person frees the CPF for
+  a new registration, inactivating does not. E-mail is unique only among **active** persons of the tenant. Both must
+  hold under concurrent writes ([ADR 0012](0012-revert-cross-aggregate-checks-to-handlers-and-domain.md) already says
+  the database, not a pre-check, is the final authority).
 - A person owns two kinds of linked contacts (guardians and reference contacts) that are not persons
   themselves, and the person and its contacts must be written atomically.
 - A birth date that indicates a minor requires a guardian, on the backend and in the form.
@@ -32,7 +32,8 @@ insists they are separate records. Children reference the root through the compo
 yet. Deleted is **only** `BaseEntity`'s soft delete (`Remove` → `DeletedAt`): the global query filter already hides a
 deleted row from every read path, and a deleted id answers 404 with no extra predicate, which is what #155 and #159
 ask for. There is no `Deleted` status, so "deleted" has a single source of truth and a status that says deleted while
-the row stays visible cannot exist. The e-mail index ignores a row that is either not `Active` or soft-deleted.
+the row stays visible cannot exist. Both unique indexes ignore a soft-deleted row; the e-mail one also ignores a row
+that is not `Active`.
 
 **Normalized storage.** The domain stores CPF as 11 digits, e-mail trimmed and lowercase, and phone trimmed, so the
 unique indexes compare plain stored values (no generated column for them).
@@ -60,34 +61,31 @@ The cost: a query cannot reach into `.Value` (it is not translatable through a c
 
 | Rule | Index (all `UNIQUE`, tenant-scoped) |
 | --- | --- |
-| CPF, any situation | `IX_Clients_TenantId_Cpf` on `(TenantId, Cpf) WHERE Cpf IS NOT NULL` |
+| CPF, active or inactive persons | `IX_Clients_TenantId_Cpf` on `(TenantId, Cpf) WHERE Cpf IS NOT NULL AND DeletedAt IS NULL` |
 | E-mail, active persons | `IX_Clients_TenantId_Email` on `(TenantId, Email) WHERE Email IS NOT NULL AND Status = 'Active' AND DeletedAt IS NULL` |
 
 A guardian's CPF is deliberately not constrained. The handler pre-checks both rules for the per-field answer through a
-projection (`ClientMatch`: id, name, deleted), not the aggregate; the indexes are what actually guarantees uniqueness.
-Two creates racing past the pre-check are practically impossible for
-this product, so that case gets no special handling: any failed save answers a generic `409 Client.SaveFailed`
-("Não foi possível salvar a pessoa. Tente novamente."), without field errors and without claiming a duplicate. Today
-the only save failure the unit of work returns as a value is a unique-index violation, but the handler does not rely on
-that; a retry goes through the pre-check again and gets the specific per-field answer.
-
-**Reading soft-deleted rows.** `ClientRepository.FindByCpfAsync` must also see soft-deleted persons. It ignores only the
-soft-delete filter (`RepositoryBase.SetIncludingDeleted`); the tenant filter stays on, so the read is scoped by the same
-mechanism as every other one ([ADR 0046](0046-separate-soft-delete-and-tenant-query-filters.md)). Persistence tests put
-the same CPF in two tenants, one of them soft-deleted.
+projection (`ClientMatch`: id and name), not the aggregate, with the default query filters, so a deleted person never
+matches ([ADR 0046](0046-separate-soft-delete-and-tenant-query-filters.md)); the indexes are what actually guarantees
+uniqueness. Two creates racing past the pre-check are practically impossible for this product, so that case gets no
+special handling: any failed save answers a generic `409 Client.SaveFailed` ("Não foi possível salvar a pessoa. Tente
+novamente."), without field errors and without claiming a duplicate, whatever the database rejected
+([ADR 0048](0048-database-failures-are-generic-to-the-user.md)); the kind and constraint go to the log. A retry goes
+through the pre-check again and gets the specific per-field answer.
 
 **Conflict contract.** A duplicate answers `409` with the errors keyed by field (`Cpf`, `Email`, PascalCase like
 validation keys), so a form can show each under its input. `FieldError` gained an optional `Meta` string map
-(omitted from the JSON when null, so no existing response changes). The CPF conflict puts `clientId` and `clientName` (so the UI can say whose record it is) there — and
-only when the existing person is not deleted, since a deleted record cannot be opened; the message already tells the
-user why. The e-mail conflict carries both too, always, since only active persons match it. A client reads
-it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`, `errors.Email[0].meta.clientId`).
+(omitted from the JSON when null, so no existing response changes). Both conflicts put `clientId` and `clientName`
+there, so the UI can open the record and say whose it is; neither matches a deleted person, so the record can always be
+opened. One conflict at a time: CPF is checked first, and the e-mail answer only comes once the CPF is free. A client
+reads it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`, `errors.Email[0].meta.clientId`).
 
 **Validation layers.** Each rule and its pt-BR message live in the domain; FluentValidation runs it and names the
 field ([ADR 0047](0047-validation-rules-live-in-the-domain.md)), and the use case runs it again when it builds the
 aggregate. List sizes are capped
 (10 guardians, 10 reference contacts) because the issue sets no bound and an unbounded array in a body is an abuse
-vector. Reference-contact purposes are strings (`emergency`, `operationalSupport`, `dailyCommunication`) validated
+vector: items of a list over the cap are not validated one by one, and the endpoint reads at most 64 KB of body
+(`[RequestSizeLimit]`), above which it answers `413 Request.TooLarge`. Reference-contact purposes are strings (`emergency`, `operationalSupport`, `dailyCommunication`) validated
 like `TagColor`, not a JSON enum: a bad enum value fails in the framework's binder with an English message and no code.
 
 **"Today".** The minor rule needs a calendar day, and it is the UTC date ([ADR 0045](0045-backend-works-in-utc.md)).
@@ -111,8 +109,8 @@ Accepted costs and limits: the Postgres-only guarantees (unique indexes, composi
 automated proof, per [ADR 0026](0026-remove-dedicated-runtime-tests.md). They were exercised by hand against a
 disposable PostgreSQL 18 with the real services and a real login — 8 and 10 parallel creates yielded exactly one
 `201` and no orphan contacts, and the schema rules were driven with SQL in a rolled-back transaction. Persistence
-tests cover the EF side (tenant assignment across the graph, isolation, reading soft-deleted rows inside the tenant,
-restoring stored values and the index definitions).
+tests cover the EF side (tenant assignment across the graph, isolation, a deleted person's CPF not matching, restoring
+stored values and the index definitions).
 
 ## Considered and rejected
 
@@ -121,9 +119,13 @@ restoring stored values and the index definitions).
   Deleted`), and a deleted status alone would not hide the row from any query.
 - **One contacts table with a discriminator** — nullable columns that only apply to one kind, and a purposes column
   that is meaningless for guardians.
-- **`IgnoreQueryFilters()` with the tenant re-applied by hand** — the first version of the CPF lookup; replaced before
-  merge by named filters ([ADR 0046](0046-separate-soft-delete-and-tenant-query-filters.md)), so no read depends on
-  remembering the tenant.
+- **CPF reserved forever, deleted persons included** — the issue's first wording and the first version of this change;
+  changed before merge by product decision: deleting a person frees the CPF, inactivating does not.
+- **`IgnoreQueryFilters()` with the tenant re-applied by hand** — how the first version of the CPF lookup saw deleted
+  persons; dropped before merge together with the rule that needed it, so no read depends on remembering the tenant
+  ([ADR 0046](0046-separate-soft-delete-and-tenant-query-filters.md)).
+- **Every conflict in one answer** (`Error.Combine` in the shared kernel) — removed before merge: a general-purpose merge
+  in a kernel every service shares, for one call site.
 - **Value objects re-validated when EF reads them** (`Create(value).Value` in `HasConversion`) — replaced before merge
   by `Restore`: a stored value that failed a later rule threw on every read of its row.
 - **The aggregate as the result of the uniqueness lookups** — replaced before merge by `ClientMatch`: it returned a

@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Domain.Entities;
@@ -12,6 +13,7 @@ public class CreateClientCommandHandlerTests
 
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
+    private readonly ILogger<CreateClientCommandHandler> _logger = Substitute.For<ILogger<CreateClientCommandHandler>>();
 
     public CreateClientCommandHandlerTests()
     {
@@ -23,7 +25,7 @@ public class CreateClientCommandHandlerTests
     }
 
     private CreateClientCommandHandler Handler(DateTimeOffset? utcNow = null) =>
-        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc));
+        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc), _logger);
 
     private static CreateClientCommand Command(
         string fullName = "Maria Souza",
@@ -199,21 +201,6 @@ public class CreateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithCpfOfADeletedClient_ReturnsAConflictWithoutALinkToIt()
-    {
-        var deleted = ClientTestData.ExistingClient() with { IsDeleted = true };
-        _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientMatch?>(deleted));
-
-        var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
-
-        result.Error.Type.Should().Be(ErrorType.Conflict);
-        var fieldError = result.Error.FieldErrors!["Cpf"].Should().ContainSingle().Subject;
-        fieldError.Message.Should().Contain("excluído");
-        fieldError.Meta.Should().BeNull();
-    }
-
-    [Fact]
     public async Task Handle_WithEmailOfAnActiveClient_ReturnsAConflictPointingAtIt()
     {
         var existing = ClientTestData.ExistingClient();
@@ -234,7 +221,7 @@ public class CreateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithBothConflicts_ReportsEveryField()
+    public async Task Handle_WithBothConflicts_ReportsTheCpfOnly()
     {
         _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<ClientMatch?>(ClientTestData.ExistingClient()));
@@ -246,7 +233,8 @@ public class CreateClientCommandHandlerTests
             CancellationToken.None);
 
         result.Error.Code.Should().Be("Client.DuplicateCpf");
-        result.Error.FieldErrors!.Keys.Should().Equal("Cpf", "Email");
+        result.Error.FieldErrors!.Keys.Should().Equal("Cpf");
+        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

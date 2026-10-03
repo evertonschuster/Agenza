@@ -26,7 +26,8 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
             .NotNull()
             .WithErrorCode("Client.GuardianMissing")
             .WithMessage("Informe os dados do responsável.")
-            .SetValidator(new GuardianInputValidator());
+            .SetValidator(new GuardianInputValidator())
+            .When(command => command.Guardians is null || command.Guardians.Count <= Client.MaxGuardians);
 
         RuleFor(command => command.ReferenceContacts)
             .MustBeValid(contacts => Client.ValidateReferenceContacts(contacts?.Count ?? 0));
@@ -35,7 +36,9 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
             .NotNull()
             .WithErrorCode("Client.ReferenceContactMissing")
             .WithMessage("Informe os dados da pessoa de referência.")
-            .SetValidator(new ReferenceContactInputValidator());
+            .SetValidator(new ReferenceContactInputValidator())
+            .When(command => command.ReferenceContacts is null
+                || command.ReferenceContacts.Count <= Client.MaxReferenceContacts);
     }
 }
 

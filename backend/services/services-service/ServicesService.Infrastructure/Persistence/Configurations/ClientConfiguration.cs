@@ -37,11 +37,11 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
             .HasMaxLength(AdministrativeNotes.MaxLength);
         builder.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
 
-        // CPF is never reused, so its index has no situation filter; e-mail only collides among live active
-        // clients. The database decides concurrent writes (docs/adr/0044).
+        // CPF collides among live clients whatever their status, e-mail only among live active ones. The database
+        // decides concurrent writes (docs/adr/0044).
         builder.HasIndex(c => new { c.TenantId, c.Cpf })
             .IsUnique()
-            .HasFilter("\"Cpf\" IS NOT NULL");
+            .HasFilter("\"Cpf\" IS NOT NULL AND \"DeletedAt\" IS NULL");
         builder.HasIndex(c => new { c.TenantId, c.Email })
             .IsUnique()
             .HasFilter("\"Email\" IS NOT NULL AND \"Status\" = 'Active' AND \"DeletedAt\" IS NULL");

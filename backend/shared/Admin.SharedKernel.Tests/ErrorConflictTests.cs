@@ -33,15 +33,4 @@ public class ErrorConflictTests
 
         error.FieldErrors!["Cpf"][0].Meta.Should().BeSameAs(meta);
     }
-
-    [Fact]
-    public void Conflict_WithField_CombinesWithAnotherFieldConflict()
-    {
-        var combined = Error.Combine(
-            Error.Conflict("Client.DuplicateCpf", "CPF taken.", field: "Cpf"),
-            Error.Conflict("Client.DuplicateEmail", "E-mail taken.", field: "Email"));
-
-        combined!.Value.Code.Should().Be("Client.DuplicateCpf");
-        combined.Value.FieldErrors!.Keys.Should().Equal("Cpf", "Email");
-    }
 }

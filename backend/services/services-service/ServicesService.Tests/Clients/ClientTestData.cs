@@ -45,7 +45,7 @@ internal static class ClientTestData
 
     public static ClientMatch ExistingClient()
     {
-        return new ClientMatch(Guid.NewGuid(), Name("Paula Rocha"), IsDeleted: false);
+        return new ClientMatch(Guid.NewGuid(), Name("Paula Rocha"));
     }
 }
 

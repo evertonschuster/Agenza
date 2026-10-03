@@ -156,7 +156,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                 table: "Clients",
                 columns: new[] { "TenantId", "Cpf" },
                 unique: true,
-                filter: "\"Cpf\" IS NOT NULL");
+                filter: "\"Cpf\" IS NOT NULL AND \"DeletedAt\" IS NULL");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Clients_TenantId_Email",

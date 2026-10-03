@@ -1,4 +1,5 @@
 using Admin.SharedKernel;
+using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
 
@@ -7,7 +8,8 @@ namespace ServicesService.Application.Clients.CreateClient;
 public sealed class CreateClientCommandHandler(
     IClientRepository clientRepository,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider) : ICommandHandler<CreateClientCommand, ClientResponse>
+    TimeProvider timeProvider,
+    ILogger<CreateClientCommandHandler> logger) : ICommandHandler<CreateClientCommand, ClientResponse>
 {
     public async Task<Result<ClientResponse>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
     {
@@ -22,11 +24,15 @@ public sealed class CreateClientCommandHandler(
         var client = clientResult!.Value!;
 
         var cpfConflict = await FindCpfConflictAsync(client, cancellationToken);
-        var emailConflict = await FindEmailConflictAsync(client, cancellationToken);
-
-        if (Error.Combine(cpfConflict, emailConflict) is { } conflict)
+        if (cpfConflict is { } cpfError)
         {
-            return Result.Failure<ClientResponse>(conflict);
+            return Result.Failure<ClientResponse>(cpfError);
+        }
+
+        var emailConflict = await FindEmailConflictAsync(client, cancellationToken);
+        if (emailConflict is { } emailError)
+        {
+            return Result.Failure<ClientResponse>(emailError);
         }
 
         clientRepository.Add(client);
@@ -34,6 +40,11 @@ public sealed class CreateClientCommandHandler(
         var saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
+            logger.LogWarning(
+                "Saving a client failed with {Kind} on {ConstraintName}",
+                saveResult.Error.Kind,
+                saveResult.Error.ConstraintName);
+
             return Result.Failure<ClientResponse>(Error.Conflict(
                 "Client.SaveFailed",
                 "Não foi possível salvar a pessoa. Tente novamente."));
@@ -53,15 +64,6 @@ public sealed class CreateClientCommandHandler(
         if (clientWithSameCpf is null)
         {
             return null;
-        }
-
-        // A deleted client cannot be opened, so only a live one carries the id the UI links to.
-        if (clientWithSameCpf.IsDeleted)
-        {
-            return Error.Conflict(
-                "Client.DuplicateCpf",
-                "Este CPF pertence a um cadastro excluído e não pode ser usado em um novo cadastro.",
-                field: "Cpf");
         }
 
         return Error.Conflict(

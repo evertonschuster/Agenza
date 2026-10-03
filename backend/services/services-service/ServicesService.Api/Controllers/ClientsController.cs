@@ -12,6 +12,8 @@ namespace ServicesService.Api.Controllers;
 [Route("api/v{version:apiVersion}/clients")]
 public class ClientsController : AgenzaControllerBase
 {
+    private const long MaxRequestBodyBytes = 64 * 1024;
+
     private readonly IDispatcher _dispatcher;
 
     public ClientsController(IDispatcher dispatcher)
@@ -20,6 +22,7 @@ public class ClientsController : AgenzaControllerBase
     }
 
     [HttpPost]
+    [RequestSizeLimit(MaxRequestBodyBytes)]
     [ProducesResponseType<ApiResponse<ClientResponse>>(StatusCodes.Status201Created)]
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]

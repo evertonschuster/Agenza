@@ -158,7 +158,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.HasIndex("TenantId", "Cpf")
                         .IsUnique()
-                        .HasFilter("\"Cpf\" IS NOT NULL");
+                        .HasFilter("\"Cpf\" IS NOT NULL AND \"DeletedAt\" IS NULL");
 
                     b.HasIndex("TenantId", "Email")
                         .IsUnique()

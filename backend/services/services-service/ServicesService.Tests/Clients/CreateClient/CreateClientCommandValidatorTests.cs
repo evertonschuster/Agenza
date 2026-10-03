@@ -351,6 +351,18 @@ public class CreateClientCommandValidatorTests
         MessagesFor(result, "ReferenceContacts").Should().Equal("Informe no máximo 10 pessoas de referência.");
     }
 
+    [Fact]
+    public async Task Validate_WithListsOverTheLimit_DoesNotValidateTheirItems()
+    {
+        var guardians = Enumerable.Range(0, 5_000).Select(_ => Guardian(name: "", relationship: "")).ToList();
+        var contacts = Enumerable.Range(0, 5_000).Select(_ => new ReferenceContactInput("", "", "tel", [])).ToList();
+
+        var result = await Validate(Command(guardians: guardians, referenceContacts: contacts));
+
+        result.Errors.Select(error => error.ErrorCode)
+            .Should().BeEquivalentTo(new[] { Client.TooManyGuardians.Code, Client.TooManyReferenceContacts.Code });
+    }
+
     [Theory]
     [MemberData(nameof(EveryRule))]
     public async Task Validate_ReportsTheDomainCodeAndMessageOfEveryRule(

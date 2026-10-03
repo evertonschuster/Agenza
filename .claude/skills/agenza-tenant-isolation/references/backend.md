@@ -58,11 +58,10 @@ With no tenant in context — background work, an M2M token — `CurrentTenantId
 no real row carries, so reads come back **empty rather than global**. Fail closed.
 
 `IgnoreQueryFilters()` without keys drops tenant scoping and soft-delete together. Its one legitimate
-use in the repo is a persistence test asserting a row was soft-deleted rather than removed. A read that
-must see deleted rows (the CPF lookup in `ClientRepository`) uses `RepositoryBase.SetIncludingDeleted`,
-which ignores `SoftDelete` alone. The filter keys are `internal` to
-`Admin.SharedKernel.EntityFrameworkCore`, so application code has no name with which to switch
-`Tenant` off.
+use in the repo is a persistence test asserting a row was soft-deleted rather than removed. No
+repository ignores either filter; a future read that must see deleted rows ignores `SoftDelete` alone,
+through a helper in `Admin.SharedKernel.EntityFrameworkCore` and its own decision. The filter keys are
+`internal` there, so application code has no name with which to switch `Tenant` off.
 
 ## 4. The save interceptor — every write
 

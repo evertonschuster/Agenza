@@ -19,20 +19,48 @@ public class GenericExceptionHandler : IExceptionHandler
         Exception exception,
         CancellationToken cancellationToken)
     {
+        if (exception is BadHttpRequestException rejectedRequest)
+        {
+            _logger.LogWarning(
+                "Rejected {Method} {Path} with {StatusCode}",
+                SanitizeForLog(httpContext.Request.Method),
+                SanitizeForLog(httpContext.Request.Path.Value),
+                rejectedRequest.StatusCode);
+
+            await WriteProblemAsync(
+                httpContext,
+                rejectedRequest.StatusCode,
+                ApiProblemDetailsFactory.CreateRequestProblem(rejectedRequest.StatusCode, httpContext),
+                cancellationToken);
+            return true;
+        }
+
         _logger.LogError(
             exception,
             "Unhandled exception processing {Method} {Path}",
             SanitizeForLog(httpContext.Request.Method),
             SanitizeForLog(httpContext.Request.Path.Value));
 
-        httpContext.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        await httpContext.Response.WriteAsJsonAsync(
+        await WriteProblemAsync(
+            httpContext,
+            StatusCodes.Status500InternalServerError,
             ApiProblemDetailsFactory.CreateUnexpectedProblem(httpContext),
+            cancellationToken);
+        return true;
+    }
+
+    private static async Task WriteProblemAsync(
+        HttpContext httpContext,
+        int statusCode,
+        ApiProblemDetails problem,
+        CancellationToken cancellationToken)
+    {
+        httpContext.Response.StatusCode = statusCode;
+        await httpContext.Response.WriteAsJsonAsync(
+            problem,
             options: null,
             contentType: "application/problem+json",
             cancellationToken);
-
-        return true;
     }
 
     // Request.Method/Path are attacker-controlled - strip CR/LF so they

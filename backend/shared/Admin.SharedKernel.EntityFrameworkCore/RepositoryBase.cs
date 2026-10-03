@@ -15,8 +15,6 @@ public abstract class RepositoryBase<TEntity>
 
     protected DbSet<TEntity> Set => DbContext.Set<TEntity>();
 
-    protected IQueryable<TEntity> SetIncludingDeleted => Set.IgnoreQueryFilters([ModelBuilderExtensions.SoftDeleteFilter]);
-
     protected Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken) =>
         Set.FirstOrDefaultAsync(predicate, cancellationToken);
 

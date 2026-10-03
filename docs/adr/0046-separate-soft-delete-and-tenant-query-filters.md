@@ -8,23 +8,21 @@ Status: accepted (2026-10); supersedes the "one combined predicate" passage of
 [ADR 0006](0006-tenant-header-base-entity-generic-repository.md) gave every `BaseEntity` one global query filter,
 `DeletedAt == null && TenantId == CurrentTenantId`, because EF Core allowed a single `HasQueryFilter` per entity type.
 The only way to read a soft-deleted row was `IgnoreQueryFilters()`, which drops the tenant scope together with the
-soft delete.
-
-#154 brought the first read that must see soft-deleted rows: a CPF stays unique per tenant across deleted persons
-([ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md)). Its first version called
-`IgnoreQueryFilters()` and re-applied the tenant with a hand-written predicate, so tenant isolation on that read depended
-on remembering the predicate, and the next read of deleted rows would have copied it.
+soft delete, so such a read had to re-apply the tenant by hand. The first version of #154 did exactly that for CPF
+uniqueness ([ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md)): tenant isolation on that read
+depended on remembering a predicate.
 
 ## Decision
 
-`ApplyAuditableConventions` registers two named filters (EF Core 10):
+`ApplyAuditableConventions` registers two named filters (EF Core 10), and every query gets both:
 
 - `SoftDelete`: `DeletedAt == null`, on every `BaseEntity`;
 - `Tenant`: `TenantId == CurrentTenantId`, read off the live `DbContext`, on every tenant-owned `BaseEntity`.
 
-A read that must see soft-deleted rows uses `RepositoryBase.SetIncludingDeleted`, which ignores `SoftDelete` and nothing
-else. The filter keys are `internal` to `Admin.SharedKernel.EntityFrameworkCore`, so application code has no name with
-which to switch the tenant filter off.
+No repository ignores either: reads leave deleted rows out and stay inside the tenant, automatically. The filter keys are
+`internal` to `Admin.SharedKernel.EntityFrameworkCore`, so application code has no name with which to switch the tenant
+filter off. A future read that genuinely needs deleted rows ignores `SoftDelete` alone, through a helper added there
+with its own decision, never by dropping every filter.
 
 ## Consequences
 
@@ -40,4 +38,6 @@ which to switch the tenant filter off.
 ## Tried and reverted
 
 - **`IgnoreQueryFilters()` with the tenant re-applied by hand** in `ClientRepository.FindByCpfAsync`: the first version
-  of #154, replaced before merge by this decision.
+  of #154.
+- **`RepositoryBase.SetIncludingDeleted`**, which ignored `SoftDelete` alone: added for that lookup and removed before
+  merge, once deleting a person freed the CPF and no read needed deleted rows.

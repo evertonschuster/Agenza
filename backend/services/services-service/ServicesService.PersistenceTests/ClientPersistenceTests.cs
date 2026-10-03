@@ -218,7 +218,7 @@ public class ClientPersistenceTests
     }
 
     [Fact]
-    public async Task FindByCpf_StillMatchesASoftDeletedClient()
+    public async Task FindByCpf_IgnoresASoftDeletedClient()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -232,12 +232,10 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            (await context.Clients.AnyAsync(c => c.Id == client.Id)).Should().BeFalse();
-
-            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
-
-            match!.Id.Should().Be(client.Id);
-            match.IsDeleted.Should().BeTrue();
+            (await context.Clients.IgnoreQueryFilters().AnyAsync(c => c.Id == client.Id))
+                .Should().BeTrue("the row is soft-deleted, not removed");
+            (await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None))
+                .Should().BeNull();
         }
     }
 
@@ -247,24 +245,17 @@ public class ClientPersistenceTests
         var databaseName = Guid.NewGuid().ToString();
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
-        var clientOfA = NewClient(cpf: CpfDigits);
-        var deletedClientOfA = NewClient("Pedro Alves", cpf: "12345678909");
         await using (var context = CreateContext(databaseName, tenantA))
         {
-            await Save(context, clientOfA);
-            await Save(context, deletedClientOfA);
+            await Save(context, NewClient(cpf: CpfDigits));
         }
-
-        await SoftDelete(databaseName, tenantA, deletedClientOfA.Id);
 
         await using (var context = CreateContext(databaseName, tenantB))
         {
-            var repository = new ClientRepository(context);
-
-            (await context.Clients.IgnoreQueryFilters().CountAsync(c => c.Cpf == Cpf(CpfDigits) || c.Cpf == Cpf("12345678909")))
-                .Should().Be(2, "the rows exist, so only the tenant filter keeps them out");
-            (await repository.FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None)).Should().BeNull();
-            (await repository.FindByCpfAsync(Cpf("12345678909"), CancellationToken.None)).Should().BeNull();
+            (await context.Clients.IgnoreQueryFilters().CountAsync(c => c.Cpf == Cpf(CpfDigits)))
+                .Should().Be(1, "the row exists, so only the tenant filter keeps it out");
+            (await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None))
+                .Should().BeNull();
         }
     }
 
@@ -333,7 +324,7 @@ public class ClientPersistenceTests
         var cpfIndex = clients.GetIndexes().Single(index => index.GetDatabaseName() == "IX_Clients_TenantId_Cpf");
         cpfIndex.IsUnique.Should().BeTrue();
         cpfIndex.Properties.Select(property => property.Name).Should().Equal("TenantId", "Cpf");
-        cpfIndex.GetFilter().Should().Be("\"Cpf\" IS NOT NULL");
+        cpfIndex.GetFilter().Should().Be("\"Cpf\" IS NOT NULL AND \"DeletedAt\" IS NULL");
 
         var emailIndex = clients.GetIndexes().Single(index => index.GetDatabaseName() == "IX_Clients_TenantId_Email");
         emailIndex.IsUnique.Should().BeTrue();
