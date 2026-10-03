@@ -127,7 +127,7 @@ de formulário: é o mesmo formato reaproveitado para carregar um erro sem campo
 
 **Conflito por campo, com `meta`** — um handler pode devolver o `Conflict` já chaveado pelo campo (em vez da
 chave `""`), para o formulário mostrar a mensagem sob o input certo. Cada entrada de `errors` aceita um `meta`
-opcional (mapa string→string, **omitido quando vazio**, então nenhuma resposta anterior muda) com contexto para
+opcional (mapa string→string, **omitido quando nulo**, então nenhuma resposta anterior muda) com contexto para
 máquina. O conflito de CPF de `POST /api/v1/clients` coloca ali o `clientId` do cadastro existente, e só quando
 ele não está excluído (um cadastro excluído não pode ser aberto; a mensagem explica o motivo). `code` no nível
 raiz é o do primeiro campo em conflito; CPF e e-mail em conflito juntos chegam juntos em `errors`.
