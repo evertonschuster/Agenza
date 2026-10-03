@@ -36,7 +36,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                 {
                     table.PrimaryKey("PK_Clients", x => x.Id);
                     table.UniqueConstraint("AK_Clients_TenantId_Id", x => new { x.TenantId, x.Id });
-                    table.CheckConstraint("CK_Clients_Status", "\"Status\" IN ('Active', 'Inactive', 'Deleted')");
+                    table.CheckConstraint("CK_Clients_Status", "\"Status\" IN ('Active', 'Inactive')");
                 });
 
             migrationBuilder.CreateTable(

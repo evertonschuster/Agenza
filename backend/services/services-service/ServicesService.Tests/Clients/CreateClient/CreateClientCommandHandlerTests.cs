@@ -258,7 +258,7 @@ public class CreateClientCommandHandlerTests
         var result = await Handler().Handle(Command(), CancellationToken.None);
 
         result.Error.Type.Should().Be(ErrorType.Conflict);
-        result.Error.Code.Should().Be("Client.DuplicateConflict");
+        result.Error.Code.Should().Be("Client.SaveFailed");
         result.Error.FieldErrors.Should().BeNull();
     }
 }

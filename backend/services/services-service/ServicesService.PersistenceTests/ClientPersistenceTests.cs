@@ -242,28 +242,6 @@ public class ClientPersistenceTests
     }
 
     [Fact]
-    public async Task FindByCpf_StillMatchesAClientWhoseStatusIsDeletedWithoutTheSoftDeleteStamp()
-    {
-        var databaseName = Guid.NewGuid().ToString();
-        var tenantId = Guid.NewGuid();
-        var client = NewClient(cpf: CpfDigits);
-        await using (var context = CreateContext(databaseName, tenantId))
-        {
-            await Save(context, client);
-        }
-
-        await SetStatus(databaseName, tenantId, client.Id, ClientStatus.Deleted);
-
-        await using (var context = CreateContext(databaseName, tenantId))
-        {
-            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
-
-            match!.Id.Should().Be(client.Id);
-            match.Status.Should().Be(ClientStatus.Deleted);
-        }
-    }
-
-    [Fact]
     public async Task FindByCpf_NeverMatchesAnotherTenantsClient()
     {
         var databaseName = Guid.NewGuid().ToString();
@@ -361,6 +339,17 @@ public class ClientPersistenceTests
         emailIndex.IsUnique.Should().BeTrue();
         emailIndex.Properties.Select(property => property.Name).Should().Equal("TenantId", "Email");
         emailIndex.GetFilter().Should().Contain("\"Status\" = 'Active'").And.Contain("\"DeletedAt\" IS NULL");
+    }
+
+    [Fact]
+    public void Model_StatusCheckListsEveryClientStatus()
+    {
+        using var context = CreateContext(Guid.NewGuid().ToString(), Guid.NewGuid());
+        var clients = context.GetService<IDesignTimeModel>().Model.FindEntityType(typeof(Client))!;
+
+        var statusCheck = clients.GetCheckConstraints().Single(check => check.Name == "CK_Clients_Status");
+
+        statusCheck.Sql.Should().Be("\"Status\" IN ('Active', 'Inactive')");
     }
 
     [Fact]

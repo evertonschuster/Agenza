@@ -27,9 +27,12 @@ insists they are separate records. Children reference the root through the compo
 `(TenantId, ClientId) → Clients(TenantId, Id)` ([ADR 0024](0024-database-enforced-data-ownership.md)). One
 `SaveChanges` is one transaction, so a failure leaves no partial person.
 
-**Situation.** `ClientStatus { Active, Inactive, Deleted }`, stored as text with a `CHECK`. Creation sets `Active`;
-no transition exists yet. `Client` also inherits `BaseEntity`'s soft delete (`DeletedAt`), so the e-mail index
-ignores a row that is either not `Active` or soft-deleted.
+**Situation.** The three situations of the issue map onto two mechanisms. Active and inactive are
+`ClientStatus { Active, Inactive }`, stored as text with a `CHECK`; creation sets `Active` and no transition exists
+yet. Deleted is **only** `BaseEntity`'s soft delete (`Remove` → `DeletedAt`): the global query filter already hides a
+deleted row from every read path, and a deleted id answers 404 with no extra predicate, which is what #155 and #159
+ask for. There is no `Deleted` status, so "deleted" has a single source of truth and a status that says deleted while
+the row stays visible cannot exist. The e-mail index ignores a row that is either not `Active` or soft-deleted.
 
 **Normalized storage.** The domain stores CPF as 11 digits, e-mail trimmed and lowercase, and phone trimmed, so the
 unique indexes compare plain stored values (no generated column for them).
@@ -60,8 +63,10 @@ The cost: a query cannot reach into `.Value` (it is not translatable through a c
 
 A guardian's CPF is deliberately not constrained. The handler pre-checks both rules for the per-field answer; the
 indexes are what actually guarantees uniqueness. Two creates racing past the pre-check are practically impossible for
-this product, so that case gets no special handling: the loser answers a generic `409 Client.DuplicateConflict`
-without field errors.
+this product, so that case gets no special handling: any failed save answers a generic `409 Client.SaveFailed`
+("Não foi possível salvar a pessoa. Tente novamente."), without field errors and without claiming a duplicate. Today
+the only save failure the unit of work returns as a value is a unique-index violation, but the handler does not rely on
+that; a retry goes through the pre-check again and gets the specific per-field answer.
 
 **The one `IgnoreQueryFilters()`.** `ClientRepository.FindByCpfAsync` must see soft-deleted and deleted rows, which the
 global filter hides, and `IgnoreQueryFilters()` drops the tenant scope with them. The method re-applies the tenant by
@@ -93,7 +98,7 @@ is ignored by the binder (tested at the DTO and verified against the running API
 
 ## Consequences
 
-- Wire shape: camelCase English fields; `status` is `active | inactive | deleted`; dates are `yyyy-MM-dd`; CPF is
+- Wire shape: camelCase English fields; `status` is `active | inactive` (a deleted person never appears in a response); dates are `yyyy-MM-dd`; CPF is
   returned as digits.
 - This change is deliverable on its own: it commits the regenerated OpenAPI types
   (`apps/admin-frontend/src/shared/api/generated/services-api.d.ts`) because `generate:api-types:check` compares them
@@ -107,6 +112,9 @@ tests cover the EF side (tenant assignment across the graph, isolation, the filt
 
 ## Considered and rejected
 
+- **A `Deleted` value in `ClientStatus` next to the soft delete** — tried in the first version of this change and
+  removed before merge: two sources of truth that every check had to read together (`IsDeleted || Status ==
+  Deleted`), and a deleted status alone would not hide the row from any query.
 - **One contacts table with a discriminator** — nullable columns that only apply to one kind, and a purposes column
   that is meaningless for guardians.
 - **Named query filters / changing `ApplyAuditableConventions` to split tenant from soft delete** — would remove the

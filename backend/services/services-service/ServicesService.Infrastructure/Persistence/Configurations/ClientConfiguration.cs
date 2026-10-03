@@ -9,9 +9,10 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
 {
     public void Configure(EntityTypeBuilder<Client> builder)
     {
+        var statuses = string.Join(", ", Enum.GetNames<ClientStatus>().Select(status => $"'{status}'"));
         builder.ToTable(
             "Clients",
-            table => table.HasCheckConstraint("CK_Clients_Status", "\"Status\" IN ('Active', 'Inactive', 'Deleted')"));
+            table => table.HasCheckConstraint("CK_Clients_Status", $"\"Status\" IN ({statuses})"));
         builder.HasKey(c => c.Id);
         builder.HasAlternateKey(c => new { c.TenantId, c.Id });
 

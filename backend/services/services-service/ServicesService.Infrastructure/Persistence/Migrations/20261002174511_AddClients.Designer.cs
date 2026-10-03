@@ -166,7 +166,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Clients", "services", t =>
                         {
-                            t.HasCheckConstraint("CK_Clients_Status", "\"Status\" IN ('Active', 'Inactive', 'Deleted')");
+                            t.HasCheckConstraint("CK_Clients_Status", "\"Status\" IN ('Active', 'Inactive')");
                         });
                 });
 

@@ -35,8 +35,8 @@ public sealed class CreateClientCommandHandler(
         if (saveResult.IsFailure)
         {
             return Result.Failure<ClientResponse>(Error.Conflict(
-                "Client.DuplicateConflict",
-                "Não foi possível salvar a pessoa devido a um conflito de dados."));
+                "Client.SaveFailed",
+                "Não foi possível salvar a pessoa. Tente novamente."));
         }
 
         return ClientResponse.FromClient(client);
@@ -56,7 +56,7 @@ public sealed class CreateClientCommandHandler(
         }
 
         // A deleted client cannot be opened, so only a live one carries the id the UI links to.
-        if (clientWithSameCpf.IsDeleted || clientWithSameCpf.Status == ClientStatus.Deleted)
+        if (clientWithSameCpf.IsDeleted)
         {
             return Error.Conflict(
                 "Client.DuplicateCpf",
