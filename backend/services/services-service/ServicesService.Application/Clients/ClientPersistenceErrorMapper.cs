@@ -14,15 +14,9 @@ public static class ClientPersistenceErrorMapper
         switch (error.ConstraintName)
         {
             case CpfConstraint:
-                return ClientConflicts.ToError(new Dictionary<string, IReadOnlyList<FieldError>>
-                {
-                    [ClientConflicts.CpfField] = [ClientConflicts.DuplicateCpf(cpfMatch)],
-                });
+                return ClientConflicts.Cpf(cpfMatch);
             case EmailConstraint:
-                return ClientConflicts.ToError(new Dictionary<string, IReadOnlyList<FieldError>>
-                {
-                    [ClientConflicts.EmailField] = [ClientConflicts.DuplicateEmail()],
-                });
+                return ClientConflicts.Email();
             default:
                 logger.LogError(
                     "Unrecognized unique constraint {ConstraintName} violated while saving a Client",

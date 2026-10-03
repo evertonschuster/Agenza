@@ -34,10 +34,11 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
 
         var client = clientResult.Value;
 
-        var conflict = await FindConflictAsync(client, cancellationToken);
-        if (conflict is { } error)
+        var cpfMatch = await FindCpfMatchAsync(client, cancellationToken);
+        var emailTaken = await IsEmailTakenAsync(client, cancellationToken);
+        if (ClientConflicts.From(cpfMatch, emailTaken) is { } conflict)
         {
-            return Result.Failure<ClientResponse>(error);
+            return Result.Failure<ClientResponse>(conflict);
         }
 
         _clientRepository.Add(client);
@@ -45,34 +46,43 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
         var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            var cpfMatch = saveResult.Error.ConstraintName == ClientPersistenceErrorMapper.CpfConstraint
-                && client.Cpf is not null
-                    ? await _clientRepository.FindByCpfAsync(client.Cpf, cancellationToken)
-                    : null;
-
-            return Result.Failure<ClientResponse>(
-                ClientPersistenceErrorMapper.Map(saveResult.Error, cpfMatch, _logger));
+            return Result.Failure<ClientResponse>(await MapSaveFailureAsync(client, saveResult.Error, cancellationToken));
         }
 
         return ClientResponse.FromClient(client);
     }
 
-    private async Task<Error?> FindConflictAsync(Client client, CancellationToken cancellationToken)
+    private async Task<ClientCpfMatch?> FindCpfMatchAsync(Client client, CancellationToken cancellationToken)
     {
-        var conflicts = new Dictionary<string, IReadOnlyList<FieldError>>();
-
-        if (client.Cpf is not null
-            && await _clientRepository.FindByCpfAsync(client.Cpf, cancellationToken) is { } cpfMatch)
+        if (client.Cpf is null)
         {
-            conflicts[ClientConflicts.CpfField] = [ClientConflicts.DuplicateCpf(cpfMatch)];
+            return null;
         }
 
-        if (client.Email is not null
-            && await _clientRepository.ActiveEmailExistsAsync(client.Email, cancellationToken))
+        return await _clientRepository.FindByCpfAsync(client.Cpf, cancellationToken);
+    }
+
+    private async Task<bool> IsEmailTakenAsync(Client client, CancellationToken cancellationToken)
+    {
+        if (client.Email is null)
         {
-            conflicts[ClientConflicts.EmailField] = [ClientConflicts.DuplicateEmail()];
+            return false;
         }
 
-        return conflicts.Count == 0 ? null : ClientConflicts.ToError(conflicts);
+        return await _clientRepository.ActiveEmailExistsAsync(client.Email, cancellationToken);
+    }
+
+    // A concurrent request took the CPF after the pre-check; look the winner up so the conflict can still link to it.
+    //TODO: Rever como lidar com o erro que vem da base de dados, poderiamos generalizar o tratamento do erro
+
+    private async Task<Error> MapSaveFailureAsync(Client client, PersistenceError error, CancellationToken cancellationToken)
+    {
+        ClientCpfMatch? cpfMatch = null;
+        if (error.ConstraintName == ClientPersistenceErrorMapper.CpfConstraint)
+        {
+            cpfMatch = await FindCpfMatchAsync(client, cancellationToken);
+        }
+
+        return ClientPersistenceErrorMapper.Map(error, cpfMatch, _logger);
     }
 }

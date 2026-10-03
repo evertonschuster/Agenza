@@ -45,6 +45,31 @@ project (docs/adr/0026). See `../docs/QUALITY.md`.
 Convenções de request/response (envelope de sucesso, formas de erro, status HTTP, casos de borda de
 roteamento) verificadas ao vivo: [`../docs/API.md`](../docs/API.md).
 
+## Code style
+
+Methods get a block body. Branching is written as guard clauses with early
+`return`s and explicit `if`s, not as `&&`/`||` chains or ternaries folded into
+an expression body:
+
+```csharp
+private async Task<bool> IsEmailTakenAsync(Client client, CancellationToken cancellationToken)
+{
+    if (client.Email is null)
+    {
+        return false;
+    }
+
+    return await _clientRepository.ActiveEmailExistsAsync(client.Email, cancellationToken);
+}
+```
+
+Not dogma: `=>` stays for a short local function or property whose body is a
+single plain expression with no branching (`DateOnly Today() => ...` in
+`CreateClientCommandValidator`), and for the lambdas an API takes
+(FluentValidation `.Must(...)`, LINQ). `CreateClientCommandHandler` and
+`ClientConflicts` are the reference. Existing code is converted when it is
+touched, not in bulk.
+
 ## Known gaps
 
 - `ServicesService` has three complete verticals (Tags `/api/v1/tags`,
