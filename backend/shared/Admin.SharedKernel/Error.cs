@@ -43,6 +43,19 @@ public readonly record struct Error(
 
     public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
 
+    public static Error Conflict(
+        string code,
+        string message,
+        string field,
+        IReadOnlyDictionary<string, string>? meta = null)
+    {
+        return new Error(
+            code,
+            message,
+            ErrorType.Conflict,
+            new Dictionary<string, IReadOnlyList<FieldError>> { [field] = [new FieldError(code, message, meta)] });
+    }
+
     public static Error Forbidden(string code, string message) => new(code, message, ErrorType.Forbidden);
 
     // Lets independent checks each return their own error and still answer with every problem at once: the result

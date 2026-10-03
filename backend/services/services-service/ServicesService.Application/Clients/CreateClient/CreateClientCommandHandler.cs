@@ -58,15 +58,17 @@ public sealed class CreateClientCommandHandler(
         // A deleted client cannot be opened, so only a live one carries the id the UI links to.
         if (clientWithSameCpf.IsDeleted || clientWithSameCpf.Status == ClientStatus.Deleted)
         {
-            return FieldConflict("Cpf", new FieldError(
+            return Error.Conflict(
                 "Client.DuplicateCpf",
-                "Este CPF pertence a um cadastro excluído e não pode ser usado em um novo cadastro."));
+                "Este CPF pertence a um cadastro excluído e não pode ser usado em um novo cadastro.",
+                field: "Cpf");
         }
 
-        return FieldConflict("Cpf", new FieldError(
+        return Error.Conflict(
             "Client.DuplicateCpf",
             "Já existe uma pessoa cadastrada com este CPF.",
-            new Dictionary<string, string> { ["clientId"] = clientWithSameCpf.Id.ToString() }));
+            field: "Cpf",
+            meta: new Dictionary<string, string> { ["clientId"] = clientWithSameCpf.Id.ToString() });
     }
 
     private async Task<Error?> FindEmailConflictAsync(Client client, CancellationToken cancellationToken)
@@ -82,18 +84,10 @@ public sealed class CreateClientCommandHandler(
             return null;
         }
 
-        return FieldConflict("Email", new FieldError(
+        return Error.Conflict(
             "Client.DuplicateEmail",
             "Já existe uma pessoa ativa cadastrada com este e-mail.",
-            new Dictionary<string, string> { ["clientId"] = activeClientWithSameEmail.Id.ToString() }));
-    }
-
-    private static Error FieldConflict(string field, FieldError fieldError)
-    {
-        return new Error(
-            fieldError.Code,
-            fieldError.Message,
-            ErrorType.Conflict,
-            new Dictionary<string, IReadOnlyList<FieldError>> { [field] = [fieldError] });
+            field: "Email",
+            meta: new Dictionary<string, string> { ["clientId"] = activeClientWithSameEmail.Id.ToString() });
     }
 }

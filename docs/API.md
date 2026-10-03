@@ -132,8 +132,9 @@ máquina. Os conflitos de CPF e de e-mail de `POST /api/v1/clients` colocam ali 
 o de CPF só quando ele não está excluído (um cadastro excluído não pode ser aberto; a mensagem explica o motivo).
 O de e-mail sempre traz o id, porque só considera pessoas ativas. `code` no nível
 raiz é o do primeiro campo em conflito; CPF e e-mail em conflito juntos chegam juntos em `errors`. No backend,
-cada verificação devolve o seu `Error` e `Error.Combine(...)` (`Admin.SharedKernel`) junta todos nessa forma: o
-`code`, a mensagem e o tipo vêm do primeiro, e os `errors` de todos são mesclados por campo.
+`Error.Conflict(code, message, field, meta)` (`Admin.SharedKernel`) monta um conflito já chaveado pelo campo, com o
+mesmo `code` e mensagem no topo e no campo. Cada verificação devolve o seu `Error` e `Error.Combine(...)` junta todos
+nessa forma: o `code`, a mensagem e o tipo vêm do primeiro, e os `errors` de todos são mesclados por campo.
 
 ```json
 {"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"Cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478"}}]}}
