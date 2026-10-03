@@ -114,7 +114,8 @@ errors }`. `errors` muda de forma dependendo do tipo:
 > **Casing:** as chaves de `errors` são o nome da propriedade do record C# (`Name`, `Color`,
 > `Page`, `PageSize`, `TagId`) — **PascalCase**, mesmo que o corpo da requisição tenha sido enviado
 > em camelCase. Não há conversão automática; quem mapeia erro→campo de formulário mapeia por esse
-> nome exato.
+> nome exato. Itens de uma lista dentro do comando levam o índice na chave:
+> `Guardians[0].Name`, `ReferenceContacts[1].Purposes`.
 
 **Aplicação** (`NotFound`/`Conflict`/`Forbidden`, sem `FieldErrors`) — `errors` colapsa para
 **uma única chave vazia** (`""`), cujo valor repete o `code`/mensagem do nível raiz. Não é um campo
@@ -122,6 +123,20 @@ de formulário: é o mesmo formato reaproveitado para carregar um erro sem campo
 
 ```json
 {"type":"https://agenza/errors/application","title":"Esta etiqueta está em uso por 1 serviço(s) e não pode ser excluída.","status":409,"code":"Tag.InUse","traceId":"...","correlationId":"...","errors":{"":[{"code":"Tag.InUse","message":"Esta etiqueta está em uso por 1 serviço(s) e não pode ser excluída."}]}}
+```
+
+**Conflito por campo, com `meta`** — um handler pode devolver o `Conflict` já chaveado pelo campo (em vez da
+chave `""`), para o formulário mostrar a mensagem sob o input certo. Cada entrada de `errors` aceita um `meta`
+opcional (mapa string→string, **omitido quando nulo**, então nenhuma resposta anterior muda) com contexto para
+máquina. Os conflitos de CPF e de e-mail de `POST /api/v1/clients` colocam ali o `clientId` do cadastro existente;
+o de CPF só quando ele não está excluído (um cadastro excluído não pode ser aberto; a mensagem explica o motivo).
+O de e-mail sempre traz o id, porque só considera pessoas ativas. `code` no nível
+raiz é o do primeiro campo em conflito; CPF e e-mail em conflito juntos chegam juntos em `errors`. No backend,
+cada verificação devolve o seu `Error` e `Error.Combine(...)` (`Admin.SharedKernel`) junta todos nessa forma: o
+`code`, a mensagem e o tipo vêm do primeiro, e os `errors` de todos são mesclados por campo.
+
+```json
+{"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"Cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478"}}]}}
 ```
 
 ### 4.2 Forma reduzida do filtro de tenant
@@ -195,7 +210,10 @@ existe.
 ## 6. Exemplos verificados (amostra, não catálogo)
 
 Rodado ao vivo em 2026-09-13 contra tags/categories/services; todos os dados de teste criados
-(`__doc_probe_*`) foram removidos ao final via `DELETE`.
+(`__doc_probe_*`) foram removidos ao final via `DELETE`. As linhas de `clients` foram rodadas ao vivo em
+2026-10-02 contra um PostgreSQL descartável (não há `DELETE` de pessoas ainda; o banco foi descartado). Um
+`tenantId` enviado no corpo é ignorado, e 8–10 criações paralelas com o mesmo CPF ou e-mail resultam em
+exatamente um `201` e os demais `409`.
 
 | Cenário | Verbo + rota | Status | `code` |
 | --- | --- | --- | --- |
@@ -206,6 +224,11 @@ Rodado ao vivo em 2026-09-13 contra tags/categories/services; todos os dados de 
 | Id vazio ≠ id inexistente | `DELETE /api/v1/tags/00000000-0000-0000-0000-000000000000` | 400 (não 404!) | `Validation.Failed` (`TagId`: `NotEmptyValidator`) |
 | Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`Page`: `GreaterThanOrEqualValidator`) |
 | Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`PageSize`: `InclusiveBetweenValidator`) |
+| CPF já cadastrado (qualquer situação) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.Cpf[0].meta.clientId`) |
+| E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.Email[0].meta.clientId`) |
+| Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`Guardians`: `PredicateValidator`) |
+| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`Guardians[0].Name`, `Guardians[0].Cpf`, `ReferenceContacts[0].Purposes`…) |
+| `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (forma §4.3, inglês, sem `code`) | — |
 
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
 constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado passa pelo roteamento
