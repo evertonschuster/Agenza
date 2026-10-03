@@ -130,7 +130,9 @@ chave `""`), para o formulário mostrar a mensagem sob o input certo. Cada entra
 opcional (mapa string→string, **omitido quando nulo**, então nenhuma resposta anterior muda) com contexto para
 máquina. O conflito de CPF de `POST /api/v1/clients` coloca ali o `clientId` do cadastro existente, e só quando
 ele não está excluído (um cadastro excluído não pode ser aberto; a mensagem explica o motivo). `code` no nível
-raiz é o do primeiro campo em conflito; CPF e e-mail em conflito juntos chegam juntos em `errors`.
+raiz é o do primeiro campo em conflito; CPF e e-mail em conflito juntos chegam juntos em `errors`. No backend,
+cada verificação devolve o seu `Error` e `Error.Combine(...)` (`Admin.SharedKernel`) junta todos nessa forma: o
+`code`, a mensagem e o tipo vêm do primeiro, e os `errors` de todos são mesclados por campo.
 
 ```json
 {"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"Cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478"}}]}}

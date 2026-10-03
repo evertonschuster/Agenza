@@ -44,4 +44,54 @@ public readonly record struct Error(
     public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
 
     public static Error Forbidden(string code, string message) => new(code, message, ErrorType.Forbidden);
+
+    // Lets independent checks each return their own error and still answer with every problem at once: the result
+    // keeps the first error's code, message and type, and merges every field error into one map.
+    public static Error? Combine(params Error?[] errors)
+    {
+        var present = errors.Where(error => error.HasValue).Select(error => error!.Value).ToList();
+
+        if (present.Count == 0)
+        {
+            return null;
+        }
+
+        if (present.Count == 1)
+        {
+            return present[0];
+        }
+
+        var fieldErrors = new Dictionary<string, List<FieldError>>();
+        foreach (var error in present)
+        {
+            foreach (var (field, entries) in FieldErrorsOf(error))
+            {
+                if (!fieldErrors.TryGetValue(field, out var merged))
+                {
+                    merged = [];
+                    fieldErrors[field] = merged;
+                }
+
+                merged.AddRange(entries);
+            }
+        }
+
+        return present[0] with
+        {
+            FieldErrors = fieldErrors.ToDictionary(entry => entry.Key, entry => (IReadOnlyList<FieldError>)entry.Value),
+        };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<FieldError>> FieldErrorsOf(Error error)
+    {
+        if (error.FieldErrors is not null)
+        {
+            return error.FieldErrors;
+        }
+
+        return new Dictionary<string, IReadOnlyList<FieldError>>
+        {
+            [string.Empty] = [new FieldError(error.Code, error.Message)],
+        };
+    }
 }

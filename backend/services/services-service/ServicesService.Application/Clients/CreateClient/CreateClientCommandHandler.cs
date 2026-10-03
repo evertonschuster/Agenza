@@ -36,10 +36,10 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
 
         var client = clientResult!.Value!;
 
-        var clientWithSameCpf = await FindClientWithSameCpfAsync(client, cancellationToken);
-        var activeClientWithSameEmail = await FindActiveClientWithSameEmailAsync(client, cancellationToken);
+        var cpfConflict = await FindCpfConflictAsync(client, cancellationToken);
+        var emailConflict = await FindEmailConflictAsync(client, cancellationToken);
 
-        if (ClientConflicts.From(clientWithSameCpf, activeClientWithSameEmail) is { } conflict)
+        if (Error.Combine(cpfConflict, emailConflict) is { } conflict)
         {
             return Result.Failure<ClientResponse>(conflict);
         }
@@ -55,24 +55,36 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
         return ClientResponse.FromClient(client);
     }
 
-    private async Task<Client?> FindClientWithSameCpfAsync(Client client, CancellationToken cancellationToken)
+    private async Task<Error?> FindCpfConflictAsync(Client client, CancellationToken cancellationToken)
     {
         if (client.Cpf is null)
         {
             return null;
         }
 
-        return await _clientRepository.FindByCpfAsync(client.Cpf, cancellationToken);
+        var clientWithSameCpf = await _clientRepository.FindByCpfAsync(client.Cpf, cancellationToken);
+        if (clientWithSameCpf is null)
+        {
+            return null;
+        }
+
+        return ClientConflicts.Cpf(clientWithSameCpf);
     }
 
-    private async Task<Client?> FindActiveClientWithSameEmailAsync(Client client, CancellationToken cancellationToken)
+    private async Task<Error?> FindEmailConflictAsync(Client client, CancellationToken cancellationToken)
     {
         if (client.Email is null)
         {
             return null;
         }
 
-        return await _clientRepository.FindActiveByEmailAsync(client.Email, cancellationToken);
+        var activeClientWithSameEmail = await _clientRepository.FindActiveByEmailAsync(client.Email, cancellationToken);
+        if (activeClientWithSameEmail is null)
+        {
+            return null;
+        }
+
+        return ClientConflicts.Email();
     }
 
     // A concurrent request took the CPF after the pre-check; look the winner up so the conflict can still link to it.
@@ -80,12 +92,15 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
 
     private async Task<Error> MapSaveFailureAsync(Client client, PersistenceError error, CancellationToken cancellationToken)
     {
-        Client? clientWithSameCpf = null;
         if (error.ConstraintName == ClientPersistenceErrorMapper.CpfConstraint)
         {
-            clientWithSameCpf = await FindClientWithSameCpfAsync(client, cancellationToken);
+            var cpfConflict = await FindCpfConflictAsync(client, cancellationToken);
+            if (cpfConflict is not null)
+            {
+                return cpfConflict.Value;
+            }
         }
 
-        return ClientPersistenceErrorMapper.Map(error, clientWithSameCpf, _logger);
+        return ClientPersistenceErrorMapper.Map(error, _logger);
     }
 }

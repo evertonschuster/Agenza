@@ -11,23 +11,6 @@ public static class ClientConflicts
     public const string EmailField = "Email";
     public const string ExistingClientIdKey = "clientId";
 
-    public static Error? From(Client? clientWithSameCpf, Client? activeClientWithSameEmail)
-    {
-        var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>>();
-
-        if (clientWithSameCpf is not null)
-        {
-            fieldErrors[CpfField] = [DuplicateCpf(clientWithSameCpf)];
-        }
-
-        if (activeClientWithSameEmail is not null)
-        {
-            fieldErrors[EmailField] = [DuplicateEmail()];
-        }
-
-        return fieldErrors.Count == 0 ? null : ToError(fieldErrors);
-    }
-
     public static Error Cpf(Client? clientWithSameCpf)
     {
         return ToError(new() { [CpfField] = [DuplicateCpf(clientWithSameCpf)] });
