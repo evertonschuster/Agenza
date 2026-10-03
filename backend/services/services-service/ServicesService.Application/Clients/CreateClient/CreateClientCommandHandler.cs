@@ -26,16 +26,19 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
 
     public async Task<Result<ClientResponse>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
     {
-        var clientResult = command.ToModel(DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime));
+        var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+        var clientResult = command.ToModel(today);
+
         if (clientResult.IsFailure)
         {
             return Result.Failure<ClientResponse>(clientResult.Error.ToApplicationError());
         }
 
-        var client = clientResult.Value;
+        var client = clientResult!.Value!;
 
         var cpfMatch = await FindCpfMatchAsync(client, cancellationToken);
         var emailTaken = await IsEmailTakenAsync(client, cancellationToken);
+
         if (ClientConflicts.From(cpfMatch, emailTaken) is { } conflict)
         {
             return Result.Failure<ClientResponse>(conflict);

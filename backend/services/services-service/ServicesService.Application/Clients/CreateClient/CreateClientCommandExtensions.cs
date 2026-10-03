@@ -9,30 +9,16 @@ public static class CreateClientCommandExtensions
     // assigns it on save (docs/adr/0008).
     public static DomainResult<Client> ToModel(this CreateClientCommand command, DateOnly today)
     {
-        var guardians = new List<ClientGuardian>();
-        foreach (var input in command.Guardians ?? [])
+        var guardiansResult = ToGuardians(command.Guardians);
+        if (guardiansResult.IsFailure)
         {
-            var guardianResult = ClientGuardian.Create(
-                Guid.CreateVersion7(), input.Name, input.Relationship, input.Phone, input.Cpf);
-            if (guardianResult.IsFailure)
-            {
-                return DomainResult.Failure<Client>(guardianResult.Error);
-            }
-
-            guardians.Add(guardianResult.Value);
+            return DomainResult.Failure<Client>(guardiansResult.Error);
         }
 
-        var referenceContacts = new List<ClientReferenceContact>();
-        foreach (var input in command.ReferenceContacts ?? [])
+        var referenceContactsResult = ToReferenceContacts(command.ReferenceContacts);
+        if (referenceContactsResult.IsFailure)
         {
-            var contactResult = ClientReferenceContact.Create(
-                Guid.CreateVersion7(), input.Name, input.Relationship, input.Phone, input.Purposes);
-            if (contactResult.IsFailure)
-            {
-                return DomainResult.Failure<Client>(contactResult.Error);
-            }
-
-            referenceContacts.Add(contactResult.Value);
+            return DomainResult.Failure<Client>(referenceContactsResult.Error);
         }
 
         return Client.Create(
@@ -44,7 +30,56 @@ public static class CreateClientCommandExtensions
             command.Cpf,
             command.AdministrativeNotes,
             today,
-            guardians,
-            referenceContacts);
+            guardiansResult.Value,
+            referenceContactsResult.Value);
+    }
+
+    private static DomainResult<List<ClientGuardian>> ToGuardians(IReadOnlyList<GuardianInput>? inputs)
+    {
+        var guardians = new List<ClientGuardian>();
+
+        foreach (var input in inputs ?? [])
+        {
+            var guardianResult = ClientGuardian.Create(
+                Guid.CreateVersion7(),
+                input.Name,
+                input.Relationship,
+                input.Phone,
+                input.Cpf);
+
+            if (guardianResult.IsFailure)
+            {
+                return DomainResult.Failure<List<ClientGuardian>>(guardianResult.Error);
+            }
+
+            guardians.Add(guardianResult.Value);
+        }
+
+        return DomainResult.Success(guardians);
+    }
+
+    private static DomainResult<List<ClientReferenceContact>> ToReferenceContacts(
+        IReadOnlyList<ReferenceContactInput>? inputs)
+    {
+        var referenceContacts = new List<ClientReferenceContact>();
+
+        foreach (var input in inputs ?? [])
+        {
+            var contactResult = ClientReferenceContact.Create(
+                Guid.CreateVersion7(),
+                input.Name,
+                input.Relationship,
+                input.Phone,
+                input.Purposes);
+
+            if (contactResult.IsFailure)
+            {
+                return DomainResult.Failure<List<ClientReferenceContact>>(contactResult.Error);
+            }
+
+            referenceContacts.Add(contactResult.Value);
+        }
+
+        return DomainResult.Success(referenceContacts);
     }
 }
