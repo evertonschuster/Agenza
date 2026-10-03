@@ -1,7 +1,5 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
-using ServicesService.Application.Clients;
 using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Domain.Entities;
 
@@ -13,7 +11,6 @@ public class CreateClientCommandHandlerTests
 
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly ILogger<CreateClientCommandHandler> _logger = Substitute.For<ILogger<CreateClientCommandHandler>>();
 
     public CreateClientCommandHandlerTests()
     {
@@ -25,7 +22,7 @@ public class CreateClientCommandHandlerTests
     }
 
     private CreateClientCommandHandler Handler(DateTimeOffset? utcNow = null) =>
-        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc), _logger);
+        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc));
 
     private static CreateClientCommand Command(
         string fullName = "Maria Souza",
@@ -243,40 +240,9 @@ public class CreateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WhenAConcurrentRequestTookTheCpf_ReturnsAConflictPointingAtTheWinner()
+    public async Task Handle_WhenTheDatabaseRejectsTheSave_ReturnsAGenericConflict()
     {
-        var winner = ClientTestData.ExistingClient();
-        _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
-            .Returns(
-                Task.FromResult<Client?>(null),
-                Task.FromResult<Client?>(winner));
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns(UniqueViolation("IX_Clients_TenantId_Cpf"));
-
-        var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
-
-        result.Error.Type.Should().Be(ErrorType.Conflict);
-        result.Error.Code.Should().Be("Client.DuplicateCpf");
-        result.Error.FieldErrors!["Cpf"][0].Meta!["clientId"].Should().Be(winner.Id.ToString());
-    }
-
-    [Fact]
-    public async Task Handle_WhenAConcurrentRequestTookTheEmail_ReturnsAConflictOnTheEmailField()
-    {
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
-            .Returns(UniqueViolation("IX_Clients_TenantId_Email"));
-
-        var result = await Handler().Handle(Command(email: "maria@example.com"), CancellationToken.None);
-
-        result.Error.Type.Should().Be(ErrorType.Conflict);
-        result.Error.Code.Should().Be("Client.DuplicateEmail");
-        result.Error.FieldErrors!.Keys.Should().Equal("Email");
-    }
-
-    [Fact]
-    public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsAGenericConflict()
-    {
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(UniqueViolation("some_other_unique_constraint"));
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(UniqueViolation("IX_Clients_TenantId_Cpf"));
 
         var result = await Handler().Handle(Command(), CancellationToken.None);
 

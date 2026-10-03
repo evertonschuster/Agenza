@@ -65,15 +65,17 @@ private async Task<Error?> FindEmailConflictAsync(Client client, CancellationTok
         return null;
     }
 
-    return ClientConflicts.Email();
+    return FieldConflict("Email", new FieldError(
+        "Client.DuplicateEmail",
+        "Já existe uma pessoa ativa cadastrada com este e-mail."));
 }
 ```
 
 Not dogma: `=>` stays for a short local function or property whose body is a
 single plain expression with no branching (`DateOnly Today() => ...` in
 `CreateClientCommandValidator`), and for the lambdas an API takes
-(FluentValidation `.Must(...)`, LINQ). `CreateClientCommandHandler` and
-`ClientConflicts` are the reference. Existing code is converted when it is
+(FluentValidation `.Must(...)`, LINQ). `CreateClientCommandHandler` is the
+reference. Existing code is converted when it is
 touched, not in bulk.
 
 ## Known gaps

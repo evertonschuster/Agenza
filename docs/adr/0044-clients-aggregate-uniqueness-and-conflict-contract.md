@@ -41,9 +41,10 @@ unique indexes compare plain stored values (no generated column for them).
 | CPF, any situation | `IX_Clients_TenantId_Cpf` on `(TenantId, Cpf) WHERE Cpf IS NOT NULL` |
 | E-mail, active persons | `IX_Clients_TenantId_Email` on `(TenantId, Email) WHERE Email IS NOT NULL AND Status = 'Active' AND DeletedAt IS NULL` |
 
-A guardian's CPF is deliberately not constrained. The handler pre-checks both rules for a friendly answer; the
-indexes decide races, and `UnitOfWork` already turns SQLSTATE `23505` into a `PersistenceError` carrying the
-constraint name.
+A guardian's CPF is deliberately not constrained. The handler pre-checks both rules for the per-field answer; the
+indexes are what actually guarantees uniqueness. Two creates racing past the pre-check are practically impossible for
+this product, so that case gets no special handling: the loser answers a generic `409 Client.DuplicateConflict`
+without field errors.
 
 **The one `IgnoreQueryFilters()`.** `ClientRepository.FindByCpfAsync` must see soft-deleted and deleted rows, which the
 global filter hides, and `IgnoreQueryFilters()` drops the tenant scope with them. The method re-applies the tenant by

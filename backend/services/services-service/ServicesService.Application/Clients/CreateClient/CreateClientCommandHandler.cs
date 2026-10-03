@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
 
@@ -10,18 +9,15 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
     private readonly IClientRepository _clientRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly TimeProvider _timeProvider;
-    private readonly ILogger<CreateClientCommandHandler> _logger;
 
     public CreateClientCommandHandler(
         IClientRepository clientRepository,
         IUnitOfWork unitOfWork,
-        TimeProvider timeProvider,
-        ILogger<CreateClientCommandHandler> logger)
+        TimeProvider timeProvider)
     {
         _clientRepository = clientRepository;
         _unitOfWork = unitOfWork;
         _timeProvider = timeProvider;
-        _logger = logger;
     }
 
     public async Task<Result<ClientResponse>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
@@ -49,7 +45,9 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
         var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            return Result.Failure<ClientResponse>(await MapSaveFailureAsync(client, saveResult.Error, cancellationToken));
+            return Result.Failure<ClientResponse>(Error.Conflict(
+                "Client.DuplicateConflict",
+                "Não foi possível salvar a pessoa devido a um conflito de dados."));
         }
 
         return ClientResponse.FromClient(client);
@@ -68,7 +66,18 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
             return null;
         }
 
-        return ClientConflicts.Cpf(clientWithSameCpf);
+        // A deleted client cannot be opened, so only a live one carries the id the UI links to.
+        if (clientWithSameCpf.IsDeleted || clientWithSameCpf.Status == ClientStatus.Deleted)
+        {
+            return FieldConflict("Cpf", new FieldError(
+                "Client.DuplicateCpf",
+                "Este CPF pertence a um cadastro excluído e não pode ser usado em um novo cadastro."));
+        }
+
+        return FieldConflict("Cpf", new FieldError(
+            "Client.DuplicateCpf",
+            "Já existe uma pessoa cadastrada com este CPF.",
+            new Dictionary<string, string> { ["clientId"] = clientWithSameCpf.Id.ToString() }));
     }
 
     private async Task<Error?> FindEmailConflictAsync(Client client, CancellationToken cancellationToken)
@@ -84,23 +93,17 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
             return null;
         }
 
-        return ClientConflicts.Email();
+        return FieldConflict("Email", new FieldError(
+            "Client.DuplicateEmail",
+            "Já existe uma pessoa ativa cadastrada com este e-mail."));
     }
 
-    // A concurrent request took the CPF after the pre-check; look the winner up so the conflict can still link to it.
-    //TODO: Rever como lidar com o erro que vem da base de dados, poderiamos generalizar o tratamento do erro
-
-    private async Task<Error> MapSaveFailureAsync(Client client, PersistenceError error, CancellationToken cancellationToken)
+    private static Error FieldConflict(string field, FieldError fieldError)
     {
-        if (error.ConstraintName == ClientPersistenceErrorMapper.CpfConstraint)
-        {
-            var cpfConflict = await FindCpfConflictAsync(client, cancellationToken);
-            if (cpfConflict is not null)
-            {
-                return cpfConflict.Value;
-            }
-        }
-
-        return ClientPersistenceErrorMapper.Map(error, _logger);
+        return new Error(
+            fieldError.Code,
+            fieldError.Message,
+            ErrorType.Conflict,
+            new Dictionary<string, IReadOnlyList<FieldError>> { [field] = [fieldError] });
     }
 }
