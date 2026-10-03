@@ -4,25 +4,14 @@ using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Clients.CreateClient;
 
-public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCommand, ClientResponse>
+public sealed class CreateClientCommandHandler(
+    IClientRepository clientRepository,
+    IUnitOfWork unitOfWork,
+    TimeProvider timeProvider) : ICommandHandler<CreateClientCommand, ClientResponse>
 {
-    private readonly IClientRepository _clientRepository;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly TimeProvider _timeProvider;
-
-    public CreateClientCommandHandler(
-        IClientRepository clientRepository,
-        IUnitOfWork unitOfWork,
-        TimeProvider timeProvider)
-    {
-        _clientRepository = clientRepository;
-        _unitOfWork = unitOfWork;
-        _timeProvider = timeProvider;
-    }
-
     public async Task<Result<ClientResponse>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
     {
-        var today = DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime);
+        var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
         var clientResult = command.ToModel(today);
 
         if (clientResult.IsFailure)
@@ -40,9 +29,9 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
             return Result.Failure<ClientResponse>(conflict);
         }
 
-        _clientRepository.Add(client);
+        clientRepository.Add(client);
 
-        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
             return Result.Failure<ClientResponse>(Error.Conflict(
@@ -60,7 +49,7 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
             return null;
         }
 
-        var clientWithSameCpf = await _clientRepository.FindByCpfAsync(client.Cpf, cancellationToken);
+        var clientWithSameCpf = await clientRepository.FindByCpfAsync(client.Cpf, cancellationToken);
         if (clientWithSameCpf is null)
         {
             return null;
@@ -87,7 +76,7 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
             return null;
         }
 
-        var activeClientWithSameEmail = await _clientRepository.FindActiveByEmailAsync(client.Email, cancellationToken);
+        var activeClientWithSameEmail = await clientRepository.FindActiveByEmailAsync(client.Email, cancellationToken);
         if (activeClientWithSameEmail is null)
         {
             return null;
