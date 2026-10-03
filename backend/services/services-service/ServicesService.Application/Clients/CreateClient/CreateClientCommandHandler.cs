@@ -36,10 +36,10 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
 
         var client = clientResult!.Value!;
 
-        var cpfMatch = await FindCpfMatchAsync(client, cancellationToken);
-        var emailTaken = await IsEmailTakenAsync(client, cancellationToken);
+        var clientWithSameCpf = await FindClientWithSameCpfAsync(client, cancellationToken);
+        var activeClientWithSameEmail = await FindActiveClientWithSameEmailAsync(client, cancellationToken);
 
-        if (ClientConflicts.From(cpfMatch, emailTaken) is { } conflict)
+        if (ClientConflicts.From(clientWithSameCpf, activeClientWithSameEmail) is { } conflict)
         {
             return Result.Failure<ClientResponse>(conflict);
         }
@@ -55,7 +55,7 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
         return ClientResponse.FromClient(client);
     }
 
-    private async Task<ClientCpfMatch?> FindCpfMatchAsync(Client client, CancellationToken cancellationToken)
+    private async Task<Client?> FindClientWithSameCpfAsync(Client client, CancellationToken cancellationToken)
     {
         if (client.Cpf is null)
         {
@@ -65,14 +65,14 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
         return await _clientRepository.FindByCpfAsync(client.Cpf, cancellationToken);
     }
 
-    private async Task<bool> IsEmailTakenAsync(Client client, CancellationToken cancellationToken)
+    private async Task<Client?> FindActiveClientWithSameEmailAsync(Client client, CancellationToken cancellationToken)
     {
         if (client.Email is null)
         {
-            return false;
+            return null;
         }
 
-        return await _clientRepository.ActiveEmailExistsAsync(client.Email, cancellationToken);
+        return await _clientRepository.FindActiveByEmailAsync(client.Email, cancellationToken);
     }
 
     // A concurrent request took the CPF after the pre-check; look the winner up so the conflict can still link to it.
@@ -80,12 +80,12 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
 
     private async Task<Error> MapSaveFailureAsync(Client client, PersistenceError error, CancellationToken cancellationToken)
     {
-        ClientCpfMatch? cpfMatch = null;
+        Client? clientWithSameCpf = null;
         if (error.ConstraintName == ClientPersistenceErrorMapper.CpfConstraint)
         {
-            cpfMatch = await FindCpfMatchAsync(client, cancellationToken);
+            clientWithSameCpf = await FindClientWithSameCpfAsync(client, cancellationToken);
         }
 
-        return ClientPersistenceErrorMapper.Map(error, cpfMatch, _logger);
+        return ClientPersistenceErrorMapper.Map(error, clientWithSameCpf, _logger);
     }
 }

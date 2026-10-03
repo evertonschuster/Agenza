@@ -52,14 +52,14 @@ Methods get a block body. Branching is written as guard clauses with early
 an expression body:
 
 ```csharp
-private async Task<bool> IsEmailTakenAsync(Client client, CancellationToken cancellationToken)
+private async Task<Client?> FindActiveClientWithSameEmailAsync(Client client, CancellationToken cancellationToken)
 {
     if (client.Email is null)
     {
-        return false;
+        return null;
     }
 
-    return await _clientRepository.ActiveEmailExistsAsync(client.Email, cancellationToken);
+    return await _clientRepository.FindActiveByEmailAsync(client.Email, cancellationToken);
 }
 ```
 

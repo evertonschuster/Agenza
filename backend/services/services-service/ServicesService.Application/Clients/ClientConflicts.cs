@@ -1,5 +1,5 @@
 using Admin.SharedKernel;
-using ServicesService.Application.Abstractions;
+using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Clients;
 
@@ -11,16 +11,16 @@ public static class ClientConflicts
     public const string EmailField = "Email";
     public const string ExistingClientIdKey = "clientId";
 
-    public static Error? From(ClientCpfMatch? cpfMatch, bool emailTaken)
+    public static Error? From(Client? clientWithSameCpf, Client? activeClientWithSameEmail)
     {
         var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>>();
 
-        if (cpfMatch is not null)
+        if (clientWithSameCpf is not null)
         {
-            fieldErrors[CpfField] = [DuplicateCpf(cpfMatch)];
+            fieldErrors[CpfField] = [DuplicateCpf(clientWithSameCpf)];
         }
 
-        if (emailTaken)
+        if (activeClientWithSameEmail is not null)
         {
             fieldErrors[EmailField] = [DuplicateEmail()];
         }
@@ -28,9 +28,9 @@ public static class ClientConflicts
         return fieldErrors.Count == 0 ? null : ToError(fieldErrors);
     }
 
-    public static Error Cpf(ClientCpfMatch? match)
+    public static Error Cpf(Client? clientWithSameCpf)
     {
-        return ToError(new() { [CpfField] = [DuplicateCpf(match)] });
+        return ToError(new() { [CpfField] = [DuplicateCpf(clientWithSameCpf)] });
     }
 
     public static Error Email()
@@ -39,9 +39,10 @@ public static class ClientConflicts
     }
 
     // A deleted client cannot be opened, so only a live match carries the id the UI links to.
-    private static FieldError DuplicateCpf(ClientCpfMatch? match)
+    private static FieldError DuplicateCpf(Client? clientWithSameCpf)
     {
-        if (match is { IsDeleted: true })
+        if (clientWithSameCpf is not null
+            && (clientWithSameCpf.IsDeleted || clientWithSameCpf.Status == ClientStatus.Deleted))
         {
             return new FieldError(
                 DuplicateCpfCode,
@@ -49,7 +50,7 @@ public static class ClientConflicts
         }
 
         const string message = "Já existe uma pessoa cadastrada com este CPF.";
-        if (match is null)
+        if (clientWithSameCpf is null)
         {
             return new FieldError(DuplicateCpfCode, message);
         }
@@ -57,7 +58,7 @@ public static class ClientConflicts
         return new FieldError(
             DuplicateCpfCode,
             message,
-            new Dictionary<string, string> { [ExistingClientIdKey] = match.ClientId.ToString() });
+            new Dictionary<string, string> { [ExistingClientIdKey] = clientWithSameCpf.Id.ToString() });
     }
 
     private static FieldError DuplicateEmail()

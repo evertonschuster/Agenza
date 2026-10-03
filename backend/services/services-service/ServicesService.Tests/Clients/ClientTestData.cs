@@ -20,6 +20,11 @@ internal static class ClientTestData
             "Tio",
             null,
             purposes.Length == 0 ? ["emergency"] : purposes).Value;
+
+    public static Client ExistingClient()
+    {
+        return Client.Create(Guid.NewGuid(), "Paula Rocha", null, null, null, ValidCpf, null, Today, [], []).Value;
+    }
 }
 
 internal sealed class FixedTimeProvider(DateTimeOffset utcNow) : TimeProvider

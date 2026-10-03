@@ -182,7 +182,7 @@ public class ClientPersistenceTests
         {
             var match = await new ClientRepository(context).FindByCpfAsync(CpfDigits, CancellationToken.None);
 
-            match.Should().Be(new ClientCpfMatch(client.Id, IsDeleted: false));
+            match!.Id.Should().Be(client.Id);
         }
     }
 
@@ -203,12 +203,12 @@ public class ClientPersistenceTests
         {
             var match = await new ClientRepository(context).FindByCpfAsync(CpfDigits, CancellationToken.None);
 
-            match.Should().Be(new ClientCpfMatch(client.Id, IsDeleted: false));
+            match!.Id.Should().Be(client.Id);
         }
     }
 
     [Fact]
-    public async Task FindByCpf_StillMatchesASoftDeletedClientAndFlagsIt()
+    public async Task FindByCpf_StillMatchesASoftDeletedClient()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -226,12 +226,13 @@ public class ClientPersistenceTests
 
             var match = await new ClientRepository(context).FindByCpfAsync(CpfDigits, CancellationToken.None);
 
-            match.Should().Be(new ClientCpfMatch(client.Id, IsDeleted: true));
+            match!.Id.Should().Be(client.Id);
+            match.IsDeleted.Should().BeTrue();
         }
     }
 
     [Fact]
-    public async Task FindByCpf_FlagsAClientWhoseStatusIsDeletedEvenWithoutTheSoftDeleteStamp()
+    public async Task FindByCpf_StillMatchesAClientWhoseStatusIsDeletedWithoutTheSoftDeleteStamp()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -247,7 +248,8 @@ public class ClientPersistenceTests
         {
             var match = await new ClientRepository(context).FindByCpfAsync(CpfDigits, CancellationToken.None);
 
-            match.Should().Be(new ClientCpfMatch(client.Id, IsDeleted: true));
+            match!.Id.Should().Be(client.Id);
+            match.Status.Should().Be(ClientStatus.Deleted);
         }
     }
 
@@ -299,7 +301,7 @@ public class ClientPersistenceTests
     }
 
     [Fact]
-    public async Task ActiveEmailExists_OnlyCountsLiveActiveClientsOfTheSameTenant()
+    public async Task FindActiveByEmail_OnlyMatchesLiveActiveClientsOfTheSameTenant()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantA = Guid.NewGuid();
@@ -321,16 +323,16 @@ public class ClientPersistenceTests
         {
             var repository = new ClientRepository(context);
 
-            (await repository.ActiveEmailExistsAsync("maria@example.com", CancellationToken.None)).Should().BeTrue();
-            (await repository.ActiveEmailExistsAsync("joao@example.com", CancellationToken.None)).Should().BeFalse();
-            (await repository.ActiveEmailExistsAsync("pedro@example.com", CancellationToken.None)).Should().BeFalse();
-            (await repository.ActiveEmailExistsAsync("outro@example.com", CancellationToken.None)).Should().BeFalse();
+            (await repository.FindActiveByEmailAsync("maria@example.com", CancellationToken.None))!.Id.Should().Be(active.Id);
+            (await repository.FindActiveByEmailAsync("joao@example.com", CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync("pedro@example.com", CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync("outro@example.com", CancellationToken.None)).Should().BeNull();
         }
 
         await using (var context = CreateContext(databaseName, tenantB))
         {
-            (await new ClientRepository(context).ActiveEmailExistsAsync("maria@example.com", CancellationToken.None))
-                .Should().BeFalse();
+            (await new ClientRepository(context).FindActiveByEmailAsync("maria@example.com", CancellationToken.None))
+                .Should().BeNull();
         }
     }
 

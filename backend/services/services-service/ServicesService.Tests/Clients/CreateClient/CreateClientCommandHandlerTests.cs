@@ -18,8 +18,9 @@ public class CreateClientCommandHandlerTests
     public CreateClientCommandHandlerTests()
     {
         _repository.FindByCpfAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientCpfMatch?>(null));
-        _repository.ActiveEmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(false);
+            .Returns(Task.FromResult<Client?>(null));
+        _repository.FindActiveByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Client?>(null));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
 
@@ -163,7 +164,7 @@ public class CreateClientCommandHandlerTests
         await Handler().Handle(Command(email: " Maria@Example.COM ", cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
         await _repository.Received(1).FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>());
-        await _repository.Received(1).ActiveEmailExistsAsync("maria@example.com", Arg.Any<CancellationToken>());
+        await _repository.Received(1).FindActiveByEmailAsync("maria@example.com", Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -172,15 +173,15 @@ public class CreateClientCommandHandlerTests
         await Handler().Handle(Command(), CancellationToken.None);
 
         await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _repository.DidNotReceive().ActiveEmailExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithCpfOfAnExistingClient_ReturnsAConflictPointingAtIt()
     {
-        var existingId = Guid.NewGuid();
+        var existing = ClientTestData.ExistingClient();
         _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientCpfMatch?>(new ClientCpfMatch(existingId, IsDeleted: false)));
+            .Returns(Task.FromResult<Client?>(existing));
 
         var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
@@ -190,7 +191,7 @@ public class CreateClientCommandHandlerTests
         var fieldError = result.Error.FieldErrors!["Cpf"].Should().ContainSingle().Subject;
         fieldError.Code.Should().Be("Client.DuplicateCpf");
         fieldError.Message.Should().Be("Já existe uma pessoa cadastrada com este CPF.");
-        fieldError.Meta.Should().ContainKey("clientId").WhoseValue.Should().Be(existingId.ToString());
+        fieldError.Meta.Should().ContainKey("clientId").WhoseValue.Should().Be(existing.Id.ToString());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -198,8 +199,10 @@ public class CreateClientCommandHandlerTests
     [Fact]
     public async Task Handle_WithCpfOfADeletedClient_ReturnsAConflictWithoutALinkToIt()
     {
+        var deleted = ClientTestData.ExistingClient();
+        deleted.MarkDeleted(null, NoonUtc);
         _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientCpfMatch?>(new ClientCpfMatch(Guid.NewGuid(), IsDeleted: true)));
+            .Returns(Task.FromResult<Client?>(deleted));
 
         var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
@@ -212,7 +215,8 @@ public class CreateClientCommandHandlerTests
     [Fact]
     public async Task Handle_WithEmailOfAnActiveClient_ReturnsAConflictOnTheEmailField()
     {
-        _repository.ActiveEmailExistsAsync("maria@example.com", Arg.Any<CancellationToken>()).Returns(true);
+        _repository.FindActiveByEmailAsync("maria@example.com", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
 
         var result = await Handler().Handle(Command(email: "Maria@Example.com"), CancellationToken.None);
 
@@ -226,8 +230,9 @@ public class CreateClientCommandHandlerTests
     public async Task Handle_WithBothConflicts_ReportsEveryField()
     {
         _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientCpfMatch?>(new ClientCpfMatch(Guid.NewGuid(), IsDeleted: false)));
-        _repository.ActiveEmailExistsAsync("maria@example.com", Arg.Any<CancellationToken>()).Returns(true);
+            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
+        _repository.FindActiveByEmailAsync("maria@example.com", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
 
         var result = await Handler().Handle(
             Command(email: "maria@example.com", cpf: ClientTestData.ValidCpf),
@@ -240,11 +245,11 @@ public class CreateClientCommandHandlerTests
     [Fact]
     public async Task Handle_WhenAConcurrentRequestTookTheCpf_ReturnsAConflictPointingAtTheWinner()
     {
-        var winnerId = Guid.NewGuid();
+        var winner = ClientTestData.ExistingClient();
         _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
             .Returns(
-                Task.FromResult<ClientCpfMatch?>(null),
-                Task.FromResult<ClientCpfMatch?>(new ClientCpfMatch(winnerId, IsDeleted: false)));
+                Task.FromResult<Client?>(null),
+                Task.FromResult<Client?>(winner));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(UniqueViolation("IX_Clients_TenantId_Cpf"));
 
@@ -252,7 +257,7 @@ public class CreateClientCommandHandlerTests
 
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Client.DuplicateCpf");
-        result.Error.FieldErrors!["Cpf"][0].Meta!["clientId"].Should().Be(winnerId.ToString());
+        result.Error.FieldErrors!["Cpf"][0].Meta!["clientId"].Should().Be(winner.Id.ToString());
     }
 
     [Fact]

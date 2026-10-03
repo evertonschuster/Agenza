@@ -1,6 +1,7 @@
 using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
+using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Clients;
 
@@ -9,12 +10,12 @@ public static class ClientPersistenceErrorMapper
     public const string CpfConstraint = "IX_Clients_TenantId_Cpf";
     public const string EmailConstraint = "IX_Clients_TenantId_Email";
 
-    public static Error Map(PersistenceError error, ClientCpfMatch? cpfMatch, ILogger logger)
+    public static Error Map(PersistenceError error, Client? clientWithSameCpf, ILogger logger)
     {
         switch (error.ConstraintName)
         {
             case CpfConstraint:
-                return ClientConflicts.Cpf(cpfMatch);
+                return ClientConflicts.Cpf(clientWithSameCpf);
             case EmailConstraint:
                 return ClientConflicts.Email();
             default:
