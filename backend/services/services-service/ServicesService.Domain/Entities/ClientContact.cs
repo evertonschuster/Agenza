@@ -12,7 +12,7 @@ public abstract class ClientContact : TenantOwnedEntity
     public Guid ClientId { get; private set; }
     public string Name { get; private set; }
     public string Relationship { get; private set; }
-    public string? Phone { get; private set; }
+    public PhoneNumber? Phone { get; private set; }
 
     // EF Core materialization only.
     protected ClientContact()
@@ -21,7 +21,7 @@ public abstract class ClientContact : TenantOwnedEntity
         Relationship = string.Empty;
     }
 
-    protected ClientContact(Guid id, string name, string relationship, string? phone)
+    protected ClientContact(Guid id, string name, string relationship, PhoneNumber? phone)
         : base(id)
     {
         Name = name;
@@ -58,6 +58,4 @@ public abstract class ClientContact : TenantOwnedEntity
 
         return DomainResult.Success(trimmed);
     }
-
-    protected static DomainResult<string?> ValidatePhone(string? phone) => PhoneNumber.Normalize(phone);
 }

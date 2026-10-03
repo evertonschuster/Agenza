@@ -23,13 +23,13 @@ public class ClientContactTests
     }
 
     [Fact]
-    public void Guardian_Create_NormalizesPhoneAndCpf()
+    public void Guardian_Create_KeepsThePhoneAndCpf()
     {
         var guardian = ClientGuardian.Create(
-            Guid.NewGuid(), "Ana Souza", "Mãe", " (11) 99999-0000 ", ClientTestData.ValidCpf).Value;
+            Guid.NewGuid(), "Ana Souza", "Mãe", ClientTestData.Phone(), ClientTestData.Cpf()).Value;
 
-        guardian.Phone.Should().Be("(11) 99999-0000");
-        guardian.Cpf.Should().Be(ClientTestData.ValidCpfDigits);
+        guardian.Phone.Should().Be(ClientTestData.Phone());
+        guardian.Cpf.Should().Be(ClientTestData.Cpf());
     }
 
     [Theory]
@@ -59,25 +59,17 @@ public class ClientContactTests
             .IsFailure.Should().BeTrue();
     }
 
-    [Theory]
-    [InlineData("telefone", null)]
-    [InlineData(null, "529.982.247-24")]
-    public void Guardian_Create_WithInvalidPhoneOrCpf_Fails(string? phone, string? cpf)
-    {
-        ClientGuardian.Create(Guid.NewGuid(), "Ana Souza", "Mãe", phone, cpf).IsFailure.Should().BeTrue();
-    }
-
     [Fact]
     public void ReferenceContact_Create_StoresThePurposesAsFlags()
     {
         var result = ClientReferenceContact.Create(
-            Guid.NewGuid(), " Carlos Lima ", " Tio ", "11 4000-1000", ["emergency", "dailyCommunication"]);
+            Guid.NewGuid(), " Carlos Lima ", " Tio ", ClientTestData.Phone("11 4000-1000"), ["emergency", "dailyCommunication"]);
 
         result.IsSuccess.Should().BeTrue();
         var contact = result.Value;
         contact.Name.Should().Be("Carlos Lima");
         contact.Relationship.Should().Be("Tio");
-        contact.Phone.Should().Be("11 4000-1000");
+        contact.Phone!.Value.Should().Be("11 4000-1000");
         contact.Purposes.Should().Be(ContactPurpose.Emergency | ContactPurpose.DailyCommunication);
     }
 
@@ -103,13 +95,6 @@ public class ClientContactTests
     public void ReferenceContact_Create_WithoutNameOrRelationship_Fails(string name, string relationship)
     {
         ClientReferenceContact.Create(Guid.NewGuid(), name, relationship, null, ["emergency"])
-            .IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public void ReferenceContact_Create_WithInvalidPhone_Fails()
-    {
-        ClientReferenceContact.Create(Guid.NewGuid(), "Carlos Lima", "Tio", "telefone", ["emergency"])
             .IsFailure.Should().BeTrue();
     }
 }

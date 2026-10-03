@@ -1,5 +1,6 @@
 using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients;
 
@@ -8,22 +9,17 @@ public class ClientTests
     private static readonly DateOnly Today = ClientTestData.Today;
 
     private static DomainResult<Client> Create(
-        string fullName = "Maria Souza",
         DateOnly? birthDate = null,
-        string? phone = null,
-        string? email = null,
-        string? cpf = null,
-        string? notes = null,
         ClientGuardian[]? guardians = null,
         ClientReferenceContact[]? referenceContacts = null) =>
         Client.Create(
             Guid.NewGuid(),
-            fullName,
+            ClientTestData.Name(),
             birthDate,
-            phone,
-            email,
-            cpf,
-            notes,
+            null,
+            null,
+            null,
+            null,
             Today,
             guardians ?? [],
             referenceContacts ?? []);
@@ -33,14 +29,14 @@ public class ClientTests
     {
         var id = Guid.NewGuid();
 
-        var result = Client.Create(id, "Maria Souza", null, null, null, null, null, Today, [], []);
+        var result = Client.Create(id, ClientTestData.Name(), null, null, null, null, null, Today, [], []);
 
         result.IsSuccess.Should().BeTrue();
         var client = result.Value;
         client.Id.Should().Be(id);
         client.TenantId.Should().Be(Guid.Empty);
         client.Status.Should().Be(ClientStatus.Active);
-        client.FullName.Should().Be("Maria Souza");
+        client.FullName.Should().Be(ClientTestData.Name());
         client.BirthDate.Should().BeNull();
         client.Phone.Should().BeNull();
         client.Email.Should().BeNull();
@@ -51,59 +47,27 @@ public class ClientTests
     }
 
     [Fact]
-    public void Create_TrimsAndNormalizesEveryField()
+    public void Create_KeepsEveryValueObjectItReceives()
     {
-        var result = Create(
-            fullName: "  Maria Souza  ",
-            birthDate: new DateOnly(1990, 5, 20),
-            phone: "  (11) 99999-0000 ",
-            email: "  Maria.Souza@Example.COM ",
-            cpf: ClientTestData.ValidCpf,
-            notes: "  Prefere atendimento à tarde.  ");
+        var notes = AdministrativeNotes.Create("Prefere atendimento à tarde.").Value;
 
-        result.IsSuccess.Should().BeTrue();
-        var client = result.Value;
-        client.FullName.Should().Be("Maria Souza");
+        var client = Client.Create(
+            Guid.NewGuid(),
+            ClientTestData.Name(),
+            new DateOnly(1990, 5, 20),
+            ClientTestData.Phone(),
+            ClientTestData.Email(),
+            ClientTestData.Cpf(),
+            notes,
+            Today,
+            [],
+            []).Value;
+
         client.BirthDate.Should().Be(new DateOnly(1990, 5, 20));
-        client.Phone.Should().Be("(11) 99999-0000");
-        client.Email.Should().Be("maria.souza@example.com");
-        client.Cpf.Should().Be(ClientTestData.ValidCpfDigits);
-        client.AdministrativeNotes.Should().Be("Prefere atendimento à tarde.");
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Create_WithBlankOptionalFields_StoresNulls(string blank)
-    {
-        var client = Create(phone: blank, email: blank, cpf: blank, notes: blank).Value;
-
-        client.Phone.Should().BeNull();
-        client.Email.Should().BeNull();
-        client.Cpf.Should().BeNull();
-        client.AdministrativeNotes.Should().BeNull();
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("A")]
-    [InlineData(" A ")]
-    public void Create_WithTooShortName_Fails(string fullName)
-    {
-        var result = Create(fullName: fullName);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
-    }
-
-    [Fact]
-    public void Create_AcceptsNamesBetweenTwoAndOneHundredFiftyCharactersAfterTrim()
-    {
-        Create(fullName: "Jo").IsSuccess.Should().BeTrue();
-        Create(fullName: new string('a', Client.FullNameMaxLength)).IsSuccess.Should().BeTrue();
-        Create(fullName: " " + new string('a', Client.FullNameMaxLength) + " ").IsSuccess.Should().BeTrue();
-        Create(fullName: new string('a', Client.FullNameMaxLength + 1)).IsFailure.Should().BeTrue();
+        client.Phone.Should().Be(ClientTestData.Phone());
+        client.Email.Should().Be(ClientTestData.Email());
+        client.Cpf!.Value.Should().Be(ClientTestData.ValidCpfDigits);
+        client.AdministrativeNotes.Should().Be(notes);
     }
 
     [Fact]
@@ -183,38 +147,6 @@ public class ClientTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Message.Should().Contain("120");
-    }
-
-    [Theory]
-    [InlineData("telefone")]
-    [InlineData("123456789012345678901")]
-    public void Create_WithInvalidPhone_Fails(string phone)
-    {
-        Create(phone: phone).IsFailure.Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData("maria")]
-    [InlineData("maria@example")]
-    public void Create_WithInvalidEmail_Fails(string email)
-    {
-        Create(email: email).IsFailure.Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData("529.982.247-24")]
-    [InlineData("111.111.111-11")]
-    [InlineData("123")]
-    public void Create_WithInvalidCpf_Fails(string cpf)
-    {
-        Create(cpf: cpf).IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Create_LimitsAdministrativeNotesToFiveHundredCharacters()
-    {
-        Create(notes: new string('n', Client.AdministrativeNotesMaxLength)).IsSuccess.Should().BeTrue();
-        Create(notes: new string('n', Client.AdministrativeNotesMaxLength + 1)).IsFailure.Should().BeTrue();
     }
 
     [Fact]

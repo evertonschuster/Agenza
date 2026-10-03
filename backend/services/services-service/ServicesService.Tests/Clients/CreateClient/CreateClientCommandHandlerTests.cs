@@ -2,6 +2,7 @@ using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Domain.Entities;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients.CreateClient;
 
@@ -14,9 +15,9 @@ public class CreateClientCommandHandlerTests
 
     public CreateClientCommandHandlerTests()
     {
-        _repository.FindByCpfAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _repository.FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(null));
-        _repository.FindActiveByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+        _repository.FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(null));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
@@ -160,8 +161,8 @@ public class CreateClientCommandHandlerTests
     {
         await Handler().Handle(Command(email: " Maria@Example.COM ", cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
-        await _repository.Received(1).FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>());
-        await _repository.Received(1).FindActiveByEmailAsync("maria@example.com", Arg.Any<CancellationToken>());
+        await _repository.Received(1).FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>());
+        await _repository.Received(1).FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -169,15 +170,15 @@ public class CreateClientCommandHandlerTests
     {
         await Handler().Handle(Command(), CancellationToken.None);
 
-        await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
-        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithCpfOfAnExistingClient_ReturnsAConflictPointingAtIt()
     {
         var existing = ClientTestData.ExistingClient();
-        _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
+        _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(existing));
 
         var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
@@ -198,7 +199,7 @@ public class CreateClientCommandHandlerTests
     {
         var deleted = ClientTestData.ExistingClient();
         deleted.MarkDeleted(null, NoonUtc);
-        _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
+        _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(deleted));
 
         var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
@@ -213,7 +214,7 @@ public class CreateClientCommandHandlerTests
     public async Task Handle_WithEmailOfAnActiveClient_ReturnsAConflictPointingAtIt()
     {
         var existing = ClientTestData.ExistingClient();
-        _repository.FindActiveByEmailAsync("maria@example.com", Arg.Any<CancellationToken>())
+        _repository.FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(existing));
 
         var result = await Handler().Handle(Command(email: "Maria@Example.com"), CancellationToken.None);
@@ -229,9 +230,9 @@ public class CreateClientCommandHandlerTests
     [Fact]
     public async Task Handle_WithBothConflicts_ReportsEveryField()
     {
-        _repository.FindByCpfAsync(ClientTestData.ValidCpfDigits, Arg.Any<CancellationToken>())
+        _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
-        _repository.FindActiveByEmailAsync("maria@example.com", Arg.Any<CancellationToken>())
+        _repository.FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
 
         var result = await Handler().Handle(

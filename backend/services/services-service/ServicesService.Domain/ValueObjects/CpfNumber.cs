@@ -2,27 +2,34 @@ using ServicesService.Domain.Common;
 
 namespace ServicesService.Domain.ValueObjects;
 
-public static class CpfNumber
+public sealed record CpfNumber
 {
     public const int Length = 11;
 
-    public static DomainResult<string?> Normalize(string? raw)
+    public string Value { get; }
+
+    private CpfNumber(string value)
+    {
+        Value = value;
+    }
+
+    public static DomainResult<CpfNumber?> Create(string? raw)
     {
         var trimmed = raw?.Trim();
 
         if (string.IsNullOrEmpty(trimmed))
         {
-            return DomainResult.Success<string?>(null);
+            return DomainResult.Success<CpfNumber?>(null);
         }
 
         var digits = StripMask(trimmed);
 
         if (!HasValidCheckDigits(digits))
         {
-            return DomainResult.Failure<string?>(new DomainError("Client.Invalid", "O CPF informado é inválido."));
+            return DomainResult.Failure<CpfNumber?>(new DomainError("Client.Invalid", "O CPF informado é inválido."));
         }
 
-        return DomainResult.Success<string?>(digits);
+        return DomainResult.Success<CpfNumber?>(new CpfNumber(digits));
     }
 
     public static bool IsValid(string? raw) => HasValidCheckDigits(StripMask(raw ?? string.Empty));

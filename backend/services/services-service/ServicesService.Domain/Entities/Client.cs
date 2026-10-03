@@ -7,18 +7,15 @@ namespace ServicesService.Domain.Entities;
 // and backed by unique indexes (ClientConfiguration), not here.
 public class Client : TenantOwnedEntity
 {
-    public const int FullNameMinLength = 2;
-    public const int FullNameMaxLength = 150;
-    public const int AdministrativeNotesMaxLength = 500;
     public const int MaxGuardians = 10;
     public const int MaxReferenceContacts = 10;
 
-    public string FullName { get; private set; }
+    public FullName FullName { get; private set; }
     public DateOnly? BirthDate { get; private set; }
-    public string? Phone { get; private set; }
-    public string? Email { get; private set; }
-    public string? Cpf { get; private set; }
-    public string? AdministrativeNotes { get; private set; }
+    public PhoneNumber? Phone { get; private set; }
+    public EmailAddress? Email { get; private set; }
+    public CpfNumber? Cpf { get; private set; }
+    public AdministrativeNotes? AdministrativeNotes { get; private set; }
     public ClientStatus Status { get; private set; }
 
     private readonly List<ClientGuardian> _guardians = [];
@@ -30,17 +27,17 @@ public class Client : TenantOwnedEntity
     // EF Core materialization only.
     private Client()
     {
-        FullName = string.Empty;
+        FullName = null!;
     }
 
     private Client(
         Guid id,
-        string fullName,
+        FullName fullName,
         DateOnly? birthDate,
-        string? phone,
-        string? email,
-        string? cpf,
-        string? administrativeNotes)
+        PhoneNumber? phone,
+        EmailAddress? email,
+        CpfNumber? cpf,
+        AdministrativeNotes? administrativeNotes)
         : base(id)
     {
         FullName = fullName;
@@ -54,22 +51,16 @@ public class Client : TenantOwnedEntity
 
     public static DomainResult<Client> Create(
         Guid id,
-        string fullName,
+        FullName fullName,
         DateOnly? birthDate,
-        string? phone,
-        string? email,
-        string? cpf,
-        string? administrativeNotes,
+        PhoneNumber? phone,
+        EmailAddress? email,
+        CpfNumber? cpf,
+        AdministrativeNotes? administrativeNotes,
         DateOnly today,
         IReadOnlyCollection<ClientGuardian> guardians,
         IReadOnlyCollection<ClientReferenceContact> referenceContacts)
     {
-        var fullNameResult = ValidateFullName(fullName);
-        if (fullNameResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(fullNameResult.Error);
-        }
-
         if (birthDate is { } date)
         {
             var birthDateResult = BirthDateRules.Validate(date, today);
@@ -79,44 +70,13 @@ public class Client : TenantOwnedEntity
             }
         }
 
-        var phoneResult = PhoneNumber.Normalize(phone);
-        if (phoneResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(phoneResult.Error);
-        }
-
-        var emailResult = EmailAddress.Normalize(email);
-        if (emailResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(emailResult.Error);
-        }
-
-        var cpfResult = CpfNumber.Normalize(cpf);
-        if (cpfResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(cpfResult.Error);
-        }
-
-        var notesResult = ValidateAdministrativeNotes(administrativeNotes);
-        if (notesResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(notesResult.Error);
-        }
-
         var contactsResult = ValidateContacts(birthDate, today, guardians, referenceContacts);
         if (contactsResult.IsFailure)
         {
             return DomainResult.Failure<Client>(contactsResult.Error);
         }
 
-        var client = new Client(
-            id,
-            fullNameResult.Value,
-            birthDate,
-            phoneResult.Value,
-            emailResult.Value,
-            cpfResult.Value,
-            notesResult.Value);
+        var client = new Client(id, fullName, birthDate, phone, email, cpf, administrativeNotes);
         client.AddContacts(guardians, referenceContacts);
 
         return DomainResult.Success(client);
@@ -137,39 +97,6 @@ public class Client : TenantOwnedEntity
             referenceContact.AssignClient(Id);
             _referenceContacts.Add(referenceContact);
         }
-    }
-
-    private static DomainResult<string> ValidateFullName(string fullName)
-    {
-        var trimmed = fullName?.Trim() ?? string.Empty;
-
-        if (trimmed.Length < FullNameMinLength || trimmed.Length > FullNameMaxLength)
-        {
-            return DomainResult.Failure<string>(new DomainError(
-                "Client.Invalid",
-                $"O nome completo é obrigatório e deve ter entre {FullNameMinLength} e {FullNameMaxLength} caracteres."));
-        }
-
-        return DomainResult.Success(trimmed);
-    }
-
-    private static DomainResult<string?> ValidateAdministrativeNotes(string? notes)
-    {
-        var trimmed = notes?.Trim();
-
-        if (string.IsNullOrEmpty(trimmed))
-        {
-            return DomainResult.Success<string?>(null);
-        }
-
-        if (trimmed.Length > AdministrativeNotesMaxLength)
-        {
-            return DomainResult.Failure<string?>(new DomainError(
-                "Client.Invalid",
-                $"As observações administrativas devem ter no máximo {AdministrativeNotesMaxLength} caracteres."));
-        }
-
-        return DomainResult.Success<string?>(trimmed);
     }
 
     private static DomainResult ValidateContacts(

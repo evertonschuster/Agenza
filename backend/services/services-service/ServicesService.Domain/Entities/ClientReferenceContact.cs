@@ -12,7 +12,7 @@ public class ClientReferenceContact : ClientContact
     {
     }
 
-    private ClientReferenceContact(Guid id, string name, string relationship, string? phone, ContactPurpose purposes)
+    private ClientReferenceContact(Guid id, string name, string relationship, PhoneNumber? phone, ContactPurpose purposes)
         : base(id, name, relationship, phone)
     {
         Purposes = purposes;
@@ -22,7 +22,7 @@ public class ClientReferenceContact : ClientContact
         Guid id,
         string name,
         string relationship,
-        string? phone,
+        PhoneNumber? phone,
         IEnumerable<string>? purposes)
     {
         var nameResult = ValidateName(name);
@@ -37,12 +37,6 @@ public class ClientReferenceContact : ClientContact
             return DomainResult.Failure<ClientReferenceContact>(relationshipResult.Error);
         }
 
-        var phoneResult = ValidatePhone(phone);
-        if (phoneResult.IsFailure)
-        {
-            return DomainResult.Failure<ClientReferenceContact>(phoneResult.Error);
-        }
-
         var purposesResult = ContactPurposes.Parse(purposes);
         if (purposesResult.IsFailure)
         {
@@ -53,7 +47,7 @@ public class ClientReferenceContact : ClientContact
             id,
             nameResult.Value,
             relationshipResult.Value,
-            phoneResult.Value,
+            phone,
             purposesResult.Value));
     }
 }

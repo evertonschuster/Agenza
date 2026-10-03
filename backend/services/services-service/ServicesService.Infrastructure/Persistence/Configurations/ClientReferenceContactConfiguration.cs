@@ -18,7 +18,9 @@ public class ClientReferenceContactConfiguration : IEntityTypeConfiguration<Clie
         builder.Property(r => r.ClientId).IsRequired();
         builder.Property(r => r.Name).IsRequired().HasMaxLength(ClientContact.NameMaxLength);
         builder.Property(r => r.Relationship).IsRequired().HasMaxLength(ClientContact.RelationshipMaxLength);
-        builder.Property(r => r.Phone).HasMaxLength(PhoneNumber.MaxLength);
+        builder.Property(r => r.Phone)
+            .HasConversion(phone => phone!.Value, value => PhoneNumber.Create(value).Value!)
+            .HasMaxLength(PhoneNumber.MaxLength);
         builder.Property(r => r.Purposes).IsRequired();
     }
 }

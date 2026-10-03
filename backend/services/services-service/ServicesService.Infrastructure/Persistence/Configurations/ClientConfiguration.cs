@@ -16,12 +16,23 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.HasAlternateKey(c => new { c.TenantId, c.Id });
 
         builder.Property(c => c.TenantId).IsRequired();
-        builder.Property(c => c.FullName).IsRequired().HasMaxLength(Client.FullNameMaxLength);
+        builder.Property(c => c.FullName)
+            .HasConversion(fullName => fullName.Value, value => FullName.Create(value).Value)
+            .IsRequired()
+            .HasMaxLength(FullName.MaxLength);
         builder.Property(c => c.BirthDate);
-        builder.Property(c => c.Phone).HasMaxLength(PhoneNumber.MaxLength);
-        builder.Property(c => c.Email).HasMaxLength(EmailAddress.MaxLength);
-        builder.Property(c => c.Cpf).HasMaxLength(CpfNumber.Length);
-        builder.Property(c => c.AdministrativeNotes).HasMaxLength(Client.AdministrativeNotesMaxLength);
+        builder.Property(c => c.Phone)
+            .HasConversion(phone => phone!.Value, value => PhoneNumber.Create(value).Value!)
+            .HasMaxLength(PhoneNumber.MaxLength);
+        builder.Property(c => c.Email)
+            .HasConversion(email => email!.Value, value => EmailAddress.Create(value).Value!)
+            .HasMaxLength(EmailAddress.MaxLength);
+        builder.Property(c => c.Cpf)
+            .HasConversion(cpf => cpf!.Value, value => CpfNumber.Create(value).Value!)
+            .HasMaxLength(CpfNumber.Length);
+        builder.Property(c => c.AdministrativeNotes)
+            .HasConversion(notes => notes!.Value, value => AdministrativeNotes.Create(value).Value!)
+            .HasMaxLength(AdministrativeNotes.MaxLength);
         builder.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
 
         // CPF is never reused, so its index has no situation filter; e-mail only collides among live active

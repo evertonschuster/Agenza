@@ -47,15 +47,25 @@ public class ClientPersistenceTests
         IReadOnlyCollection<ClientReferenceContact>? referenceContacts = null) =>
         Client.Create(
             Guid.NewGuid(),
-            fullName,
+            FullName.Create(fullName).Value,
             birthDate,
             null,
-            email,
-            cpf,
+            EmailAddress.Create(email).Value,
+            CpfNumber.Create(cpf).Value,
             null,
             Today,
             guardians ?? [],
             referenceContacts ?? []).Value;
+
+    private static CpfNumber Cpf(string digits)
+    {
+        return CpfNumber.Create(digits).Value!;
+    }
+
+    private static EmailAddress Email(string address)
+    {
+        return EmailAddress.Create(address).Value!;
+    }
 
     private static async Task Save(ServicesDataContext context, Client client)
     {
@@ -153,7 +163,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantB))
         {
-            (await context.Clients.Select(c => c.FullName).ToListAsync()).Should().Equal("João Pereira");
+            (await context.Clients.Select(c => c.FullName).ToListAsync()).Should().Equal(FullName.Create("João Pereira").Value);
             (await context.Clients.AnyAsync(c => c.Id == client.Id)).Should().BeFalse();
             (await context.ClientGuardians.AnyAsync()).Should().BeFalse();
             (await context.ClientReferenceContacts.AnyAsync()).Should().BeFalse();
@@ -161,7 +171,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantA))
         {
-            (await context.Clients.Select(c => c.FullName).ToListAsync()).Should().Equal("Maria Souza");
+            (await context.Clients.Select(c => c.FullName).ToListAsync()).Should().Equal(FullName.Create("Maria Souza").Value);
             (await context.ClientGuardians.CountAsync()).Should().Be(1);
             (await context.ClientReferenceContacts.CountAsync()).Should().Be(1);
         }
@@ -180,7 +190,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var match = await new ClientRepository(context).FindByCpfAsync(CpfDigits, CancellationToken.None);
+            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
 
             match!.Id.Should().Be(client.Id);
         }
@@ -201,7 +211,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var match = await new ClientRepository(context).FindByCpfAsync(CpfDigits, CancellationToken.None);
+            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
 
             match!.Id.Should().Be(client.Id);
         }
@@ -224,7 +234,7 @@ public class ClientPersistenceTests
         {
             (await context.Clients.AnyAsync(c => c.Id == client.Id)).Should().BeFalse();
 
-            var match = await new ClientRepository(context).FindByCpfAsync(CpfDigits, CancellationToken.None);
+            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
 
             match!.Id.Should().Be(client.Id);
             match.IsDeleted.Should().BeTrue();
@@ -246,7 +256,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var match = await new ClientRepository(context).FindByCpfAsync(CpfDigits, CancellationToken.None);
+            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
 
             match!.Id.Should().Be(client.Id);
             match.Status.Should().Be(ClientStatus.Deleted);
@@ -273,10 +283,10 @@ public class ClientPersistenceTests
         {
             var repository = new ClientRepository(context);
 
-            (await context.Clients.IgnoreQueryFilters().CountAsync(c => c.Cpf == CpfDigits || c.Cpf == "12345678909"))
+            (await context.Clients.IgnoreQueryFilters().CountAsync(c => c.Cpf == Cpf(CpfDigits) || c.Cpf == Cpf("12345678909")))
                 .Should().Be(2, "the rows exist, so only the repository's own tenant predicate keeps them out");
-            (await repository.FindByCpfAsync(CpfDigits, CancellationToken.None)).Should().BeNull();
-            (await repository.FindByCpfAsync("12345678909", CancellationToken.None)).Should().BeNull();
+            (await repository.FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None)).Should().BeNull();
+            (await repository.FindByCpfAsync(Cpf("12345678909"), CancellationToken.None)).Should().BeNull();
         }
     }
 
@@ -295,7 +305,7 @@ public class ClientPersistenceTests
         var options = new DbContextOptionsBuilder<ServicesDataContext>().UseInMemoryDatabase(databaseName).Options;
         await using var tenantlessContext = new ServicesDataContext(options, tenantProvider);
 
-        var match = await new ClientRepository(tenantlessContext).FindByCpfAsync(CpfDigits, CancellationToken.None);
+        var match = await new ClientRepository(tenantlessContext).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
 
         match.Should().BeNull();
     }
@@ -323,15 +333,15 @@ public class ClientPersistenceTests
         {
             var repository = new ClientRepository(context);
 
-            (await repository.FindActiveByEmailAsync("maria@example.com", CancellationToken.None))!.Id.Should().Be(active.Id);
-            (await repository.FindActiveByEmailAsync("joao@example.com", CancellationToken.None)).Should().BeNull();
-            (await repository.FindActiveByEmailAsync("pedro@example.com", CancellationToken.None)).Should().BeNull();
-            (await repository.FindActiveByEmailAsync("outro@example.com", CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync(Email("maria@example.com"), CancellationToken.None))!.Id.Should().Be(active.Id);
+            (await repository.FindActiveByEmailAsync(Email("joao@example.com"), CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync(Email("pedro@example.com"), CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync(Email("outro@example.com"), CancellationToken.None)).Should().BeNull();
         }
 
         await using (var context = CreateContext(databaseName, tenantB))
         {
-            (await new ClientRepository(context).FindActiveByEmailAsync("maria@example.com", CancellationToken.None))
+            (await new ClientRepository(context).FindActiveByEmailAsync(Email("maria@example.com"), CancellationToken.None))
                 .Should().BeNull();
         }
     }

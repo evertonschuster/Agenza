@@ -8,21 +8,21 @@ public class EmailAddressTests
     [InlineData("maria@example.com", "maria@example.com")]
     [InlineData("  Maria.Souza@Example.COM  ", "maria.souza@example.com")]
     [InlineData("maria+agenda@mail.example.com.br", "maria+agenda@mail.example.com.br")]
-    public void Normalize_TrimsAndLowercases(string raw, string expected)
+    public void Create_TrimsAndLowercases(string raw, string expected)
     {
-        var result = EmailAddress.Normalize(raw);
+        var result = EmailAddress.Create(raw);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(expected);
+        result.Value!.Value.Should().Be(expected);
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Normalize_WithBlankValue_ReturnsNull(string? raw)
+    public void Create_WithBlankValue_ReturnsNull(string? raw)
     {
-        var result = EmailAddress.Normalize(raw);
+        var result = EmailAddress.Create(raw);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().BeNull();
@@ -39,19 +39,19 @@ public class EmailAddressTests
     [InlineData("maria@example.com.")]
     [InlineData("maria souza@example.com")]
     [InlineData("a@b@example.com")]
-    public void Normalize_WithInvalidFormat_Fails(string raw)
+    public void Create_WithInvalidFormat_Fails(string raw)
     {
-        var result = EmailAddress.Normalize(raw);
+        var result = EmailAddress.Create(raw);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Client.Invalid");
     }
 
     [Fact]
-    public void Normalize_WithMoreThanTheMaximumLength_Fails()
+    public void Create_WithMoreThanTheMaximumLength_Fails()
     {
         var email = new string('a', EmailAddress.MaxLength) + "@example.com";
 
-        EmailAddress.Normalize(email).IsFailure.Should().BeTrue();
+        EmailAddress.Create(email).IsFailure.Should().BeTrue();
     }
 }

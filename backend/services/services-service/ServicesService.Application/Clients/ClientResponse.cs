@@ -18,12 +18,12 @@ public sealed record ClientResponse(
     public static ClientResponse FromClient(Client client) =>
         new(
             client.Id,
-            client.FullName,
+            client.FullName.Value,
             client.BirthDate,
-            client.Phone,
-            client.Email,
-            client.Cpf,
-            client.AdministrativeNotes,
+            client.Phone?.Value,
+            client.Email?.Value,
+            client.Cpf?.Value,
+            client.AdministrativeNotes?.Value,
             client.Status.ToString().ToLowerInvariant(),
             client.Guardians.Select(GuardianResponse.FromGuardian).ToList(),
             client.ReferenceContacts.Select(ReferenceContactResponse.FromReferenceContact).ToList());
@@ -32,7 +32,7 @@ public sealed record ClientResponse(
 public sealed record GuardianResponse(Guid Id, string Name, string Relationship, string? Phone, string? Cpf)
 {
     public static GuardianResponse FromGuardian(ClientGuardian guardian) =>
-        new(guardian.Id, guardian.Name, guardian.Relationship, guardian.Phone, guardian.Cpf);
+        new(guardian.Id, guardian.Name, guardian.Relationship, guardian.Phone?.Value, guardian.Cpf?.Value);
 }
 
 public sealed record ReferenceContactResponse(
@@ -43,5 +43,5 @@ public sealed record ReferenceContactResponse(
     IReadOnlyList<string> Purposes)
 {
     public static ReferenceContactResponse FromReferenceContact(ClientReferenceContact contact) =>
-        new(contact.Id, contact.Name, contact.Relationship, contact.Phone, ContactPurposes.ToNames(contact.Purposes));
+        new(contact.Id, contact.Name, contact.Relationship, contact.Phone?.Value, ContactPurposes.ToNames(contact.Purposes));
 }

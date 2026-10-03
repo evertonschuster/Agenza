@@ -13,10 +13,10 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
         RuleFor(command => command.FullName)
             .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("O nome completo é obrigatório.")
-            .Must(fullName => fullName.Trim().Length >= Client.FullNameMinLength)
-            .WithMessage($"O nome completo deve ter pelo menos {Client.FullNameMinLength} caracteres.")
-            .Must(fullName => fullName.Trim().Length <= Client.FullNameMaxLength)
-            .WithMessage($"O nome completo deve ter no máximo {Client.FullNameMaxLength} caracteres.");
+            .Must(fullName => fullName.Trim().Length >= FullName.MinLength)
+            .WithMessage($"O nome completo deve ter pelo menos {FullName.MinLength} caracteres.")
+            .Must(fullName => fullName.Trim().Length <= FullName.MaxLength)
+            .WithMessage($"O nome completo deve ter no máximo {FullName.MaxLength} caracteres.");
 
         RuleFor(command => command.BirthDate)
             .Cascade(CascadeMode.Stop)
@@ -38,9 +38,9 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
         RuleFor(command => command.Cpf).MustBeValidCpf();
 
         RuleFor(command => command.AdministrativeNotes)
-            .Must(notes => notes is null || notes.Trim().Length <= Client.AdministrativeNotesMaxLength)
+            .Must(notes => notes is null || notes.Trim().Length <= AdministrativeNotes.MaxLength)
             .WithMessage(
-                $"As observações administrativas devem ter no máximo {Client.AdministrativeNotesMaxLength} caracteres.");
+                $"As observações administrativas devem ter no máximo {AdministrativeNotes.MaxLength} caracteres.");
 
         RuleFor(command => command.Guardians)
             .Must(guardians => guardians is null || guardians.Count <= Client.MaxGuardians)

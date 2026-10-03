@@ -10,36 +10,36 @@ public class PhoneNumberTests
     [InlineData("+55 (11) 99999-0000")]
     [InlineData("11 9999-0000")]
     [InlineData("+55 11 99999 0000")]
-    public void Normalize_WithAllowedCharacters_KeepsTheValue(string raw)
+    public void Create_WithAllowedCharacters_KeepsTheValue(string raw)
     {
-        var result = PhoneNumber.Normalize(raw);
+        var result = PhoneNumber.Create(raw);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(raw);
+        result.Value!.Value.Should().Be(raw);
     }
 
     [Fact]
-    public void Normalize_TrimsSurroundingWhitespace()
+    public void Create_TrimsSurroundingWhitespace()
     {
-        PhoneNumber.Normalize("  (11) 99999-0000  ").Value.Should().Be("(11) 99999-0000");
+        PhoneNumber.Create("  (11) 99999-0000  ").Value!.Value.Should().Be("(11) 99999-0000");
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Normalize_WithBlankValue_ReturnsNull(string? raw)
+    public void Create_WithBlankValue_ReturnsNull(string? raw)
     {
-        var result = PhoneNumber.Normalize(raw);
+        var result = PhoneNumber.Create(raw);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().BeNull();
     }
 
     [Fact]
-    public void Normalize_WithExactlyTwentyCharacters_Succeeds()
+    public void Create_WithExactlyTwentyCharacters_Succeeds()
     {
-        PhoneNumber.Normalize(new string('1', PhoneNumber.MaxLength)).IsSuccess.Should().BeTrue();
+        PhoneNumber.Create(new string('1', PhoneNumber.MaxLength)).IsSuccess.Should().BeTrue();
     }
 
     [Theory]
@@ -50,9 +50,9 @@ public class PhoneNumberTests
     [InlineData("telefone")]
     [InlineData("+-() ")]
     [InlineData("---")]
-    public void Normalize_WithDisallowedShape_Fails(string raw)
+    public void Create_WithDisallowedShape_Fails(string raw)
     {
-        var result = PhoneNumber.Normalize(raw);
+        var result = PhoneNumber.Create(raw);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Client.Invalid");

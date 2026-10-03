@@ -11,21 +11,21 @@ public class CpfNumberTests
     [InlineData("529 982 247 25", "52998224725")]
     [InlineData("123.456.789-09", "12345678909")]
     [InlineData("111.444.777-35", "11144477735")]
-    public void Normalize_WithValidCpf_StripsTheMask(string raw, string expectedDigits)
+    public void Create_WithValidCpf_StripsTheMask(string raw, string expectedDigits)
     {
-        var result = CpfNumber.Normalize(raw);
+        var result = CpfNumber.Create(raw);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Should().Be(expectedDigits);
+        result.Value!.Value.Should().Be(expectedDigits);
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Normalize_WithBlankValue_ReturnsNull(string? raw)
+    public void Create_WithBlankValue_ReturnsNull(string? raw)
     {
-        var result = CpfNumber.Normalize(raw);
+        var result = CpfNumber.Create(raw);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().BeNull();
@@ -43,9 +43,9 @@ public class CpfNumberTests
     [InlineData("abc.def.ghi-jk")]
     [InlineData("529.982.247-2a")]
     [InlineData("٥٢٩٩٨٢٢٤٧٢٥")]
-    public void Normalize_WithInvalidCpf_Fails(string raw)
+    public void Create_WithInvalidCpf_Fails(string raw)
     {
-        var result = CpfNumber.Normalize(raw);
+        var result = CpfNumber.Create(raw);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Client.Invalid");
