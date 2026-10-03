@@ -9,6 +9,20 @@ public abstract class ClientContact : TenantOwnedEntity
     public const int NameMaxLength = 150;
     public const int RelationshipMaxLength = 60;
 
+    public static readonly DomainError NameRequired = new("ClientContact.NameRequired", "O nome do contato é obrigatório.");
+
+    public static readonly DomainError InvalidNameLength = new(
+        "ClientContact.InvalidNameLength",
+        $"O nome do contato deve ter entre {NameMinLength} e {NameMaxLength} caracteres.");
+
+    public static readonly DomainError RelationshipRequired = new(
+        "ClientContact.RelationshipRequired",
+        "O vínculo do contato é obrigatório.");
+
+    public static readonly DomainError RelationshipTooLong = new(
+        "ClientContact.RelationshipTooLong",
+        $"O vínculo do contato deve ter no máximo {RelationshipMaxLength} caracteres.");
+
     public Guid ClientId { get; private set; }
     public string Name { get; private set; }
     public string Relationship { get; private set; }
@@ -35,11 +49,14 @@ public abstract class ClientContact : TenantOwnedEntity
     {
         var trimmed = name?.Trim() ?? string.Empty;
 
+        if (trimmed.Length == 0)
+        {
+            return DomainResult.Failure<string>(NameRequired);
+        }
+
         if (trimmed.Length < NameMinLength || trimmed.Length > NameMaxLength)
         {
-            return DomainResult.Failure<string>(new DomainError(
-                "Client.Invalid",
-                $"O nome do contato é obrigatório e deve ter entre {NameMinLength} e {NameMaxLength} caracteres."));
+            return DomainResult.Failure<string>(InvalidNameLength);
         }
 
         return DomainResult.Success(trimmed);
@@ -49,11 +66,14 @@ public abstract class ClientContact : TenantOwnedEntity
     {
         var trimmed = relationship?.Trim() ?? string.Empty;
 
-        if (trimmed.Length is 0 or > RelationshipMaxLength)
+        if (trimmed.Length == 0)
         {
-            return DomainResult.Failure<string>(new DomainError(
-                "Client.Invalid",
-                $"O vínculo do contato é obrigatório e deve ter no máximo {RelationshipMaxLength} caracteres."));
+            return DomainResult.Failure<string>(RelationshipRequired);
+        }
+
+        if (trimmed.Length > RelationshipMaxLength)
+        {
+            return DomainResult.Failure<string>(RelationshipTooLong);
         }
 
         return DomainResult.Success(trimmed);

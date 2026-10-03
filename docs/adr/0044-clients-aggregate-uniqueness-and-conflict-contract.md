@@ -42,8 +42,10 @@ the day they are checked ("in the past", "at most 120 years"), so `Create(value,
 `Restore(value)` rebuilds a stored date without them; every other value object re-validates when EF reads it back.
 A value object names its own errors after its type and talks about the value, not the entity using it
 (`CpfNumber.Invalid`, `BirthDate.TooOld`, `ContactPurposes.Required`), each a `static readonly DomainError` on the
-type, so it can be reused outside clients. `Client.Invalid` stays for the rules that belong to the entity (a
-guardian for a minor, the contact limits, a contact's name and relationship). The use case's `ToModel` builds them
+type, so it can be reused outside clients. The entities name theirs the same way (`Client.GuardianRequired`,
+`Client.TooManyGuardians`, `ClientContact.NameRequired`…). `CreateClientCommandValidator` reuses every one of these
+codes through `.WithErrorCode(...)`, so a rule answers the same code whether the validator or the domain catches it,
+and the API never exposes FluentValidation's internal names (`PredicateValidator`). The use case's `ToModel` builds them
 from the command. EF stores each as its plain text column through `HasConversion`, so the schema is unchanged.
 Complex types were rejected because the persistence tests run on the InMemory provider, which does not support them.
 The cost: a query cannot reach into `.Value` (it is not translatable through a converter); compare whole value objects

@@ -7,9 +7,11 @@ public sealed record FullName
     public const int MinLength = 2;
     public const int MaxLength = 150;
 
+    public static readonly DomainError Required = new("FullName.Required", "O nome completo é obrigatório.");
+
     public static readonly DomainError InvalidLength = new(
         "FullName.InvalidLength",
-        $"O nome completo é obrigatório e deve ter entre {MinLength} e {MaxLength} caracteres.");
+        $"O nome completo deve ter entre {MinLength} e {MaxLength} caracteres.");
 
     public string Value { get; }
 
@@ -21,6 +23,11 @@ public sealed record FullName
     public static DomainResult<FullName> Create(string? raw)
     {
         var trimmed = raw?.Trim() ?? string.Empty;
+
+        if (trimmed.Length == 0)
+        {
+            return DomainResult.Failure<FullName>(Required);
+        }
 
         if (trimmed.Length < MinLength || trimmed.Length > MaxLength)
         {

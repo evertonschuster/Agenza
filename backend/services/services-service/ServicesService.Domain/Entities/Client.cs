@@ -10,6 +10,18 @@ public class Client : TenantOwnedEntity
     public const int MaxGuardians = 10;
     public const int MaxReferenceContacts = 10;
 
+    public static readonly DomainError TooManyGuardians = new(
+        "Client.TooManyGuardians",
+        $"Informe no máximo {MaxGuardians} responsáveis.");
+
+    public static readonly DomainError TooManyReferenceContacts = new(
+        "Client.TooManyReferenceContacts",
+        $"Informe no máximo {MaxReferenceContacts} pessoas de referência.");
+
+    public static readonly DomainError GuardianRequired = new(
+        "Client.GuardianRequired",
+        $"Informe ao menos um responsável para pessoas menores de {ValueObjects.BirthDate.AdultAgeInYears} anos.");
+
     public FullName FullName { get; private set; }
     public BirthDate? BirthDate { get; private set; }
     public PhoneNumber? Phone { get; private set; }
@@ -98,23 +110,17 @@ public class Client : TenantOwnedEntity
     {
         if (guardians.Count > MaxGuardians)
         {
-            return DomainResult.Failure(new DomainError(
-                "Client.Invalid",
-                $"Informe no máximo {MaxGuardians} responsáveis."));
+            return DomainResult.Failure(TooManyGuardians);
         }
 
         if (referenceContacts.Count > MaxReferenceContacts)
         {
-            return DomainResult.Failure(new DomainError(
-                "Client.Invalid",
-                $"Informe no máximo {MaxReferenceContacts} pessoas de referência."));
+            return DomainResult.Failure(TooManyReferenceContacts);
         }
 
         if (birthDate is not null && birthDate.IsMinorOn(today) && guardians.Count == 0)
         {
-            return DomainResult.Failure(new DomainError(
-                "Client.Invalid",
-                $"Informe ao menos um responsável para pessoas menores de {BirthDate.AdultAgeInYears} anos."));
+            return DomainResult.Failure(GuardianRequired);
         }
 
         return DomainResult.Success();

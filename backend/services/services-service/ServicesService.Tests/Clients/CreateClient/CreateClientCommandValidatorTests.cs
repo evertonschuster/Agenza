@@ -39,6 +39,39 @@ public class CreateClientCommandValidatorTests
     private static string[] MessagesFor(ValidationResult result, string propertyName) =>
         result.Errors.Where(error => error.PropertyName == propertyName).Select(error => error.ErrorMessage).ToArray();
 
+    public static TheoryData<string, CreateClientCommand, string, string> EveryRule()
+    {
+        var tooManyGuardians = Enumerable.Repeat(Guardian(), 11).ToArray();
+        var tooManyReferences = Enumerable.Repeat(Reference(), 11).ToArray();
+
+        return new TheoryData<string, CreateClientCommand, string, string>
+        {
+            { "name missing", Command(fullName: ""), "FullName", "FullName.Required" },
+            { "name too short", Command(fullName: " A "), "FullName", "FullName.InvalidLength" },
+            { "name too long", Command(fullName: new string('a', 151)), "FullName", "FullName.InvalidLength" },
+            { "birth date today", Command(birthDate: new DateOnly(2026, 10, 2)), "BirthDate", "BirthDate.NotInThePast" },
+            { "birth date too old", Command(birthDate: new DateOnly(1905, 10, 2)), "BirthDate", "BirthDate.TooOld" },
+            { "phone", Command(phone: "telefone"), "Phone", "PhoneNumber.Invalid" },
+            { "email shape", Command(email: "maria@example"), "Email", "EmailAddress.Invalid" },
+            { "email length", Command(email: new string('a', 255) + "@x.com"), "Email", "EmailAddress.Invalid" },
+            { "cpf", Command(cpf: "529.982.247-24"), "Cpf", "CpfNumber.Invalid" },
+            { "notes", Command(notes: new string('n', 501)), "AdministrativeNotes", "AdministrativeNotes.TooLong" },
+            { "minor without guardian", Command(birthDate: new DateOnly(2015, 3, 10)), "Guardians", "Client.GuardianRequired" },
+            { "too many guardians", Command(guardians: tooManyGuardians), "Guardians", "Client.TooManyGuardians" },
+            { "too many references", Command(referenceContacts: tooManyReferences), "ReferenceContacts", "Client.TooManyReferenceContacts" },
+            { "null guardian", Command(guardians: [null!]), "Guardians[0]", "Client.GuardianMissing" },
+            { "null reference", Command(referenceContacts: [null!]), "ReferenceContacts[0]", "Client.ReferenceContactMissing" },
+            { "guardian name missing", Command(guardians: [Guardian(name: "")]), "Guardians[0].Name", "ClientContact.NameRequired" },
+            { "guardian name too short", Command(guardians: [Guardian(name: "A")]), "Guardians[0].Name", "ClientContact.InvalidNameLength" },
+            { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
+            { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
+            { "guardian phone", Command(guardians: [Guardian(phone: "x")]), "Guardians[0].Phone", "PhoneNumber.Invalid" },
+            { "guardian cpf", Command(guardians: [Guardian(cpf: "123")]), "Guardians[0].Cpf", "CpfNumber.Invalid" },
+            { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput("Carlos Lima", "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
+            { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Unknown" },
+        };
+    }
+
     [Fact]
     public async Task Validate_WithOnlyTheName_Passes()
     {
@@ -312,5 +345,19 @@ public class CreateClientCommandValidatorTests
 
         MessagesFor(result, "Guardians").Should().Equal("Informe no máximo 10 responsáveis.");
         MessagesFor(result, "ReferenceContacts").Should().Equal("Informe no máximo 10 pessoas de referência.");
+    }
+
+    [Theory]
+    [MemberData(nameof(EveryRule))]
+    public async Task Validate_ReportsTheBusinessCodeOfEveryRule(
+        string rule,
+        CreateClientCommand command,
+        string propertyName,
+        string expectedCode)
+    {
+        var result = await Validate(command);
+
+        result.Errors.Where(error => error.PropertyName == propertyName).Select(error => error.ErrorCode)
+            .Should().Equal([expectedCode], rule);
     }
 }

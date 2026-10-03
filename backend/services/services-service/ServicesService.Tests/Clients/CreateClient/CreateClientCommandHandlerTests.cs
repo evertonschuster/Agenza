@@ -111,7 +111,7 @@ public class CreateClientCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Validation);
-        result.Error.Code.Should().Be("Client.Invalid");
+        result.Error.Code.Should().Be("Client.GuardianRequired");
         _repository.DidNotReceive().Add(Arg.Any<Client>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
@@ -141,7 +141,7 @@ public class CreateClientCommandHandlerTests
 
         turningEighteenToday.IsSuccess.Should().BeTrue();
         turningEighteenTomorrow.IsFailure.Should().BeTrue();
-        turningEighteenTomorrow.Error.Code.Should().Be("Client.Invalid");
+        turningEighteenTomorrow.Error.Code.Should().Be("Client.GuardianRequired");
     }
 
     [Fact]

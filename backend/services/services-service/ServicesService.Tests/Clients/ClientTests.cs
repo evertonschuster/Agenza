@@ -85,7 +85,7 @@ public class ClientTests
         var result = Create(birthDate: new DateOnly(2015, 3, 10), guardians: []);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
+        result.Error.Code.Should().Be("Client.GuardianRequired");
         result.Error.Message.Should().Contain("responsável");
     }
 

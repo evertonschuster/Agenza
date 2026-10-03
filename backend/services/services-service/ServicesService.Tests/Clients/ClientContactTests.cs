@@ -33,17 +33,17 @@ public class ClientContactTests
     }
 
     [Theory]
-    [InlineData("", "Mãe")]
-    [InlineData("A", "Mãe")]
-    [InlineData("   ", "Mãe")]
-    [InlineData("Ana Souza", "")]
-    [InlineData("Ana Souza", "   ")]
-    public void Guardian_Create_WithoutNameOrRelationship_Fails(string name, string relationship)
+    [InlineData("", "Mãe", "ClientContact.NameRequired")]
+    [InlineData("   ", "Mãe", "ClientContact.NameRequired")]
+    [InlineData("A", "Mãe", "ClientContact.InvalidNameLength")]
+    [InlineData("Ana Souza", "", "ClientContact.RelationshipRequired")]
+    [InlineData("Ana Souza", "   ", "ClientContact.RelationshipRequired")]
+    public void Guardian_Create_WithoutNameOrRelationship_Fails(string name, string relationship, string expectedCode)
     {
         var result = ClientGuardian.Create(Guid.NewGuid(), name, relationship, null, null);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
+        result.Error.Code.Should().Be(expectedCode);
     }
 
     [Fact]

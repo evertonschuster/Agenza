@@ -105,7 +105,11 @@ errors }`. `errors` muda de forma dependendo do tipo:
 
 **Validação** (`ErrorType.Validation` com `FieldErrors`) — `code` é sempre `"Validation.Failed"`
 (genérico; o código específico da regra vive dentro de `errors`), `errors` tem uma chave por
-**propriedade C#**, cada uma uma lista de `{code, message}`:
+**propriedade C#**, cada uma uma lista de `{code, message}`. O `code` de cada item depende do validator: os de
+`clients` dão a cada regra um código de negócio com `.WithErrorCode(...)`, reaproveitando os erros declarados nos value
+objects e nas entidades (`FullName.Required`, `CpfNumber.Invalid`, `BirthDate.TooOld`, `Client.GuardianRequired`,
+`ClientContact.NameRequired`…); os de tags, categories e services ainda expõem o nome interno do validador do
+FluentValidation (`NotEmptyValidator`, `PredicateValidator`), que não distingue uma regra `.Must(...)` de outra:
 
 ```json
 {"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"Name":[{"code":"NotEmptyValidator","message":"O nome da etiqueta é obrigatório."}],"Color":[{"code":"PredicateValidator","message":"A cor da etiqueta deve ser uma das seguintes: #0d9488, #0ea5e9, #8b5cf6, #ec4899, #ef4444, #f59e0b, #22c55e, #64748b."}]}}
@@ -227,8 +231,8 @@ exatamente um `201` e os demais `409`.
 | Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`PageSize`: `InclusiveBetweenValidator`) |
 | CPF já cadastrado (qualquer situação) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.Cpf[0].meta.clientId`) |
 | E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.Email[0].meta.clientId`) |
-| Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`Guardians`: `PredicateValidator`) |
-| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`Guardians[0].Name`, `Guardians[0].Cpf`, `ReferenceContacts[0].Purposes`…) |
+| Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`Guardians`: `Client.GuardianRequired`) |
+| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`Guardians[0].Name`: `ClientContact.NameRequired`, `Guardians[0].Cpf`: `CpfNumber.Invalid`, `ReferenceContacts[0].Purposes`: `ContactPurposes.Required`…) |
 | `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (forma §4.3, inglês, sem `code`) | — |
 
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a

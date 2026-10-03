@@ -11,17 +11,17 @@ public class FullNameTests
     }
 
     [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    [InlineData("A")]
-    [InlineData(" A ")]
-    public void Create_WithMissingOrTooShortName_Fails(string? raw)
+    [InlineData(null, "FullName.Required")]
+    [InlineData("", "FullName.Required")]
+    [InlineData("   ", "FullName.Required")]
+    [InlineData("A", "FullName.InvalidLength")]
+    [InlineData(" A ", "FullName.InvalidLength")]
+    public void Create_WithMissingOrTooShortName_Fails(string? raw, string expectedCode)
     {
         var result = FullName.Create(raw);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("FullName.InvalidLength");
+        result.Error.Code.Should().Be(expectedCode);
     }
 
     [Fact]
