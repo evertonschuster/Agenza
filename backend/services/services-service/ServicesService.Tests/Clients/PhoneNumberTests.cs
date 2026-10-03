@@ -57,4 +57,10 @@ public class PhoneNumberTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("PhoneNumber.Invalid");
     }
+
+    [Fact]
+    public void Restore_AcceptsAPhoneThatCreateWouldReject()
+    {
+        PhoneNumber.Restore("ramal 21").Value.Should().Be("ramal 21");
+    }
 }

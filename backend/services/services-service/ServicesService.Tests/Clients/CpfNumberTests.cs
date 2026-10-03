@@ -57,4 +57,10 @@ public class CpfNumberTests
     {
         CpfNumber.IsValid("529.982.247-25").Should().BeTrue();
     }
+
+    [Fact]
+    public void Restore_AcceptsACpfThatCreateWouldReject()
+    {
+        CpfNumber.Restore("00000000000").Value.Should().Be("00000000000");
+    }
 }

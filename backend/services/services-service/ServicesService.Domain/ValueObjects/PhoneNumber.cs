@@ -34,6 +34,11 @@ public sealed record PhoneNumber
         return DomainResult.Success<PhoneNumber?>(new PhoneNumber(trimmed));
     }
 
+    public static PhoneNumber Restore(string value)
+    {
+        return new PhoneNumber(value);
+    }
+
     public static bool HasValidShape(string value)
     {
         if (value.Length > MaxLength || !value.Any(char.IsAsciiDigit))

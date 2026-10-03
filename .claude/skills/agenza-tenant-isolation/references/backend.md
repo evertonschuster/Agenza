@@ -38,9 +38,11 @@ guaranteed the claim is there.
 ## 3. The global query filter — every read
 
 `Admin.SharedKernel.EntityFrameworkCore/ModelBuilderExtensions.cs`, `ApplyAuditableConventions`,
-called once from `ServicesDataContext.OnModelCreating`. It walks the model and, for any
-`ITenantOwned` type, builds one combined predicate — soft-delete **and** tenant — plus the supporting
-indexes. EF Core allows a single `HasQueryFilter` per entity, hence one predicate rather than two.
+called once from `ServicesDataContext.OnModelCreating`. It walks the model and registers two named
+filters plus the supporting indexes: `SoftDelete` on every `BaseEntity`, `Tenant` on every
+`ITenantOwned` one ([ADR 0046](../../../../docs/adr/0046-separate-soft-delete-and-tenant-query-filters.md)).
+Two filters rather than one combined predicate, so a read can include soft-deleted rows without
+leaving the tenant.
 
 **The trap, and the single most valuable thing to know about this file:** EF Core compiles and caches
 the model per `DbContext` *type*, not per instance. An earlier version baked the tenant into the
@@ -49,14 +51,18 @@ first had **its** tenant permanently baked in for every later request, on every 
 The fix is `Expression.Property(Expression.Constant(dbContext, dbContext.GetType()), CurrentTenantId)`:
 a `this`-instance member access is the one thing EF re-evaluates against the context actually running
 each query. `ServicesDataContextTenantScopingTests` constructs two contexts for two tenants against
-the same cached model precisely to catch a regression here. Any diff that touches `BuildFilter`,
+the same cached model precisely to catch a regression here. Any diff that touches `BuildTenantFilter`,
 `CurrentTenantId`, or how the context is registered in DI is a stop-and-read.
 
 With no tenant in context — background work, an M2M token — `CurrentTenantId` is `Guid.Empty`, which
 no real row carries, so reads come back **empty rather than global**. Fail closed.
 
-`IgnoreQueryFilters()` drops tenant scoping and soft-delete together. Its one legitimate use in the
-repo is a persistence test asserting a row was soft-deleted rather than removed.
+`IgnoreQueryFilters()` without keys drops tenant scoping and soft-delete together. Its one legitimate
+use in the repo is a persistence test asserting a row was soft-deleted rather than removed. A read that
+must see deleted rows (the CPF lookup in `ClientRepository`) uses `RepositoryBase.SetIncludingDeleted`,
+which ignores `SoftDelete` alone. The filter keys are `internal` to
+`Admin.SharedKernel.EntityFrameworkCore`, so application code has no name with which to switch
+`Tenant` off.
 
 ## 4. The save interceptor — every write
 
@@ -114,7 +120,8 @@ a route that reaches into raw claims itself has bypassed the boundary.
 The two mechanisms with dedicated regression coverage live in `ServicesService.PersistenceTests`
 ([ADR 0019](../../../../docs/adr/0019-narrow-tenant-isolation-persistence-tests.md)) — EF InMemory,
 no Docker: `AuditableEntitySaveChangesInterceptorTests` (assignment on add, throw with no tenant,
-soft delete) and `ServicesDataContextTenantScopingTests` (per-tenant reads, and the two-context
+soft delete) and `ServicesDataContextTenantScopingTests` (per-tenant reads, both named filters on
+every tenant-owned entity, ignoring `SoftDelete` keeping the tenant, and the two-context
 model-cache scenario from §3). The project is intentionally named without a `.Tests` suffix so the
 80% assembly coverage gate does not pressure anyone into padding it with unrelated tests.
 

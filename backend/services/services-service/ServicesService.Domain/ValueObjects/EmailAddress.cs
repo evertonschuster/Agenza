@@ -34,6 +34,11 @@ public sealed record EmailAddress
         return DomainResult.Success<EmailAddress?>(new EmailAddress(normalized));
     }
 
+    public static EmailAddress Restore(string value)
+    {
+        return new EmailAddress(value);
+    }
+
     public static bool HasValidShape(string value)
     {
         if (value.Length > MaxLength || value.Any(char.IsWhiteSpace))

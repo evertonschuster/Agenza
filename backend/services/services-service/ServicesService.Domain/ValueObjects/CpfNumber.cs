@@ -34,6 +34,11 @@ public sealed record CpfNumber
         return DomainResult.Success<CpfNumber?>(new CpfNumber(digits));
     }
 
+    public static CpfNumber Restore(string value)
+    {
+        return new CpfNumber(value);
+    }
+
     public static bool IsValid(string? raw) => HasValidCheckDigits(StripMask(raw ?? string.Empty));
 
     private static string StripMask(string value) =>

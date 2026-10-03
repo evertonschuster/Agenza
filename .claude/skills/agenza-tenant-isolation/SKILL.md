@@ -33,7 +33,7 @@ Cheap, and it catches most of what matters. Each hit is a question to answer, no
 | `X-Tenant-Id` set anywhere but `shared/api/apiClient.ts` | Only one writer exists, on purpose. |
 | The `tenant_id` claim decoded outside `shared/session/tenant.ts`, `HttpContextTenantAccessor`, or `require_tenant_context` | Three decode sites in the whole repo. A fourth is the bug. |
 | `[IgnoreTenant]` | **Zero uses today.** A first one has to justify itself in the PR body. |
-| `IgnoreQueryFilters()` | Drops soft-delete *and* tenant scoping in one call. Only legitimate in a persistence test asserting the soft delete. |
+| `IgnoreQueryFilters()` | Without keys it drops soft-delete *and* tenant scoping in one call: only legitimate in a persistence test asserting the soft delete. A read that must see deleted rows uses `RepositoryBase.SetIncludingDeleted`, which ignores the `SoftDelete` filter alone ([ADR 0046](../../../docs/adr/0046-separate-soft-delete-and-tenant-query-filters.md)). A key list naming `Tenant` is the bug. |
 | `Guid.NewGuid()` / a literal UUID next to the word tenant in a test | See §5. |
 
 ## 2. Route by what the diff touches

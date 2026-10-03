@@ -262,7 +262,7 @@ public class ClientPersistenceTests
             var repository = new ClientRepository(context);
 
             (await context.Clients.IgnoreQueryFilters().CountAsync(c => c.Cpf == Cpf(CpfDigits) || c.Cpf == Cpf("12345678909")))
-                .Should().Be(2, "the rows exist, so only the repository's own tenant predicate keeps them out");
+                .Should().Be(2, "the rows exist, so only the tenant filter keeps them out");
             (await repository.FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None)).Should().BeNull();
             (await repository.FindByCpfAsync(Cpf("12345678909"), CancellationToken.None)).Should().BeNull();
         }

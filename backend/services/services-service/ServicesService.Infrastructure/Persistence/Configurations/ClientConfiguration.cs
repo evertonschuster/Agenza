@@ -18,22 +18,22 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
 
         builder.Property(c => c.TenantId).IsRequired();
         builder.Property(c => c.FullName)
-            .HasConversion(fullName => fullName.Value, value => FullName.Create(value).Value)
+            .HasConversion(fullName => fullName.Value, value => FullName.Restore(value))
             .IsRequired()
             .HasMaxLength(FullName.MaxLength);
         builder.Property(c => c.BirthDate)
             .HasConversion(birthDate => birthDate!.Value, value => BirthDate.Restore(value));
         builder.Property(c => c.Phone)
-            .HasConversion(phone => phone!.Value, value => PhoneNumber.Create(value).Value!)
+            .HasConversion(phone => phone!.Value, value => PhoneNumber.Restore(value))
             .HasMaxLength(PhoneNumber.MaxLength);
         builder.Property(c => c.Email)
-            .HasConversion(email => email!.Value, value => EmailAddress.Create(value).Value!)
+            .HasConversion(email => email!.Value, value => EmailAddress.Restore(value))
             .HasMaxLength(EmailAddress.MaxLength);
         builder.Property(c => c.Cpf)
-            .HasConversion(cpf => cpf!.Value, value => CpfNumber.Create(value).Value!)
+            .HasConversion(cpf => cpf!.Value, value => CpfNumber.Restore(value))
             .HasMaxLength(CpfNumber.Length);
         builder.Property(c => c.AdministrativeNotes)
-            .HasConversion(notes => notes!.Value, value => AdministrativeNotes.Create(value).Value!)
+            .HasConversion(notes => notes!.Value, value => AdministrativeNotes.Restore(value))
             .HasMaxLength(AdministrativeNotes.MaxLength);
         builder.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
 

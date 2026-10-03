@@ -33,4 +33,12 @@ public class AdministrativeNotesTests
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("AdministrativeNotes.TooLong");
     }
+
+    [Fact]
+    public void Restore_AcceptsNotesThatCreateWouldReject()
+    {
+        var tooLong = new string('n', AdministrativeNotes.MaxLength + 1);
+
+        AdministrativeNotes.Restore(tooLong).Value.Should().Be(tooLong);
+    }
 }

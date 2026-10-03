@@ -6,6 +6,9 @@ namespace Admin.SharedKernel.EntityFrameworkCore;
 
 public static class ModelBuilderExtensions
 {
+    internal const string SoftDeleteFilter = "SoftDelete";
+    internal const string TenantFilter = "Tenant";
+
     private const string DeletedAtPropertyName = "DeletedAt";
     private const string TenantIdPropertyName = "TenantId";
     private const string CurrentTenantIdPropertyName = "CurrentTenantId";
@@ -16,55 +19,59 @@ public static class ModelBuilderExtensions
         Type baseEntityType,
         Type? tenantOwnedType = null)
     {
-        PropertyInfo? currentTenantIdProperty = null;
-        if (tenantOwnedType is not null)
+        foreach (var entityType in EntityTypesAssignableTo(modelBuilder, baseEntityType))
         {
-            currentTenantIdProperty = dbContext.GetType().GetProperty(CurrentTenantIdPropertyName)
-                ?? throw new InvalidOperationException(
-                    $"{dbContext.GetType().Name} must expose a public '{CurrentTenantIdPropertyName}' property to scope {tenantOwnedType.Name} entities.");
+            var entityBuilder = modelBuilder.Entity(entityType);
+            entityBuilder.HasQueryFilter(SoftDeleteFilter, BuildSoftDeleteFilter(entityType));
+            entityBuilder.HasIndex(DeletedAtPropertyName);
         }
 
-        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        if (tenantOwnedType is null)
         {
-            if (!baseEntityType.IsAssignableFrom(entityType.ClrType))
-            {
-                continue;
-            }
+            return;
+        }
 
-            var isTenantOwned = tenantOwnedType?.IsAssignableFrom(entityType.ClrType) ?? false;
-            var entityBuilder = modelBuilder.Entity(entityType.ClrType);
+        var currentTenantIdProperty = dbContext.GetType().GetProperty(CurrentTenantIdPropertyName)
+            ?? throw new InvalidOperationException(
+                $"{dbContext.GetType().Name} must expose a public '{CurrentTenantIdPropertyName}' property to scope {tenantOwnedType.Name} entities.");
 
-            entityBuilder.HasQueryFilter(
-                BuildFilter(dbContext, entityType.ClrType, isTenantOwned ? currentTenantIdProperty : null));
-            entityBuilder.HasIndex(DeletedAtPropertyName);
-
-            if (isTenantOwned)
-            {
-                entityBuilder.HasIndex(TenantIdPropertyName);
-            }
+        foreach (var entityType in EntityTypesAssignableTo(modelBuilder, baseEntityType, tenantOwnedType))
+        {
+            var entityBuilder = modelBuilder.Entity(entityType);
+            entityBuilder.HasQueryFilter(TenantFilter, BuildTenantFilter(dbContext, entityType, currentTenantIdProperty));
+            entityBuilder.HasIndex(TenantIdPropertyName);
         }
     }
 
-    private static LambdaExpression BuildFilter(DbContext dbContext, Type entityType, PropertyInfo? currentTenantIdProperty)
+    private static List<Type> EntityTypesAssignableTo(ModelBuilder modelBuilder, params Type[] types)
+    {
+        return modelBuilder.Model.GetEntityTypes()
+            .Select(entityType => entityType.ClrType)
+            .Where(clrType => types.All(type => type.IsAssignableFrom(clrType)))
+            .ToList();
+    }
+
+    private static LambdaExpression BuildSoftDeleteFilter(Type entityType)
     {
         var parameter = Expression.Parameter(entityType, "entity");
         var deletedAt = Expression.Property(parameter, DeletedAtPropertyName);
-        Expression predicate = Expression.Equal(deletedAt, Expression.Constant(null, typeof(DateTimeOffset?)));
 
-        if (currentTenantIdProperty is not null)
-        {
-            // Must reference the live DbContext instance, not a snapshotted
-            // value: EF Core caches the compiled model per DbContext type,
-            // so a plain Guid constant here would get baked in once and
-            // reused by every request. A `this`-instance property access
-            // is the one thing EF re-evaluates against the actual context
-            // executing each query.
-            var contextConstant = Expression.Constant(dbContext, dbContext.GetType());
-            var currentTenantId = Expression.Property(contextConstant, currentTenantIdProperty);
-            var tenantId = Expression.Property(parameter, TenantIdPropertyName);
-            predicate = Expression.AndAlso(predicate, Expression.Equal(tenantId, currentTenantId));
-        }
+        return Expression.Lambda(Expression.Equal(deletedAt, Expression.Constant(null, typeof(DateTimeOffset?))), parameter);
+    }
 
-        return Expression.Lambda(predicate, parameter);
+    private static LambdaExpression BuildTenantFilter(DbContext dbContext, Type entityType, PropertyInfo currentTenantIdProperty)
+    {
+        // Must reference the live DbContext instance, not a snapshotted
+        // value: EF Core caches the compiled model per DbContext type,
+        // so a plain Guid constant here would get baked in once and
+        // reused by every request. A `this`-instance property access
+        // is the one thing EF re-evaluates against the actual context
+        // executing each query.
+        var parameter = Expression.Parameter(entityType, "entity");
+        var contextConstant = Expression.Constant(dbContext, dbContext.GetType());
+        var currentTenantId = Expression.Property(contextConstant, currentTenantIdProperty);
+        var tenantId = Expression.Property(parameter, TenantIdPropertyName);
+
+        return Expression.Lambda(Expression.Equal(tenantId, currentTenantId), parameter);
     }
 }

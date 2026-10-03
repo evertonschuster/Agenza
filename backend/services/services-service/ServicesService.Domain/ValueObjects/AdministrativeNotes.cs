@@ -33,4 +33,9 @@ public sealed record AdministrativeNotes
 
         return DomainResult.Success<AdministrativeNotes?>(new AdministrativeNotes(trimmed));
     }
+
+    public static AdministrativeNotes Restore(string value)
+    {
+        return new AdministrativeNotes(value);
+    }
 }

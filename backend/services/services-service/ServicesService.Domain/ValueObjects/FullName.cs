@@ -36,4 +36,9 @@ public sealed record FullName
 
         return DomainResult.Success(new FullName(trimmed));
     }
+
+    public static FullName Restore(string value)
+    {
+        return new FullName(value);
+    }
 }

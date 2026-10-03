@@ -1,3 +1,4 @@
+using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 
@@ -42,9 +43,9 @@ internal static class ClientTestData
             null,
             purposes.Length == 0 ? ["emergency"] : purposes).Value;
 
-    public static Client ExistingClient()
+    public static ClientMatch ExistingClient()
     {
-        return Client.Create(Guid.NewGuid(), Name("Paula Rocha"), null, null, null, Cpf(), null, Today, [], []).Value;
+        return new ClientMatch(Guid.NewGuid(), Name("Paula Rocha"), IsDeleted: false);
     }
 }
 

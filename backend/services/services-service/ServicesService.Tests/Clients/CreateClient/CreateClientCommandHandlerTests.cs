@@ -16,9 +16,9 @@ public class CreateClientCommandHandlerTests
     public CreateClientCommandHandlerTests()
     {
         _repository.FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<Client?>(null));
+            .Returns(Task.FromResult<ClientMatch?>(null));
         _repository.FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<Client?>(null));
+            .Returns(Task.FromResult<ClientMatch?>(null));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
 
@@ -179,7 +179,7 @@ public class CreateClientCommandHandlerTests
     {
         var existing = ClientTestData.ExistingClient();
         _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<Client?>(existing));
+            .Returns(Task.FromResult<ClientMatch?>(existing));
 
         var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
@@ -201,10 +201,9 @@ public class CreateClientCommandHandlerTests
     [Fact]
     public async Task Handle_WithCpfOfADeletedClient_ReturnsAConflictWithoutALinkToIt()
     {
-        var deleted = ClientTestData.ExistingClient();
-        deleted.MarkDeleted(null, NoonUtc);
+        var deleted = ClientTestData.ExistingClient() with { IsDeleted = true };
         _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<Client?>(deleted));
+            .Returns(Task.FromResult<ClientMatch?>(deleted));
 
         var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
@@ -219,7 +218,7 @@ public class CreateClientCommandHandlerTests
     {
         var existing = ClientTestData.ExistingClient();
         _repository.FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<Client?>(existing));
+            .Returns(Task.FromResult<ClientMatch?>(existing));
 
         var result = await Handler().Handle(Command(email: "Maria@Example.com"), CancellationToken.None);
 
@@ -238,9 +237,9 @@ public class CreateClientCommandHandlerTests
     public async Task Handle_WithBothConflicts_ReportsEveryField()
     {
         _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
+            .Returns(Task.FromResult<ClientMatch?>(ClientTestData.ExistingClient()));
         _repository.FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
+            .Returns(Task.FromResult<ClientMatch?>(ClientTestData.ExistingClient()));
 
         var result = await Handler().Handle(
             Command(email: "maria@example.com", cpf: ClientTestData.ValidCpf),

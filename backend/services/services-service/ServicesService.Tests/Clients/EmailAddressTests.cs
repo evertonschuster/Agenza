@@ -54,4 +54,10 @@ public class EmailAddressTests
 
         EmailAddress.Create(email).IsFailure.Should().BeTrue();
     }
+
+    [Fact]
+    public void Restore_AcceptsAnEmailThatCreateWouldReject()
+    {
+        EmailAddress.Restore("maria@localhost").Value.Should().Be("maria@localhost");
+    }
 }

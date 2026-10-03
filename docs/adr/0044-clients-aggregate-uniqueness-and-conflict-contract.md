@@ -40,9 +40,10 @@ unique indexes compare plain stored values (no generated column for them).
 **Value objects.** `FullName`, `BirthDate`, `CpfNumber`, `EmailAddress`, `PhoneNumber` and `AdministrativeNotes` are
 `record`s built through `Create`, which validates and normalizes (the `DurationRange` pattern); the optional ones
 return `null` for a blank input. `Client` and its contacts receive them already valid, so the aggregate only checks
-what depends on the whole: a guardian for a minor and the contact limits. `BirthDate` is the one whose rules depend on
-the day they are checked ("in the past", "at most 120 years"), so `Create(value, today)` applies them to new input and
-`Restore(value)` rebuilds a stored date without them; every other value object re-validates when EF reads it back.
+what depends on the whole: a guardian for a minor and the contact limits. `Create` is for new input; `Restore(value)`
+rebuilds a stored value without re-validating it and is what EF's conversions call, so a row stays readable after a rule
+changes or after data is fixed outside the application (`TagColor` follows the same split). `BirthDate.Create` also takes
+`today`, because its rules depend on the day they are checked ("in the past", "at most 120 years").
 A value object names its own errors after its type and talks about the value, not the entity using it
 (`CpfNumber.Invalid`, `BirthDate.TooOld`, `ContactPurposes.Required`), each a `static readonly DomainError` on the
 type, so it can be reused outside clients. The entities name theirs the same way (`Client.GuardianRequired`,
@@ -61,18 +62,18 @@ The cost: a query cannot reach into `.Value` (it is not translatable through a c
 | CPF, any situation | `IX_Clients_TenantId_Cpf` on `(TenantId, Cpf) WHERE Cpf IS NOT NULL` |
 | E-mail, active persons | `IX_Clients_TenantId_Email` on `(TenantId, Email) WHERE Email IS NOT NULL AND Status = 'Active' AND DeletedAt IS NULL` |
 
-A guardian's CPF is deliberately not constrained. The handler pre-checks both rules for the per-field answer; the
-indexes are what actually guarantees uniqueness. Two creates racing past the pre-check are practically impossible for
+A guardian's CPF is deliberately not constrained. The handler pre-checks both rules for the per-field answer through a
+projection (`ClientMatch`: id, name, deleted), not the aggregate; the indexes are what actually guarantees uniqueness.
+Two creates racing past the pre-check are practically impossible for
 this product, so that case gets no special handling: any failed save answers a generic `409 Client.SaveFailed`
 ("Não foi possível salvar a pessoa. Tente novamente."), without field errors and without claiming a duplicate. Today
 the only save failure the unit of work returns as a value is a unique-index violation, but the handler does not rely on
 that; a retry goes through the pre-check again and gets the specific per-field answer.
 
-**The one `IgnoreQueryFilters()`.** `ClientRepository.FindByCpfAsync` must see soft-deleted and deleted rows, which the
-global filter hides, and `IgnoreQueryFilters()` drops the tenant scope with them. The method re-applies the tenant by
-hand from `ServicesDataContext.CurrentTenantId` (`Guid.Empty` — matching nothing — with no tenant). This is the only
-bypass in the repository layer and is pinned by persistence tests that put the same CPF in two tenants, one of them
-soft-deleted. A new read path must not copy it.
+**Reading soft-deleted rows.** `ClientRepository.FindByCpfAsync` must also see soft-deleted persons. It ignores only the
+soft-delete filter (`RepositoryBase.SetIncludingDeleted`); the tenant filter stays on, so the read is scoped by the same
+mechanism as every other one ([ADR 0046](0046-separate-soft-delete-and-tenant-query-filters.md)). Persistence tests put
+the same CPF in two tenants, one of them soft-deleted.
 
 **Conflict contract.** A duplicate answers `409` with the errors keyed by field (`Cpf`, `Email`, PascalCase like
 validation keys), so a form can show each under its input. `FieldError` gained an optional `Meta` string map
@@ -108,7 +109,8 @@ Accepted costs and limits: the Postgres-only guarantees (unique indexes, composi
 automated proof, per [ADR 0026](0026-remove-dedicated-runtime-tests.md). They were exercised by hand against a
 disposable PostgreSQL 18 with the real services and a real login — 8 and 10 parallel creates yielded exactly one
 `201` and no orphan contacts, and the schema rules were driven with SQL in a rolled-back transaction. Persistence
-tests cover the EF side (tenant assignment across the graph, isolation, the filters' bypass and the index definitions).
+tests cover the EF side (tenant assignment across the graph, isolation, reading soft-deleted rows inside the tenant,
+restoring stored values and the index definitions).
 
 ## Considered and rejected
 
@@ -117,9 +119,13 @@ tests cover the EF side (tenant assignment across the graph, isolation, the filt
   Deleted`), and a deleted status alone would not hide the row from any query.
 - **One contacts table with a discriminator** — nullable columns that only apply to one kind, and a purposes column
   that is meaningless for guardians.
-- **Named query filters / changing `ApplyAuditableConventions` to split tenant from soft delete** — would remove the
-  hand-written tenant predicate, but touches the highest-consequence mechanism ([ADR 0006](0006-tenant-header-base-entity-generic-repository.md))
-  for one lookup.
+- **`IgnoreQueryFilters()` with the tenant re-applied by hand** — the first version of the CPF lookup; replaced before
+  merge by named filters ([ADR 0046](0046-separate-soft-delete-and-tenant-query-filters.md)), so no read depends on
+  remembering the tenant.
+- **Value objects re-validated when EF reads them** (`Create(value).Value` in `HasConversion`) — replaced before merge
+  by `Restore`: a stored value that failed a later rule threw on every read of its row.
+- **The aggregate as the result of the uniqueness lookups** — replaced before merge by `ClientMatch`: it returned a
+  `Client` without its contacts that looked complete.
 - **The existing id as a top-level problem extension** — not visible in the generated OpenAPI schema, so untyped.
 - **Sending the user to a CPF search instead of the record** — an extra step, and no such search exists yet.
 - **JSON enums for purposes and status** — see the validation note above.

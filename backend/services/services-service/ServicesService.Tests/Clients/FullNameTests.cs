@@ -34,6 +34,12 @@ public class FullNameTests
     }
 
     [Fact]
+    public void Restore_AcceptsANameThatCreateWouldReject()
+    {
+        FullName.Restore("A").Value.Should().Be("A");
+    }
+
+    [Fact]
     public void Equality_ComparesTheValue()
     {
         FullName.Create("Maria Souza").Value.Should().Be(FullName.Create(" Maria Souza ").Value);

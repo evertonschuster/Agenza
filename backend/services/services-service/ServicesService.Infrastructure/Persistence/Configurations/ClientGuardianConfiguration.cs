@@ -17,10 +17,10 @@ public class ClientGuardianConfiguration : IEntityTypeConfiguration<ClientGuardi
         builder.Property(g => g.Name).IsRequired().HasMaxLength(ClientContact.NameMaxLength);
         builder.Property(g => g.Relationship).IsRequired().HasMaxLength(ClientContact.RelationshipMaxLength);
         builder.Property(g => g.Phone)
-            .HasConversion(phone => phone!.Value, value => PhoneNumber.Create(value).Value!)
+            .HasConversion(phone => phone!.Value, value => PhoneNumber.Restore(value))
             .HasMaxLength(PhoneNumber.MaxLength);
         builder.Property(g => g.Cpf)
-            .HasConversion(cpf => cpf!.Value, value => CpfNumber.Create(value).Value!)
+            .HasConversion(cpf => cpf!.Value, value => CpfNumber.Restore(value))
             .HasMaxLength(CpfNumber.Length);
     }
 }
