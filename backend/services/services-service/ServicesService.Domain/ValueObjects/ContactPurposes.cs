@@ -20,7 +20,7 @@ public static class ContactPurposes
         ("dailyCommunication", ContactPurpose.DailyCommunication),
     ];
 
-    public static IReadOnlyList<string> Names { get; } = Catalog.Select(entry => entry.Name).ToList();
+    private static IReadOnlyList<string> Names { get; } = Catalog.Select(entry => entry.Name).ToList();
 
     public static readonly DomainError Unknown = new(
         "ContactPurposes.Unknown",
@@ -29,9 +29,6 @@ public static class ContactPurposes
     public static readonly DomainError Required = new(
         "ContactPurposes.Required",
         "Informe ao menos uma finalidade de contato.");
-
-    public static bool IsKnown(string name) =>
-        Catalog.Any(entry => string.Equals(entry.Name, name?.Trim(), StringComparison.OrdinalIgnoreCase));
 
     public static DomainResult<ContactPurpose> Parse(IEnumerable<string>? names)
     {

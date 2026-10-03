@@ -47,9 +47,10 @@ changes or after data is fixed outside the application (`TagColor` follows the s
 A value object names its own errors after its type and talks about the value, not the entity using it
 (`CpfNumber.Invalid`, `BirthDate.TooOld`, `ContactPurposes.Required`), each a `static readonly DomainError` on the
 type, so it can be reused outside clients. The entities name theirs the same way (`Client.GuardianRequired`,
-`Client.TooManyGuardians`, `ClientContact.NameRequired`…). `CreateClientCommandValidator` reuses every one of these
-codes through `.WithErrorCode(...)`, so a rule answers the same code whether the validator or the domain catches it,
-and the API never exposes FluentValidation's internal names (`PredicateValidator`). The use case's `ToModel` builds them
+`Client.TooManyGuardians`, `ClientContact.NameRequired`…). `CreateClientCommandValidator` runs these same functions and
+only names the field ([ADR 0047](0047-validation-rules-live-in-the-domain.md)), so a rule answers the same code and
+message whichever layer catches it, and the API never exposes FluentValidation's internal names (`PredicateValidator`).
+The use case's `ToModel` builds them
 from the command. EF stores each as its plain text column through `HasConversion`, so the schema is unchanged.
 Complex types were rejected because the persistence tests run on the InMemory provider, which does not support them.
 The cost: a query cannot reach into `.Value` (it is not translatable through a converter); compare whole value objects
@@ -82,8 +83,9 @@ only when the existing person is not deleted, since a deleted record cannot be o
 user why. The e-mail conflict carries both too, always, since only active persons match it. A client reads
 it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`, `errors.Email[0].meta.clientId`).
 
-**Validation layers.** Per-field pt-BR messages come from FluentValidation (the only place that can name the field);
-the domain re-checks the same invariants and its messages are not meant to reach the user. List sizes are capped
+**Validation layers.** Each rule and its pt-BR message live in the domain; FluentValidation runs it and names the
+field ([ADR 0047](0047-validation-rules-live-in-the-domain.md)), and the use case runs it again when it builds the
+aggregate. List sizes are capped
 (10 guardians, 10 reference contacts) because the issue sets no bound and an unbounded array in a body is an abuse
 vector. Reference-contact purposes are strings (`emergency`, `operationalSupport`, `dailyCommunication`) validated
 like `TagColor`, not a JSON enum: a bad enum value fails in the framework's binder with an English message and no code.

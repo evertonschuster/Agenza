@@ -45,19 +45,17 @@ public class ContactPurposesTests
         ContactPurposes.ToNames(purposes).Should().Equal("emergency", "dailyCommunication");
     }
 
-    [Fact]
-    public void Names_ExposesTheThreeAllowedPurposes()
+    [Theory]
+    [InlineData("billing")]
+    [InlineData("")]
+    public void Parse_WithANameOutsideTheCatalog_Fails(string name)
     {
-        ContactPurposes.Names.Should().Equal("emergency", "operationalSupport", "dailyCommunication");
+        ContactPurposes.Parse([name]).Error.Code.Should().Be("ContactPurposes.Unknown");
     }
 
-    [Theory]
-    [InlineData("emergency", true)]
-    [InlineData("  dailyCommunication ", true)]
-    [InlineData("billing", false)]
-    [InlineData("", false)]
-    public void IsKnown_MatchesTheCatalog(string name, bool expected)
+    [Fact]
+    public void Unknown_ListsTheAllowedPurposesInCatalogOrder()
     {
-        ContactPurposes.IsKnown(name).Should().Be(expected);
+        ContactPurposes.Unknown.Message.Should().Contain("emergency, operationalSupport, dailyCommunication");
     }
 }

@@ -3,7 +3,8 @@
 Status: accepted (2026-07); supersedes docs/adr/0010 and docs/adr/0011;
 Domain-throws-again / DuplicateEntityException convention superseded by
 docs/adr/0014 (Domain returns DomainResult, persistence conflicts return
-PersistenceResult)
+PersistenceResult); for a rule the domain also enforces, the validator
+calls the domain instead of restating it (docs/adr/0047)
 
 ## Context
 

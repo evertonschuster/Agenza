@@ -39,7 +39,7 @@ public sealed record EmailAddress
         return new EmailAddress(value);
     }
 
-    public static bool HasValidShape(string value)
+    private static bool HasValidShape(string value)
     {
         if (value.Length > MaxLength || value.Any(char.IsWhiteSpace))
         {

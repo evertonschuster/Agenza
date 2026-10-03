@@ -73,10 +73,16 @@ public class Client : TenantOwnedEntity
         IReadOnlyCollection<ClientGuardian> guardians,
         IReadOnlyCollection<ClientReferenceContact> referenceContacts)
     {
-        var contactsResult = ValidateContacts(birthDate, today, guardians, referenceContacts);
-        if (contactsResult.IsFailure)
+        var guardiansResult = ValidateGuardians(birthDate?.Value, today, guardians.Count);
+        if (guardiansResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(contactsResult.Error);
+            return DomainResult.Failure<Client>(guardiansResult.Error);
+        }
+
+        var referenceContactsResult = ValidateReferenceContacts(referenceContacts.Count);
+        if (referenceContactsResult.IsFailure)
+        {
+            return DomainResult.Failure<Client>(referenceContactsResult.Error);
         }
 
         var client = new Client(id, fullName, birthDate, phone, email, cpf, administrativeNotes);
@@ -102,25 +108,26 @@ public class Client : TenantOwnedEntity
         }
     }
 
-    private static DomainResult ValidateContacts(
-        BirthDate? birthDate,
-        DateOnly today,
-        IReadOnlyCollection<ClientGuardian> guardians,
-        IReadOnlyCollection<ClientReferenceContact> referenceContacts)
+    public static DomainResult ValidateGuardians(DateOnly? birthDate, DateOnly today, int guardianCount)
     {
-        if (guardians.Count > MaxGuardians)
+        if (guardianCount > MaxGuardians)
         {
             return DomainResult.Failure(TooManyGuardians);
         }
 
-        if (referenceContacts.Count > MaxReferenceContacts)
-        {
-            return DomainResult.Failure(TooManyReferenceContacts);
-        }
-
-        if (birthDate is not null && birthDate.IsMinorOn(today) && guardians.Count == 0)
+        if (birthDate is { } date && ValueObjects.BirthDate.IsMinorOn(date, today) && guardianCount == 0)
         {
             return DomainResult.Failure(GuardianRequired);
+        }
+
+        return DomainResult.Success();
+    }
+
+    public static DomainResult ValidateReferenceContacts(int referenceContactCount)
+    {
+        if (referenceContactCount > MaxReferenceContacts)
+        {
+            return DomainResult.Failure(TooManyReferenceContacts);
         }
 
         return DomainResult.Success();

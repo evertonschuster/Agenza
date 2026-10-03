@@ -45,7 +45,7 @@ public abstract class ClientContact : TenantOwnedEntity
 
     internal void AssignClient(Guid clientId) => ClientId = clientId;
 
-    protected static DomainResult<string> ValidateName(string name)
+    public static DomainResult<string> ValidateName(string name)
     {
         var trimmed = name?.Trim() ?? string.Empty;
 
@@ -62,7 +62,7 @@ public abstract class ClientContact : TenantOwnedEntity
         return DomainResult.Success(trimmed);
     }
 
-    protected static DomainResult<string> ValidateRelationship(string relationship)
+    public static DomainResult<string> ValidateRelationship(string relationship)
     {
         var trimmed = relationship?.Trim() ?? string.Empty;
 
