@@ -9,7 +9,7 @@ namespace ServicesService.Tests.Clients.CreateClient;
 
 public class CreateClientCommandHandlerTests
 {
-    private static readonly DateTimeOffset NoonInSaoPaulo = new(2026, 10, 2, 15, 0, 0, TimeSpan.Zero);
+    private static readonly DateTimeOffset NoonUtc = new(2026, 10, 2, 12, 0, 0, TimeSpan.Zero);
 
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
@@ -24,7 +24,7 @@ public class CreateClientCommandHandlerTests
     }
 
     private CreateClientCommandHandler Handler(DateTimeOffset? utcNow = null) =>
-        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonInSaoPaulo), _logger);
+        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc), _logger);
 
     private static CreateClientCommand Command(
         string fullName = "Maria Souza",
@@ -129,16 +129,20 @@ public class CreateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_DecidesMinorityOnTheBusinessDayNotTheUtcDay()
+    public async Task Handle_DecidesMinorityOnTheUtcDay()
     {
-        var tenPmInSaoPaulo = new DateTimeOffset(2026, 10, 3, 1, 0, 0, TimeSpan.Zero);
+        var earlyUtcMorning = new DateTimeOffset(2026, 10, 3, 1, 0, 0, TimeSpan.Zero);
 
-        var result = await Handler(tenPmInSaoPaulo).Handle(
+        var turningEighteenToday = await Handler(earlyUtcMorning).Handle(
             Command(birthDate: new DateOnly(2008, 10, 3)),
             CancellationToken.None);
+        var turningEighteenTomorrow = await Handler(earlyUtcMorning).Handle(
+            Command(birthDate: new DateOnly(2008, 10, 4)),
+            CancellationToken.None);
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Client.Invalid");
+        turningEighteenToday.IsSuccess.Should().BeTrue();
+        turningEighteenTomorrow.IsFailure.Should().BeTrue();
+        turningEighteenTomorrow.Error.Code.Should().Be("Client.Invalid");
     }
 
     [Fact]

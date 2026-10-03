@@ -1,5 +1,4 @@
 using FluentValidation;
-using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 
@@ -9,6 +8,8 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
 {
     public CreateClientCommandValidator(TimeProvider timeProvider)
     {
+        DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
+
         RuleFor(command => command.FullName)
             .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("O nome completo é obrigatório.")
@@ -19,9 +20,9 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
 
         RuleFor(command => command.BirthDate)
             .Cascade(CascadeMode.Stop)
-            .Must(birthDate => BirthDateRules.IsInThePast(birthDate!.Value, timeProvider.GetBusinessToday()))
+            .Must(birthDate => BirthDateRules.IsInThePast(birthDate!.Value, Today()))
             .WithMessage("A data de nascimento deve estar no passado.")
-            .Must(birthDate => BirthDateRules.IsWithinMaxAge(birthDate!.Value, timeProvider.GetBusinessToday()))
+            .Must(birthDate => BirthDateRules.IsWithinMaxAge(birthDate!.Value, Today()))
             .WithMessage($"A data de nascimento não pode indicar idade superior a {BirthDateRules.MaxAgeInYears} anos.")
             .When(command => command.BirthDate.HasValue);
 
@@ -49,7 +50,7 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
             .Must(guardians => guardians is { Count: > 0 })
             .WithMessage($"Informe ao menos um responsável para pessoas menores de {BirthDateRules.AdultAgeInYears} anos.")
             .When(command => command.BirthDate is { } birthDate
-                && BirthDateRules.IsMinorOn(birthDate, timeProvider.GetBusinessToday()));
+                && BirthDateRules.IsMinorOn(birthDate, Today()));
 
         RuleForEach(command => command.Guardians)
             .NotNull().WithMessage("Informe os dados do responsável.")

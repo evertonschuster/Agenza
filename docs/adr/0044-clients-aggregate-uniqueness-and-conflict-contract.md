@@ -63,10 +63,10 @@ the domain re-checks the same invariants and its messages are not meant to reach
 vector. Reference-contact purposes are strings (`emergency`, `operationalSupport`, `dailyCommunication`) validated
 like `TagColor`, not a JSON enum: a bad enum value fails in the framework's binder with an English message and no code.
 
-**"Today".** The minor rule needs a calendar day, so `TimeProvider.GetBusinessToday()` converts to
-`America/Sao_Paulo` (Windows id, then a fixed UTC−3, because Brazil has had no DST since 2019). Age is completed years
-(a leap-day birthday counts on February 28 in common years), "in the past" is strictly before today, and "more than
-120 years" means an age of 121 or more. A client that pre-validates must use the same day and the same age rule.
+**"Today".** The minor rule needs a calendar day, and it is the UTC date ([ADR 0045](0045-backend-works-in-utc.md)).
+Age is completed years (a leap-day birthday counts on February 28 in common years), "in the past" is strictly before
+today, and "more than 120 years" means an age of 121 or more. A client that pre-validates uses the same age rule; with
+its local date it is at most stricter than the backend around midnight, never looser.
 
 **Tenant.** Neither the command nor its nested inputs has a tenant member; the tenant is assigned on save from the
 validated token ([ADR 0008](0008-automatic-tenant-assignment-on-save.md)), and a `tenantId` smuggled into the body
@@ -96,3 +96,5 @@ tests cover the EF side (tenant assignment across the graph, isolation, the filt
 - **The existing id as a top-level problem extension** — not visible in the generated OpenAPI schema, so untyped.
 - **Sending the user to a CPF search instead of the record** — an extra step, and no such search exists yet.
 - **JSON enums for purposes and status** — see the validation note above.
+- **Brazil's business day (`America/Sao_Paulo`) for "today"** — implemented and reverted before merge; see
+  [ADR 0045](0045-backend-works-in-utc.md).

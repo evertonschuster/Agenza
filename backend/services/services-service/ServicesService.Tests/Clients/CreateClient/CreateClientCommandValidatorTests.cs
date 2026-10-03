@@ -171,15 +171,16 @@ public class CreateClientCommandValidatorTests
     }
 
     [Fact]
-    public async Task Validate_UsesTheBusinessDayToDecideWhoIsAMinor()
+    public async Task Validate_UsesTheUtcDayToDecideWhoIsAMinor()
     {
-        var lateEvening = new CreateClientCommandValidator(
+        var earlyUtcMorning = new CreateClientCommandValidator(
             new FixedTimeProvider(new DateTimeOffset(2026, 10, 3, 1, 0, 0, TimeSpan.Zero)));
-        var turningEighteenTomorrow = Command(birthDate: new DateOnly(2008, 10, 3));
 
-        var result = await lateEvening.ValidateAsync(turningEighteenTomorrow);
+        var turningEighteenToday = await earlyUtcMorning.ValidateAsync(Command(birthDate: new DateOnly(2008, 10, 3)));
+        var turningEighteenTomorrow = await earlyUtcMorning.ValidateAsync(Command(birthDate: new DateOnly(2008, 10, 4)));
 
-        MessagesFor(result, "Guardians").Should().HaveCount(1);
+        turningEighteenToday.IsValid.Should().BeTrue();
+        MessagesFor(turningEighteenTomorrow, "Guardians").Should().HaveCount(1);
     }
 
     [Theory]

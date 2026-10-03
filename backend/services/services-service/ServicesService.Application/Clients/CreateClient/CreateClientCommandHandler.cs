@@ -26,7 +26,7 @@ public sealed class CreateClientCommandHandler : ICommandHandler<CreateClientCom
 
     public async Task<Result<ClientResponse>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
     {
-        var clientResult = command.ToModel(_timeProvider.GetBusinessToday());
+        var clientResult = command.ToModel(DateOnly.FromDateTime(_timeProvider.GetUtcNow().UtcDateTime));
         if (clientResult.IsFailure)
         {
             return Result.Failure<ClientResponse>(clientResult.Error.ToApplicationError());
