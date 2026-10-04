@@ -40,4 +40,9 @@ public sealed record TagColor
 
         return DomainResult.Success(new TagColor(normalized));
     }
+
+    public static TagColor Restore(string value)
+    {
+        return new TagColor(value);
+    }
 }

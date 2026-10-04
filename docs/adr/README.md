@@ -8,8 +8,10 @@ superseded is historical evidence, not current implementation guidance.
 | Concern | Current ADRs |
 | --- | --- |
 | Service and data topology | 0001, 0002, 0003, 0024, 0029 |
-| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012, 0014, 0018 |
-| Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028 |
+| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012, 0014, 0018, 0048 |
+| Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
+| Clients (served persons): aggregate, uniqueness, conflicts | 0044 |
+| Dates, times and time zones | 0045 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026 |
 | Authentication UX and AI delegation | 0020, 0022 |
 | Database bootstrap | 0025 as narrowed by 0027, plus 0027/0028 |
@@ -58,4 +60,5 @@ cancellation layer · 0034 custom Result type · 0035 no server-state library ·
 0036 OIDC session in localStorage · 0037 session core in shared · 0038 categories
 harness removed · 0039 Base UI primitives · 0040 three-state theme · 0041 AI
 instruction files reinstated · 0042 widgets layer and layer-boundaries lint rule
-(proposed).
+(proposed) · 0044 clients aggregate, uniqueness rules and conflict contract · 0045 backend works in UTC only ·
+0046 separate soft-delete and tenant query filters · 0048 database failures are generic to the user.

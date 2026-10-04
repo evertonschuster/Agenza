@@ -18,7 +18,7 @@ public class TagConfiguration : IEntityTypeConfiguration<Tag>
         builder.Property(t => t.Description).HasMaxLength(Tag.DescriptionMaxLength);
 
         builder.Property(t => t.Color)
-            .HasConversion(color => color.Value, value => TagColor.Create(value).Value)
+            .HasConversion(color => color.Value, value => TagColor.Restore(value))
             .IsRequired()
             .HasMaxLength(7);
 

@@ -9,6 +9,7 @@ public static class ApiProblemDetailsFactory
     private const string ApplicationProblemType = "https://agenza/errors/application";
     private const string AuthorizationProblemType = "https://agenza/errors/authorization";
     private const string UnexpectedProblemType = "https://agenza/errors/unexpected";
+    private const string RequestProblemType = "https://agenza/errors/request";
     private const string CorrelationIdHeaderName = "X-Correlation-Id";
 
     public static ApiProblemDetails CreateValidationProblem(Error error, HttpContext? httpContext = null)
@@ -46,6 +47,28 @@ public static class ApiProblemDetailsFactory
             "Ocorreu um erro inesperado.",
             StatusCodes.Status500InternalServerError,
             "Unexpected.Error",
+            EmptyErrors);
+    }
+
+    public static ApiProblemDetails CreateRequestProblem(int status, HttpContext? httpContext = null)
+    {
+        if (status == StatusCodes.Status413PayloadTooLarge)
+        {
+            return CreateProblem(
+                httpContext,
+                RequestProblemType,
+                "Os dados enviados excedem o tamanho permitido.",
+                status,
+                "Request.TooLarge",
+                EmptyErrors);
+        }
+
+        return CreateProblem(
+            httpContext,
+            RequestProblemType,
+            "Não foi possível ler os dados enviados.",
+            status,
+            "Request.Invalid",
             EmptyErrors);
     }
 

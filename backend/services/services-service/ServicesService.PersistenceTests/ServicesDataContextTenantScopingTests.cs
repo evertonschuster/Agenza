@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
+using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 using ServicesService.Infrastructure.Persistence;
@@ -28,6 +29,53 @@ public class ServicesDataContextTenantScopingTests
     private static Service ValidService(string name) =>
         Service.Create(
             Guid.NewGuid(), name, null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
+
+    private static async Task<Service> SaveDeletedService(string databaseName, Guid tenantId, string name)
+    {
+        var service = ValidService(name);
+        service.AssignTenant(tenantId);
+        service.MarkDeleted(null, DateTimeOffset.UtcNow);
+
+        await using var context = CreateContext(databaseName, tenantId);
+        context.Services.Add(service);
+        await context.SaveChangesAsync();
+
+        return service;
+    }
+
+    [Fact]
+    public void Model_ScopesEveryTenantOwnedEntityWithNamedSoftDeleteAndTenantFilters()
+    {
+        using var context = CreateContext(Guid.NewGuid().ToString(), Guid.NewGuid());
+        var tenantOwnedTypes = context.Model.GetEntityTypes()
+            .Where(entityType => typeof(ITenantOwned).IsAssignableFrom(entityType.ClrType))
+            .ToList();
+
+        tenantOwnedTypes.Should().NotBeEmpty();
+        foreach (var entityType in tenantOwnedTypes)
+        {
+            entityType.GetDeclaredQueryFilters().Select(filter => filter.Key)
+                .Should().BeEquivalentTo(new[] { "SoftDelete", "Tenant" }, entityType.DisplayName());
+        }
+    }
+
+    [Fact]
+    public async Task IgnoringOnlyTheSoftDeleteFilter_KeepsTheTenantScope()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantA = Guid.NewGuid();
+        var tenantB = Guid.NewGuid();
+        var deletedOfA = await SaveDeletedService(databaseName, tenantA, "Haircut");
+        await SaveDeletedService(databaseName, tenantB, "Manicure");
+
+        await using var context = CreateContext(databaseName, tenantA);
+
+        (await context.Services.IgnoreQueryFilters().CountAsync())
+            .Should().Be(2, "both rows exist, so only the tenant filter can keep tenant B's out");
+        (await context.Services.AnyAsync()).Should().BeFalse();
+        (await context.Services.IgnoreQueryFilters(["SoftDelete"]).ToListAsync())
+            .Should().ContainSingle().Which.Id.Should().Be(deletedOfA.Id);
+    }
 
     [Fact]
     public async Task Services_OnlyReturnsRowsBelongingToTheCurrentTenant()

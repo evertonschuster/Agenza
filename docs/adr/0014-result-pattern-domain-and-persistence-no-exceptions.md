@@ -1,7 +1,9 @@
 # ADR 0014 — Result pattern end-to-end; Domain and persistence no longer throw for expected outcomes
 
 Status: accepted (2026-07); supersedes the exception-related passages of
-docs/adr/0005, docs/adr/0006, and docs/adr/0012
+docs/adr/0005, docs/adr/0006, and docs/adr/0012; the per-constraint answers
+of the persistence error mappers replaced by a generic message for new code
+(docs/adr/0048)
 
 ## Context
 

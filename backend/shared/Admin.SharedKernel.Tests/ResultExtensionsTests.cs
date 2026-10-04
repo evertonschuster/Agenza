@@ -118,6 +118,27 @@ public class ResultExtensionsTests
     }
 
     [Fact]
+    public void ToActionResult_OnConflictWithFieldErrors_KeepsTheKeyedErrorsAndTheirMeta()
+    {
+        var controller = new TestController();
+        var meta = new Dictionary<string, string> { ["clientId"] = "0197f2a0-0000-7000-8000-000000000001" };
+        var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>>
+        {
+            ["Cpf"] = [new FieldError("Client.DuplicateCpf", "Já existe uma pessoa cadastrada com este CPF.", meta)],
+        };
+        var error = new Error("Client.DuplicateCpf", "Já existe uma pessoa cadastrada com este CPF.", ErrorType.Conflict, fieldErrors);
+
+        var actionResult = Result.Failure<int>(error).ToActionResult(controller, value => controller.Ok(value));
+
+        var objectResult = actionResult.Should().BeOfType<ObjectResult>().Subject;
+        objectResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
+        var problemDetails = objectResult.Value.Should().BeOfType<ApiProblemDetails>().Subject;
+        problemDetails.Code.Should().Be("Client.DuplicateCpf");
+        problemDetails.Errors.Should().BeSameAs(fieldErrors);
+        problemDetails.Errors!["Cpf"][0].Meta.Should().BeSameAs(meta);
+    }
+
+    [Fact]
     public void ToActionResult_Generic_OnSuccess_WithCreated_WrapsInEnvelope()
     {
         var controller = new TestController();
