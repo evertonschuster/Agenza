@@ -62,17 +62,16 @@ public class ClientContactTests
     }
 
     [Fact]
-    public void ValidateName_EnforcesTheLengthLimits()
+    public void Guardian_EnforcesTheLengthLimits()
     {
-        ClientContact.ValidateName(new string('a', ClientContact.NameMaxLength)).IsSuccess.Should().BeTrue();
-        ClientContact.ValidateName(new string('a', ClientContact.NameMaxLength + 1)).IsFailure.Should().BeTrue();
-    }
-
-    [Fact]
-    public void ValidateRelationship_EnforcesTheLengthLimit()
-    {
-        ClientContact.ValidateRelationship(new string('a', ClientContact.RelationshipMaxLength)).IsSuccess.Should().BeTrue();
-        ClientContact.ValidateRelationship(new string('a', ClientContact.RelationshipMaxLength + 1)).IsFailure.Should().BeTrue();
+        CreateClient(guardians: [new GuardianData(new string('a', ClientContact.NameMaxLength), "Mãe", null, null)])
+            .IsSuccess.Should().BeTrue();
+        CreateClient(guardians: [new GuardianData(new string('a', ClientContact.NameMaxLength + 1), "Mãe", null, null)])
+            .IsFailure.Should().BeTrue();
+        CreateClient(guardians: [new GuardianData("Ana", new string('a', ClientContact.RelationshipMaxLength), null, null)])
+            .IsSuccess.Should().BeTrue();
+        CreateClient(guardians: [new GuardianData("Ana", new string('a', ClientContact.RelationshipMaxLength + 1), null, null)])
+            .IsFailure.Should().BeTrue();
     }
 
     [Fact]

@@ -106,9 +106,9 @@ errors }`. `errors` muda de forma dependendo do tipo:
 **Validação** (`ErrorType.Validation` com `FieldErrors`) — `code` é sempre `"Validation.Failed"`
 (genérico; o código específico da regra vive dentro de `errors`), `errors` tem uma chave por
 **propriedade C#**, cada uma uma lista de `{code, message}`. O `code` de cada item depende do validator: os de
-`clients` devolvem o `code` e a mensagem do próprio erro de domínio, do value object ou da entidade (`FullName.Required`,
-`CpfNumber.Invalid`, `BirthDate.TooOld`, `Client.GuardianRequired`, `ClientContact.NameRequired`…,
-[ADR 0047](adr/0047-validation-rules-live-in-the-domain.md)); os de tags, categories e services ainda expõem o nome interno do validador do
+`clients` dão a cada regra um código de negócio com `.WithErrorCode(...)`, reaproveitando os erros declarados nos value
+objects e nas entidades (`FullName.Required`, `CpfNumber.Invalid`, `BirthDate.TooOld`, `Client.GuardianRequired`,
+`ClientContact.NameRequired`…); os de tags, categories e services ainda expõem o nome interno do validador do
 FluentValidation (`NotEmptyValidator`, `PredicateValidator`), que não distingue uma regra `.Must(...)` de outra:
 
 ```json

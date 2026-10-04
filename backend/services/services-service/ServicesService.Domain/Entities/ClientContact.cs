@@ -44,7 +44,7 @@ public abstract class ClientContact : TenantOwnedEntity
         Phone = phone;
     }
 
-    public static DomainResult<string> ValidateName(string name)
+    protected static DomainResult<string> ValidateName(string name)
     {
         var trimmed = name?.Trim() ?? string.Empty;
 
@@ -61,7 +61,7 @@ public abstract class ClientContact : TenantOwnedEntity
         return DomainResult.Success(trimmed);
     }
 
-    public static DomainResult<string> ValidateRelationship(string relationship)
+    protected static DomainResult<string> ValidateRelationship(string relationship)
     {
         var trimmed = relationship?.Trim() ?? string.Empty;
 

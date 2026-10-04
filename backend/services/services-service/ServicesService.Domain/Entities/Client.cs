@@ -73,24 +73,18 @@ public class Client : TenantOwnedEntity
         IReadOnlyCollection<GuardianData> guardians,
         IReadOnlyCollection<ReferenceContactData> referenceContacts)
     {
-        var guardiansResult = ValidateGuardians(birthDate?.Value, today, guardians.Count);
-        if (guardiansResult.IsFailure)
+        var contactsResult = ValidateContacts(birthDate, today, guardians, referenceContacts);
+        if (contactsResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(guardiansResult.Error);
-        }
-
-        var referenceContactsResult = ValidateReferenceContacts(referenceContacts.Count);
-        if (referenceContactsResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(referenceContactsResult.Error);
+            return DomainResult.Failure<Client>(contactsResult.Error);
         }
 
         var client = new Client(id, fullName, birthDate, phone, email, cpf, administrativeNotes);
 
-        var contactsResult = client.AddContacts(guardians, referenceContacts);
-        if (contactsResult.IsFailure)
+        var addContactsResult = client.AddContacts(guardians, referenceContacts);
+        if (addContactsResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(contactsResult.Error);
+            return DomainResult.Failure<Client>(addContactsResult.Error);
         }
 
         return DomainResult.Success(client);
@@ -125,26 +119,25 @@ public class Client : TenantOwnedEntity
         return DomainResult.Success();
     }
 
-    public static DomainResult ValidateGuardians(DateOnly? birthDate, DateOnly today, int guardianCount)
+    private static DomainResult ValidateContacts(
+        BirthDate? birthDate,
+        DateOnly today,
+        IReadOnlyCollection<GuardianData> guardians,
+        IReadOnlyCollection<ReferenceContactData> referenceContacts)
     {
-        if (guardianCount > MaxGuardians)
+        if (guardians.Count > MaxGuardians)
         {
             return DomainResult.Failure(TooManyGuardians);
         }
 
-        if (birthDate is { } date && ValueObjects.BirthDate.IsMinorOn(date, today) && guardianCount == 0)
-        {
-            return DomainResult.Failure(GuardianRequired);
-        }
-
-        return DomainResult.Success();
-    }
-
-    public static DomainResult ValidateReferenceContacts(int referenceContactCount)
-    {
-        if (referenceContactCount > MaxReferenceContacts)
+        if (referenceContacts.Count > MaxReferenceContacts)
         {
             return DomainResult.Failure(TooManyReferenceContacts);
+        }
+
+        if (birthDate is not null && birthDate.IsMinorOn(today) && guardians.Count == 0)
+        {
+            return DomainResult.Failure(GuardianRequired);
         }
 
         return DomainResult.Success();

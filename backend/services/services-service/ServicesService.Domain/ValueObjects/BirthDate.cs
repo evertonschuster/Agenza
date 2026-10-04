@@ -65,12 +65,12 @@ public sealed record BirthDate
         return age;
     }
 
-    private static bool IsInThePast(DateOnly birthDate, DateOnly today)
+    public static bool IsInThePast(DateOnly birthDate, DateOnly today)
     {
         return birthDate < today;
     }
 
-    private static bool IsWithinMaxAge(DateOnly birthDate, DateOnly today)
+    public static bool IsWithinMaxAge(DateOnly birthDate, DateOnly today)
     {
         return AgeOn(birthDate, today) <= MaxAgeInYears;
     }

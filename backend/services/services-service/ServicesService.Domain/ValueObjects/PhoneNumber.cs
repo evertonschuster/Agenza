@@ -39,7 +39,7 @@ public sealed record PhoneNumber
         return new PhoneNumber(value);
     }
 
-    private static bool HasValidShape(string value)
+    public static bool HasValidShape(string value)
     {
         if (value.Length > MaxLength || !value.Any(char.IsAsciiDigit))
         {
