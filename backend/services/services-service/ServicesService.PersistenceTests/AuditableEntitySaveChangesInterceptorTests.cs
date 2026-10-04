@@ -49,7 +49,7 @@ public class AuditableEntitySaveChangesInterceptorTests
         var service = ValidService();
 
         context.Services.Add(service);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         service.TenantId.Should().Be(tenantId);
     }
@@ -74,7 +74,7 @@ public class AuditableEntitySaveChangesInterceptorTests
         var service = ValidService();
 
         context.Services.Add(service);
-        await context.SaveChangesAsync();
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         service.CreatedAt.Should().NotBe(default);
         service.CreatedBy.Should().NotBeNull();
@@ -90,20 +90,20 @@ public class AuditableEntitySaveChangesInterceptorTests
         await using (var context = CreateContext(databaseName, TenantProvider(tenantId)))
         {
             context.Services.Add(service);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var context = CreateContext(databaseName, TenantProvider(tenantId)))
         {
-            var tracked = await context.Services.SingleAsync(s => s.Id == service.Id);
+            var tracked = await context.Services.SingleAsync(s => s.Id == service.Id, TestContext.Current.CancellationToken);
             context.Services.Remove(tracked);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var context = CreateContext(databaseName, TenantProvider(tenantId)))
         {
-            (await context.Services.IgnoreQueryFilters().SingleAsync(s => s.Id == service.Id)).IsDeleted.Should().BeTrue();
-            (await context.Services.AnyAsync(s => s.Id == service.Id)).Should().BeFalse();
+            (await context.Services.IgnoreQueryFilters().SingleAsync(s => s.Id == service.Id, TestContext.Current.CancellationToken)).IsDeleted.Should().BeTrue();
+            (await context.Services.AnyAsync(s => s.Id == service.Id, TestContext.Current.CancellationToken)).Should().BeFalse();
         }
     }
 }

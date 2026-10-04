@@ -38,6 +38,11 @@ The full stack has one local orchestration path:
   Python, and `uv` must be installed; AppHost runs the npm and locked
   `uv sync` setup resources before starting Vite and Uvicorn.
 
+  `dotnet run` hands the AppHost to the Aspire CLI, which launches the Debug
+  build. The first build on a machine fetches the CLI, dashboard, and DCP
+  through `dotnet dnx` into `~/.aspire`, so it needs network access but no
+  separate install ([ADR 0050](adr/0050-xunit-v3-on-vstest-and-aspire-cli-bundle.md)).
+
   A single local-development password is shared by PostgreSQL, the restricted
   application roles, and the internal OAuth clients. Its safe demo default is
   `postgres`, so the command works without secret setup. Override it through

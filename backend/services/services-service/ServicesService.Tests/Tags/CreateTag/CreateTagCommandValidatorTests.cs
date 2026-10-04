@@ -9,7 +9,7 @@ public class CreateTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
     {
-        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", "Note"));
+        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", "Note"), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeTrue();
     }
@@ -17,7 +17,7 @@ public class CreateTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyName_Fails()
     {
-        var result = await _validator.ValidateAsync(new CreateTagCommand("", "#0d9488", null));
+        var result = await _validator.ValidateAsync(new CreateTagCommand("", "#0d9488", null), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -27,7 +27,7 @@ public class CreateTagCommandValidatorTests
     {
         var name = new string('x', 41);
 
-        var result = await _validator.ValidateAsync(new CreateTagCommand(name, "#0d9488", null));
+        var result = await _validator.ValidateAsync(new CreateTagCommand(name, "#0d9488", null), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -35,7 +35,7 @@ public class CreateTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithColorOutsidePalette_Fails()
     {
-        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#123456", null));
+        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#123456", null), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -45,7 +45,7 @@ public class CreateTagCommandValidatorTests
     {
         var description = new string('x', 201);
 
-        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", description));
+        var result = await _validator.ValidateAsync(new CreateTagCommand("VIP", "#0d9488", description), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }

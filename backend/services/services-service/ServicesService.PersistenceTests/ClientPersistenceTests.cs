@@ -124,7 +124,7 @@ public class ClientPersistenceTests
             var loaded = await context.Clients
                 .Include(c => c.Guardians)
                 .Include(c => c.ReferenceContacts)
-                .SingleAsync();
+                .SingleAsync(TestContext.Current.CancellationToken);
 
             loaded.Status.Should().Be(ClientStatus.Active);
             loaded.TenantId.Should().Be(tenantId);
@@ -171,17 +171,17 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantB))
         {
-            (await context.Clients.Select(c => c.FullName).ToListAsync()).Should().Equal(FullName.Create("João Pereira").Value);
-            (await context.Clients.AnyAsync(c => c.Id == client.Id)).Should().BeFalse();
-            (await context.Set<ClientGuardian>().AnyAsync()).Should().BeFalse();
-            (await context.Set<ClientReferenceContact>().AnyAsync()).Should().BeFalse();
+            (await context.Clients.Select(c => c.FullName).ToListAsync(TestContext.Current.CancellationToken)).Should().Equal(FullName.Create("João Pereira").Value);
+            (await context.Clients.AnyAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken)).Should().BeFalse();
+            (await context.Set<ClientGuardian>().AnyAsync(TestContext.Current.CancellationToken)).Should().BeFalse();
+            (await context.Set<ClientReferenceContact>().AnyAsync(TestContext.Current.CancellationToken)).Should().BeFalse();
         }
 
         await using (var context = CreateContext(databaseName, tenantA))
         {
-            (await context.Clients.Select(c => c.FullName).ToListAsync()).Should().Equal(FullName.Create("Maria Souza").Value);
-            (await context.Set<ClientGuardian>().CountAsync()).Should().Be(1);
-            (await context.Set<ClientReferenceContact>().CountAsync()).Should().Be(1);
+            (await context.Clients.Select(c => c.FullName).ToListAsync(TestContext.Current.CancellationToken)).Should().Equal(FullName.Create("Maria Souza").Value);
+            (await context.Set<ClientGuardian>().CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
+            (await context.Set<ClientReferenceContact>().CountAsync(TestContext.Current.CancellationToken)).Should().Be(1);
         }
     }
 
@@ -240,7 +240,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            (await context.Clients.IgnoreQueryFilters().AnyAsync(c => c.Id == client.Id))
+            (await context.Clients.IgnoreQueryFilters().AnyAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken))
                 .Should().BeTrue("the row is soft-deleted, not removed");
             (await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None))
                 .Should().BeNull();
@@ -260,7 +260,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantB))
         {
-            (await context.Clients.IgnoreQueryFilters().CountAsync(c => c.Cpf == Cpf(CpfDigits)))
+            (await context.Clients.IgnoreQueryFilters().CountAsync(c => c.Cpf == Cpf(CpfDigits), TestContext.Current.CancellationToken))
                 .Should().Be(1, "the row exists, so only the tenant filter keeps it out");
             (await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None))
                 .Should().BeNull();

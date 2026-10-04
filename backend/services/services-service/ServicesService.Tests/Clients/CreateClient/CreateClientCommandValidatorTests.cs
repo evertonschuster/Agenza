@@ -209,8 +209,8 @@ public class CreateClientCommandValidatorTests
         var earlyUtcMorning = new CreateClientCommandValidator(
             new FixedTimeProvider(new DateTimeOffset(2026, 10, 3, 1, 0, 0, TimeSpan.Zero)));
 
-        var turningEighteenToday = await earlyUtcMorning.ValidateAsync(Command(birthDate: new DateOnly(2008, 10, 3)));
-        var turningEighteenTomorrow = await earlyUtcMorning.ValidateAsync(Command(birthDate: new DateOnly(2008, 10, 4)));
+        var turningEighteenToday = await earlyUtcMorning.ValidateAsync(Command(birthDate: new DateOnly(2008, 10, 3)), TestContext.Current.CancellationToken);
+        var turningEighteenTomorrow = await earlyUtcMorning.ValidateAsync(Command(birthDate: new DateOnly(2008, 10, 4)), TestContext.Current.CancellationToken);
 
         turningEighteenToday.IsValid.Should().BeTrue();
         MessagesFor(turningEighteenTomorrow, "Guardians").Should().HaveCount(1);

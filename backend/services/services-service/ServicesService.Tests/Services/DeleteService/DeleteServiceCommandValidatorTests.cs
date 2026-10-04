@@ -9,7 +9,7 @@ public class DeleteServiceCommandValidatorTests
     [Fact]
     public async Task Validate_WithNonEmptyServiceId_Passes()
     {
-        var result = await _validator.ValidateAsync(new DeleteServiceCommand(Guid.NewGuid()));
+        var result = await _validator.ValidateAsync(new DeleteServiceCommand(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeTrue();
     }
@@ -17,7 +17,7 @@ public class DeleteServiceCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyServiceId_Fails()
     {
-        var result = await _validator.ValidateAsync(new DeleteServiceCommand(Guid.Empty));
+        var result = await _validator.ValidateAsync(new DeleteServiceCommand(Guid.Empty), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }

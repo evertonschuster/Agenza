@@ -14,13 +14,13 @@ public class CreateServiceCommandValidatorTests
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
     {
-        (await _validator.ValidateAsync(ValidCommand())).IsValid.Should().BeTrue();
+        (await _validator.ValidateAsync(ValidCommand(), TestContext.Current.CancellationToken)).IsValid.Should().BeTrue();
     }
 
     [Fact]
     public async Task Validate_WithEmptyName_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { Name = "" })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { Name = "" }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -28,7 +28,7 @@ public class CreateServiceCommandValidatorTests
     {
         var name = new string('x', Service.NameMaxLength + 1);
 
-        (await _validator.ValidateAsync(ValidCommand() with { Name = name })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { Name = name }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Fact]
@@ -36,51 +36,51 @@ public class CreateServiceCommandValidatorTests
     {
         var description = new string('x', Service.DescriptionMaxLength + 1);
 
-        (await _validator.ValidateAsync(ValidCommand() with { Description = description })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { Description = description }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithNonPositiveMinDuration_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { MinDurationMinutes = 0 })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { MinDurationMinutes = 0 }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithMaxDurationOverAllowedLimit_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { MaxDurationMinutes = DurationRange.MaxAllowedMinutes + 1 }))
+        (await _validator.ValidateAsync(ValidCommand() with { MaxDurationMinutes = DurationRange.MaxAllowedMinutes + 1 }, TestContext.Current.CancellationToken))
             .IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithMinDurationGreaterThanMaxDuration_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { MinDurationMinutes = 61, MaxDurationMinutes = 60 }))
+        (await _validator.ValidateAsync(ValidCommand() with { MinDurationMinutes = 61, MaxDurationMinutes = 60 }, TestContext.Current.CancellationToken))
             .IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithDurationOutsideMinMaxRange_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { DurationMinutes = 5 })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { DurationMinutes = 5 }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithNegativePrice_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { Price = -0.01m })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { Price = -0.01m }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithPriceExceedingPrecision_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { Price = 123456789.12m })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { Price = 123456789.12m }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithPriceExceedingScale_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { Price = 45.123m })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { Price = 45.123m }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Theory]
@@ -88,32 +88,32 @@ public class CreateServiceCommandValidatorTests
     [InlineData(100.01)]
     public async Task Validate_WithMaxDiscountPercentageOutsideRange_Fails(double maxDiscountPercentage)
     {
-        (await _validator.ValidateAsync(ValidCommand() with { MaxDiscountPercentage = (decimal)maxDiscountPercentage }))
+        (await _validator.ValidateAsync(ValidCommand() with { MaxDiscountPercentage = (decimal)maxDiscountPercentage }, TestContext.Current.CancellationToken))
             .IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithMaxDiscountPercentageExceedingScale_Fails()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { MaxDiscountPercentage = 12.345m })).IsValid.Should().BeFalse();
+        (await _validator.ValidateAsync(ValidCommand() with { MaxDiscountPercentage = 12.345m }, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
     }
 
     [Fact]
     public async Task Validate_WithNoTagIds_Passes()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { TagIds = null })).IsValid.Should().BeTrue();
+        (await _validator.ValidateAsync(ValidCommand() with { TagIds = null }, TestContext.Current.CancellationToken)).IsValid.Should().BeTrue();
     }
 
     [Fact]
     public async Task Validate_WithEmptyTagIds_Passes()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [] })).IsValid.Should().BeTrue();
+        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [] }, TestContext.Current.CancellationToken)).IsValid.Should().BeTrue();
     }
 
     [Fact]
     public async Task Validate_WithMultipleDistinctTagIds_Passes()
     {
-        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [Guid.NewGuid(), Guid.NewGuid()] }))
+        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [Guid.NewGuid(), Guid.NewGuid()] }, TestContext.Current.CancellationToken))
             .IsValid.Should().BeTrue();
     }
 
@@ -122,7 +122,7 @@ public class CreateServiceCommandValidatorTests
     {
         var duplicateId = Guid.NewGuid();
 
-        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [duplicateId, duplicateId] }))
+        (await _validator.ValidateAsync(ValidCommand() with { TagIds = [duplicateId, duplicateId] }, TestContext.Current.CancellationToken))
             .IsValid.Should().BeFalse();
     }
 }

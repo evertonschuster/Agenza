@@ -9,7 +9,7 @@ public class DeleteCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_WithNonEmptyCategoryId_Passes()
     {
-        var result = await _validator.ValidateAsync(new DeleteCategoryCommand(Guid.NewGuid()));
+        var result = await _validator.ValidateAsync(new DeleteCategoryCommand(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeTrue();
     }
@@ -17,7 +17,7 @@ public class DeleteCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyCategoryId_Fails()
     {
-        var result = await _validator.ValidateAsync(new DeleteCategoryCommand(Guid.Empty));
+        var result = await _validator.ValidateAsync(new DeleteCategoryCommand(Guid.Empty), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }

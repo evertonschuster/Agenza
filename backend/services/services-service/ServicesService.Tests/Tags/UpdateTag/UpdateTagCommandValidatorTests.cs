@@ -10,7 +10,7 @@ public class UpdateTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
     {
-        var result = await _validator.ValidateAsync(new UpdateTagCommand(_tagId, "Returning", "#0d9488", null));
+        var result = await _validator.ValidateAsync(new UpdateTagCommand(_tagId, "Returning", "#0d9488", null), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeTrue();
     }
@@ -18,7 +18,7 @@ public class UpdateTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyTagId_Fails()
     {
-        var result = await _validator.ValidateAsync(new UpdateTagCommand(Guid.Empty, "VIP", "#0d9488", null));
+        var result = await _validator.ValidateAsync(new UpdateTagCommand(Guid.Empty, "VIP", "#0d9488", null), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -26,7 +26,7 @@ public class UpdateTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyName_Fails()
     {
-        var result = await _validator.ValidateAsync(new UpdateTagCommand(_tagId, "", "#0d9488", null));
+        var result = await _validator.ValidateAsync(new UpdateTagCommand(_tagId, "", "#0d9488", null), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -34,7 +34,7 @@ public class UpdateTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithColorOutsidePalette_Fails()
     {
-        var result = await _validator.ValidateAsync(new UpdateTagCommand(_tagId, "VIP", "#123456", null));
+        var result = await _validator.ValidateAsync(new UpdateTagCommand(_tagId, "VIP", "#123456", null), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
