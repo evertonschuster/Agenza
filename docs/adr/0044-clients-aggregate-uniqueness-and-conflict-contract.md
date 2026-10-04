@@ -1,6 +1,7 @@
 # ADR 0044 â€” Clients: person aggregate, uniqueness rules and conflict contract
 
-Status: accepted (2026-10)
+Status: accepted (2026-10); the PascalCase key casing of the conflict contract (`Cpf`, `Email`) is superseded by
+[ADR 0051](0051-camelcase-error-keys-on-the-wire.md), which writes them as `cpf`, `email` on the wire
 
 ## Context
 
@@ -78,6 +79,10 @@ special handling: any failed save answers a generic `409 Client.SaveFailed` ("NÃ
 novamente."), without field errors and without claiming a duplicate, whatever the database rejected
 ([ADR 0048](0048-database-failures-are-generic-to-the-user.md)); the kind and constraint go to the log. A retry goes
 through the pre-check again and gets the specific per-field answer.
+
+> **2026-10 update:** the key casing in the paragraph below is superseded by
+> [ADR 0051](0051-camelcase-error-keys-on-the-wire.md): on the wire the keys are camelCase (`cpf`, `email`, read as
+> `errors.cpf[0].meta.clientId`). The rest of the conflict contract stands.
 
 **Conflict contract.** A duplicate answers `409` with the errors keyed by field (`Cpf`, `Email`, PascalCase like
 validation keys), so a form can show each under its input. `FieldError` gained an optional `Meta` string map
