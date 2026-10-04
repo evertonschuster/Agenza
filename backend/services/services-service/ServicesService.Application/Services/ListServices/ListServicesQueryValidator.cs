@@ -19,5 +19,10 @@ public sealed class ListServicesQueryValidator : AbstractValidator<ListServicesQ
             .InclusiveBetween(1, MaxPageSize)
             .WithErrorCode(InvalidPageSizeCode)
             .WithMessage($"O tamanho da página deve ser entre 1 e {MaxPageSize}.");
+
+        RuleFor(query => query.Status)
+            .Must(ServiceStatusNames.IsKnownFilter)
+            .WithErrorCode(ServiceStatusNames.UnknownCode)
+            .WithMessage(ServiceStatusNames.UnknownMessage);
     }
 }

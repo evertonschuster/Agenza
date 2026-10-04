@@ -7,4 +7,5 @@ public sealed record ListServicesQuery(
     int PageSize = 20,
     string? Search = null,
     Guid? CategoryId = null,
-    Guid? TagId = null) : IQuery<PagedResult<ServiceResponse>>;
+    IReadOnlyList<Guid>? TagIds = null,
+    string? Status = null) : IQuery<PagedResult<ServiceResponse>>;

@@ -8,14 +8,20 @@ public sealed class UpdateServiceCommandValidator : AbstractValidator<UpdateServ
     {
         RuleFor(command => command.ServiceId).MustBeAServiceId();
         RuleFor(command => command.Name).MustBeValidName();
-        RuleFor(command => command.Description).MustBeValidDescription();
+        RuleFor(command => command.InternalDescription).MustBeValidInternalDescription();
+        RuleFor(command => command.ClientDescription).MustBeValidClientDescription();
+        RuleFor(command => command.TagIds).MustBeValidTagIds();
+        RuleFor(command => command.DurationMinutes).MustBeValidDuration();
+        RuleFor(command => command.PreparationMinutes).MustBeValidPreparation();
+        RuleFor(command => command.CleanupMinutes).MustBeValidCleanup();
         RuleFor(command => command.MinDurationMinutes).MustBeValidMinDuration();
         RuleFor(command => command.MaxDurationMinutes)
             .MustBeValidMaxDuration(command => command.MinDurationMinutes);
         RuleFor(command => command.DurationMinutes)
-            .MustBeWithinTheDurationRange(command => command.MinDurationMinutes, command => command.MaxDurationMinutes);
+            .MustBeWithinTheDurationLimits(command => command.MinDurationMinutes, command => command.MaxDurationMinutes);
+        RuleFor(command => command.PricingType).MustBeAKnownPricingType();
+        RuleFor(command => command.Price).MustMatchThePricingType(command => command.PricingType);
         RuleFor(command => command.Price).MustBeValidPrice();
         RuleFor(command => command.MaxDiscountPercentage).MustBeValidMaxDiscount();
-        RuleFor(command => command.TagIds).MustBeValidTagIds();
     }
 }

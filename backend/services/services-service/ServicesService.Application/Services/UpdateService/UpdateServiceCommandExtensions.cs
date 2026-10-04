@@ -8,13 +8,20 @@ public static class UpdateServiceCommandExtensions
 {
     public static DomainResult ApplyTo(this UpdateServiceCommand command, Service service)
     {
-        var durationResult = DurationRange.Create(
-            command.MinDurationMinutes,
+        var durationResult = ServiceDuration.Create(
             command.DurationMinutes,
+            command.PreparationMinutes ?? 0,
+            command.CleanupMinutes ?? 0,
+            command.MinDurationMinutes,
             command.MaxDurationMinutes);
         if (durationResult.IsFailure)
         {
             return DomainResult.Failure(durationResult.Error);
+        }
+
+        if (PricingTypeNames.ToPricingType(command.PricingType) is not { } pricingType)
+        {
+            return DomainResult.Failure(PricingTypeNames.Unknown);
         }
 
         var priceResult = Money.Create(command.Price);
@@ -31,11 +38,13 @@ public static class UpdateServiceCommandExtensions
 
         return service.Update(
             command.Name,
-            command.Description,
+            command.CategoryId,
+            command.InternalDescription,
+            command.ClientDescription,
             durationResult.Value,
+            pricingType,
             priceResult.Value,
             maxDiscountResult.Value,
-            command.CategoryId,
             command.TagIds ?? []);
     }
 }

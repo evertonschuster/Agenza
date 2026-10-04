@@ -42,4 +42,32 @@ public class ListServicesQueryValidatorTests
         _validator.Validate(new ListServicesQuery(PageSize: 1)).IsValid.Should().BeTrue();
         _validator.Validate(new ListServicesQuery(PageSize: 100)).IsValid.Should().BeTrue();
     }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("all")]
+    [InlineData("active")]
+    [InlineData("inactive")]
+    public void Validate_WithAKnownSituation_Passes(string? status)
+    {
+        _validator.Validate(new ListServicesQuery(Status: status)).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Validate_WithAnUnknownSituation_ReportsTheBusinessCode()
+    {
+        var result = _validator.Validate(new ListServicesQuery(Status: "deleted"));
+
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.PropertyName.Should().Be("Status");
+        error.ErrorCode.Should().Be("ServiceStatus.Unknown");
+        error.ErrorMessage.Should().Be("A situação deve ser uma das seguintes: active, inactive, all.");
+    }
+
+    [Fact]
+    public void Validate_WithTags_Passes()
+    {
+        _validator.Validate(new ListServicesQuery(TagIds: [Guid.NewGuid(), Guid.NewGuid()])).IsValid.Should().BeTrue();
+    }
 }

@@ -6,15 +6,21 @@ public sealed record ServiceResponse(
     Guid Id,
     int Code,
     string Name,
-    string? Description,
-    int DurationMinutes,
-    int MinDurationMinutes,
-    int MaxDurationMinutes,
-    decimal Price,
-    decimal MaxDiscountPercentage,
     Guid? CategoryId,
     string? CategoryName,
-    IReadOnlyList<TagSummary> Tags)
+    IReadOnlyList<TagSummary> Tags,
+    string? InternalDescription,
+    string? ClientDescription,
+    int DurationMinutes,
+    int PreparationMinutes,
+    int CleanupMinutes,
+    int TotalDurationMinutes,
+    int? MinDurationMinutes,
+    int? MaxDurationMinutes,
+    string PricingType,
+    decimal? Price,
+    decimal? MaxDiscountPercentage,
+    string Status)
 {
     public static ServiceResponse FromService(Service service, string? categoryName, IReadOnlyList<Tag> tags)
     {
@@ -22,15 +28,21 @@ public sealed record ServiceResponse(
             service.Id,
             service.Code,
             service.Name,
-            service.Description,
-            service.DurationMinutes,
-            service.MinDurationMinutes,
-            service.MaxDurationMinutes,
-            service.Price.Value,
-            service.MaxDiscountPercentage.Value,
             service.CategoryId,
             categoryName,
-            tags.Select(tag => new TagSummary(tag.Id, tag.Name, tag.Color.Value)).ToList());
+            tags.Select(tag => new TagSummary(tag.Id, tag.Name, tag.Color.Value)).ToList(),
+            service.InternalDescription,
+            service.ClientDescription,
+            service.DurationMinutes,
+            service.PreparationMinutes,
+            service.CleanupMinutes,
+            service.TotalDurationMinutes,
+            service.MinDurationMinutes,
+            service.MaxDurationMinutes,
+            PricingTypeNames.ToName(service.PricingType),
+            service.Price?.Value,
+            service.MaxDiscountPercentage?.Value,
+            ServiceStatusNames.ToName(service.Status));
     }
 }
 

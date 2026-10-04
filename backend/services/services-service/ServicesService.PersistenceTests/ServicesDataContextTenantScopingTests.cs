@@ -2,7 +2,6 @@ using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.PersistenceTests;
@@ -26,17 +25,7 @@ public class ServicesDataContextTenantScopingTests
         return new ServicesDataContext(options, provider);
     }
 
-    private static Service ValidService(string name) =>
-        Service.Create(
-            Guid.NewGuid(),
-            name,
-            null,
-            DurationRange.Create(15, 30, 60).Value,
-            Money.Create(45.50m).Value,
-            Percentage.Create(10m).Value,
-            null,
-            [],
-            1).Value;
+    private static Service ValidService(string name) => ServiceFixtures.NewService(name);
 
     private static async Task<Service> SaveDeletedService(string databaseName, Guid tenantId, string name)
     {

@@ -8,13 +8,20 @@ public static class CreateServiceCommandExtensions
 {
     public static DomainResult<Service> ToModel(this CreateServiceCommand command, int code)
     {
-        var durationResult = DurationRange.Create(
-            command.MinDurationMinutes,
+        var durationResult = ServiceDuration.Create(
             command.DurationMinutes,
+            command.PreparationMinutes ?? 0,
+            command.CleanupMinutes ?? 0,
+            command.MinDurationMinutes,
             command.MaxDurationMinutes);
         if (durationResult.IsFailure)
         {
             return DomainResult.Failure<Service>(durationResult.Error);
+        }
+
+        if (PricingTypeNames.ToPricingType(command.PricingType) is not { } pricingType)
+        {
+            return DomainResult.Failure<Service>(PricingTypeNames.Unknown);
         }
 
         var priceResult = Money.Create(command.Price);
@@ -32,11 +39,13 @@ public static class CreateServiceCommandExtensions
         return Service.Create(
             Guid.CreateVersion7(),
             command.Name,
-            command.Description,
+            command.CategoryId,
+            command.InternalDescription,
+            command.ClientDescription,
             durationResult.Value,
+            pricingType,
             priceResult.Value,
             maxDiscountResult.Value,
-            command.CategoryId,
             command.TagIds ?? [],
             code);
     }

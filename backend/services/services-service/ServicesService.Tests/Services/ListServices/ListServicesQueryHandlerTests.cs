@@ -27,21 +27,45 @@ public class ListServicesQueryHandlerTests
                 Arg.Any<int>(),
                 Arg.Any<string?>(),
                 Arg.Any<Guid?>(),
-                Arg.Any<Guid?>(),
+                Arg.Any<IReadOnlyCollection<Guid>>(),
+                Arg.Any<ServiceStatus?>(),
                 Arg.Any<CancellationToken>())
             .Returns((services, totalCount));
     }
 
     [Fact]
-    public async Task Handle_ReturnsTheServicesFromTheRepository()
+    public async Task Handle_ReturnsTheServicesFromTheRepositoryWithTheirSituation()
     {
-        RepositoryReturns([ServiceTestData.NewService("Haircut")], 1);
+        var inactive = ServiceTestData.NewService("Massage", null, 2);
+        inactive.Inactivate();
+        RepositoryReturns([ServiceTestData.NewService("Haircut"), inactive], 2);
 
         var result = await _handler.Handle(new ListServicesQuery(), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Items.Should().ContainSingle().Which.Name.Should().Be("Haircut");
-        result.Value.TotalCount.Should().Be(1);
+        result.Value.Items.Select(item => (item.Name, item.Status)).Should()
+            .Equal(("Haircut", "active"), ("Massage", "inactive"));
+        result.Value.TotalCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsThePricingAndTheTotalTimeOfEachService()
+    {
+        var variable = Service.Create(
+            Guid.NewGuid(), "Session", null, null, null,
+            ServiceTestData.Duration(50, 10, 5), PricingType.Variable, null, null, [], 1).Value;
+        RepositoryReturns([ServiceTestData.NewService("Haircut", null, 2), variable], 2);
+
+        var result = await _handler.Handle(new ListServicesQuery(), CancellationToken.None);
+
+        var fixedItem = result.Value.Items.Single(item => item.Name == "Haircut");
+        fixedItem.PricingType.Should().Be("fixed");
+        fixedItem.Price.Should().Be(45.50m);
+        fixedItem.TotalDurationMinutes.Should().Be(30);
+        var variableItem = result.Value.Items.Single(item => item.Name == "Session");
+        variableItem.PricingType.Should().Be("variable");
+        variableItem.Price.Should().BeNull();
+        variableItem.TotalDurationMinutes.Should().Be(65);
     }
 
     [Fact]
@@ -128,7 +152,8 @@ public class ListServicesQueryHandlerTests
     public async Task Handle_WithPageSmallerThanTheTotal_ReturnsTheRequestedPageAndTheTotalCount()
     {
         _serviceRepository.ListAsync(
-                1, 2, Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+                1, 2, Arg.Any<string?>(), Arg.Any<Guid?>(), Arg.Any<IReadOnlyCollection<Guid>>(),
+                Arg.Any<ServiceStatus?>(), Arg.Any<CancellationToken>())
             .Returns((
                 (IReadOnlyList<Service>)[ServiceTestData.NewService("Haircut", null, 1), ServiceTestData.NewService("Manicure", null, 2)],
                 3));
@@ -142,18 +167,64 @@ public class ListServicesQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_PassesTheSearchAndTheFiltersToTheRepository()
+    public async Task Handle_PassesTheSearchAndEveryFilterToTheRepository()
     {
         var categoryId = Guid.NewGuid();
-        var tagId = Guid.NewGuid();
-        _serviceRepository.ListAsync(1, 20, "cut", categoryId, tagId, Arg.Any<CancellationToken>())
-            .Returns(((IReadOnlyList<Service>)[], 0));
+        var firstTagId = Guid.NewGuid();
+        var secondTagId = Guid.NewGuid();
+        RepositoryReturns([], 0);
 
-        var result = await _handler.Handle(
-            new ListServicesQuery(Search: "cut", CategoryId: categoryId, TagId: tagId),
+        await _handler.Handle(
+            new ListServicesQuery(
+                Search: "cut",
+                CategoryId: categoryId,
+                TagIds: [firstTagId, secondTagId],
+                Status: "inactive"),
             CancellationToken.None);
 
-        result.IsSuccess.Should().BeTrue();
-        await _serviceRepository.Received(1).ListAsync(1, 20, "cut", categoryId, tagId, Arg.Any<CancellationToken>());
+        await _serviceRepository.Received(1).ListAsync(
+            1,
+            20,
+            "cut",
+            categoryId,
+            Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.SequenceEqual(new[] { firstTagId, secondTagId })),
+            ServiceStatus.Inactive,
+            Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("all")]
+    public async Task Handle_WithoutASituationFilter_ListsEveryService(string? status)
+    {
+        RepositoryReturns([], 0);
+
+        await _handler.Handle(new ListServicesQuery(Status: status), CancellationToken.None);
+
+        await _serviceRepository.Received(1).ListAsync(
+            1, 20, null, null, Arg.Any<IReadOnlyCollection<Guid>>(), null, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithTheActiveSituation_ListsOnlyActiveServices()
+    {
+        RepositoryReturns([], 0);
+
+        await _handler.Handle(new ListServicesQuery(Status: "active"), CancellationToken.None);
+
+        await _serviceRepository.Received(1).ListAsync(
+            1, 20, null, null, Arg.Any<IReadOnlyCollection<Guid>>(), ServiceStatus.Active, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithoutTagIds_AppliesNoTagFilter()
+    {
+        RepositoryReturns([], 0);
+
+        await _handler.Handle(new ListServicesQuery(TagIds: null), CancellationToken.None);
+
+        await _serviceRepository.Received(1).ListAsync(
+            1, 20, null, null, Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 0), null, Arg.Any<CancellationToken>());
     }
 }

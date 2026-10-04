@@ -9,25 +9,36 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
 {
     public void Configure(EntityTypeBuilder<Service> builder)
     {
-        builder.ToTable("Services");
+        var statuses = string.Join(", ", Enum.GetNames<ServiceStatus>().Select(status => $"'{status}'"));
+        var pricingTypes = string.Join(", ", Enum.GetNames<PricingType>().Select(type => $"'{type}'"));
+        builder.ToTable(
+            "Services",
+            table =>
+            {
+                table.HasCheckConstraint("CK_Services_Status", $"\"Status\" IN ({statuses})");
+                table.HasCheckConstraint("CK_Services_PricingType", $"\"PricingType\" IN ({pricingTypes})");
+            });
         builder.HasKey(s => s.Id);
         builder.HasAlternateKey(s => new { s.TenantId, s.Id });
 
         builder.Property(s => s.TenantId).IsRequired();
         builder.Property(s => s.Code).IsRequired();
         builder.Property(s => s.Name).IsRequired().HasMaxLength(Service.NameMaxLength);
-        builder.Property(s => s.Description).HasMaxLength(Service.DescriptionMaxLength);
+        builder.Property(s => s.InternalDescription).HasMaxLength(Service.InternalDescriptionMaxLength);
+        builder.Property(s => s.ClientDescription).HasMaxLength(Service.ClientDescriptionMaxLength);
         builder.Property(s => s.DurationMinutes).IsRequired();
-        builder.Property(s => s.MinDurationMinutes).IsRequired();
-        builder.Property(s => s.MaxDurationMinutes).IsRequired();
+        builder.Property(s => s.PreparationMinutes).IsRequired();
+        builder.Property(s => s.CleanupMinutes).IsRequired();
+        builder.Property(s => s.MinDurationMinutes);
+        builder.Property(s => s.MaxDurationMinutes);
+        builder.Property(s => s.PricingType).IsRequired().HasConversion<string>().HasMaxLength(16);
         builder.Property(s => s.Price)
-            .HasConversion(price => price.Value, value => Money.Restore(value))
-            .IsRequired()
+            .HasConversion(price => price!.Value, value => Money.Restore(value))
             .HasPrecision(Money.Precision, Money.Scale);
         builder.Property(s => s.MaxDiscountPercentage)
-            .HasConversion(percentage => percentage.Value, value => Percentage.Restore(value))
-            .IsRequired()
+            .HasConversion(percentage => percentage!.Value, value => Percentage.Restore(value))
             .HasPrecision(Percentage.Precision, Percentage.Scale);
+        builder.Property(s => s.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
         builder.Property(s => s.CategoryId);
         builder.HasOne<Category>()
             .WithMany()

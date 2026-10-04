@@ -2,7 +2,6 @@ using Admin.Identity.Client;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Persistence.Interceptors;
 
@@ -37,17 +36,7 @@ public class AuditableEntitySaveChangesInterceptorTests
         return provider;
     }
 
-    private static Service ValidService() =>
-        Service.Create(
-            Guid.NewGuid(),
-            "Haircut",
-            null,
-            DurationRange.Create(15, 30, 60).Value,
-            Money.Create(45.50m).Value,
-            Percentage.Create(10m).Value,
-            null,
-            [],
-            1).Value;
+    private static Service ValidService() => ServiceFixtures.NewService();
 
     [Fact]
     public async Task SaveChangesAsync_WithNewTenantOwnedEntity_AssignsTheCurrentTenant()

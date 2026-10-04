@@ -24,19 +24,24 @@ public sealed record Percentage
         Value = value;
     }
 
-    public static DomainResult<Percentage> Create(decimal raw)
+    public static DomainResult<Percentage?> Create(decimal? raw)
     {
-        if (!IsInRange(raw))
+        if (raw is not { } value)
         {
-            return DomainResult.Failure<Percentage>(OutOfRange);
+            return DomainResult.Success<Percentage?>(null);
         }
 
-        if (!HasValidScale(raw))
+        if (!IsInRange(value))
         {
-            return DomainResult.Failure<Percentage>(TooManyDecimals);
+            return DomainResult.Failure<Percentage?>(OutOfRange);
         }
 
-        return DomainResult.Success(new Percentage(raw));
+        if (!HasValidScale(value))
+        {
+            return DomainResult.Failure<Percentage?>(TooManyDecimals);
+        }
+
+        return DomainResult.Success<Percentage?>(new Percentage(value));
     }
 
     public static Percentage Restore(decimal value)

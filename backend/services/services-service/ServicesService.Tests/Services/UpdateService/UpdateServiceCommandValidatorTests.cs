@@ -11,24 +11,32 @@ public class UpdateServiceCommandValidatorTests
     private static UpdateServiceCommand Command(
         Guid? serviceId = null,
         string name = "Haircut",
-        string? description = "A classic cut",
+        IReadOnlyList<Guid>? tagIds = null,
+        string? internalDescription = null,
+        string? clientDescription = null,
         int durationMinutes = 30,
-        int minDurationMinutes = 15,
-        int maxDurationMinutes = 60,
-        decimal price = 45.50m,
-        decimal maxDiscountPercentage = 10m,
-        IReadOnlyList<Guid>? tagIds = null) =>
+        int? preparationMinutes = null,
+        int? cleanupMinutes = null,
+        int? minDurationMinutes = null,
+        int? maxDurationMinutes = null,
+        string pricingType = "fixed",
+        decimal? price = 45.50m,
+        decimal? maxDiscountPercentage = null) =>
         new(
             serviceId ?? Guid.NewGuid(),
             name,
-            description,
+            null,
+            tagIds,
+            internalDescription,
+            clientDescription,
             durationMinutes,
+            preparationMinutes,
+            cleanupMinutes,
             minDurationMinutes,
             maxDurationMinutes,
+            pricingType,
             price,
-            maxDiscountPercentage,
-            null,
-            tagIds);
+            maxDiscountPercentage);
 
     private async Task<ValidationResult> Validate(UpdateServiceCommand command) =>
         await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
@@ -39,13 +47,19 @@ public class UpdateServiceCommandValidatorTests
         {
             { "id", Command(serviceId: Guid.Empty), "ServiceId", "Service.IdRequired" },
             { "name", Command(name: ""), "Name", "Service.NameRequired" },
-            { "description", Command(description: new string('x', Service.DescriptionMaxLength + 1)), "Description", "Service.DescriptionTooLong" },
-            { "min duration", Command(minDurationMinutes: 0), "MinDurationMinutes", "DurationRange.MinOutOfRange" },
-            { "max duration", Command(maxDurationMinutes: 1441), "MaxDurationMinutes", "DurationRange.MaxOutOfRange" },
-            { "duration", Command(durationMinutes: 5), "DurationMinutes", "DurationRange.DurationOutsideRange" },
+            { "internal description", Command(internalDescription: new string('x', Service.InternalDescriptionMaxLength + 1)), "InternalDescription", "Service.InternalDescriptionTooLong" },
+            { "client description", Command(clientDescription: new string('x', Service.ClientDescriptionMaxLength + 1)), "ClientDescription", "Service.ClientDescriptionTooLong" },
+            { "tags", Command(tagIds: [Guid.Empty]), "TagIds", "Service.InvalidTag" },
+            { "duration", Command(durationMinutes: 0), "DurationMinutes", "ServiceDuration.DurationOutOfRange" },
+            { "preparation", Command(preparationMinutes: -1), "PreparationMinutes", "ServiceDuration.PreparationOutOfRange" },
+            { "cleanup", Command(cleanupMinutes: -1), "CleanupMinutes", "ServiceDuration.CleanupOutOfRange" },
+            { "min duration", Command(minDurationMinutes: 0), "MinDurationMinutes", "ServiceDuration.MinOutOfRange" },
+            { "max duration", Command(maxDurationMinutes: 1441), "MaxDurationMinutes", "ServiceDuration.MaxOutOfRange" },
+            { "duration limits", Command(durationMinutes: 5, minDurationMinutes: 15), "DurationMinutes", "ServiceDuration.DurationBelowMin" },
+            { "pricing type", Command(pricingType: "hourly"), "PricingType", "PricingType.Unknown" },
+            { "price against the pricing type", Command(pricingType: "variable", price: 10m), "Price", "Service.PriceNotAllowed" },
             { "price", Command(price: -1m), "Price", "Money.Negative" },
             { "discount", Command(maxDiscountPercentage: 101m), "MaxDiscountPercentage", "Percentage.OutOfRange" },
-            { "tags", Command(tagIds: [Guid.Empty]), "TagIds", "Service.InvalidTag" },
         };
     }
 
@@ -54,6 +68,7 @@ public class UpdateServiceCommandValidatorTests
     {
         (await Validate(Command())).IsValid.Should().BeTrue();
         (await Validate(Command(tagIds: [Guid.NewGuid(), Guid.NewGuid()]))).IsValid.Should().BeTrue();
+        (await Validate(Command(pricingType: "variable", price: null))).IsValid.Should().BeTrue();
     }
 
     [Theory]

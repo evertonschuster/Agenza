@@ -1,3 +1,4 @@
+using System.Globalization;
 using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Services;
@@ -14,7 +15,16 @@ public class MoneyTests
         var result = Money.Create((decimal)amount);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Value.Should().Be((decimal)amount);
+        result.Value!.Value.Should().Be((decimal)amount);
+    }
+
+    [Fact]
+    public void Create_WithoutAnAmount_ReturnsNull()
+    {
+        var result = Money.Create(null);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeNull();
     }
 
     [Fact]
@@ -40,7 +50,7 @@ public class MoneyTests
     [InlineData("99999999.995")]
     public void Create_WithMoreThanTheStoredPrecision_Fails(string amount)
     {
-        var result = Money.Create(decimal.Parse(amount, System.Globalization.CultureInfo.InvariantCulture));
+        var result = Money.Create(decimal.Parse(amount, CultureInfo.InvariantCulture));
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Money.InvalidPrecision");

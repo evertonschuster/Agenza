@@ -13,7 +13,16 @@ public class PercentageTests
         var result = Percentage.Create((decimal)value);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Value.Should().Be((decimal)value);
+        result.Value!.Value.Should().Be((decimal)value);
+    }
+
+    [Fact]
+    public void Create_WithoutAValue_ReturnsNull()
+    {
+        var result = Percentage.Create(null);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Should().BeNull();
     }
 
     [Theory]

@@ -11,24 +11,32 @@ public class CreateServiceCommandValidatorTests
 
     private static CreateServiceCommand Command(
         string name = "Haircut",
-        string? description = "A classic cut",
-        int durationMinutes = 30,
-        int minDurationMinutes = 15,
-        int maxDurationMinutes = 60,
-        decimal price = 45.50m,
-        decimal maxDiscountPercentage = 10m,
         Guid? categoryId = null,
-        IReadOnlyList<Guid>? tagIds = null) =>
+        IReadOnlyList<Guid>? tagIds = null,
+        string? internalDescription = "Only for the team",
+        string? clientDescription = "A classic cut",
+        int durationMinutes = 30,
+        int? preparationMinutes = null,
+        int? cleanupMinutes = null,
+        int? minDurationMinutes = null,
+        int? maxDurationMinutes = null,
+        string pricingType = "fixed",
+        decimal? price = 45.50m,
+        decimal? maxDiscountPercentage = null) =>
         new(
             name,
-            description,
+            categoryId,
+            tagIds,
+            internalDescription,
+            clientDescription,
             durationMinutes,
+            preparationMinutes,
+            cleanupMinutes,
             minDurationMinutes,
             maxDurationMinutes,
+            pricingType,
             price,
-            maxDiscountPercentage,
-            categoryId,
-            tagIds);
+            maxDiscountPercentage);
 
     private async Task<ValidationResult> Validate(CreateServiceCommand command) =>
         await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
@@ -45,28 +53,66 @@ public class CreateServiceCommandValidatorTests
             { "name missing", Command(name: ""), "Name", "Service.NameRequired" },
             { "name blank", Command(name: "   "), "Name", "Service.NameRequired" },
             { "name too long", Command(name: new string('x', Service.NameMaxLength + 1)), "Name", "Service.NameTooLong" },
-            { "description too long", Command(description: new string('x', Service.DescriptionMaxLength + 1)), "Description", "Service.DescriptionTooLong" },
-            { "min duration", Command(minDurationMinutes: 0), "MinDurationMinutes", "DurationRange.MinOutOfRange" },
-            { "max duration", Command(maxDurationMinutes: DurationRange.MaxAllowedMinutes + 1), "MaxDurationMinutes", "DurationRange.MaxOutOfRange" },
-            { "min above max", Command(minDurationMinutes: 61, maxDurationMinutes: 60, durationMinutes: 61), "MaxDurationMinutes", "DurationRange.MinGreaterThanMax" },
-            { "duration below the range", Command(durationMinutes: 5), "DurationMinutes", "DurationRange.DurationOutsideRange" },
-            { "duration above the range", Command(durationMinutes: 61), "DurationMinutes", "DurationRange.DurationOutsideRange" },
+            { "internal description too long", Command(internalDescription: new string('x', Service.InternalDescriptionMaxLength + 1)), "InternalDescription", "Service.InternalDescriptionTooLong" },
+            { "client description too long", Command(clientDescription: new string('x', Service.ClientDescriptionMaxLength + 1)), "ClientDescription", "Service.ClientDescriptionTooLong" },
+            { "too many tags", Command(tagIds: Enumerable.Range(0, Service.MaxTags + 1).Select(_ => Guid.NewGuid()).ToArray()), "TagIds", "Service.TooManyTags" },
+            { "empty tag id", Command(tagIds: [Guid.Empty]), "TagIds", "Service.InvalidTag" },
+            { "repeated tag id", Command(tagIds: [duplicated, duplicated]), "TagIds", "Service.DuplicateTags" },
+            { "duration zero", Command(durationMinutes: 0), "DurationMinutes", "ServiceDuration.DurationOutOfRange" },
+            { "duration over a day", Command(durationMinutes: ServiceDuration.MaxAllowedMinutes + 1), "DurationMinutes", "ServiceDuration.DurationOutOfRange" },
+            { "negative preparation", Command(preparationMinutes: -1), "PreparationMinutes", "ServiceDuration.PreparationOutOfRange" },
+            { "preparation over a day", Command(preparationMinutes: ServiceDuration.MaxAllowedMinutes + 1), "PreparationMinutes", "ServiceDuration.PreparationOutOfRange" },
+            { "negative cleanup", Command(cleanupMinutes: -1), "CleanupMinutes", "ServiceDuration.CleanupOutOfRange" },
+            { "cleanup over a day", Command(cleanupMinutes: ServiceDuration.MaxAllowedMinutes + 1), "CleanupMinutes", "ServiceDuration.CleanupOutOfRange" },
+            { "min duration zero", Command(minDurationMinutes: 0), "MinDurationMinutes", "ServiceDuration.MinOutOfRange" },
+            { "min duration over a day", Command(minDurationMinutes: ServiceDuration.MaxAllowedMinutes + 1), "MinDurationMinutes", "ServiceDuration.MinOutOfRange" },
+            { "max duration zero", Command(maxDurationMinutes: 0), "MaxDurationMinutes", "ServiceDuration.MaxOutOfRange" },
+            { "max duration over a day", Command(maxDurationMinutes: ServiceDuration.MaxAllowedMinutes + 1), "MaxDurationMinutes", "ServiceDuration.MaxOutOfRange" },
+            { "min above max", Command(durationMinutes: 70, minDurationMinutes: 61, maxDurationMinutes: 60), "MaxDurationMinutes", "ServiceDuration.MinGreaterThanMax" },
+            { "duration below the minimum", Command(durationMinutes: 5, minDurationMinutes: 15), "DurationMinutes", "ServiceDuration.DurationBelowMin" },
+            { "duration above the maximum", Command(durationMinutes: 61, maxDurationMinutes: 60), "DurationMinutes", "ServiceDuration.DurationAboveMax" },
+            { "unknown pricing type", Command(pricingType: "hourly"), "PricingType", "PricingType.Unknown" },
+            { "fixed price without an amount", Command(pricingType: "fixed", price: null), "Price", "Service.PriceRequired" },
+            { "variable price with an amount", Command(pricingType: "variable", price: 10m), "Price", "Service.PriceNotAllowed" },
             { "negative price", Command(price: -0.01m), "Price", "Money.Negative" },
             { "price over the stored precision", Command(price: 123456789.12m), "Price", "Money.InvalidPrecision" },
             { "price with three decimals", Command(price: 45.123m), "Price", "Money.InvalidPrecision" },
             { "discount below zero", Command(maxDiscountPercentage: -0.01m), "MaxDiscountPercentage", "Percentage.OutOfRange" },
             { "discount above one hundred", Command(maxDiscountPercentage: 100.01m), "MaxDiscountPercentage", "Percentage.OutOfRange" },
             { "discount with three decimals", Command(maxDiscountPercentage: 12.345m), "MaxDiscountPercentage", "Percentage.TooManyDecimals" },
-            { "too many tags", Command(tagIds: Enumerable.Range(0, Service.MaxTags + 1).Select(_ => Guid.NewGuid()).ToArray()), "TagIds", "Service.TooManyTags" },
-            { "empty tag id", Command(tagIds: [Guid.Empty]), "TagIds", "Service.InvalidTag" },
-            { "repeated tag id", Command(tagIds: [duplicated, duplicated]), "TagIds", "Service.DuplicateTags" },
         };
     }
 
     [Fact]
-    public async Task Validate_WithValidCommand_Passes()
+    public async Task Validate_WithOnlyWhatIsRequired_Passes()
     {
-        (await Validate(Command())).IsValid.Should().BeTrue();
+        var result = await Validate(Command(
+            internalDescription: null,
+            clientDescription: null,
+            tagIds: null,
+            preparationMinutes: null,
+            cleanupMinutes: null,
+            minDurationMinutes: null,
+            maxDurationMinutes: null,
+            maxDiscountPercentage: null));
+
+        result.IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithEveryFieldFilled_Passes()
+    {
+        var result = await Validate(Command(
+            categoryId: Guid.NewGuid(),
+            tagIds: [Guid.NewGuid(), Guid.NewGuid()],
+            durationMinutes: 30,
+            preparationMinutes: 10,
+            cleanupMinutes: 5,
+            minDurationMinutes: 15,
+            maxDurationMinutes: 60,
+            maxDiscountPercentage: 10m));
+
+        result.IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -74,25 +120,52 @@ public class CreateServiceCommandValidatorTests
     {
         var command = Command(
             name: new string('x', Service.NameMaxLength),
-            description: new string('x', Service.DescriptionMaxLength),
-            durationMinutes: DurationRange.MaxAllowedMinutes,
-            minDurationMinutes: DurationRange.MinAllowedMinutes,
-            maxDurationMinutes: DurationRange.MaxAllowedMinutes,
+            internalDescription: new string('i', Service.InternalDescriptionMaxLength),
+            clientDescription: new string('c', Service.ClientDescriptionMaxLength),
+            tagIds: Enumerable.Range(0, Service.MaxTags).Select(_ => Guid.NewGuid()).ToArray(),
+            durationMinutes: ServiceDuration.MaxAllowedMinutes,
+            preparationMinutes: ServiceDuration.MaxAllowedMinutes,
+            cleanupMinutes: ServiceDuration.MaxAllowedMinutes,
+            minDurationMinutes: ServiceDuration.MinAllowedMinutes,
+            maxDurationMinutes: ServiceDuration.MaxAllowedMinutes,
             price: Money.MaxValue,
-            maxDiscountPercentage: Percentage.Maximum,
-            tagIds: Enumerable.Range(0, Service.MaxTags).Select(_ => Guid.NewGuid()).ToArray());
+            maxDiscountPercentage: Percentage.Maximum);
 
         (await Validate(command)).IsValid.Should().BeTrue();
+        (await Validate(Command(durationMinutes: 1, preparationMinutes: 0, cleanupMinutes: 0))).IsValid.Should().BeTrue();
         (await Validate(Command(price: 0m, maxDiscountPercentage: 0m))).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("fixed", 45.5)]
+    [InlineData("Fixed", 0)]
+    [InlineData("FIXED", 10)]
+    public async Task Validate_WithFixedPricingAndAnAmount_Passes(string pricingType, double price)
+    {
+        (await Validate(Command(pricingType: pricingType, price: (decimal)price))).IsValid.Should().BeTrue();
+    }
+
+    [Theory]
+    [InlineData("variable")]
+    [InlineData("Variable")]
+    public async Task Validate_WithVariablePricingAndNoAmount_Passes(string pricingType)
+    {
+        (await Validate(Command(pricingType: pricingType, price: null))).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithADurationEqualToItsMinimumAndMaximum_Passes()
+    {
+        (await Validate(Command(durationMinutes: 30, minDurationMinutes: 30, maxDurationMinutes: 30))).IsValid.Should().BeTrue();
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task Validate_WithBlankDescription_Passes(string? description)
+    public async Task Validate_WithBlankDescriptions_Passes(string? description)
     {
-        (await Validate(Command(description: description))).IsValid.Should().BeTrue();
+        (await Validate(Command(internalDescription: description, clientDescription: description))).IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -113,54 +186,82 @@ public class CreateServiceCommandValidatorTests
     }
 
     [Fact]
-    public async Task Validate_CountsTheNameLengthAfterTrimming()
+    public async Task Validate_CountsTheTextLengthsAfterTrimming()
     {
-        (await Validate(Command(name: " " + new string('x', Service.NameMaxLength) + " "))).IsValid.Should().BeTrue();
+        var padded = Command(
+            name: " " + new string('x', Service.NameMaxLength) + " ",
+            internalDescription: " " + new string('i', Service.InternalDescriptionMaxLength) + " ",
+            clientDescription: " " + new string('c', Service.ClientDescriptionMaxLength) + " ");
 
-        var result = await Validate(Command(name: new string('x', Service.NameMaxLength + 1)));
-
-        MessagesFor(result, "Name").Should().Equal("O nome do serviço deve ter no máximo 80 caracteres.");
+        (await Validate(padded)).IsValid.Should().BeTrue();
     }
 
     [Fact]
-    public async Task Validate_ReportsTheMessageOfEachRuleInPortuguese()
+    public async Task Validate_ReportsTheMessageOfEachTextRuleInPortuguese()
     {
         var result = await Validate(Command(
-            description: new string('x', Service.DescriptionMaxLength + 1),
-            minDurationMinutes: 0,
-            maxDurationMinutes: DurationRange.MaxAllowedMinutes + 1,
-            price: -1m,
-            maxDiscountPercentage: 101m));
+            name: new string('x', Service.NameMaxLength + 1),
+            internalDescription: new string('x', Service.InternalDescriptionMaxLength + 1),
+            clientDescription: new string('x', Service.ClientDescriptionMaxLength + 1)));
 
-        MessagesFor(result, "Description").Should().Equal("A descrição do serviço deve ter no máximo 500 caracteres.");
-        MessagesFor(result, "MinDurationMinutes").Should()
-            .Equal("A duração mínima do serviço deve ser de pelo menos 1 minuto.");
-        MessagesFor(result, "MaxDurationMinutes").Should()
-            .Equal("A duração máxima do serviço não pode ultrapassar 1440 minutos.");
-        MessagesFor(result, "Price").Should().Equal("O preço do serviço não pode ser negativo.");
-        MessagesFor(result, "MaxDiscountPercentage").Should()
-            .Equal("O desconto máximo do serviço deve ficar entre 0 e 100.");
+        MessagesFor(result, "Name").Should().Equal("O nome do serviço deve ter no máximo 80 caracteres.");
+        MessagesFor(result, "InternalDescription").Should().Equal("A descrição interna deve ter no máximo 500 caracteres.");
+        MessagesFor(result, "ClientDescription").Should().Equal("A descrição para o cliente deve ter no máximo 500 caracteres.");
+    }
+
+    [Fact]
+    public async Task Validate_ReportsTheMessageOfEachTimeRuleInPortuguese()
+    {
+        var result = await Validate(Command(
+            durationMinutes: 0,
+            preparationMinutes: -1,
+            cleanupMinutes: 1441,
+            minDurationMinutes: 0,
+            maxDurationMinutes: 1441));
+
+        MessagesFor(result, "DurationMinutes").Should().Contain("A duração do serviço deve ser de 1 a 1440 minutos.");
+        MessagesFor(result, "PreparationMinutes").Should().Equal("O tempo de preparo deve ser de 0 a 1440 minutos.");
+        MessagesFor(result, "CleanupMinutes").Should().Equal("O tempo de limpeza deve ser de 0 a 1440 minutos.");
+        MessagesFor(result, "MinDurationMinutes").Should().Equal("A duração mínima deve ser de 1 a 1440 minutos.");
+        MessagesFor(result, "MaxDurationMinutes").Should().Equal("A duração máxima deve ser de 1 a 1440 minutos.");
     }
 
     [Fact]
     public async Task Validate_ExplainsTheCrossFieldDurationRules()
     {
-        var result = await Validate(Command(durationMinutes: 5, minDurationMinutes: 61, maxDurationMinutes: 60));
+        var limits = await Validate(Command(durationMinutes: 70, minDurationMinutes: 61, maxDurationMinutes: 60));
+        var below = await Validate(Command(durationMinutes: 5, minDurationMinutes: 15));
+        var above = await Validate(Command(durationMinutes: 61, maxDurationMinutes: 60));
 
-        MessagesFor(result, "MaxDurationMinutes").Should()
-            .Equal("A duração mínima do serviço não pode ser maior que a duração máxima.");
-        MessagesFor(result, "DurationMinutes").Should()
-            .Equal("A duração do serviço deve estar entre a duração mínima e a duração máxima.");
+        MessagesFor(limits, "MaxDurationMinutes").Should()
+            .Equal("A duração mínima não pode ser maior que a duração máxima.");
+        MessagesFor(below, "DurationMinutes").Should()
+            .Equal("A duração do serviço não pode ser menor que a duração mínima.");
+        MessagesFor(above, "DurationMinutes").Should()
+            .Equal("A duração do serviço não pode ser maior que a duração máxima.");
     }
 
     [Fact]
-    public async Task Validate_ExplainsThePriceAndDiscountPrecision()
+    public async Task Validate_ExplainsThePricingRules()
     {
-        var result = await Validate(Command(price: 45.123m, maxDiscountPercentage: 12.345m));
-
-        MessagesFor(result, "Price").Should()
+        MessagesFor(await Validate(Command(pricingType: "hourly")), "PricingType").Should()
+            .Equal("A forma de cobrança deve ser uma das seguintes: fixed, variable.");
+        MessagesFor(await Validate(Command(pricingType: "fixed", price: null)), "Price").Should()
+            .Equal("Informe o valor do serviço de preço fixo.");
+        MessagesFor(await Validate(Command(pricingType: "variable", price: 10m)), "Price").Should()
+            .Equal("O serviço de preço variável não tem valor fixo.");
+        MessagesFor(await Validate(Command(price: -1m)), "Price").Should()
+            .Equal("O preço do serviço não pode ser negativo.");
+        MessagesFor(await Validate(Command(price: 45.123m)), "Price").Should()
             .Equal("O preço deve ter no máximo 8 dígitos inteiros e 2 casas decimais.");
-        MessagesFor(result, "MaxDiscountPercentage").Should()
+    }
+
+    [Fact]
+    public async Task Validate_ExplainsTheDiscountRules()
+    {
+        MessagesFor(await Validate(Command(maxDiscountPercentage: 101m)), "MaxDiscountPercentage").Should()
+            .Equal("O desconto máximo do serviço deve ficar entre 0 e 100.");
+        MessagesFor(await Validate(Command(maxDiscountPercentage: 12.345m)), "MaxDiscountPercentage").Should()
             .Equal("O desconto máximo deve ter no máximo 2 casas decimais.");
     }
 
@@ -175,6 +276,14 @@ public class CreateServiceCommandValidatorTests
         MessagesFor(await Validate(Command(tagIds: [Guid.Empty])), "TagIds").Should().Equal("Informe etiquetas válidas.");
         MessagesFor(await Validate(Command(tagIds: [duplicated, duplicated])), "TagIds").Should()
             .Equal("A mesma etiqueta não pode ser informada mais de uma vez.");
+    }
+
+    [Fact]
+    public async Task Validate_ForAnUnknownPricingType_DoesNotAlsoComplainAboutThePrice()
+    {
+        var result = await Validate(Command(pricingType: "hourly", price: null));
+
+        MessagesFor(result, "Price").Should().BeEmpty();
     }
 
     [Theory]

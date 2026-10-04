@@ -18,7 +18,8 @@ public sealed class ListServicesQueryHandler(
             query.PageSize,
             query.Search,
             query.CategoryId,
-            query.TagId,
+            query.TagIds ?? [],
+            ServiceStatusNames.ToFilter(query.Status),
             cancellationToken);
 
         var categoryNamesById = await ReadCategoryNamesAsync(services, cancellationToken);

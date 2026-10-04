@@ -21,19 +21,24 @@ public sealed record Money
         Value = value;
     }
 
-    public static DomainResult<Money> Create(decimal raw)
+    public static DomainResult<Money?> Create(decimal? raw)
     {
-        if (raw < 0)
+        if (raw is not { } amount)
         {
-            return DomainResult.Failure<Money>(Negative);
+            return DomainResult.Success<Money?>(null);
         }
 
-        if (!HasValidPrecision(raw))
+        if (amount < 0)
         {
-            return DomainResult.Failure<Money>(InvalidPrecision);
+            return DomainResult.Failure<Money?>(Negative);
         }
 
-        return DomainResult.Success(new Money(raw));
+        if (!HasValidPrecision(amount))
+        {
+            return DomainResult.Failure<Money?>(InvalidPrecision);
+        }
+
+        return DomainResult.Success<Money?>(new Money(amount));
     }
 
     public static Money Restore(decimal value)

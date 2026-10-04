@@ -9,7 +9,8 @@ public interface IServiceRepository
         int pageSize,
         string? search,
         Guid? categoryId,
-        Guid? tagId,
+        IReadOnlyCollection<Guid> tagIds,
+        ServiceStatus? status,
         CancellationToken cancellationToken);
 
     Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken);

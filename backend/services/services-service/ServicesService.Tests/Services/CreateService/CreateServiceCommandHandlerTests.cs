@@ -34,27 +34,35 @@ public class CreateServiceCommandHandlerTests
 
     private static CreateServiceCommand Command(
         string name = "Haircut",
-        string? description = "A classic cut",
-        int durationMinutes = 30,
-        int minDurationMinutes = 15,
-        int maxDurationMinutes = 60,
-        decimal price = 45.50m,
-        decimal maxDiscountPercentage = 10m,
         Guid? categoryId = null,
-        IReadOnlyList<Guid>? tagIds = null) =>
+        IReadOnlyList<Guid>? tagIds = null,
+        string? internalDescription = "Only for the team",
+        string? clientDescription = "A classic cut",
+        int durationMinutes = 30,
+        int? preparationMinutes = null,
+        int? cleanupMinutes = null,
+        int? minDurationMinutes = 15,
+        int? maxDurationMinutes = 60,
+        string pricingType = "fixed",
+        decimal? price = 45.50m,
+        decimal? maxDiscountPercentage = 10m) =>
         new(
             name,
-            description,
+            categoryId,
+            tagIds,
+            internalDescription,
+            clientDescription,
             durationMinutes,
+            preparationMinutes,
+            cleanupMinutes,
             minDurationMinutes,
             maxDurationMinutes,
+            pricingType,
             price,
-            maxDiscountPercentage,
-            categoryId,
-            tagIds);
+            maxDiscountPercentage);
 
     [Fact]
-    public async Task Handle_WithValidCommand_PersistsAndReturnsTheService()
+    public async Task Handle_WithValidCommand_PersistsAnActiveServiceAndReturnsIt()
     {
         var result = await _handler.Handle(Command(), CancellationToken.None);
 
@@ -63,17 +71,72 @@ public class CreateServiceCommandHandlerTests
         response.Id.Should().NotBe(Guid.Empty);
         response.Code.Should().Be(1);
         response.Name.Should().Be("Haircut");
-        response.Description.Should().Be("A classic cut");
+        response.InternalDescription.Should().Be("Only for the team");
+        response.ClientDescription.Should().Be("A classic cut");
         response.DurationMinutes.Should().Be(30);
         response.MinDurationMinutes.Should().Be(15);
         response.MaxDurationMinutes.Should().Be(60);
+        response.PricingType.Should().Be("fixed");
         response.Price.Should().Be(45.50m);
         response.MaxDiscountPercentage.Should().Be(10m);
+        response.Status.Should().Be("active");
         response.CategoryId.Should().BeNull();
         response.CategoryName.Should().BeNull();
         response.Tags.Should().BeEmpty();
         _serviceRepository.Received(1).Add(Arg.Is<Service>(service => service.Id == response.Id));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithPreparationAndCleanup_ReturnsTheTotalTimeToReserve()
+    {
+        var result = await _handler.Handle(Command(preparationMinutes: 10, cleanupMinutes: 5), CancellationToken.None);
+
+        result.Value.PreparationMinutes.Should().Be(10);
+        result.Value.CleanupMinutes.Should().Be(5);
+        result.Value.TotalDurationMinutes.Should().Be(45);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutPreparationAndCleanup_ReservesOnlyTheDuration()
+    {
+        var result = await _handler.Handle(Command(preparationMinutes: null, cleanupMinutes: null), CancellationToken.None);
+
+        result.Value.PreparationMinutes.Should().Be(0);
+        result.Value.CleanupMinutes.Should().Be(0);
+        result.Value.TotalDurationMinutes.Should().Be(30);
+    }
+
+    [Fact]
+    public async Task Handle_WithVariablePricing_PersistsWithoutAFixedAmount()
+    {
+        var result = await _handler.Handle(Command(pricingType: "variable", price: null), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.PricingType.Should().Be("variable");
+        result.Value.Price.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WithFixedPriceZero_PersistsAFreeService()
+    {
+        var result = await _handler.Handle(Command(price: 0m), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Price.Should().Be(0m);
+    }
+
+    [Fact]
+    public async Task Handle_WithoutLimitsAndMaxDiscount_PersistsThemAsNull()
+    {
+        var result = await _handler.Handle(
+            Command(minDurationMinutes: null, maxDurationMinutes: null, maxDiscountPercentage: null),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.MinDurationMinutes.Should().BeNull();
+        result.Value.MaxDurationMinutes.Should().BeNull();
+        result.Value.MaxDiscountPercentage.Should().BeNull();
     }
 
     [Fact]
@@ -121,6 +184,19 @@ public class CreateServiceCommandHandlerTests
         await _serviceCodeGenerator.DidNotReceive().GetNextCodeAsync(Arg.Any<CancellationToken>());
         _serviceRepository.DidNotReceive().Add(Arg.Any<Service>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithTheNameOfAnInactiveService_StillReturnsTheConflict()
+    {
+        var existing = ServiceTestData.NewService("Haircut");
+        existing.Inactivate();
+        _serviceRepository.FindByNameAsync("Haircut", Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Service?>(existing));
+
+        var result = await _handler.Handle(Command(), CancellationToken.None);
+
+        result.Error.Code.Should().Be("Service.DuplicateName");
     }
 
     [Fact]
@@ -191,6 +267,53 @@ public class CreateServiceCommandHandlerTests
         await _unitOfWork.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
         _serviceRepository.DidNotReceive().Add(Arg.Any<Service>());
+    }
+
+    [Theory]
+    [InlineData("hourly", null, "PricingType.Unknown")]
+    [InlineData("fixed", null, "Service.PriceRequired")]
+    [InlineData("variable", 10, "Service.PriceNotAllowed")]
+    public async Task Handle_WithAPricingTheValidatorWouldHaveRefused_RollsBackAndDoesNotSave(
+        string pricingType,
+        int? price,
+        string expectedCode)
+    {
+        var result = await _handler.Handle(Command(pricingType: pricingType, price: price), CancellationToken.None);
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        result.Error.Code.Should().Be(expectedCode);
+        await _unitOfWork.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+        _serviceRepository.DidNotReceive().Add(Arg.Any<Service>());
+    }
+
+    [Theory]
+    [InlineData(0, "ServiceDuration.DurationOutOfRange")]
+    [InlineData(5, "ServiceDuration.DurationBelowMin")]
+    [InlineData(61, "ServiceDuration.DurationAboveMax")]
+    public async Task Handle_WithADurationTheValidatorWouldHaveRefused_ReturnsTheNamedError(int duration, string expectedCode)
+    {
+        var result = await _handler.Handle(Command(durationMinutes: duration), CancellationToken.None);
+
+        result.Error.Code.Should().Be(expectedCode);
+        await _unitOfWork.Received(1).RollbackAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(-1, "Money.Negative")]
+    [InlineData(45.123, "Money.InvalidPrecision")]
+    public async Task Handle_WithAPriceTheValidatorWouldHaveRefused_ReturnsTheNamedError(double price, string expectedCode)
+    {
+        var result = await _handler.Handle(Command(price: (decimal)price), CancellationToken.None);
+
+        result.Error.Code.Should().Be(expectedCode);
+    }
+
+    [Fact]
+    public async Task Handle_WithAMaxDiscountTheValidatorWouldHaveRefused_ReturnsTheNamedError()
+    {
+        var result = await _handler.Handle(Command(maxDiscountPercentage: 150m), CancellationToken.None);
+
+        result.Error.Code.Should().Be("Percentage.OutOfRange");
     }
 
     [Fact]

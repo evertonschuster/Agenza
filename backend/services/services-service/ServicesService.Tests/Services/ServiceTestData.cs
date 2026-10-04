@@ -5,35 +5,50 @@ namespace ServicesService.Tests.Services;
 
 internal static class ServiceTestData
 {
-    public static DurationRange Duration(int min = 15, int duration = 30, int max = 60)
+    public static ServiceDuration Duration(
+        int duration = 30,
+        int preparation = 0,
+        int cleanup = 0,
+        int? min = 15,
+        int? max = 60)
     {
-        return DurationRange.Create(min, duration, max).Value;
+        return ServiceDuration.Create(duration, preparation, cleanup, min, max).Value;
     }
 
     public static Money Price(decimal value = 45.50m)
     {
-        return Money.Create(value).Value;
+        return Money.Create(value).Value!;
     }
 
     public static Percentage Discount(decimal value = 10m)
     {
-        return Percentage.Create(value).Value;
+        return Percentage.Create(value).Value!;
     }
 
     public static Service NewService(
         string name = "Haircut",
         Guid? categoryId = null,
         int code = 1,
-        IReadOnlyCollection<Guid>? tagIds = null)
+        IReadOnlyCollection<Guid>? tagIds = null,
+        PricingType pricingType = PricingType.Fixed,
+        decimal? price = 45.50m)
     {
+        Money? money = null;
+        if (price is { } amount)
+        {
+            money = Price(amount);
+        }
+
         return Service.Create(
             Guid.NewGuid(),
             name,
+            categoryId,
+            null,
             null,
             Duration(),
-            Price(),
+            pricingType,
+            money,
             Discount(),
-            categoryId,
             tagIds ?? [],
             code).Value;
     }

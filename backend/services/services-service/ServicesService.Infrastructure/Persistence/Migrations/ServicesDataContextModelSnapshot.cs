@@ -278,6 +278,13 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("CleanupMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ClientDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<int>("Code")
                         .HasColumnType("integer");
 
@@ -293,21 +300,21 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                     b.Property<Guid?>("DeletedBy")
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Description")
-                        .HasMaxLength(500)
-                        .HasColumnType("character varying(500)");
-
                     b.Property<int>("DurationMinutes")
                         .HasColumnType("integer");
 
-                    b.Property<decimal>("MaxDiscountPercentage")
+                    b.Property<string>("InternalDescription")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<decimal?>("MaxDiscountPercentage")
                         .HasPrecision(5, 2)
                         .HasColumnType("numeric(5,2)");
 
-                    b.Property<int>("MaxDurationMinutes")
+                    b.Property<int?>("MaxDurationMinutes")
                         .HasColumnType("integer");
 
-                    b.Property<int>("MinDurationMinutes")
+                    b.Property<int?>("MinDurationMinutes")
                         .HasColumnType("integer");
 
                     b.Property<string>("Name")
@@ -320,9 +327,22 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .HasColumnType("text")
                         .HasComputedColumnSql("lower(\"Name\")", true);
 
-                    b.Property<decimal>("Price")
+                    b.Property<int>("PreparationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal?>("Price")
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
+
+                    b.Property<string>("PricingType")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
 
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
@@ -349,7 +369,12 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("\"DeletedAt\" IS NULL");
 
-                    b.ToTable("Services", "services");
+                    b.ToTable("Services", "services", t =>
+                        {
+                            t.HasCheckConstraint("CK_Services_PricingType", "\"PricingType\" IN ('Fixed', 'Variable')");
+
+                            t.HasCheckConstraint("CK_Services_Status", "\"Status\" IN ('Active', 'Inactive')");
+                        });
                 });
 
             modelBuilder.Entity("ServicesService.Domain.Entities.ServiceTag", b =>

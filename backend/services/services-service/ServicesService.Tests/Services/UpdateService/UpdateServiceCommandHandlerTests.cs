@@ -32,25 +32,33 @@ public class UpdateServiceCommandHandlerTests
     private static UpdateServiceCommand Command(
         Guid serviceId,
         string name = "Haircut",
-        string? description = null,
-        int durationMinutes = 30,
-        int minDurationMinutes = 15,
-        int maxDurationMinutes = 60,
-        decimal price = 45.50m,
-        decimal maxDiscountPercentage = 10m,
         Guid? categoryId = null,
-        IReadOnlyList<Guid>? tagIds = null) =>
+        IReadOnlyList<Guid>? tagIds = null,
+        string? internalDescription = null,
+        string? clientDescription = null,
+        int durationMinutes = 30,
+        int? preparationMinutes = null,
+        int? cleanupMinutes = null,
+        int? minDurationMinutes = 15,
+        int? maxDurationMinutes = 60,
+        string pricingType = "fixed",
+        decimal? price = 45.50m,
+        decimal? maxDiscountPercentage = 10m) =>
         new(
             serviceId,
             name,
-            description,
+            categoryId,
+            tagIds,
+            internalDescription,
+            clientDescription,
             durationMinutes,
+            preparationMinutes,
+            cleanupMinutes,
             minDurationMinutes,
             maxDurationMinutes,
+            pricingType,
             price,
-            maxDiscountPercentage,
-            categoryId,
-            tagIds);
+            maxDiscountPercentage);
 
     private Service ExistingService(
         string name = "Haircut",
@@ -68,20 +76,62 @@ public class UpdateServiceCommandHandlerTests
         var service = ExistingService();
 
         var result = await _handler.Handle(
-            Command(service.Id, "Massage", "Relaxing", 90, 60, 120, 90m, 25m),
+            Command(
+                service.Id,
+                "Massage",
+                internalDescription: "Team only",
+                clientDescription: "Relaxing",
+                durationMinutes: 90,
+                preparationMinutes: 10,
+                cleanupMinutes: 5,
+                minDurationMinutes: 60,
+                maxDurationMinutes: 120,
+                price: 90m,
+                maxDiscountPercentage: 25m),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Id.Should().Be(service.Id);
-        result.Value.Name.Should().Be("Massage");
-        result.Value.Description.Should().Be("Relaxing");
-        result.Value.DurationMinutes.Should().Be(90);
-        result.Value.MinDurationMinutes.Should().Be(60);
-        result.Value.MaxDurationMinutes.Should().Be(120);
-        result.Value.Price.Should().Be(90m);
-        result.Value.MaxDiscountPercentage.Should().Be(25m);
-        result.Value.Code.Should().Be(1);
+        var response = result.Value;
+        response.Id.Should().Be(service.Id);
+        response.Name.Should().Be("Massage");
+        response.InternalDescription.Should().Be("Team only");
+        response.ClientDescription.Should().Be("Relaxing");
+        response.DurationMinutes.Should().Be(90);
+        response.TotalDurationMinutes.Should().Be(105);
+        response.MinDurationMinutes.Should().Be(60);
+        response.MaxDurationMinutes.Should().Be(120);
+        response.Price.Should().Be(90m);
+        response.MaxDiscountPercentage.Should().Be(25m);
+        response.Code.Should().Be(1);
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_SwitchingToVariablePricing_DropsTheAmount()
+    {
+        var service = ExistingService();
+
+        var result = await _handler.Handle(
+            Command(service.Id, pricingType: "variable", price: null),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.PricingType.Should().Be("variable");
+        result.Value.Price.Should().BeNull();
+        service.Price.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_KeepsTheSituationOfAnInactiveService()
+    {
+        var service = ExistingService();
+        service.Inactivate();
+
+        var result = await _handler.Handle(Command(service.Id, "Massage"), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Status.Should().Be("inactive");
+        service.Status.Should().Be(ServiceStatus.Inactive);
     }
 
     [Fact]
@@ -216,17 +266,56 @@ public class UpdateServiceCommandHandlerTests
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
-    [Fact]
-    public async Task Handle_WhenTheDomainRejects_ReturnsTheNamedErrorAndDoesNotSave()
+    [Theory]
+    [InlineData("", "fixed", 45.5, "Service.NameRequired")]
+    [InlineData("Haircut", "hourly", 45.5, "PricingType.Unknown")]
+    [InlineData("Haircut", "variable", 45.5, "Service.PriceNotAllowed")]
+    public async Task Handle_WhenTheDomainRejects_ReturnsTheNamedErrorAndChangesNothing(
+        string name,
+        string pricingType,
+        double price,
+        string expectedCode)
     {
         var service = ExistingService();
 
-        var result = await _handler.Handle(Command(service.Id, name: ""), CancellationToken.None);
+        var result = await _handler.Handle(
+            Command(service.Id, name, pricingType: pricingType, price: (decimal)price),
+            CancellationToken.None);
 
         result.Error.Type.Should().Be(ErrorType.Validation);
-        result.Error.Code.Should().Be("Service.NameRequired");
+        result.Error.Code.Should().Be(expectedCode);
         service.Name.Should().Be("Haircut");
+        service.PricingType.Should().Be(PricingType.Fixed);
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Theory]
+    [InlineData(0, "ServiceDuration.DurationOutOfRange")]
+    [InlineData(5, "ServiceDuration.DurationBelowMin")]
+    public async Task Handle_WithADurationTheValidatorWouldHaveRefused_ReturnsTheNamedError(int duration, string expectedCode)
+    {
+        var service = ExistingService();
+
+        var result = await _handler.Handle(Command(service.Id, durationMinutes: duration), CancellationToken.None);
+
+        result.Error.Code.Should().Be(expectedCode);
+    }
+
+    [Theory]
+    [InlineData(-1, 10, "Money.Negative")]
+    [InlineData(45.5, 150, "Percentage.OutOfRange")]
+    public async Task Handle_WithAPriceOrDiscountTheValidatorWouldHaveRefused_ReturnsTheNamedError(
+        double price,
+        double maxDiscountPercentage,
+        string expectedCode)
+    {
+        var service = ExistingService();
+
+        var result = await _handler.Handle(
+            Command(service.Id, price: (decimal)price, maxDiscountPercentage: (decimal)maxDiscountPercentage),
+            CancellationToken.None);
+
+        result.Error.Code.Should().Be(expectedCode);
     }
 
     [Fact]

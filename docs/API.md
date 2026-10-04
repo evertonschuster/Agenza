@@ -68,7 +68,7 @@ o único campo que muda por endpoint.
 `GET /api/v1/services`:
 
 ```json
-{"data":{"items":[{"id":"...","code":1,"name":"Teste","description":null,"durationMinutes":2,"minDurationMinutes":1,"maxDurationMinutes":3,"price":10.00,"maxDiscountPercentage":10.00,"categoryId":null,"categoryName":null,"tags":[]}],"totalCount":1,"page":1,"pageSize":20},"success":true, "...":"..."}
+{"data":{"items":[{"id":"...","code":25,"name":"Limpeza de pele","categoryId":"...","categoryName":"Estética","tags":[{"id":"...","name":"Facial","color":"#0d9488"}],"internalDescription":"Só a equipe vê","clientDescription":"O cliente vê","durationMinutes":50,"preparationMinutes":10,"cleanupMinutes":5,"totalDurationMinutes":65,"minDurationMinutes":null,"maxDurationMinutes":null,"pricingType":"fixed","price":120.50,"maxDiscountPercentage":null,"status":"active"}],"totalCount":1,"page":1,"pageSize":20},"success":true, "...":"..."}
 ```
 
 **Criação** (`201 Created`, header `Location` presente, `data` é o recurso criado):
@@ -236,7 +236,7 @@ existe.
 
 Cada linha ilustra uma **categoria** de resposta que se repete em qualquer feature; a rota é só onde
 ela foi observada. Rodado ao vivo contra a instância local (2026-09-13) e contra um PostgreSQL
-descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dados de teste removidos ao final.
+descartável (2026-10-02; chaves de `errors` e linhas de serviços revistas em 2026-10-04), com os dados de teste removidos ao final.
 
 | Cenário | Verbo + rota | Status | `code` |
 | --- | --- | --- | --- |
@@ -245,8 +245,9 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | Recurso em uso (regra cruzando entidades) | `DELETE /api/v1/tags/{id}` (tag usada por um `service`) | 409 | `Tag.InUse` |
 | Categoria não encontrada | `GET /api/v1/categories/{id}` (id não existe) | 404 | `Category.NotFound` |
 | Id vazio ≠ id inexistente | `DELETE /api/v1/tags/00000000-0000-0000-0000-000000000000` | 400 (não 404!) | `Validation.Failed` (`tagId`: `NotEmptyValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`page`: `GreaterThanOrEqualValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`pageSize`: `InclusiveBetweenValidator`) |
+| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`page`: `Page.Invalid`) |
+| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`pageSize`: `PageSize.Invalid`) |
+| Transição que o recurso já cumpriu | `POST /api/v1/services/{id}/deactivate` (serviço já inativo) | 400 | `Service.AlreadyInactive` (forma de domínio, mensagem sob a chave `""`) |
 | CPF já cadastrado (pessoa ativa ou inativa) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.cpf[0].meta.clientId`) |
 | E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.email[0].meta.clientId`) |
 | Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`guardians`: `Client.GuardianRequired`) |

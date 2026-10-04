@@ -379,18 +379,19 @@ touches that slice, not in bulk.
 
 | Concern | Copy from | Older shape — don't copy | Rule |
 | --- | --- | --- | --- |
-| Handler: pre-checks, field conflicts with `meta`, generic save failure | `ServicesService.Application/Clients/CreateClient/CreateClientCommandHandler.cs` | `*PersistenceErrorMapper.cs` mapping constraint names to messages | §4, [0048](../../docs/adr/0048-database-failures-are-generic-to-the-user.md) |
-| Orchestration owned by the handler | `CreateClientCommandHandler.cs` | `ServiceRelationshipLoader`, a class shared by two handlers | §2, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
-| Validator codes and messages | `CreateClientCommandValidator.cs`, `ClientRuleBuilderExtensions.cs` | rules without `.WithErrorCode`, which leak `NotEmptyValidator`/`PredicateValidator` to the API | §4, [0044](../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md) |
-| Domain errors | `static readonly DomainError` per rule on `Client` and on the value objects | one inline `new DomainError("<Entity>.Invalid", …)` shared by every rule of an entity | §3 |
-| Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
-| Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
-| Read, update, delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → `ApplyTo` → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
+| Handler: pre-checks, field conflicts with `meta`, generic save failure | `ServicesService.Application/Clients/CreateClient/CreateClientCommandHandler.cs` | `*PersistenceErrorMapper.cs` mapping constraint names to messages (Tags and Categories) | §4, [0048](../../docs/adr/0048-database-failures-are-generic-to-the-user.md) |
+| Orchestration owned by the handler | `CreateClientCommandHandler.cs`, `Services/CreateService/CreateServiceCommandHandler.cs` | — | §2, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
+| Validator codes and messages | `CreateClientCommandValidator.cs`, `ClientRuleBuilderExtensions.cs`, `Services/ServiceRuleBuilderExtensions.cs` | rules without `.WithErrorCode`, which leak `NotEmptyValidator`/`PredicateValidator` to the API (Tags and Categories) | §4, [0044](../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md) |
+| Domain errors | `static readonly DomainError` per rule on `Client`, `Service` and on the value objects | one inline `new DomainError("<Entity>.Invalid", …)` shared by every rule of an entity (`Tag`, `Category`) | §3 |
+| Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore` | — | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
+| Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration`, `Service`, `ServiceConfiguration` | — | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
+| State transition | `Service.Inactivate`/`Reactivate`, `Services/DeactivateService/DeactivateServiceCommandHandler.cs` | — | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
+| Read, update, delete, list, paging | `Services/GetServiceById`, `UpdateService`, `DeleteService` and `ListServices` (paged query, bounded validator, `PagedResult`) | the same flows in the Tags and Categories slices, with the older shapes of the rows above | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 
 This table is the only place that names reference files. When a newer slice supersedes one, change
-the row in the same PR. A conversion is scoped to what the change touches: a fix to a service's
-description does not rewrite its tag relationship.
+the row in the same PR. A conversion is scoped to what the change touches: a fix to one field does
+not rewrite an unrelated relationship of the same entity.
 
 ## 11. What enforces what
 

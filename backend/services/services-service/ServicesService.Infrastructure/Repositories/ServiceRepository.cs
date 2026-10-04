@@ -18,7 +18,8 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
         int pageSize,
         string? search,
         Guid? categoryId,
-        Guid? tagId,
+        IReadOnlyCollection<Guid> tagIds,
+        ServiceStatus? status,
         CancellationToken cancellationToken)
     {
         return ListPagedAsync(
@@ -26,7 +27,8 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
                 .Include(s => s.Tags)
                 .Where(s => string.IsNullOrWhiteSpace(search) || EF.Functions.ILike(s.Name, $"%{search.Trim()}%"))
                 .Where(s => categoryId == null || s.CategoryId == categoryId)
-                .Where(s => tagId == null || s.Tags.Any(link => link.TagId == tagId))
+                .Where(s => tagIds.Count == 0 || s.Tags.Any(link => tagIds.Contains(link.TagId)))
+                .Where(s => status == null || s.Status == status)
                 .OrderBy(s => s.Name)
                 .ThenBy(s => s.Id),
             page,
