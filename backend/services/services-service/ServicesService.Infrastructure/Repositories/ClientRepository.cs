@@ -1,4 +1,3 @@
-using System.Linq.Expressions;
 using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
@@ -10,27 +9,22 @@ namespace ServicesService.Infrastructure.Repositories;
 
 public class ClientRepository : RepositoryBase<Client>, IClientRepository
 {
-    private static readonly Expression<Func<Client, ClientMatch>> ToMatch =
-        client => new ClientMatch(client.Id, client.FullName);
-
     public ClientRepository(ServicesDataContext dbContext)
         : base(dbContext)
     {
     }
 
-    public Task<ClientMatch?> FindByCpfAsync(CpfNumber cpf, CancellationToken cancellationToken)
+    public Task<Client?> FindByCpfAsync(CpfNumber cpf, CancellationToken cancellationToken)
     {
         return Set
-            .Where(c => c.Cpf == cpf)
-            .Select(ToMatch)
-            .FirstOrDefaultAsync(cancellationToken);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Cpf == cpf, cancellationToken);
     }
 
-    public Task<ClientMatch?> FindActiveByEmailAsync(EmailAddress email, CancellationToken cancellationToken)
+    public Task<Client?> FindActiveByEmailAsync(EmailAddress email, CancellationToken cancellationToken)
     {
         return Set
-            .Where(c => c.Email == email && c.Status == ClientStatus.Active)
-            .Select(ToMatch)
-            .FirstOrDefaultAsync(cancellationToken);
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Email == email && c.Status == ClientStatus.Active, cancellationToken);
     }
 }

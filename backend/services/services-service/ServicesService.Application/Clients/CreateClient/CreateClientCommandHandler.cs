@@ -93,7 +93,7 @@ public sealed class CreateClientCommandHandler(
             meta: ExistingClientMeta(activeClientWithSameEmail));
     }
 
-    private static Dictionary<string, string> ExistingClientMeta(ClientMatch existing)
+    private static Dictionary<string, string> ExistingClientMeta(Client existing)
     {
         return new Dictionary<string, string>
         {

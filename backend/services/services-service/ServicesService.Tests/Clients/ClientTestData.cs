@@ -1,4 +1,3 @@
-using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 
@@ -42,9 +41,9 @@ internal static class ClientTestData
         return new ReferenceContactData("Carlos Lima", "Tio", null, ContactPurposes.Create(purposes).Value);
     }
 
-    public static ClientMatch ExistingClient()
+    public static Client ExistingClient()
     {
-        return new ClientMatch(Guid.NewGuid(), Name("Paula Rocha"));
+        return Client.Create(Guid.NewGuid(), Name("Paula Rocha"), null, null, null, Cpf(), null, Today, [], []).Value;
     }
 }
 

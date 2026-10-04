@@ -71,9 +71,9 @@ The cost: a query cannot reach into `.Value` (it is not translatable through a c
 | CPF, active or inactive persons | `IX_Clients_TenantId_Cpf` on `(TenantId, Cpf) WHERE Cpf IS NOT NULL AND DeletedAt IS NULL` |
 | E-mail, active persons | `IX_Clients_TenantId_Email` on `(TenantId, Email) WHERE Email IS NOT NULL AND Status = 'Active' AND DeletedAt IS NULL` |
 
-A guardian's CPF is deliberately not constrained. The handler pre-checks both rules for the per-field answer through a
-projection (`ClientMatch`: id and name), not the aggregate, with the default query filters, so a deleted person never
-matches ([ADR 0046](0046-separate-soft-delete-and-tenant-query-filters.md)); the indexes are what actually guarantees
+A guardian's CPF is deliberately not constrained. The handler pre-checks both rules for the per-field answer by reading
+the existing `Client` without tracking and with the default query filters, so a deleted person never matches
+([ADR 0046](0046-separate-soft-delete-and-tenant-query-filters.md)); the indexes are what actually guarantees
 uniqueness. Two creates racing past the pre-check are practically impossible for this product, so that case gets no
 special handling: any failed save answers a generic `409 Client.SaveFailed` ("Não foi possível salvar a pessoa. Tente
 novamente."), without field errors and without claiming a duplicate, whatever the database rejected
@@ -138,8 +138,8 @@ stored values and the index definitions).
   in a kernel every service shares, for one call site.
 - **Value objects re-validated when EF reads them** (`Create(value).Value` in `HasConversion`) — replaced before merge
   by `Restore`: a stored value that failed a later rule threw on every read of its row.
-- **The aggregate as the result of the uniqueness lookups** — replaced before merge by `ClientMatch`: it returned a
-  `Client` without its contacts that looked complete.
+- **A projection (`ClientMatch`) as the result of the uniqueness lookups** — tried and reverted before merge: the
+  lookups return the `Client` itself.
 - **Children built outside the root and handed to `Client.Create`** — the first version of this change, with public
   child factories and an `AssignClient` any domain type could call; replaced before merge by the root creating them.
 - **The existing id as a top-level problem extension** — not visible in the generated OpenAPI schema, so untyped.

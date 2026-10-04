@@ -18,9 +18,9 @@ public class CreateClientCommandHandlerTests
     public CreateClientCommandHandlerTests()
     {
         _repository.FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientMatch?>(null));
+            .Returns(Task.FromResult<Client?>(null));
         _repository.FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientMatch?>(null));
+            .Returns(Task.FromResult<Client?>(null));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
 
@@ -181,7 +181,7 @@ public class CreateClientCommandHandlerTests
     {
         var existing = ClientTestData.ExistingClient();
         _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientMatch?>(existing));
+            .Returns(Task.FromResult<Client?>(existing));
 
         var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
@@ -205,7 +205,7 @@ public class CreateClientCommandHandlerTests
     {
         var existing = ClientTestData.ExistingClient();
         _repository.FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientMatch?>(existing));
+            .Returns(Task.FromResult<Client?>(existing));
 
         var result = await Handler().Handle(Command(email: "Maria@Example.com"), CancellationToken.None);
 
@@ -224,9 +224,9 @@ public class CreateClientCommandHandlerTests
     public async Task Handle_WithBothConflicts_ReportsTheCpfOnly()
     {
         _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientMatch?>(ClientTestData.ExistingClient()));
+            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
         _repository.FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult<ClientMatch?>(ClientTestData.ExistingClient()));
+            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
 
         var result = await Handler().Handle(
             Command(email: "maria@example.com", cpf: ClientTestData.ValidCpf),
