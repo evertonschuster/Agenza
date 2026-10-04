@@ -157,11 +157,13 @@ jobs:
           uv sync --frozen --extra dev --directory ai-services/assistant-service
 
       - name: Build the Aspire application
-        run: dotnet build backend/AdminBackend.slnx -c Release
+        # Default (Debug) configuration: `dotnet run` hands the AppHost to the Aspire CLI,
+        # which launches the Debug build whatever -c says (docs/adr/0050).
+        run: dotnet build backend/AdminBackend.slnx
 
       - name: Start the application through Aspire
         run: |
-          dotnet run --project backend/AppHost -c Release --no-build --launch-profile http > "$RUNNER_TEMP/agenza-apphost.log" 2>&1 &
+          dotnet run --project backend/AppHost --no-build --launch-profile http > "$RUNNER_TEMP/agenza-apphost.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/agenza-apphost.pid"
 
       - name: Wait for services-service to serve its OpenAPI document

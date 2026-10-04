@@ -70,10 +70,10 @@ public class ServicesDataContextTenantScopingTests
 
         await using var context = CreateContext(databaseName, tenantA);
 
-        (await context.Services.IgnoreQueryFilters().CountAsync())
+        (await context.Services.IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken))
             .Should().Be(2, "both rows exist, so only the tenant filter can keep tenant B's out");
-        (await context.Services.AnyAsync()).Should().BeFalse();
-        (await context.Services.IgnoreQueryFilters(["SoftDelete"]).ToListAsync())
+        (await context.Services.AnyAsync(TestContext.Current.CancellationToken)).Should().BeFalse();
+        (await context.Services.IgnoreQueryFilters(["SoftDelete"]).ToListAsync(TestContext.Current.CancellationToken))
             .Should().ContainSingle().Which.Id.Should().Be(deletedOfA.Id);
     }
 
@@ -89,7 +89,7 @@ public class ServicesDataContextTenantScopingTests
             var service = ValidService("Haircut");
             service.AssignTenant(tenantA);
             context.Services.Add(service);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var context = CreateContext(databaseName, tenantB))
@@ -97,12 +97,12 @@ public class ServicesDataContextTenantScopingTests
             var service = ValidService("Manicure");
             service.AssignTenant(tenantB);
             context.Services.Add(service);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var context = CreateContext(databaseName, tenantA))
         {
-            var visible = await context.Services.ToListAsync();
+            var visible = await context.Services.ToListAsync(TestContext.Current.CancellationToken);
 
             visible.Should().ContainSingle().Which.Name.Should().Be("Haircut");
         }
@@ -119,15 +119,15 @@ public class ServicesDataContextTenantScopingTests
         await using (var context = CreateContext(databaseName, tenantId))
         {
             context.Services.Add(service);
-            await context.SaveChangesAsync();
-            var tracked = await context.Services.SingleAsync(s => s.Id == service.Id);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+            var tracked = await context.Services.SingleAsync(s => s.Id == service.Id, TestContext.Current.CancellationToken);
             context.Services.Remove(tracked);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            (await context.Services.AnyAsync(s => s.Id == service.Id)).Should().BeFalse();
+            (await context.Services.AnyAsync(s => s.Id == service.Id, TestContext.Current.CancellationToken)).Should().BeFalse();
         }
     }
 
@@ -143,7 +143,7 @@ public class ServicesDataContextTenantScopingTests
         await using (var context = CreateContext(databaseName, tenantA))
         {
             context.Services.Add(service);
-            await context.SaveChangesAsync();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         // Two DbContext instances of the SAME type, different tenants, opened
@@ -152,6 +152,6 @@ public class ServicesDataContextTenantScopingTests
         // B's context if CurrentTenantId weren't re-read off the live instance.
         await using var contextForB = CreateContext(databaseName, tenantB);
 
-        (await contextForB.Services.AnyAsync()).Should().BeFalse();
+        (await contextForB.Services.AnyAsync(TestContext.Current.CancellationToken)).Should().BeFalse();
     }
 }

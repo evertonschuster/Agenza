@@ -35,7 +35,7 @@ public class GenericExceptionHandlerTests
         handled.Should().BeTrue();
         httpContext.Response.StatusCode.Should().Be(statusCode);
         httpContext.Response.Body.Position = 0;
-        var problem = await JsonSerializer.DeserializeAsync<JsonElement>(httpContext.Response.Body);
+        var problem = await JsonSerializer.DeserializeAsync<JsonElement>(httpContext.Response.Body, cancellationToken: TestContext.Current.CancellationToken);
         problem.GetProperty("code").GetString().Should().Be(expectedCode);
         problem.GetProperty("status").GetInt32().Should().Be(statusCode);
     }

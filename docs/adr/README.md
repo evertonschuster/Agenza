@@ -72,4 +72,4 @@ harness removed · 0039 Base UI primitives · 0040 three-state theme · 0041 AI
 instruction files reinstated · 0042 widgets layer and layer-boundaries lint rule
 (proposed) · 0044 clients aggregate, uniqueness rules and conflict contract · 0045 backend works in UTC only ·
 0046 separate soft-delete and tenant query filters · 0048 database failures are generic to the user ·
-0049 conventions for new backend slices · 0050 xUnit v3 on VSTest and Aspire without the CLI bundle.
+0049 conventions for new backend slices · 0050 xUnit v3 on VSTest and the Aspire CLI bundle.

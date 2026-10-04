@@ -5,15 +5,9 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
-  <!--
-    xUnit v3 test projects (*.Tests, *.PersistenceTests) are executables.
-    xUnit1051 is off: the suites run in memory in milliseconds, so threading
-    TestContext.Current.CancellationToken through every call buys nothing
-    (docs/adr/0050).
-  -->
+  <!-- xUnit v3 test projects (*.Tests, *.PersistenceTests) are executables. -->
   <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
     <OutputType>Exe</OutputType>
-    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
   </PropertyGroup>
 
   <!--

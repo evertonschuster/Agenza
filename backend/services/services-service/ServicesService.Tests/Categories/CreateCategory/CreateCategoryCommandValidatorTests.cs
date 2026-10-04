@@ -9,7 +9,7 @@ public class CreateCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
     {
-        var result = await _validator.ValidateAsync(new CreateCategoryCommand("Hair"));
+        var result = await _validator.ValidateAsync(new CreateCategoryCommand("Hair"), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeTrue();
     }
@@ -17,7 +17,7 @@ public class CreateCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyName_Fails()
     {
-        var result = await _validator.ValidateAsync(new CreateCategoryCommand(""));
+        var result = await _validator.ValidateAsync(new CreateCategoryCommand(""), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -27,7 +27,7 @@ public class CreateCategoryCommandValidatorTests
     {
         var name = new string('x', 61);
 
-        var result = await _validator.ValidateAsync(new CreateCategoryCommand(name));
+        var result = await _validator.ValidateAsync(new CreateCategoryCommand(name), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -37,7 +37,7 @@ public class CreateCategoryCommandValidatorTests
     {
         // No repository is constructor-injected (docs/adr/0012): existence and
         // duplicate-name checks are the handler's job now, not the validator's.
-        var result = await _validator.ValidateAsync(new CreateCategoryCommand("Hair"));
+        var result = await _validator.ValidateAsync(new CreateCategoryCommand("Hair"), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeTrue();
     }

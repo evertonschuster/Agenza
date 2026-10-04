@@ -70,7 +70,7 @@ public class DispatcherTests
     {
         var dispatcher = BuildDispatcher();
 
-        var result = await dispatcher.Send(new Ping("hi"));
+        var result = await dispatcher.Send(new Ping("hi"), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("pong: hi");
@@ -81,7 +81,7 @@ public class DispatcherTests
     {
         var dispatcher = BuildDispatcher();
 
-        var result = await dispatcher.Send(new Archive(Guid.NewGuid()));
+        var result = await dispatcher.Send(new Archive(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
     }
@@ -91,7 +91,7 @@ public class DispatcherTests
     {
         var dispatcher = BuildDispatcher();
 
-        var result = await dispatcher.Query(new CountTenants(Guid.NewGuid()));
+        var result = await dispatcher.Query(new CountTenants(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be(1);
@@ -102,7 +102,7 @@ public class DispatcherTests
     {
         var dispatcher = BuildDispatcher(services => services.AddScoped<IValidator<Ping>, PingValidator>());
 
-        var result = await dispatcher.Send(new Ping(""));
+        var result = await dispatcher.Send(new Ping(""), TestContext.Current.CancellationToken);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Validation);
@@ -113,7 +113,7 @@ public class DispatcherTests
     {
         var dispatcher = BuildDispatcher(services => services.AddScoped<IValidator<Ping>, PingValidator>());
 
-        var result = await dispatcher.Send(new Ping("hi"));
+        var result = await dispatcher.Send(new Ping("hi"), TestContext.Current.CancellationToken);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().Be("pong: hi");
@@ -128,7 +128,7 @@ public class DispatcherTests
             services.AddScoped<IValidator<Register>, RegisterValidator>();
         });
 
-        var result = await dispatcher.Send(new Register("", ""));
+        var result = await dispatcher.Send(new Register("", ""), TestContext.Current.CancellationToken);
 
         result.IsFailure.Should().BeTrue();
         result.Error.FieldErrors.Should().NotBeNull();
