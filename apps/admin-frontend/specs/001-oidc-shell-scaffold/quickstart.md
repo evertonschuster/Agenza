@@ -5,7 +5,7 @@ Run-and-verify guide for this feature's acceptance scenarios (spec.md User Stori
 ## Prerequisites
 
 - Node.js `>=26.5.1` and npm `12.0.2` (repo root `.nvmrc` / `package.json`).
-- .NET SDK `10.0.302` (`backend/global.json`) — required to run the Aspire AppHost.
+- .NET SDK `10.0.401` (`backend/global.json`) — required to run the Aspire AppHost.
 - From repo root: `npm install` (installs all workspaces, including `apps/admin-frontend` once this feature's scaffold exists).
 
 No dev-certificate trust step is needed — every fixed port in `backend/AppHost/AppHost.cs` (5173/5081/5080) is plain HTTP in local development.

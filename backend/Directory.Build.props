@@ -6,6 +6,17 @@
   </PropertyGroup>
 
   <!--
+    xUnit v3 test projects (*.Tests, *.PersistenceTests) are executables.
+    xUnit1051 is off: the suites run in memory in milliseconds, so threading
+    TestContext.Current.CancellationToken through every call buys nothing
+    (docs/adr/0050).
+  -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <OutputType>Exe</OutputType>
+    <NoWarn>$(NoWarn);xUnit1051</NoWarn>
+  </PropertyGroup>
+
+  <!--
     Coverage gate for unit-test projects (*.Tests): coverlet instruments
     the assemblies each test project references (Domain + Application)
     and fails `dotnet test` below 80% line coverage. Lives here instead

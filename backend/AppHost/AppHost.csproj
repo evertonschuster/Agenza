@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.0">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,6 +6,9 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>4e3bd65e-834c-46d4-8592-e03bc42d7f94</UserSecretsId>
+    <!-- The AppHost runs through `dotnet run` (README, frontend-ci), which takes
+         the dashboard and DCP from NuGet; the Aspire CLI bundle is not used (docs/adr/0050). -->
+    <NoWarn>$(NoWarn);ASPIRE010</NoWarn>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,7 +16,7 @@
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.Python" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
