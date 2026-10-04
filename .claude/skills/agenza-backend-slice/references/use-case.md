@@ -57,7 +57,8 @@ A `sealed class` implementing the handler contract. It depends only on ports fro
 `TimeProvider` and `ILogger<T>` — never the `DbContext`, `IDispatcher`, another handler, `HttpContext`
 or `ITenantAccessor`.
 
-`Handle` reads as the sequence of the five gates:
+`Handle` reads as these seven steps, which walk gates 3 to 5 of ARCHITECTURE §4 (binding and the
+validator already ran before the handler):
 
 1. Resolve context: `today` from `TimeProvider`.
 2. Get the aggregate: `ToModel` for a create; the repository plus `NotFound` for anything else.

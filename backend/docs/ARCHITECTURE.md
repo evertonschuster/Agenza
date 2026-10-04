@@ -21,7 +21,7 @@ Three rules of thumb behind everything below:
   saves; a query loads and maps. Caching, projections inside repositories, raw SQL, hand-opened
   transactions, gap-free sequences, denormalized columns and parallel queries need a measured problem or
   a product rule, stated in the PR — and an ADR when they add a mechanism. Not a query per row, and
-  `AsNoTracking` on lookups, are shape rather than optimization and stay required
+  `AsNoTracking` on pre-check lookups, are shape rather than optimization and stay required
   ([0049](../../docs/adr/0049-conventions-for-new-backend-slices.md)).
 
 Placeholders: `<Service>` is the project prefix (`ServicesService`), `<Feature>` a plural noun
@@ -287,7 +287,8 @@ in `Application/Abstractions` and declares only what a handler calls; the adapte
 `RepositoryBase<T>` in Infrastructure. It returns its own root (with its children), a list or a page
 of them, a `bool` or a count — never a DTO, an `IQueryable` or another aggregate. Methods say what they
 are for (`FindActiveByEmailAsync`), take value objects for value-object columns, and use
-`AsNoTracking` for lookups that won't be modified. Paged reads go through `ListPagedAsync`. The tenant
+`AsNoTracking` on pre-check lookups (`Find…Async`), whose result is never changed; `GetByIdAsync` stays
+tracked even when a query reuses it. Paged reads go through `ListPagedAsync`. The tenant
 and soft-delete filters come from the `DbContext`: a repository never writes a `TenantId` or
 `DeletedAt` predicate. A query cannot reach `.Value` through a converter: compare whole value objects,
 order by the property, or use `EF.Property<string>(e, "<Property>")` for text matching. Repositories

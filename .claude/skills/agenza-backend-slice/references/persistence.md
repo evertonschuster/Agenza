@@ -24,8 +24,9 @@ Parameters are ids, value objects for value-object columns and plain filter valu
 an expression, an `IQueryable` or a specification. Results are the root with its own children — never a
 DTO, a projection or another aggregate.
 
-A `GetByIdAsync` shared by a query and a command stays tracked. A second method that differs only by
-`AsNoTracking` is the premature optimization this codebase avoids.
+A `GetByIdAsync` shared by a query and a command stays tracked: `AsNoTracking` is required only on
+pre-check lookups (`Find…Async`), and a second method that differs only by tracking is the premature
+optimization this codebase avoids (ARCHITECTURE, rules of thumb).
 
 ## 2. The adapter — `<Entity>Repository`
 

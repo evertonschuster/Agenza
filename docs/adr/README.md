@@ -45,10 +45,12 @@ follow 0041 for what to do.
 Pointers that died with that removal (`bfd16b8`): ADRs 0005, 0006, 0007 and 0012
 send the reader to `backend/CLAUDE.md` and to `backend-use-case` /
 `backend-new-microservice` skills, and ADRs 0024, 0026 and 0028 list an
-"architecture guard" among their fitness functions. None of these exist; the
-guard was not replaced, so the rules it checked are enforced by review. The
-current backend guide is [`backend/docs/ARCHITECTURE.md`](../../backend/docs/ARCHITECTURE.md),
-entered through [`backend/AGENTS.md`](../../backend/AGENTS.md).
+"architecture guard" among their fitness functions. Those skills and the guard
+no longer exist, and the guard was not replaced, so the rules it checked are
+enforced by review. `backend/CLAUDE.md` exists again, but only as an import of
+[`backend/AGENTS.md`](../../backend/AGENTS.md) — not the rulebook those ADRs
+describe. The current backend guide is
+[`backend/docs/ARCHITECTURE.md`](../../backend/docs/ARCHITECTURE.md).
 
 ## Complete register
 

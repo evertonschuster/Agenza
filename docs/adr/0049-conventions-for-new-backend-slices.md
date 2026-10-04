@@ -36,7 +36,8 @@ handler maps to the response. Caching, projections inside repositories, raw SQL,
 hand-opened transactions, gap-free sequences, denormalized columns and parallel queries in a handler need a
 measured problem or a product rule, stated in the PR; one that adds a mechanism needs an ADR. Two things are
 shape, not optimization, and stay required: never a query per row (load a set of ids in one query), and
-`AsNoTracking` on lookups that will not be modified. The existing service-code sequence is not changed by
+`AsNoTracking` on the pre-check lookups whose result is never changed. A `GetByIdAsync` shared by a query
+and a command stays tracked rather than gaining a second, untracked twin. The existing service-code sequence is not changed by
 this ADR, and it is not a pattern for a new entity.
 
 **2. Aggregates reference each other by id.** An aggregate holds the id of another aggregate, never a

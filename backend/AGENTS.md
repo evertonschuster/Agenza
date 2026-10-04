@@ -29,51 +29,23 @@ verticais organizam a Application; não substituem as camadas.
 
 ## Regras que quebram build ou review
 
-**O Domain não referencia nada.** Nem projeto, nem pacote. `BaseEntity`, `DomainResult` e afins são
-duplicados por serviço de propósito.
+Cada linha é um lembrete; a regra, com o porquê, está na seção indicada da
+[ARCHITECTURE](docs/ARCHITECTURE.md).
 
-**Erros são valores, em cinco portões.** Validator (forma) → Domain (`DomainResult`) → handler (estado
-atual: 404/409) → unit of work (`<Entity>.SaveFailed` genérico) → exceção só para o inesperado.
-`try/catch` em handler é achado de review.
-
-**Validator é síncrono e não consulta nada.** Cada regra leva `.WithErrorCode` com o código do domínio
-e mensagem pt-BR; os limites vêm das constantes do domínio.
-
-**A raiz do agregado cria os filhos.** Construtor privado, `Create` e métodos de comportamento que
-devolvem `DomainResult`; filhos só pela raiz, sem `DbSet`. Valor com regra vira value object com
-`Create` (valida e normaliza) e `Restore` (o que o EF chama). Transição de estado é método com nome de
-intenção, nunca `SetX`. Factory é método estático no próprio tipo, nunca classe.
-
-**Agregados se referenciam por id.** Nunca uma navegação para outra raiz; um conjunto de ids é um filho
-do dono que guarda o id do outro.
-
-**O handler é dono da orquestração.** Um por operação, sem classe base nem loader/serviço entre
-handlers: regra compartilhada vai para o domínio, leitura compartilhada para o repositório. A entrada é
-o próprio comando e a saída é `<Entity>Response.From<Entity>`; nenhum tipo de domínio no fio.
-
-**Repositório simples.** Um por raiz, declarando só o que um handler chama; devolve a raiz, nunca DTO
-nem `IQueryable`. Tenant e excluídos vêm dos filtros do `DbContext` — nenhum predicado manual.
-
-**A forma mais simples correta primeiro.** Cache, projeção, SQL cru, transação aberta à mão, sequência
-sem buracos: só com problema medido ou regra de produto escrita no PR.
-
-**O tenant nunca é parâmetro.** Nenhum comando, query, DTO, mapeamento ou repositório carrega tenant: o
-interceptor atribui no save e os filtros escopam a leitura. Relação entre entidades do tenant usa FK
-composta `(TenantId, …)`.
-
-**O banco é a autoridade de unicidade.** Índice único com `TenantId` e filtro `"DeletedAt" IS NULL`; a
-pré-checagem do handler só existe para a resposta por campo. A Application não conhece nome de
-constraint.
-
-**Controller não tem lógica.** Liga o comando, despacha, `ToActionResult`. Todo status declarado com
-`ProducesResponseType`. Enum no fio é string.
-
-**UTC, sempre.** `TimeProvider` injetado; "hoje" é a data UTC. Nada de `DateTime.Now` nem fuso.
-
-**Migração é aditiva.** Uma por mudança; nunca edite uma migração já commitada.
-
-**Estilo.** Corpo em bloco com guard clauses, sem `&&`/ternário dobrado numa expressão; sem
-comentário de "o quê".
+- **O Domain não referencia nada** — nem projeto, nem pacote. [§1](docs/ARCHITECTURE.md#1-shape)
+- **A forma mais simples correta primeiro** — mecanismo de desempenho só com evidência no PR.
+  [Regras gerais](docs/ARCHITECTURE.md)
+- **O handler é dono da orquestração; entrada e saída são records explícitos.**
+  [§2](docs/ARCHITECTURE.md#2-anatomy-of-a-feature)
+- **Domínio rico** — a raiz cria os filhos, agregados se referenciam por id, value objects com
+  `Create`/`Restore`, transição com nome de intenção, factory estática. [§3](docs/ARCHITECTURE.md#3-domain)
+- **Erros são valores, em cinco portões** — validator síncrono e com código em toda regra; `try/catch`
+  em handler é achado. [§4](docs/ARCHITECTURE.md#4-errors--one-pipeline-five-gates)
+- **O tenant nunca é parâmetro; repositório simples sobre os filtros do `DbContext`; o banco decide a
+  unicidade; migração só aditiva.** [§5](docs/ARCHITECTURE.md#5-tenancy-and-persistence)
+- **Controller sem lógica; enum no fio é string.** [§6](docs/ARCHITECTURE.md#6-http-surface)
+- **UTC, sempre.** [§7](docs/ARCHITECTURE.md#7-time)
+- **Corpo em bloco com guard clauses; sem comentário de "o quê".** [§8](docs/ARCHITECTURE.md#8-code-style)
 
 ## Portões
 

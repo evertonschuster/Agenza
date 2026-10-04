@@ -68,7 +68,7 @@ problem or a product rule named in the PR:
   uses yet, a generic base type "for the next feature".
 
 Two things look like optimization and are not: never a query per row (read a set of ids in one query),
-and `AsNoTracking` on lookups that won't be modified.
+and `AsNoTracking` on pre-check lookups (`Find…Async`), whose result is never changed.
 
 ## 3. Touching an older slice
 
