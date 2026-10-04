@@ -31,6 +31,21 @@ public class ValueObjectConversionTests
     }
 
     [Fact]
+    public void ReadingAStoredPriceAndDiscount_RestoresThemWithoutTodaysRules()
+    {
+        var options = new DbContextOptionsBuilder<ServicesDataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        using var context = new ServicesDataContext(options);
+        var services = context.Model.FindEntityType(typeof(Service))!;
+
+        services.FindProperty(nameof(Service.Price))!.GetValueConverter()!
+            .ConvertFromProvider(-1m).Should().Be(Money.Restore(-1m));
+        services.FindProperty(nameof(Service.MaxDiscountPercentage))!.GetValueConverter()!
+            .ConvertFromProvider(150m).Should().Be(Percentage.Restore(150m));
+    }
+
+    [Fact]
     public void ReadingStoredPurposes_RestoresThemWithoutTodaysRules()
     {
         var options = new DbContextOptionsBuilder<ServicesDataContext>()

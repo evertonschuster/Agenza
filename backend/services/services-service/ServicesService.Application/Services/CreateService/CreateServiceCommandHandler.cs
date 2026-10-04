@@ -1,69 +1,117 @@
 using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
+using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Services.CreateService;
 
-public sealed class CreateServiceCommandHandler : ICommandHandler<CreateServiceCommand, ServiceResponse>
+public sealed class CreateServiceCommandHandler(
+    IServiceRepository serviceRepository,
+    ICategoryRepository categoryRepository,
+    ITagRepository tagRepository,
+    IServiceCodeGenerator serviceCodeGenerator,
+    IUnitOfWork unitOfWork,
+    ILogger<CreateServiceCommandHandler> logger) : ICommandHandler<CreateServiceCommand, ServiceResponse>
 {
-    private readonly IServiceRepository _serviceRepository;
-    private readonly ServiceRelationshipLoader _relationshipLoader;
-    private readonly IServiceCodeGenerator _serviceCodeGenerator;
-    private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<CreateServiceCommandHandler> _logger;
-
-    public CreateServiceCommandHandler(
-        IServiceRepository serviceRepository,
-        ServiceRelationshipLoader relationshipLoader,
-        IServiceCodeGenerator serviceCodeGenerator,
-        IUnitOfWork unitOfWork,
-        ILogger<CreateServiceCommandHandler> logger)
-    {
-        _serviceRepository = serviceRepository;
-        _relationshipLoader = relationshipLoader;
-        _serviceCodeGenerator = serviceCodeGenerator;
-        _unitOfWork = unitOfWork;
-        _logger = logger;
-    }
-
     public async Task<Result<ServiceResponse>> Handle(CreateServiceCommand command, CancellationToken cancellationToken)
     {
-        if (await _serviceRepository.NameExistsAsync(command.Name, excludeServiceId: null, cancellationToken))
+        var nameConflict = await FindNameConflictAsync(command.Name, cancellationToken);
+        if (nameConflict is { } nameError)
         {
-            return Result.Failure<ServiceResponse>(
-                Error.Conflict("Service.DuplicateName", $"Já existe um serviço chamado '{command.Name}'."));
+            return Result.Failure<ServiceResponse>(nameError);
         }
 
-        var relationshipsResult = await _relationshipLoader.LoadAsync(
-            command.CategoryId, command.TagIds, cancellationToken);
-        if (relationshipsResult.IsFailure)
+        var categoryResult = await FindCategoryAsync(command.CategoryId, cancellationToken);
+        if (categoryResult.IsFailure)
         {
-            return Result.Failure<ServiceResponse>(relationshipsResult.Error);
+            return Result.Failure<ServiceResponse>(categoryResult.Error);
         }
 
-        var relationships = relationshipsResult.Value;
+        var tagsResult = await FindTagsAsync(command.TagIds, cancellationToken);
+        if (tagsResult.IsFailure)
+        {
+            return Result.Failure<ServiceResponse>(tagsResult.Error);
+        }
 
-        // Requested only once existence/duplicate checks passed, so a rejected
-        // create doesn't burn a code from the tenant's sequence.
-        var code = await _serviceCodeGenerator.GetNextCodeAsync(cancellationToken);
-        var serviceResult = command.ToModel(code, relationships.Tags);
+        var code = await serviceCodeGenerator.GetNextCodeAsync(cancellationToken);
+        var serviceResult = command.ToModel(code);
         if (serviceResult.IsFailure)
         {
-            // GetNextCodeAsync may have already opened an ambient transaction - close it since SaveChangesAsync never runs on this branch.
-            await _unitOfWork.RollbackAsync(cancellationToken);
+            await unitOfWork.RollbackAsync(cancellationToken);
             return Result.Failure<ServiceResponse>(serviceResult.Error.ToApplicationError());
         }
 
         var service = serviceResult.Value;
-        _serviceRepository.Add(service);
+        serviceRepository.Add(service);
 
-        var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
+        var saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            return Result.Failure<ServiceResponse>(
-                ServicePersistenceErrorMapper.Map(saveResult.Error, command.Name, _logger));
+            logger.LogWarning(
+                "Saving a service failed with {Kind} on {ConstraintName}",
+                saveResult.Error.Kind,
+                saveResult.Error.ConstraintName);
+
+            return Result.Failure<ServiceResponse>(Error.Conflict(
+                "Service.SaveFailed",
+                "Não foi possível salvar o serviço. Tente novamente."));
         }
 
-        return ServiceResponse.FromService(service, relationships.Category?.Name);
+        return ServiceResponse.FromService(service, categoryResult.Value?.Name, tagsResult.Value);
+    }
+
+    private async Task<Error?> FindNameConflictAsync(string name, CancellationToken cancellationToken)
+    {
+        var serviceWithSameName = await serviceRepository.FindByNameAsync(name, cancellationToken);
+        if (serviceWithSameName is null)
+        {
+            return null;
+        }
+
+        return Error.Conflict(
+            "Service.DuplicateName",
+            $"Já existe um serviço chamado '{serviceWithSameName.Name}'.",
+            field: nameof(CreateServiceCommand.Name),
+            meta: new Dictionary<string, string>
+            {
+                ["serviceId"] = serviceWithSameName.Id.ToString(),
+                ["serviceName"] = serviceWithSameName.Name,
+            });
+    }
+
+    private async Task<Result<Category?>> FindCategoryAsync(Guid? categoryId, CancellationToken cancellationToken)
+    {
+        if (categoryId is not { } id)
+        {
+            return Result.Success<Category?>(null);
+        }
+
+        var category = await categoryRepository.GetByIdAsync(id, cancellationToken);
+        if (category is null)
+        {
+            return Result.Failure<Category?>(
+                Error.NotFound("Category.NotFound", $"Categoria '{id}' não foi encontrada."));
+        }
+
+        return Result.Success<Category?>(category);
+    }
+
+    private async Task<Result<IReadOnlyList<Tag>>> FindTagsAsync(
+        IReadOnlyList<Guid>? tagIds,
+        CancellationToken cancellationToken)
+    {
+        if (tagIds is not { Count: > 0 })
+        {
+            return Result.Success<IReadOnlyList<Tag>>([]);
+        }
+
+        var tags = await tagRepository.GetByIdsAsync(tagIds, cancellationToken);
+        if (tags.Count != tagIds.Distinct().Count())
+        {
+            return Result.Failure<IReadOnlyList<Tag>>(
+                Error.NotFound("Tag.NotFound", "Uma ou mais etiquetas informadas não foram encontradas."));
+        }
+
+        return Result.Success(tags);
     }
 }

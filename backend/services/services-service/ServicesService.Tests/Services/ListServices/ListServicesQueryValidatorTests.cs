@@ -9,33 +9,31 @@ public class ListServicesQueryValidatorTests
     [Fact]
     public void Validate_WithDefaultQuery_Passes()
     {
-        var result = _validator.Validate(new ListServicesQuery());
-
-        result.IsValid.Should().BeTrue();
+        _validator.Validate(new ListServicesQuery()).IsValid.Should().BeTrue();
     }
 
     [Fact]
-    public void Validate_WithPageLessThanOne_Fails()
+    public void Validate_WithPageLessThanOne_ReportsTheBusinessCode()
     {
         var result = _validator.Validate(new ListServicesQuery(Page: 0));
 
-        result.IsValid.Should().BeFalse();
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.PropertyName.Should().Be("Page");
+        error.ErrorCode.Should().Be("Page.Invalid");
+        error.ErrorMessage.Should().Be("A página deve ser maior ou igual a 1.");
     }
 
-    [Fact]
-    public void Validate_WithPageSizeBelowOne_Fails()
+    [Theory]
+    [InlineData(0)]
+    [InlineData(101)]
+    public void Validate_WithPageSizeOutOfBounds_ReportsTheBusinessCode(int pageSize)
     {
-        var result = _validator.Validate(new ListServicesQuery(PageSize: 0));
+        var result = _validator.Validate(new ListServicesQuery(PageSize: pageSize));
 
-        result.IsValid.Should().BeFalse();
-    }
-
-    [Fact]
-    public void Validate_WithPageSizeAboveOneHundred_Fails()
-    {
-        var result = _validator.Validate(new ListServicesQuery(PageSize: 101));
-
-        result.IsValid.Should().BeFalse();
+        var error = result.Errors.Should().ContainSingle().Subject;
+        error.PropertyName.Should().Be("PageSize");
+        error.ErrorCode.Should().Be("PageSize.Invalid");
+        error.ErrorMessage.Should().Be("O tamanho da página deve ser entre 1 e 100.");
     }
 
     [Fact]

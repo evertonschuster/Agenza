@@ -3,12 +3,31 @@ using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Domain.Entities;
 
-// Name uniqueness per tenant is a cross-aggregate rule, enforced in the CreateService/UpdateService use cases via IServiceRepository, mirroring Tag.
-// Category/Tag existence are likewise cross-aggregate rules enforced by the use cases, not here.
 public class Service : TenantOwnedEntity
 {
     public const int NameMaxLength = 80;
     public const int DescriptionMaxLength = 500;
+    public const int MaxTags = 10;
+
+    public static readonly DomainError NameRequired = new("Service.NameRequired", "O nome do serviço é obrigatório.");
+
+    public static readonly DomainError NameTooLong = new(
+        "Service.NameTooLong",
+        $"O nome do serviço deve ter no máximo {NameMaxLength} caracteres.");
+
+    public static readonly DomainError DescriptionTooLong = new(
+        "Service.DescriptionTooLong",
+        $"A descrição do serviço deve ter no máximo {DescriptionMaxLength} caracteres.");
+
+    public static readonly DomainError TooManyTags = new(
+        "Service.TooManyTags",
+        $"Informe no máximo {MaxTags} etiquetas.");
+
+    public static readonly DomainError DuplicateTags = new(
+        "Service.DuplicateTags",
+        "A mesma etiqueta não pode ser informada mais de uma vez.");
+
+    public static readonly DomainError InvalidTag = new("Service.InvalidTag", "Informe etiquetas válidas.");
 
     public int Code { get; private set; }
     public string Name { get; private set; }
@@ -16,17 +35,19 @@ public class Service : TenantOwnedEntity
     public int DurationMinutes { get; private set; }
     public int MinDurationMinutes { get; private set; }
     public int MaxDurationMinutes { get; private set; }
-    public decimal Price { get; private set; }
-    public decimal MaxDiscountPercentage { get; private set; }
+    public Money Price { get; private set; }
+    public Percentage MaxDiscountPercentage { get; private set; }
     public Guid? CategoryId { get; private set; }
 
-    private readonly List<Tag> _tags = [];
-    public IReadOnlyCollection<Tag> Tags => _tags;
+    private readonly List<ServiceTag> _tags = [];
+    public IReadOnlyCollection<ServiceTag> Tags => _tags;
 
     // EF Core materialization only.
     private Service()
     {
         Name = string.Empty;
+        Price = null!;
+        MaxDiscountPercentage = null!;
     }
 
     private Service(
@@ -34,8 +55,8 @@ public class Service : TenantOwnedEntity
         string name,
         string? description,
         DurationRange duration,
-        decimal price,
-        decimal maxDiscountPercentage,
+        Money price,
+        Percentage maxDiscountPercentage,
         Guid? categoryId,
         int code)
         : base(id)
@@ -56,9 +77,10 @@ public class Service : TenantOwnedEntity
         string name,
         string? description,
         DurationRange duration,
-        decimal price,
-        decimal maxDiscountPercentage,
+        Money price,
+        Percentage maxDiscountPercentage,
         Guid? categoryId,
+        IReadOnlyCollection<Guid> tagIds,
         int code)
     {
         var nameResult = ValidateName(name);
@@ -73,40 +95,36 @@ public class Service : TenantOwnedEntity
             return DomainResult.Failure<Service>(descriptionResult.Error);
         }
 
-        var priceResult = ValidatePrice(price);
-        if (priceResult.IsFailure)
+        var tagsResult = ValidateTags(tagIds);
+        if (tagsResult.IsFailure)
         {
-            return DomainResult.Failure<Service>(priceResult.Error);
+            return DomainResult.Failure<Service>(tagsResult.Error);
         }
 
-        var maxDiscountResult = ValidateMaxDiscountPercentage(maxDiscountPercentage);
-        if (maxDiscountResult.IsFailure)
-        {
-            return DomainResult.Failure<Service>(maxDiscountResult.Error);
-        }
-
-        return DomainResult.Success(new Service(
+        var service = new Service(
             id,
             nameResult.Value,
             descriptionResult.Value,
             duration,
-            priceResult.Value,
-            maxDiscountResult.Value,
+            price,
+            maxDiscountPercentage,
             categoryId,
-            code));
+            code);
+
+        service.SyncTags(tagIds);
+
+        return DomainResult.Success(service);
     }
 
     public DomainResult Update(
         string name,
         string? description,
         DurationRange duration,
-        decimal price,
-        decimal maxDiscountPercentage,
-        Guid? categoryId)
+        Money price,
+        Percentage maxDiscountPercentage,
+        Guid? categoryId,
+        IReadOnlyCollection<Guid> tagIds)
     {
-        // Every new value is validated before anything is assigned, so a
-        // later validation failure (e.g. an invalid discount) can never leave
-        // the entity with some fields already overwritten and others not.
         var nameResult = ValidateName(name);
         if (nameResult.IsFailure)
         {
@@ -119,45 +137,52 @@ public class Service : TenantOwnedEntity
             return DomainResult.Failure(descriptionResult.Error);
         }
 
-        var priceResult = ValidatePrice(price);
-        if (priceResult.IsFailure)
+        var tagsResult = ValidateTags(tagIds);
+        if (tagsResult.IsFailure)
         {
-            return DomainResult.Failure(priceResult.Error);
+            return DomainResult.Failure(tagsResult.Error);
         }
 
-        var maxDiscountResult = ValidateMaxDiscountPercentage(maxDiscountPercentage);
-        if (maxDiscountResult.IsFailure)
-        {
-            return DomainResult.Failure(maxDiscountResult.Error);
-        }
-
-        CategoryId = categoryId;
         Name = nameResult.Value;
         Description = descriptionResult.Value;
         MinDurationMinutes = duration.MinDurationMinutes;
         DurationMinutes = duration.DurationMinutes;
         MaxDurationMinutes = duration.MaxDurationMinutes;
-        Price = priceResult.Value;
-        MaxDiscountPercentage = maxDiscountResult.Value;
+        Price = price;
+        MaxDiscountPercentage = maxDiscountPercentage;
+        CategoryId = categoryId;
+        SyncTags(tagIds);
 
         return DomainResult.Success();
     }
 
-    public void SetTags(IEnumerable<Tag> tags)
+    private void SyncTags(IReadOnlyCollection<Guid> tagIds)
     {
-        _tags.Clear();
-        _tags.AddRange(tags);
+        _tags.RemoveAll(link => !tagIds.Contains(link.TagId));
+
+        foreach (var tagId in tagIds)
+        {
+            if (_tags.Exists(link => link.TagId == tagId))
+            {
+                continue;
+            }
+
+            _tags.Add(ServiceTag.Create(Guid.CreateVersion7(), Id, tagId));
+        }
     }
 
     private static DomainResult<string> ValidateName(string name)
     {
         var trimmed = name?.Trim() ?? string.Empty;
 
-        if (trimmed.Length is 0 or > NameMaxLength)
+        if (trimmed.Length == 0)
         {
-            return DomainResult.Failure<string>(new DomainError(
-                "Service.Invalid",
-                $"O nome do serviço é obrigatório e deve ter no máximo {NameMaxLength} caracteres."));
+            return DomainResult.Failure<string>(NameRequired);
+        }
+
+        if (trimmed.Length > NameMaxLength)
+        {
+            return DomainResult.Failure<string>(NameTooLong);
         }
 
         return DomainResult.Success(trimmed);
@@ -174,33 +199,29 @@ public class Service : TenantOwnedEntity
 
         if (trimmed.Length > DescriptionMaxLength)
         {
-            return DomainResult.Failure<string?>(new DomainError(
-                "Service.Invalid",
-                $"A descrição do serviço deve ter no máximo {DescriptionMaxLength} caracteres."));
+            return DomainResult.Failure<string?>(DescriptionTooLong);
         }
 
         return DomainResult.Success<string?>(trimmed);
     }
 
-    private static DomainResult<decimal> ValidatePrice(decimal price)
+    private static DomainResult ValidateTags(IReadOnlyCollection<Guid> tagIds)
     {
-        if (price < 0)
+        if (tagIds.Count > MaxTags)
         {
-            return DomainResult.Failure<decimal>(
-                new DomainError("Service.Invalid", "O preço do serviço não pode ser negativo."));
+            return DomainResult.Failure(TooManyTags);
         }
 
-        return DomainResult.Success(price);
-    }
-
-    private static DomainResult<decimal> ValidateMaxDiscountPercentage(decimal maxDiscountPercentage)
-    {
-        if (maxDiscountPercentage < 0 || maxDiscountPercentage > 100)
+        if (tagIds.Any(tagId => tagId == Guid.Empty))
         {
-            return DomainResult.Failure<decimal>(
-                new DomainError("Service.Invalid", "O desconto máximo do serviço deve ser entre 0 e 100."));
+            return DomainResult.Failure(InvalidTag);
         }
 
-        return DomainResult.Success(maxDiscountPercentage);
+        if (tagIds.Distinct().Count() != tagIds.Count)
+        {
+            return DomainResult.Failure(DuplicateTags);
+        }
+
+        return DomainResult.Success();
     }
 }

@@ -15,6 +15,8 @@ namespace ServicesService.Api.Controllers;
 [Route("api/v{version:apiVersion}/services")]
 public class ServicesController : AgenzaControllerBase
 {
+    private const long MaxRequestBodyBytes = 64 * 1024;
+
     private readonly IDispatcher _dispatcher;
 
     public ServicesController(IDispatcher dispatcher)
@@ -32,6 +34,7 @@ public class ServicesController : AgenzaControllerBase
     }
 
     [HttpPost]
+    [RequestSizeLimit(MaxRequestBodyBytes)]
     [ProducesResponseType<ApiResponse<ServiceResponse>>(StatusCodes.Status201Created)]
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
@@ -42,6 +45,7 @@ public class ServicesController : AgenzaControllerBase
     }
 
     [HttpPut("{id:guid}")]
+    [RequestSizeLimit(MaxRequestBodyBytes)]
     [ProducesResponseType<ApiResponse<ServiceResponse>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]

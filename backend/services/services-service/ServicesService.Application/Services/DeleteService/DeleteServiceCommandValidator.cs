@@ -6,7 +6,6 @@ public sealed class DeleteServiceCommandValidator : AbstractValidator<DeleteServ
 {
     public DeleteServiceCommandValidator()
     {
-        RuleFor(c => c.ServiceId)
-            .NotEmpty().WithMessage("O id do serviço é obrigatório.");
+        RuleFor(command => command.ServiceId).MustBeAServiceId();
     }
 }

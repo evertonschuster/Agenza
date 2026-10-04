@@ -14,7 +14,7 @@ public interface IServiceRepository
 
     Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken);
 
-    Task<bool> NameExistsAsync(string name, Guid? excludeServiceId, CancellationToken cancellationToken);
+    Task<Service?> FindByNameAsync(string name, CancellationToken cancellationToken);
 
     Task<int> CountByCategoryIdAsync(Guid categoryId, CancellationToken cancellationToken);
 

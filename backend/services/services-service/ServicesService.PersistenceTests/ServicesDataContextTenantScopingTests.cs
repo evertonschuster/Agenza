@@ -28,7 +28,15 @@ public class ServicesDataContextTenantScopingTests
 
     private static Service ValidService(string name) =>
         Service.Create(
-            Guid.NewGuid(), name, null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
+            Guid.NewGuid(),
+            name,
+            null,
+            DurationRange.Create(15, 30, 60).Value,
+            Money.Create(45.50m).Value,
+            Percentage.Create(10m).Value,
+            null,
+            [],
+            1).Value;
 
     private static async Task<Service> SaveDeletedService(string databaseName, Guid tenantId, string name)
     {

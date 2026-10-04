@@ -1,24 +1,19 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
+using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Services.ListServices;
 
-public sealed class ListServicesQueryHandler : IQueryHandler<ListServicesQuery, PagedResult<ServiceResponse>>
+public sealed class ListServicesQueryHandler(
+    IServiceRepository serviceRepository,
+    ICategoryRepository categoryRepository,
+    ITagRepository tagRepository) : IQueryHandler<ListServicesQuery, PagedResult<ServiceResponse>>
 {
-    private readonly IServiceRepository _serviceRepository;
-    private readonly ICategoryRepository _categoryRepository;
-
-    public ListServicesQueryHandler(IServiceRepository serviceRepository, ICategoryRepository categoryRepository)
-    {
-        _serviceRepository = serviceRepository;
-        _categoryRepository = categoryRepository;
-    }
-
     public async Task<Result<PagedResult<ServiceResponse>>> Handle(
         ListServicesQuery query,
         CancellationToken cancellationToken)
     {
-        var (services, totalCount) = await _serviceRepository.ListAsync(
+        var (services, totalCount) = await serviceRepository.ListAsync(
             query.Page,
             query.PageSize,
             query.Search,
@@ -26,28 +21,67 @@ public sealed class ListServicesQueryHandler : IQueryHandler<ListServicesQuery, 
             query.TagId,
             cancellationToken);
 
-        // Only the categories this page's services actually reference (at most
-        // pageSize distinct ids), not the tenant's entire Category catalog on
-        // every page (docs/adr/0012).
-        var categoryIds = services
-            .Select(service => service.CategoryId)
-            .Where(categoryId => categoryId is not null)
-            .Select(categoryId => categoryId!.Value)
-            .Distinct()
-            .ToList();
-        var categoryNamesById = categoryIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : (await _categoryRepository.GetByIdsAsync(categoryIds, cancellationToken))
-                .ToDictionary(category => category.Id, category => category.Name);
+        var categoryNamesById = await ReadCategoryNamesAsync(services, cancellationToken);
+        var tags = await ReadTagsAsync(services, cancellationToken);
 
         var items = services
             .Select(service => ServiceResponse.FromService(
                 service,
-                service.CategoryId is { } categoryId && categoryNamesById.TryGetValue(categoryId, out var name)
-                    ? name
-                    : null))
+                CategoryNameOf(service, categoryNamesById),
+                TagsOf(service, tags)))
             .ToList();
 
         return Result.Success(new PagedResult<ServiceResponse>(items, totalCount, query.Page, query.PageSize));
+    }
+
+    private async Task<Dictionary<Guid, string>> ReadCategoryNamesAsync(
+        IReadOnlyList<Service> services,
+        CancellationToken cancellationToken)
+    {
+        var categoryIds = services
+            .Select(service => service.CategoryId)
+            .OfType<Guid>()
+            .Distinct()
+            .ToList();
+        if (categoryIds.Count == 0)
+        {
+            return [];
+        }
+
+        var categories = await categoryRepository.GetByIdsAsync(categoryIds, cancellationToken);
+        return categories.ToDictionary(category => category.Id, category => category.Name);
+    }
+
+    private async Task<IReadOnlyList<Tag>> ReadTagsAsync(
+        IReadOnlyList<Service> services,
+        CancellationToken cancellationToken)
+    {
+        var tagIds = services
+            .SelectMany(service => service.Tags)
+            .Select(link => link.TagId)
+            .Distinct()
+            .ToList();
+        if (tagIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await tagRepository.GetByIdsAsync(tagIds, cancellationToken);
+    }
+
+    private static string? CategoryNameOf(Service service, Dictionary<Guid, string> categoryNamesById)
+    {
+        if (service.CategoryId is not { } categoryId)
+        {
+            return null;
+        }
+
+        return categoryNamesById.GetValueOrDefault(categoryId);
+    }
+
+    private static IReadOnlyList<Tag> TagsOf(Service service, IReadOnlyList<Tag> tags)
+    {
+        var linkedTagIds = service.Tags.Select(link => link.TagId).ToHashSet();
+        return tags.Where(tag => linkedTagIds.Contains(tag.Id)).ToList();
     }
 }

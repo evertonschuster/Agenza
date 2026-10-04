@@ -16,8 +16,9 @@ public sealed record ServiceResponse(
     string? CategoryName,
     IReadOnlyList<TagSummary> Tags)
 {
-    public static ServiceResponse FromService(Service service, string? categoryName) =>
-        new(
+    public static ServiceResponse FromService(Service service, string? categoryName, IReadOnlyList<Tag> tags)
+    {
+        return new ServiceResponse(
             service.Id,
             service.Code,
             service.Name,
@@ -25,11 +26,12 @@ public sealed record ServiceResponse(
             service.DurationMinutes,
             service.MinDurationMinutes,
             service.MaxDurationMinutes,
-            service.Price,
-            service.MaxDiscountPercentage,
+            service.Price.Value,
+            service.MaxDiscountPercentage.Value,
             service.CategoryId,
             categoryName,
-            service.Tags.Select(tag => new TagSummary(tag.Id, tag.Name, tag.Color.Value)).ToList());
+            tags.Select(tag => new TagSummary(tag.Id, tag.Name, tag.Color.Value)).ToList());
+    }
 }
 
 public sealed record TagSummary(Guid Id, string Name, string Color);

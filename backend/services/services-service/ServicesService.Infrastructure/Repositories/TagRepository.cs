@@ -34,6 +34,12 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
             cancellationToken);
     }
 
-    public Task<IReadOnlyList<Tag>> GetByIdsAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken) =>
-        ListAsync(t => tagIds.Contains(t.Id), order: null, cancellationToken);
+    public Task<IReadOnlyList<Tag>> GetByIdsAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken)
+    {
+        return ListAsync(
+            t => tagIds.Contains(t.Id),
+            query => query.OrderBy(t => t.Name).ThenBy(t => t.Id),
+            cancellationToken,
+            asNoTracking: true);
+    }
 }
