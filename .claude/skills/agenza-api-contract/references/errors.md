@@ -56,11 +56,12 @@ This is the trap. `errors` is `Record<string, { code?, message? }[]>` and gets f
 different ways** (`ApiProblemDetailsFactory`):
 
 1. **Validation (400).** Keys come from FluentValidation's `PropertyName`, grouped in
-   `Dispatcher.cs` — so they are **PascalCase C# property names** (`Name`, `DurationMinutes`), not
-   the camelCase your JSON body and form fields use. A cross-field rule can be re-keyed onto one
+   `Dispatcher.cs`, and `ApiProblemDetailsFactory` writes them as the **camelCase path of the JSON
+   body** (`name`, `durationMinutes`, `guardians[0].name`; ADR 0051). A cross-field rule can be re-keyed onto one
    field with `OverridePropertyName` (see `CreateServiceCommandValidator.cs`), so the key set is not
    mechanically the command's properties either.
-2. **Any other application error** (Conflict, NotFound, Failure). `CreateSingleErrorDictionary`
+2. **Any error without field errors** (Conflict, NotFound, Failure, and a Validation the domain
+   rejected after the validator let it through). `CreateSingleErrorDictionary`
    puts the error itself under the **empty-string key `""`**. So a 409 arrives with a populated
    `errors` that maps to no field at all.
 

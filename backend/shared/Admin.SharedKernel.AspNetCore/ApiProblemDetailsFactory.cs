@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
 
@@ -14,7 +15,13 @@ public static class ApiProblemDetailsFactory
 
     public static ApiProblemDetails CreateValidationProblem(Error error, HttpContext? httpContext = null)
     {
-        return CreateProblem(httpContext, ValidationProblemType, "Ocorreram erros de validação.", StatusCodes.Status400BadRequest, error.Code, error.FieldErrors ?? EmptyErrors);
+        return CreateProblem(
+            httpContext,
+            ValidationProblemType,
+            "Ocorreram erros de validação.",
+            StatusCodes.Status400BadRequest,
+            error.Code,
+            error.FieldErrors ?? CreateSingleErrorDictionary(error));
     }
 
     public static ApiProblemDetails CreateApplicationProblem(Error error, HttpContext? httpContext = null)
@@ -88,8 +95,19 @@ public static class ApiProblemDetailsFactory
             Code = code,
             TraceId = httpContext?.TraceIdentifier,
             CorrelationId = ResolveCorrelationId(httpContext),
-            Errors = errors,
+            Errors = ToWireKeys(errors),
         };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<FieldError>> ToWireKeys(
+        IReadOnlyDictionary<string, IReadOnlyList<FieldError>> errors)
+    {
+        return errors.ToDictionary(entry => ToWirePath(entry.Key), entry => entry.Value);
+    }
+
+    private static string ToWirePath(string propertyPath)
+    {
+        return string.Join('.', propertyPath.Split('.').Select(JsonNamingPolicy.CamelCase.ConvertName));
     }
 
     private static string? ResolveCorrelationId(HttpContext? httpContext)

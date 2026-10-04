@@ -204,8 +204,8 @@ different kind of rule:
 | # | Gate | Owns | Answers |
 | --- | --- | --- | --- |
 | 1 | Model binding (framework) | JSON syntax and types | 400 in the framework's shape: English, no `code` |
-| 2 | Validator, run by the dispatcher | input shape: required, length, format, range, list size, cross-field within the request | 400 `Validation.Failed`, `errors` keyed by property |
-| 3 | Domain, `Create`/behaviour → `DomainResult` | the same invariants again, plus rules over the whole aggregate | 400 through `DomainErrorMapper` |
+| 2 | Validator, run by the dispatcher | input shape: required, length, format, range, list size, cross-field within the request | 400 `Validation.Failed`, `errors` keyed by property; the response writes each path in camelCase ([0051](../../docs/adr/0051-camelcase-error-keys-on-the-wire.md)) |
+| 3 | Domain, `Create`/behaviour → `DomainResult` | the same invariants again, plus rules over the whole aggregate | 400 through `DomainErrorMapper`, the domain's code at the top and its message under the empty key |
 | 4 | Handler | current state: existence, uniqueness, in use, other aggregates | `NotFound` 404, `Conflict` 409 |
 | 5 | Unit of work, `PersistenceResult` | what the database rejected | 409 `<Entity>.SaveFailed`, generic |
 | — | Anything else | — | exception → `GenericExceptionHandler` → generic 500 |

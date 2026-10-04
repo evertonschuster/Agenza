@@ -79,10 +79,10 @@ public class ResultExtensionsTests
     }
 
     [Fact]
-    public void ToActionResult_OnValidationFailureWithoutFieldErrors_ReturnsThePlainProblemDetails()
+    public void ToActionResult_OnValidationFailureWithoutFieldErrors_CarriesTheErrorUnderTheEmptyKey()
     {
         var controller = new TestController();
-        var error = Error.Validation("Validation.Failed", "bad input");
+        var error = Error.Validation("FullName.Required", "O nome completo é obrigatório.");
 
         var actionResult = Result.Failure(error).ToActionResult(controller, () => controller.NoContent());
 
@@ -90,19 +90,21 @@ public class ResultExtensionsTests
         objectResult.StatusCode.Should().Be(StatusCodes.Status400BadRequest);
         var problemDetails = objectResult.Value.Should().BeOfType<ApiProblemDetails>().Subject;
         problemDetails.Title.Should().Be("Ocorreram erros de validação.");
+        problemDetails.Code.Should().Be("FullName.Required");
         problemDetails.TraceId.Should().NotBeNullOrWhiteSpace();
         problemDetails.CorrelationId.Should().NotBeNullOrWhiteSpace();
-        problemDetails.Errors.Should().BeEmpty();
+        problemDetails.Errors!.Keys.Should().Equal(string.Empty);
+        problemDetails.Errors[string.Empty].Should()
+            .Equal(new FieldError("FullName.Required", "O nome completo é obrigatório."));
     }
 
     [Fact]
     public void ToActionResult_OnValidationFailureWithFieldErrors_ReturnsAStructuredProblemDetails()
     {
         var controller = new TestController();
-        var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>>
-        {
-            ["name"] = [new FieldError("Service.NameTooLong", "O nome deve possuir no máximo 100 caracteres.")],
-        };
+        IReadOnlyList<FieldError> nameErrors =
+            [new FieldError("Service.NameTooLong", "O nome deve possuir no máximo 100 caracteres.")];
+        var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>> { ["Name"] = nameErrors };
         var error = Error.Validation("Validation.Failed", "bad input", fieldErrors);
 
         var actionResult = Result.Failure(error).ToActionResult(controller, () => controller.NoContent());
@@ -114,7 +116,8 @@ public class ResultExtensionsTests
         problemDetails.Code.Should().Be("Validation.Failed");
         problemDetails.TraceId.Should().NotBeNullOrWhiteSpace();
         problemDetails.CorrelationId.Should().NotBeNullOrWhiteSpace();
-        problemDetails.Errors.Should().BeSameAs(fieldErrors);
+        problemDetails.Errors!.Keys.Should().Equal("name");
+        problemDetails.Errors["name"].Should().BeSameAs(nameErrors);
     }
 
     [Fact]
@@ -134,8 +137,8 @@ public class ResultExtensionsTests
         objectResult.StatusCode.Should().Be(StatusCodes.Status409Conflict);
         var problemDetails = objectResult.Value.Should().BeOfType<ApiProblemDetails>().Subject;
         problemDetails.Code.Should().Be("Client.DuplicateCpf");
-        problemDetails.Errors.Should().BeSameAs(fieldErrors);
-        problemDetails.Errors!["Cpf"][0].Meta.Should().BeSameAs(meta);
+        problemDetails.Errors!.Keys.Should().Equal("cpf");
+        problemDetails.Errors["cpf"][0].Meta.Should().BeSameAs(meta);
     }
 
     [Fact]

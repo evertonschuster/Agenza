@@ -1,6 +1,7 @@
 # ADR 0044 — Clients: person aggregate, uniqueness rules and conflict contract
 
-Status: accepted (2026-10)
+Status: accepted (2026-10); the PascalCase keys of the conflict contract (`Cpf`, `Email`) are camelCase on the wire
+since [ADR 0051](0051-camelcase-error-keys-on-the-wire.md) (`cpf`, `email`)
 
 ## Context
 
@@ -80,11 +81,11 @@ novamente."), without field errors and without claiming a duplicate, whatever th
 through the pre-check again and gets the specific per-field answer.
 
 **Conflict contract.** A duplicate answers `409` with the errors keyed by field (`Cpf`, `Email`, PascalCase like
-validation keys), so a form can show each under its input. `FieldError` gained an optional `Meta` string map
+validation keys; camelCase on the wire since ADR 0051), so a form can show each under its input. `FieldError` gained an optional `Meta` string map
 (omitted from the JSON when null, so no existing response changes). Both conflicts put `clientId` and `clientName`
 there, so the UI can open the record and say whose it is; neither matches a deleted person, so the record can always be
 opened. One conflict at a time: CPF is checked first, and the e-mail answer only comes once the CPF is free. A client
-reads it from the typed OpenAPI schema (`errors.Cpf[0].meta.clientId`, `errors.Email[0].meta.clientId`).
+reads it from the typed OpenAPI schema (`errors.cpf[0].meta.clientId`, `errors.email[0].meta.clientId`).
 
 **Validation layers.** Per-field pt-BR messages come from FluentValidation (the only place that can name the field);
 the domain re-checks the same invariants and its messages are not meant to reach the user. List sizes are capped

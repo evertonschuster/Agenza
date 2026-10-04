@@ -107,7 +107,7 @@ errors }`. `errors` muda de forma dependendo do tipo:
 
 **Validação** (`ErrorType.Validation` com `FieldErrors`) — `code` é sempre `"Validation.Failed"`
 (genérico; o código específico da regra vive dentro de `errors`), `errors` tem uma chave por
-**propriedade C#**, cada uma uma lista de `{code, message}`.
+**campo do corpo**, cada uma uma lista de `{code, message}`.
 
 O `code` de cada item é o código de negócio da regra, no formato `<Tipo>.<Regra>` — o mesmo
 `DomainError` que o domínio devolveria, reaproveitado pelo validator com `.WithErrorCode(...)`; por
@@ -118,14 +118,27 @@ regra `.Must(...)` de outra — é legado, convertido quando a fatia é tocada. 
 é dessa forma legada:
 
 ```json
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"Name":[{"code":"NotEmptyValidator","message":"O nome da etiqueta é obrigatório."}],"Color":[{"code":"PredicateValidator","message":"A cor da etiqueta deve ser uma das seguintes: #0d9488, #0ea5e9, #8b5cf6, #ec4899, #ef4444, #f59e0b, #22c55e, #64748b."}]}}
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"name":[{"code":"NotEmptyValidator","message":"O nome da etiqueta é obrigatório."}],"color":[{"code":"PredicateValidator","message":"A cor da etiqueta deve ser uma das seguintes: #0d9488, #0ea5e9, #8b5cf6, #ec4899, #ef4444, #f59e0b, #22c55e, #64748b."}]}}
 ```
 
-> **Casing:** as chaves de `errors` são o nome da propriedade do record C# (`Name`, `Color`,
-> `Page`, `PageSize`, `TagId`) — **PascalCase**, mesmo que o corpo da requisição tenha sido enviado
-> em camelCase. Não há conversão automática; quem mapeia erro→campo de formulário mapeia por esse
-> nome exato. Itens de uma lista dentro do comando levam o índice na chave:
-> `Guardians[0].Name`, `ReferenceContacts[1].Purposes`.
+> **Casing:** as chaves de `errors` são o caminho do campo em **camelCase**, igual ao corpo JSON
+> (`name`, `color`, `page`, `pageSize`, `tagId`). Itens de uma lista levam o índice na chave:
+> `guardians[0].name`, `referenceContacts[1].purposes`; o erro da lista inteira vem na chave da
+> lista (`guardians`). Dentro do backend os caminhos continuam com o nome da propriedade C#
+> (`Guardians[0].Name`, o que o FluentValidation e os handlers produzem); a conversão acontece num
+> lugar só, em `ApiProblemDetailsFactory`, ao montar a resposta
+> ([ADR 0051](adr/0051-camelcase-error-keys-on-the-wire.md)).
+
+**Validação do domínio** (`ErrorType.Validation` sem `FieldErrors`) — quando uma regra escapa do validator e
+só o domínio a recusa (portão 3 da [ARCHITECTURE §4](../backend/docs/ARCHITECTURE.md)), o `DomainErrorMapper`
+devolve o `DomainError` sem campo. O `title` continua o genérico de validação, o `code` do topo é o do domínio
+(não `Validation.Failed`) e `errors` traz a chave vazia `""` com o mesmo `code` e a mensagem do domínio, que é o
+fallback em pt-BR. O domínio não sabe qual campo nem qual índice da lista falhou, então a mensagem vai para o nível
+do formulário:
+
+```json
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"FullName.Required","traceId":"...","correlationId":"...","errors":{"":[{"code":"FullName.Required","message":"O nome completo é obrigatório."}]}}
+```
 
 **Aplicação** (`NotFound`/`Conflict`/`Forbidden`, sem `FieldErrors`) — `errors` colapsa para
 **uma única chave vazia** (`""`), cujo valor repete o `code`/mensagem do nível raiz. Não é um campo
@@ -144,7 +157,7 @@ field, meta)` (`Admin.SharedKernel`) monta o conflito já chaveado pelo campo, c
 no campo. Exemplo verificado:
 
 ```json
-{"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"Cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478","clientName":"Maria Souza"}}]}}
+{"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478","clientName":"Maria Souza"}}]}}
 ```
 
 ### 4.2 Forma reduzida do filtro de tenant
@@ -157,10 +170,12 @@ Só `Tenant.ContextMismatch` (§2) usa essa forma menor — sem `traceId`/`corre
 Se o **model binder** do `[ApiController]` rejeita o corpo antes de qualquer `IValidator`/handler
 rodar — uma propriedade obrigatória do record **totalmente ausente** do JSON (não vazia: ausente), ou
 JSON malformado — a resposta é o `ValidationProblemDetails` padrão do framework, não
-`ApiProblemDetails`. Três diferenças que quebram tratamento genérico escrito só olhando §4.1:
+`ApiProblemDetails`. Quatro diferenças que quebram tratamento genérico escrito só olhando §4.1:
 
 - **sem `code`** — nada para ramificar;
 - `errors` é `Record<string, string[]>` — array de string, não de `{code, message}`;
+- as chaves de `errors` ficam com o nome C# (`FullName`, `Guardians[0].Name`), não em camelCase —
+  essa resposta não passa por `ApiProblemDetailsFactory` ([ADR 0051](adr/0051-camelcase-error-keys-on-the-wire.md));
 - `type` aponta pra RFC 9110 genérica, e a mensagem **vem em inglês** ("The Name field is
   required.", "One or more validation errors occurred.") — quebra a regra de copy pt-BR se
   exibida crua.
@@ -220,7 +235,7 @@ existe.
 
 Cada linha ilustra uma **categoria** de resposta que se repete em qualquer feature; a rota é só onde
 ela foi observada. Rodado ao vivo contra a instância local (2026-09-13) e contra um PostgreSQL
-descartável (2026-10-02), com os dados de teste removidos ao final.
+descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dados de teste removidos ao final.
 
 | Cenário | Verbo + rota | Status | `code` |
 | --- | --- | --- | --- |
@@ -228,13 +243,13 @@ descartável (2026-10-02), com os dados de teste removidos ao final.
 | Recurso não encontrado | `PUT`/`DELETE /api/v1/tags/{id}` (id não existe) | 404 | `Tag.NotFound` |
 | Recurso em uso (regra cruzando entidades) | `DELETE /api/v1/tags/{id}` (tag usada por um `service`) | 409 | `Tag.InUse` |
 | Categoria não encontrada | `GET /api/v1/categories/{id}` (id não existe) | 404 | `Category.NotFound` |
-| Id vazio ≠ id inexistente | `DELETE /api/v1/tags/00000000-0000-0000-0000-000000000000` | 400 (não 404!) | `Validation.Failed` (`TagId`: `NotEmptyValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`Page`: `GreaterThanOrEqualValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`PageSize`: `InclusiveBetweenValidator`) |
-| CPF já cadastrado (pessoa ativa ou inativa) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.Cpf[0].meta.clientId`) |
-| E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.Email[0].meta.clientId`) |
-| Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`Guardians`: `Client.GuardianRequired`) |
-| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`Guardians[0].Name`: `ClientContact.NameRequired`, `Guardians[0].Cpf`: `CpfNumber.Invalid`, `ReferenceContacts[0].Purposes`: `ContactPurposes.Required`…) |
+| Id vazio ≠ id inexistente | `DELETE /api/v1/tags/00000000-0000-0000-0000-000000000000` | 400 (não 404!) | `Validation.Failed` (`tagId`: `NotEmptyValidator`) |
+| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`page`: `GreaterThanOrEqualValidator`) |
+| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`pageSize`: `InclusiveBetweenValidator`) |
+| CPF já cadastrado (pessoa ativa ou inativa) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.cpf[0].meta.clientId`) |
+| E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.email[0].meta.clientId`) |
+| Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`guardians`: `Client.GuardianRequired`) |
+| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `guardians[0].cpf`: `CpfNumber.Invalid`, `referenceContacts[0].purposes`: `ContactPurposes.Required`…) |
 | `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (forma §4.3, inglês, sem `code`) | — |
 
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
