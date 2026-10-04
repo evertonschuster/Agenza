@@ -1,6 +1,6 @@
-# ADR 0051 — Error keys on the wire are the camelCase path of the request body
+# ADR 0051 — Error keys on the wire are the camelCase path of the request field
 
-Status: accepted (2026-10); changes the key casing of the conflict contract in
+Status: accepted (2026-10); supersedes the key casing of the conflict contract in
 [ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md) (`Cpf`, `Email` → `cpf`, `email`)
 
 ## Context
@@ -30,10 +30,13 @@ and English text, and that a client only shows as a form-level fallback.
 ## Consequences
 
 - A client maps a key to a form path by replacing `[n]` with `.n`, with no case folding. The admin-frontend's
-  case-insensitive lookup keeps working unchanged.
+  `toFormErrors` matches flat keys (`name`, `color`) case-insensitively and keeps working unchanged; it does not
+  rewrite `[n]` yet, because no form on `main` has list fields. That step belongs to the first form that does (the
+  clients form), in its own frontend change.
 - The OpenAPI schema does not change (`errors` is a string-keyed map), so the generated frontend types do not either.
 - The conversion assumes the wire name of a field is the camelCase of its C# name. A `[JsonPropertyName]` on a
   command, or a different naming policy in the MVC JSON options, would break that silently; neither exists. Rename the
   C# property instead.
-- Two C# names that differ only in the case of their first letter would collide after conversion; no command has
-  such a pair.
+- Two keys can only collide after conversion if two properties of one command share a camelCase name, and
+  System.Text.Json already refuses such a type ("The JSON property name … collides with another property"), so the
+  request never reaches the validator. The conversion does not merge keys for a case that cannot occur.

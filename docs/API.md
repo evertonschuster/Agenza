@@ -107,7 +107,8 @@ errors }`. `errors` muda de forma dependendo do tipo:
 
 **Validação** (`ErrorType.Validation` com `FieldErrors`) — `code` é sempre `"Validation.Failed"`
 (genérico; o código específico da regra vive dentro de `errors`), `errors` tem uma chave por
-**campo do corpo**, cada uma uma lista de `{code, message}`.
+**campo validado da requisição**, seja do corpo, da rota ou da query, e cada chave traz uma lista de
+`{code, message}`.
 
 O `code` de cada item é o código de negócio da regra, no formato `<Tipo>.<Regra>` — o mesmo
 `DomainError` que o domínio devolveria, reaproveitado pelo validator com `.WithErrorCode(...)`; por

@@ -10,7 +10,7 @@ superseded is historical evidence, not current implementation guidance.
 | Service and data topology | 0001, 0002, 0003, 0024, 0029 |
 | Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049, 0051 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
-| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as amended by 0051, 0046, 0048, 0049 |
+| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051, 0046, 0048, 0049 |
 | Dates, times and time zones | 0045 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
 | Authentication UX and AI delegation | 0020, 0022 |
@@ -30,8 +30,9 @@ superseded is historical evidence, not current implementation guidance.
 | 0013 | 0024 | Application-only tenant relationship enforcement |
 | 0023 | 0026 | Dedicated runtime-test project |
 | 0030 local-hook portion | 0031 | Repository-owned local Git hooks |
+| 0044 key-casing portion | 0051 | PascalCase keys in the conflict contract (`errors.Cpf`, `errors.Email`) |
 
-ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, and 0030
+ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, 0030, and 0044
 contain explicitly marked historical passages. Their status header and the
 newer ADR named there win over the historical body.
 
