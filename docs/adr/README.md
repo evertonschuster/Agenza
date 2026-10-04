@@ -8,9 +8,9 @@ superseded is historical evidence, not current implementation guidance.
 | Concern | Current ADRs |
 | --- | --- |
 | Service and data topology | 0001, 0002, 0003, 0024, 0029 |
-| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012, 0014, 0018, 0048 |
+| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
-| Clients (served persons): aggregate, uniqueness, conflicts | 0044 |
+| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044, 0046, 0048, 0049 |
 | Dates, times and time zones | 0045 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026 |
 | Authentication UX and AI delegation | 0020, 0022 |
@@ -42,6 +42,16 @@ the `.agents/skills/` mirror, the sync script, or the governance CI job, which
 are the parts 0016 identified as the failure. Read 0016 for the failure analysis;
 follow 0041 for what to do.
 
+Pointers that died with that removal (`bfd16b8`): ADRs 0005, 0006, 0007 and 0012
+send the reader to `backend/CLAUDE.md` and to `backend-use-case` /
+`backend-new-microservice` skills, and ADRs 0024, 0026 and 0028 list an
+"architecture guard" among their fitness functions. Those skills and the guard
+no longer exist, and the guard was not replaced, so the rules it checked are
+enforced by review. `backend/CLAUDE.md` exists again, but only as an import of
+[`backend/AGENTS.md`](../../backend/AGENTS.md) — not the rulebook those ADRs
+describe. The current backend guide is
+[`backend/docs/ARCHITECTURE.md`](../../backend/docs/ARCHITECTURE.md).
+
 ## Complete register
 
 0001 context-aggregated services · 0002 schema per service · 0003 OpenIddict ·
@@ -61,4 +71,5 @@ cancellation layer · 0034 custom Result type · 0035 no server-state library ·
 harness removed · 0039 Base UI primitives · 0040 three-state theme · 0041 AI
 instruction files reinstated · 0042 widgets layer and layer-boundaries lint rule
 (proposed) · 0044 clients aggregate, uniqueness rules and conflict contract · 0045 backend works in UTC only ·
-0046 separate soft-delete and tenant query filters · 0048 database failures are generic to the user.
+0046 separate soft-delete and tenant query filters · 0048 database failures are generic to the user ·
+0049 conventions for new backend slices.

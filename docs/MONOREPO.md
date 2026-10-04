@@ -8,18 +8,11 @@ admin/
 │   ├── AdminBackend.slnx   .NET solution
 │   ├── AppHost/            .NET Aspire orchestrator — local dev only, see below
 │   ├── ServiceDefaults/    shared OpenTelemetry/health-check/service-discovery wiring
-│   ├── shared/
-│   │   ├── Admin.Identity.Client/       JWT validation + ITenantAccessor for resource services
-│   │   ├── Admin.SharedKernel/          CQRS/Result-pattern kernel (docs/adr/0005) — Result,
-│   │   │                                ICommand/IQuery + handlers, IDispatcher; framework-agnostic
-│   │   └── Admin.SharedKernel.AspNetCore/  Result → IActionResult mapping + the generic
-│   │                                        exception handler (docs/adr/0018) — only .Api
-│   │                                        projects reference this one
+│   ├── shared/             cross-cutting infrastructure only — kernel, ASP.NET Core and EF
+│   │                       helpers, token validation (backend/docs/ARCHITECTURE.md §1)
 │   └── services/
 │       ├── identity-service/   OIDC provider (OpenIddict), tenants, users, M2M tokens
-│       └── services-service/   the business's offerings — Tags,
-│                               Categories, and Services verticals,
-│                               plus Clients (served persons)
+│       └── services-service/   the tenant's business context: what it offers and whom it serves
 ├── ai-services/
 │   └── assistant-service/  placeholder Python/FastAPI AI service
 ├── infra/
@@ -96,10 +89,12 @@ the OpenAPI/OIDC runtime smoke instead of maintaining a parallel Compose graph.
 
 ## Adding a new backend microservice
 
-Create the five base projects (Domain/Application/Infrastructure/Api/Tests)
-and add a PersistenceTests project whenever tenant-scoped EF behavior needs
-security coverage. Use the live services, central package file, solution, and
-AppHost as executable references; do not copy versioned project templates.
+Usually you don't: a capability that fits an existing business context is a
+new feature inside that service (docs/adr/0001). When a new context does
+justify a service, record it in an ADR and follow
+[backend/docs/ARCHITECTURE.md §1](../backend/docs/ARCHITECTURE.md#1-shape).
+Use the live services, central package file, solution, and AppHost as
+executable references; do not copy versioned project templates.
 
 ## Adding a new AI service
 

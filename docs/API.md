@@ -4,9 +4,11 @@ Este documento descreve como o `services-service` **realmente se comporta**, ver
 requisições reais (`curl`) contra a instância local (porta 5080, via Aspire) em 2026-09-13, token de
 `owner@demo.local` no tenant demo. Não é uma cópia do código — é o comportamento observado na
 fronteira HTTP, com pointers para onde cada regra vive. Séries de erro por entidade (que campo,
-que `code`, que mensagem) **não são catalogadas aqui**: isso muda por feature e vive em
-`backend/services/*/​*.Application/**/*Validator.cs` e `*ErrorMapper.cs`. O que este documento fixa
-são as **formas** (envelopes, status HTTP, casing, idioma) que se repetem em qualquer endpoint novo.
+que `code`, que mensagem) **não são catalogadas aqui**: isso muda por feature e vive no código — nos
+validators, nos `DomainError` das entidades e value objects, e nos handlers de cada
+`<Feature>/` ([`backend/docs/ARCHITECTURE.md`](../backend/docs/ARCHITECTURE.md) §4). O que este
+documento fixa são as **formas** (envelopes, status HTTP, casing, idioma) que se repetem em qualquer
+endpoint novo; os exemplos são amostras, não inventário.
 
 Autoridade sobre isso: `Admin.SharedKernel` (`Result`, `Error`, `ErrorType`) e
 `Admin.SharedKernel.AspNetCore` (`ApiResponse<T>`, `ApiProblemDetails`, `ApiProblemDetailsFactory`,
@@ -55,14 +57,15 @@ mesma mensagem, de propósito (não vazar qual parte da checagem falhou).
 Toda resposta 2xx com corpo é `{ data, success: true, timestamp, traceId, correlationId }`. `data` é
 o único campo que muda por endpoint.
 
-**Lista simples** (`GET /api/v1/tags`, `GET /api/v1/categories` — sem paginação, sem limite):
+**Lista simples** — `data` é um array (`IReadOnlyList<T>`), sem paginação. Exemplo, `GET /api/v1/tags`:
 
 ```json
 {"data":[{"id":"01a09ce6-fc92-7272-8df9-e1009a6201bb","name":"Everton","color":"#0d9488","description":null}],"success":true,"timestamp":"2026-09-13T22:42:22.21Z","traceId":"...","correlationId":"..."}
 ```
 
-**Lista paginada** (`GET /api/v1/services` — o único endpoint hoje que pagina; `page`/`pageSize`
-validados por `ListServicesQueryValidator`, ver §6):
+**Lista paginada** — `data` é `PagedResult<T>`: `{ items, totalCount, page, pageSize }`, com
+`page`/`pageSize` validados pelo validator da query (fora do intervalo → 400, ver §6). Exemplo,
+`GET /api/v1/services`:
 
 ```json
 {"data":{"items":[{"id":"...","code":1,"name":"Teste","description":null,"durationMinutes":2,"minDurationMinutes":1,"maxDurationMinutes":3,"price":10.00,"maxDiscountPercentage":10.00,"categoryId":null,"categoryName":null,"tags":[]}],"totalCount":1,"page":1,"pageSize":20},"success":true, "...":"..."}
@@ -80,14 +83,13 @@ Location: /api/v1/tags/01a09cef-9875-7588-90c0-06360a4f10d0
 **Atualização** — `200 OK`, mesma forma de `data` da criação, sem `Location`. **Delete** — `204 No
 Content`, sem corpo.
 
-Dois detalhes que mordem quem formata para exibição:
+Detalhes do fio que mordem quem formata para exibição:
 
-- Números decimais (`price`, `maxDiscountPercentage`) chegam como número JSON puro, sem zeros à
-  direita garantidos (`100.0`, `10`, não `100.00`/`10.00`) — formatação de moeda/percentual é
-  responsabilidade de quem consome ([`agenza-ptbr-copy`](../.claude/skills/agenza-ptbr-copy/SKILL.md)).
-- `services` embute o nome da categoria (`categoryName`) e um resumo de cada tag (`id`, `name`,
-  `color`) diretamente no payload — não é preciso buscar categoria/tag à parte para exibir uma
-  linha de serviço.
+- Números decimais chegam como número JSON puro, sem zeros à direita garantidos (`100.0`, `10`, não
+  `100.00`/`10.00`) — formatação de moeda/percentual é responsabilidade de quem consome
+  ([`agenza-ptbr-copy`](../.claude/skills/agenza-ptbr-copy/SKILL.md)).
+- Datas de calendário são `yyyy-MM-dd`; instantes são UTC; enums são strings camelCase
+  (`active`), nunca números.
 
 ## 4. Envelope de erro — quatro formas atrás do mesmo `application/problem+json`
 
@@ -105,11 +107,15 @@ errors }`. `errors` muda de forma dependendo do tipo:
 
 **Validação** (`ErrorType.Validation` com `FieldErrors`) — `code` é sempre `"Validation.Failed"`
 (genérico; o código específico da regra vive dentro de `errors`), `errors` tem uma chave por
-**propriedade C#**, cada uma uma lista de `{code, message}`. O `code` de cada item depende do validator: os de
-`clients` dão a cada regra um código de negócio com `.WithErrorCode(...)`, reaproveitando os erros declarados nos value
-objects e nas entidades (`FullName.Required`, `CpfNumber.Invalid`, `BirthDate.TooOld`, `Client.GuardianRequired`,
-`ClientContact.NameRequired`…); os de tags, categories e services ainda expõem o nome interno do validador do
-FluentValidation (`NotEmptyValidator`, `PredicateValidator`), que não distingue uma regra `.Must(...)` de outra:
+**propriedade C#**, cada uma uma lista de `{code, message}`.
+
+O `code` de cada item é o código de negócio da regra, no formato `<Tipo>.<Regra>` — o mesmo
+`DomainError` que o domínio devolveria, reaproveitado pelo validator com `.WithErrorCode(...)`; por
+exemplo `{"code":"CpfNumber.Invalid","message":"Informe um CPF válido."}`. Validators anteriores a
+essa regra ([ADR 0044](adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md)) ainda expõem o
+nome interno do FluentValidation (`NotEmptyValidator`, `PredicateValidator`), que não distingue uma
+regra `.Must(...)` de outra — é legado, convertido quando a fatia é tocada. O exemplo verificado abaixo
+é dessa forma legada:
 
 ```json
 {"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"Name":[{"code":"NotEmptyValidator","message":"O nome da etiqueta é obrigatório."}],"Color":[{"code":"PredicateValidator","message":"A cor da etiqueta deve ser uma das seguintes: #0d9488, #0ea5e9, #8b5cf6, #ec4899, #ef4444, #f59e0b, #22c55e, #64748b."}]}}
@@ -132,10 +138,10 @@ de formulário: é o mesmo formato reaproveitado para carregar um erro sem campo
 **Conflito por campo, com `meta`** — um handler pode devolver o `Conflict` já chaveado pelo campo (em vez da
 chave `""`), para o formulário mostrar a mensagem sob o input certo. Cada entrada de `errors` aceita um `meta`
 opcional (mapa string→string, **omitido quando nulo**, então nenhuma resposta anterior muda) com contexto para
-máquina. Os conflitos de CPF e de e-mail de `POST /api/v1/clients` colocam ali o `clientId` e o `clientName` do cadastro
-existente, que nunca está excluído (uma pessoa excluída não conta para a unicidade). Vem um conflito por vez: o de CPF
-tem precedência, e o de e-mail só aparece com o CPF livre. No backend, `Error.Conflict(code, message, field, meta)`
-(`Admin.SharedKernel`) monta o conflito já chaveado pelo campo, com o mesmo `code` e mensagem no topo e no campo.
+máquina — tipicamente o id e o nome do registro existente com que o novo colide, para a interface poder abri-lo.
+Vem um conflito por resposta, numa ordem fixa definida pelo handler. No backend, `Error.Conflict(code, message,
+field, meta)` (`Admin.SharedKernel`) monta o conflito já chaveado pelo campo, com o mesmo `code` e mensagem no topo e
+no campo. Exemplo verificado:
 
 ```json
 {"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"Cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478","clientName":"Maria Souza"}}]}}
@@ -204,19 +210,17 @@ existe.
 | --- | --- | --- |
 | `Validation` | 400 | FluentValidation falhou (comando ou query) |
 | `NotFound` | 404 | Handler não achou o recurso pelo id |
-| `Conflict` | 409 | Regra de negócio (nome duplicado, recurso em uso, violação de índice único) |
+| `Conflict` | 409 | Regra de negócio checada pelo handler (duplicado, recurso em uso), ou falha ao salvar rejeitada pelo banco — esta última sempre genérica, `<Entity>.SaveFailed`, sem campo ([ADR 0048](adr/0048-database-failures-are-generic-to-the-user.md)) |
 | `Forbidden` | 403 | Erro de aplicação do tipo Forbidden (raro; não confundir com o 403 de tenant, §4.2) |
 | `Failure` | 400 | Fallback genérico |
-| corpo recusado pelo servidor | 413 / 400 | `GenericExceptionHandler`, forma canônica: `Request.TooLarge` acima do limite do endpoint (64 KB em `POST /api/v1/clients`), `Request.Invalid` para corpo truncado ou malformado no transporte |
+| corpo recusado pelo servidor | 413 / 400 | `GenericExceptionHandler`, forma canônica: `Request.TooLarge` acima do `[RequestSizeLimit]` do endpoint, `Request.Invalid` para corpo truncado ou malformado no transporte |
 | exceção não tratada | 500 | `GenericExceptionHandler`, forma canônica, mensagem sempre genérica (não vaza detalhe da exceção) |
 
 ## 6. Exemplos verificados (amostra, não catálogo)
 
-Rodado ao vivo em 2026-09-13 contra tags/categories/services; todos os dados de teste criados
-(`__doc_probe_*`) foram removidos ao final via `DELETE`. As linhas de `clients` foram rodadas ao vivo em
-2026-10-02 contra um PostgreSQL descartável (não há `DELETE` de pessoas ainda; o banco foi descartado). Um
-`tenantId` enviado no corpo é ignorado, e 8–10 criações paralelas com o mesmo CPF ou e-mail resultam em
-exatamente um `201` e os demais `409`.
+Cada linha ilustra uma **categoria** de resposta que se repete em qualquer feature; a rota é só onde
+ela foi observada. Rodado ao vivo contra a instância local (2026-09-13) e contra um PostgreSQL
+descartável (2026-10-02), com os dados de teste removidos ao final.
 
 | Cenário | Verbo + rota | Status | `code` |
 | --- | --- | --- | --- |
@@ -238,9 +242,9 @@ constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado pas
 normalmente e só é rejeitado dentro do `DeleteTagCommandValidator` (`NotEmpty`) — chega como 400 de
 validação, não 404 de "não encontrado", mesmo parecendo semanticamente "não existe".
 
-Catálogo completo de `code`s por entidade: `*CommandValidator.cs` (mensagens de forma/formato) e
-`*ErrorMapper.cs`/handlers (regras de negócio) sob
-`backend/services/services-service/ServicesService.Application/{Tags,Categories,Services}/`.
+Os `code`s de uma feature vivem no código dela: os validators e os `DomainError` declarados nas
+entidades e value objects (regras de forma), e os handlers (regras de estado), sob
+`backend/services/<service>/<Service>.Application/<Feature>/` e `<Service>.Domain/`.
 
 ## 7. Para quem consome isto (frontend e futuros agentes)
 
@@ -250,9 +254,10 @@ Catálogo completo de `code`s por entidade: `*CommandValidator.cs` (mensagens de
 - Trate **ausência de `code`** como um caso válido (fallback genérico), não como bug — acontece
   sempre que um campo obrigatório falta inteiramente no corpo, ou o JSON é inválido.
 - **Não confie em `Content-Type` nem em corpo presente** para 404/405 — podem vir vazios (§4.4).
-- Se algum dia esta API expuser mensagem nativa do framework (§4.3) direto na UI, ela sai em
-  inglês — quebra a regra de copy pt-BR. Prefira sempre um texto próprio por `code` conhecido, com
-  fallback genérico pt-BR quando `code` está ausente.
+- **Mostre a mensagem que veio na forma canônica (§4.1)** — `title` e cada `errors[campo][i].message`
+  são texto pt-BR escrito para o usuário final; exiba como chegou, sem reescrever. Texto próprio do
+  frontend só onde não há mensagem do backend utilizável: a forma nativa do framework (§4.3), que
+  sai em inglês e sem `code`, os 404/405 vazios (§4.4) e falhas de rede.
 - O contrato gerado (`shared/api/generated/services-api.d.ts`) promete `ApiProblemDetails` para
   todo erro — as formas §4.2 e §4.3 divergem desse contrato na prática. Isso é o comportamento real
   do serviço hoje, não necessariamente um bug a corrigir; só não dá pra assumir a forma rica em
