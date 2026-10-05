@@ -73,9 +73,9 @@ public static class ApiProblemDetailsFactory
         return CreateProblem(
             httpContext,
             RequestProblemType,
-            "Não foi possível ler os dados enviados.",
+            RequestErrors.Invalid.Message,
             status,
-            "Request.Invalid",
+            RequestErrors.Invalid.Code,
             EmptyErrors);
     }
 

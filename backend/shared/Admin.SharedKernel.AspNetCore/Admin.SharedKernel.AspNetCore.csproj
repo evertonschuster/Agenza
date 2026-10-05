@@ -11,8 +11,9 @@
   </ItemGroup>
 
   <ItemGroup>
-    <!-- Only the Result -> IActionResult mapping and the generic exception
-         handler live here - both need MVC/hosting types. Everything else
+    <!-- Only the Result -> IActionResult mapping, the invalid-model-state
+         mapping and the generic exception handler live here - all need
+         MVC/hosting types. Everything else
          (Result, Error, Cqrs, Dispatcher) stays framework-agnostic in
          Admin.SharedKernel (docs/adr/0018). -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />

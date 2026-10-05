@@ -1,4 +1,5 @@
 using System.Text.Json;
+using ServicesService.Application;
 using ServicesService.Application.Clients.CreateClient;
 
 namespace ServicesService.Tests.Clients.CreateClient;
@@ -54,6 +55,17 @@ public class CpfNumberJsonConverterTests
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.cpf");
         exception.Message.Should().Contain("O CPF informado é inválido.");
+    }
+
+    [Theory]
+    [InlineData("\"123\"")]
+    [InlineData("52998224725")]
+    public void Read_WithAnInvalidCpf_ThrowsAMessageRegisteredAsAKnownWireError(string cpfJson)
+    {
+        var act = () => Bind(cpfJson);
+
+        var message = act.Should().Throw<JsonException>().Which.Message;
+        WireJsonConverters.KnownErrors.Should().Contain(error => error.Message == message);
     }
 
     [Fact]
