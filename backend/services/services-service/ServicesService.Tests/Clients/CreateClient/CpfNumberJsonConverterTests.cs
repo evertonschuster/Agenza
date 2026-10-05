@@ -5,12 +5,10 @@ namespace ServicesService.Tests.Clients.CreateClient;
 
 public class CpfNumberJsonConverterTests
 {
-    private static readonly JsonSerializerOptions WebOptions = new(JsonSerializerDefaults.Web);
-
     private static CreateClientCommand Bind(string cpfJson) =>
         JsonSerializer.Deserialize<CreateClientCommand>(
             $$"""{ "fullName": "Maria Souza", "cpf": {{cpfJson}} }""",
-            WebOptions)!;
+            WireJson.Options)!;
 
     [Theory]
     [InlineData("\"529.982.247-25\"")]
@@ -36,7 +34,7 @@ public class CpfNumberJsonConverterTests
     [Fact]
     public void Read_WithTheFieldAbsent_BindsNull()
     {
-        var command = JsonSerializer.Deserialize<CreateClientCommand>("""{ "fullName": "Maria Souza" }""", WebOptions)!;
+        var command = JsonSerializer.Deserialize<CreateClientCommand>("""{ "fullName": "Maria Souza" }""", WireJson.Options)!;
 
         command.Cpf.Should().BeNull();
     }
@@ -71,7 +69,7 @@ public class CpfNumberJsonConverterTests
     {
         var command = JsonSerializer.Deserialize<CreateClientCommand>(
             """{ "fullName": "Maria Souza", "guardians": [{ "name": "Ana Souza", "relationship": "Mãe", "cpf": "123.456.789-09" }] }""",
-            WebOptions)!;
+            WireJson.Options)!;
 
         command.Guardians.Should().ContainSingle().Which.Cpf!.Value.Should().Be("12345678909");
     }
@@ -81,7 +79,7 @@ public class CpfNumberJsonConverterTests
     {
         var act = () => JsonSerializer.Deserialize<CreateClientCommand>(
             """{ "fullName": "Maria Souza", "guardians": [{ "name": "Ana Souza", "relationship": "Mãe", "cpf": "123" }] }""",
-            WebOptions);
+            WireJson.Options);
 
         act.Should().Throw<JsonException>().Which.Path.Should().Be("$.guardians[0].cpf");
     }
@@ -91,7 +89,7 @@ public class CpfNumberJsonConverterTests
     {
         var json = JsonSerializer.Serialize(
             new GuardianInput("Ana Souza", "Mãe", null, ClientTestData.Cpf()),
-            WebOptions);
+            WireJson.Options);
 
         json.Should().Contain("\"cpf\":\"52998224725\"");
     }

@@ -2,7 +2,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using ServicesService.Domain.ValueObjects;
 
-namespace ServicesService.Application.Clients.CreateClient;
+namespace ServicesService.Application.Clients;
 
 public sealed class CpfNumberJsonConverter : JsonConverter<CpfNumber>
 {
