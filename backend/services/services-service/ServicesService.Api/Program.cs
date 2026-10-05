@@ -18,7 +18,7 @@ builder.Services
         options.Filters.Add<TenantHeaderFilter>();
     })
     .AddJsonOptions(options => WireJsonConverters.AddTo(options.JsonSerializerOptions))
-    .AddModelStateProblemDetails(WireJsonConverters.KnownErrors);
+    .AddModelStateProblemDetails();
 builder.Services.AddApiDocumentation(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();

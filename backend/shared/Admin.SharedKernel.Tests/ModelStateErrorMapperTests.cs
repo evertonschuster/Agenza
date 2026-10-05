@@ -8,7 +8,8 @@ public class ModelStateErrorMapperTests
     private const string ConversionText =
         "The JSON value could not be converted to Some.Command. Path: $.birthDate | LineNumber: 0 | BytePositionInLine: 50.";
 
-    private static readonly FieldError KnownCpf = new("CpfNumber.Invalid", "O CPF informado é inválido.");
+    private const string ConverterText = "O CPF informado é inválido.";
+
     private static readonly string[] BodyParameters = ["command"];
 
     private static ModelStateDictionary State(params (string Key, string Message)[] errors)
@@ -24,34 +25,34 @@ public class ModelStateErrorMapperTests
 
     private static Error Map(ModelStateDictionary state)
     {
-        return ModelStateErrorMapper.ToError(state, BodyParameters, [KnownCpf]);
+        return ModelStateErrorMapper.ToError(state, BodyParameters);
     }
 
     [Fact]
     public void ToError_ReturnsAValidationErrorWithTheCanonicalCode()
     {
-        var error = Map(State(("$.cpf", KnownCpf.Message)));
+        var error = Map(State(("$.birthDate", ConversionText)));
 
         error.Type.Should().Be(ErrorType.Validation);
         error.Code.Should().Be("Validation.Failed");
-        error.Message.Should().Be(KnownCpf.Message);
+        error.Message.Should().Be(RequestErrors.InvalidValue.Message);
     }
 
     [Fact]
-    public void ToError_KeepsTheCodeAndMessageOfAKnownErrorAndDropsTheJsonRoot()
+    public void ToError_AConverterFailureUnderAJsonPathBecomesAnInvalidValueOfThatField()
     {
-        var error = Map(State(("$.cpf", KnownCpf.Message)));
+        var error = Map(State(("$.cpf", ConverterText)));
 
-        error.FieldErrors.Should().ContainSingle().Which.Should().Match<KeyValuePair<string, IReadOnlyList<FieldError>>>(
-            pair => pair.Key == "cpf" && pair.Value.Count == 1 && pair.Value[0].Code == "CpfNumber.Invalid");
+        error.FieldErrors!.Should().ContainSingle().Which.Key.Should().Be("cpf");
+        error.FieldErrors["cpf"].Should().Equal(RequestErrors.InvalidValue);
     }
 
     [Fact]
     public void ToError_KeepsTheIndexedPathOfANestedField()
     {
-        var error = Map(State(("$.guardians[0].cpf", KnownCpf.Message)));
+        var error = Map(State(("$.guardians[0].cpf", ConverterText)));
 
-        error.FieldErrors.Should().ContainKey("guardians[0].cpf");
+        error.FieldErrors!["guardians[0].cpf"].Should().Equal(RequestErrors.InvalidValue);
     }
 
     [Fact]
@@ -119,7 +120,7 @@ public class ModelStateErrorMapperTests
     [Fact]
     public void ToError_IgnoresEntriesWithoutErrors()
     {
-        var state = State(("$.cpf", KnownCpf.Message));
+        var state = State(("$.cpf", ConverterText));
         state.SetModelValue("name", "x", "x");
 
         var error = Map(state);
@@ -130,7 +131,7 @@ public class ModelStateErrorMapperTests
     [Fact]
     public void ToError_ProducesCamelCaseKeysOnceRenderedAsAProblem()
     {
-        var error = Map(State(("FullName", "The FullName field is required."), ("$.guardians[0].cpf", KnownCpf.Message)));
+        var error = Map(State(("FullName", "The FullName field is required."), ("$.guardians[0].cpf", ConverterText)));
 
         var problem = ApiProblemDetailsFactory.CreateValidationProblem(error);
 

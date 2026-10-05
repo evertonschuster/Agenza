@@ -12,8 +12,6 @@ namespace Admin.SharedKernel.Tests;
 
 public class MvcBuilderExtensionsTests
 {
-    private static readonly FieldError KnownCpf = new("CpfNumber.Invalid", "O CPF informado é inválido.");
-
     private static ActionContext BodyActionContext()
     {
         return new ActionContext
@@ -39,11 +37,11 @@ public class MvcBuilderExtensionsTests
     public void AddModelStateProblemDetails_AnswersAnInvalidModelWithTheCanonicalProblem()
     {
         var services = new ServiceCollection();
-        services.AddControllers().AddModelStateProblemDetails([KnownCpf]);
+        services.AddControllers().AddModelStateProblemDetails();
         var options = services.BuildServiceProvider().GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
         var context = BodyActionContext();
         context.ModelState.AddModelError("command", "The command field is required.");
-        context.ModelState.AddModelError("$.cpf", KnownCpf.Message);
+        context.ModelState.AddModelError("$.cpf", "O CPF informado é inválido.");
 
         var result = options.InvalidModelStateResponseFactory(context);
 
@@ -54,6 +52,6 @@ public class MvcBuilderExtensionsTests
         problem.Status.Should().Be(StatusCodes.Status400BadRequest);
         problem.TraceId.Should().NotBeNullOrWhiteSpace();
         problem.Errors!.Keys.Should().Equal("cpf");
-        problem.Errors["cpf"].Should().Equal(KnownCpf);
+        problem.Errors["cpf"].Should().Equal(RequestErrors.InvalidValue);
     }
 }

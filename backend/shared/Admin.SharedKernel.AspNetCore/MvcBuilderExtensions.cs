@@ -7,9 +7,7 @@ namespace Admin.SharedKernel.AspNetCore;
 
 public static class MvcBuilderExtensions
 {
-    public static IMvcBuilder AddModelStateProblemDetails(
-        this IMvcBuilder builder,
-        IReadOnlyCollection<FieldError> knownErrors)
+    public static IMvcBuilder AddModelStateProblemDetails(this IMvcBuilder builder)
     {
         return builder.ConfigureApiBehaviorOptions(options =>
         {
@@ -20,7 +18,7 @@ public static class MvcBuilderExtensions
                     .Select(parameter => parameter.Name)
                     .ToList();
 
-                var error = ModelStateErrorMapper.ToError(context.ModelState, bodyParameterNames, knownErrors);
+                var error = ModelStateErrorMapper.ToError(context.ModelState, bodyParameterNames);
                 var problem = ApiProblemDetailsFactory.CreateValidationProblem(error, context.HttpContext);
 
                 return new ObjectResult(problem) { StatusCode = StatusCodes.Status400BadRequest };

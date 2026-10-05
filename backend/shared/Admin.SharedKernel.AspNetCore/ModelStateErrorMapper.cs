@@ -6,11 +6,9 @@ public static class ModelStateErrorMapper
 {
     private const string ConversionFailure = "The JSON value could not be converted";
     private const string RequiredSuffix = "field is required.";
+    private const string ParserPosition = "LineNumber:";
 
-    public static Error ToError(
-        ModelStateDictionary modelState,
-        IReadOnlyCollection<string> bodyParameterNames,
-        IReadOnlyCollection<FieldError> knownErrors)
+    public static Error ToError(ModelStateDictionary modelState, IReadOnlyCollection<string> bodyParameterNames)
     {
         var failed = modelState
             .Where(entry => entry.Value is { Errors.Count: > 0 })
@@ -28,7 +26,7 @@ public static class ModelStateErrorMapper
         {
             foreach (var modelError in errors)
             {
-                var (field, fieldError) = Classify(key, modelError.ErrorMessage, knownErrors);
+                var (field, fieldError) = Classify(key, modelError.ErrorMessage);
                 if (!fieldErrors.TryGetValue(field, out var list))
                 {
                     list = [];
@@ -47,20 +45,9 @@ public static class ModelStateErrorMapper
     }
 
     // The framework hands over a key and English text, no code and no exception, so the cases below depend on its wording.
-    private static (string Field, FieldError Error) Classify(
-        string key,
-        string text,
-        IReadOnlyCollection<FieldError> knownErrors)
+    private static (string Field, FieldError Error) Classify(string key, string text)
     {
         var field = ToField(key);
-
-        foreach (var known in knownErrors)
-        {
-            if (known.Message == text)
-            {
-                return (field, known);
-            }
-        }
 
         if (text.StartsWith(ConversionFailure, StringComparison.Ordinal))
         {
@@ -72,7 +59,13 @@ public static class ModelStateErrorMapper
             return (field, RequestErrors.FieldRequired);
         }
 
-        if (key.Length == 0 || key[0] == '$')
+        if (key.Length == 0)
+        {
+            return (string.Empty, RequestErrors.Invalid);
+        }
+
+        // System.Text.Json writes the parser position into its own messages; a converter's own failure has none.
+        if (key[0] == '$' && text.Contains(ParserPosition, StringComparison.Ordinal))
         {
             return (string.Empty, RequestErrors.Invalid);
         }
