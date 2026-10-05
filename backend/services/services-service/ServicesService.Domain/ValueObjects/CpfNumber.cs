@@ -39,8 +39,6 @@ public sealed record CpfNumber
         return new CpfNumber(value);
     }
 
-    public static bool IsValid(string? raw) => HasValidCheckDigits(StripMask(raw ?? string.Empty));
-
     private static string StripMask(string value) =>
         new(value.Where(character => character is not ('.' or '-') && !char.IsWhiteSpace(character)).ToArray());
 

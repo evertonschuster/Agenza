@@ -1,5 +1,6 @@
 using FluentValidation.Results;
 using ServicesService.Application.Clients.CreateClient;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients.CreateClient;
 
@@ -13,7 +14,7 @@ public class CreateClientCommandValidatorTests
         DateOnly? birthDate = null,
         string? phone = null,
         string? email = null,
-        string? cpf = null,
+        CpfNumber? cpf = null,
         string? notes = null,
         IReadOnlyList<GuardianInput>? guardians = null,
         IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
@@ -23,7 +24,7 @@ public class CreateClientCommandValidatorTests
         string name = "Ana Souza",
         string relationship = "Mãe",
         string? phone = null,
-        string? cpf = null) =>
+        CpfNumber? cpf = null) =>
         new(name, relationship, phone, cpf);
 
     private static ReferenceContactInput Reference(
@@ -54,7 +55,6 @@ public class CreateClientCommandValidatorTests
             { "phone", Command(phone: "telefone"), "Phone", "PhoneNumber.Invalid" },
             { "email shape", Command(email: "maria@example"), "Email", "EmailAddress.Invalid" },
             { "email length", Command(email: new string('a', 255) + "@x.com"), "Email", "EmailAddress.Invalid" },
-            { "cpf", Command(cpf: "529.982.247-24"), "Cpf", "CpfNumber.Invalid" },
             { "notes", Command(notes: new string('n', 501)), "AdministrativeNotes", "AdministrativeNotes.TooLong" },
             { "minor without guardian", Command(birthDate: new DateOnly(2015, 3, 10)), "Guardians", "Client.GuardianRequired" },
             { "too many guardians", Command(guardians: tooManyGuardians), "Guardians", "Client.TooManyGuardians" },
@@ -66,7 +66,6 @@ public class CreateClientCommandValidatorTests
             { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
             { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
             { "guardian phone", Command(guardians: [Guardian(phone: "x")]), "Guardians[0].Phone", "PhoneNumber.Invalid" },
-            { "guardian cpf", Command(guardians: [Guardian(cpf: "123")]), "Guardians[0].Cpf", "CpfNumber.Invalid" },
             { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput("Carlos Lima", "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
             { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Unknown" },
         };
@@ -87,9 +86,9 @@ public class CreateClientCommandValidatorTests
             birthDate: new DateOnly(1990, 5, 20),
             phone: "+55 (11) 99999-0000",
             email: "Maria@Example.com",
-            cpf: ClientTestData.ValidCpf,
+            cpf: ClientTestData.Cpf(),
             notes: "Prefere atendimento à tarde.",
-            guardians: [Guardian(phone: "(11) 98888-0000", cpf: ClientTestData.OtherValidCpf)],
+            guardians: [Guardian(phone: "(11) 98888-0000", cpf: ClientTestData.Cpf(ClientTestData.OtherValidCpf))],
             referenceContacts: [Reference(phone: "11 4000-1000", purposes: ["emergency", "dailyCommunication"])]));
 
         result.IsValid.Should().BeTrue();
@@ -247,22 +246,11 @@ public class CreateClientCommandValidatorTests
     }
 
     [Theory]
-    [InlineData("529.982.247-24")]
-    [InlineData("111.111.111-11")]
-    [InlineData("1234")]
-    public async Task Validate_WithInvalidCpf_Fails(string cpf)
-    {
-        var result = await Validate(Command(cpf: cpf));
-
-        MessagesFor(result, "Cpf").Should().Equal("Informe um CPF válido.");
-    }
-
-    [Theory]
     [InlineData("")]
     [InlineData("   ")]
     public async Task Validate_WithBlankOptionalFields_Passes(string blank)
     {
-        var result = await Validate(Command(phone: blank, email: blank, cpf: blank, notes: blank));
+        var result = await Validate(Command(phone: blank, email: blank, notes: blank));
 
         result.IsValid.Should().BeTrue();
     }
@@ -284,14 +272,13 @@ public class CreateClientCommandValidatorTests
         var result = await Validate(Command(guardians:
         [
             Guardian(),
-            Guardian(name: "A", relationship: new string('r', 61), phone: "tel", cpf: "123"),
+            Guardian(name: "A", relationship: new string('r', 61), phone: "tel"),
         ]));
 
         MessagesFor(result, "Guardians[1].Name").Should().Equal("O nome do responsável deve ter pelo menos 2 caracteres.");
         MessagesFor(result, "Guardians[1].Relationship").Should()
             .Equal("O vínculo do responsável deve ter no máximo 60 caracteres.");
         MessagesFor(result, "Guardians[1].Phone").Should().ContainSingle();
-        MessagesFor(result, "Guardians[1].Cpf").Should().Equal("Informe um CPF válido.");
         result.Errors.Should().NotContain(error => error.PropertyName.StartsWith("Guardians[0]"));
     }
 

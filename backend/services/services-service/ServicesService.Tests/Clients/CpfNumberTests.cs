@@ -49,13 +49,6 @@ public class CpfNumberTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("CpfNumber.Invalid");
-        CpfNumber.IsValid(raw).Should().BeFalse();
-    }
-
-    [Fact]
-    public void IsValid_WithValidMaskedCpf_ReturnsTrue()
-    {
-        CpfNumber.IsValid("529.982.247-25").Should().BeTrue();
     }
 
     [Fact]

@@ -43,8 +43,6 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
             .WithErrorCode(EmailAddress.Invalid.Code)
             .WithMessage("Informe um e-mail válido.");
 
-        RuleFor(command => command.Cpf).MustBeValidCpf();
-
         RuleFor(command => command.AdministrativeNotes)
             .Must(notes => notes is null || notes.Trim().Length <= AdministrativeNotes.MaxLength)
             .WithErrorCode(AdministrativeNotes.TooLong.Code)
@@ -92,7 +90,6 @@ public sealed class GuardianInputValidator : AbstractValidator<GuardianInput>
         RuleFor(guardian => guardian.Name).MustBeValidContactName("do responsável");
         RuleFor(guardian => guardian.Relationship).MustBeValidContactRelationship("do responsável");
         RuleFor(guardian => guardian.Phone).MustBeValidPhone();
-        RuleFor(guardian => guardian.Cpf).MustBeValidCpf();
     }
 }
 

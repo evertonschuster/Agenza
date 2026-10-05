@@ -34,12 +34,6 @@ public static class CreateClientCommandExtensions
             return DomainResult.Failure<Client>(emailResult.Error);
         }
 
-        var cpfResult = CpfNumber.Create(command.Cpf);
-        if (cpfResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(cpfResult.Error);
-        }
-
         var notesResult = AdministrativeNotes.Create(command.AdministrativeNotes);
         if (notesResult.IsFailure)
         {
@@ -64,7 +58,7 @@ public static class CreateClientCommandExtensions
             birthDateResult.Value,
             phoneResult.Value,
             emailResult.Value,
-            cpfResult.Value,
+            command.Cpf,
             notesResult.Value,
             today,
             guardiansResult.Value,
@@ -97,13 +91,7 @@ public static class CreateClientCommandExtensions
             return DomainResult.Failure<GuardianData>(phoneResult.Error);
         }
 
-        var cpfResult = CpfNumber.Create(input.Cpf);
-        if (cpfResult.IsFailure)
-        {
-            return DomainResult.Failure<GuardianData>(cpfResult.Error);
-        }
-
-        return DomainResult.Success(new GuardianData(input.Name, input.Relationship, phoneResult.Value, cpfResult.Value));
+        return DomainResult.Success(new GuardianData(input.Name, input.Relationship, phoneResult.Value, input.Cpf));
     }
 
     private static DomainResult<List<ReferenceContactData>> ToReferenceContacts(

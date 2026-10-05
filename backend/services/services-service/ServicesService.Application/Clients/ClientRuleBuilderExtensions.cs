@@ -14,13 +14,6 @@ public static class ClientRuleBuilderExtensions
                 $"Informe um telefone válido, com até {PhoneNumber.MaxLength} caracteres entre dígitos, espaços, +, parênteses e hífen.");
     }
 
-    public static IRuleBuilderOptions<T, string?> MustBeValidCpf<T>(this IRuleBuilder<T, string?> rule)
-    {
-        return rule.Must(cpf => string.IsNullOrWhiteSpace(cpf) || CpfNumber.IsValid(cpf))
-            .WithErrorCode(CpfNumber.Invalid.Code)
-            .WithMessage("Informe um CPF válido.");
-    }
-
     public static IRuleBuilderOptions<T, string> MustBeValidContactName<T>(
         this IRuleBuilderInitial<T, string> rule,
         string subject)

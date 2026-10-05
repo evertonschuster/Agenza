@@ -1,4 +1,6 @@
+using System.Text.Json.Serialization;
 using Admin.SharedKernel;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Clients.CreateClient;
 
@@ -7,12 +9,16 @@ public sealed record CreateClientCommand(
     DateOnly? BirthDate,
     string? Phone,
     string? Email,
-    string? Cpf,
+    [property: JsonConverter(typeof(CpfNumberJsonConverter))] CpfNumber? Cpf,
     string? AdministrativeNotes,
     IReadOnlyList<GuardianInput>? Guardians,
     IReadOnlyList<ReferenceContactInput>? ReferenceContacts) : ICommand<ClientResponse>;
 
-public sealed record GuardianInput(string Name, string Relationship, string? Phone, string? Cpf);
+public sealed record GuardianInput(
+    string Name,
+    string Relationship,
+    string? Phone,
+    [property: JsonConverter(typeof(CpfNumberJsonConverter))] CpfNumber? Cpf);
 
 public sealed record ReferenceContactInput(
     string Name,
