@@ -362,7 +362,8 @@ Inject `ILogger<T>` and write a message template with named placeholders, never 
 the pipeline behind it, owned by `Admin.Logging` and brought in by `AddServiceDefaults()`
 ([0054](../../docs/adr/0054-serilog-readable-console-logging.md)): a service configures nothing. Domain and Application
 stay on `Microsoft.Extensions.Logging.Abstractions` and nothing calls the static `Log`. The default levels live in
-`Admin.Logging`; a host that needs another level sets it under `Serilog:MinimumLevel` in its `appsettings.json`
+`Admin.Logging`; a host that needs another level sets it under `Serilog:MinimumLevel` in its `appsettings.json`, and drops a
+noisy message by text with `Serilog:Filter` (identity-service does, for OpenIddict's request dumps)
 (`Logging:LogLevel` is ignored). A message carries constraint names, codes and ids, not request input; when it must,
 strip control characters first (CWE-117), as `GenericExceptionHandler` and the request line do.
 

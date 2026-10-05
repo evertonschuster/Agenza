@@ -31,8 +31,12 @@ A new service gets all of the following from `AddServiceDefaults()`, with no `Pr
   its output to a file.
 - **Levels in code**: `Information`, with `Microsoft.AspNetCore`, `Microsoft.EntityFrameworkCore.Database.Command`,
   `System.Net.Http.HttpClient` and `Polly` at `Warning`. `Serilog:MinimumLevel` in configuration overrides or extends
-  that per host (the AppHost quiets `Aspire.Hosting.Dcp` there). `OpenIddict` stays at `Information` on purpose: it
-  reports rejected token and authorization requests there. `Logging:LogLevel` is no longer read.
+  that per host (the AppHost quiets `Aspire.Hosting.Dcp` there), and `Serilog:Filter` drops messages by text.
+  `OpenIddict` stays at `Information` on purpose: it reports rejected token and authorization requests there, in the
+  same category as its request and response dumps. identity-service therefore keeps the level and filters the dumps
+  (`was successfully extracted/validated/returned`, `matched a server endpoint`): a token request goes from about
+  twenty lines to the request line, plus the reason when it is rejected. If OpenIddict rewords a message the noise
+  comes back; nothing is hidden. `Logging:LogLevel` is no longer read.
 - **Structured export** through `Serilog.Sinks.OpenTelemetry`, only when `OTEL_EXPORTER_OTLP_ENDPOINT` is set. It reads
   the `OTEL_*` variables Aspire injects, so log-to-trace correlation and the resource name need no code.
 - **One line per request**, from an `IStartupFilter` that puts `UseSerilogRequestLogging` outside the application's own

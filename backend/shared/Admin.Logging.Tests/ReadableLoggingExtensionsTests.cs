@@ -70,6 +70,34 @@ public class ReadableLoggingExtensionsTests
     }
 
     [Fact]
+    public void AddReadableLogging_HonorsFiltersFromConfiguration()
+    {
+        var captured = new StringWriter();
+        var previous = Console.Out;
+        Console.SetOut(captured);
+
+        try
+        {
+            using var provider = BuildProvider(new Dictionary<string, string?>
+            {
+                ["Serilog:Filter:0:Name"] = "ByExcluding",
+                ["Serilog:Filter:0:Args:expression"] = "@mt like '%was successfully%'",
+            });
+            var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("OpenIddict.Server.Dispatcher");
+
+            logger.LogInformation("The request was successfully extracted");
+            logger.LogInformation("The request was rejected because invalid scopes were specified");
+        }
+        finally
+        {
+            Console.SetOut(previous);
+        }
+
+        captured.ToString().Should().Contain("rejected because invalid scopes");
+        captured.ToString().Should().NotContain("successfully extracted");
+    }
+
+    [Fact]
     public void AddReadableLogging_DoesNotReplaceTheStaticLogger()
     {
         using var provider = BuildProvider();
