@@ -29,7 +29,9 @@ NuGet, pip, and the workflows' actions.
   assemblies each project references — **Domain + Application** —
   gated at 80% line coverage. `Admin.SharedKernel` is excluded from
   every _consuming_ service's gate (`Directory.Build.targets`) since it
-  has its own dedicated project (`Admin.SharedKernel.Tests`) and gate —
+  has its own dedicated project (`Admin.SharedKernel.Tests`) and gate, and
+  so does `Admin.Logging` (`Admin.Logging.Tests`, which never counts
+  toward a service's gate because no service test project references it) —
   counting it twice would let one hide behind the other's number
   (docs/adr/0005). `ServicesService.PersistenceTests` covers EF tenant
   assignment and filtering in memory (docs/adr/0019). There is no

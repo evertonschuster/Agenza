@@ -45,6 +45,8 @@ Cada linha é um lembrete; a regra, com o porquê, está na seção indicada da
   unicidade; migração só aditiva.** [§5](docs/ARCHITECTURE.md#5-tenancy-and-persistence)
 - **Controller sem lógica; enum no fio é string.** [§6](docs/ARCHITECTURE.md#6-http-surface)
 - **UTC, sempre.** [§7](docs/ARCHITECTURE.md#7-time)
+- **Log com `ILogger<T>` e template com placeholders, nunca string interpolada; nível em `Serilog:MinimumLevel`.**
+  [§8](docs/ARCHITECTURE.md#logging)
 - **Corpo em bloco com guard clauses; sem comentário de "o quê".** [§8](docs/ARCHITECTURE.md#8-code-style)
 
 ## Portões
