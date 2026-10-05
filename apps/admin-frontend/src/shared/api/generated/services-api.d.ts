@@ -782,7 +782,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails'];
+            'text/plain': components['schemas']['ApiProblemDetails'];
+            'application/json': components['schemas']['ApiProblemDetails'];
+            'text/json': components['schemas']['ApiProblemDetails'];
           };
         };
         /** @description Unauthorized */
@@ -951,7 +953,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'application/problem+json': components['schemas']['ApiProblemDetails'];
+            'text/plain': components['schemas']['ApiProblemDetails'];
+            'application/json': components['schemas']['ApiProblemDetails'];
+            'text/json': components['schemas']['ApiProblemDetails'];
           };
         };
         /** @description Unauthorized */

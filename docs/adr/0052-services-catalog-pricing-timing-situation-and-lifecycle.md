@@ -83,7 +83,8 @@ the links, the `CHECK`s, and the case-insensitive name index.
 - Deleting a tag while a create that uses it is in flight can leave a live link to a tag that is soft-deleted. Reads
   omit that tag. The join-table design had the same window; no lock is added for it.
 - `AddServiceCatalogFields` rolled back gives a service with a variable price a price of 0, restores the limits to
-  the duration and drops the pricing type and the situation.
+  the duration and drops the pricing type, the situation, the client description and the preparation and cleanup
+  times. Those values are lost.
 - `Money` has no currency; reais are implied by the product.
 
 ## Considered and rejected
