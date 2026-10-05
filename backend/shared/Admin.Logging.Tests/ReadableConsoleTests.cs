@@ -1,18 +1,34 @@
 using System.Globalization;
+using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Extensions.Logging;
 
 namespace Admin.Logging.Tests;
+
+internal sealed class SampleHandler;
 
 public class ReadableConsoleTests
 {
     [Fact]
-    public void Format_ShortensTheSourceContextToItsLastSegment()
+    public void Format_ShowsTheFullSourceContext()
     {
         var output = Render(colors: false, logger => logger
-            .ForContext("SourceContext", "ServicesService.Application.Clients.CreateClientCommandHandler")
-            .Information("Client {ClientId} created", 42));
+            .ForContext("SourceContext", "Microsoft.Hosting.Lifetime")
+            .Information("Now listening on: {Address}", "http://localhost:5080"));
 
-        output.Should().MatchRegex(@"^\[\d{2}:\d{2}:\d{2} INF\] CreateClientCommandHandler: Client 42 created\n$");
+        output.Should().MatchRegex(@"^\[\d{2}:\d{2}:\d{2} INF\] Microsoft\.Hosting\.Lifetime: Now listening on: http://localhost:5080\n$");
+    }
+
+    [Fact]
+    public void Format_ForAnILoggerOfT_ShowsTheFullNameOfThatClass()
+    {
+        var output = Render(colors: false, logger =>
+        {
+            using var factory = new SerilogLoggerFactory(logger);
+            factory.CreateLogger<SampleHandler>().LogInformation("Client {ClientId} created", 42);
+        });
+
+        output.Should().MatchRegex(@"^\[\d{2}:\d{2}:\d{2} INF\] Admin\.Logging\.Tests\.SampleHandler: Client 42 created\n$");
     }
 
     [Fact]

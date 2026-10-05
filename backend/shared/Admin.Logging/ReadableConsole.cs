@@ -9,7 +9,7 @@ internal static class ReadableConsole
 {
     private const string Template =
         "[{@t:HH:mm:ss} {@l:u3}]" +
-        "{#if SourceContext is not null} {Substring(SourceContext, LastIndexOf(SourceContext, '.') + 1)}:{#end}" +
+        "{#if SourceContext is not null} {SourceContext}:{#end}" +
         " {@m}\n{@x}";
 
     public static ITextFormatter CreateFormatter(bool colors)

@@ -20,8 +20,10 @@ neither used nor replaced ([0018](0018-shared-kernel-aspnetcore-split.md)).
 
 A new service gets all of the following from `AddServiceDefaults()`, with no `Program.cs` line and no settings block:
 
-- **One console format**, `[HH:mm:ss LVL] ShortContext: message`, then the exception block. `ShortContext` is the last
-  segment of the logger category. Culture is invariant (`35.8 ms`, not `35,8 ms`), in the console and in the OTLP body.
+- **One console format**, `[HH:mm:ss LVL] Category: message`, then the exception block. The category is written in full
+  (`ServicesService.Application.Clients.CreateClient.CreateClientCommandHandler` for an `ILogger<T>`): the first version
+  cut it to its last segment, which turned `Microsoft.Hosting.Lifetime` into a misleading `Lifetime`. Culture is
+  invariant (`35.8 ms`, not `35,8 ms`), in the console and in the OTLP body.
   The time is the host's local time: [0045](0045-backend-works-in-utc.md) is about domain and persistence instants, and
   the OTLP export carries absolute ones. `UtcDateTime(@t)` in the template flips it.
 - **Colors** only in `Development`, never with `NO_COLOR`. A service passes `colorWhenRedirected` because the Aspire
