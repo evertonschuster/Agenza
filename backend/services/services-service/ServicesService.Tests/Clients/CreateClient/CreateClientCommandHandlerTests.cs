@@ -17,9 +17,9 @@ public class CreateClientCommandHandlerTests
 
     public CreateClientCommandHandlerTests()
     {
-        _repository.FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<CancellationToken>())
+        _repository.FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(null));
-        _repository.FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<CancellationToken>())
+        _repository.FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(null));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
@@ -163,8 +163,8 @@ public class CreateClientCommandHandlerTests
     {
         await Handler().Handle(Command(email: " Maria@Example.COM ", cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
-        await _repository.Received(1).FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>());
-        await _repository.Received(1).FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>());
+        await _repository.Received(1).FindByCpfAsync(ClientTestData.Cpf(), null, Arg.Any<CancellationToken>());
+        await _repository.Received(1).FindActiveByEmailAsync(ClientTestData.Email(), null, Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -172,15 +172,15 @@ public class CreateClientCommandHandlerTests
     {
         await Handler().Handle(Command(), CancellationToken.None);
 
-        await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<CancellationToken>());
-        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithCpfOfAnExistingClient_ReturnsAConflictPointingAtIt()
     {
         var existing = ClientTestData.ExistingClient();
-        _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
+        _repository.FindByCpfAsync(ClientTestData.Cpf(), null, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(existing));
 
         var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
@@ -204,7 +204,7 @@ public class CreateClientCommandHandlerTests
     public async Task Handle_WithEmailOfAnActiveClient_ReturnsAConflictPointingAtIt()
     {
         var existing = ClientTestData.ExistingClient();
-        _repository.FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>())
+        _repository.FindActiveByEmailAsync(ClientTestData.Email(), null, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(existing));
 
         var result = await Handler().Handle(Command(email: "Maria@Example.com"), CancellationToken.None);
@@ -223,9 +223,9 @@ public class CreateClientCommandHandlerTests
     [Fact]
     public async Task Handle_WithBothConflicts_ReportsTheCpfOnly()
     {
-        _repository.FindByCpfAsync(ClientTestData.Cpf(), Arg.Any<CancellationToken>())
+        _repository.FindByCpfAsync(ClientTestData.Cpf(), null, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
-        _repository.FindActiveByEmailAsync(ClientTestData.Email(), Arg.Any<CancellationToken>())
+        _repository.FindActiveByEmailAsync(ClientTestData.Email(), null, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
 
         var result = await Handler().Handle(
@@ -234,7 +234,7 @@ public class CreateClientCommandHandlerTests
 
         result.Error.Code.Should().Be("Client.DuplicateCpf");
         result.Error.FieldErrors!.Keys.Should().Equal("Cpf");
-        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]

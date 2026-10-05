@@ -1,27 +1,32 @@
 using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
+using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 
-namespace ServicesService.Application.Clients.CreateClient;
+namespace ServicesService.Application.Clients.UpdateClient;
 
-public sealed class CreateClientCommandHandler(
+public sealed class UpdateClientCommandHandler(
     IClientRepository clientRepository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider,
-    ILogger<CreateClientCommandHandler> logger) : ICommandHandler<CreateClientCommand, ClientResponse>
+    ILogger<UpdateClientCommandHandler> logger) : ICommandHandler<UpdateClientCommand, ClientResponse>
 {
-    public async Task<Result<ClientResponse>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
+    public async Task<Result<ClientResponse>> Handle(UpdateClientCommand command, CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
-        var clientResult = command.ToModel(today);
 
-        if (clientResult.IsFailure)
+        var client = await clientRepository.GetByIdAsync(command.ClientId, cancellationToken);
+        if (client is null)
         {
-            return Result.Failure<ClientResponse>(clientResult.Error.ToApplicationError());
+            return Result.Failure<ClientResponse>(Error.NotFound("Client.NotFound", "A pessoa não foi encontrada."));
         }
 
-        var client = clientResult!.Value!;
+        var applyResult = command.ApplyTo(client, today);
+        if (applyResult.IsFailure)
+        {
+            return Result.Failure<ClientResponse>(ToError(applyResult.Error));
+        }
 
         var cpfConflict = await FindCpfConflictAsync(client, cancellationToken);
         if (cpfConflict is { } cpfError)
@@ -34,8 +39,6 @@ public sealed class CreateClientCommandHandler(
         {
             return Result.Failure<ClientResponse>(emailError);
         }
-
-        clientRepository.Add(client);
 
         var saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
@@ -53,6 +56,18 @@ public sealed class CreateClientCommandHandler(
         return ClientResponse.FromClient(client);
     }
 
+    private static Error ToError(DomainError error)
+    {
+        if (error.Code == Client.ContactNotFound.Code)
+        {
+            return Error.NotFound(
+                error.Code,
+                "Um dos contatos não foi encontrado neste cadastro. Recarregue a pessoa e tente novamente.");
+        }
+
+        return error.ToApplicationError();
+    }
+
     private async Task<Error?> FindCpfConflictAsync(Client client, CancellationToken cancellationToken)
     {
         if (client.Cpf is null)
@@ -60,8 +75,8 @@ public sealed class CreateClientCommandHandler(
             return null;
         }
 
-        var clientWithSameCpf = await clientRepository.FindByCpfAsync(client.Cpf, null, cancellationToken);
-        if (clientWithSameCpf is null)
+        var otherClientWithSameCpf = await clientRepository.FindByCpfAsync(client.Cpf, client.Id, cancellationToken);
+        if (otherClientWithSameCpf is null)
         {
             return null;
         }
@@ -70,18 +85,21 @@ public sealed class CreateClientCommandHandler(
             "Client.DuplicateCpf",
             "Já existe uma pessoa cadastrada com este CPF.",
             field: "Cpf",
-            meta: ExistingClientMeta(clientWithSameCpf));
+            meta: ExistingClientMeta(otherClientWithSameCpf));
     }
 
     private async Task<Error?> FindEmailConflictAsync(Client client, CancellationToken cancellationToken)
     {
-        if (client.Email is null)
+        if (client.Email is null || client.Status != ClientStatus.Active)
         {
             return null;
         }
 
-        var activeClientWithSameEmail = await clientRepository.FindActiveByEmailAsync(client.Email, null, cancellationToken);
-        if (activeClientWithSameEmail is null)
+        var otherActiveClientWithSameEmail = await clientRepository.FindActiveByEmailAsync(
+            client.Email,
+            client.Id,
+            cancellationToken);
+        if (otherActiveClientWithSameEmail is null)
         {
             return null;
         }
@@ -90,7 +108,7 @@ public sealed class CreateClientCommandHandler(
             "Client.DuplicateEmail",
             "Já existe uma pessoa ativa cadastrada com este e-mail.",
             field: "Email",
-            meta: ExistingClientMeta(activeClientWithSameEmail));
+            meta: ExistingClientMeta(otherActiveClientWithSameEmail));
     }
 
     private static Dictionary<string, string> ExistingClientMeta(Client existing)

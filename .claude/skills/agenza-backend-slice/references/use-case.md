@@ -71,6 +71,10 @@ validator already ran before the handler):
    `<Entity>.SaveFailed`.
 7. Return `<Entity>Response.From<Entity>(…)`.
 
+An edit runs `ApplyTo` at step 3, before the pre-checks, because they compare the values it just assigned
+(a uniqueness lookup excludes the aggregate itself); nothing is persisted until step 6, so a rejected
+pre-check discards the change.
+
 A query handler: read through the repository → `NotFound` or map. When the response shows another
 aggregate, collect its ids from the page, read them in one call through that aggregate's repository,
 and hand what you need to `From<Entity>`.

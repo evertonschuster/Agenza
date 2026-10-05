@@ -43,4 +43,16 @@ public class ClientGuardian : ClientContact
             data.Phone,
             data.Cpf));
     }
+
+    internal DomainResult Update(GuardianData data)
+    {
+        var reviseResult = Revise(data.Name, data.Relationship, data.Phone);
+        if (reviseResult.IsFailure)
+        {
+            return reviseResult;
+        }
+
+        Cpf = data.Cpf;
+        return DomainResult.Success();
+    }
 }

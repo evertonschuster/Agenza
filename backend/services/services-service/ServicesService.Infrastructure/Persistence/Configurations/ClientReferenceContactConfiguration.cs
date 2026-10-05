@@ -13,6 +13,7 @@ public class ClientReferenceContactConfiguration : IEntityTypeConfiguration<Clie
             "ClientReferenceContacts",
             table => table.HasCheckConstraint("CK_ClientReferenceContacts_Purposes", "\"Purposes\" BETWEEN 1 AND 7"));
         builder.HasKey(r => r.Id);
+        builder.Property(r => r.Id).ValueGeneratedNever();
 
         builder.Property(r => r.TenantId).IsRequired();
         builder.Property(r => r.ClientId).IsRequired();

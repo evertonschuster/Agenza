@@ -279,7 +279,9 @@ either; `IgnoreQueryFilters()` belongs to a persistence test that asserts a soft
   it; when the display keeps the user's form (a name with its casing), the index uses a generated
   normalized column ([0049](../../docs/adr/0049-conventions-for-new-backend-slices.md)).
 - Children: `HasMany(…).WithOne()` with the composite foreign and principal keys, navigation through
-  the backing field.
+  the backing field. A child's key, minted by its root, is `ValueGeneratedNever()`: for a key EF thinks
+  the store generates, a child added to a loaded root is tracked as `Modified` and its save fails
+  ([0053](../../docs/adr/0053-clients-edit-synchronizes-contacts-by-id.md)).
 - Soft-delete and tenant filters and their indexes come from the convention — never by hand.
 
 **Repositories.** One per aggregate root — never one for a child. The port `I<Entity>Repository` lives
@@ -385,7 +387,8 @@ touches that slice, not in bulk.
 | Domain errors | `static readonly DomainError` per rule on `Client` and on the value objects | one inline `new DomainError("<Entity>.Invalid", …)` shared by every rule of an entity | §3 |
 | Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
 | Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
-| Read, update, delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → `ApplyTo` → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
+| Update, with children synchronized by id | `UpdateClientCommandHandler.cs`, `Client.Update`: load → `NotFound` → `ApplyTo` → pre-checks that exclude the aggregate itself → save | | §3, §4, [0053](../../docs/adr/0053-clients-edit-synchronizes-contacts-by-id.md) |
+| Read, delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 
 This table is the only place that names reference files. When a newer slice supersedes one, change

@@ -14,17 +14,32 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
     {
     }
 
-    public Task<Client?> FindByCpfAsync(CpfNumber cpf, CancellationToken cancellationToken)
+    public Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken)
     {
         return Set
-            .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Cpf == cpf, cancellationToken);
+            .Include(c => c.Guardians)
+            .Include(c => c.ReferenceContacts)
+            .FirstOrDefaultAsync(c => c.Id == clientId, cancellationToken);
     }
 
-    public Task<Client?> FindActiveByEmailAsync(EmailAddress email, CancellationToken cancellationToken)
+    public Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken)
     {
         return Set
             .AsNoTracking()
-            .FirstOrDefaultAsync(c => c.Email == email && c.Status == ClientStatus.Active, cancellationToken);
+            .FirstOrDefaultAsync(c => c.Cpf == cpf && (excludeClientId == null || c.Id != excludeClientId), cancellationToken);
+    }
+
+    public Task<Client?> FindActiveByEmailAsync(
+        EmailAddress email,
+        Guid? excludeClientId,
+        CancellationToken cancellationToken)
+    {
+        return Set
+            .AsNoTracking()
+            .FirstOrDefaultAsync(
+                c => c.Email == email
+                    && c.Status == ClientStatus.Active
+                    && (excludeClientId == null || c.Id != excludeClientId),
+                cancellationToken);
     }
 }

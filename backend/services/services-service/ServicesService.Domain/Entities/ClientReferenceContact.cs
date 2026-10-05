@@ -49,4 +49,16 @@ public class ClientReferenceContact : ClientContact
             data.Phone,
             data.Purposes));
     }
+
+    internal DomainResult Update(ReferenceContactData data)
+    {
+        var reviseResult = Revise(data.Name, data.Relationship, data.Phone);
+        if (reviseResult.IsFailure)
+        {
+            return reviseResult;
+        }
+
+        Purposes = data.Purposes;
+        return DomainResult.Success();
+    }
 }

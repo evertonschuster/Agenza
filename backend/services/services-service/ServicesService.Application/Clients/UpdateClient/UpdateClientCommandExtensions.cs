@@ -2,64 +2,61 @@ using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 
-namespace ServicesService.Application.Clients.CreateClient;
+namespace ServicesService.Application.Clients.UpdateClient;
 
-public static class CreateClientCommandExtensions
+public static class UpdateClientCommandExtensions
 {
-    // TenantId is intentionally Guid.Empty - AuditableEntitySaveChangesInterceptor
-    // assigns it on save (docs/adr/0008).
-    public static DomainResult<Client> ToModel(this CreateClientCommand command, DateOnly today)
+    public static DomainResult ApplyTo(this UpdateClientCommand command, Client client, DateOnly today)
     {
         var fullNameResult = FullName.Create(command.FullName);
         if (fullNameResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(fullNameResult.Error);
+            return fullNameResult;
         }
 
         var birthDateResult = BirthDate.Create(command.BirthDate, today);
         if (birthDateResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(birthDateResult.Error);
+            return birthDateResult;
         }
 
         var phoneResult = PhoneNumber.Create(command.Phone);
         if (phoneResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(phoneResult.Error);
+            return phoneResult;
         }
 
         var emailResult = EmailAddress.Create(command.Email);
         if (emailResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(emailResult.Error);
+            return emailResult;
         }
 
         var cpfResult = CpfNumber.Create(command.Cpf);
         if (cpfResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(cpfResult.Error);
+            return cpfResult;
         }
 
         var notesResult = AdministrativeNotes.Create(command.AdministrativeNotes);
         if (notesResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(notesResult.Error);
+            return notesResult;
         }
 
-        var guardiansResult = ToGuardians(command.Guardians);
+        var guardiansResult = ToGuardianChanges(command.Guardians);
         if (guardiansResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(guardiansResult.Error);
+            return guardiansResult;
         }
 
-        var referenceContactsResult = ToReferenceContacts(command.ReferenceContacts);
+        var referenceContactsResult = ToReferenceContactChanges(command.ReferenceContacts);
         if (referenceContactsResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(referenceContactsResult.Error);
+            return referenceContactsResult;
         }
 
-        return Client.Create(
-            Guid.CreateVersion7(),
+        return client.Update(
             fullNameResult.Value,
             birthDateResult.Value,
             phoneResult.Value,
@@ -71,9 +68,10 @@ public static class CreateClientCommandExtensions
             referenceContactsResult.Value);
     }
 
-    private static DomainResult<List<GuardianData>> ToGuardians(IReadOnlyList<GuardianInput>? inputs)
+    private static DomainResult<List<ContactChange<GuardianData>>> ToGuardianChanges(
+        IReadOnlyList<UpdateGuardianInput>? inputs)
     {
-        var guardians = new List<GuardianData>();
+        var changes = new List<ContactChange<GuardianData>>();
 
         foreach (var input in inputs ?? [])
         {
@@ -84,19 +82,19 @@ public static class CreateClientCommandExtensions
                 input.Cpf);
             if (guardianResult.IsFailure)
             {
-                return DomainResult.Failure<List<GuardianData>>(guardianResult.Error);
+                return DomainResult.Failure<List<ContactChange<GuardianData>>>(guardianResult.Error);
             }
 
-            guardians.Add(guardianResult.Value);
+            changes.Add(new ContactChange<GuardianData>(input.Id, guardianResult.Value));
         }
 
-        return DomainResult.Success(guardians);
+        return DomainResult.Success(changes);
     }
 
-    private static DomainResult<List<ReferenceContactData>> ToReferenceContacts(
-        IReadOnlyList<ReferenceContactInput>? inputs)
+    private static DomainResult<List<ContactChange<ReferenceContactData>>> ToReferenceContactChanges(
+        IReadOnlyList<UpdateReferenceContactInput>? inputs)
     {
-        var referenceContacts = new List<ReferenceContactData>();
+        var changes = new List<ContactChange<ReferenceContactData>>();
 
         foreach (var input in inputs ?? [])
         {
@@ -107,12 +105,12 @@ public static class CreateClientCommandExtensions
                 input.Purposes);
             if (contactResult.IsFailure)
             {
-                return DomainResult.Failure<List<ReferenceContactData>>(contactResult.Error);
+                return DomainResult.Failure<List<ContactChange<ReferenceContactData>>>(contactResult.Error);
             }
 
-            referenceContacts.Add(contactResult.Value);
+            changes.Add(new ContactChange<ReferenceContactData>(input.Id, contactResult.Value));
         }
 
-        return DomainResult.Success(referenceContacts);
+        return DomainResult.Success(changes);
     }
 }

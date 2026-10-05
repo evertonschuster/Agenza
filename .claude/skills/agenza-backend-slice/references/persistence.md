@@ -47,8 +47,9 @@ optimization this codebase avoids (ARCHITECTURE, rules of thumb).
 Check each line of ARCHITECTURE §5 "Entity configuration" against your entity: composite alternate key,
 composite foreign keys between tenant-owned entities, value objects through `Restore` with lengths from
 their constants, enums as text with a `CHECK`, unique indexes with `TenantId` and
-`"DeletedAt" IS NULL`, children through the backing field. Never add a soft-delete or tenant filter by
-hand.
+`"DeletedAt" IS NULL`, children through the backing field, a child's key `ValueGeneratedNever()` (its
+root mints it; otherwise a child added to a loaded root is tracked as `Modified` and the save fails).
+Never add a soft-delete or tenant filter by hand.
 
 A set of ids of another aggregate is a child entity of the owner — its own configuration, keyed
 `(TenantId, OwnerId, OtherId)`, with composite foreign keys to both roots.

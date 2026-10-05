@@ -3,6 +3,8 @@ using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Domain.Entities;
 
+public sealed record ContactChange<TData>(Guid? Id, TData Data);
+
 public abstract class ClientContact : TenantOwnedEntity
 {
     public const int NameMinLength = 2;
@@ -42,6 +44,31 @@ public abstract class ClientContact : TenantOwnedEntity
         Name = name;
         Relationship = relationship;
         Phone = phone;
+    }
+
+    internal static DomainResult ValidateDetails(string name, string relationship)
+    {
+        var nameResult = ValidateName(name);
+        if (nameResult.IsFailure)
+        {
+            return nameResult;
+        }
+
+        return ValidateRelationship(relationship);
+    }
+
+    protected DomainResult Revise(string name, string relationship, PhoneNumber? phone)
+    {
+        var detailsResult = ValidateDetails(name, relationship);
+        if (detailsResult.IsFailure)
+        {
+            return detailsResult;
+        }
+
+        Name = name.Trim();
+        Relationship = relationship.Trim();
+        Phone = phone;
+        return DomainResult.Success();
     }
 
     protected static DomainResult<string> ValidateName(string name)

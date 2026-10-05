@@ -198,7 +198,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
+            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), null, CancellationToken.None);
 
             match!.Id.Should().Be(client.Id);
         }
@@ -219,7 +219,7 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
+            var match = await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), null, CancellationToken.None);
 
             match!.Id.Should().Be(client.Id);
         }
@@ -242,7 +242,7 @@ public class ClientPersistenceTests
         {
             (await context.Clients.IgnoreQueryFilters().AnyAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken))
                 .Should().BeTrue("the row is soft-deleted, not removed");
-            (await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None))
+            (await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), null, CancellationToken.None))
                 .Should().BeNull();
         }
     }
@@ -262,7 +262,7 @@ public class ClientPersistenceTests
         {
             (await context.Clients.IgnoreQueryFilters().CountAsync(c => c.Cpf == Cpf(CpfDigits), TestContext.Current.CancellationToken))
                 .Should().Be(1, "the row exists, so only the tenant filter keeps it out");
-            (await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None))
+            (await new ClientRepository(context).FindByCpfAsync(Cpf(CpfDigits), null, CancellationToken.None))
                 .Should().BeNull();
         }
     }
@@ -282,7 +282,7 @@ public class ClientPersistenceTests
         var options = new DbContextOptionsBuilder<ServicesDataContext>().UseInMemoryDatabase(databaseName).Options;
         await using var tenantlessContext = new ServicesDataContext(options, tenantProvider);
 
-        var match = await new ClientRepository(tenantlessContext).FindByCpfAsync(Cpf(CpfDigits), CancellationToken.None);
+        var match = await new ClientRepository(tenantlessContext).FindByCpfAsync(Cpf(CpfDigits), null, CancellationToken.None);
 
         match.Should().BeNull();
     }
@@ -310,16 +310,213 @@ public class ClientPersistenceTests
         {
             var repository = new ClientRepository(context);
 
-            (await repository.FindActiveByEmailAsync(Email("maria@example.com"), CancellationToken.None))!.Id.Should().Be(active.Id);
-            (await repository.FindActiveByEmailAsync(Email("joao@example.com"), CancellationToken.None)).Should().BeNull();
-            (await repository.FindActiveByEmailAsync(Email("pedro@example.com"), CancellationToken.None)).Should().BeNull();
-            (await repository.FindActiveByEmailAsync(Email("outro@example.com"), CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync(Email("maria@example.com"), null, CancellationToken.None))!.Id.Should().Be(active.Id);
+            (await repository.FindActiveByEmailAsync(Email("joao@example.com"), null, CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync(Email("pedro@example.com"), null, CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync(Email("outro@example.com"), null, CancellationToken.None)).Should().BeNull();
         }
 
         await using (var context = CreateContext(databaseName, tenantB))
         {
-            (await new ClientRepository(context).FindActiveByEmailAsync(Email("maria@example.com"), CancellationToken.None))
+            (await new ClientRepository(context).FindActiveByEmailAsync(Email("maria@example.com"), null, CancellationToken.None))
                 .Should().BeNull();
+        }
+    }
+
+    [Fact]
+    public async Task FindByCpf_ExcludesTheGivenClient()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(cpf: CpfDigits);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            var repository = new ClientRepository(context);
+
+            (await repository.FindByCpfAsync(Cpf(CpfDigits), client.Id, CancellationToken.None)).Should().BeNull();
+            (await repository.FindByCpfAsync(Cpf(CpfDigits), Guid.NewGuid(), CancellationToken.None))!.Id.Should().Be(client.Id);
+        }
+    }
+
+    [Fact]
+    public async Task FindActiveByEmail_ExcludesTheGivenClient()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(email: "maria@example.com");
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            var repository = new ClientRepository(context);
+
+            (await repository.FindActiveByEmailAsync(Email("maria@example.com"), client.Id, CancellationToken.None)).Should().BeNull();
+            (await repository.FindActiveByEmailAsync(Email("maria@example.com"), Guid.NewGuid(), CancellationToken.None))!.Id
+                .Should().Be(client.Id);
+        }
+    }
+
+    [Fact]
+    public async Task GetById_LoadsTheClientWithItsContactsOfTheSameTenant()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(guardians: [Guardian(), Guardian()], referenceContacts: [ReferenceContact()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            var loaded = await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None);
+
+            loaded!.Guardians.Should().HaveCount(2);
+            loaded.ReferenceContacts.Should().ContainSingle();
+            context.Entry(loaded).State.Should().Be(EntityState.Unchanged, "the client is loaded tracked, to be changed");
+        }
+    }
+
+    [Fact]
+    public async Task GetById_NeverReturnsAnotherTenantsOrADeletedClient()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantA = Guid.NewGuid();
+        var tenantB = Guid.NewGuid();
+        var client = NewClient(guardians: [Guardian()]);
+        var deleted = NewClient("Pedro Alves", guardians: [Guardian()]);
+        await using (var context = CreateContext(databaseName, tenantA))
+        {
+            await Save(context, client);
+            await Save(context, deleted);
+        }
+
+        await SoftDelete(databaseName, tenantA, deleted.Id);
+
+        await using (var context = CreateContext(databaseName, tenantB))
+        {
+            (await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None)).Should().BeNull();
+        }
+
+        await using (var context = CreateContext(databaseName, tenantA))
+        {
+            (await new ClientRepository(context).GetByIdAsync(deleted.Id, CancellationToken.None)).Should().BeNull();
+            (await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None)).Should().NotBeNull();
+        }
+    }
+
+    [Fact]
+    public async Task Update_SyncsTheContactsInOneSave_KeepingIdsAndSoftDeletingTheRemovedOnes()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(
+            guardians: [Guardian(), new GuardianData("Bia Souza", "Tia", null, null)],
+            referenceContacts: [ReferenceContact(), ReferenceContact()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        var keptGuardianId = client.Guardians.First().Id;
+        var removedGuardianId = client.Guardians.Last().Id;
+        var keptContactId = client.ReferenceContacts.First().Id;
+        var removedContactId = client.ReferenceContacts.Last().Id;
+
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            var loaded = (await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None))!;
+
+            var result = loaded.Update(
+                FullName.Create("Maria Souza Lima").Value,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Today,
+                [
+                    new ContactChange<GuardianData>(keptGuardianId, new GuardianData("Ana Lima", "Mãe", null, null)),
+                    new ContactChange<GuardianData>(null, new GuardianData("Cris Souza", "Prima", null, null)),
+                ],
+                [new ContactChange<ReferenceContactData>(keptContactId, ReferenceContact())]);
+            result.IsSuccess.Should().BeTrue();
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            var loaded = (await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None))!;
+
+            loaded.FullName.Value.Should().Be("Maria Souza Lima");
+            loaded.Guardians.Select(guardian => guardian.Name).Should().BeEquivalentTo("Ana Lima", "Cris Souza");
+            loaded.Guardians.Should().Contain(guardian => guardian.Id == keptGuardianId);
+            loaded.Guardians.Should().NotContain(guardian => guardian.Id == removedGuardianId);
+            loaded.Guardians.Should().OnlyContain(guardian => guardian.TenantId == tenantId && guardian.ClientId == client.Id);
+            loaded.ReferenceContacts.Should().ContainSingle().Which.Id.Should().Be(keptContactId);
+
+            var removedGuardian = await context.Set<ClientGuardian>().IgnoreQueryFilters()
+                .SingleAsync(guardian => guardian.Id == removedGuardianId, TestContext.Current.CancellationToken);
+            removedGuardian.DeletedAt.Should().NotBeNull("a removed contact is soft-deleted, not erased");
+            var removedContact = await context.Set<ClientReferenceContact>().IgnoreQueryFilters()
+                .SingleAsync(contact => contact.Id == removedContactId, TestContext.Current.CancellationToken);
+            removedContact.DeletedAt.Should().NotBeNull();
+        }
+    }
+
+    [Fact]
+    public async Task Update_WithAContactIdOfAnotherTenantsClient_FailsAndLeavesThatContactAlone()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantA = Guid.NewGuid();
+        var tenantB = Guid.NewGuid();
+        var mine = NewClient("Maria Souza", guardians: [Guardian()]);
+        var theirs = NewClient("João Pereira", guardians: [new GuardianData("Pai do João", "Pai", null, null)]);
+        await using (var context = CreateContext(databaseName, tenantA))
+        {
+            await Save(context, mine);
+        }
+
+        await using (var context = CreateContext(databaseName, tenantB))
+        {
+            await Save(context, theirs);
+        }
+
+        var foreignGuardianId = theirs.Guardians.Single().Id;
+
+        await using (var context = CreateContext(databaseName, tenantA))
+        {
+            var loaded = (await new ClientRepository(context).GetByIdAsync(mine.Id, CancellationToken.None))!;
+
+            var result = loaded.Update(
+                FullName.Create("Maria Souza").Value,
+                null,
+                null,
+                null,
+                null,
+                null,
+                Today,
+                [new ContactChange<GuardianData>(foreignGuardianId, new GuardianData("Invasor", "Pai", null, null))],
+                []);
+
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Client.ContactNotFound");
+            (await context.SaveChangesAsync(TestContext.Current.CancellationToken)).Should().Be(0);
+        }
+
+        await using (var context = CreateContext(databaseName, tenantB))
+        {
+            var untouched = (await new ClientRepository(context).GetByIdAsync(theirs.Id, CancellationToken.None))!;
+
+            untouched.Guardians.Should().ContainSingle().Which.Name.Should().Be("Pai do João");
         }
     }
 
@@ -349,6 +546,19 @@ public class ClientPersistenceTests
         var statusCheck = clients.GetCheckConstraints().Single(check => check.Name == "CK_Clients_Status");
 
         statusCheck.Sql.Should().Be("\"Status\" IN ('Active', 'Inactive')");
+    }
+
+    [Fact]
+    public void Model_LeavesTheContactIdsToTheRootSoANewContactIsInsertedNotUpdated()
+    {
+        using var context = CreateContext(Guid.NewGuid().ToString(), Guid.NewGuid());
+        var model = context.GetService<IDesignTimeModel>().Model;
+
+        foreach (var contactType in new[] { typeof(ClientGuardian), typeof(ClientReferenceContact) })
+        {
+            model.FindEntityType(contactType)!.FindProperty(nameof(ClientContact.Id))!.ValueGenerated
+                .Should().Be(ValueGenerated.Never);
+        }
     }
 
     [Fact]
