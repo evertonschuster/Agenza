@@ -6,7 +6,7 @@ namespace ServicesService.Application.Clients;
 
 public sealed class CpfNumberJsonConverter : JsonConverter<CpfNumber>
 {
-    // The message never carries the CPF: it is personal data and the exception text ends up in logs.
+    // The message reaches the user and the logs as is, so it never carries the CPF (personal data).
     public override CpfNumber? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
         if (reader.TokenType != JsonTokenType.String)

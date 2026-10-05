@@ -64,10 +64,16 @@ public static class ModelStateErrorMapper
             return (string.Empty, RequestErrors.Invalid);
         }
 
-        // System.Text.Json writes the parser position into its own messages; a converter's own failure has none.
-        if (key[0] == '$' && text.Contains(ParserPosition, StringComparison.Ordinal))
+        if (key[0] == '$')
         {
-            return (string.Empty, RequestErrors.Invalid);
+            // System.Text.Json writes the parser position into its own messages; a converter's own failure has none.
+            if (text.Contains(ParserPosition, StringComparison.Ordinal))
+            {
+                return (string.Empty, RequestErrors.Invalid);
+            }
+
+            // A converter writes its message for the user, so it is shown as is.
+            return (field, new FieldError(RequestErrors.InvalidValue.Code, text));
         }
 
         return (field, RequestErrors.InvalidValue);

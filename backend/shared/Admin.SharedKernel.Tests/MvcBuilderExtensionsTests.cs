@@ -52,6 +52,6 @@ public class MvcBuilderExtensionsTests
         problem.Status.Should().Be(StatusCodes.Status400BadRequest);
         problem.TraceId.Should().NotBeNullOrWhiteSpace();
         problem.Errors!.Keys.Should().Equal("cpf");
-        problem.Errors["cpf"].Should().Equal(RequestErrors.InvalidValue);
+        problem.Errors["cpf"].Should().Equal(new FieldError(RequestErrors.InvalidValue.Code, "O CPF informado é inválido."));
     }
 }

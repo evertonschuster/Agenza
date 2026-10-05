@@ -53,7 +53,7 @@ public class CpfNumberJsonConverterTests
 
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.cpf");
-        exception.Message.Should().Contain("O CPF informado é inválido.");
+        exception.Message.Should().Be("O CPF informado é inválido.");
     }
 
     [Fact]

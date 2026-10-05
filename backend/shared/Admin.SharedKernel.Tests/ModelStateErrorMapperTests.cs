@@ -39,12 +39,12 @@ public class ModelStateErrorMapperTests
     }
 
     [Fact]
-    public void ToError_AConverterFailureUnderAJsonPathBecomesAnInvalidValueOfThatField()
+    public void ToError_AConverterFailureUnderAJsonPathKeepsItsOwnMessageUnderTheInvalidValueCode()
     {
         var error = Map(State(("$.cpf", ConverterText)));
 
         error.FieldErrors!.Should().ContainSingle().Which.Key.Should().Be("cpf");
-        error.FieldErrors["cpf"].Should().Equal(RequestErrors.InvalidValue);
+        error.FieldErrors["cpf"].Should().Equal(new FieldError(RequestErrors.InvalidValue.Code, ConverterText));
     }
 
     [Fact]
@@ -52,7 +52,7 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("$.guardians[0].cpf", ConverterText)));
 
-        error.FieldErrors!["guardians[0].cpf"].Should().Equal(RequestErrors.InvalidValue);
+        error.FieldErrors!["guardians[0].cpf"].Should().Equal(new FieldError(RequestErrors.InvalidValue.Code, ConverterText));
     }
 
     [Fact]
