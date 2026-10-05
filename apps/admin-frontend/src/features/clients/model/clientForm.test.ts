@@ -190,6 +190,34 @@ describe('clientFormSchema', () => {
       ).toBeUndefined();
     });
 
+    it('reports the missing guardian together with errors on other fields', () => {
+      const issues = issuesOf(
+        values({
+          fullName: '',
+          email: 'invalido',
+          birthDate: '10/03/2015',
+          guardians: [],
+          referenceContacts: [reference({ purposes: [] })],
+        }),
+      );
+
+      expect(issues['fullName']).toBe('O nome completo é obrigatório.');
+      expect(issues['email']).toBe('Informe um e-mail válido.');
+      expect(issues['referenceContacts.0.purposes']).toBeDefined();
+      expect(issues['guardians']).toBe(
+        'Informe ao menos um responsável para pessoas menores de 18 anos.',
+      );
+    });
+
+    it('still counts a guardian whose own fields are invalid', () => {
+      const issues = issuesOf(
+        values({ birthDate: '10/03/2015', guardians: [guardian({ name: '' })] }),
+      );
+
+      expect(issues['guardians.0.name']).toBe('O nome do responsável é obrigatório.');
+      expect(issues['guardians']).toBeUndefined();
+    });
+
     it('counts the São Paulo day, not the UTC day', () => {
       vi.setSystemTime(new Date('2026-10-03T01:00:00Z'));
 

@@ -69,7 +69,7 @@ export function useClientFormPage(): UseClientFormPageResult {
     if (result.ok) {
       toast.add({
         title: 'Pessoa cadastrada',
-        description: `${result.data.fullName} foi cadastrada.`,
+        description: `O cadastro de ${result.data.fullName} foi criado.`,
         type: 'success',
       });
       if (isMountedRef.current) void navigate(CLIENTS_PATH);

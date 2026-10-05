@@ -129,19 +129,19 @@ const clientFormObject = z.object({
     ),
 });
 
-export const clientFormSchema = clientFormObject.superRefine((value, ctx) => {
-  if (
-    value.birthDate &&
-    isMinorOn(value.birthDate, todayInSaoPaulo()) &&
-    value.guardians.length === 0
-  ) {
-    ctx.addIssue({
-      code: 'custom',
-      path: ['guardians'],
-      message: `Informe ao menos um responsável para pessoas menores de ${ADULT_AGE_IN_YEARS} anos.`,
-    });
-  }
-});
+export const clientFormSchema = clientFormObject.refine(
+  (value) =>
+    !value.birthDate ||
+    !isMinorOn(value.birthDate, todayInSaoPaulo()) ||
+    value.guardians.length > 0,
+  {
+    path: ['guardians'],
+    message: `Informe ao menos um responsável para pessoas menores de ${ADULT_AGE_IN_YEARS} anos.`,
+    // Zod skips object refinements once any field fails; the person would only learn about the
+    // missing guardian on a second submit. Only an invalid birth date makes the rule meaningless.
+    when: (payload) => payload.issues.every((issue) => issue.path?.[0] !== 'birthDate'),
+  },
+);
 
 export type ClientFormFieldValues = z.input<typeof clientFormSchema>;
 export type ClientFormValues = z.output<typeof clientFormSchema>;

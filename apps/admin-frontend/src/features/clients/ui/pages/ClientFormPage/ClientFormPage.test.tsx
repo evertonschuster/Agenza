@@ -134,7 +134,11 @@ describe('ClientFormPage', () => {
         referenceContacts: [],
       });
       expect(toastAdd).toHaveBeenCalledWith(
-        expect.objectContaining({ title: 'Pessoa cadastrada', type: 'success' }),
+        expect.objectContaining({
+          title: 'Pessoa cadastrada',
+          description: 'O cadastro de Maria Souza foi criado.',
+          type: 'success',
+        }),
       );
       expect(await screen.findByRole('heading', { name: 'Lista de pessoas' })).toBeInTheDocument();
     });
@@ -290,6 +294,20 @@ describe('ClientFormPage', () => {
 
       await screen.findByText('O nome completo é obrigatório.');
       expect(screen.getByLabelText('Nome completo')).toHaveFocus();
+    });
+
+    it('reports the missing guardian on the same submit as the other errors', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.type(screen.getByLabelText('Data de nascimento'), '10032015');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('O nome completo é obrigatório.')).toBeInTheDocument();
+      expect(
+        screen.getByText('Informe ao menos um responsável para pessoas menores de 18 anos.'),
+      ).toBeInTheDocument();
+      expect(mockCreate).not.toHaveBeenCalled();
     });
 
     it('stops offering more guardians at the limit', async () => {
