@@ -17,6 +17,7 @@ superseded is historical evidence, not current implementation guidance.
 | Database bootstrap | 0025 as narrowed by 0027, plus 0027/0028 |
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032, 0050 |
+| Logging and telemetry | 0054 |
 | admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
 | AI agent instruction files | 0041 |
@@ -74,4 +75,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 (proposed) · 0044 clients aggregate, uniqueness rules and conflict contract · 0045 backend works in UTC only ·
 0046 separate soft-delete and tenant query filters · 0048 database failures are generic to the user ·
 0049 conventions for new backend slices · 0050 xUnit v3 on VSTest and the Aspire CLI bundle ·
-0051 camelCase error keys on the wire · 0053 clients: editing a person synchronizes its contacts by id.
+0051 camelCase error keys on the wire · 0053 clients: editing a person synchronizes its contacts by id ·
+0054 Serilog logging pipeline.

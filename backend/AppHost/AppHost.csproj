@@ -20,6 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\shared\Admin.Logging\Admin.Logging.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\services\identity-service\IdentityService.Api\IdentityService.Api.csproj" />
     <ProjectReference Include="..\services\services-service\ServicesService.Api\ServicesService.Api.csproj" />
   </ItemGroup>
