@@ -53,6 +53,29 @@ public class RequestLoggingTests
         _sink.Events.Should().ContainSingle().Which.Level.Should().Be(LogEventLevel.Verbose);
     }
 
+    [Theory]
+    [InlineData("/health")]
+    [InlineData("/alive")]
+    public async Task AddRequestLogging_LogsAFailingQuietPathAsAnError(string path)
+    {
+        await SendAsync(path, context =>
+        {
+            context.Response.StatusCode = StatusCodes.Status503ServiceUnavailable;
+            return Task.CompletedTask;
+        }, quietPaths: ["/health", "/alive"]);
+
+        _sink.Events.Should().ContainSingle().Which.Level.Should().Be(LogEventLevel.Error);
+    }
+
+    [Fact]
+    public async Task AddRequestLogging_LogsAnExceptionOnAQuietPathAsAnErrorAndRethrowsIt()
+    {
+        var send = () => SendAsync("/health", _ => throw new InvalidOperationException("boom"), quietPaths: ["/health"]);
+
+        await send.Should().ThrowAsync<InvalidOperationException>();
+        _sink.Events.Should().ContainSingle().Which.Level.Should().Be(LogEventLevel.Error);
+    }
+
     [Fact]
     public async Task AddRequestLogging_LogsAFileServedWithoutAnEndpointBelowInformation()
     {

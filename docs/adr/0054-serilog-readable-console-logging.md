@@ -41,7 +41,8 @@ A new service gets all of the following from `AddServiceDefaults()`, with no `Pr
   the `OTEL_*` variables Aspire injects, so log-to-trace correlation and the resource name need no code.
 - **One line per request**, from an `IStartupFilter` that puts `UseSerilogRequestLogging` outside the application's own
   middleware, so a 500 turned into a problem response by `UseExceptionHandler` is still logged with its status.
-  `/health` and `/alive` (passed in by ServiceDefaults) and files served without an endpoint are `Verbose`. The query
+  `/health` and `/alive` (passed in by ServiceDefaults) and files served without an endpoint are `Verbose`, unless the
+  request throws or answers 5xx: a failing probe is logged as an error like any other request. The query
   string is never logged, and control characters are stripped from the path, as `GenericExceptionHandler` already does
   for its own line (CWE-117).
 

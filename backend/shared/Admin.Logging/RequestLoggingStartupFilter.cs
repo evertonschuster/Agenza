@@ -34,14 +34,14 @@ internal sealed class RequestLoggingStartupFilter : IStartupFilter
 
     internal LogEventLevel GetLevel(HttpContext context, double elapsedMilliseconds, Exception? exception)
     {
-        if (IsQuiet(context.Request.Path))
-        {
-            return LogEventLevel.Verbose;
-        }
-
         if (exception is not null || context.Response.StatusCode >= StatusCodes.Status500InternalServerError)
         {
             return LogEventLevel.Error;
+        }
+
+        if (IsQuiet(context.Request.Path))
+        {
+            return LogEventLevel.Verbose;
         }
 
         if (IsStaticFile(context))

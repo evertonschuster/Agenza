@@ -1,9 +1,11 @@
+using System.Globalization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Serilog;
+using Serilog.Sinks.OpenTelemetry;
 
 namespace Admin.Logging.Tests;
 
@@ -111,10 +113,27 @@ public class ReadableLoggingExtensionsTests
     {
         using var provider = BuildProvider(new Dictionary<string, string?>
         {
-            ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://localhost:4317",
+            ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://collector.internal:4317",
         });
 
         provider.GetRequiredService<Serilog.ILogger>().Should().NotBeNull();
+    }
+
+    [Fact]
+    public void ConfigureOtlp_UsesTheEndpointFromConfigurationAndTheInvariantCulture()
+    {
+        var configuration = new ConfigurationBuilder()
+            .AddInMemoryCollection(new Dictionary<string, string?>
+            {
+                ["OTEL_EXPORTER_OTLP_ENDPOINT"] = "http://collector.internal:4317",
+            })
+            .Build();
+        var options = new OpenTelemetrySinkOptions();
+
+        ReadableLoggingExtensions.ConfigureOtlp(options, configuration);
+
+        options.Endpoint.Should().Be("http://collector.internal:4317");
+        options.FormatProvider.Should().BeSameAs(CultureInfo.InvariantCulture);
     }
 
     private static ServiceProvider BuildProvider(Dictionary<string, string?>? settings = null)

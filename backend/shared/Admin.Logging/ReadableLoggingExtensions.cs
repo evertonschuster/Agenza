@@ -4,6 +4,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.OpenTelemetry;
 
 namespace Admin.Logging;
 
@@ -59,7 +60,13 @@ public static class ReadableLoggingExtensions
 
         if (exportToOtlp)
         {
-            logger.WriteTo.OpenTelemetry(options => options.FormatProvider = CultureInfo.InvariantCulture);
+            logger.WriteTo.OpenTelemetry(options => ConfigureOtlp(options, configuration));
         }
+    }
+
+    internal static void ConfigureOtlp(OpenTelemetrySinkOptions options, IConfiguration configuration)
+    {
+        options.Endpoint = configuration[OtlpEndpointKey]!;
+        options.FormatProvider = CultureInfo.InvariantCulture;
     }
 }
