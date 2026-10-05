@@ -19,4 +19,8 @@
     <PackageReference Include="OpenTelemetry.Instrumentation.Runtime" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\shared\Admin.Logging\Admin.Logging.csproj" />
+  </ItemGroup>
+
 </Project>

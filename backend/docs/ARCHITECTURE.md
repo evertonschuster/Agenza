@@ -49,8 +49,9 @@ that wraps two stores in one transaction. Don't carry its specifics into a busin
 
 A new service copies the project set below, the per-service `Domain/Common/` types, a schema and a
 role in `infra/postgres/init/`, a schema-scoped migrations history table, and an AppHost resource;
-it registers `TenantHeaderFilter` if it serves tenant-owned resources. Use the live services as the
-template, not a copied snippet ([`docs/MONOREPO.md`](../../docs/MONOREPO.md)).
+it registers `TenantHeaderFilter` if it serves tenant-owned resources. `AddServiceDefaults()` already
+brings logging, telemetry and health checks, so there is nothing to copy for them. Use the live services
+as the template, not a copied snippet ([`docs/MONOREPO.md`](../../docs/MONOREPO.md)).
 
 ### Projects and dependency direction
 
@@ -74,6 +75,7 @@ Shared projects in `backend/shared/` hold infrastructure, never business rules:
 | `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler` | Api |
 | `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>`, `ApplyAuditableConventions` (soft-delete and tenant filters) | Infrastructure |
 | `Admin.Identity.Client` | JWT validation, `ITenantAccessor`, `ICurrentUserAccessor`, `TenantHeaderFilter`, `[IgnoreTenant]` | Infrastructure, Api |
+| `Admin.Logging` | the Serilog pipeline: console format, default levels, OTLP export, one line per request | `ServiceDefaults`, `AppHost` — never a layer |
 
 `BaseEntity`, `TenantOwnedEntity`, `DomainResult` and `DomainError` are **duplicated per service on
 purpose** — Domain references nothing, so it cannot share them
@@ -353,6 +355,16 @@ Older code is converted when touched, not in bulk.
 
 No "what" comments and no XML doc comments; a one-line "why" only for a genuine race or a non-obvious
 constraint (root [`AGENTS.md`](../../AGENTS.md)). Rationale belongs in an ADR.
+
+### Logging
+
+Inject `ILogger<T>` and write a message template with named placeholders, never an interpolated string. Serilog is
+the pipeline behind it, owned by `Admin.Logging` and brought in by `AddServiceDefaults()`
+([0054](../../docs/adr/0054-serilog-readable-console-logging.md)): a service configures nothing. Domain and Application
+stay on `Microsoft.Extensions.Logging.Abstractions` and nothing calls the static `Log`. The default levels live in
+`Admin.Logging`; a host that needs another level sets it under `Serilog:MinimumLevel` in its `appsettings.json`
+(`Logging:LogLevel` is ignored). A message carries constraint names, codes and ids, not request input; when it must,
+strip control characters first (CWE-117), as `GenericExceptionHandler` and the request line do.
 
 ## 9. Tests
 

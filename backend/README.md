@@ -20,9 +20,9 @@ services/<service>/
 ├── <Service>.Api/               ASP.NET Core controllers — → Application + Infrastructure
 ├── <Service>.Tests/             unit tests of Domain + Application
 └── <Service>.PersistenceTests/  EF InMemory tenant tests, where a service needs them
-shared/                          cross-cutting infrastructure — never business rules
+shared/                          cross-cutting infrastructure (incl. Admin.Logging) — never business rules
 AppHost/                         .NET Aspire, local orchestration only
-ServiceDefaults/                 OpenTelemetry, health checks, service discovery
+ServiceDefaults/                 logging (via Admin.Logging), OpenTelemetry, health checks, service discovery
 ```
 
 Each service is one business context with its own schema and database role. The project-reference
