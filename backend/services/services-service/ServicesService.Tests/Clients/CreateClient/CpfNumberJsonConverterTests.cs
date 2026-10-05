@@ -1,5 +1,7 @@
 using System.Text.Json;
+using Admin.SharedKernel;
 using ServicesService.Application.Clients.CreateClient;
+using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients.CreateClient;
 
@@ -53,7 +55,9 @@ public class CpfNumberJsonConverterTests
 
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.cpf");
-        exception.Message.Should().Be("O CPF informado é inválido.");
+        exception.Message.Should().Be("CpfNumber.Invalid|O CPF informado é inválido.");
+        WireErrorText.TryDecode(exception.Message, out var fieldError).Should().BeTrue();
+        fieldError.Code.Should().Be(CpfNumber.Invalid.Code);
     }
 
     [Fact]

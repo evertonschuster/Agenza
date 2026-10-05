@@ -4,8 +4,8 @@ namespace Admin.SharedKernel.AspNetCore;
 
 public static class ModelStateErrorMapper
 {
+    private const string NativeErrorCode = "Validation.Failed";
     private const string ConversionFailure = "The JSON value could not be converted";
-    private const string RequiredSuffix = "field is required.";
     private const string ParserPosition = "LineNumber:";
 
     public static Error ToError(ModelStateDictionary modelState, IReadOnlyCollection<string> bodyParameterNames)
@@ -44,39 +44,38 @@ public static class ModelStateErrorMapper
             fieldErrors.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<FieldError>)pair.Value));
     }
 
-    // The framework hands over a key and English text, no code and no exception, so the cases below depend on its wording.
+    // Beyond a converter's own "Code|Message" text, the framework hands over a key and English text, with no code and no
+    // exception, so telling a syntax error from a field error depends on its wording.
     private static (string Field, FieldError Error) Classify(string key, string text)
     {
-        var field = ToField(key);
+        if (WireErrorText.TryDecode(text, out var wireError))
+        {
+            return (ToField(key), wireError);
+        }
+
+        var native = new FieldError(NativeErrorCode, text);
+
+        if (key.Length == 0 || IsSyntaxError(key, text))
+        {
+            return (string.Empty, native);
+        }
+
+        return (ToField(key), native);
+    }
+
+    private static bool IsSyntaxError(string key, string text)
+    {
+        if (key[0] != '$')
+        {
+            return false;
+        }
 
         if (text.StartsWith(ConversionFailure, StringComparison.Ordinal))
         {
-            return (field, RequestErrors.InvalidValue);
+            return false;
         }
 
-        if (text.EndsWith(RequiredSuffix, StringComparison.Ordinal))
-        {
-            return (field, RequestErrors.FieldRequired);
-        }
-
-        if (key.Length == 0)
-        {
-            return (string.Empty, RequestErrors.Invalid);
-        }
-
-        if (key[0] == '$')
-        {
-            // System.Text.Json writes the parser position into its own messages; a converter's own failure has none.
-            if (text.Contains(ParserPosition, StringComparison.Ordinal))
-            {
-                return (string.Empty, RequestErrors.Invalid);
-            }
-
-            // A converter writes its message for the user, so it is shown as is.
-            return (field, new FieldError(RequestErrors.InvalidValue.Code, text));
-        }
-
-        return (field, RequestErrors.InvalidValue);
+        return text.Contains(ParserPosition, StringComparison.Ordinal);
     }
 
     private static string ToField(string key)

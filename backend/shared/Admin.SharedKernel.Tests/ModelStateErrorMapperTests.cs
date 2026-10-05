@@ -8,8 +8,8 @@ public class ModelStateErrorMapperTests
     private const string ConversionText =
         "The JSON value could not be converted to Some.Command. Path: $.birthDate | LineNumber: 0 | BytePositionInLine: 50.";
 
-    private const string ConverterText = "O CPF informado é inválido.";
-
+    private static readonly string ConverterText = WireErrorText.Encode("CpfNumber.Invalid", "O CPF informado é inválido.");
+    private static readonly FieldError ConverterError = new("CpfNumber.Invalid", "O CPF informado é inválido.");
     private static readonly string[] BodyParameters = ["command"];
 
     private static ModelStateDictionary State(params (string Key, string Message)[] errors)
@@ -31,20 +31,20 @@ public class ModelStateErrorMapperTests
     [Fact]
     public void ToError_ReturnsAValidationErrorWithTheCanonicalCode()
     {
-        var error = Map(State(("$.birthDate", ConversionText)));
+        var error = Map(State(("$.cpf", ConverterText)));
 
         error.Type.Should().Be(ErrorType.Validation);
         error.Code.Should().Be("Validation.Failed");
-        error.Message.Should().Be(RequestErrors.InvalidValue.Message);
+        error.Message.Should().Be(ConverterError.Message);
     }
 
     [Fact]
-    public void ToError_AConverterFailureUnderAJsonPathKeepsItsOwnMessageUnderTheInvalidValueCode()
+    public void ToError_AConverterFailureKeepsItsOwnCodeAndMessageUnderTheField()
     {
         var error = Map(State(("$.cpf", ConverterText)));
 
         error.FieldErrors!.Should().ContainSingle().Which.Key.Should().Be("cpf");
-        error.FieldErrors["cpf"].Should().Equal(new FieldError(RequestErrors.InvalidValue.Code, ConverterText));
+        error.FieldErrors["cpf"].Should().Equal(ConverterError);
     }
 
     [Fact]
@@ -52,43 +52,51 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("$.guardians[0].cpf", ConverterText)));
 
-        error.FieldErrors!["guardians[0].cpf"].Should().Equal(new FieldError(RequestErrors.InvalidValue.Code, ConverterText));
+        error.FieldErrors!["guardians[0].cpf"].Should().Equal(ConverterError);
     }
 
     [Fact]
-    public void ToError_ATypeConversionFailureBecomesAnInvalidValue()
+    public void ToError_ATypeConversionFailureKeepsTheFrameworkText()
     {
         var error = Map(State(("$.birthDate", ConversionText)));
 
-        error.FieldErrors!["birthDate"].Should().Equal(RequestErrors.InvalidValue);
+        error.FieldErrors!["birthDate"].Should().Equal(new FieldError("Validation.Failed", ConversionText));
     }
 
     [Fact]
-    public void ToError_AMissingRequiredFieldBecomesFieldRequired()
+    public void ToError_AMissingRequiredFieldKeepsTheFrameworkText()
     {
         var error = Map(State(("FullName", "The FullName field is required.")));
 
-        error.FieldErrors!["FullName"].Should().Equal(RequestErrors.FieldRequired);
+        error.FieldErrors!["FullName"].Should().Equal(new FieldError("Validation.Failed", "The FullName field is required."));
     }
 
     [Fact]
-    public void ToError_AnUnrecognisedMessageUnderAFieldBecomesAnInvalidValueOfThatField()
+    public void ToError_AnUnrecognisedMessageUnderAFieldKeepsItsText()
     {
         var error = Map(State(("Page", "The value 'abc' is not valid.")));
 
-        error.FieldErrors!["Page"].Should().Equal(RequestErrors.InvalidValue);
+        error.FieldErrors!["Page"].Should().Equal(new FieldError("Validation.Failed", "The value 'abc' is not valid."));
     }
 
     [Theory]
     [InlineData("$.fullName", "Expected depth to be zero at the end of the JSON payload. Path: $.fullName | LineNumber: 0 | BytePositionInLine: 12.")]
     [InlineData("", "A non-empty request body is required.")]
     [InlineData("$", "'x' is an invalid start of a value. Path: $ | LineNumber: 0 | BytePositionInLine: 0.")]
-    public void ToError_ASyntaxOrEmptyBodyErrorBelongsToTheForm(string key, string text)
+    public void ToError_ASyntaxOrEmptyBodyErrorBelongsToTheFormAndKeepsItsText(string key, string text)
     {
         var error = Map(State((key, text)));
 
         error.FieldErrors!.Should().ContainSingle().Which.Key.Should().BeEmpty();
-        error.FieldErrors[string.Empty].Should().Equal(RequestErrors.Invalid);
+        error.FieldErrors[string.Empty].Should().Equal(new FieldError("Validation.Failed", text));
+    }
+
+    [Fact]
+    public void ToError_AJsonPathMessageWithoutCodeOrParserPositionKeepsItsTextUnderTheField()
+    {
+        var error = Map(State(("$.cpf", "O CPF informado é inválido.")));
+
+        error.FieldErrors!["cpf"].Should().Equal(new FieldError("Validation.Failed", "O CPF informado é inválido."));
     }
 
     [Fact]
@@ -106,7 +114,7 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("command", "The command field is required.")));
 
-        error.FieldErrors!["command"].Should().Equal(RequestErrors.FieldRequired);
+        error.FieldErrors!["command"].Should().Equal(new FieldError("Validation.Failed", "The command field is required."));
     }
 
     [Fact]
@@ -114,7 +122,7 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("Page", "The value 'abc' is not valid."), ("Page", "The Page field is required.")));
 
-        error.FieldErrors!["Page"].Should().Equal(RequestErrors.InvalidValue, RequestErrors.FieldRequired);
+        error.FieldErrors!["Page"].Should().HaveCount(2);
     }
 
     [Fact]

@@ -1,5 +1,7 @@
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using Admin.SharedKernel;
+using ServicesService.Domain.Common;
 using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Clients;
@@ -11,13 +13,13 @@ public sealed class CpfNumberJsonConverter : JsonConverter<CpfNumber>
     {
         if (reader.TokenType != JsonTokenType.String)
         {
-            throw new JsonException(CpfNumber.Invalid.Message);
+            throw new JsonException(Encode(CpfNumber.Invalid));
         }
 
         var result = CpfNumber.Create(reader.GetString());
         if (result.IsFailure)
         {
-            throw new JsonException(result.Error.Message);
+            throw new JsonException(Encode(result.Error));
         }
 
         return result.Value;
@@ -26,5 +28,10 @@ public sealed class CpfNumberJsonConverter : JsonConverter<CpfNumber>
     public override void Write(Utf8JsonWriter writer, CpfNumber value, JsonSerializerOptions options)
     {
         writer.WriteStringValue(value.Value);
+    }
+
+    private static string Encode(DomainError error)
+    {
+        return WireErrorText.Encode(error.Code, error.Message);
     }
 }
