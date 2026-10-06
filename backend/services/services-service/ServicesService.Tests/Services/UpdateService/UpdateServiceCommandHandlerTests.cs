@@ -3,7 +3,6 @@ using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services;
 using ServicesService.Application.Services.UpdateService;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Tests.Services.UpdateService;
 

@@ -1,5 +1,3 @@
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Application.Abstractions;
 
 public interface IClientRepository

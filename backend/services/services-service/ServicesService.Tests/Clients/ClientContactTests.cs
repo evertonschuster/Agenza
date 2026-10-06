@@ -1,5 +1,3 @@
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Tests.Clients;
 
 public class ClientContactTests

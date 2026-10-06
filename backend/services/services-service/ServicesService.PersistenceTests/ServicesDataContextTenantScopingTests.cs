@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Entities;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.PersistenceTests;

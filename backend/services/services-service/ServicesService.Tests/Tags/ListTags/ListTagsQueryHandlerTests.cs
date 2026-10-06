@@ -1,6 +1,5 @@
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.ListTags;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Tests.Tags.ListTags;
 

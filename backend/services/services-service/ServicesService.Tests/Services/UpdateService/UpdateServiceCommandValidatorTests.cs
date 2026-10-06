@@ -1,5 +1,4 @@
 using ServicesService.Application.Services.UpdateService;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Tests.Services.UpdateService;
 

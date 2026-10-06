@@ -1,7 +1,6 @@
 using Admin.Identity.Client;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Entities;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Persistence.Interceptors;
 

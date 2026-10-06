@@ -1,6 +1,5 @@
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services.ListServices;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Tests.Services.ListServices;
 

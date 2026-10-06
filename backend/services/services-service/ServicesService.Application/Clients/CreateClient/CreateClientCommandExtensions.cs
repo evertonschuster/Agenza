@@ -1,5 +1,3 @@
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Application.Clients.CreateClient;
 
 public static class CreateClientCommandExtensions

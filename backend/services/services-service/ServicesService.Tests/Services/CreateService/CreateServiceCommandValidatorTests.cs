@@ -1,5 +1,4 @@
 using ServicesService.Application.Services.CreateService;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Tests.Services.CreateService;
 

@@ -1,7 +1,6 @@
 using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Clients.CreateClient;
 

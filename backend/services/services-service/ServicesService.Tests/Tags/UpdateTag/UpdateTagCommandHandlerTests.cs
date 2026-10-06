@@ -2,7 +2,6 @@ using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.UpdateTag;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Tests.Tags.UpdateTag;
 

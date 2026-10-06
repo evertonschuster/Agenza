@@ -1,6 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Infrastructure.Persistence.Configurations;
 

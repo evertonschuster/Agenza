@@ -1,7 +1,6 @@
 using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Infrastructure.Persistence;
 

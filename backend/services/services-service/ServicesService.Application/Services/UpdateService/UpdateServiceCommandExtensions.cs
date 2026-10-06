@@ -1,5 +1,3 @@
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Application.Services.UpdateService;
 
 public static class UpdateServiceCommandExtensions

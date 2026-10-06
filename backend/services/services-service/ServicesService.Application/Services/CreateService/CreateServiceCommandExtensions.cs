@@ -1,5 +1,3 @@
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Application.Services.CreateService;
 
 public static class CreateServiceCommandExtensions

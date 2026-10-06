@@ -23,6 +23,7 @@
     <Using Include="Admin.SharedKernel.ValueObjects" />
     <Using Include="ServicesService.Domain.Common" />
     <Using Include="ServicesService.Domain.ValueObjects" />
+    <Using Include="ServicesService.Domain.Entities" />
   </ItemGroup>
 
   <ItemGroup>
