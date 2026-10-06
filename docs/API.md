@@ -138,7 +138,7 @@ fallback em pt-BR. O domínio não sabe qual campo nem qual índice da lista fal
 do formulário:
 
 ```json
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"FullName.Required","traceId":"...","correlationId":"...","errors":{"":[{"code":"FullName.Required","message":"O nome completo é obrigatório."}]}}
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Client.GuardianRequired","traceId":"...","correlationId":"...","errors":{"":[{"code":"Client.GuardianRequired","message":"Informe ao menos um responsável para pessoas menores de 18 anos."}]}}
 ```
 
 **Aplicação** (`NotFound`/`Conflict`/`Forbidden`, sem `FieldErrors`) — `errors` colapsa para
@@ -170,8 +170,8 @@ Só `Tenant.ContextMismatch` (§2) usa essa forma menor — sem `traceId`/`corre
 
 Se o **model binder** do `[ApiController]` rejeita o corpo antes de qualquer `IValidator`/handler
 rodar — uma propriedade obrigatória do record **totalmente ausente** do JSON (não vazia: ausente),
-JSON malformado, um valor de tipo errado ou um value object compartilhado com formato inválido
-(`CpfNumber`, [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
+JSON malformado, um valor de tipo errado ou um value object compartilhado inválido
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
 canônica de §4.1** (`AddModelStateProblemDetails`), não o `ValidationProblemDetails` do framework. O
 que muda é o conteúdo:
 
@@ -181,10 +181,12 @@ que muda é o conteúdo:
   um campo — JSON malformado, corpo vazio — vem sob a chave vazia `""`;
 - a `message` é o texto do framework, **em inglês** ("The FullName field is required.", "A non-empty
   request body is required."), exceto a de um value object compartilhado, que vem em pt-BR ("O CPF
-  informado é inválido.") e nunca ecoa o valor recebido. Um valor de tipo errado traz o texto do
+  informado é inválido.", "O nome completo é obrigatório.", "Informe um e-mail válido.") e nunca ecoa o valor
+  recebido. Um valor de tipo errado traz o texto do
   `System.Text.Json` — nome interno do tipo e posição do parser, não texto para o usuário;
 - só a **primeira** falha de valor é reportada: o `System.Text.Json` para no primeiro valor inválido,
-  então dois CPFs inválidos no mesmo corpo geram uma única entrada;
+  então dois CPFs inválidos, ou um nome vazio e um CPF inválido, no mesmo corpo geram uma única entrada, a
+  do primeiro campo no JSON (o validator reportava todos os campos de uma vez);
 - uma falha de **leitura do corpo** (JSON malformado, corpo vazio, tipo errado, value object inválido)
   vem com uma segunda chave em `errors`: o nome do parâmetro do corpo na action (`command` nos
   controllers de hoje) com "The command field is required.". O framework marca o parâmetro inteiro

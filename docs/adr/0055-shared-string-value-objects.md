@@ -16,8 +16,8 @@ type the same way.
 
 1. **A project with no reference at all**, `backend/shared/Admin.SharedKernel.ValueObjects`. A service's Domain may
    reference it and nothing else, so Domain still depends on no package and no other project. It holds the value objects
-   that carry no business context — a format and a normalization that are the same in every service (CPF today; e-mail
-   and phone are candidates). A value object that belongs to one context stays in that service's `Domain/ValueObjects/`
+   that carry no business context — a format and a normalization that are the same in every service (CPF, full name, phone and
+   e-mail). A value object that belongs to one context stays in that service's `Domain/ValueObjects/`
    with `Create` and `DomainResult`.
 
 2. **They behave like a scalar** (`Guid`, `DateOnly`) on the wire, not like the service's own value objects. The
@@ -26,12 +26,14 @@ type the same way.
    with several rules has a message for each. There is no `Parse` and no `TryParse`, and no `DomainResult` or
    `DomainError`: both are per-service types, and a code is not needed here, since a binding failure always answers
    `Validation.Failed`. Blank is not a value: `Create(null)`, `Create("")` and whitespace fail, and the member is
-   nullable when the field is optional.
+   nullable when the field is optional. What a blank means on the wire is declared by the type: `BlankIsAbsent`
+   (a static virtual member of the contract, `true` by default) makes the converter bind it to `null`; a type that
+   declares it `false` (`FullName`) gets its own message instead of the framework's `[Required]` in English.
 
 3. **The kernel applies the contract once**, so a new value object in that project works everywhere with no per-service
    code:
    - `JsonSerializerOptions.AddValueObjectConverters()` (`Admin.SharedKernel`): a JSON string in, any formatting the type
-     accepts; `null`, `""` and whitespace bind to `null`; anything else throws a `JsonException` carrying the `Error` of
+     accepts; `null`, `""` and whitespace bind to `null` when the type's `BlankIsAbsent` is true; anything else throws a `JsonException` carrying the `Error` of
      the result — for a token that is not a string, the `Error` of `Create(null)` — and never the value (it is personal
      data and the message reaches the logs, so a type's errors must not echo it).
    - `OpenApiOptions.MapValueObjectsToStrings()` (`Admin.SharedKernel.AspNetCore`): the schema is an inline `string`
@@ -46,8 +48,8 @@ type the same way.
 
 5. **Tests live with the kernel.** `Admin.SharedKernel.Tests` covers the types and the pieces, with its own coverage
    gate; the services' gates exclude `Admin.SharedKernel.ValueObjects` the way they already exclude
-   `Admin.SharedKernel`. The service tier keeps one test per command that proves its wire contract
-   (`CreateClientCommandCpfBindingTests`).
+   `Admin.SharedKernel`. The service tier keeps one test per value object that proves its wire contract in the
+   command (`CreateClientCommand<Type>BindingTests`).
 
 ## Consequences
 
@@ -63,8 +65,14 @@ type the same way.
 - A converter can only reject by throwing, so a binding failure is a `JsonException` — the same mechanism the
   framework's own `Guid` and `DateOnly` converters use. [ADR 0014](0014-result-pattern-domain-and-persistence-no-exceptions.md)
   asks that expected outcomes be values; this ADR does not change that, and the tension is left open here.
-- Only optional (nullable) members have been exercised. A required member typed as a value object, where `""` would bind
-  to `null`, has not.
+- A required member (`FullName`) answers `""` and whitespace with the type's own message. `null` and an absent property
+  still reach the framework's implicit `[Required]`, in English, because it answers before the converter runs; a token
+  that is not a string takes the message of `Create(null)`, so a number in `fullName` answers "O nome completo é
+  obrigatório.".
+- The messages the shared types carry are the ones the validators gave ("Informe um telefone válido…", "O e-mail deve
+  ter no máximo 254 caracteres."), not the domain's, because those were what the user saw; the validators lost the rules.
+- Binding stops at the first invalid value. A body with an empty name and an invalid CPF reports only the field that comes
+  first in the JSON, where the validator reported every field at once.
 - A rule that takes a parameter (`BirthDate` needs today) or a value that is not a string does not fit the contract and
   stays in the service.
 

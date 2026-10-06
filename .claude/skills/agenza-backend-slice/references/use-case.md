@@ -22,7 +22,7 @@ One `AbstractValidator<T>` per request that carries input, queries included. Wri
 facts about the input, one `RuleFor` per property:
 
 - Every rule ends in `.WithErrorCode(…)` and `.WithMessage("…")`. The code is the domain's
-  (`FullName.Required.Code`); a rule with no domain counterpart — an empty route id, a missing list
+  (`AdministrativeNotes.TooLong.Code`); a rule with no domain counterpart — an empty route id, a missing list
   item — still gets a `<Type>.<Rule>` code, as a literal in the validator. The message is pt-BR, names
   the field, and interpolates limits from the domain's constants.
 - `.Cascade(CascadeMode.Stop)` when a later rule assumes an earlier one held (the length check after
