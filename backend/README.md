@@ -14,7 +14,7 @@ Solution: `AdminBackend.slnx` (the XML solution format). Toolchain and package v
 
 ```
 services/<service>/
-├── <Service>.Domain/            entities, value objects — no references
+├── <Service>.Domain/            entities, value objects — → Admin.SharedKernel.ValueObjects only
 ├── <Service>.Application/       use cases as vertical slices, ports — → Domain
 ├── <Service>.Infrastructure/    EF Core, repositories, adapters — → Application
 ├── <Service>.Api/               ASP.NET Core controllers — → Application + Infrastructure

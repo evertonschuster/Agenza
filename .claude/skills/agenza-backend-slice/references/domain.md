@@ -48,6 +48,9 @@ Writing one:
   value. The predicate and `Create` share the private check, so they cannot disagree.
 - No reference to an entity, a repository, a clock or configuration; what a rule needs comes in as a
   parameter (`today`).
+- A value with a format and no business context, the same in every service (CPF), goes to
+  `Admin.SharedKernel.ValueObjects` instead: `IStringValueObject<T>`, `TryParse`/`Parse`, no
+  `DomainResult`. Its JSON, OpenAPI and column conversion come from the kernel (ARCHITECTURE §3, ADR 0055).
 
 ## 3. Behaviour
 
@@ -84,7 +87,8 @@ Writing one:
 
 One `static readonly DomainError` per rule, on the type that owns the rule, `<Type>.<Rule>`, pt-BR
 message. A rule over the whole aggregate belongs to the root (`Client.GuardianRequired`); a rule over a
-value belongs to the value object (`CpfNumber.Invalid`). The validator reuses these codes.
+value belongs to the value object (`BirthDate.TooOld`). The validator reuses these codes. A shared
+string value object has no `DomainError`: its one message is `InvalidMessage`.
 
 ## 6. Red flags in the domain
 

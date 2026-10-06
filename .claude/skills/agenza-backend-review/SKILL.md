@@ -49,7 +49,7 @@ Cheap, and it catches most of what matters. Each hit is a question, not a verdic
 | `class …Factory`, `class …Builder` | Domain, Application | factories are static methods on the type | Média |
 | `new DomainError(` inside a method | Domain | an unnamed error | Média |
 | a `RuleFor` chain with no `.WithErrorCode` | `*Validator.cs` | FluentValidation's internal name leaks to the API | Média |
-| a C# enum or a domain type as a member | commands, inputs, responses | the wire carries strings and primitives | Média |
+| a C# enum or a domain type as a member (a shared string value object such as `CpfNumber` is fine, ADR 0055) | commands, inputs, responses | the wire carries strings and primitives | Média |
 | `//`, `///` | anywhere | "what" comments are not allowed | Baixa |
 
 ## 3. Read it, in this order
@@ -63,7 +63,7 @@ Evaluate every step even after an early finding — each is an independent way t
 3. **Domain richness.** Value objects by the threshold in §3; behaviour named after intention with
    refused transitions; factories as static methods; one named error per rule.
 4. **Use case.** The five gates in order; pre-checks before side effects; field conflicts with `meta`;
-   generic save failure; DTOs with no domain type.
+   generic save failure; DTOs with no domain type but the shared string value objects.
 5. **Persistence.** Repository returns and parameters; configuration against §5; the migration's `Up`
    and `Down` read line by line.
 6. **Simplicity.** Anything added for performance, flexibility or "the next feature": ask what measured

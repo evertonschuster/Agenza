@@ -9,7 +9,8 @@ admin/
 │   ├── AppHost/            .NET Aspire orchestrator — local dev only, see below
 │   ├── ServiceDefaults/    shared logging/OpenTelemetry/health-check/service-discovery wiring
 │   ├── shared/             cross-cutting infrastructure only — kernel, ASP.NET Core and EF
-│   │                       helpers, token validation, logging (backend/docs/ARCHITECTURE.md §1)
+│   │                       helpers, token validation, logging, the value objects every service shares
+│   │                       (backend/docs/ARCHITECTURE.md §1)
 │   └── services/
 │       ├── identity-service/   OIDC provider (OpenIddict), tenants, users, M2M tokens
 │       └── services-service/   the tenant's business context: what it offers and whom it serves

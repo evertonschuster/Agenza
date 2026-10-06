@@ -56,7 +56,7 @@ as the template, not a copied snippet ([`docs/MONOREPO.md`](../../docs/MONOREPO.
 ### Projects and dependency direction
 
 ```
-<Service>.Domain            entities, value objects, DomainResult        no project or package reference
+<Service>.Domain            entities, value objects, DomainResult        → Admin.SharedKernel.ValueObjects only; no package
 <Service>.Application       use cases, ports in Abstractions/            → Domain, Admin.SharedKernel
 <Service>.Infrastructure    EF Core, repositories, adapters              → Application, Admin.SharedKernel.EntityFrameworkCore, Admin.Identity.Client
 <Service>.Api               controllers, Program.cs, Setup/              → Application, Infrastructure, Admin.SharedKernel.AspNetCore, ServiceDefaults
@@ -73,14 +73,19 @@ Shared projects in `backend/shared/` hold infrastructure, never business rules:
 | --- | --- | --- |
 | `Admin.SharedKernel` | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PagedResult` | Application |
 | `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler` | Api |
-| `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>`, `ApplyAuditableConventions` (soft-delete and tenant filters) | Infrastructure |
+| `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>`, `ApplyAuditableConventions` (soft-delete and tenant filters), the column conversion of the shared value objects | Infrastructure |
+| `Admin.SharedKernel.ValueObjects` | `IStringValueObject<T>` and the string value objects every service shares (`CpfNumber`); no reference at all | Domain |
 | `Admin.Identity.Client` | JWT validation, `ITenantAccessor`, `ICurrentUserAccessor`, `TenantHeaderFilter`, `[IgnoreTenant]` | Infrastructure, Api |
 | `Admin.Logging` | the Serilog pipeline: console format, default levels, OTLP export, one line per request | `ServiceDefaults`, `AppHost` — never a layer |
 
 `BaseEntity`, `TenantOwnedEntity`, `DomainResult` and `DomainError` are **duplicated per service on
-purpose** — Domain references nothing, so it cannot share them
+purpose** — Domain references only a project that holds value objects and nothing else, so it cannot
+share them
 ([0006](../../docs/adr/0006-tenant-header-base-entity-generic-repository.md),
-[0014](../../docs/adr/0014-result-pattern-domain-and-persistence-no-exceptions.md)).
+[0014](../../docs/adr/0014-result-pattern-domain-and-persistence-no-exceptions.md)). That project,
+`Admin.SharedKernel.ValueObjects`, is the one shared project that holds domain types: a format that is
+the same in every service, never a rule of one context
+([0055](../../docs/adr/0055-shared-string-value-objects.md)).
 
 Anything added to a shared project lands in every service. It needs a second real caller, not an
 anticipated one.
@@ -133,10 +138,11 @@ to `<Feature>RuleBuilderExtensions`, a mapping to `<Entity>Response.From<Entity>
 lines repeated between the create and the edit of the same aggregate are accepted.
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
-nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids — no domain type, no tenant. The
+nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
+(`CpfNumber`) — no other domain type, no tenant. The
 output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
-the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. Value
-objects flatten to their primitive, enums to camelCase strings. No mapping library, no DTO in the
+the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
+response, value objects flatten to their primitive and enums to camelCase strings. No mapping library, no DTO in the
 domain, no entity past the handler.
 
 ## 3. Domain
@@ -184,9 +190,22 @@ and today), when it is money or a percentage, or when more than one type uses it
 only by its length (a name, a description) **may** stay a primitive, validated by its owner with a named
 `DomainError`. The column stores the normalized value.
 
+**Shared value objects** ([0055](../../docs/adr/0055-shared-string-value-objects.md)) live in
+`Admin.SharedKernel.ValueObjects` when the value has a format and no business context (CPF). They
+behave like `Guid` and `DateOnly`: a `sealed record` implementing `IStringValueObject<T>`, so
+`TryParse`/`Parse` instead of `Create`, plus `Value`, `Restore` and `InvalidMessage`; no `DomainResult`,
+no `DomainError`. A blank string is not a value — `TryParse("")` fails — and an optional member is
+nullable. The kernel does the rest for every implementer: the JSON converter
+(`AddValueObjectConverters`), the OpenAPI `string` schema (`MapValueObjectsToStrings`) and the column
+conversion (`AddValueObjectConversions`, called from the `DbContext`'s `ConfigureConventions`). Only
+`HasMaxLength` is written in the entity configuration. A command may carry one (`CpfNumber? Cpf`); it
+needs no validator rule and no call in `ToModel`. To add one: the type in that project and its tests in
+`Admin.SharedKernel.Tests`. A value whose rule takes a parameter (`BirthDate`) or is not a string stays
+in the service, with `Create`.
+
 **Errors.** `DomainError(Code, Message)`, declared once per rule as `static readonly` on the type that
 owns it. The code is `<Type>.<Rule>` and talks about the value, not about who uses it
-(`CpfNumber.Invalid`, `Client.GuardianRequired`), so it can be reused elsewhere. Messages are pt-BR.
+(`BirthDate.TooOld`, `Client.GuardianRequired`), so it can be reused elsewhere. Messages are pt-BR.
 
 **Lifecycle.** "Deleted" is `BaseEntity`'s soft delete and nothing else: a repository `Remove`s, the
 save interceptor stamps `DeletedAt`, the query filter hides the row, a deleted id answers 404. Never
@@ -205,7 +224,7 @@ different kind of rule:
 
 | # | Gate | Owns | Answers |
 | --- | --- | --- | --- |
-| 1 | Model binding (framework) | JSON syntax and types | 400 in the framework's shape: English, no `code` |
+| 1 | Model binding (framework), and the shared value objects | JSON syntax and types; the format of a shared value object (`CpfNumber`) | 400 `Validation.Failed` in the canonical shape, the failure under its field with the code `Validation.Failed`: the framework's English message, or the pt-BR message of a shared value object |
 | 2 | Validator, run by the dispatcher | input shape: required, length, format, range, list size, cross-field within the request | 400 `Validation.Failed`, `errors` keyed by property; the response writes each path in camelCase ([0051](../../docs/adr/0051-camelcase-error-keys-on-the-wire.md)) |
 | 3 | Domain, `Create`/behaviour → `DomainResult` | the same invariants again, plus rules over the whole aggregate | 400 through `DomainErrorMapper`, the domain's code at the top and its message under the empty key |
 | 4 | Handler | current state: existence, uniqueness, in use, other aggregates | `NotFound` 404, `Conflict` 409 |
@@ -239,9 +258,10 @@ failed result, `AssignTenant(Guid.Empty)`, a save with no tenant), an unrecognis
 and transactional cleanup. A `try/catch` in a handler is a finding.
 
 **What dies in gate 1** — malformed JSON, a non-nullable member absent from the body, a value of the
-wrong JSON type, an unknown JSON enum — reaches the client without a pt-BR message or a `code`. That
-is why enums travel as strings (§6). Consumers handle the rest as described in
-[`docs/API.md`](../../docs/API.md) §4.3.
+wrong JSON type, an unknown JSON enum — reaches the client in the canonical shape
+(`AddModelStateProblemDetails`), but with the framework's English message and the generic code
+`Validation.Failed`; only a shared value object brings its own pt-BR message. That is why enums travel
+as strings (§6). The shape is described in [`docs/API.md`](../../docs/API.md) §4.3.
 
 **Codes and messages.** `code` is English (`<Type>.<Rule>`, `<Entity>.<Reason>`) and is the contract
 clients branch on. Messages are pt-BR copy written for the end user; the frontend shows them as they
@@ -270,7 +290,8 @@ either; `IgnoreQueryFilters()` belongs to a persistence test that asserts a soft
 - A tenant-owned principal exposes `HasAlternateKey(e => new { e.TenantId, e.Id })`; a relationship
   between tenant-owned entities is the composite FK `(TenantId, <Parent>Id) → (TenantId, Id)`. An
   `Id`-only FK between two tenant-owned entities is a finding.
-- Value objects: `HasConversion(v => v.Value, s => <Vo>.Restore(s))`, lengths from the value
+- Value objects: `HasConversion(v => v.Value, s => <Vo>.Restore(s))` for the service's own; the shared
+  ones are converted by `AddValueObjectConversions()` in `ConfigureConventions`. Lengths from the value
   object's constants, never literals. No EF complex types — the InMemory persistence tests do not
   support them.
 - Enums: text, with a `CHECK` built from `Enum.GetNames<T>()`.
@@ -396,7 +417,7 @@ touches that slice, not in bulk.
 | Orchestration owned by the handler | `CreateClientCommandHandler.cs` | `ServiceRelationshipLoader`, a class shared by two handlers | §2, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
 | Validator codes and messages | `CreateClientCommandValidator.cs`, `ClientRuleBuilderExtensions.cs` | rules without `.WithErrorCode`, which leak `NotEmptyValidator`/`PredicateValidator` to the API | §4, [0044](../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md) |
 | Domain errors | `static readonly DomainError` per rule on `Client` and on the value objects | one inline `new DomainError("<Entity>.Invalid", …)` shared by every rule of an entity | §3 |
-| Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
+| Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore`; a shared one, `Admin.SharedKernel.ValueObjects/CpfNumber.cs` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md), [0055](../../docs/adr/0055-shared-string-value-objects.md) |
 | Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
 | Read, update, delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → `ApplyTo` → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |

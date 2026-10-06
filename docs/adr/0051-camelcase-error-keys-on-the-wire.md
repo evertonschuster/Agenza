@@ -1,7 +1,9 @@
 # ADR 0051 — Error keys on the wire are the camelCase path of the request field
 
 Status: accepted (2026-10); supersedes the key casing of the conflict contract in
-[ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md) (`Cpf`, `Email` → `cpf`, `email`)
+[ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md) (`Cpf`, `Email` → `cpf`, `email`). The
+paragraph below on the framework's own 400 no longer holds: a binding failure now takes the canonical shape, with
+camelCase keys ([API.md §4.3](../API.md))
 
 ## Context
 

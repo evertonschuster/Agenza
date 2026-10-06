@@ -10,7 +10,7 @@ superseded is historical evidence, not current implementation guidance.
 | Service and data topology | 0001, 0002, 0003, 0024, 0029 |
 | Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049, 0051 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
-| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051, 0046, 0048, 0049 |
+| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051, 0046, 0048, 0049, 0055 |
 | Dates, times and time zones | 0045 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
 | Authentication UX and AI delegation | 0020, 0022 |
@@ -75,4 +75,4 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 (proposed) · 0044 clients aggregate, uniqueness rules and conflict contract · 0045 backend works in UTC only ·
 0046 separate soft-delete and tenant query filters · 0048 database failures are generic to the user ·
 0049 conventions for new backend slices · 0050 xUnit v3 on VSTest and the Aspire CLI bundle ·
-0051 camelCase error keys on the wire · 0054 Serilog logging pipeline.
+0051 camelCase error keys on the wire · 0054 Serilog logging pipeline · 0055 string value objects shared by every service.
