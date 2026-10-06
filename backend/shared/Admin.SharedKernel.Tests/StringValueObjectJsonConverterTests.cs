@@ -40,6 +40,29 @@ public class StringValueObjectJsonConverterTests
         public static ThreeLetters Restore(string value) => new(value);
     }
 
+    private sealed record RequiredSample(MustBeFilled? Field);
+
+    private sealed record MustBeFilled : IStringValueObject<MustBeFilled>
+    {
+        public const string Blank = "Preencha o campo.";
+
+        public static bool BlankIsAbsent => false;
+
+        public string Value { get; }
+
+        private MustBeFilled(string value)
+        {
+            Value = value;
+        }
+
+        public static ParseResult<MustBeFilled> Create(string? raw) =>
+            string.IsNullOrWhiteSpace(raw)
+                ? ParseResult<MustBeFilled>.Failure(Blank)
+                : ParseResult<MustBeFilled>.Success(new MustBeFilled(raw.Trim()));
+
+        public static MustBeFilled Restore(string value) => new(value);
+    }
+
     private static Sample Bind(string json) => JsonSerializer.Deserialize<Sample>(json, Options)!;
 
     [Fact]
@@ -71,6 +94,26 @@ public class StringValueObjectJsonConverterTests
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.code");
         exception.Message.Should().Be(expectedMessage);
+    }
+
+    [Theory]
+    [InlineData("\"\"")]
+    [InlineData("\"   \"")]
+    public void Read_WithBlank_WhenTheTypeSaysBlankIsAMistake_ThrowsWithTheTypeMessage(string fieldJson)
+    {
+        var act = () => JsonSerializer.Deserialize<RequiredSample>($$"""{ "field": {{fieldJson}} }""", Options);
+
+        var exception = act.Should().Throw<JsonException>().Which;
+        exception.Path.Should().Be("$.field");
+        exception.Message.Should().Be(MustBeFilled.Blank);
+    }
+
+    [Fact]
+    public void Read_WithAValue_WhenTheTypeSaysBlankIsAMistake_BindsIt()
+    {
+        var sample = JsonSerializer.Deserialize<RequiredSample>("""{ "field": " ok " }""", Options)!;
+
+        sample.Field!.Value.Should().Be("ok");
     }
 
     [Fact]

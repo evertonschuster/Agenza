@@ -37,7 +37,7 @@ public class CreateClientCommandHandlerTests
         string? notes = null,
         IReadOnlyList<GuardianInput>? guardians = null,
         IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
-        new(fullName, birthDate, phone, email, cpf, notes, guardians, referenceContacts);
+        new(ClientTestData.Name(fullName), birthDate, phone, email, cpf, notes, guardians, referenceContacts);
 
     private static GuardianInput Guardian() => new("Ana Souza", "Mãe", "(11) 98888-0000", null);
 

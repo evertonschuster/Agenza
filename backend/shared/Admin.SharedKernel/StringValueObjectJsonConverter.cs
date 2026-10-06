@@ -27,7 +27,12 @@ internal sealed class StringValueObjectJsonConverter<T> : JsonConverter<T>
 
         if (string.IsNullOrWhiteSpace(text))
         {
-            return null;
+            if (T.BlankIsAbsent)
+            {
+                return null;
+            }
+
+            throw new JsonException(T.Create(text).Error);
         }
 
         var result = T.Create(text);

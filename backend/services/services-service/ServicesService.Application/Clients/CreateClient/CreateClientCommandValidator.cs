@@ -10,18 +10,6 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
     {
         DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
-        RuleFor(command => command.FullName)
-            .Cascade(CascadeMode.Stop)
-            .NotEmpty()
-            .WithErrorCode(FullName.Required.Code)
-            .WithMessage("O nome completo é obrigatório.")
-            .Must(fullName => fullName.Trim().Length >= FullName.MinLength)
-            .WithErrorCode(FullName.InvalidLength.Code)
-            .WithMessage($"O nome completo deve ter pelo menos {FullName.MinLength} caracteres.")
-            .Must(fullName => fullName.Trim().Length <= FullName.MaxLength)
-            .WithErrorCode(FullName.InvalidLength.Code)
-            .WithMessage($"O nome completo deve ter no máximo {FullName.MaxLength} caracteres.");
-
         RuleFor(command => command.BirthDate)
             .Cascade(CascadeMode.Stop)
             .Must(birthDate => BirthDate.IsInThePast(birthDate!.Value, Today()))

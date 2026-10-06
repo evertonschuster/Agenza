@@ -4,7 +4,7 @@ using Admin.SharedKernel.ValueObjects;
 namespace ServicesService.Application.Clients.CreateClient;
 
 public sealed record CreateClientCommand(
-    string FullName,
+    FullName FullName,
     DateOnly? BirthDate,
     string? Phone,
     string? Email,

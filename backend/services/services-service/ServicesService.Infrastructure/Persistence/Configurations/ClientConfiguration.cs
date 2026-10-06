@@ -19,7 +19,6 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
 
         builder.Property(c => c.TenantId).IsRequired();
         builder.Property(c => c.FullName)
-            .HasConversion(fullName => fullName.Value, value => FullName.Restore(value))
             .IsRequired()
             .HasMaxLength(FullName.MaxLength);
         builder.Property(c => c.BirthDate)

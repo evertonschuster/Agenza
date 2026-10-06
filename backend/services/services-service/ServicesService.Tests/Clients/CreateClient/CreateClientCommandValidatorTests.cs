@@ -18,7 +18,7 @@ public class CreateClientCommandValidatorTests
         string? notes = null,
         IReadOnlyList<GuardianInput>? guardians = null,
         IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
-        new(fullName, birthDate, phone, email, cpf, notes, guardians, referenceContacts);
+        new(ClientTestData.Name(fullName), birthDate, phone, email, cpf, notes, guardians, referenceContacts);
 
     private static GuardianInput Guardian(
         string name = "Ana Souza",
@@ -47,9 +47,6 @@ public class CreateClientCommandValidatorTests
 
         return new TheoryData<string, CreateClientCommand, string, string>
         {
-            { "name missing", Command(fullName: ""), "FullName", "FullName.Required" },
-            { "name too short", Command(fullName: " A "), "FullName", "FullName.InvalidLength" },
-            { "name too long", Command(fullName: new string('a', 151)), "FullName", "FullName.InvalidLength" },
             { "birth date today", Command(birthDate: new DateOnly(2026, 10, 2)), "BirthDate", "BirthDate.NotInThePast" },
             { "birth date too old", Command(birthDate: new DateOnly(1905, 10, 2)), "BirthDate", "BirthDate.TooOld" },
             { "phone", Command(phone: "telefone"), "Phone", "PhoneNumber.Invalid" },
@@ -92,34 +89,6 @@ public class CreateClientCommandValidatorTests
             referenceContacts: [Reference(phone: "11 4000-1000", purposes: ["emergency", "dailyCommunication"])]));
 
         result.IsValid.Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task Validate_WithoutName_ReportsOnlyTheRequiredMessage(string fullName)
-    {
-        var result = await Validate(Command(fullName: fullName));
-
-        MessagesFor(result, "FullName").Should().Equal("O nome completo é obrigatório.");
-    }
-
-    [Fact]
-    public async Task Validate_WithOneCharacterName_ReportsTheMinimum()
-    {
-        var result = await Validate(Command(fullName: " A "));
-
-        MessagesFor(result, "FullName").Should().Equal("O nome completo deve ter pelo menos 2 caracteres.");
-    }
-
-    [Fact]
-    public async Task Validate_CountsTheNameLengthAfterTrimming()
-    {
-        (await Validate(Command(fullName: " " + new string('a', 150) + " "))).IsValid.Should().BeTrue();
-
-        var result = await Validate(Command(fullName: new string('a', 151)));
-
-        MessagesFor(result, "FullName").Should().Equal("O nome completo deve ter no máximo 150 caracteres.");
     }
 
     [Fact]

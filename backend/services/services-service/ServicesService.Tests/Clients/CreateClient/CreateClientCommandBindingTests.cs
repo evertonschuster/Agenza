@@ -21,7 +21,7 @@ public class CreateClientCommandBindingTests
         var command = JsonSerializer.Deserialize<CreateClientCommand>(json, WireJson.Options);
 
         command.Should().NotBeNull();
-        command!.FullName.Should().Be("Maria Souza");
+        command!.FullName.Value.Should().Be("Maria Souza");
         command.Guardians.Should().ContainSingle().Which.Name.Should().Be("Ana Souza");
         typeof(CreateClientCommand).GetProperties().Select(property => property.Name)
             .Should().NotContain(name => name.Contains("Tenant"));
