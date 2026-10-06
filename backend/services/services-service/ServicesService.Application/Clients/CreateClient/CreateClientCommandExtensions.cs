@@ -10,12 +10,6 @@ public static class CreateClientCommandExtensions
     // assigns it on save (docs/adr/0008).
     public static DomainResult<Client> ToModel(this CreateClientCommand command, DateOnly today)
     {
-        var notesResult = AdministrativeNotes.Create(command.AdministrativeNotes);
-        if (notesResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(notesResult.Error);
-        }
-
         var referenceContactsResult = ToReferenceContacts(command.ReferenceContacts);
         if (referenceContactsResult.IsFailure)
         {
@@ -29,7 +23,7 @@ public static class CreateClientCommandExtensions
             command.Phone,
             command.Email,
             command.Cpf,
-            notesResult.Value,
+            command.AdministrativeNotes,
             today,
             ToGuardians(command.Guardians),
             referenceContactsResult.Value);

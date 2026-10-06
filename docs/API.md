@@ -171,7 +171,7 @@ Só `Tenant.ContextMismatch` (§2) usa essa forma menor — sem `traceId`/`corre
 Se o **model binder** do `[ApiController]` rejeita o corpo antes de qualquer `IValidator`/handler
 rodar — uma propriedade obrigatória do record **totalmente ausente** do JSON (não vazia: ausente),
 JSON malformado, um valor de tipo errado ou um value object compartilhado inválido
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
 canônica de §4.1** (`AddModelStateProblemDetails`), não o `ValidationProblemDetails` do framework. O
 que muda é o conteúdo:
 

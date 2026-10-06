@@ -51,7 +51,7 @@ public class CreateClientCommandBindingTests
 
         command.BirthDate!.Value.Should().Be(new DateOnly(2015, 3, 10));
         command.Cpf!.Value.Should().Be(ClientTestData.ValidCpfDigits);
-        command.AdministrativeNotes.Should().Be("Prefere contato pela manhã.");
+        command.AdministrativeNotes!.Value.Should().Be("Prefere contato pela manhã.");
         command.ReferenceContacts.Should().ContainSingle()
             .Which.Purposes.Should().Equal("emergency", "dailyCommunication");
     }

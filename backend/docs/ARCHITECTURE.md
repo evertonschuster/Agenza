@@ -139,7 +139,8 @@ lines repeated between the create and the edit of the same aggregate are accepte
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
 nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`) — no other domain type, no tenant. The
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`) — no other domain type,
+no tenant. The
 output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
 the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
 response, value objects flatten to their primitive and enums to camelCase strings. No mapping library, no DTO in the
@@ -192,7 +193,7 @@ only by its length (a name, a description) **may** stay a primitive, validated b
 
 **Shared value objects** ([0055](../../docs/adr/0055-shared-string-value-objects.md)) live in
 `Admin.SharedKernel.ValueObjects` when the value has a format and no business context (CPF, full name,
-phone, e-mail, birth date). They
+phone, e-mail, birth date, administrative notes). They
 behave like a scalar on the wire: a `sealed record` implementing `IStringValueObject<T>`, with `Value`,
 `Restore` and a `Create(raw)` that returns a `ParseResult<T>` — the value, or the pt-BR message of the
 rule that failed; no `DomainResult`, no `DomainError`, no `Parse`. A blank string is not a value —

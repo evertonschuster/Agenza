@@ -24,7 +24,7 @@ public class CreateClientCommandValidatorTests
             phone is null ? null : ClientTestData.Phone(phone),
             email is null ? null : ClientTestData.Email(email),
             cpf,
-            notes,
+            notes is null ? null : ClientTestData.Notes(notes),
             guardians,
             referenceContacts);
 
@@ -55,7 +55,6 @@ public class CreateClientCommandValidatorTests
 
         return new TheoryData<string, CreateClientCommand, string, string>
         {
-            { "notes", Command(notes: new string('n', 501)), "AdministrativeNotes", "AdministrativeNotes.TooLong" },
             { "minor without guardian", Command(birthDate: new DateOnly(2015, 3, 10)), "Guardians", "Client.GuardianRequired" },
             { "too many guardians", Command(guardians: tooManyGuardians), "Guardians", "Client.TooManyGuardians" },
             { "too many references", Command(referenceContacts: tooManyReferences), "ReferenceContacts", "Client.TooManyReferenceContacts" },
@@ -164,27 +163,6 @@ public class CreateClientCommandValidatorTests
 
         turningEighteenToday.IsValid.Should().BeTrue();
         MessagesFor(turningEighteenTomorrow, "Guardians").Should().HaveCount(1);
-    }
-
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task Validate_WithBlankAdministrativeNotes_Passes(string blank)
-    {
-        var result = await Validate(Command(notes: blank));
-
-        result.IsValid.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Validate_LimitsAdministrativeNotesToFiveHundredCharacters()
-    {
-        (await Validate(Command(notes: new string('n', 500)))).IsValid.Should().BeTrue();
-
-        var result = await Validate(Command(notes: new string('n', 501)));
-
-        MessagesFor(result, "AdministrativeNotes").Should()
-            .Equal("As observações administrativas devem ter no máximo 500 caracteres.");
     }
 
     [Fact]

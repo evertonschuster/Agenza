@@ -11,12 +11,6 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
     {
         DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
-        RuleFor(command => command.AdministrativeNotes)
-            .Must(notes => notes is null || notes.Trim().Length <= AdministrativeNotes.MaxLength)
-            .WithErrorCode(AdministrativeNotes.TooLong.Code)
-            .WithMessage(
-                $"As observações administrativas devem ter no máximo {AdministrativeNotes.MaxLength} caracteres.");
-
         RuleFor(command => command.Guardians)
             .Must(guardians => guardians is null || guardians.Count <= Client.MaxGuardians)
             .WithErrorCode(Client.TooManyGuardians.Code)

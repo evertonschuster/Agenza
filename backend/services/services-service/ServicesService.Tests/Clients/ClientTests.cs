@@ -50,7 +50,7 @@ public class ClientTests
     [Fact]
     public void Create_KeepsEveryValueObjectItReceives()
     {
-        var notes = AdministrativeNotes.Create("Prefere atendimento à tarde.").Value;
+        var notes = ClientTestData.Notes();
 
         var client = Client.Create(
             Guid.NewGuid(),

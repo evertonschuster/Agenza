@@ -16,8 +16,8 @@ type the same way.
 
 1. **A project with no reference at all**, `backend/shared/Admin.SharedKernel.ValueObjects`. A service's Domain may
    reference it and nothing else, so Domain still depends on no package and no other project. It holds the value objects
-   that carry no business context — a format and a normalization that are the same in every service (CPF, full name, phone, e-mail and
-   birth date). A value object that belongs to one context stays in that service's `Domain/ValueObjects/`
+   that carry no business context — a format and a normalization that are the same in every service (CPF, full name, phone, e-mail,
+   birth date and administrative notes). A value object that belongs to one context stays in that service's `Domain/ValueObjects/`
    with `Create` and `DomainResult`.
 
 2. **They behave like a scalar** (`Guid`, `DateOnly`) on the wire, not like the service's own value objects. The

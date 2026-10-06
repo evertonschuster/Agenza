@@ -17,6 +17,11 @@ internal static class ClientTestData
         return FullName.Create(value).Value;
     }
 
+    public static AdministrativeNotes Notes(string value = "Prefere atendimento à tarde.")
+    {
+        return AdministrativeNotes.Create(value).Value;
+    }
+
     public static BirthDate? Birth(DateOnly? date)
     {
         return date is null ? null : BirthDate.Create(date.Value, Today).Value;

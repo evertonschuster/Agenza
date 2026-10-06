@@ -24,9 +24,7 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.Property(c => c.Phone).HasMaxLength(PhoneNumber.MaxLength);
         builder.Property(c => c.Email).HasMaxLength(EmailAddress.MaxLength);
         builder.Property(c => c.Cpf).HasMaxLength(CpfNumber.Length);
-        builder.Property(c => c.AdministrativeNotes)
-            .HasConversion(notes => notes!.Value, value => AdministrativeNotes.Restore(value))
-            .HasMaxLength(AdministrativeNotes.MaxLength);
+        builder.Property(c => c.AdministrativeNotes).HasMaxLength(AdministrativeNotes.MaxLength);
         builder.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
 
         // CPF collides among live clients whatever their status, e-mail only among live active ones. The database

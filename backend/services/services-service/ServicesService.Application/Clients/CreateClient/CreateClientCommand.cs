@@ -9,7 +9,7 @@ public sealed record CreateClientCommand(
     PhoneNumber? Phone,
     EmailAddress? Email,
     CpfNumber? Cpf,
-    string? AdministrativeNotes,
+    AdministrativeNotes? AdministrativeNotes,
     IReadOnlyList<GuardianInput>? Guardians,
     IReadOnlyList<ReferenceContactInput>? ReferenceContacts) : ICommand<ClientResponse>;
 

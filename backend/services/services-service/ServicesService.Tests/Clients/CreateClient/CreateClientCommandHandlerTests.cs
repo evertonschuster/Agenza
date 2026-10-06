@@ -43,7 +43,7 @@ public class CreateClientCommandHandlerTests
             phone is null ? null : ClientTestData.Phone(phone),
             email is null ? null : ClientTestData.Email(email),
             cpf,
-            notes,
+            notes is null ? null : ClientTestData.Notes(notes),
             guardians,
             referenceContacts);
 
