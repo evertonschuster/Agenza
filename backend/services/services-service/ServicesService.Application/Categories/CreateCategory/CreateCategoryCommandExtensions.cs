@@ -1,4 +1,3 @@
-using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Categories.CreateCategory;

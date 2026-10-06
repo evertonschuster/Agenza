@@ -22,4 +22,8 @@
     <PackageReference Include="Microsoft.OpenApi" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="Admin.SharedKernel.ValueObjects" />
+  </ItemGroup>
+
 </Project>

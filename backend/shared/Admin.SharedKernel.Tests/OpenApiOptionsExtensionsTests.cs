@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Admin.SharedKernel.AspNetCore;
-using Admin.SharedKernel.ValueObjects;
 using Microsoft.AspNetCore.OpenApi;
 
 namespace Admin.SharedKernel.Tests;

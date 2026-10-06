@@ -1,6 +1,5 @@
 using ServicesService.Application.Services.CreateService;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Services.CreateService;
 

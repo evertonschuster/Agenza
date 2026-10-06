@@ -19,4 +19,8 @@
     <ProjectReference Include="..\Admin.SharedKernel.ValueObjects\Admin.SharedKernel.ValueObjects.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Using Include="Admin.SharedKernel.ValueObjects" />
+  </ItemGroup>
+
 </Project>

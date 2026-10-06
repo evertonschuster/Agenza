@@ -20,6 +20,9 @@
     <Using Include="Xunit" />
     <Using Include="AwesomeAssertions" />
     <Using Include="NSubstitute" />
+    <Using Include="Admin.SharedKernel.ValueObjects" />
+    <Using Include="ServicesService.Domain.Common" />
+    <Using Include="ServicesService.Domain.ValueObjects" />
   </ItemGroup>
 
   <ItemGroup>

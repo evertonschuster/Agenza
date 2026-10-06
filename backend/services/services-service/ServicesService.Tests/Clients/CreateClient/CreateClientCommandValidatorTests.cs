@@ -1,4 +1,3 @@
-using Admin.SharedKernel.ValueObjects;
 using FluentValidation.Results;
 using ServicesService.Application.Clients.CreateClient;
 

@@ -1,6 +1,4 @@
-using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients;
 

@@ -1,7 +1,3 @@
-using Admin.SharedKernel.ValueObjects;
-using ServicesService.Domain.Common;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Domain.Entities;
 
 public sealed record ReferenceContactData(string Name, string Relationship, PhoneNumber? Phone, ContactPurposes Purposes);

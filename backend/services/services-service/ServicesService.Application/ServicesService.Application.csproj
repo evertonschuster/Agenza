@@ -20,4 +20,10 @@
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
+  <ItemGroup>
+    <Using Include="Admin.SharedKernel.ValueObjects" />
+    <Using Include="ServicesService.Domain.Common" />
+    <Using Include="ServicesService.Domain.ValueObjects" />
+  </ItemGroup>
+
 </Project>

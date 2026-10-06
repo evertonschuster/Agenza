@@ -1,5 +1,3 @@
-using ServicesService.Domain.Common;
-
 namespace ServicesService.Domain.ValueObjects;
 
 public sealed record DurationRange

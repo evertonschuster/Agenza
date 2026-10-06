@@ -1,5 +1,3 @@
-using Admin.SharedKernel.ValueObjects;
-
 namespace Admin.SharedKernel.Tests;
 
 public class FullNameTests

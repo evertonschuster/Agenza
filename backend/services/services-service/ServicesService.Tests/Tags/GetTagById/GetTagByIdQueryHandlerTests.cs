@@ -2,7 +2,6 @@ using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.GetTagById;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Tags.GetTagById;
 

@@ -4,7 +4,6 @@ using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services;
 using ServicesService.Application.Services.UpdateService;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Services.UpdateService;
 

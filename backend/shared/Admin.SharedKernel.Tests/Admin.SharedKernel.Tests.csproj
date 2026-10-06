@@ -24,6 +24,7 @@
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="AwesomeAssertions" />
+    <Using Include="Admin.SharedKernel.ValueObjects" />
   </ItemGroup>
 
   <ItemGroup>

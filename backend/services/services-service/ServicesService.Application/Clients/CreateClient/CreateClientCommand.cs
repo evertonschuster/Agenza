@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Admin.SharedKernel.ValueObjects;
 
 namespace ServicesService.Application.Clients.CreateClient;
 

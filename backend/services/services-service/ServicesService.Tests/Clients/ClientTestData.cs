@@ -1,6 +1,4 @@
-using Admin.SharedKernel.ValueObjects;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients;
 

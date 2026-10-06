@@ -1,7 +1,3 @@
-using Admin.SharedKernel.ValueObjects;
-using ServicesService.Domain.Common;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Domain.Entities;
 
 // CPF and e-mail uniqueness per tenant are cross-aggregate rules, enforced in the use cases via IClientRepository

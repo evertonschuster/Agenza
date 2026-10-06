@@ -1,10 +1,8 @@
 using Admin.SharedKernel;
-using Admin.SharedKernel.ValueObjects;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients.CreateClient;
 
