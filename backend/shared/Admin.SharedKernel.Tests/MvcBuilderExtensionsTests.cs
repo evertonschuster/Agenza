@@ -2,8 +2,6 @@ using Admin.SharedKernel.AspNetCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
-using Microsoft.AspNetCore.Mvc.Controllers;
-using Microsoft.AspNetCore.Mvc.ModelBinding;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -12,25 +10,9 @@ namespace Admin.SharedKernel.Tests;
 
 public class MvcBuilderExtensionsTests
 {
-    private static ActionContext BodyActionContext()
+    private static ActionContext InvalidActionContext()
     {
-        return new ActionContext
-        {
-            HttpContext = new DefaultHttpContext(),
-            RouteData = new RouteData(),
-            ActionDescriptor = new ControllerActionDescriptor
-            {
-                Parameters =
-                [
-                    new ParameterDescriptor
-                    {
-                        Name = "command",
-                        ParameterType = typeof(object),
-                        BindingInfo = new BindingInfo { BindingSource = BindingSource.Body },
-                    },
-                ],
-            },
-        };
+        return new ActionContext(new DefaultHttpContext(), new RouteData(), new ActionDescriptor());
     }
 
     [Fact]
@@ -39,8 +21,7 @@ public class MvcBuilderExtensionsTests
         var services = new ServiceCollection();
         services.AddControllers().AddModelStateProblemDetails();
         var options = services.BuildServiceProvider().GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
-        var context = BodyActionContext();
-        context.ModelState.AddModelError("command", "The command field is required.");
+        var context = InvalidActionContext();
         context.ModelState.AddModelError("$.cpf", "O CPF informado é inválido.");
 
         var result = options.InvalidModelStateResponseFactory(context);

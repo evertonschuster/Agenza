@@ -11,8 +11,6 @@ public class ModelStateErrorMapperTests
 
     private const string ConverterText = "O CPF informado é inválido.";
 
-    private static readonly string[] BodyParameters = ["command"];
-
     private sealed record Body(DateOnly? BirthDate);
 
     private static FieldError BindingError(string text) => new("Validation.Failed", text);
@@ -30,7 +28,7 @@ public class ModelStateErrorMapperTests
 
     private static Error Map(ModelStateDictionary state)
     {
-        return ModelStateErrorMapper.ToError(state, BodyParameters);
+        return ModelStateErrorMapper.ToError(state);
     }
 
     [Fact]
@@ -97,21 +95,14 @@ public class ModelStateErrorMapperTests
     }
 
     [Fact]
-    public void ToError_DropsTheBodyParameterEntryWhenAnotherErrorExplainsIt()
+    public void ToError_KeepsTheEntryTheFrameworkAddsForTheBodyParameter()
     {
         var error = Map(State(
-            ("command", "The command field is required."),
-            ("$.birthDate", ConversionText)));
+            ("$.birthDate", ConversionText),
+            ("command", "The command field is required.")));
 
-        error.FieldErrors!.Keys.Should().Equal("birthDate");
-    }
-
-    [Fact]
-    public void ToError_KeepsTheBodyParameterEntryWhenItIsTheOnlyError()
-    {
-        var error = Map(State(("command", "The command field is required.")));
-
-        error.FieldErrors!["command"].Should().Equal(BindingError("The command field is required."));
+        error.FieldErrors!.Keys.Should().BeEquivalentTo(["birthDate", "command"]);
+        error.FieldErrors["command"].Should().Equal(BindingError("The command field is required."));
     }
 
     [Fact]

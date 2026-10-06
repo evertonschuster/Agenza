@@ -184,15 +184,20 @@ que muda é o conteúdo:
   informado é inválido.") e nunca ecoa o valor recebido. Um valor de tipo errado traz o texto do
   `System.Text.Json` — nome interno do tipo e posição do parser, não texto para o usuário;
 - só a **primeira** falha de valor é reportada: o `System.Text.Json` para no primeiro valor inválido,
-  então dois CPFs inválidos no mesmo corpo geram uma única entrada.
+  então dois CPFs inválidos no mesmo corpo geram uma única entrada;
+- uma falha de **leitura do corpo** (JSON malformado, corpo vazio, tipo errado, value object inválido)
+  vem com uma segunda chave em `errors`: o nome do parâmetro do corpo na action (`command` nos
+  controllers de hoje) com "The command field is required.". O framework marca o parâmetro inteiro
+  como ausente, a entrada só repete a falha real, e o backend não a remove. Uma propriedade ausente
+  (`fullName`) não a produz.
 
 Verificado em 2026-10-06 num host descartável com os mesmos controllers e a mesma configuração de MVC
 e de OpenAPI do serviço, sem banco nem autenticação:
 
 ```json
 {"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"fullName":[{"code":"Validation.Failed","message":"The FullName field is required."}]}}
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"":[{"code":"Validation.Failed","message":"Expected depth to be zero at the end of the JSON payload. ... Path: $ | LineNumber: 0 | BytePositionInLine: 19."}]}}
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"cpf":[{"code":"Validation.Failed","message":"O CPF informado é inválido."}]}}
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"":[{"code":"Validation.Failed","message":"Expected depth to be zero at the end of the JSON payload. ... Path: $ | LineNumber: 0 | BytePositionInLine: 19."}],"command":[{"code":"Validation.Failed","message":"The command field is required."}]}}
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"cpf":[{"code":"Validation.Failed","message":"O CPF informado é inválido."}],"command":[{"code":"Validation.Failed","message":"The command field is required."}]}}
 ```
 
 ### 4.4 404 e 405 vazios de roteamento — sem corpo, sem Content-Type
@@ -267,6 +272,9 @@ entidades e value objects (regras de forma), e os handlers (regras de estado), s
 - **Ramifique por `code`, nunca por `title`/mensagem livre** — já é regra do
   [AGENTS.md raiz](../AGENTS.md) e da skill [`agenza-api-contract`](../.claude/skills/agenza-api-contract/SKILL.md); §4.4 é o motivo concreto: o `code` pode
   simplesmente não existir.
+- **Ignore a chave de `errors` que é o nome do parâmetro do corpo** (`command`, §4.3): numa falha de
+  leitura do corpo ela repete a falha real e não é um campo da requisição. Um consumidor que trata
+  toda chave desconhecida como erro de formulário a mostra como "The command field is required.".
 - Trate **ausência de `code`** como um caso válido (fallback genérico), não como bug — acontece nos
   404/405 sem corpo (§4.4). O `code` de uma falha de binding existe, mas é sempre `Validation.Failed`:
   não distingue a regra (§4.3).

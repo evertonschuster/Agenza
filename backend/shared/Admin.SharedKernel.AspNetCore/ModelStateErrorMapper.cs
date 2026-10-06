@@ -10,7 +10,6 @@ public static class ModelStateErrorMapper
 
     public static Error ToError(ModelStateDictionary modelState)
     {
-        // A failed body read also marks the whole body parameter as missing; that entry only repeats the real one.
         var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>>();
         string? message = null;
 

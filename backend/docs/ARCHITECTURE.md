@@ -261,7 +261,9 @@ and transactional cleanup. A `try/catch` in a handler is a finding.
 wrong JSON type, an unknown JSON enum — reaches the client in the canonical shape
 (`AddModelStateProblemDetails`), but with the framework's English message and the generic code
 `Validation.Failed`; only a shared value object brings its own pt-BR message. That is why enums travel
-as strings (§6). The shape is described in [`docs/API.md`](../../docs/API.md) §4.3.
+as strings (§6). A failed body read also carries the framework's entry for the body parameter
+(`command`), which the backend does not remove. The shape is described in
+[`docs/API.md`](../../docs/API.md) §4.3.
 
 **Codes and messages.** `code` is English (`<Type>.<Rule>`, `<Entity>.<Reason>`) and is the contract
 clients branch on. Messages are pt-BR copy written for the end user; the frontend shows them as they
