@@ -35,7 +35,7 @@ Apply the threshold in §3. In this codebase it reads as:
 | --- | --- |
 | a tag's name, a contact's name or relationship, a description | its owner, with a named `DomainError` |
 
-Writing one:
+Writing a service's own (a value that is shared by every service is a different job — see the last bullet):
 
 - `sealed record`, private constructor, one `Value` (or the few values it groups).
 - `Create(raw)` trims and normalizes, then validates, and fails on the **first** broken rule. An
@@ -48,9 +48,10 @@ Writing one:
   value. The predicate and `Create` share the private check, so they cannot disagree.
 - No reference to an entity, a repository, a clock or configuration; what a rule needs comes in as a
   parameter (`today`).
-- A value with a format and no business context, the same in every service (CPF), goes to
-  `Admin.SharedKernel.ValueObjects` instead: `IStringValueObject<T>`, `Create` → `ParseResult<T>`, no
-  `DomainResult` (a date whose rules depend on today: `IDateValueObject<T>`, `Create(date, today)`). Its JSON, OpenAPI and column conversion come from the kernel (ARCHITECTURE §3, ADR 0055).
+- A value with a format and no business context, the same in every service (CPF, full name, phone,
+  e-mail, birth date, administrative notes), is not written here: it goes to
+  `Admin.SharedKernel.ValueObjects` and follows [value-objects.md](value-objects.md). The one thing to
+  know from this file: it has no `DomainResult` and no `DomainError` — `Create` returns a `ParseResult<T>`.
 
 ## 3. Behaviour
 
@@ -72,7 +73,7 @@ Writing one:
 | --- | --- | --- |
 | Root | `public static DomainResult<T> Create(Guid id, <value objects>, <context>, <child data>)` | `ToModel` in the Application |
 | Child | `internal static DomainResult<TChild> Create(Guid id, Guid rootId, <Child>Data data)` | its root only |
-| Value object | `Create(raw)` and `Restore(stored)` | `ToModel`, `ApplyTo`, EF conversions |
+| Value object | `Create(raw)` and `Restore(stored)` | `ToModel`, `ApplyTo`, EF conversions; a shared one: the JSON converter and the EF convention, never `ToModel` |
 
 - A root's `Create` takes value objects already built, not raw strings, for fields that are value
   objects; its own primitive fields it validates itself.

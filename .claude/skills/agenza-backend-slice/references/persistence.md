@@ -45,8 +45,10 @@ optimization this codebase avoids (ARCHITECTURE, rules of thumb).
 ## 3. The configuration — `<Entity>Configuration`
 
 Check each line of ARCHITECTURE §5 "Entity configuration" against your entity: composite alternate key,
-composite foreign keys between tenant-owned entities, value objects through `Restore` with lengths from
-their constants, enums as text with a `CHECK`, unique indexes with `TenantId` and
+composite foreign keys between tenant-owned entities, value objects with lengths from their constants
+(a service's own through `HasConversion(v => v.Value, s => <Vo>.Restore(s))`; a shared one needs only
+`HasMaxLength` — the `DbContext`'s `ConfigureConventions` already calls `AddValueObjectConversions()`),
+enums as text with a `CHECK`, unique indexes with `TenantId` and
 `"DeletedAt" IS NULL`, children through the backing field. Never add a soft-delete or tenant filter by
 hand.
 
