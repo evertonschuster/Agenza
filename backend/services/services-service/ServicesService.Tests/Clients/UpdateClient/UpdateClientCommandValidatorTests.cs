@@ -19,7 +19,16 @@ public class UpdateClientCommandValidatorTests
         IReadOnlyList<UpdateGuardianInput>? guardians = null,
         IReadOnlyList<UpdateReferenceContactInput>? referenceContacts = null,
         Guid? clientId = null) =>
-        new(clientId ?? ClientId, fullName, birthDate, phone, email, cpf, notes, guardians, referenceContacts);
+        new(
+            clientId ?? ClientId,
+            ClientTestData.Name(fullName),
+            ClientTestData.Birth(birthDate),
+            phone is null ? null : ClientTestData.Phone(phone),
+            email is null ? null : ClientTestData.Email(email),
+            cpf is null ? null : ClientTestData.Cpf(cpf),
+            notes is null ? null : ClientTestData.Notes(notes),
+            guardians,
+            referenceContacts);
 
     private static UpdateGuardianInput Guardian(
         Guid? id = null,
@@ -27,7 +36,12 @@ public class UpdateClientCommandValidatorTests
         string relationship = "Mãe",
         string? phone = null,
         string? cpf = null) =>
-        new(id, name, relationship, phone, cpf);
+        new(
+            id,
+            name,
+            relationship,
+            phone is null ? null : ClientTestData.Phone(phone),
+            cpf is null ? null : ClientTestData.Cpf(cpf));
 
     private static UpdateReferenceContactInput Reference(
         Guid? id = null,
@@ -35,7 +49,12 @@ public class UpdateClientCommandValidatorTests
         string relationship = "Tio",
         string? phone = null,
         params string[] purposes) =>
-        new(id, name, relationship, phone, purposes.Length == 0 ? ["emergency"] : purposes);
+        new(
+            id,
+            ClientTestData.Name(name),
+            relationship,
+            phone is null ? null : ClientTestData.Phone(phone),
+            purposes.Length == 0 ? ["emergency"] : purposes);
 
     private async Task<ValidationResult> Validate(UpdateClientCommand command) =>
         await _validator.ValidateAsync(command);
@@ -52,16 +71,6 @@ public class UpdateClientCommandValidatorTests
         return new TheoryData<string, UpdateClientCommand, string, string>
         {
             { "client id missing", Command(clientId: Guid.Empty), "ClientId", "Client.IdRequired" },
-            { "name missing", Command(fullName: ""), "FullName", "FullName.Required" },
-            { "name too short", Command(fullName: " A "), "FullName", "FullName.InvalidLength" },
-            { "name too long", Command(fullName: new string('a', 151)), "FullName", "FullName.InvalidLength" },
-            { "birth date today", Command(birthDate: new DateOnly(2026, 10, 2)), "BirthDate", "BirthDate.NotInThePast" },
-            { "birth date too old", Command(birthDate: new DateOnly(1905, 10, 2)), "BirthDate", "BirthDate.TooOld" },
-            { "phone", Command(phone: "telefone"), "Phone", "PhoneNumber.Invalid" },
-            { "email shape", Command(email: "maria@example"), "Email", "EmailAddress.Invalid" },
-            { "email length", Command(email: new string('a', 255) + "@x.com"), "Email", "EmailAddress.Invalid" },
-            { "cpf", Command(cpf: "529.982.247-24"), "Cpf", "CpfNumber.Invalid" },
-            { "notes", Command(notes: new string('n', 501)), "AdministrativeNotes", "AdministrativeNotes.TooLong" },
             { "minor without guardian", Command(birthDate: new DateOnly(2015, 3, 10)), "Guardians", "Client.GuardianRequired" },
             { "too many guardians", Command(guardians: tooManyGuardians), "Guardians", "Client.TooManyGuardians" },
             { "too many references", Command(referenceContacts: tooManyReferences), "ReferenceContacts", "Client.TooManyReferenceContacts" },
@@ -73,12 +82,8 @@ public class UpdateClientCommandValidatorTests
             { "guardian name too short", Command(guardians: [Guardian(name: "A")]), "Guardians[0].Name", "ClientContact.InvalidNameLength" },
             { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
             { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
-            { "guardian phone", Command(guardians: [Guardian(phone: "x")]), "Guardians[0].Phone", "PhoneNumber.Invalid" },
-            { "guardian cpf", Command(guardians: [Guardian(cpf: "123")]), "Guardians[0].Cpf", "CpfNumber.Invalid" },
-            { "reference name missing", Command(referenceContacts: [Reference(name: "")]), "ReferenceContacts[0].Name", "ClientContact.NameRequired" },
             { "reference relationship missing", Command(referenceContacts: [Reference(relationship: "")]), "ReferenceContacts[0].Relationship", "ClientContact.RelationshipRequired" },
-            { "reference phone", Command(referenceContacts: [Reference(phone: "x")]), "ReferenceContacts[0].Phone", "PhoneNumber.Invalid" },
-            { "reference without purposes", Command(referenceContacts: [new UpdateReferenceContactInput(null, "Carlos Lima", "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
+            { "reference without purposes", Command(referenceContacts: [new UpdateReferenceContactInput(null, ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
             { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Unknown" },
         };
     }
@@ -186,7 +191,7 @@ public class UpdateClientCommandValidatorTests
     public async Task Validate_WithListsOverTheLimit_DoesNotValidateTheirItems()
     {
         var guardians = Enumerable.Range(0, 5_000).Select(_ => Guardian(name: "", relationship: "")).ToList();
-        var contacts = Enumerable.Range(0, 5_000).Select(_ => new UpdateReferenceContactInput(null, "", "", "tel", [])).ToList();
+        var contacts = Enumerable.Range(0, 5_000).Select(_ => new UpdateReferenceContactInput(null, ClientTestData.Name("Carlos Lima"), "", null, [])).ToList();
 
         var result = await Validate(Command(guardians: guardians, referenceContacts: contacts));
 

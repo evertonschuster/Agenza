@@ -43,7 +43,7 @@ public class ClientReferenceContact : ClientContact
 
     internal DomainResult Update(ReferenceContactData data)
     {
-        var reviseResult = Revise(data.Name, data.Relationship, data.Phone);
+        var reviseResult = Revise(data.Name.Value, data.Relationship, data.Phone);
         if (reviseResult.IsFailure)
         {
             return reviseResult;

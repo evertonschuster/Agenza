@@ -16,7 +16,7 @@ public class ClientUpdateTests
         return Client.Create(
             Guid.NewGuid(),
             ClientTestData.Name("Paula Rocha"),
-            BirthDate.Create(birthDate, Today).Value,
+            ClientTestData.Birth(birthDate),
             ClientTestData.Phone(),
             ClientTestData.Email("paula@example.com"),
             ClientTestData.Cpf(),
@@ -55,7 +55,7 @@ public class ClientUpdateTests
     {
         return client.Update(
             ClientTestData.Name(fullName),
-            BirthDate.Create(birthDate, Today).Value,
+            ClientTestData.Birth(birthDate),
             null,
             null,
             null,
@@ -120,7 +120,7 @@ public class ClientUpdateTests
         var purposes = ContactPurposes.Create(ContactPurpose.OperationalSupport | ContactPurpose.DailyCommunication).Value;
         var contactChange = new ContactChange<ReferenceContactData>(
             contact.Id,
-            new ReferenceContactData("Carlos Dias", "Primo", null, purposes));
+            new ReferenceContactData(ClientTestData.Name("Carlos Dias"), "Primo", null, purposes));
 
         var result = Update(client, [change], [contactChange]);
 
@@ -277,20 +277,6 @@ public class ClientUpdateTests
             [new ContactChange<GuardianData>(guardian.Id, new GuardianData("Ana", "   ", null, null))]);
 
         result.Error.Code.Should().Be("ClientContact.RelationshipRequired");
-        AssertUntouched(client);
-    }
-
-    [Fact]
-    public void Update_WithAnInvalidReferenceContact_ChangesNothing()
-    {
-        var client = ClientWithContacts();
-        var purposes = ContactPurposes.Create(ContactPurpose.Emergency).Value;
-
-        var result = Update(
-            client,
-            referenceContacts: [new ContactChange<ReferenceContactData>(null, new ReferenceContactData("", "Tio", null, purposes))]);
-
-        result.Error.Code.Should().Be("ClientContact.NameRequired");
         AssertUntouched(client);
     }
 

@@ -54,10 +54,29 @@ public class UpdateClientCommandHandlerTests
         IReadOnlyList<UpdateGuardianInput>? guardians = null,
         IReadOnlyList<UpdateReferenceContactInput>? referenceContacts = null,
         Guid? clientId = null) =>
-        new(clientId ?? _client.Id, fullName, birthDate, phone, email, cpf, notes, guardians, referenceContacts);
+        new(
+            clientId ?? _client.Id,
+            ClientTestData.Name(fullName),
+            ClientTestData.Birth(birthDate),
+            phone is null ? null : ClientTestData.Phone(phone),
+            email is null ? null : ClientTestData.Email(email),
+            cpf is null ? null : ClientTestData.Cpf(cpf),
+            notes is null ? null : ClientTestData.Notes(notes),
+            guardians,
+            referenceContacts);
 
-    private static UpdateGuardianInput Guardian(Guid? id = null, string name = "Ana Souza") =>
-        new(id, name, "Mãe", null, null);
+    private static UpdateGuardianInput Guardian(
+        Guid? id = null,
+        string name = "Ana Souza",
+        string relationship = "Mãe",
+        string? phone = null,
+        string? cpf = null) =>
+        new(
+            id,
+            name,
+            relationship,
+            phone is null ? null : ClientTestData.Phone(phone),
+            cpf is null ? null : ClientTestData.Cpf(cpf));
 
     private static PersistenceResult<int> UniqueViolation(string? constraint) =>
         PersistenceResult.Failure<int>(new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, constraint));
@@ -101,8 +120,8 @@ public class UpdateClientCommandHandlerTests
         var removed = _client.Guardians.Last();
         var contact = _client.ReferenceContacts.Single();
         var command = Command(
-            guardians: [Guardian(kept.Id, "Ana Lima"), new UpdateGuardianInput(null, "Cris Souza", "Tia", "(11) 98888-0000", ClientTestData.OtherValidCpf)],
-            referenceContacts: [new UpdateReferenceContactInput(contact.Id, "Carlos Dias", "Primo", null, ["operationalSupport"])]);
+            guardians: [Guardian(kept.Id, "Ana Lima"), Guardian(null, "Cris Souza", "Tia", "(11) 98888-0000", ClientTestData.OtherValidCpf)],
+            referenceContacts: [new UpdateReferenceContactInput(contact.Id, ClientTestData.Name("Carlos Dias"), "Primo", null, ["operationalSupport"])]);
 
         var result = await Handler().Handle(command, CancellationToken.None);
 

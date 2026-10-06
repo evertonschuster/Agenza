@@ -255,7 +255,7 @@ public class Client : TenantOwnedEntity
 
         foreach (var change in referenceContacts)
         {
-            var detailsResult = ClientContact.ValidateDetails(change.Data.Name, change.Data.Relationship);
+            var detailsResult = ClientContact.ValidateDetails(change.Data.Name.Value, change.Data.Relationship);
             if (detailsResult.IsFailure)
             {
                 return detailsResult;

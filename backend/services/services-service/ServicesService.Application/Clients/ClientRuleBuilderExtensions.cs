@@ -7,68 +7,6 @@ public static class ClientRuleBuilderExtensions
     public const string GuardianMissingCode = "Client.GuardianMissing";
     public const string ReferenceContactMissingCode = "Client.ReferenceContactMissing";
 
-    public static IRuleBuilderOptions<T, string> MustBeValidFullName<T>(this IRuleBuilderInitial<T, string> rule)
-    {
-        return rule.Cascade(CascadeMode.Stop)
-            .NotEmpty()
-            .WithErrorCode(FullName.Required.Code)
-            .WithMessage("O nome completo é obrigatório.")
-            .Must(fullName => fullName.Trim().Length >= FullName.MinLength)
-            .WithErrorCode(FullName.InvalidLength.Code)
-            .WithMessage($"O nome completo deve ter pelo menos {FullName.MinLength} caracteres.")
-            .Must(fullName => fullName.Trim().Length <= FullName.MaxLength)
-            .WithErrorCode(FullName.InvalidLength.Code)
-            .WithMessage($"O nome completo deve ter no máximo {FullName.MaxLength} caracteres.");
-    }
-
-    public static IRuleBuilderOptions<T, DateOnly?> MustBeValidBirthDate<T>(
-        this IRuleBuilderInitial<T, DateOnly?> rule,
-        Func<DateOnly> today)
-    {
-        return rule.Cascade(CascadeMode.Stop)
-            .Must(birthDate => birthDate is null || BirthDate.IsInThePast(birthDate.Value, today()))
-            .WithErrorCode(BirthDate.NotInThePast.Code)
-            .WithMessage("A data de nascimento deve estar no passado.")
-            .Must(birthDate => birthDate is null || BirthDate.IsWithinMaxAge(birthDate.Value, today()))
-            .WithErrorCode(BirthDate.TooOld.Code)
-            .WithMessage($"A data de nascimento não pode indicar idade superior a {BirthDate.MaxAgeInYears} anos.");
-    }
-
-    public static IRuleBuilderOptions<T, string?> MustBeValidPhone<T>(this IRuleBuilder<T, string?> rule)
-    {
-        return rule.Must(phone => string.IsNullOrWhiteSpace(phone) || PhoneNumber.HasValidShape(phone.Trim()))
-            .WithErrorCode(PhoneNumber.Invalid.Code)
-            .WithMessage(
-                $"Informe um telefone válido, com até {PhoneNumber.MaxLength} caracteres entre dígitos, espaços, +, parênteses e hífen.");
-    }
-
-    public static IRuleBuilderOptions<T, string?> MustBeValidEmail<T>(this IRuleBuilderInitial<T, string?> rule)
-    {
-        return rule.Cascade(CascadeMode.Stop)
-            .Must(email => email is null || email.Trim().Length <= EmailAddress.MaxLength)
-            .WithErrorCode(EmailAddress.Invalid.Code)
-            .WithMessage($"O e-mail deve ter no máximo {EmailAddress.MaxLength} caracteres.")
-            .Must(email => string.IsNullOrWhiteSpace(email) || EmailAddress.HasValidShape(email.Trim().ToLowerInvariant()))
-            .WithErrorCode(EmailAddress.Invalid.Code)
-            .WithMessage("Informe um e-mail válido.");
-    }
-
-    public static IRuleBuilderOptions<T, string?> MustBeValidCpf<T>(this IRuleBuilder<T, string?> rule)
-    {
-        return rule.Must(cpf => string.IsNullOrWhiteSpace(cpf) || CpfNumber.IsValid(cpf))
-            .WithErrorCode(CpfNumber.Invalid.Code)
-            .WithMessage("Informe um CPF válido.");
-    }
-
-    public static IRuleBuilderOptions<T, string?> MustBeValidAdministrativeNotes<T>(
-        this IRuleBuilder<T, string?> rule)
-    {
-        return rule.Must(notes => notes is null || notes.Trim().Length <= AdministrativeNotes.MaxLength)
-            .WithErrorCode(AdministrativeNotes.TooLong.Code)
-            .WithMessage(
-                $"As observações administrativas devem ter no máximo {AdministrativeNotes.MaxLength} caracteres.");
-    }
-
     public static IRuleBuilderOptions<T, IReadOnlyList<TItem>?> MustNotExceedTheGuardianLimit<T, TItem>(
         this IRuleBuilder<T, IReadOnlyList<TItem>?> rule)
     {
