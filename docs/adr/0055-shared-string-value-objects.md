@@ -20,19 +20,20 @@ type the same way.
    and phone are candidates). A value object that belongs to one context stays in that service's `Domain/ValueObjects/`
    with `Create` and `DomainResult`.
 
-2. **They behave like `Guid` and `DateOnly`**, not like the service's own value objects. The contract
-   `IStringValueObject<T>` extends `IParsable<T>` — `TryParse`, `Parse` (throws `FormatException`) — and adds `Value`,
-   `Restore` (rebuilds a stored value without validating) and `InvalidMessage` (pt-BR, one per type). There is no
-   `DomainResult` and no `DomainError`: both are per-service types, and the only reader of a failure here is the wire
-   converter, which needs one message. Blank is not a value: `TryParse("")` fails, and the member is nullable when the
-   field is optional.
+2. **They behave like a scalar** (`Guid`, `DateOnly`) on the wire, not like the service's own value objects. The
+   contract `IStringValueObject<T>` is `Value`, `Create(string?)` and `Restore` (rebuilds a stored value without
+   validating). `Create` returns a `ParseResult<T>`: the value, or the pt-BR message of the rule that failed — a type
+   with several rules has a message for each. There is no `Parse` and no `TryParse`, and no `DomainResult` or
+   `DomainError`: both are per-service types, and a code is not needed here, since a binding failure always answers
+   `Validation.Failed`. Blank is not a value: `Create(null)`, `Create("")` and whitespace fail, and the member is
+   nullable when the field is optional.
 
 3. **The kernel applies the contract once**, so a new value object in that project works everywhere with no per-service
    code:
    - `JsonSerializerOptions.AddValueObjectConverters()` (`Admin.SharedKernel`): a JSON string in, any formatting the type
-     accepts; `null`, `""` and whitespace bind to `null`; anything else, including a non-string token, throws a
-     `JsonException` carrying `InvalidMessage` and never the value (it is personal data and the message reaches the
-     logs).
+     accepts; `null`, `""` and whitespace bind to `null`; anything else throws a `JsonException` carrying the `Error` of
+     the result — for a token that is not a string, the `Error` of `Create(null)` — and never the value (it is personal
+     data and the message reaches the logs, so a type's errors must not echo it).
    - `OpenApiOptions.MapValueObjectsToStrings()` (`Admin.SharedKernel.AspNetCore`): the schema is an inline `string`
      (nullable when the member is), with no schema of its own, so the generated frontend types do not change.
    - `ModelConfigurationBuilder.AddValueObjectConversions()` (`Admin.SharedKernel.EntityFrameworkCore`), called from
@@ -52,6 +53,11 @@ type the same way.
 
 - Adding a value object: one type in the project and its tests; a service picks it up by calling the three extensions it
   already calls. `ARCHITECTURE.md` §3 carries the recipe.
+- `Create` must fail on null and blank, because the converter takes the message of a non-string token from
+  `Create(null)`. `StringValueObjectContractTests` checks it for every type in the project.
+- Without `IParsable<T>` a shared value object does not bind from a route or a query. MVC on .NET 10 does bind an
+  `IParsable` type there (probed: it calls `TryParse`, never `Parse`), but with its own English message that echoes the
+  value; a CPF in a URL is not wanted.
 - `Admin.SharedKernel.AspNetCore` now references `Microsoft.AspNetCore.OpenApi`, whose source generator adds a generated
   file to that assembly; the kernel's test project excludes that file from coverage.
 - A converter can only reject by throwing, so a binding failure is a `JsonException` — the same mechanism the
@@ -72,8 +78,12 @@ type the same way.
   `ProjectReference` that changes together with its consumers.
 - **Moving `DomainResult`/`DomainError` into the shared project**, so the value objects keep `Create → DomainResult`. It
   touches about forty files in two services, amends ADR 0014, and the only reader of the failure is the converter.
-- **`TryCreate(raw, out value, out error)` with only `DomainError` shared.** It leaves two conventions in one Domain
-  (this one and the other eight value objects), where `IParsable<T>` is the shape the framework already understands.
+- **`IParsable<T>`** (`TryParse`, `Parse`), the first version of this contract. `Parse` had no caller — the converter and
+  EF never call it and MVC calls only `TryParse` — and `TryParse` returns no message, so a type could carry only one
+  fixed message.
+- **`TryParse(raw, out value, out string? error)`.** One message per rule with no result type. `ParseResult<T>` was
+  chosen so that a failure travels the way the services' own `DomainResult` does, and can carry more than a message
+  later without changing the shape of the contract.
 - **One converter class per value object, with `[JsonConverter]` on each property** — the first version of the CPF spike.
   One class, one registration and one schema case per type per service, and an attribute that `Guid` and `DateOnly` never
   needed. Replaced by the contract.

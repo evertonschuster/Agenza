@@ -1,6 +1,5 @@
 using System.Text.Json;
 using ServicesService.Application.Clients.CreateClient;
-using Admin.SharedKernel.ValueObjects;
 
 namespace ServicesService.Tests.Clients.CreateClient;
 
@@ -46,7 +45,7 @@ public class CreateClientCommandCpfBindingTests
 
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.cpf");
-        exception.Message.Should().Be(CpfNumber.InvalidMessage);
+        exception.Message.Should().Be("O CPF informado é inválido.");
     }
 
     [Fact]

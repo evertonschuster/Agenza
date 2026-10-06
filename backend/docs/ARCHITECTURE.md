@@ -192,10 +192,10 @@ only by its length (a name, a description) **may** stay a primitive, validated b
 
 **Shared value objects** ([0055](../../docs/adr/0055-shared-string-value-objects.md)) live in
 `Admin.SharedKernel.ValueObjects` when the value has a format and no business context (CPF). They
-behave like `Guid` and `DateOnly`: a `sealed record` implementing `IStringValueObject<T>`, so
-`TryParse`/`Parse` instead of `Create`, plus `Value`, `Restore` and `InvalidMessage`; no `DomainResult`,
-no `DomainError`. A blank string is not a value — `TryParse("")` fails — and an optional member is
-nullable. The kernel does the rest for every implementer: the JSON converter
+behave like a scalar on the wire: a `sealed record` implementing `IStringValueObject<T>`, with `Value`,
+`Restore` and a `Create(raw)` that returns a `ParseResult<T>` — the value, or the pt-BR message of the
+rule that failed; no `DomainResult`, no `DomainError`, no `Parse`. A blank string is not a value —
+`Create("")` fails — and an optional member is nullable. The kernel does the rest for every implementer: the JSON converter
 (`AddValueObjectConverters`), the OpenAPI `string` schema (`MapValueObjectsToStrings`) and the column
 conversion (`AddValueObjectConversions`, called from the `DbContext`'s `ConfigureConventions`). Only
 `HasMaxLength` is written in the entity configuration. A command may carry one (`CpfNumber? Cpf`); it

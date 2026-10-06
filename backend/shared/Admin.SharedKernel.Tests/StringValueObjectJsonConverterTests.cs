@@ -1,4 +1,3 @@
-using System.Diagnostics.CodeAnalysis;
 using System.Text.Json;
 using Admin.SharedKernel.ValueObjects;
 
@@ -13,7 +12,8 @@ public class StringValueObjectJsonConverterTests
 
     private sealed record ThreeLetters : IStringValueObject<ThreeLetters>
     {
-        public static string InvalidMessage => "Informe três letras.";
+        public const string WrongLength = "Informe exatamente três caracteres.";
+        public const string NotLetters = "Use apenas letras.";
 
         public string Value { get; }
 
@@ -22,13 +22,19 @@ public class StringValueObjectJsonConverterTests
             Value = value;
         }
 
-        public static ThreeLetters Parse(string s, IFormatProvider? provider) =>
-            TryParse(s, provider, out var result) ? result : throw new FormatException(InvalidMessage);
-
-        public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out ThreeLetters result)
+        public static ParseResult<ThreeLetters> Create(string? raw)
         {
-            result = s is { Length: 3 } && s.All(char.IsAsciiLetter) ? new ThreeLetters(s) : null;
-            return result is not null;
+            if (raw is not { Length: 3 })
+            {
+                return ParseResult<ThreeLetters>.Failure(WrongLength);
+            }
+
+            if (!raw.All(char.IsAsciiLetter))
+            {
+                return ParseResult<ThreeLetters>.Failure(NotLetters);
+            }
+
+            return ParseResult<ThreeLetters>.Success(new ThreeLetters(raw));
         }
 
         public static ThreeLetters Restore(string value) => new(value);
@@ -52,19 +58,19 @@ public class StringValueObjectJsonConverterTests
     }
 
     [Theory]
-    [InlineData("\"ab\"")]
-    [InlineData("\"abcd\"")]
-    [InlineData("\"ab1\"")]
-    [InlineData("123")]
-    [InlineData("true")]
-    [InlineData("{}")]
-    public void Read_WithAnInvalidValue_ThrowsAtTheFieldWithTheTypeMessage(string codeJson)
+    [InlineData("\"ab\"", ThreeLetters.WrongLength)]
+    [InlineData("\"abcd\"", ThreeLetters.WrongLength)]
+    [InlineData("\"ab1\"", ThreeLetters.NotLetters)]
+    [InlineData("123", ThreeLetters.WrongLength)]
+    [InlineData("true", ThreeLetters.WrongLength)]
+    [InlineData("{}", ThreeLetters.WrongLength)]
+    public void Read_WithAnInvalidValue_ThrowsAtTheFieldWithTheMessageOfTheBrokenRule(string codeJson, string expectedMessage)
     {
         var act = () => Bind($$"""{ "code": {{codeJson}} }""");
 
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.code");
-        exception.Message.Should().Be(ThreeLetters.InvalidMessage);
+        exception.Message.Should().Be(expectedMessage);
     }
 
     [Fact]

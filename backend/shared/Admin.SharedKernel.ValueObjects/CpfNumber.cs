@@ -1,12 +1,10 @@
-using System.Diagnostics.CodeAnalysis;
-
 namespace Admin.SharedKernel.ValueObjects;
 
 public sealed record CpfNumber : IStringValueObject<CpfNumber>
 {
     public const int Length = 11;
 
-    public static string InvalidMessage => "O CPF informado é inválido.";
+    private const string InvalidMessage = "O CPF informado é inválido.";
 
     public string Value { get; }
 
@@ -15,29 +13,16 @@ public sealed record CpfNumber : IStringValueObject<CpfNumber>
         Value = value;
     }
 
-    public static CpfNumber Parse(string s, IFormatProvider? provider)
+    public static ParseResult<CpfNumber> Create(string? raw)
     {
-        return TryParse(s, provider, out var result) ? result : throw new FormatException(InvalidMessage);
-    }
-
-    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out CpfNumber result)
-    {
-        result = null;
-
-        if (string.IsNullOrWhiteSpace(s))
-        {
-            return false;
-        }
-
-        var digits = StripMask(s);
+        var digits = StripMask(raw ?? string.Empty);
 
         if (!HasValidCheckDigits(digits))
         {
-            return false;
+            return ParseResult<CpfNumber>.Failure(InvalidMessage);
         }
 
-        result = new CpfNumber(digits);
-        return true;
+        return ParseResult<CpfNumber>.Success(new CpfNumber(digits));
     }
 
     public static CpfNumber Restore(string value)

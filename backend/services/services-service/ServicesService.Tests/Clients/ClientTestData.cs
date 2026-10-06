@@ -19,7 +19,7 @@ internal static class ClientTestData
 
     public static CpfNumber Cpf(string value = ValidCpf)
     {
-        return CpfNumber.Parse(value, null);
+        return CpfNumber.Create(value).Value;
     }
 
     public static EmailAddress Email(string value = "maria@example.com")

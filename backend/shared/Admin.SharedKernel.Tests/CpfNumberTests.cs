@@ -4,6 +4,8 @@ namespace Admin.SharedKernel.Tests;
 
 public class CpfNumberTests
 {
+    private const string InvalidMessage = "O CPF informado é inválido.";
+
     [Theory]
     [InlineData("529.982.247-25", "52998224725")]
     [InlineData("52998224725", "52998224725")]
@@ -11,11 +13,12 @@ public class CpfNumberTests
     [InlineData("529 982 247 25", "52998224725")]
     [InlineData("123.456.789-09", "12345678909")]
     [InlineData("111.444.777-35", "11144477735")]
-    public void TryParse_WithAValidCpf_StripsTheMask(string raw, string expectedDigits)
+    public void Create_WithAValidCpf_StripsTheMask(string raw, string expectedDigits)
     {
-        CpfNumber.TryParse(raw, null, out var cpf).Should().BeTrue();
+        var result = CpfNumber.Create(raw);
 
-        cpf!.Value.Should().Be(expectedDigits);
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Value.Should().Be(expectedDigits);
     }
 
     [Theory]
@@ -33,29 +36,24 @@ public class CpfNumberTests
     [InlineData("abc.def.ghi-jk")]
     [InlineData("529.982.247-2a")]
     [InlineData("٥٢٩٩٨٢٢٤٧٢٥")]
-    public void TryParse_WithAnythingElse_Fails(string? raw)
+    public void Create_WithAnythingElse_FailsWithTheCpfMessage(string? raw)
     {
-        CpfNumber.TryParse(raw, null, out var cpf).Should().BeFalse();
+        var result = CpfNumber.Create(raw);
 
-        cpf.Should().BeNull();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(InvalidMessage);
     }
 
     [Fact]
-    public void Parse_WithAValidCpf_ReturnsIt()
+    public void Create_WhenItFails_NeverCarriesTheValue()
     {
-        CpfNumber.Parse("529.982.247-25", null).Value.Should().Be("52998224725");
+        var result = CpfNumber.Create("529.982.247-24");
+
+        result.Error.Should().NotContain("529").And.NotContain("24");
     }
 
     [Fact]
-    public void Parse_WithAnInvalidCpf_ThrowsAFormatExceptionWithTheTypeMessage()
-    {
-        var act = () => CpfNumber.Parse("529.982.247-24", null);
-
-        act.Should().Throw<FormatException>().WithMessage(CpfNumber.InvalidMessage);
-    }
-
-    [Fact]
-    public void Restore_AcceptsACpfThatTryParseWouldReject()
+    public void Restore_AcceptsACpfThatCreateWouldReject()
     {
         CpfNumber.Restore("00000000000").Value.Should().Be("00000000000");
     }

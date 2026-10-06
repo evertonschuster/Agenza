@@ -52,7 +52,7 @@ public class ClientPersistenceTests
             BirthDate.Create(birthDate, Today).Value,
             null,
             EmailAddress.Create(email).Value,
-            cpf is null ? null : CpfNumber.Parse(cpf, null),
+            cpf is null ? null : CpfNumber.Create(cpf).Value,
             null,
             Today,
             guardians ?? [],
@@ -70,7 +70,7 @@ public class ClientPersistenceTests
 
     private static CpfNumber Cpf(string digits)
     {
-        return CpfNumber.Parse(digits, null);
+        return CpfNumber.Create(digits).Value;
     }
 
     private static EmailAddress Email(string address)
