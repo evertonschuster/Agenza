@@ -13,6 +13,12 @@ public static class ModelConfigurationBuilderExtensions
                 .HaveConversion(typeof(StringValueObjectConverter<>).MakeGenericType(valueObject));
         }
 
+        foreach (var valueObject in DateValueObjects.InThisProject())
+        {
+            configurationBuilder.Properties(valueObject)
+                .HaveConversion(typeof(DateValueObjectConverter<>).MakeGenericType(valueObject));
+        }
+
         return configurationBuilder;
     }
 }

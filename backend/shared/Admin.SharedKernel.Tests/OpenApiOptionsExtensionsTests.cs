@@ -7,12 +7,14 @@ namespace Admin.SharedKernel.Tests;
 
 public class OpenApiOptionsExtensionsTests
 {
-    [Fact]
-    public void MapValueObjectsToStrings_GivesAValueObjectNoSchemaOfItsOwn()
+    [Theory]
+    [InlineData(typeof(CpfNumber))]
+    [InlineData(typeof(BirthDate))]
+    public void MapValueObjectsToStrings_GivesAValueObjectNoSchemaOfItsOwn(Type valueObject)
     {
         var options = new OpenApiOptions().MapValueObjectsToStrings();
 
-        options.CreateSchemaReferenceId(JsonSerializerOptions.Default.GetTypeInfo(typeof(CpfNumber))).Should().BeNull();
+        options.CreateSchemaReferenceId(JsonSerializerOptions.Default.GetTypeInfo(valueObject)).Should().BeNull();
     }
 
     [Theory]

@@ -139,7 +139,7 @@ lines repeated between the create and the edit of the same aggregate are accepte
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
 nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`) — no other domain type, no tenant. The
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`) — no other domain type, no tenant. The
 output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
 the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
 response, value objects flatten to their primitive and enums to camelCase strings. No mapping library, no DTO in the
@@ -192,7 +192,7 @@ only by its length (a name, a description) **may** stay a primitive, validated b
 
 **Shared value objects** ([0055](../../docs/adr/0055-shared-string-value-objects.md)) live in
 `Admin.SharedKernel.ValueObjects` when the value has a format and no business context (CPF, full name,
-phone, e-mail). They
+phone, e-mail, birth date). They
 behave like a scalar on the wire: a `sealed record` implementing `IStringValueObject<T>`, with `Value`,
 `Restore` and a `Create(raw)` that returns a `ParseResult<T>` — the value, or the pt-BR message of the
 rule that failed; no `DomainResult`, no `DomainError`, no `Parse`. A blank string is not a value —
@@ -204,12 +204,15 @@ conversion (`AddValueObjectConversions`, called from the `DbContext`'s `Configur
 `HasMaxLength` is written in the entity configuration. A command may carry one (`CpfNumber? Cpf`, `FullName FullName`); it
 needs no validator rule and no call in `ToModel`. Binding stops at the first invalid value, so a body with
 two invalid fields answers one at a time. To add one: the type in that project and its tests in
-`Admin.SharedKernel.Tests`. A value whose rule takes a parameter (`BirthDate`) or is not a string stays
-in the service, with `Create`.
+`Admin.SharedKernel.Tests`. A date whose rules depend on the day (`BirthDate`) implements
+`IDateValueObject<T>` instead — `Create(date, today)`, with `today` read at binding from the container's
+`TimeProvider` (the same one the handlers use, [0045](../../docs/adr/0045-backend-works-in-utc.md)) and the same
+three pieces from the kernel. A value that is neither a string nor a date stays in the service, with
+`Create`.
 
 **Errors.** `DomainError(Code, Message)`, declared once per rule as `static readonly` on the type that
 owns it. The code is `<Type>.<Rule>` and talks about the value, not about who uses it
-(`BirthDate.TooOld`, `Client.GuardianRequired`), so it can be reused elsewhere. Messages are pt-BR.
+(`ContactPurposes.Required`, `Client.GuardianRequired`), so it can be reused elsewhere. Messages are pt-BR.
 
 **Lifecycle.** "Deleted" is `BaseEntity`'s soft delete and nothing else: a repository `Remove`s, the
 save interceptor stamps `DeletedAt`, the query filter hides the row, a deleted id answers 404. Never

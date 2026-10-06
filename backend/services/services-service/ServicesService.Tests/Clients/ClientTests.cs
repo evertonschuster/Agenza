@@ -1,3 +1,4 @@
+using Admin.SharedKernel.ValueObjects;
 using ServicesService.Domain.Common;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
@@ -15,7 +16,7 @@ public class ClientTests
         Client.Create(
             Guid.NewGuid(),
             ClientTestData.Name(),
-            BirthDate.Create(birthDate, Today).Value,
+            ClientTestData.Birth(birthDate),
             null,
             null,
             null,

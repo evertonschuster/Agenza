@@ -1,3 +1,4 @@
+using Admin.SharedKernel.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
@@ -28,6 +29,20 @@ public class ValueObjectConversionTests
         var restored = converter.ConvertFromProvider(storedValue);
 
         restored.Should().BeEquivalentTo(new { Value = storedValue });
+    }
+
+    [Fact]
+    public void ReadingAStoredBirthDate_RestoresItWithoutTodaysRules()
+    {
+        var options = new DbContextOptionsBuilder<ServicesDataContext>()
+            .UseInMemoryDatabase(Guid.NewGuid().ToString())
+            .Options;
+        using var context = new ServicesDataContext(options);
+        var converter = context.Model.FindEntityType(typeof(Client))!.FindProperty(nameof(Client.BirthDate))!.GetValueConverter()!;
+        var storedLongAgo = new DateOnly(1890, 1, 1);
+
+        converter.ConvertFromProvider(storedLongAgo).Should().Be(BirthDate.Restore(storedLongAgo));
+        converter.ConvertToProvider(BirthDate.Restore(storedLongAgo)).Should().Be(storedLongAgo);
     }
 
     [Fact]

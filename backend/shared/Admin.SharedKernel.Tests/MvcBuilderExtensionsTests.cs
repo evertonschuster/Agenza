@@ -1,4 +1,6 @@
+using System.Text.Json;
 using Admin.SharedKernel.AspNetCore;
+using Admin.SharedKernel.ValueObjects;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Abstractions;
@@ -14,6 +16,23 @@ public class MvcBuilderExtensionsTests
     {
         return new ActionContext(new DefaultHttpContext(), new RouteData(), new ActionDescriptor());
     }
+
+    [Fact]
+    public void AddValueObjectJson_ReadsTheDateValueObjectsAgainstTheClockOfTheContainer()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton<TimeProvider>(new FixedClock(new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero)));
+        services.AddControllers().AddValueObjectJson();
+        var json = services.BuildServiceProvider().GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
+
+        var today = () => JsonSerializer.Deserialize<DateSample>("{ \"born\": \"2026-10-02\" }", json);
+
+        today.Should().Throw<JsonException>();
+        JsonSerializer.Deserialize<DateSample>("{ \"born\": \"2026-10-01\" }", json)!.Born!.Value
+            .Should().Be(new DateOnly(2026, 10, 1));
+    }
+
+    private sealed record DateSample(BirthDate? Born);
 
     [Fact]
     public void AddModelStateProblemDetails_AnswersAnInvalidModelWithTheCanonicalProblem()

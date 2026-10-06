@@ -16,8 +16,8 @@ type the same way.
 
 1. **A project with no reference at all**, `backend/shared/Admin.SharedKernel.ValueObjects`. A service's Domain may
    reference it and nothing else, so Domain still depends on no package and no other project. It holds the value objects
-   that carry no business context — a format and a normalization that are the same in every service (CPF, full name, phone and
-   e-mail). A value object that belongs to one context stays in that service's `Domain/ValueObjects/`
+   that carry no business context — a format and a normalization that are the same in every service (CPF, full name, phone, e-mail and
+   birth date). A value object that belongs to one context stays in that service's `Domain/ValueObjects/`
    with `Create` and `DomainResult`.
 
 2. **They behave like a scalar** (`Guid`, `DateOnly`) on the wire, not like the service's own value objects. The
@@ -30,17 +30,24 @@ type the same way.
    (a static virtual member of the contract, `true` by default) makes the converter bind it to `null`; a type that
    declares it `false` (`FullName`) gets its own message instead of the framework's `[Required]` in English.
 
+   A second contract, `IDateValueObject<T>`, serves a value that is a date and whose rules depend on the day
+   (`BirthDate`): `Create(DateOnly, today)` and `Restore(DateOnly)`. The type never reads the clock; the converter hands it
+   `today` from an injected `TimeProvider`.
+
 3. **The kernel applies the contract once**, so a new value object in that project works everywhere with no per-service
    code:
-   - `JsonSerializerOptions.AddValueObjectConverters()` (`Admin.SharedKernel`): a JSON string in, any formatting the type
+   - `JsonSerializerOptions.AddValueObjectConverters(TimeProvider)` (`Admin.SharedKernel`), which MVC reaches through
+     `AddValueObjectJson()` with the container's own `TimeProvider`: a JSON string in, any formatting the type
      accepts; `null`, `""` and whitespace bind to `null` when the type's `BlankIsAbsent` is true; anything else throws a `JsonException` carrying the `Error` of
      the result — for a token that is not a string, the `Error` of `Create(null)` — and never the value (it is personal
-     data and the message reaches the logs, so a type's errors must not echo it).
+     data and the message reaches the logs, so a type's errors must not echo it). A date value object reads the date the
+     way the framework does, so a malformed date, `""` included, answers as it always did; only its own rules have a message.
    - `OpenApiOptions.MapValueObjectsToStrings()` (`Admin.SharedKernel.AspNetCore`): the schema is an inline `string`
-     (nullable when the member is), with no schema of its own, so the generated frontend types do not change.
+     (nullable when the member is, `format: date` for a date), with no schema of its own, so the generated frontend types
+     do not change.
    - `ModelConfigurationBuilder.AddValueObjectConversions()` (`Admin.SharedKernel.EntityFrameworkCore`), called from
-     `ConfigureConventions`: a `string` column. The column's length stays in the entity configuration
-     (`HasMaxLength(CpfNumber.Length)`).
+     `ConfigureConventions`: a `string` column, or a `date` column for a date. The column's length stays in the entity
+     configuration (`HasMaxLength(CpfNumber.Length)`).
 
 4. **A command or an input may carry such a value object** (`CpfNumber? Cpf`). The validator no longer restates its
    rule and `ToModel` makes no call for it: an invalid value never gets past model binding. The failure reaches the
@@ -73,8 +80,11 @@ type the same way.
   ter no máximo 254 caracteres."), not the domain's, because those were what the user saw; the validators lost the rules.
 - Binding stops at the first invalid value. A body with an empty name and an invalid CPF reports only the field that comes
   first in the JSON, where the validator reported every field at once.
-- A rule that takes a parameter (`BirthDate` needs today) or a value that is not a string does not fit the contract and
-  stays in the service.
+- The clock is read at binding by the injected `TimeProvider` ([ADR 0045](0045-backend-works-in-utc.md)) and again by
+  the handler for `today`, so a request that straddles UTC midnight could be judged by two different days. The validator
+  keeps one birth-date rule, that a minor needs a guardian (`IsMinorOn(today)`), because it is a rule about the whole
+  command.
+- A value that is neither a string nor a date stays in the service.
 
 ## Considered and rejected
 

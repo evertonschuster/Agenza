@@ -171,7 +171,7 @@ Só `Tenant.ContextMismatch` (§2) usa essa forma menor — sem `traceId`/`corre
 Se o **model binder** do `[ApiController]` rejeita o corpo antes de qualquer `IValidator`/handler
 rodar — uma propriedade obrigatória do record **totalmente ausente** do JSON (não vazia: ausente),
 JSON malformado, um valor de tipo errado ou um value object compartilhado inválido
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
 canônica de §4.1** (`AddModelStateProblemDetails`), não o `ValidationProblemDetails` do framework. O
 que muda é o conteúdo:
 
@@ -181,7 +181,7 @@ que muda é o conteúdo:
   um campo — JSON malformado, corpo vazio — vem sob a chave vazia `""`;
 - a `message` é o texto do framework, **em inglês** ("The FullName field is required.", "A non-empty
   request body is required."), exceto a de um value object compartilhado, que vem em pt-BR ("O CPF
-  informado é inválido.", "O nome completo é obrigatório.", "Informe um e-mail válido.") e nunca ecoa o valor
+  informado é inválido.", "O nome completo é obrigatório.", "Informe um e-mail válido.", "A data de nascimento deve estar no passado.") e nunca ecoa o valor
   recebido. Um valor de tipo errado traz o texto do
   `System.Text.Json` — nome interno do tipo e posição do parser, não texto para o usuário;
 - só a **primeira** falha de valor é reportada: o `System.Text.Json` para no primeiro valor inválido,

@@ -21,8 +21,6 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.Property(c => c.FullName)
             .IsRequired()
             .HasMaxLength(FullName.MaxLength);
-        builder.Property(c => c.BirthDate)
-            .HasConversion(birthDate => birthDate!.Value, value => BirthDate.Restore(value));
         builder.Property(c => c.Phone).HasMaxLength(PhoneNumber.MaxLength);
         builder.Property(c => c.Email).HasMaxLength(EmailAddress.MaxLength);
         builder.Property(c => c.Cpf).HasMaxLength(CpfNumber.Length);

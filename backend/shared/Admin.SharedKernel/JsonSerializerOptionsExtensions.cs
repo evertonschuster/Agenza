@@ -4,9 +4,9 @@ namespace Admin.SharedKernel;
 
 public static class JsonSerializerOptionsExtensions
 {
-    public static JsonSerializerOptions AddValueObjectConverters(this JsonSerializerOptions options)
+    public static JsonSerializerOptions AddValueObjectConverters(this JsonSerializerOptions options, TimeProvider timeProvider)
     {
-        options.Converters.Add(new StringValueObjectJsonConverterFactory());
+        options.Converters.Add(new ValueObjectJsonConverterFactory(timeProvider));
         return options;
     }
 }

@@ -20,7 +20,7 @@ public class CreateClientCommandValidatorTests
         IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
         new(
             ClientTestData.Name(fullName),
-            birthDate,
+            birthDate is null ? null : BirthDate.Restore(birthDate.Value),
             phone is null ? null : ClientTestData.Phone(phone),
             email is null ? null : ClientTestData.Email(email),
             cpf,
@@ -55,8 +55,6 @@ public class CreateClientCommandValidatorTests
 
         return new TheoryData<string, CreateClientCommand, string, string>
         {
-            { "birth date today", Command(birthDate: new DateOnly(2026, 10, 2)), "BirthDate", "BirthDate.NotInThePast" },
-            { "birth date too old", Command(birthDate: new DateOnly(1905, 10, 2)), "BirthDate", "BirthDate.TooOld" },
             { "notes", Command(notes: new string('n', 501)), "AdministrativeNotes", "AdministrativeNotes.TooLong" },
             { "minor without guardian", Command(birthDate: new DateOnly(2015, 3, 10)), "Guardians", "Client.GuardianRequired" },
             { "too many guardians", Command(guardians: tooManyGuardians), "Guardians", "Client.TooManyGuardians" },
@@ -96,31 +94,11 @@ public class CreateClientCommandValidatorTests
     }
 
     [Fact]
-    public async Task Validate_WithBirthDateToday_Fails()
-    {
-        var result = await Validate(Command(birthDate: new DateOnly(2026, 10, 2), guardians: [Guardian()]));
-
-        MessagesFor(result, "BirthDate").Should().Equal("A data de nascimento deve estar no passado.");
-    }
-
-    [Fact]
-    public async Task Validate_WithFutureBirthDate_FailsWithoutDemandingAGuardian()
+    public async Task Validate_WithAFutureBirthDate_DoesNotDemandAGuardian()
     {
         var result = await Validate(Command(birthDate: new DateOnly(2027, 1, 1)));
 
-        MessagesFor(result, "BirthDate").Should().Equal("A data de nascimento deve estar no passado.");
         MessagesFor(result, "Guardians").Should().BeEmpty();
-    }
-
-    [Fact]
-    public async Task Validate_WithBirthDateOlderThanOneHundredTwentyYears_Fails()
-    {
-        (await Validate(Command(birthDate: new DateOnly(1906, 10, 2)))).IsValid.Should().BeTrue();
-
-        var result = await Validate(Command(birthDate: new DateOnly(1905, 10, 2)));
-
-        MessagesFor(result, "BirthDate").Should()
-            .Equal("A data de nascimento não pode indicar idade superior a 120 anos.");
     }
 
     [Fact]

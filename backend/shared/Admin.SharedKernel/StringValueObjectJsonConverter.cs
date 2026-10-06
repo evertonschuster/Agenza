@@ -4,14 +4,6 @@ using Admin.SharedKernel.ValueObjects;
 
 namespace Admin.SharedKernel;
 
-internal sealed class StringValueObjectJsonConverterFactory : JsonConverterFactory
-{
-    public override bool CanConvert(Type typeToConvert) => StringValueObjects.Is(typeToConvert);
-
-    public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options) =>
-        (JsonConverter)Activator.CreateInstance(typeof(StringValueObjectJsonConverter<>).MakeGenericType(typeToConvert))!;
-}
-
 internal sealed class StringValueObjectJsonConverter<T> : JsonConverter<T>
     where T : class, IStringValueObject<T>
 {

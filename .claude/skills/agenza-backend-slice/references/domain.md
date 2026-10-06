@@ -50,7 +50,7 @@ Writing one:
   parameter (`today`).
 - A value with a format and no business context, the same in every service (CPF), goes to
   `Admin.SharedKernel.ValueObjects` instead: `IStringValueObject<T>`, `Create` → `ParseResult<T>`, no
-  `DomainResult`. Its JSON, OpenAPI and column conversion come from the kernel (ARCHITECTURE §3, ADR 0055).
+  `DomainResult` (a date whose rules depend on today: `IDateValueObject<T>`, `Create(date, today)`). Its JSON, OpenAPI and column conversion come from the kernel (ARCHITECTURE §3, ADR 0055).
 
 ## 3. Behaviour
 
@@ -87,7 +87,7 @@ Writing one:
 
 One `static readonly DomainError` per rule, on the type that owns the rule, `<Type>.<Rule>`, pt-BR
 message. A rule over the whole aggregate belongs to the root (`Client.GuardianRequired`); a rule over a
-value belongs to the value object (`BirthDate.TooOld`). The validator reuses these codes. A shared
+value belongs to the value object (`ContactPurposes.Required`). The validator reuses these codes. A shared
 string value object has no `DomainError`: its failure is the message of the rule that broke, in the
 `ParseResult<T>` that `Create` returns.
 

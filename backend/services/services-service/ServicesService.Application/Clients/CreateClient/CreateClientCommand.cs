@@ -5,7 +5,7 @@ namespace ServicesService.Application.Clients.CreateClient;
 
 public sealed record CreateClientCommand(
     FullName FullName,
-    DateOnly? BirthDate,
+    BirthDate? BirthDate,
     PhoneNumber? Phone,
     EmailAddress? Email,
     CpfNumber? Cpf,

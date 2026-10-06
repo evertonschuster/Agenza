@@ -17,6 +17,11 @@ internal static class ClientTestData
         return FullName.Create(value).Value;
     }
 
+    public static BirthDate? Birth(DateOnly? date)
+    {
+        return date is null ? null : BirthDate.Create(date.Value, Today).Value;
+    }
+
     public static CpfNumber Cpf(string value = ValidCpf)
     {
         return CpfNumber.Create(value).Value;

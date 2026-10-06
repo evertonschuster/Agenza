@@ -6,7 +6,7 @@ namespace Admin.SharedKernel.Tests;
 public class StringValueObjectJsonConverterTests
 {
     private static readonly JsonSerializerOptions Options =
-        new JsonSerializerOptions(JsonSerializerDefaults.Web).AddValueObjectConverters();
+        new JsonSerializerOptions(JsonSerializerDefaults.Web).AddValueObjectConverters(TimeProvider.System);
 
     private sealed record Sample(ThreeLetters? Code, IReadOnlyList<ThreeLetters>? Codes, Guid? Id, DateOnly? Day);
 

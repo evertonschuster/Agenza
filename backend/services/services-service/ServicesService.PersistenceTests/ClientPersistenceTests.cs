@@ -49,7 +49,7 @@ public class ClientPersistenceTests
         Client.Create(
             Guid.NewGuid(),
             FullName.Create(fullName).Value,
-            BirthDate.Create(birthDate, Today).Value,
+            birthDate is null ? null : BirthDate.Create(birthDate.Value, Today).Value,
             null,
             email is null ? null : EmailAddress.Create(email).Value,
             cpf is null ? null : CpfNumber.Create(cpf).Value,

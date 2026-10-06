@@ -17,7 +17,7 @@ builder.Services
         // A verified X-Tenant-Id header is required unless [IgnoreTenant].
         options.Filters.Add<TenantHeaderFilter>();
     })
-    .AddJsonOptions(options => options.JsonSerializerOptions.AddValueObjectConverters())
+    .AddValueObjectJson()
     .AddModelStateProblemDetails();
 builder.Services.AddApiDocumentation(builder.Configuration);
 

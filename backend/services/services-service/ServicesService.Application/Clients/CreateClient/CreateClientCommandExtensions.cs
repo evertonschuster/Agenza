@@ -10,12 +10,6 @@ public static class CreateClientCommandExtensions
     // assigns it on save (docs/adr/0008).
     public static DomainResult<Client> ToModel(this CreateClientCommand command, DateOnly today)
     {
-        var birthDateResult = BirthDate.Create(command.BirthDate, today);
-        if (birthDateResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(birthDateResult.Error);
-        }
-
         var notesResult = AdministrativeNotes.Create(command.AdministrativeNotes);
         if (notesResult.IsFailure)
         {
@@ -31,7 +25,7 @@ public static class CreateClientCommandExtensions
         return Client.Create(
             Guid.CreateVersion7(),
             command.FullName,
-            birthDateResult.Value,
+            command.BirthDate,
             command.Phone,
             command.Email,
             command.Cpf,

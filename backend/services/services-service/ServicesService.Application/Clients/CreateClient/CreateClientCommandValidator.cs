@@ -1,3 +1,4 @@
+using Admin.SharedKernel.ValueObjects;
 using FluentValidation;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
@@ -9,16 +10,6 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
     public CreateClientCommandValidator(TimeProvider timeProvider)
     {
         DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
-
-        RuleFor(command => command.BirthDate)
-            .Cascade(CascadeMode.Stop)
-            .Must(birthDate => BirthDate.IsInThePast(birthDate!.Value, Today()))
-            .WithErrorCode(BirthDate.NotInThePast.Code)
-            .WithMessage("A data de nascimento deve estar no passado.")
-            .Must(birthDate => BirthDate.IsWithinMaxAge(birthDate!.Value, Today()))
-            .WithErrorCode(BirthDate.TooOld.Code)
-            .WithMessage($"A data de nascimento não pode indicar idade superior a {BirthDate.MaxAgeInYears} anos.")
-            .When(command => command.BirthDate.HasValue);
 
         RuleFor(command => command.AdministrativeNotes)
             .Must(notes => notes is null || notes.Trim().Length <= AdministrativeNotes.MaxLength)
@@ -35,8 +26,7 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
             .Must(guardians => guardians is { Count: > 0 })
             .WithErrorCode(Client.GuardianRequired.Code)
             .WithMessage($"Informe ao menos um responsável para pessoas menores de {BirthDate.AdultAgeInYears} anos.")
-            .When(command => command.BirthDate is { } birthDate
-                && BirthDate.IsMinorOn(birthDate, Today()));
+            .When(command => command.BirthDate is { } birthDate && birthDate.IsMinorOn(Today()));
 
         RuleForEach(command => command.Guardians)
             .NotNull()

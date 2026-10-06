@@ -39,7 +39,7 @@ public class CreateClientCommandHandlerTests
         IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
         new(
             ClientTestData.Name(fullName),
-            birthDate,
+            ClientTestData.Birth(birthDate),
             phone is null ? null : ClientTestData.Phone(phone),
             email is null ? null : ClientTestData.Email(email),
             cpf,
