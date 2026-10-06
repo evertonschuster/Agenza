@@ -15,4 +15,8 @@
     <PackageReference Include="Microsoft.Extensions.DependencyInjection.Abstractions" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Admin.SharedKernel.ValueObjects\Admin.SharedKernel.ValueObjects.csproj" />
+  </ItemGroup>
+
 </Project>

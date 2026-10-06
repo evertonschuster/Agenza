@@ -1,8 +1,8 @@
 using Admin.Identity.Client;
+using Admin.SharedKernel.AspNetCore;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
-using ServicesService.Domain.ValueObjects;
 using System.Text.Json.Nodes;
 
 namespace ServicesService.Api.Setup;
@@ -24,29 +24,7 @@ public static class DocumentationExtensions
 
         services.AddOpenApi(options =>
         {
-            options.CreateSchemaReferenceId = typeInfo =>
-            {
-                if (typeInfo.Type == typeof(CpfNumber))
-                {
-                    return null;
-                }
-
-                return OpenApiOptions.CreateDefaultSchemaReferenceId(typeInfo);
-            };
-
-            options.AddSchemaTransformer((schema, context, _) =>
-            {
-                if (context.JsonTypeInfo.Type != typeof(CpfNumber))
-                {
-                    return Task.CompletedTask;
-                }
-
-                var nullable = schema.Type is { } type && type.HasFlag(JsonSchemaType.Null);
-                schema.Type = nullable ? JsonSchemaType.String | JsonSchemaType.Null : JsonSchemaType.String;
-                schema.Properties = null;
-
-                return Task.CompletedTask;
-            });
+            options.MapValueObjectsToStrings();
 
             options.AddDocumentTransformer((document, _, _) =>
             {

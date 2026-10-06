@@ -1,3 +1,4 @@
+using Admin.SharedKernel.ValueObjects;
 using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 
@@ -18,7 +19,7 @@ internal static class ClientTestData
 
     public static CpfNumber Cpf(string value = ValidCpf)
     {
-        return CpfNumber.Create(value).Value!;
+        return CpfNumber.Parse(value, null);
     }
 
     public static EmailAddress Email(string value = "maria@example.com")

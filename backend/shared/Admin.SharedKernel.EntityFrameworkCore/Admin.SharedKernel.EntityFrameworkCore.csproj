@@ -16,4 +16,8 @@
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
   </ItemGroup>
 
+  <ItemGroup>
+    <ProjectReference Include="..\Admin.SharedKernel.ValueObjects\Admin.SharedKernel.ValueObjects.csproj" />
+  </ItemGroup>
+
 </Project>

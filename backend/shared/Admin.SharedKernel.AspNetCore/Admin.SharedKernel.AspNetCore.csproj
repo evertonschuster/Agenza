@@ -17,6 +17,9 @@
          (Result, Error, Cqrs, Dispatcher) stays framework-agnostic in
          Admin.SharedKernel (docs/adr/0018). -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <!-- The OpenAPI schema of the value objects (Admin.SharedKernel.ValueObjects): one string each. -->
+    <PackageReference Include="Microsoft.AspNetCore.OpenApi" />
+    <PackageReference Include="Microsoft.OpenApi" />
   </ItemGroup>
 
 </Project>

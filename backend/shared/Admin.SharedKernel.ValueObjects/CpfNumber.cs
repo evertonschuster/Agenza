@@ -1,12 +1,12 @@
-using ServicesService.Domain.Common;
+using System.Diagnostics.CodeAnalysis;
 
-namespace ServicesService.Domain.ValueObjects;
+namespace Admin.SharedKernel.ValueObjects;
 
-public sealed record CpfNumber
+public sealed record CpfNumber : IStringValueObject<CpfNumber>
 {
     public const int Length = 11;
 
-    public static readonly DomainError Invalid = new("CpfNumber.Invalid", "O CPF informado é inválido.");
+    public static string InvalidMessage => "O CPF informado é inválido.";
 
     public string Value { get; }
 
@@ -15,23 +15,29 @@ public sealed record CpfNumber
         Value = value;
     }
 
-    public static DomainResult<CpfNumber?> Create(string? raw)
+    public static CpfNumber Parse(string s, IFormatProvider? provider)
     {
-        var trimmed = raw?.Trim();
+        return TryParse(s, provider, out var result) ? result : throw new FormatException(InvalidMessage);
+    }
 
-        if (string.IsNullOrEmpty(trimmed))
+    public static bool TryParse([NotNullWhen(true)] string? s, IFormatProvider? provider, [MaybeNullWhen(false)] out CpfNumber result)
+    {
+        result = null;
+
+        if (string.IsNullOrWhiteSpace(s))
         {
-            return DomainResult.Success<CpfNumber?>(null);
+            return false;
         }
 
-        var digits = StripMask(trimmed);
+        var digits = StripMask(s);
 
         if (!HasValidCheckDigits(digits))
         {
-            return DomainResult.Failure<CpfNumber?>(Invalid);
+            return false;
         }
 
-        return DomainResult.Success<CpfNumber?>(new CpfNumber(digits));
+        result = new CpfNumber(digits);
+        return true;
     }
 
     public static CpfNumber Restore(string value)

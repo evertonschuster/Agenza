@@ -1,3 +1,4 @@
+using Admin.SharedKernel.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ServicesService.Domain.Entities;
@@ -19,8 +20,6 @@ public class ClientGuardianConfiguration : IEntityTypeConfiguration<ClientGuardi
         builder.Property(g => g.Phone)
             .HasConversion(phone => phone!.Value, value => PhoneNumber.Restore(value))
             .HasMaxLength(PhoneNumber.MaxLength);
-        builder.Property(g => g.Cpf)
-            .HasConversion(cpf => cpf!.Value, value => CpfNumber.Restore(value))
-            .HasMaxLength(CpfNumber.Length);
+        builder.Property(g => g.Cpf).HasMaxLength(CpfNumber.Length);
     }
 }

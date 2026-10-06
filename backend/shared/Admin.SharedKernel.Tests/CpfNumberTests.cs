@@ -1,6 +1,6 @@
-using ServicesService.Domain.ValueObjects;
+using Admin.SharedKernel.ValueObjects;
 
-namespace ServicesService.Tests.Clients;
+namespace Admin.SharedKernel.Tests;
 
 public class CpfNumberTests
 {
@@ -11,27 +11,17 @@ public class CpfNumberTests
     [InlineData("529 982 247 25", "52998224725")]
     [InlineData("123.456.789-09", "12345678909")]
     [InlineData("111.444.777-35", "11144477735")]
-    public void Create_WithValidCpf_StripsTheMask(string raw, string expectedDigits)
+    public void TryParse_WithAValidCpf_StripsTheMask(string raw, string expectedDigits)
     {
-        var result = CpfNumber.Create(raw);
+        CpfNumber.TryParse(raw, null, out var cpf).Should().BeTrue();
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value!.Value.Should().Be(expectedDigits);
+        cpf!.Value.Should().Be(expectedDigits);
     }
 
     [Theory]
     [InlineData(null)]
     [InlineData("")]
     [InlineData("   ")]
-    public void Create_WithBlankValue_ReturnsNull(string? raw)
-    {
-        var result = CpfNumber.Create(raw);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeNull();
-    }
-
-    [Theory]
     [InlineData("529.982.247-24")]
     [InlineData("529.982.247-52")]
     [InlineData("123.456.789-00")]
@@ -43,16 +33,29 @@ public class CpfNumberTests
     [InlineData("abc.def.ghi-jk")]
     [InlineData("529.982.247-2a")]
     [InlineData("٥٢٩٩٨٢٢٤٧٢٥")]
-    public void Create_WithInvalidCpf_Fails(string raw)
+    public void TryParse_WithAnythingElse_Fails(string? raw)
     {
-        var result = CpfNumber.Create(raw);
+        CpfNumber.TryParse(raw, null, out var cpf).Should().BeFalse();
 
-        result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("CpfNumber.Invalid");
+        cpf.Should().BeNull();
     }
 
     [Fact]
-    public void Restore_AcceptsACpfThatCreateWouldReject()
+    public void Parse_WithAValidCpf_ReturnsIt()
+    {
+        CpfNumber.Parse("529.982.247-25", null).Value.Should().Be("52998224725");
+    }
+
+    [Fact]
+    public void Parse_WithAnInvalidCpf_ThrowsAFormatExceptionWithTheTypeMessage()
+    {
+        var act = () => CpfNumber.Parse("529.982.247-24", null);
+
+        act.Should().Throw<FormatException>().WithMessage(CpfNumber.InvalidMessage);
+    }
+
+    [Fact]
+    public void Restore_AcceptsACpfThatTryParseWouldReject()
     {
         CpfNumber.Restore("00000000000").Value.Should().Be("00000000000");
     }

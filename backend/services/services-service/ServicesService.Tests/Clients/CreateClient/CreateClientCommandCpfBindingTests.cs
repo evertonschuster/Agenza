@@ -1,10 +1,10 @@
 using System.Text.Json;
 using ServicesService.Application.Clients.CreateClient;
-using ServicesService.Domain.ValueObjects;
+using Admin.SharedKernel.ValueObjects;
 
 namespace ServicesService.Tests.Clients.CreateClient;
 
-public class CpfNumberJsonConverterTests
+public class CreateClientCommandCpfBindingTests
 {
     private static CreateClientCommand Bind(string cpfJson) =>
         JsonSerializer.Deserialize<CreateClientCommand>(
@@ -46,7 +46,7 @@ public class CpfNumberJsonConverterTests
 
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.cpf");
-        exception.Message.Should().Be(CpfNumber.Invalid.Message);
+        exception.Message.Should().Be(CpfNumber.InvalidMessage);
     }
 
     [Fact]

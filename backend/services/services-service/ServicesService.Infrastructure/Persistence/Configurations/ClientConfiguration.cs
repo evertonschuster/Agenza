@@ -1,3 +1,4 @@
+using Admin.SharedKernel.ValueObjects;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using ServicesService.Domain.Entities;
@@ -29,9 +30,7 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.Property(c => c.Email)
             .HasConversion(email => email!.Value, value => EmailAddress.Restore(value))
             .HasMaxLength(EmailAddress.MaxLength);
-        builder.Property(c => c.Cpf)
-            .HasConversion(cpf => cpf!.Value, value => CpfNumber.Restore(value))
-            .HasMaxLength(CpfNumber.Length);
+        builder.Property(c => c.Cpf).HasMaxLength(CpfNumber.Length);
         builder.Property(c => c.AdministrativeNotes)
             .HasConversion(notes => notes!.Value, value => AdministrativeNotes.Restore(value))
             .HasMaxLength(AdministrativeNotes.MaxLength);

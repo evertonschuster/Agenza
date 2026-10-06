@@ -26,6 +26,11 @@ public class ServicesDataContext : DbContext
     public DbSet<Client> Clients => Set<Client>();
     public DbSet<TenantSequence> TenantSequences => Set<TenantSequence>();
 
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.AddValueObjectConversions();
+    }
+
     protected override void OnModelCreating(ModelBuilder builder)
     {
         base.OnModelCreating(builder);
