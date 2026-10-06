@@ -111,7 +111,7 @@ Vertical slices organise the Application layer; they do not replace the layers
       <Operation>Command.cs | Query.cs     a record; nested input records live in the same file
       <Operation>CommandHandler.cs | QueryHandler.cs
       <Operation>CommandValidator.cs | QueryValidator.cs      whenever the request carries input
-      <Operation>CommandExtensions.cs      ToModel(…) / ApplyTo(entity): command → domain calls
+      <Operation>CommandExtensions.cs      extension methods ToModel(…) / ApplyTo(entity): command → domain calls
 <Service>.Infrastructure/
   Persistence/Configurations/<Entity>Configuration.cs
   Persistence/Migrations/
@@ -126,8 +126,9 @@ Vertical slices organise the Application layer; they do not replace the layers
   library. Repositories and adapters are registered in Infrastructure's `DependencyInjection.cs`.
 - A type is born in its operation folder and moves to the feature root when a second operation needs
   it — not before.
-- `ToModel`/`ApplyTo` keep the handler reading as orchestration; the mapping only calls the domain's
-  public factories and behaviour, it adds no rule
+- `ToModel`/`ApplyTo` are extension methods on the command and keep the handler reading as
+  orchestration; conversion helpers with a natural receiver prefer them too. The mapping only calls
+  the domain's public factories and behaviour, it adds no rule
   ([0007](../../docs/adr/0007-direct-command-binding-and-mapping-extensions.md)).
 
 **A use case owns its orchestration**

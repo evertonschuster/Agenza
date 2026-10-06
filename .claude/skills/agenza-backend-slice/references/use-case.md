@@ -50,6 +50,8 @@ base validator class.
   with the value objects and the children's data records.
 - `ApplyTo(this <Command>, <Entity>, <context>)` → `DomainResult`: build the value objects, call the
   behaviour.
+- Helpers named `To...` with a natural source object are extension methods and are called from that
+  object. Keep domain factories such as `Create` and `Restore` as static methods.
 - No rule, no I/O, no tenant. Each step is an explicit `if (x.IsFailure) return …` — no helper chains
   them.
 

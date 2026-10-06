@@ -6,7 +6,7 @@ public static class CreateClientCommandExtensions
     // assigns it on save (docs/adr/0008).
     public static DomainResult<Client> ToModel(this CreateClientCommand command, DateOnly today)
     {
-        var referenceContactsResult = ToReferenceContacts(command.ReferenceContacts);
+        var referenceContactsResult = command.ReferenceContacts.ToReferenceContacts();
         if (referenceContactsResult.IsFailure)
         {
             return DomainResult.Failure<Client>(referenceContactsResult.Error);
@@ -21,11 +21,11 @@ public static class CreateClientCommandExtensions
             command.Cpf,
             command.AdministrativeNotes,
             today,
-            ToGuardians(command.Guardians),
+            command.Guardians.ToGuardians(),
             referenceContactsResult.Value);
     }
 
-    private static List<GuardianData> ToGuardians(IReadOnlyList<GuardianInput>? inputs)
+    private static List<GuardianData> ToGuardians(this IReadOnlyList<GuardianInput>? inputs)
     {
         var guardians = new List<GuardianData>();
 
@@ -37,14 +37,13 @@ public static class CreateClientCommandExtensions
         return guardians;
     }
 
-    private static DomainResult<List<ReferenceContactData>> ToReferenceContacts(
-        IReadOnlyList<ReferenceContactInput>? inputs)
+    private static DomainResult<List<ReferenceContactData>> ToReferenceContacts(this IReadOnlyList<ReferenceContactInput>? inputs)
     {
         var referenceContacts = new List<ReferenceContactData>();
 
         foreach (var input in inputs ?? [])
         {
-            var contactResult = ToReferenceContact(input);
+            var contactResult = input.ToReferenceContact();
             if (contactResult.IsFailure)
             {
                 return DomainResult.Failure<List<ReferenceContactData>>(contactResult.Error);
@@ -56,7 +55,7 @@ public static class CreateClientCommandExtensions
         return DomainResult.Success(referenceContacts);
     }
 
-    private static DomainResult<ReferenceContactData> ToReferenceContact(ReferenceContactInput input)
+    private static DomainResult<ReferenceContactData> ToReferenceContact(this ReferenceContactInput input)
     {
         var purposesResult = ContactPurposes.Create(ContactPurposeNames.ToPurposes(input.Purposes));
         if (purposesResult.IsFailure)

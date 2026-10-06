@@ -14,7 +14,6 @@ builder.AddServiceDefaults();
 builder.Services
     .AddControllers(options =>
     {
-        // A verified X-Tenant-Id header is required unless [IgnoreTenant].
         options.Filters.Add<TenantHeaderFilter>();
     })
     .AddValueObjectJson()
