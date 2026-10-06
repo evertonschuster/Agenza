@@ -36,4 +36,38 @@ public class CreateClientCommandFullNameBindingTests
 
         act.Should().Throw<JsonException>().Which.Message.Should().Be("O nome completo deve ter no máximo 150 caracteres.");
     }
+
+    private static CreateClientCommand BindReferenceContact(string nameJson) =>
+        JsonSerializer.Deserialize<CreateClientCommand>(
+            $$"""{ "fullName": "Maria Souza", "referenceContacts": [{ "name": {{nameJson}}, "relationship": "Tio", "purposes": ["emergency"] }] }""",
+            WireJson.Options)!;
+
+    [Fact]
+    public void Read_WithAValidReferenceContactName_BindsItTrimmed()
+    {
+        var command = BindReferenceContact("\"  Carlos Lima  \"");
+
+        command.ReferenceContacts.Should().ContainSingle().Which.Name.Value.Should().Be("Carlos Lima");
+    }
+
+    [Theory]
+    [InlineData("\"\"", "O nome completo é obrigatório.")]
+    [InlineData("\"   \"", "O nome completo é obrigatório.")]
+    [InlineData("\"A\"", "O nome completo deve ter pelo menos 2 caracteres.")]
+    public void Read_WithAnInvalidReferenceContactName_ThrowsAtTheIndexedField(string nameJson, string expectedMessage)
+    {
+        var act = () => BindReferenceContact(nameJson);
+
+        var exception = act.Should().Throw<JsonException>().Which;
+        exception.Path.Should().Be("$.referenceContacts[0].name");
+        exception.Message.Should().Be(expectedMessage);
+    }
+
+    [Fact]
+    public void Read_WithATooLongReferenceContactName_ThrowsTheMaximumMessage()
+    {
+        var act = () => BindReferenceContact($"\"{new string('a', 151)}\"");
+
+        act.Should().Throw<JsonException>().Which.Message.Should().Be("O nome completo deve ter no máximo 150 caracteres.");
+    }
 }

@@ -15,7 +15,7 @@ public sealed record CreateClientCommand(
 public sealed record GuardianInput(string Name, string Relationship, PhoneNumber? Phone, CpfNumber? Cpf);
 
 public sealed record ReferenceContactInput(
-    string Name,
+    FullName Name,
     string Relationship,
     PhoneNumber? Phone,
     IReadOnlyList<string>? Purposes);

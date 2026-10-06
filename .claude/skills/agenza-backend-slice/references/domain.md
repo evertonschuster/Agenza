@@ -33,7 +33,7 @@ Apply the threshold in §3. In this codebase it reads as:
 
 | May stay a primitive | Validated by |
 | --- | --- |
-| a tag's name, a contact's name or relationship, a description | its owner, with a named `DomainError` |
+| a tag's name, a guardian's name, a contact's relationship, a description | its owner, with a named `DomainError` |
 
 Writing a service's own (a value that is shared by every service is a different job — see the last bullet):
 

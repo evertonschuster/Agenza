@@ -54,7 +54,6 @@ public sealed class ReferenceContactInputValidator : AbstractValidator<Reference
 {
     public ReferenceContactInputValidator()
     {
-        RuleFor(contact => contact.Name).MustBeValidContactName("da pessoa de referência");
         RuleFor(contact => contact.Relationship).MustBeValidContactRelationship("da pessoa de referência");
 
         RuleFor(contact => contact.Purposes)

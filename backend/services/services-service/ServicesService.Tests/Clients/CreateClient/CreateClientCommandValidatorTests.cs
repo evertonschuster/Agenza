@@ -39,7 +39,7 @@ public class CreateClientCommandValidatorTests
         string relationship = "Tio",
         string? phone = null,
         params string[] purposes) =>
-        new(name, relationship, phone is null ? null : ClientTestData.Phone(phone), purposes.Length == 0 ? ["emergency"] : purposes);
+        new(ClientTestData.Name(name), relationship, phone is null ? null : ClientTestData.Phone(phone), purposes.Length == 0 ? ["emergency"] : purposes);
 
     private async Task<ValidationResult> Validate(CreateClientCommand command) =>
         await _validator.ValidateAsync(command);
@@ -63,7 +63,7 @@ public class CreateClientCommandValidatorTests
             { "guardian name too short", Command(guardians: [Guardian(name: "A")]), "Guardians[0].Name", "ClientContact.InvalidNameLength" },
             { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
             { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
-            { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput("Carlos Lima", "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
+            { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
             { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Unknown" },
         };
     }
@@ -184,11 +184,10 @@ public class CreateClientCommandValidatorTests
     {
         var result = await Validate(Command(referenceContacts:
         [
-            new ReferenceContactInput("", "", null, []),
-            new ReferenceContactInput("Carlos Lima", "Tio", null, ["billing"]),
+            new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "", null, []),
+            new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, ["billing"]),
         ]));
 
-        MessagesFor(result, "ReferenceContacts[0].Name").Should().Equal("O nome da pessoa de referência é obrigatório.");
         MessagesFor(result, "ReferenceContacts[0].Relationship").Should()
             .Equal("O vínculo da pessoa de referência é obrigatório.");
         MessagesFor(result, "ReferenceContacts[0].Purposes").Should()
@@ -234,7 +233,7 @@ public class CreateClientCommandValidatorTests
     public async Task Validate_WithListsOverTheLimit_DoesNotValidateTheirItems()
     {
         var guardians = Enumerable.Range(0, 5_000).Select(_ => Guardian(name: "", relationship: "")).ToList();
-        var contacts = Enumerable.Range(0, 5_000).Select(_ => new ReferenceContactInput("", "", null, [])).ToList();
+        var contacts = Enumerable.Range(0, 5_000).Select(_ => new ReferenceContactInput(ClientTestData.Name(), "", null, [])).ToList();
 
         var result = await Validate(Command(guardians: guardians, referenceContacts: contacts));
 

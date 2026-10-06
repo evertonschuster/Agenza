@@ -45,7 +45,7 @@ internal static class ClientTestData
 
     public static ReferenceContactData ReferenceContact(ContactPurpose purposes = ContactPurpose.Emergency)
     {
-        return new ReferenceContactData("Carlos Lima", "Tio", null, ContactPurposes.Create(purposes).Value);
+        return new ReferenceContactData(Name("Carlos Lima"), "Tio", null, ContactPurposes.Create(purposes).Value);
     }
 
     public static Client ExistingClient()

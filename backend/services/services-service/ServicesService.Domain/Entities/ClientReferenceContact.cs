@@ -1,6 +1,6 @@
 namespace ServicesService.Domain.Entities;
 
-public sealed record ReferenceContactData(string Name, string Relationship, PhoneNumber? Phone, ContactPurposes Purposes);
+public sealed record ReferenceContactData(FullName Name, string Relationship, PhoneNumber? Phone, ContactPurposes Purposes);
 
 public class ClientReferenceContact : ClientContact
 {
@@ -26,12 +26,6 @@ public class ClientReferenceContact : ClientContact
 
     internal static DomainResult<ClientReferenceContact> Create(Guid id, Guid clientId, ReferenceContactData data)
     {
-        var nameResult = ValidateName(data.Name);
-        if (nameResult.IsFailure)
-        {
-            return DomainResult.Failure<ClientReferenceContact>(nameResult.Error);
-        }
-
         var relationshipResult = ValidateRelationship(data.Relationship);
         if (relationshipResult.IsFailure)
         {
@@ -41,7 +35,7 @@ public class ClientReferenceContact : ClientContact
         return DomainResult.Success(new ClientReferenceContact(
             id,
             clientId,
-            nameResult.Value,
+            data.Name.Value,
             relationshipResult.Value,
             data.Phone,
             data.Purposes));

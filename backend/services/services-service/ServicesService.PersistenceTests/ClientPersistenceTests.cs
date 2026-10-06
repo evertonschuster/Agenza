@@ -62,7 +62,7 @@ public class ClientPersistenceTests
 
     private static ReferenceContactData ReferenceContact()
     {
-        return new ReferenceContactData("Carlos Lima", "Tio", null, ContactPurposes.Create(ContactPurpose.Emergency).Value);
+        return new ReferenceContactData(FullName.Create("Carlos Lima").Value, "Tio", null, ContactPurposes.Create(ContactPurpose.Emergency).Value);
     }
 
     private static CpfNumber Cpf(string digits)
