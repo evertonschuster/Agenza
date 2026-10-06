@@ -1,6 +1,3 @@
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Tests.Clients;
 
 internal static class ClientTestData
@@ -16,19 +13,29 @@ internal static class ClientTestData
         return FullName.Create(value).Value;
     }
 
+    public static AdministrativeNotes Notes(string value = "Prefere atendimento à tarde.")
+    {
+        return AdministrativeNotes.Create(value).Value;
+    }
+
+    public static BirthDate? Birth(DateOnly? date)
+    {
+        return date is null ? null : BirthDate.Create(date.Value, Today).Value;
+    }
+
     public static CpfNumber Cpf(string value = ValidCpf)
     {
-        return CpfNumber.Create(value).Value!;
+        return CpfNumber.Create(value).Value;
     }
 
     public static EmailAddress Email(string value = "maria@example.com")
     {
-        return EmailAddress.Create(value).Value!;
+        return EmailAddress.Create(value).Value;
     }
 
     public static PhoneNumber Phone(string value = "(11) 99999-0000")
     {
-        return PhoneNumber.Create(value).Value!;
+        return PhoneNumber.Create(value).Value;
     }
 
     public static GuardianData Guardian(string name = "Ana Souza", string relationship = "Mãe")
@@ -38,7 +45,7 @@ internal static class ClientTestData
 
     public static ReferenceContactData ReferenceContact(ContactPurpose purposes = ContactPurpose.Emergency)
     {
-        return new ReferenceContactData("Carlos Lima", "Tio", null, ContactPurposes.Create(purposes).Value);
+        return new ReferenceContactData(Name("Carlos Lima"), "Tio", null, ContactPurposes.Create(purposes).Value);
     }
 
     public static Client ExistingClient()

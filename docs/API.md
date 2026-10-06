@@ -91,18 +91,18 @@ Detalhes do fio que mordem quem formata para exibição:
 - Datas de calendário são `yyyy-MM-dd`; instantes são UTC; enums são strings camelCase
   (`active`), nunca números.
 
-## 4. Envelope de erro — quatro formas atrás do mesmo `application/problem+json`
+## 4. Envelope de erro — três formas atrás do mesmo `application/problem+json`
 
 O OpenAPI gerado (`services-api.d.ts`) declara **uma única forma** (`ApiProblemDetails`) para todo
-400/401/403/404/409/500, em toda rota. Na prática, o mesmo status HTTP pode vir em quatro formas
+400/401/403/404/409/500, em toda rota. Na prática, o mesmo status HTTP pode vir em três formas
 JSON diferentes, dependendo de **qual camada** rejeitou a requisição. Quem escreve tratamento de
 erro genérico (repositório, `unwrap`, formulário) precisa saber que o `code` pode não existir e que
 a mensagem pode vir em inglês.
 
 ### 4.1 Forma canônica — `ApiProblemDetailsFactory` (a maioria dos casos)
 
-Usada para: erro de validação do FluentValidation (400), `NotFound`/`Conflict`/`Forbidden` de
-aplicação, exceção não tratada (500). Sempre `{ type, title, status, code, traceId, correlationId,
+Usada para: erro de validação do FluentValidation (400), falha do model binder (400, §4.3),
+`NotFound`/`Conflict`/`Forbidden` de aplicação, exceção não tratada (500). Sempre `{ type, title, status, code, traceId, correlationId,
 errors }`. `errors` muda de forma dependendo do tipo:
 
 **Validação** (`ErrorType.Validation` com `FieldErrors`) — `code` é sempre `"Validation.Failed"`
@@ -112,7 +112,7 @@ errors }`. `errors` muda de forma dependendo do tipo:
 
 O `code` de cada item é o código de negócio da regra, no formato `<Tipo>.<Regra>` — o mesmo
 `DomainError` que o domínio devolveria, reaproveitado pelo validator com `.WithErrorCode(...)`; por
-exemplo `{"code":"CpfNumber.Invalid","message":"Informe um CPF válido."}`. Validators anteriores a
+exemplo `{"code":"ClientContact.NameRequired","message":"O nome do contato é obrigatório."}`. Validators anteriores a
 essa regra ([ADR 0044](adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md)) ainda expõem o
 nome interno do FluentValidation (`NotEmptyValidator`, `PredicateValidator`), que não distingue uma
 regra `.Must(...)` de outra — é legado, convertido quando a fatia é tocada. O exemplo verificado abaixo
@@ -138,7 +138,7 @@ fallback em pt-BR. O domínio não sabe qual campo nem qual índice da lista fal
 do formulário:
 
 ```json
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"FullName.Required","traceId":"...","correlationId":"...","errors":{"":[{"code":"FullName.Required","message":"O nome completo é obrigatório."}]}}
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Client.GuardianRequired","traceId":"...","correlationId":"...","errors":{"":[{"code":"Client.GuardianRequired","message":"Informe ao menos um responsável para pessoas menores de 18 anos."}]}}
 ```
 
 **Aplicação** (`NotFound`/`Conflict`/`Forbidden`, sem `FieldErrors`) — `errors` colapsa para
@@ -166,35 +166,41 @@ no campo. Exemplo verificado:
 Só `Tenant.ContextMismatch` (§2) usa essa forma menor — sem `traceId`/`correlationId`/`errors`.
 Único caso hoje fora de `ApiProblemDetailsFactory`.
 
-### 4.3 Forma nativa do ASP.NET Core — quando a requisição nem chega no dispatcher
+### 4.3 Falha do model binding — quando a requisição nem chega no dispatcher
 
 Se o **model binder** do `[ApiController]` rejeita o corpo antes de qualquer `IValidator`/handler
-rodar — uma propriedade obrigatória do record **totalmente ausente** do JSON (não vazia: ausente), ou
-JSON malformado — a resposta é o `ValidationProblemDetails` padrão do framework, não
-`ApiProblemDetails`. Quatro diferenças que quebram tratamento genérico escrito só olhando §4.1:
+rodar — uma propriedade obrigatória do record **totalmente ausente** do JSON (não vazia: ausente),
+JSON malformado, um valor de tipo errado ou um value object compartilhado inválido
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
+canônica de §4.1** (`AddModelStateProblemDetails`), não o `ValidationProblemDetails` do framework. O
+que muda é o conteúdo:
 
-- **sem `code`** — nada para ramificar;
-- `errors` é `Record<string, string[]>` — array de string, não de `{code, message}`;
-- as chaves de `errors` ficam com o nome C# (`FullName`, `Guardians[0].Name`), não em camelCase —
-  essa resposta não passa por `ApiProblemDetailsFactory` ([ADR 0051](adr/0051-camelcase-error-keys-on-the-wire.md));
-- `type` aponta pra RFC 9110 genérica, e a mensagem **vem em inglês** ("The Name field is
-  required.", "One or more validation errors occurred.") — quebra a regra de copy pt-BR se
-  exibida crua.
+- `code` é sempre `Validation.Failed`, no topo e em cada item de `errors`: o binder não conhece a
+  regra de negócio que falhou;
+- a chave de `errors` é o campo em camelCase (`fullName`, `guardians[0].cpf`); uma falha que não é de
+  um campo — JSON malformado, corpo vazio — vem sob a chave vazia `""`;
+- a `message` é o texto do framework, **em inglês** ("The FullName field is required.", "A non-empty
+  request body is required."), exceto a de um value object compartilhado, que vem em pt-BR ("O CPF
+  informado é inválido.", "O nome completo é obrigatório.", "Informe um e-mail válido.", "A data de nascimento deve estar no passado.") e nunca ecoa o valor
+  recebido. Um valor de tipo errado traz o texto do
+  `System.Text.Json` — nome interno do tipo e posição do parser, não texto para o usuário;
+- só a **primeira** falha de valor é reportada: o `System.Text.Json` para no primeiro valor inválido,
+  então dois CPFs inválidos, ou um nome vazio e um CPF inválido, no mesmo corpo geram uma única entrada, a
+  do primeiro campo no JSON (o validator reportava todos os campos de uma vez);
+- uma falha de **leitura do corpo** (JSON malformado, corpo vazio, tipo errado, value object inválido)
+  vem com uma segunda chave em `errors`: o nome do parâmetro do corpo na action (`command` nos
+  controllers de hoje) com "The command field is required.". O framework marca o parâmetro inteiro
+  como ausente, a entrada só repete a falha real, e o backend não a remove. Uma propriedade ausente
+  (`fullName`) não a produz.
+
+Verificado em 2026-10-06 num host descartável com os mesmos controllers e a mesma configuração de MVC
+e de OpenAPI do serviço, sem banco nem autenticação:
 
 ```json
-{"type":"https://tools.ietf.org/html/rfc9110#section-15.5.1","title":"One or more validation errors occurred.","status":400,"errors":{"Name":["The Name field is required."],"Color":["The Color field is required."]},"traceId":"00-fd8ab30c0d7ca41b18f942bf5914a674-b4b4a1861d1c7b50-01"}
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"fullName":[{"code":"Validation.Failed","message":"The FullName field is required."}]}}
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"":[{"code":"Validation.Failed","message":"Expected depth to be zero at the end of the JSON payload. ... Path: $ | LineNumber: 0 | BytePositionInLine: 19."}],"command":[{"code":"Validation.Failed","message":"The command field is required."}]}}
+{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"cpf":[{"code":"Validation.Failed","message":"O CPF informado é inválido."}],"command":[{"code":"Validation.Failed","message":"The command field is required."}]}}
 ```
-
-JSON malformado soma um segundo sintoma: a chave `"$"` com o erro de parsing do
-`System.Text.Json`, mais um `"command"` reclamando que o parâmetro inteiro da action é obrigatório
-(o model binder falha para a action inteira, não só para um campo):
-
-```json
-{"errors":{"$":["Expected depth to be zero at the end of the JSON payload. ..."],"command":["The command field is required."]},"traceId":"00-b513cf5e...-01"}
-```
-
-`traceId` aqui também é outro formato (W3C traceparent, `00-<trace>-<span>-01`), diferente do
-`{TraceIdentifier}:{contador}` usado em toda outra resposta.
 
 ### 4.4 404 e 405 vazios de roteamento — sem corpo, sem Content-Type
 
@@ -250,8 +256,9 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | CPF já cadastrado (pessoa ativa ou inativa) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.cpf[0].meta.clientId`) |
 | E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.email[0].meta.clientId`) |
 | Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`guardians`: `Client.GuardianRequired`) |
-| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `guardians[0].cpf`: `CpfNumber.Invalid`, `referenceContacts[0].purposes`: `ContactPurposes.Required`…) |
-| `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (forma §4.3, inglês, sem `code`) | — |
+| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `referenceContacts[0].purposes`: `ContactPurposes.Required`…) |
+| CPF inválido, em qualquer formatação (§4.3) | `POST /api/v1/clients` (`cpf` ou `guardians[0].cpf`) | 400 | `Validation.Failed` (`cpf`: `Validation.Failed`, "O CPF informado é inválido.") |
+| `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (§4.3: mensagem do framework, em inglês) | `Validation.Failed` (`fullName`: `Validation.Failed`) |
 
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
 constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado passa pelo roteamento
@@ -265,17 +272,21 @@ entidades e value objects (regras de forma), e os handlers (regras de estado), s
 ## 7. Para quem consome isto (frontend e futuros agentes)
 
 - **Ramifique por `code`, nunca por `title`/mensagem livre** — já é regra do
-  [AGENTS.md raiz](../AGENTS.md) e da skill [`agenza-api-contract`](../.claude/skills/agenza-api-contract/SKILL.md); §4.3 é o motivo concreto: `code` pode
+  [AGENTS.md raiz](../AGENTS.md) e da skill [`agenza-api-contract`](../.claude/skills/agenza-api-contract/SKILL.md); §4.4 é o motivo concreto: o `code` pode
   simplesmente não existir.
-- Trate **ausência de `code`** como um caso válido (fallback genérico), não como bug — acontece
-  sempre que um campo obrigatório falta inteiramente no corpo, ou o JSON é inválido.
+- **Ignore a chave de `errors` que é o nome do parâmetro do corpo** (`command`, §4.3): numa falha de
+  leitura do corpo ela repete a falha real e não é um campo da requisição. Um consumidor que trata
+  toda chave desconhecida como erro de formulário a mostra como "The command field is required.".
+- Trate **ausência de `code`** como um caso válido (fallback genérico), não como bug — acontece nos
+  404/405 sem corpo (§4.4). O `code` de uma falha de binding existe, mas é sempre `Validation.Failed`:
+  não distingue a regra (§4.3).
 - **Não confie em `Content-Type` nem em corpo presente** para 404/405 — podem vir vazios (§4.4).
 - **Mostre a mensagem que veio na forma canônica (§4.1)** — `title` e cada `errors[campo][i].message`
   são texto pt-BR escrito para o usuário final; exiba como chegou, sem reescrever. Texto próprio do
-  frontend só onde não há mensagem do backend utilizável: a forma nativa do framework (§4.3), que
-  sai em inglês e sem `code`, os 404/405 vazios (§4.4) e falhas de rede.
+  frontend só onde não há mensagem do backend utilizável: o texto de binding do framework (§4.3), que
+  sai em inglês, os 404/405 vazios (§4.4) e falhas de rede.
 - O contrato gerado (`shared/api/generated/services-api.d.ts`) promete `ApiProblemDetails` para
-  todo erro — as formas §4.2 e §4.3 divergem desse contrato na prática. Isso é o comportamento real
+  todo erro — a forma §4.2 e os 404/405 vazios (§4.4) divergem desse contrato na prática. Isso é o comportamento real
   do serviço hoje, não necessariamente um bug a corrigir; só não dá pra assumir a forma rica em
   100% dos casos.
 

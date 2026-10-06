@@ -1,5 +1,3 @@
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Application.Clients;
 
 public static class ContactPurposeNames

@@ -1,10 +1,8 @@
-using ServicesService.Domain.ValueObjects;
-
-namespace ServicesService.Tests.Clients;
+namespace Admin.SharedKernel.Tests;
 
 public class BirthDateTests
 {
-    private static readonly DateOnly Today = ClientTestData.Today;
+    private static readonly DateOnly Today = new(2026, 10, 2);
 
     [Theory]
     [InlineData(2008, 10, 2, 18)]
@@ -23,46 +21,39 @@ public class BirthDateTests
     [Theory]
     [InlineData(2008, 10, 3, true)]
     [InlineData(2008, 10, 2, false)]
+    [InlineData(2015, 3, 10, true)]
+    [InlineData(1990, 5, 20, false)]
     [InlineData(2026, 10, 1, true)]
-    [InlineData(1990, 1, 1, false)]
     public void IsMinorOn_IsTrueUntilTheEighteenthBirthday(int year, int month, int day, bool expected)
     {
-        BirthDate.IsMinorOn(new DateOnly(year, month, day), Today).Should().Be(expected);
         BirthDate.Restore(new DateOnly(year, month, day)).IsMinorOn(Today).Should().Be(expected);
-    }
-
-    [Fact]
-    public void IsMinorOn_WithAFutureDate_IsFalse()
-    {
-        BirthDate.IsMinorOn(Today.AddDays(1), Today).Should().BeFalse();
-    }
-
-    [Fact]
-    public void Create_WithoutAValue_ReturnsNull()
-    {
-        var result = BirthDate.Create(null, Today);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeNull();
-    }
-
-    [Fact]
-    public void Create_WithAPastDate_KeepsIt()
-    {
-        BirthDate.Create(Today.AddDays(-1), Today).Value!.Value.Should().Be(Today.AddDays(-1));
     }
 
     [Theory]
     [InlineData(0)]
     [InlineData(1)]
     [InlineData(365)]
-    public void Create_WithTodayOrFuture_Fails(int daysAhead)
+    public void IsMinorOn_IsFalseForTodayOrTheFuture(int daysAhead)
+    {
+        BirthDate.Restore(Today.AddDays(daysAhead)).IsMinorOn(Today).Should().BeFalse();
+    }
+
+    [Fact]
+    public void Create_WithAPastDate_KeepsIt()
+    {
+        BirthDate.Create(Today.AddDays(-1), Today).Value.Value.Should().Be(Today.AddDays(-1));
+    }
+
+    [Theory]
+    [InlineData(0)]
+    [InlineData(1)]
+    [InlineData(365)]
+    public void Create_WithTodayOrFuture_FailsWithThePastMessage(int daysAhead)
     {
         var result = BirthDate.Create(Today.AddDays(daysAhead), Today);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("BirthDate.NotInThePast");
-        result.Error.Message.Should().Contain("passado");
+        result.Error.Should().Be("A data de nascimento deve estar no passado.");
     }
 
     [Fact]
@@ -72,13 +63,21 @@ public class BirthDateTests
     }
 
     [Fact]
-    public void Create_WithMoreThanOneHundredTwentyYears_Fails()
+    public void Create_WithMoreThanOneHundredTwentyYears_FailsWithTheAgeMessage()
     {
         var result = BirthDate.Create(new DateOnly(1905, 10, 2), Today);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("BirthDate.TooOld");
-        result.Error.Message.Should().Contain("120");
+        result.Error.Should().Be("A data de nascimento não pode indicar idade superior a 120 anos.");
+    }
+
+    [Fact]
+    public void Create_JudgesTheDateAgainstTheDayItIsGiven()
+    {
+        var date = new DateOnly(2026, 10, 2);
+
+        BirthDate.Create(date, date.AddDays(1)).IsSuccess.Should().BeTrue();
+        BirthDate.Create(date, date).IsFailure.Should().BeTrue();
     }
 
     [Fact]

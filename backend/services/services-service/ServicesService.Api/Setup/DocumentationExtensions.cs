@@ -1,4 +1,5 @@
 using Admin.Identity.Client;
+using Admin.SharedKernel.AspNetCore;
 using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
@@ -23,6 +24,8 @@ public static class DocumentationExtensions
 
         services.AddOpenApi(options =>
         {
+            options.MapValueObjectsToStrings();
+
             options.AddDocumentTransformer((document, _, _) =>
             {
                 document.Components ??= new OpenApiComponents();

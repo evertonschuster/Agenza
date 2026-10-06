@@ -1,5 +1,3 @@
-using ServicesService.Domain.Common;
-
 namespace ServicesService.Domain.Entities;
 
 // Name uniqueness per tenant is a cross-aggregate rule, enforced in the CreateCategory/UpdateCategory use cases via ICategoryRepository, not here.

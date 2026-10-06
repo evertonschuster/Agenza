@@ -33,9 +33,9 @@ Apply the threshold in §3. In this codebase it reads as:
 
 | May stay a primitive | Validated by |
 | --- | --- |
-| a tag's name, a contact's name or relationship, a description | its owner, with a named `DomainError` |
+| a tag's name, a guardian's name, a contact's relationship, a description | its owner, with a named `DomainError` |
 
-Writing one:
+Writing a service's own (a value that is shared by every service is a different job — see the last bullet):
 
 - `sealed record`, private constructor, one `Value` (or the few values it groups).
 - `Create(raw)` trims and normalizes, then validates, and fails on the **first** broken rule. An
@@ -48,6 +48,10 @@ Writing one:
   value. The predicate and `Create` share the private check, so they cannot disagree.
 - No reference to an entity, a repository, a clock or configuration; what a rule needs comes in as a
   parameter (`today`).
+- A value with a format and no business context, the same in every service (CPF, full name, phone,
+  e-mail, birth date, administrative notes), is not written here: it goes to
+  `Admin.SharedKernel.ValueObjects` and follows [value-objects.md](value-objects.md). The one thing to
+  know from this file: it has no `DomainResult` and no `DomainError` — `Create` returns a `ParseResult<T>`.
 
 ## 3. Behaviour
 
@@ -69,7 +73,7 @@ Writing one:
 | --- | --- | --- |
 | Root | `public static DomainResult<T> Create(Guid id, <value objects>, <context>, <child data>)` | `ToModel` in the Application |
 | Child | `internal static DomainResult<TChild> Create(Guid id, Guid rootId, <Child>Data data)` | its root only |
-| Value object | `Create(raw)` and `Restore(stored)` | `ToModel`, `ApplyTo`, EF conversions |
+| Value object | `Create(raw)` and `Restore(stored)` | `ToModel`, `ApplyTo`, EF conversions; a shared one: the JSON converter and the EF convention, never `ToModel` |
 
 - A root's `Create` takes value objects already built, not raw strings, for fields that are value
   objects; its own primitive fields it validates itself.
@@ -84,7 +88,9 @@ Writing one:
 
 One `static readonly DomainError` per rule, on the type that owns the rule, `<Type>.<Rule>`, pt-BR
 message. A rule over the whole aggregate belongs to the root (`Client.GuardianRequired`); a rule over a
-value belongs to the value object (`CpfNumber.Invalid`). The validator reuses these codes.
+value belongs to the value object (`ContactPurposes.Required`). The validator reuses these codes. A shared
+string value object has no `DomainError`: its failure is the message of the rule that broke, in the
+`ParseResult<T>` that `Create` returns.
 
 ## 6. Red flags in the domain
 

@@ -1,7 +1,3 @@
-using ServicesService.Domain.Common;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Application.Clients.CreateClient;
 
 public static class CreateClientCommandExtensions
@@ -10,49 +6,7 @@ public static class CreateClientCommandExtensions
     // assigns it on save (docs/adr/0008).
     public static DomainResult<Client> ToModel(this CreateClientCommand command, DateOnly today)
     {
-        var fullNameResult = FullName.Create(command.FullName);
-        if (fullNameResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(fullNameResult.Error);
-        }
-
-        var birthDateResult = BirthDate.Create(command.BirthDate, today);
-        if (birthDateResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(birthDateResult.Error);
-        }
-
-        var phoneResult = PhoneNumber.Create(command.Phone);
-        if (phoneResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(phoneResult.Error);
-        }
-
-        var emailResult = EmailAddress.Create(command.Email);
-        if (emailResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(emailResult.Error);
-        }
-
-        var cpfResult = CpfNumber.Create(command.Cpf);
-        if (cpfResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(cpfResult.Error);
-        }
-
-        var notesResult = AdministrativeNotes.Create(command.AdministrativeNotes);
-        if (notesResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(notesResult.Error);
-        }
-
-        var guardiansResult = ToGuardians(command.Guardians);
-        if (guardiansResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(guardiansResult.Error);
-        }
-
-        var referenceContactsResult = ToReferenceContacts(command.ReferenceContacts);
+        var referenceContactsResult = command.ReferenceContacts.ToReferenceContacts();
         if (referenceContactsResult.IsFailure)
         {
             return DomainResult.Failure<Client>(referenceContactsResult.Error);
@@ -60,60 +14,36 @@ public static class CreateClientCommandExtensions
 
         return Client.Create(
             Guid.CreateVersion7(),
-            fullNameResult.Value,
-            birthDateResult.Value,
-            phoneResult.Value,
-            emailResult.Value,
-            cpfResult.Value,
-            notesResult.Value,
+            command.FullName,
+            command.BirthDate,
+            command.Phone,
+            command.Email,
+            command.Cpf,
+            command.AdministrativeNotes,
             today,
-            guardiansResult.Value,
+            command.Guardians.ToGuardians(),
             referenceContactsResult.Value);
     }
 
-    private static DomainResult<List<GuardianData>> ToGuardians(IReadOnlyList<GuardianInput>? inputs)
+    private static List<GuardianData> ToGuardians(this IReadOnlyList<GuardianInput>? inputs)
     {
         var guardians = new List<GuardianData>();
 
         foreach (var input in inputs ?? [])
         {
-            var guardianResult = ToGuardian(input);
-            if (guardianResult.IsFailure)
-            {
-                return DomainResult.Failure<List<GuardianData>>(guardianResult.Error);
-            }
-
-            guardians.Add(guardianResult.Value);
+            guardians.Add(new GuardianData(input.Name, input.Relationship, input.Phone, input.Cpf));
         }
 
-        return DomainResult.Success(guardians);
+        return guardians;
     }
 
-    private static DomainResult<GuardianData> ToGuardian(GuardianInput input)
-    {
-        var phoneResult = PhoneNumber.Create(input.Phone);
-        if (phoneResult.IsFailure)
-        {
-            return DomainResult.Failure<GuardianData>(phoneResult.Error);
-        }
-
-        var cpfResult = CpfNumber.Create(input.Cpf);
-        if (cpfResult.IsFailure)
-        {
-            return DomainResult.Failure<GuardianData>(cpfResult.Error);
-        }
-
-        return DomainResult.Success(new GuardianData(input.Name, input.Relationship, phoneResult.Value, cpfResult.Value));
-    }
-
-    private static DomainResult<List<ReferenceContactData>> ToReferenceContacts(
-        IReadOnlyList<ReferenceContactInput>? inputs)
+    private static DomainResult<List<ReferenceContactData>> ToReferenceContacts(this IReadOnlyList<ReferenceContactInput>? inputs)
     {
         var referenceContacts = new List<ReferenceContactData>();
 
         foreach (var input in inputs ?? [])
         {
-            var contactResult = ToReferenceContact(input);
+            var contactResult = input.ToReferenceContact();
             if (contactResult.IsFailure)
             {
                 return DomainResult.Failure<List<ReferenceContactData>>(contactResult.Error);
@@ -125,14 +55,8 @@ public static class CreateClientCommandExtensions
         return DomainResult.Success(referenceContacts);
     }
 
-    private static DomainResult<ReferenceContactData> ToReferenceContact(ReferenceContactInput input)
+    private static DomainResult<ReferenceContactData> ToReferenceContact(this ReferenceContactInput input)
     {
-        var phoneResult = PhoneNumber.Create(input.Phone);
-        if (phoneResult.IsFailure)
-        {
-            return DomainResult.Failure<ReferenceContactData>(phoneResult.Error);
-        }
-
         var purposesResult = ContactPurposes.Create(ContactPurposeNames.ToPurposes(input.Purposes));
         if (purposesResult.IsFailure)
         {
@@ -142,7 +66,7 @@ public static class CreateClientCommandExtensions
         return DomainResult.Success(new ReferenceContactData(
             input.Name,
             input.Relationship,
-            phoneResult.Value,
+            input.Phone,
             purposesResult.Value));
     }
 }

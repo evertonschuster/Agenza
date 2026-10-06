@@ -3,19 +3,19 @@ using Admin.SharedKernel;
 namespace ServicesService.Application.Clients.CreateClient;
 
 public sealed record CreateClientCommand(
-    string FullName,
-    DateOnly? BirthDate,
-    string? Phone,
-    string? Email,
-    string? Cpf,
-    string? AdministrativeNotes,
+    FullName FullName,
+    BirthDate? BirthDate,
+    PhoneNumber? Phone,
+    EmailAddress? Email,
+    CpfNumber? Cpf,
+    AdministrativeNotes? AdministrativeNotes,
     IReadOnlyList<GuardianInput>? Guardians,
     IReadOnlyList<ReferenceContactInput>? ReferenceContacts) : ICommand<ClientResponse>;
 
-public sealed record GuardianInput(string Name, string Relationship, string? Phone, string? Cpf);
+public sealed record GuardianInput(string Name, string Relationship, PhoneNumber? Phone, CpfNumber? Cpf);
 
 public sealed record ReferenceContactInput(
-    string Name,
+    FullName Name,
     string Relationship,
-    string? Phone,
+    PhoneNumber? Phone,
     IReadOnlyList<string>? Purposes);

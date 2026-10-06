@@ -1,6 +1,3 @@
-using ServicesService.Domain.Common;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Domain.Entities;
 
 // CPF and e-mail uniqueness per tenant are cross-aggregate rules, enforced in the use cases via IClientRepository
@@ -20,7 +17,7 @@ public class Client : TenantOwnedEntity
 
     public static readonly DomainError GuardianRequired = new(
         "Client.GuardianRequired",
-        $"Informe ao menos um responsável para pessoas menores de {ValueObjects.BirthDate.AdultAgeInYears} anos.");
+        $"Informe ao menos um responsável para pessoas menores de {BirthDate.AdultAgeInYears} anos.");
 
     public FullName FullName { get; private set; }
     public BirthDate? BirthDate { get; private set; }

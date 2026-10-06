@@ -1,5 +1,3 @@
-using ServicesService.Domain.Common;
-
 namespace ServicesService.Domain.ValueObjects;
 
 // Fixed 8-color palette (frontend docs/API.md) - not a free-form hex value.

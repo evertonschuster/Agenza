@@ -5,8 +5,6 @@ namespace ServicesService.Tests.Clients.CreateClient;
 
 public class CreateClientCommandBindingTests
 {
-    private static readonly JsonSerializerOptions WebOptions = new(JsonSerializerDefaults.Web);
-
     [Fact]
     public void Deserialize_IgnoresATenantSentInTheBody()
     {
@@ -20,10 +18,10 @@ public class CreateClientCommandBindingTests
             }
             """;
 
-        var command = JsonSerializer.Deserialize<CreateClientCommand>(json, WebOptions);
+        var command = JsonSerializer.Deserialize<CreateClientCommand>(json, WireJson.Options);
 
         command.Should().NotBeNull();
-        command!.FullName.Should().Be("Maria Souza");
+        command!.FullName.Value.Should().Be("Maria Souza");
         command.Guardians.Should().ContainSingle().Which.Name.Should().Be("Ana Souza");
         typeof(CreateClientCommand).GetProperties().Select(property => property.Name)
             .Should().NotContain(name => name.Contains("Tenant"));
@@ -49,10 +47,11 @@ public class CreateClientCommandBindingTests
             }
             """;
 
-        var command = JsonSerializer.Deserialize<CreateClientCommand>(json, WebOptions)!;
+        var command = JsonSerializer.Deserialize<CreateClientCommand>(json, WireJson.Options)!;
 
-        command.BirthDate.Should().Be(new DateOnly(2015, 3, 10));
-        command.AdministrativeNotes.Should().Be("Prefere contato pela manhã.");
+        command.BirthDate!.Value.Should().Be(new DateOnly(2015, 3, 10));
+        command.Cpf!.Value.Should().Be(ClientTestData.ValidCpfDigits);
+        command.AdministrativeNotes!.Value.Should().Be("Prefere contato pela manhã.");
         command.ReferenceContacts.Should().ContainSingle()
             .Which.Purposes.Should().Equal("emergency", "dailyCommunication");
     }
@@ -60,9 +59,10 @@ public class CreateClientCommandBindingTests
     [Fact]
     public void Deserialize_WithoutOptionalFields_LeavesThemNull()
     {
-        var command = JsonSerializer.Deserialize<CreateClientCommand>("""{ "fullName": "Maria Souza" }""", WebOptions)!;
+        var command = JsonSerializer.Deserialize<CreateClientCommand>("""{ "fullName": "Maria Souza" }""", WireJson.Options)!;
 
         command.BirthDate.Should().BeNull();
+        command.Cpf.Should().BeNull();
         command.Guardians.Should().BeNull();
         command.ReferenceContacts.Should().BeNull();
     }

@@ -1,7 +1,3 @@
-using ServicesService.Domain.Common;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Tests.Clients;
 
 public class ClientContactTests
@@ -81,7 +77,7 @@ public class ClientContactTests
 
         var client = CreateClient(referenceContacts:
         [
-            new ReferenceContactData(" Carlos Lima ", " Tio ", ClientTestData.Phone("11 4000-1000"), purposes),
+            new ReferenceContactData(ClientTestData.Name(" Carlos Lima "), " Tio ", ClientTestData.Phone("11 4000-1000"), purposes),
         ]).Value;
 
         var contact = client.ReferenceContacts.Should().ContainSingle().Subject;
@@ -92,13 +88,16 @@ public class ClientContactTests
     }
 
     [Theory]
-    [InlineData("", "Tio")]
-    [InlineData("Carlos Lima", "")]
-    public void ReferenceContact_WithoutNameOrRelationship_FailsTheClient(string name, string relationship)
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ReferenceContact_WithoutRelationship_FailsTheClient(string relationship)
     {
         var purposes = ContactPurposes.Create(ContactPurpose.Emergency).Value;
 
-        CreateClient(referenceContacts: [new ReferenceContactData(name, relationship, null, purposes)])
-            .IsFailure.Should().BeTrue();
+        var result = CreateClient(referenceContacts:
+            [new ReferenceContactData(ClientTestData.Name("Carlos Lima"), relationship, null, purposes)]);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("ClientContact.RelationshipRequired");
     }
 }

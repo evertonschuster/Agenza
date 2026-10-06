@@ -1,6 +1,6 @@
 ---
 name: agenza-backend-slice
-description: Use when building or changing backend functionality in a .NET service under backend/services/ — modeling an aggregate, child entity, value object, state transition, factory or domain error; writing a command, query, handler, validator, mapping or response DTO; adding a repository method, EF configuration or migration; adding a controller action; writing backend unit or persistence tests; or deciding which existing slice to copy and where shared logic belongs.
+description: Use when building or changing backend functionality in a .NET service under backend/services/ — modeling an aggregate, child entity, value object (a service's own or one shared by every service), state transition, factory or domain error; writing a command, query, handler, validator, mapping or response DTO; adding a repository method, EF configuration or migration; adding a controller action; writing backend unit or persistence tests; or deciding which existing slice to copy and where shared logic belongs.
 ---
 
 # Building a backend slice
@@ -13,7 +13,8 @@ the order of work and the decisions you meet on the way. Two generations of slic
 
 | You are about to… | Read | Rules |
 | --- | --- | --- |
-| model an aggregate, a child, a value object, a transition, a factory, a domain error | [references/domain.md](references/domain.md) | §3 |
+| model an aggregate, a child, a value object of the service, a transition, a factory, a domain error | [references/domain.md](references/domain.md) | §3 |
+| add or change a value object that every service shares, or type a request member with one | [references/value-objects.md](references/value-objects.md) | §3, ADR 0055 |
 | write a command or query, its validator, the mapping, the handler, the response | [references/use-case.md](references/use-case.md) | §2, §4, §6, §7 |
 | write a repository method, a configuration, an index, a migration | [references/persistence.md](references/persistence.md) | §5 |
 | write tests | [references/tests.md](references/tests.md) | §9 |

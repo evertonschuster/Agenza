@@ -1,5 +1,3 @@
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Application.Categories;
 
 public sealed record CategoryResponse(Guid Id, string Name)

@@ -3,8 +3,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Persistence.Interceptors;
 using ServicesService.Infrastructure.Repositories;
@@ -48,10 +46,10 @@ public class ClientPersistenceTests
         Client.Create(
             Guid.NewGuid(),
             FullName.Create(fullName).Value,
-            BirthDate.Create(birthDate, Today).Value,
+            birthDate is null ? null : BirthDate.Create(birthDate.Value, Today).Value,
             null,
-            EmailAddress.Create(email).Value,
-            CpfNumber.Create(cpf).Value,
+            email is null ? null : EmailAddress.Create(email).Value,
+            cpf is null ? null : CpfNumber.Create(cpf).Value,
             null,
             Today,
             guardians ?? [],
@@ -64,17 +62,17 @@ public class ClientPersistenceTests
 
     private static ReferenceContactData ReferenceContact()
     {
-        return new ReferenceContactData("Carlos Lima", "Tio", null, ContactPurposes.Create(ContactPurpose.Emergency).Value);
+        return new ReferenceContactData(FullName.Create("Carlos Lima").Value, "Tio", null, ContactPurposes.Create(ContactPurpose.Emergency).Value);
     }
 
     private static CpfNumber Cpf(string digits)
     {
-        return CpfNumber.Create(digits).Value!;
+        return CpfNumber.Create(digits).Value;
     }
 
     private static EmailAddress Email(string address)
     {
-        return EmailAddress.Create(address).Value!;
+        return EmailAddress.Create(address).Value;
     }
 
     private static async Task Save(ServicesDataContext context, Client client)

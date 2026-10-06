@@ -1,6 +1,4 @@
-using ServicesService.Domain.ValueObjects;
-
-namespace ServicesService.Tests.Clients;
+namespace Admin.SharedKernel.Tests;
 
 public class FullNameTests
 {
@@ -11,17 +9,25 @@ public class FullNameTests
     }
 
     [Theory]
-    [InlineData(null, "FullName.Required")]
-    [InlineData("", "FullName.Required")]
-    [InlineData("   ", "FullName.Required")]
-    [InlineData("A", "FullName.InvalidLength")]
-    [InlineData(" A ", "FullName.InvalidLength")]
-    public void Create_WithMissingOrTooShortName_Fails(string? raw, string expectedCode)
+    [InlineData(null, "O nome completo é obrigatório.")]
+    [InlineData("", "O nome completo é obrigatório.")]
+    [InlineData("   ", "O nome completo é obrigatório.")]
+    [InlineData("A", "O nome completo deve ter pelo menos 2 caracteres.")]
+    [InlineData(" A ", "O nome completo deve ter pelo menos 2 caracteres.")]
+    public void Create_WithMissingOrTooShortName_FailsWithTheMessageOfTheBrokenRule(string? raw, string expectedMessage)
     {
         var result = FullName.Create(raw);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be(expectedCode);
+        result.Error.Should().Be(expectedMessage);
+    }
+
+    [Fact]
+    public void Create_WithATooLongName_FailsWithTheMaximumMessage()
+    {
+        var result = FullName.Create(new string('a', FullName.MaxLength + 1));
+
+        result.Error.Should().Be("O nome completo deve ter no máximo 150 caracteres.");
     }
 
     [Fact]
@@ -30,7 +36,12 @@ public class FullNameTests
         FullName.Create("Jo").IsSuccess.Should().BeTrue();
         FullName.Create(new string('a', FullName.MaxLength)).IsSuccess.Should().BeTrue();
         FullName.Create(" " + new string('a', FullName.MaxLength) + " ").IsSuccess.Should().BeTrue();
-        FullName.Create(new string('a', FullName.MaxLength + 1)).IsFailure.Should().BeTrue();
+    }
+
+    [Fact]
+    public void BlankIsAbsent_IsFalse_BecauseABlankNameIsAMistake()
+    {
+        FullName.BlankIsAbsent.Should().BeFalse();
     }
 
     [Fact]

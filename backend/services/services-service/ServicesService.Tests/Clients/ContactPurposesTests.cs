@@ -1,5 +1,3 @@
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Tests.Clients;
 
 public class ContactPurposesTests
