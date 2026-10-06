@@ -8,22 +8,15 @@ public static class ModelStateErrorMapper
     private const string ConversionFailure = "The JSON value could not be converted";
     private const string ParserPosition = "LineNumber:";
 
-    public static Error ToError(ModelStateDictionary modelState, IReadOnlyCollection<string> bodyParameterNames)
+    public static Error ToError(ModelStateDictionary modelState)
     {
         // A failed body read also marks the whole body parameter as missing; that entry only repeats the real one.
-        var skipBodyParameter = modelState.Count(entry => entry.Value is { Errors.Count: > 0 }) > 1;
-
         var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>>();
         string? message = null;
 
         foreach (var (key, entry) in modelState)
         {
             if (entry is not { Errors.Count: > 0 })
-            {
-                continue;
-            }
-
-            if (skipBodyParameter && bodyParameterNames.Contains(key))
             {
                 continue;
             }

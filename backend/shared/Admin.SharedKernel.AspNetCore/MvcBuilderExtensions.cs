@@ -13,12 +13,7 @@ public static class MvcBuilderExtensions
         {
             options.InvalidModelStateResponseFactory = context =>
             {
-                var bodyParameterNames = context.ActionDescriptor.Parameters
-                    .Where(parameter => parameter.BindingInfo?.BindingSource == BindingSource.Body)
-                    .Select(parameter => parameter.Name)
-                    .ToList();
-
-                var error = ModelStateErrorMapper.ToError(context.ModelState, bodyParameterNames);
+                var error = ModelStateErrorMapper.ToError(context.ModelState);
                 var problem = ApiProblemDetailsFactory.CreateValidationProblem(error, context.HttpContext);
 
                 return new ObjectResult(problem) { StatusCode = StatusCodes.Status400BadRequest };
