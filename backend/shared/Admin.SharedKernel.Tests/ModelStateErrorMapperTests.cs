@@ -8,9 +8,11 @@ public class ModelStateErrorMapperTests
     private const string ConversionText =
         "The JSON value could not be converted to Some.Command. Path: $.birthDate | LineNumber: 0 | BytePositionInLine: 50.";
 
-    private static readonly string ConverterText = WireErrorText.Encode("CpfNumber.Invalid", "O CPF informado é inválido.");
-    private static readonly FieldError ConverterError = new("CpfNumber.Invalid", "O CPF informado é inválido.");
+    private const string ConverterText = "O CPF informado é inválido.";
+
     private static readonly string[] BodyParameters = ["command"];
+
+    private static FieldError BindingError(string text) => new("Validation.Failed", text);
 
     private static ModelStateDictionary State(params (string Key, string Message)[] errors)
     {
@@ -35,16 +37,16 @@ public class ModelStateErrorMapperTests
 
         error.Type.Should().Be(ErrorType.Validation);
         error.Code.Should().Be("Validation.Failed");
-        error.Message.Should().Be(ConverterError.Message);
+        error.Message.Should().Be(ConverterText);
     }
 
     [Fact]
-    public void ToError_AConverterFailureKeepsItsOwnCodeAndMessageUnderTheField()
+    public void ToError_AConverterFailureKeepsItsMessageUnderTheFieldWithoutTheJsonRoot()
     {
         var error = Map(State(("$.cpf", ConverterText)));
 
         error.FieldErrors!.Should().ContainSingle().Which.Key.Should().Be("cpf");
-        error.FieldErrors["cpf"].Should().Equal(ConverterError);
+        error.FieldErrors["cpf"].Should().Equal(BindingError(ConverterText));
     }
 
     [Fact]
@@ -52,7 +54,7 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("$.guardians[0].cpf", ConverterText)));
 
-        error.FieldErrors!["guardians[0].cpf"].Should().Equal(ConverterError);
+        error.FieldErrors!["guardians[0].cpf"].Should().Equal(BindingError(ConverterText));
     }
 
     [Fact]
@@ -60,7 +62,7 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("$.birthDate", ConversionText)));
 
-        error.FieldErrors!["birthDate"].Should().Equal(new FieldError("Validation.Failed", ConversionText));
+        error.FieldErrors!["birthDate"].Should().Equal(BindingError(ConversionText));
     }
 
     [Fact]
@@ -68,7 +70,7 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("FullName", "The FullName field is required.")));
 
-        error.FieldErrors!["FullName"].Should().Equal(new FieldError("Validation.Failed", "The FullName field is required."));
+        error.FieldErrors!["FullName"].Should().Equal(BindingError("The FullName field is required."));
     }
 
     [Fact]
@@ -76,7 +78,7 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("Page", "The value 'abc' is not valid.")));
 
-        error.FieldErrors!["Page"].Should().Equal(new FieldError("Validation.Failed", "The value 'abc' is not valid."));
+        error.FieldErrors!["Page"].Should().Equal(BindingError("The value 'abc' is not valid."));
     }
 
     [Theory]
@@ -88,15 +90,7 @@ public class ModelStateErrorMapperTests
         var error = Map(State((key, text)));
 
         error.FieldErrors!.Should().ContainSingle().Which.Key.Should().BeEmpty();
-        error.FieldErrors[string.Empty].Should().Equal(new FieldError("Validation.Failed", text));
-    }
-
-    [Fact]
-    public void ToError_AJsonPathMessageWithoutCodeOrParserPositionKeepsItsTextUnderTheField()
-    {
-        var error = Map(State(("$.cpf", "O CPF informado é inválido.")));
-
-        error.FieldErrors!["cpf"].Should().Equal(new FieldError("Validation.Failed", "O CPF informado é inválido."));
+        error.FieldErrors[string.Empty].Should().Equal(BindingError(text));
     }
 
     [Fact]
@@ -114,7 +108,7 @@ public class ModelStateErrorMapperTests
     {
         var error = Map(State(("command", "The command field is required.")));
 
-        error.FieldErrors!["command"].Should().Equal(new FieldError("Validation.Failed", "The command field is required."));
+        error.FieldErrors!["command"].Should().Equal(BindingError("The command field is required."));
     }
 
     [Fact]

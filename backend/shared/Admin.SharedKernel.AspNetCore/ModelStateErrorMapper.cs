@@ -4,7 +4,7 @@ namespace Admin.SharedKernel.AspNetCore;
 
 public static class ModelStateErrorMapper
 {
-    private const string NativeErrorCode = "Validation.Failed";
+    private const string BindingErrorCode = "Validation.Failed";
     private const string ConversionFailure = "The JSON value could not be converted";
     private const string ParserPosition = "LineNumber:";
 
@@ -44,23 +44,18 @@ public static class ModelStateErrorMapper
             fieldErrors.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<FieldError>)pair.Value));
     }
 
-    // Beyond a converter's own "Code|Message" text, the framework hands over a key and English text, with no code and no
-    // exception, so telling a syntax error from a field error depends on its wording.
+    // The framework hands over a key and a text, with no code and no exception, so telling a syntax error from a field
+    // error depends on the wording of its text.
     private static (string Field, FieldError Error) Classify(string key, string text)
     {
-        if (WireErrorText.TryDecode(text, out var wireError))
-        {
-            return (ToField(key), wireError);
-        }
-
-        var native = new FieldError(NativeErrorCode, text);
+        var bindingError = new FieldError(BindingErrorCode, text);
 
         if (key.Length == 0 || IsSyntaxError(key, text))
         {
-            return (string.Empty, native);
+            return (string.Empty, bindingError);
         }
 
-        return (ToField(key), native);
+        return (ToField(key), bindingError);
     }
 
     private static bool IsSyntaxError(string key, string text)

@@ -41,7 +41,7 @@ public class MvcBuilderExtensionsTests
         var options = services.BuildServiceProvider().GetRequiredService<IOptions<ApiBehaviorOptions>>().Value;
         var context = BodyActionContext();
         context.ModelState.AddModelError("command", "The command field is required.");
-        context.ModelState.AddModelError("$.cpf", WireErrorText.Encode("CpfNumber.Invalid", "O CPF informado é inválido."));
+        context.ModelState.AddModelError("$.cpf", "O CPF informado é inválido.");
 
         var result = options.InvalidModelStateResponseFactory(context);
 
@@ -52,6 +52,6 @@ public class MvcBuilderExtensionsTests
         problem.Status.Should().Be(StatusCodes.Status400BadRequest);
         problem.TraceId.Should().NotBeNullOrWhiteSpace();
         problem.Errors!.Keys.Should().Equal("cpf");
-        problem.Errors["cpf"].Should().Equal(new FieldError("CpfNumber.Invalid", "O CPF informado é inválido."));
+        problem.Errors["cpf"].Should().Equal(new FieldError("Validation.Failed", "O CPF informado é inválido."));
     }
 }
