@@ -7,7 +7,7 @@ public sealed record CreateClientCommand(
     FullName FullName,
     DateOnly? BirthDate,
     PhoneNumber? Phone,
-    string? Email,
+    EmailAddress? Email,
     CpfNumber? Cpf,
     string? AdministrativeNotes,
     IReadOnlyList<GuardianInput>? Guardians,

@@ -16,12 +16,6 @@ public static class CreateClientCommandExtensions
             return DomainResult.Failure<Client>(birthDateResult.Error);
         }
 
-        var emailResult = EmailAddress.Create(command.Email);
-        if (emailResult.IsFailure)
-        {
-            return DomainResult.Failure<Client>(emailResult.Error);
-        }
-
         var notesResult = AdministrativeNotes.Create(command.AdministrativeNotes);
         if (notesResult.IsFailure)
         {
@@ -39,7 +33,7 @@ public static class CreateClientCommandExtensions
             command.FullName,
             birthDateResult.Value,
             command.Phone,
-            emailResult.Value,
+            command.Email,
             command.Cpf,
             notesResult.Value,
             today,

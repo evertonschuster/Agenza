@@ -22,7 +22,7 @@ public class CreateClientCommandValidatorTests
             ClientTestData.Name(fullName),
             birthDate,
             phone is null ? null : ClientTestData.Phone(phone),
-            email,
+            email is null ? null : ClientTestData.Email(email),
             cpf,
             notes,
             guardians,
@@ -57,8 +57,6 @@ public class CreateClientCommandValidatorTests
         {
             { "birth date today", Command(birthDate: new DateOnly(2026, 10, 2)), "BirthDate", "BirthDate.NotInThePast" },
             { "birth date too old", Command(birthDate: new DateOnly(1905, 10, 2)), "BirthDate", "BirthDate.TooOld" },
-            { "email shape", Command(email: "maria@example"), "Email", "EmailAddress.Invalid" },
-            { "email length", Command(email: new string('a', 255) + "@x.com"), "Email", "EmailAddress.Invalid" },
             { "notes", Command(notes: new string('n', 501)), "AdministrativeNotes", "AdministrativeNotes.TooLong" },
             { "minor without guardian", Command(birthDate: new DateOnly(2015, 3, 10)), "Guardians", "Client.GuardianRequired" },
             { "too many guardians", Command(guardians: tooManyGuardians), "Guardians", "Client.TooManyGuardians" },
@@ -191,30 +189,11 @@ public class CreateClientCommandValidatorTests
     }
 
     [Theory]
-    [InlineData("maria")]
-    [InlineData("maria@example")]
-    [InlineData("maria souza@example.com")]
-    public async Task Validate_WithInvalidEmail_Fails(string email)
-    {
-        var result = await Validate(Command(email: email));
-
-        MessagesFor(result, "Email").Should().Equal("Informe um e-mail válido.");
-    }
-
-    [Fact]
-    public async Task Validate_WithEmailOverTheMaximumLength_Fails()
-    {
-        var result = await Validate(Command(email: new string('a', 250) + "@example.com"));
-
-        MessagesFor(result, "Email").Should().Equal("O e-mail deve ter no máximo 254 caracteres.");
-    }
-
-    [Theory]
     [InlineData("")]
     [InlineData("   ")]
-    public async Task Validate_WithBlankOptionalFields_Passes(string blank)
+    public async Task Validate_WithBlankAdministrativeNotes_Passes(string blank)
     {
-        var result = await Validate(Command(email: blank, notes: blank));
+        var result = await Validate(Command(notes: blank));
 
         result.IsValid.Should().BeTrue();
     }

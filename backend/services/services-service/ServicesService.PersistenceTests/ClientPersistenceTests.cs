@@ -51,7 +51,7 @@ public class ClientPersistenceTests
             FullName.Create(fullName).Value,
             BirthDate.Create(birthDate, Today).Value,
             null,
-            EmailAddress.Create(email).Value,
+            email is null ? null : EmailAddress.Create(email).Value,
             cpf is null ? null : CpfNumber.Create(cpf).Value,
             null,
             Today,
@@ -75,7 +75,7 @@ public class ClientPersistenceTests
 
     private static EmailAddress Email(string address)
     {
-        return EmailAddress.Create(address).Value!;
+        return EmailAddress.Create(address).Value;
     }
 
     private static async Task Save(ServicesDataContext context, Client client)

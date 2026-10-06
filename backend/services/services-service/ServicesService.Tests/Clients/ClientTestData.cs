@@ -24,7 +24,7 @@ internal static class ClientTestData
 
     public static EmailAddress Email(string value = "maria@example.com")
     {
-        return EmailAddress.Create(value).Value!;
+        return EmailAddress.Create(value).Value;
     }
 
     public static PhoneNumber Phone(string value = "(11) 99999-0000")

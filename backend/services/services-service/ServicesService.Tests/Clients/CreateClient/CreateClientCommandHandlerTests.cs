@@ -41,7 +41,7 @@ public class CreateClientCommandHandlerTests
             ClientTestData.Name(fullName),
             birthDate,
             phone is null ? null : ClientTestData.Phone(phone),
-            email,
+            email is null ? null : ClientTestData.Email(email),
             cpf,
             notes,
             guardians,

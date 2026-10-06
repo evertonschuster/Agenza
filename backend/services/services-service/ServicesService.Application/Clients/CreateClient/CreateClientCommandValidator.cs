@@ -20,15 +20,6 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
             .WithMessage($"A data de nascimento não pode indicar idade superior a {BirthDate.MaxAgeInYears} anos.")
             .When(command => command.BirthDate.HasValue);
 
-        RuleFor(command => command.Email)
-            .Cascade(CascadeMode.Stop)
-            .Must(email => email is null || email.Trim().Length <= EmailAddress.MaxLength)
-            .WithErrorCode(EmailAddress.Invalid.Code)
-            .WithMessage($"O e-mail deve ter no máximo {EmailAddress.MaxLength} caracteres.")
-            .Must(email => string.IsNullOrWhiteSpace(email) || EmailAddress.HasValidShape(email.Trim().ToLowerInvariant()))
-            .WithErrorCode(EmailAddress.Invalid.Code)
-            .WithMessage("Informe um e-mail válido.");
-
         RuleFor(command => command.AdministrativeNotes)
             .Must(notes => notes is null || notes.Trim().Length <= AdministrativeNotes.MaxLength)
             .WithErrorCode(AdministrativeNotes.TooLong.Code)
