@@ -62,6 +62,7 @@ public class CreateClientCommandBindingTests
         var command = JsonSerializer.Deserialize<CreateClientCommand>("""{ "fullName": "Maria Souza" }""", WireJson.Options)!;
 
         command.BirthDate.Should().BeNull();
+        command.Cpf.Should().BeNull();
         command.Guardians.Should().BeNull();
         command.ReferenceContacts.Should().BeNull();
     }

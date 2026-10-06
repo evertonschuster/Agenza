@@ -32,14 +32,6 @@ public class CpfNumberJsonConverterTests
         Bind(cpfJson).Cpf.Should().BeNull();
     }
 
-    [Fact]
-    public void Read_WithTheFieldAbsent_BindsNull()
-    {
-        var command = JsonSerializer.Deserialize<CreateClientCommand>("""{ "fullName": "Maria Souza" }""", WireJson.Options)!;
-
-        command.Cpf.Should().BeNull();
-    }
-
     [Theory]
     [InlineData("\"529.982.247-24\"")]
     [InlineData("\"111.111.111-11\"")]
@@ -55,14 +47,6 @@ public class CpfNumberJsonConverterTests
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.cpf");
         exception.Message.Should().Be(CpfNumber.Invalid.Message);
-    }
-
-    [Fact]
-    public void Read_WithAnInvalidCpf_NeverEchoesTheValue()
-    {
-        var act = () => Bind("\"529.982.247-24\"");
-
-        act.Should().Throw<JsonException>().Which.Message.Should().NotContain("247");
     }
 
     [Fact]

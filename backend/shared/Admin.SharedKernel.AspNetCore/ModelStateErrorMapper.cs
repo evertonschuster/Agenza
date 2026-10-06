@@ -4,7 +4,7 @@ namespace Admin.SharedKernel.AspNetCore;
 
 public static class ModelStateErrorMapper
 {
-    private const string BindingErrorCode = "Validation.Failed";
+    private const string ValidationFailed = "Validation.Failed";
     private const string ConversionFailure = "The JSON value could not be converted";
     private const string ParserPosition = "LineNumber:";
 
@@ -39,7 +39,7 @@ public static class ModelStateErrorMapper
 
         var message = string.Join(" ", fieldErrors.Values.SelectMany(list => list).Select(item => item.Message));
         return Error.Validation(
-            "Validation.Failed",
+            ValidationFailed,
             message,
             fieldErrors.ToDictionary(pair => pair.Key, pair => (IReadOnlyList<FieldError>)pair.Value));
     }
@@ -48,7 +48,7 @@ public static class ModelStateErrorMapper
     // error depends on the wording of its text.
     private static (string Field, FieldError Error) Classify(string key, string text)
     {
-        var bindingError = new FieldError(BindingErrorCode, text);
+        var bindingError = new FieldError(ValidationFailed, text);
 
         if (key.Length == 0 || IsSyntaxError(key, text))
         {

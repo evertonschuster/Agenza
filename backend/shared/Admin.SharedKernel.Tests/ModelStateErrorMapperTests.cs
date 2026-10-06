@@ -1,3 +1,4 @@
+using System.Text.Json;
 using Admin.SharedKernel.AspNetCore;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
 
@@ -11,6 +12,8 @@ public class ModelStateErrorMapperTests
     private const string ConverterText = "O CPF informado é inválido.";
 
     private static readonly string[] BodyParameters = ["command"];
+
+    private sealed record Body(DateOnly? BirthDate);
 
     private static FieldError BindingError(string text) => new("Validation.Failed", text);
 
@@ -128,6 +131,30 @@ public class ModelStateErrorMapperTests
         var error = Map(state);
 
         error.FieldErrors!.Keys.Should().Equal("cpf");
+    }
+
+    // The mapper reads the framework's wording, so these two take the text from System.Text.Json itself, as MVC does
+    // (key = the exception's Path, text = its Message): a .NET update that rewords it fails here, not in production.
+    [Fact]
+    public void ToError_ARealTypeConversionFailureStaysUnderItsField()
+    {
+        var act = () => JsonSerializer.Deserialize<Body>("""{ "birthDate": "not a date" }""", JsonSerializerOptions.Web);
+        var exception = act.Should().Throw<JsonException>().Which;
+
+        var error = Map(State((exception.Path!, exception.Message)));
+
+        error.FieldErrors!.Keys.Should().Equal("birthDate");
+    }
+
+    [Fact]
+    public void ToError_ARealSyntaxErrorBelongsToTheForm()
+    {
+        var act = () => JsonSerializer.Deserialize<Body>("""{ "birthDate": """, JsonSerializerOptions.Web);
+        var exception = act.Should().Throw<JsonException>().Which;
+
+        var error = Map(State((exception.Path!, exception.Message)));
+
+        error.FieldErrors!.Keys.Should().Equal(string.Empty);
     }
 
     [Fact]
