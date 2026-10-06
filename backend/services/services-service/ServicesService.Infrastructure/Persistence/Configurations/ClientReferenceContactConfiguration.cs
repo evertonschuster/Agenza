@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Infrastructure.Persistence.Configurations;
 
@@ -19,9 +17,7 @@ public class ClientReferenceContactConfiguration : IEntityTypeConfiguration<Clie
         builder.Property(r => r.ClientId).IsRequired();
         builder.Property(r => r.Name).IsRequired().HasMaxLength(ClientContact.NameMaxLength);
         builder.Property(r => r.Relationship).IsRequired().HasMaxLength(ClientContact.RelationshipMaxLength);
-        builder.Property(r => r.Phone)
-            .HasConversion(phone => phone!.Value, value => PhoneNumber.Restore(value))
-            .HasMaxLength(PhoneNumber.MaxLength);
+        builder.Property(r => r.Phone).HasMaxLength(PhoneNumber.MaxLength);
         builder.Property(r => r.Purposes)
             .HasConversion(purposes => (int)purposes.Value, value => ContactPurposes.Restore((ContactPurpose)value))
             .IsRequired();

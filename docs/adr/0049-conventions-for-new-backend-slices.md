@@ -1,7 +1,8 @@
 # ADR 0049 — Conventions for new backend slices
 
 Status: accepted (2026-10); supersedes, as a pattern for new code, the shared `ServiceRelationshipLoader`
-of [ADR 0012](0012-revert-cross-aggregate-checks-to-handlers-and-domain.md)
+of [ADR 0012](0012-revert-cross-aggregate-checks-to-handlers-and-domain.md); item 8 ("no domain type" in a command) is
+amended by [ADR 0055](0055-shared-string-value-objects.md) for the shared string value objects
 
 ## Context
 

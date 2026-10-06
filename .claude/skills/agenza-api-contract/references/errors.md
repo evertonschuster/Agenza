@@ -52,7 +52,7 @@ not read as "sem conexão", because the user's actual next step is entirely diff
 
 ## `errors` is not always field errors
 
-This is the trap. `errors` is `Record<string, { code?, message? }[]>` and gets filled **two
+This is the trap. `errors` is `Record<string, { code?, message? }[]>` and gets filled **three
 different ways** (`ApiProblemDetailsFactory`):
 
 1. **Validation (400).** Keys come from FluentValidation's `PropertyName`, grouped in
@@ -60,7 +60,13 @@ different ways** (`ApiProblemDetailsFactory`):
    body** (`name`, `durationMinutes`, `guardians[0].name`; ADR 0051). A cross-field rule can be re-keyed onto one
    field with `OverridePropertyName` (see `CreateServiceCommandValidator.cs`), so the key set is not
    mechanically the command's properties either.
-2. **Any error without field errors** (Conflict, NotFound, Failure, and a Validation the domain
+2. **A body that did not bind (400).** Before any validator runs, MVC fills the keys from the JSON
+   member path (`cpf`, `guardians[0].cpf`), each item with `code: "Validation.Failed"`. The `message` is
+   pt-BR only when a shared value object rejected the value; otherwise it is the framework's English
+   text, with the C# type name and the parser position. A failure that is not a member (malformed JSON,
+   empty body) sits under `""`, and a body-read failure adds one more entry under the action's
+   parameter name (`command`). Only the first invalid value is reported. See `docs/API.md` §4.3.
+3. **Any error without field errors** (Conflict, NotFound, Failure, and a Validation the domain
    rejected after the validator let it through). `CreateSingleErrorDictionary`
    puts the error itself under the **empty-string key `""`**. So a 409 arrives with a populated
    `errors` that maps to no field at all.

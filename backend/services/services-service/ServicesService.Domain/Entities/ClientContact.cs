@@ -1,6 +1,3 @@
-using ServicesService.Domain.Common;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Domain.Entities;
 
 public sealed record ContactChange<TData>(Guid? Id, TData Data);

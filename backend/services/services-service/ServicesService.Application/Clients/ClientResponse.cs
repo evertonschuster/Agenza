@@ -1,6 +1,3 @@
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Application.Clients;
 
 public sealed record ClientResponse(

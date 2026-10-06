@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Infrastructure.Persistence.Configurations;
 
@@ -18,23 +16,12 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
 
         builder.Property(c => c.TenantId).IsRequired();
         builder.Property(c => c.FullName)
-            .HasConversion(fullName => fullName.Value, value => FullName.Restore(value))
             .IsRequired()
             .HasMaxLength(FullName.MaxLength);
-        builder.Property(c => c.BirthDate)
-            .HasConversion(birthDate => birthDate!.Value, value => BirthDate.Restore(value));
-        builder.Property(c => c.Phone)
-            .HasConversion(phone => phone!.Value, value => PhoneNumber.Restore(value))
-            .HasMaxLength(PhoneNumber.MaxLength);
-        builder.Property(c => c.Email)
-            .HasConversion(email => email!.Value, value => EmailAddress.Restore(value))
-            .HasMaxLength(EmailAddress.MaxLength);
-        builder.Property(c => c.Cpf)
-            .HasConversion(cpf => cpf!.Value, value => CpfNumber.Restore(value))
-            .HasMaxLength(CpfNumber.Length);
-        builder.Property(c => c.AdministrativeNotes)
-            .HasConversion(notes => notes!.Value, value => AdministrativeNotes.Restore(value))
-            .HasMaxLength(AdministrativeNotes.MaxLength);
+        builder.Property(c => c.Phone).HasMaxLength(PhoneNumber.MaxLength);
+        builder.Property(c => c.Email).HasMaxLength(EmailAddress.MaxLength);
+        builder.Property(c => c.Cpf).HasMaxLength(CpfNumber.Length);
+        builder.Property(c => c.AdministrativeNotes).HasMaxLength(AdministrativeNotes.MaxLength);
         builder.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
 
         // CPF collides among live clients whatever their status, e-mail only among live active ones. The database

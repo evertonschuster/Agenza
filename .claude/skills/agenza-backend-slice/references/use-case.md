@@ -9,8 +9,10 @@ messages", plus the earlier slices for reads, edits and paging. This file is how
 - `<Verb><Noun>Command` changes state; `<Verb><Noun>Query` only reads. A positional `sealed record`
   implementing `ICommand`, `ICommand<TResponse>` or `IQuery<TResponse>`.
 - Members are what crosses the wire: primitives, strings, `DateOnly?`, `Guid`, and lists as
-  `IReadOnlyList<<Thing>Input>?`, with the `<Thing>Input` records in the same file. No domain type, no
-  tenant, no C# enum — an enum travels as a string and `<Concept>Names` translates it.
+  `IReadOnlyList<<Thing>Input>?`, with the `<Thing>Input` records in the same file. No domain type —
+  except a shared string value object such as `CpfNumber?`, which binds from the JSON string and needs
+  no validator rule (ADR 0055) — no tenant, no C# enum: an enum travels as a string and
+  `<Concept>Names` translates it.
 - A route id is a member (`<Entity>Id`) that the controller fills with `with { … }`.
 - A list query carries its filters as optional members and `Page`/`PageSize` with defaults.
 
@@ -20,7 +22,7 @@ One `AbstractValidator<T>` per request that carries input, queries included. Wri
 facts about the input, one `RuleFor` per property:
 
 - Every rule ends in `.WithErrorCode(…)` and `.WithMessage("…")`. The code is the domain's
-  (`FullName.Required.Code`); a rule with no domain counterpart — an empty route id, a missing list
+  (`Client.TooManyGuardians.Code`); a rule with no domain counterpart — an empty route id, a missing list
   item — still gets a `<Type>.<Rule>` code, as a literal in the validator. The message is pt-BR, names
   the field, and interpolates limits from the domain's constants.
 - `.Cascade(CascadeMode.Stop)` when a later rule assumes an earlier one held (the length check after
@@ -48,6 +50,8 @@ base validator class.
   with the value objects and the children's data records.
 - `ApplyTo(this <Command>, <Entity>, <context>)` → `DomainResult`: build the value objects, call the
   behaviour.
+- Helpers named `To...` with a natural source object are extension methods and are called from that
+  object. Keep domain factories such as `Create` and `Restore` as static methods.
 - No rule, no I/O, no tenant. Each step is an explicit `if (x.IsFailure) return …` — no helper chains
   them.
 
@@ -105,7 +109,7 @@ No `try/catch`, no base class, no loader or service class between handlers.
 
 ## 6. Red flags in a use case
 
-- a domain type or a C# enum in a command, an input or a response
+- a domain type (other than a shared string value object) or a C# enum in a command, an input or a response
 - `TenantId` anywhere in the request, the mapping or the handler
 - an async rule, a repository or a uniqueness check in a validator; a rule without `.WithErrorCode`
 - `try`/`catch` in a handler; a handler that injects the `DbContext` or calls another handler

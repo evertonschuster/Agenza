@@ -7,11 +7,13 @@ AwesomeAssertions (`.Should()`), NSubstitute. Code to copy: the tests of the sli
 
 | You wrote | Prove | File |
 | --- | --- | --- |
-| a value object | every rule; every normalization; blank → `null` when optional; `Restore` does not validate | `<Service>.Tests/<Feature>/<ValueObject>Tests.cs` |
+| a value object of the service | every rule; every normalization; blank → `null` when optional; `Restore` does not validate | `<Service>.Tests/<Feature>/<ValueObject>Tests.cs` |
+| a shared value object | every rule with its message; every normalization; the boundary of each limit; `Restore` does not validate | `backend/shared/Admin.SharedKernel.Tests/<ValueObject>Tests.cs` |
 | an aggregate | every invariant; every transition, allowed and refused; children built and linked to the root; no tenant before save; a failed `Update` changes nothing | `<Service>.Tests/<Feature>/<Entity>Tests.cs` |
 | a validator | every rule yields its **code** on its **property**; a valid request passes | `…/<Feature>/<Operation>/<Operation>…ValidatorTests.cs` |
 | a handler | success persists and returns the response; each `NotFound` and conflict with code, field and `meta`; a rejection persists nothing; a failed save answers `<Entity>.SaveFailed`; each read happens once | `…/<Feature>/<Operation>/<Operation>…HandlerTests.cs` |
 | a command bound from a body | the wire JSON binds; a `tenantId` in the body is ignored | `…/<Feature>/<Operation>/<Operation>CommandBindingTests.cs` |
+| a command member typed as a shared value object | the wire JSON binds to it, and an invalid value fails with the type's message under that field | `…/<Feature>/<Operation>/<Operation>Command<ValueObject>BindingTests.cs` |
 | tenant assignment, a filter, a conversion, an index, a relationship | the EF behaviour | `<Service>.PersistenceTests/<Entity>PersistenceTests.cs` |
 | a response mapping | through the handler's tests, not on its own | — |
 

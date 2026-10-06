@@ -1,7 +1,3 @@
-using ServicesService.Domain.Common;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Tests.Clients;
 
 public class ClientTests
@@ -15,7 +11,7 @@ public class ClientTests
         Client.Create(
             Guid.NewGuid(),
             ClientTestData.Name(),
-            BirthDate.Create(birthDate, Today).Value,
+            ClientTestData.Birth(birthDate),
             null,
             null,
             null,
@@ -49,7 +45,7 @@ public class ClientTests
     [Fact]
     public void Create_KeepsEveryValueObjectItReceives()
     {
-        var notes = AdministrativeNotes.Create("Prefere atendimento à tarde.").Value;
+        var notes = ClientTestData.Notes();
 
         var client = Client.Create(
             Guid.NewGuid(),

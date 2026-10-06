@@ -32,7 +32,7 @@ verticais organizam a Application; não substituem as camadas.
 Cada linha é um lembrete; a regra, com o porquê, está na seção indicada da
 [ARCHITECTURE](docs/ARCHITECTURE.md).
 
-- **O Domain não referencia nada** — nem projeto, nem pacote. [§1](docs/ARCHITECTURE.md#1-shape)
+- **O Domain só referencia `Admin.SharedKernel.ValueObjects`** — nenhum outro projeto, nenhum pacote. [§1](docs/ARCHITECTURE.md#1-shape)
 - **A forma mais simples correta primeiro** — mecanismo de desempenho só com evidência no PR.
   [Regras gerais](docs/ARCHITECTURE.md)
 - **O handler é dono da orquestração; entrada e saída são records explícitos.**

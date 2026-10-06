@@ -1,5 +1,4 @@
 using ServicesService.Application.Clients;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients;
 

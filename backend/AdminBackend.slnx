@@ -22,6 +22,7 @@
     <Project Path="shared/Admin.SharedKernel.AspNetCore/Admin.SharedKernel.AspNetCore.csproj" />
     <Project Path="shared/Admin.SharedKernel.EntityFrameworkCore/Admin.SharedKernel.EntityFrameworkCore.csproj" />
     <Project Path="shared/Admin.SharedKernel.Tests/Admin.SharedKernel.Tests.csproj" />
+    <Project Path="shared/Admin.SharedKernel.ValueObjects/Admin.SharedKernel.ValueObjects.csproj" />
     <Project Path="shared/Admin.SharedKernel/Admin.SharedKernel.csproj" />
   </Folder>
   <Project Path="AppHost/AppHost.csproj" />

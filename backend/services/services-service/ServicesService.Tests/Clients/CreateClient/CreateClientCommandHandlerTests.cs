@@ -2,8 +2,6 @@ using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.CreateClient;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients.CreateClient;
 
@@ -32,13 +30,21 @@ public class CreateClientCommandHandlerTests
         DateOnly? birthDate = null,
         string? phone = null,
         string? email = null,
-        string? cpf = null,
+        CpfNumber? cpf = null,
         string? notes = null,
         IReadOnlyList<GuardianInput>? guardians = null,
         IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
-        new(fullName, birthDate, phone, email, cpf, notes, guardians, referenceContacts);
+        new(
+            ClientTestData.Name(fullName),
+            ClientTestData.Birth(birthDate),
+            phone is null ? null : ClientTestData.Phone(phone),
+            email is null ? null : ClientTestData.Email(email),
+            cpf,
+            notes is null ? null : ClientTestData.Notes(notes),
+            guardians,
+            referenceContacts);
 
-    private static GuardianInput Guardian() => new("Ana Souza", "Mãe", "(11) 98888-0000", null);
+    private static GuardianInput Guardian() => new("Ana Souza", "Mãe", ClientTestData.Phone("(11) 98888-0000"), null);
 
     private static PersistenceResult<int> UniqueViolation(string? constraint) =>
         PersistenceResult.Failure<int>(new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, constraint));
@@ -68,12 +74,12 @@ public class CreateClientCommandHandlerTests
             birthDate: new DateOnly(2015, 3, 10),
             phone: " (11) 99999-0000 ",
             email: " Maria@Example.com ",
-            cpf: ClientTestData.ValidCpf,
+            cpf: ClientTestData.Cpf(),
             notes: " Prefere contato por WhatsApp pela manhã. ",
-            guardians: [new GuardianInput("Ana Souza", "Mãe", "(11) 98888-0000", ClientTestData.OtherValidCpf)],
+            guardians: [new GuardianInput("Ana Souza", "Mãe", ClientTestData.Phone("(11) 98888-0000"), ClientTestData.Cpf(ClientTestData.OtherValidCpf))],
             referenceContacts:
             [
-                new ReferenceContactInput("Carlos Lima", "Tio", "11 4000-1000", ["emergency", "dailyCommunication"]),
+                new ReferenceContactInput(ClientTestData.Name(" Carlos Lima "), "Tio", ClientTestData.Phone("11 4000-1000"), ["emergency", "dailyCommunication"]),
             ]);
 
         var result = await Handler().Handle(command, CancellationToken.None);
@@ -94,6 +100,7 @@ public class CreateClientCommandHandlerTests
         guardian.Id.Should().NotBe(Guid.Empty);
         var reference = response.ReferenceContacts.Should().ContainSingle().Subject;
         reference.Name.Should().Be("Carlos Lima");
+        reference.Phone.Should().Be("11 4000-1000");
         reference.Purposes.Should().Equal("emergency", "dailyCommunication");
     }
 
@@ -159,9 +166,9 @@ public class CreateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ChecksUniquenessWithTheNormalizedCpfAndEmail()
+    public async Task Handle_ChecksUniquenessWithTheCpfAndTheNormalizedEmail()
     {
-        await Handler().Handle(Command(email: " Maria@Example.COM ", cpf: ClientTestData.ValidCpf), CancellationToken.None);
+        await Handler().Handle(Command(email: " Maria@Example.COM ", cpf: ClientTestData.Cpf()), CancellationToken.None);
 
         await _repository.Received(1).FindByCpfAsync(ClientTestData.Cpf(), null, Arg.Any<CancellationToken>());
         await _repository.Received(1).FindActiveByEmailAsync(ClientTestData.Email(), null, Arg.Any<CancellationToken>());
@@ -183,7 +190,7 @@ public class CreateClientCommandHandlerTests
         _repository.FindByCpfAsync(ClientTestData.Cpf(), null, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(existing));
 
-        var result = await Handler().Handle(Command(cpf: ClientTestData.ValidCpf), CancellationToken.None);
+        var result = await Handler().Handle(Command(cpf: ClientTestData.Cpf()), CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
@@ -229,7 +236,7 @@ public class CreateClientCommandHandlerTests
             .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
 
         var result = await Handler().Handle(
-            Command(email: "maria@example.com", cpf: ClientTestData.ValidCpf),
+            Command(email: "maria@example.com", cpf: ClientTestData.Cpf()),
             CancellationToken.None);
 
         result.Error.Code.Should().Be("Client.DuplicateCpf");

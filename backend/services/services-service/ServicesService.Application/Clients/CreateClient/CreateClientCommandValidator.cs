@@ -1,6 +1,4 @@
 using FluentValidation;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Clients.CreateClient;
 
@@ -10,19 +8,11 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
     {
         DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
-        RuleFor(command => command.FullName).MustBeValidFullName();
-        RuleFor(command => command.BirthDate).MustBeValidBirthDate(Today);
-        RuleFor(command => command.Phone).MustBeValidPhone();
-        RuleFor(command => command.Email).MustBeValidEmail();
-        RuleFor(command => command.Cpf).MustBeValidCpf();
-        RuleFor(command => command.AdministrativeNotes).MustBeValidAdministrativeNotes();
-
         RuleFor(command => command.Guardians).MustNotExceedTheGuardianLimit();
 
         RuleFor(command => command.Guardians)
             .MustHaveAGuardian()
-            .When(command => command.BirthDate is { } birthDate
-                && BirthDate.IsMinorOn(birthDate, Today()));
+            .When(command => command.BirthDate is { } birthDate && birthDate.IsMinorOn(Today()));
 
         RuleForEach(command => command.Guardians)
             .NotNull()
@@ -49,8 +39,6 @@ public sealed class GuardianInputValidator : AbstractValidator<GuardianInput>
     {
         RuleFor(guardian => guardian.Name).MustBeValidContactName("do responsável");
         RuleFor(guardian => guardian.Relationship).MustBeValidContactRelationship("do responsável");
-        RuleFor(guardian => guardian.Phone).MustBeValidPhone();
-        RuleFor(guardian => guardian.Cpf).MustBeValidCpf();
     }
 }
 
@@ -58,9 +46,7 @@ public sealed class ReferenceContactInputValidator : AbstractValidator<Reference
 {
     public ReferenceContactInputValidator()
     {
-        RuleFor(contact => contact.Name).MustBeValidContactName("da pessoa de referência");
         RuleFor(contact => contact.Relationship).MustBeValidContactRelationship("da pessoa de referência");
-        RuleFor(contact => contact.Phone).MustBeValidPhone();
         RuleFor(contact => contact.Purposes).MustHaveValidPurposes();
     }
 }

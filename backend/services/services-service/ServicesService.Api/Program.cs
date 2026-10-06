@@ -11,11 +11,13 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 
-builder.Services.AddControllers(options =>
-{
-    // A verified X-Tenant-Id header is required unless [IgnoreTenant].
-    options.Filters.Add<TenantHeaderFilter>();
-});
+builder.Services
+    .AddControllers(options =>
+    {
+        options.Filters.Add<TenantHeaderFilter>();
+    })
+    .AddValueObjectJson()
+    .AddModelStateProblemDetails();
 builder.Services.AddApiDocumentation(builder.Configuration);
 
 builder.Services.AddExceptionHandler<GenericExceptionHandler>();

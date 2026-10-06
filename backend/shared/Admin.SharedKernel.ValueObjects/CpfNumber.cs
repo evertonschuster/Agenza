@@ -1,12 +1,10 @@
-using ServicesService.Domain.Common;
+namespace Admin.SharedKernel.ValueObjects;
 
-namespace ServicesService.Domain.ValueObjects;
-
-public sealed record CpfNumber
+public sealed record CpfNumber : IStringValueObject<CpfNumber>
 {
     public const int Length = 11;
 
-    public static readonly DomainError Invalid = new("CpfNumber.Invalid", "O CPF informado é inválido.");
+    private const string InvalidMessage = "O CPF informado é inválido.";
 
     public string Value { get; }
 
@@ -15,31 +13,22 @@ public sealed record CpfNumber
         Value = value;
     }
 
-    public static DomainResult<CpfNumber?> Create(string? raw)
+    public static ParseResult<CpfNumber> Create(string? raw)
     {
-        var trimmed = raw?.Trim();
-
-        if (string.IsNullOrEmpty(trimmed))
-        {
-            return DomainResult.Success<CpfNumber?>(null);
-        }
-
-        var digits = StripMask(trimmed);
+        var digits = StripMask(raw ?? string.Empty);
 
         if (!HasValidCheckDigits(digits))
         {
-            return DomainResult.Failure<CpfNumber?>(Invalid);
+            return ParseResult<CpfNumber>.Failure(InvalidMessage);
         }
 
-        return DomainResult.Success<CpfNumber?>(new CpfNumber(digits));
+        return ParseResult<CpfNumber>.Success(new CpfNumber(digits));
     }
 
     public static CpfNumber Restore(string value)
     {
         return new CpfNumber(value);
     }
-
-    public static bool IsValid(string? raw) => HasValidCheckDigits(StripMask(raw ?? string.Empty));
 
     private static string StripMask(string value) =>
         new(value.Where(character => character is not ('.' or '-') && !char.IsWhiteSpace(character)).ToArray());

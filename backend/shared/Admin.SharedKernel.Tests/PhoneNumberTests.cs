@@ -1,9 +1,10 @@
-using ServicesService.Domain.ValueObjects;
-
-namespace ServicesService.Tests.Clients;
+namespace Admin.SharedKernel.Tests;
 
 public class PhoneNumberTests
 {
+    private const string InvalidMessage =
+        "Informe um telefone válido, com até 20 caracteres entre dígitos, espaços, +, parênteses e hífen.";
+
     [Theory]
     [InlineData("11999990000")]
     [InlineData("(11) 99999-0000")]
@@ -15,25 +16,13 @@ public class PhoneNumberTests
         var result = PhoneNumber.Create(raw);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value!.Value.Should().Be(raw);
+        result.Value.Value.Should().Be(raw);
     }
 
     [Fact]
     public void Create_TrimsSurroundingWhitespace()
     {
-        PhoneNumber.Create("  (11) 99999-0000  ").Value!.Value.Should().Be("(11) 99999-0000");
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void Create_WithBlankValue_ReturnsNull(string? raw)
-    {
-        var result = PhoneNumber.Create(raw);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Should().BeNull();
+        PhoneNumber.Create("  (11) 99999-0000  ").Value.Value.Should().Be("(11) 99999-0000");
     }
 
     [Fact]
@@ -43,6 +32,9 @@ public class PhoneNumberTests
     }
 
     [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
     [InlineData("123456789012345678901")]
     [InlineData("(11) 99999-0000 ramal 12")]
     [InlineData("11.99999.0000")]
@@ -50,13 +42,22 @@ public class PhoneNumberTests
     [InlineData("telefone")]
     [InlineData("+-() ")]
     [InlineData("---")]
-    public void Create_WithDisallowedShape_Fails(string raw)
+    public void Create_WithBlankOrDisallowedShape_FailsWithTheValidatorMessage(string? raw)
     {
         var result = PhoneNumber.Create(raw);
 
         result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("PhoneNumber.Invalid");
+        result.Error.Should().Be(InvalidMessage);
     }
+
+    [Fact]
+    public void BlankIsAbsent_IsTrue_BecauseThePhoneIsOptional()
+    {
+        BlankIsAbsentOf<PhoneNumber>().Should().BeTrue();
+    }
+
+    private static bool BlankIsAbsentOf<T>()
+        where T : class, IStringValueObject<T> => T.BlankIsAbsent;
 
     [Fact]
     public void Restore_AcceptsAPhoneThatCreateWouldReject()

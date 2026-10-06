@@ -1,6 +1,5 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Services;
 
