@@ -23,9 +23,7 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
             .HasMaxLength(FullName.MaxLength);
         builder.Property(c => c.BirthDate)
             .HasConversion(birthDate => birthDate!.Value, value => BirthDate.Restore(value));
-        builder.Property(c => c.Phone)
-            .HasConversion(phone => phone!.Value, value => PhoneNumber.Restore(value))
-            .HasMaxLength(PhoneNumber.MaxLength);
+        builder.Property(c => c.Phone).HasMaxLength(PhoneNumber.MaxLength);
         builder.Property(c => c.Email)
             .HasConversion(email => email!.Value, value => EmailAddress.Restore(value))
             .HasMaxLength(EmailAddress.MaxLength);

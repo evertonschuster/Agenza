@@ -29,7 +29,7 @@ internal static class ClientTestData
 
     public static PhoneNumber Phone(string value = "(11) 99999-0000")
     {
-        return PhoneNumber.Create(value).Value!;
+        return PhoneNumber.Create(value).Value;
     }
 
     public static GuardianData Guardian(string name = "Ana Souza", string relationship = "Mãe")

@@ -20,8 +20,6 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
             .WithMessage($"A data de nascimento não pode indicar idade superior a {BirthDate.MaxAgeInYears} anos.")
             .When(command => command.BirthDate.HasValue);
 
-        RuleFor(command => command.Phone).MustBeValidPhone();
-
         RuleFor(command => command.Email)
             .Cascade(CascadeMode.Stop)
             .Must(email => email is null || email.Trim().Length <= EmailAddress.MaxLength)
@@ -77,7 +75,6 @@ public sealed class GuardianInputValidator : AbstractValidator<GuardianInput>
     {
         RuleFor(guardian => guardian.Name).MustBeValidContactName("do responsável");
         RuleFor(guardian => guardian.Relationship).MustBeValidContactRelationship("do responsável");
-        RuleFor(guardian => guardian.Phone).MustBeValidPhone();
     }
 }
 
@@ -87,7 +84,6 @@ public sealed class ReferenceContactInputValidator : AbstractValidator<Reference
     {
         RuleFor(contact => contact.Name).MustBeValidContactName("da pessoa de referência");
         RuleFor(contact => contact.Relationship).MustBeValidContactRelationship("da pessoa de referência");
-        RuleFor(contact => contact.Phone).MustBeValidPhone();
 
         RuleFor(contact => contact.Purposes)
             .Cascade(CascadeMode.Stop)

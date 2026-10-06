@@ -17,9 +17,7 @@ public class ClientGuardianConfiguration : IEntityTypeConfiguration<ClientGuardi
         builder.Property(g => g.ClientId).IsRequired();
         builder.Property(g => g.Name).IsRequired().HasMaxLength(ClientContact.NameMaxLength);
         builder.Property(g => g.Relationship).IsRequired().HasMaxLength(ClientContact.RelationshipMaxLength);
-        builder.Property(g => g.Phone)
-            .HasConversion(phone => phone!.Value, value => PhoneNumber.Restore(value))
-            .HasMaxLength(PhoneNumber.MaxLength);
+        builder.Property(g => g.Phone).HasMaxLength(PhoneNumber.MaxLength);
         builder.Property(g => g.Cpf).HasMaxLength(CpfNumber.Length);
     }
 }

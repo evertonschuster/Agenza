@@ -37,9 +37,17 @@ public class CreateClientCommandHandlerTests
         string? notes = null,
         IReadOnlyList<GuardianInput>? guardians = null,
         IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
-        new(ClientTestData.Name(fullName), birthDate, phone, email, cpf, notes, guardians, referenceContacts);
+        new(
+            ClientTestData.Name(fullName),
+            birthDate,
+            phone is null ? null : ClientTestData.Phone(phone),
+            email,
+            cpf,
+            notes,
+            guardians,
+            referenceContacts);
 
-    private static GuardianInput Guardian() => new("Ana Souza", "Mãe", "(11) 98888-0000", null);
+    private static GuardianInput Guardian() => new("Ana Souza", "Mãe", ClientTestData.Phone("(11) 98888-0000"), null);
 
     private static PersistenceResult<int> UniqueViolation(string? constraint) =>
         PersistenceResult.Failure<int>(new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, constraint));
@@ -71,10 +79,10 @@ public class CreateClientCommandHandlerTests
             email: " Maria@Example.com ",
             cpf: ClientTestData.Cpf(),
             notes: " Prefere contato por WhatsApp pela manhã. ",
-            guardians: [new GuardianInput("Ana Souza", "Mãe", "(11) 98888-0000", ClientTestData.Cpf(ClientTestData.OtherValidCpf))],
+            guardians: [new GuardianInput("Ana Souza", "Mãe", ClientTestData.Phone("(11) 98888-0000"), ClientTestData.Cpf(ClientTestData.OtherValidCpf))],
             referenceContacts:
             [
-                new ReferenceContactInput("Carlos Lima", "Tio", "11 4000-1000", ["emergency", "dailyCommunication"]),
+                new ReferenceContactInput("Carlos Lima", "Tio", ClientTestData.Phone("11 4000-1000"), ["emergency", "dailyCommunication"]),
             ]);
 
         var result = await Handler().Handle(command, CancellationToken.None);
@@ -95,6 +103,7 @@ public class CreateClientCommandHandlerTests
         guardian.Id.Should().NotBe(Guid.Empty);
         var reference = response.ReferenceContacts.Should().ContainSingle().Subject;
         reference.Name.Should().Be("Carlos Lima");
+        reference.Phone.Should().Be("11 4000-1000");
         reference.Purposes.Should().Equal("emergency", "dailyCommunication");
     }
 

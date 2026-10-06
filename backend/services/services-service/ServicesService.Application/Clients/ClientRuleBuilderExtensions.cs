@@ -1,19 +1,10 @@
 using FluentValidation;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Application.Clients;
 
 public static class ClientRuleBuilderExtensions
 {
-    public static IRuleBuilderOptions<T, string?> MustBeValidPhone<T>(this IRuleBuilder<T, string?> rule)
-    {
-        return rule.Must(phone => string.IsNullOrWhiteSpace(phone) || PhoneNumber.HasValidShape(phone.Trim()))
-            .WithErrorCode(PhoneNumber.Invalid.Code)
-            .WithMessage(
-                $"Informe um telefone válido, com até {PhoneNumber.MaxLength} caracteres entre dígitos, espaços, +, parênteses e hífen.");
-    }
-
     public static IRuleBuilderOptions<T, string> MustBeValidContactName<T>(
         this IRuleBuilderInitial<T, string> rule,
         string subject)

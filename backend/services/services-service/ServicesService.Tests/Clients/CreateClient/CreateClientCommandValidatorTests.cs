@@ -18,21 +18,29 @@ public class CreateClientCommandValidatorTests
         string? notes = null,
         IReadOnlyList<GuardianInput>? guardians = null,
         IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
-        new(ClientTestData.Name(fullName), birthDate, phone, email, cpf, notes, guardians, referenceContacts);
+        new(
+            ClientTestData.Name(fullName),
+            birthDate,
+            phone is null ? null : ClientTestData.Phone(phone),
+            email,
+            cpf,
+            notes,
+            guardians,
+            referenceContacts);
 
     private static GuardianInput Guardian(
         string name = "Ana Souza",
         string relationship = "Mãe",
         string? phone = null,
         CpfNumber? cpf = null) =>
-        new(name, relationship, phone, cpf);
+        new(name, relationship, phone is null ? null : ClientTestData.Phone(phone), cpf);
 
     private static ReferenceContactInput Reference(
         string name = "Carlos Lima",
         string relationship = "Tio",
         string? phone = null,
         params string[] purposes) =>
-        new(name, relationship, phone, purposes.Length == 0 ? ["emergency"] : purposes);
+        new(name, relationship, phone is null ? null : ClientTestData.Phone(phone), purposes.Length == 0 ? ["emergency"] : purposes);
 
     private async Task<ValidationResult> Validate(CreateClientCommand command) =>
         await _validator.ValidateAsync(command);
@@ -49,7 +57,6 @@ public class CreateClientCommandValidatorTests
         {
             { "birth date today", Command(birthDate: new DateOnly(2026, 10, 2)), "BirthDate", "BirthDate.NotInThePast" },
             { "birth date too old", Command(birthDate: new DateOnly(1905, 10, 2)), "BirthDate", "BirthDate.TooOld" },
-            { "phone", Command(phone: "telefone"), "Phone", "PhoneNumber.Invalid" },
             { "email shape", Command(email: "maria@example"), "Email", "EmailAddress.Invalid" },
             { "email length", Command(email: new string('a', 255) + "@x.com"), "Email", "EmailAddress.Invalid" },
             { "notes", Command(notes: new string('n', 501)), "AdministrativeNotes", "AdministrativeNotes.TooLong" },
@@ -62,7 +69,6 @@ public class CreateClientCommandValidatorTests
             { "guardian name too short", Command(guardians: [Guardian(name: "A")]), "Guardians[0].Name", "ClientContact.InvalidNameLength" },
             { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
             { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
-            { "guardian phone", Command(guardians: [Guardian(phone: "x")]), "Guardians[0].Phone", "PhoneNumber.Invalid" },
             { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput("Carlos Lima", "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
             { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Unknown" },
         };
@@ -185,17 +191,6 @@ public class CreateClientCommandValidatorTests
     }
 
     [Theory]
-    [InlineData("telefone")]
-    [InlineData("123456789012345678901")]
-    [InlineData("11.99999.0000")]
-    public async Task Validate_WithInvalidPhone_Fails(string phone)
-    {
-        var result = await Validate(Command(phone: phone));
-
-        MessagesFor(result, "Phone").Should().ContainSingle();
-    }
-
-    [Theory]
     [InlineData("maria")]
     [InlineData("maria@example")]
     [InlineData("maria souza@example.com")]
@@ -219,7 +214,7 @@ public class CreateClientCommandValidatorTests
     [InlineData("   ")]
     public async Task Validate_WithBlankOptionalFields_Passes(string blank)
     {
-        var result = await Validate(Command(phone: blank, email: blank, notes: blank));
+        var result = await Validate(Command(email: blank, notes: blank));
 
         result.IsValid.Should().BeTrue();
     }
@@ -241,13 +236,12 @@ public class CreateClientCommandValidatorTests
         var result = await Validate(Command(guardians:
         [
             Guardian(),
-            Guardian(name: "A", relationship: new string('r', 61), phone: "tel"),
+            Guardian(name: "A", relationship: new string('r', 61)),
         ]));
 
         MessagesFor(result, "Guardians[1].Name").Should().Equal("O nome do responsável deve ter pelo menos 2 caracteres.");
         MessagesFor(result, "Guardians[1].Relationship").Should()
             .Equal("O vínculo do responsável deve ter no máximo 60 caracteres.");
-        MessagesFor(result, "Guardians[1].Phone").Should().ContainSingle();
         result.Errors.Should().NotContain(error => error.PropertyName.StartsWith("Guardians[0]"));
     }
 
@@ -256,14 +250,13 @@ public class CreateClientCommandValidatorTests
     {
         var result = await Validate(Command(referenceContacts:
         [
-            new ReferenceContactInput("", "", "tel", []),
+            new ReferenceContactInput("", "", null, []),
             new ReferenceContactInput("Carlos Lima", "Tio", null, ["billing"]),
         ]));
 
         MessagesFor(result, "ReferenceContacts[0].Name").Should().Equal("O nome da pessoa de referência é obrigatório.");
         MessagesFor(result, "ReferenceContacts[0].Relationship").Should()
             .Equal("O vínculo da pessoa de referência é obrigatório.");
-        MessagesFor(result, "ReferenceContacts[0].Phone").Should().ContainSingle();
         MessagesFor(result, "ReferenceContacts[0].Purposes").Should()
             .Equal("Informe ao menos uma finalidade para a pessoa de referência.");
         MessagesFor(result, "ReferenceContacts[1].Purposes").Should().ContainSingle()
@@ -307,7 +300,7 @@ public class CreateClientCommandValidatorTests
     public async Task Validate_WithListsOverTheLimit_DoesNotValidateTheirItems()
     {
         var guardians = Enumerable.Range(0, 5_000).Select(_ => Guardian(name: "", relationship: "")).ToList();
-        var contacts = Enumerable.Range(0, 5_000).Select(_ => new ReferenceContactInput("", "", "tel", [])).ToList();
+        var contacts = Enumerable.Range(0, 5_000).Select(_ => new ReferenceContactInput("", "", null, [])).ToList();
 
         var result = await Validate(Command(guardians: guardians, referenceContacts: contacts));
 
