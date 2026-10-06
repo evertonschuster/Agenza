@@ -1,6 +1,6 @@
 # ADR 0053 — Clients: editing a person synchronizes its contacts by id
 
-Status: accepted (2026-10); extends [ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md), which
+Status: superseded by [ADR 0056](0056-clients-edit-replaces-contact-composition.md) (2026-10); extends [ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md), which
 announced "one operation that synchronizes the lists by id and re-checks the guardian and limit rules on the result"
 
 ## Context

@@ -1708,16 +1708,12 @@ export interface components {
       referenceContacts: null | components['schemas']['UpdateReferenceContactInput'][];
     };
     UpdateGuardianInput: {
-      /** Format: uuid */
-      id: null | string;
       name: string;
       relationship: string;
       phone: null | string;
       cpf: null | string;
     };
     UpdateReferenceContactInput: {
-      /** Format: uuid */
-      id: null | string;
       name: string;
       relationship: string;
       phone: null | string;

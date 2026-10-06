@@ -22,7 +22,7 @@ public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategor
 
     public async Task<Result<CategoryResponse>> Handle(UpdateCategoryCommand command, CancellationToken cancellationToken)
     {
-        var category = await _categoryRepository.GetByIdAsync(command.CategoryId, cancellationToken);
+        var category = await _categoryRepository.GetForUpdateAsync(command.CategoryId, cancellationToken);
         if (category is null)
         {
             return Result.Failure<CategoryResponse>(

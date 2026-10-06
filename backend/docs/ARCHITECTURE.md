@@ -21,8 +21,8 @@ Three rules of thumb behind everything below:
   saves; a query loads and maps. Caching, projections inside repositories, raw SQL, hand-opened
   transactions, gap-free sequences, denormalized columns and parallel queries need a measured problem or
   a product rule, stated in the PR — and an ADR when they add a mechanism. Not a query per row, and
-  `AsNoTracking` on pre-check lookups, are shape rather than optimization and stay required
-  ([0049](../../docs/adr/0049-conventions-for-new-backend-slices.md)).
+  explicit no-tracking reads with explicitly tracked updates, are shape rather than optimization and
+  stay required ([0057](../../docs/adr/0057-services-query-tracking-is-explicit.md)).
 
 Placeholders: `<Service>` is the project prefix (`ServicesService`), `<Feature>` a plural noun
 folder (`Clients`), `<Operation>` a verb + noun (`CreateClient`), `<Entity>` the aggregate
@@ -223,7 +223,7 @@ add a `Deleted` status beside it. Other states are an enum on the entity, stored
 **What the domain does not know**: the tenant (assigned on save, §5), the wire format (§6), the clock
 (`today` is a parameter, §7), persistence, and other aggregates — a rule that needs another aggregate
 or the current state of the database belongs to the handler (§4). Ids are `Guid.CreateVersion7()`: a
-root's by its caller (`ToModel`), a child's by its root.
+root's by its caller (`ToModel`), and a child's by its own internal factory.
 
 ## 4. Errors — one pipeline, five gates
 
@@ -313,9 +313,10 @@ either; `IgnoreQueryFilters()` belongs to a persistence test that asserts a soft
   it; when the display keeps the user's form (a name with its casing), the index uses a generated
   normalized column ([0049](../../docs/adr/0049-conventions-for-new-backend-slices.md)).
 - Children: `HasMany(…).WithOne()` with the composite foreign and principal keys, navigation through
-  the backing field. A child's key, minted by its root, is `ValueGeneratedNever()`: for a key EF thinks
+  the backing field. A child's factory mints its technical key and the configuration is `ValueGeneratedNever()`:
+  for a key EF thinks
   the store generates, a child added to a loaded root is tracked as `Modified` and its save fails
-  ([0053](../../docs/adr/0053-clients-edit-synchronizes-contacts-by-id.md)).
+  ([0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md)).
 - Soft-delete and tenant filters and their indexes come from the convention — never by hand.
 
 **Repositories.** One per aggregate root — never one for a child. The port `I<Entity>Repository` lives
@@ -323,8 +324,9 @@ in `Application/Abstractions` and declares only what a handler calls; the adapte
 `RepositoryBase<T>` in Infrastructure. It returns its own root (with its children), a list or a page
 of them, a `bool` or a count — never a DTO, an `IQueryable` or another aggregate. Methods say what they
 are for (`FindActiveByEmailAsync`), take value objects for value-object columns, and use
-`AsNoTracking` on pre-check lookups (`Find…Async`), whose result is never changed; `GetByIdAsync` stays
-tracked even when a query reuses it. Paged reads go through `ListPagedAsync`. The tenant
+`AsNoTracking` for reads. A command that changes an aggregate asks for it through an explicit
+`GetForUpdateAsync`, which uses `AsTracking`; a read never reuses that method. Paged reads go through
+`ListPagedAsync`. The tenant
 and soft-delete filters come from the `DbContext`: a repository never writes a `TenantId` or
 `DeletedAt` predicate. A query cannot reach `.Value` through a converter: compare whole value objects,
 order by the property, or use `EF.Property<string>(e, "<Property>")` for text matching. Repositories
@@ -432,7 +434,7 @@ touches that slice, not in bulk.
 | Domain errors | `static readonly DomainError` per rule on `Client` and on the value objects | one inline `new DomainError("<Entity>.Invalid", …)` shared by every rule of an entity | §3 |
 | Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore`; a shared one, `Admin.SharedKernel.ValueObjects/CpfNumber.cs` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md), [0055](../../docs/adr/0055-shared-string-value-objects.md) |
 | Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
-| Update, with children synchronized by id | `UpdateClientCommandHandler.cs`, `Client.Update`: load → `NotFound` → `ApplyTo` → pre-checks that exclude the aggregate itself → save | | §3, §4, [0053](../../docs/adr/0053-clients-edit-synchronizes-contacts-by-id.md) |
+| Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: load → `NotFound` → `ApplyTo` → pre-checks that exclude the aggregate itself → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
 | Read, delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 

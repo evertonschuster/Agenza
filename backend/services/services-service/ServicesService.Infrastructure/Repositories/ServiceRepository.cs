@@ -28,11 +28,10 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
                 .OrderBy(s => s.Name),
             page,
             pageSize,
-            cancellationToken,
-            asNoTracking: true);
+            cancellationToken);
 
-    public Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken) =>
-        Set.Include(s => s.Tags).FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
+    public Task<Service?> GetForUpdateAsync(Guid serviceId, CancellationToken cancellationToken) =>
+        Set.AsTracking().Include(s => s.Tags).FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
 
     public Task<bool> NameExistsAsync(string name, Guid? excludeServiceId, CancellationToken cancellationToken)
     {

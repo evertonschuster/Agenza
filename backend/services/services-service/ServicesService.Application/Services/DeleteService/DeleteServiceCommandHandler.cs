@@ -22,7 +22,7 @@ public sealed class DeleteServiceCommandHandler : ICommandHandler<DeleteServiceC
 
     public async Task<Result> Handle(DeleteServiceCommand command, CancellationToken cancellationToken)
     {
-        var service = await _serviceRepository.GetByIdAsync(command.ServiceId, cancellationToken);
+        var service = await _serviceRepository.GetForUpdateAsync(command.ServiceId, cancellationToken);
         if (service is null)
         {
             return Result.Failure(

@@ -32,7 +32,7 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
     {
         var service = ValidService();
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
 
         var result = await _handler.Handle(
             new UpdateServiceCommand(service.Id, "Massage", "Relaxing", 90, 60, 120, 90.00m, 25m, null, null),
@@ -53,9 +53,9 @@ public class UpdateServiceCommandHandlerTests
         var service = ValidService();
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
-        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });
 
         var result = await _handler.Handle(
@@ -75,8 +75,8 @@ public class UpdateServiceCommandHandlerTests
         var service = ValidService();
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         service.SetTags([tag]);
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
-        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag>());
 
         var result = await _handler.Handle(
@@ -94,7 +94,7 @@ public class UpdateServiceCommandHandlerTests
         var service = ValidService();
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         service.SetTags([tag]);
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
 
         var result = await _handler.Handle(
             new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
@@ -102,7 +102,7 @@ public class UpdateServiceCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Tags.Should().ContainSingle(t => t.Id == tag.Id);
-        await _tagRepository.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
+        await _tagRepository.DidNotReceive().GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -110,7 +110,7 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_WithUnknownServiceId_ReturnsNotFound()
     {
         var unknownId = Guid.NewGuid();
-        _serviceRepository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Service?)null);
+        _serviceRepository.GetForUpdateAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Service?)null);
 
         var result = await _handler.Handle(
             new UpdateServiceCommand(unknownId, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
@@ -125,7 +125,7 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_RenamingToAnotherServicesName_ReturnsConflict()
     {
         var service = ValidService();
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _serviceRepository.NameExistsAsync("Massage", service.Id, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _handler.Handle(
@@ -142,7 +142,7 @@ public class UpdateServiceCommandHandlerTests
     {
         var service = ValidService();
         var categoryId = Guid.NewGuid();
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _categoryRepository.GetByIdAsync(categoryId, Arg.Any<CancellationToken>()).Returns((Category?)null);
 
         var result = await _handler.Handle(
@@ -158,20 +158,20 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_LoadsTheServiceExactlyOnce()
     {
         var service = ValidService();
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
 
         await _handler.Handle(
             new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
             CancellationToken.None);
 
-        await _serviceRepository.Received(1).GetByIdAsync(service.Id, Arg.Any<CancellationToken>());
+        await _serviceRepository.Received(1).GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
     {
         var service = ValidService();
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_NameNormalized")));
@@ -189,7 +189,7 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_WithConcurrentDuplicateCodeAtSaveTime_ReturnsDuplicateCodeConflict()
     {
         var service = ValidService();
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_Code")));
@@ -207,7 +207,7 @@ public class UpdateServiceCommandHandlerTests
     public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
     {
         var service = ValidService();
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        _serviceRepository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));

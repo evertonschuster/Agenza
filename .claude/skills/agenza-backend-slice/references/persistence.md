@@ -49,7 +49,7 @@ composite foreign keys between tenant-owned entities, value objects with lengths
 (a service's own through `HasConversion(v => v.Value, s => <Vo>.Restore(s))`; a shared one needs only
 `HasMaxLength` — the `DbContext`'s `ConfigureConventions` already calls `AddValueObjectConversions()`),
 enums as text with a `CHECK`, unique indexes with `TenantId` and `"DeletedAt" IS NULL`, children through
-the backing field, and a child's key `ValueGeneratedNever()` (its root mints it; otherwise a child added
+the backing field, and a child's key `ValueGeneratedNever()` (its internal factory mints it; otherwise a child added
 to a loaded root is tracked as `Modified` and the save fails). Never add a soft-delete or tenant filter by
 hand.
 

@@ -30,6 +30,7 @@ public class ClientPersistenceTests
 
         var options = new DbContextOptionsBuilder<ServicesDataContext>()
             .UseInMemoryDatabase(databaseName)
+            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
             .AddInterceptors(interceptor)
             .Options;
 
@@ -84,7 +85,7 @@ public class ClientPersistenceTests
     private static async Task SetStatus(string databaseName, Guid tenantId, Guid clientId, ClientStatus status)
     {
         await using var context = CreateContext(databaseName, tenantId);
-        var tracked = await context.Clients.SingleAsync(c => c.Id == clientId);
+        var tracked = await context.Clients.AsTracking().SingleAsync(c => c.Id == clientId);
         context.Entry(tracked).Property(c => c.Status).CurrentValue = status;
         await context.SaveChangesAsync();
     }
@@ -92,7 +93,7 @@ public class ClientPersistenceTests
     private static async Task SoftDelete(string databaseName, Guid tenantId, Guid clientId)
     {
         await using var context = CreateContext(databaseName, tenantId);
-        var tracked = await context.Clients.SingleAsync(c => c.Id == clientId);
+        var tracked = await context.Clients.AsTracking().SingleAsync(c => c.Id == clientId);
         context.Clients.Remove(tracked);
         await context.SaveChangesAsync();
     }
@@ -363,7 +364,7 @@ public class ClientPersistenceTests
     }
 
     [Fact]
-    public async Task GetById_LoadsTheClientWithItsContactsOfTheSameTenant()
+    public async Task QueriesLoadWithoutTracking_AndGetForUpdateLoadsTheClientWithItsContactsTracked()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -375,16 +376,23 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var loaded = await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None);
+            var loaded = await context.Clients
+                .Include(c => c.Guardians)
+                .Include(c => c.ReferenceContacts)
+                .SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
 
             loaded!.Guardians.Should().HaveCount(2);
             loaded.ReferenceContacts.Should().ContainSingle();
-            context.Entry(loaded).State.Should().Be(EntityState.Unchanged, "the client is loaded tracked, to be changed");
+            context.Entry(loaded).State.Should().Be(EntityState.Detached);
+
+            var tracked = await new ClientRepository(context).GetForUpdateAsync(client.Id, CancellationToken.None);
+
+            context.Entry(tracked!).State.Should().Be(EntityState.Unchanged);
         }
     }
 
     [Fact]
-    public async Task GetById_NeverReturnsAnotherTenantsOrADeletedClient()
+    public async Task QueriesNeverReturnAnotherTenantsOrADeletedClient()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantA = Guid.NewGuid();
@@ -401,18 +409,18 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantB))
         {
-            (await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None)).Should().BeNull();
+            (await context.Clients.SingleOrDefaultAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken)).Should().BeNull();
         }
 
         await using (var context = CreateContext(databaseName, tenantA))
         {
-            (await new ClientRepository(context).GetByIdAsync(deleted.Id, CancellationToken.None)).Should().BeNull();
-            (await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None)).Should().NotBeNull();
+            (await context.Clients.SingleOrDefaultAsync(c => c.Id == deleted.Id, TestContext.Current.CancellationToken)).Should().BeNull();
+            (await context.Clients.SingleOrDefaultAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken)).Should().NotBeNull();
         }
     }
 
     [Fact]
-    public async Task Update_SyncsTheContactsInOneSave_KeepingIdsAndSoftDeletingTheRemovedOnes()
+    public async Task Update_ReplacesEveryContactInOneSave_AndSoftDeletesThePreviousOnes()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -424,14 +432,12 @@ public class ClientPersistenceTests
             await Save(context, client);
         }
 
-        var keptGuardianId = client.Guardians.First().Id;
-        var removedGuardianId = client.Guardians.Last().Id;
-        var keptContactId = client.ReferenceContacts.First().Id;
-        var removedContactId = client.ReferenceContacts.Last().Id;
+        var previousGuardianIds = client.Guardians.Select(guardian => guardian.Id).ToArray();
+        var previousReferenceContactIds = client.ReferenceContacts.Select(contact => contact.Id).ToArray();
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var loaded = (await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None))!;
+            var loaded = (await new ClientRepository(context).GetForUpdateAsync(client.Id, CancellationToken.None))!;
 
             var result = loaded.Update(
                 FullName.Create("Maria Souza Lima").Value,
@@ -442,79 +448,35 @@ public class ClientPersistenceTests
                 null,
                 Today,
                 [
-                    new ContactChange<GuardianData>(keptGuardianId, new GuardianData("Ana Lima", "Mãe", null, null)),
-                    new ContactChange<GuardianData>(null, new GuardianData("Cris Souza", "Prima", null, null)),
+                    new GuardianData("Ana Lima", "Mãe", null, null),
+                    new GuardianData("Cris Souza", "Prima", null, null),
                 ],
-                [new ContactChange<ReferenceContactData>(keptContactId, ReferenceContact())]);
+                [ReferenceContact()]);
             result.IsSuccess.Should().BeTrue();
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var loaded = (await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None))!;
+            var loaded = await context.Clients
+                .Include(c => c.Guardians)
+                .Include(c => c.ReferenceContacts)
+                .SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
 
             loaded.FullName.Value.Should().Be("Maria Souza Lima");
             loaded.Guardians.Select(guardian => guardian.Name).Should().BeEquivalentTo("Ana Lima", "Cris Souza");
-            loaded.Guardians.Should().Contain(guardian => guardian.Id == keptGuardianId);
-            loaded.Guardians.Should().NotContain(guardian => guardian.Id == removedGuardianId);
+            loaded.Guardians.Should().NotContain(guardian => previousGuardianIds.Contains(guardian.Id));
             loaded.Guardians.Should().OnlyContain(guardian => guardian.TenantId == tenantId && guardian.ClientId == client.Id);
-            loaded.ReferenceContacts.Should().ContainSingle().Which.Id.Should().Be(keptContactId);
+            loaded.ReferenceContacts.Should().NotContain(contact => previousReferenceContactIds.Contains(contact.Id));
 
-            var removedGuardian = await context.Set<ClientGuardian>().IgnoreQueryFilters()
-                .SingleAsync(guardian => guardian.Id == removedGuardianId, TestContext.Current.CancellationToken);
-            removedGuardian.DeletedAt.Should().NotBeNull("a removed contact is soft-deleted, not erased");
-            var removedContact = await context.Set<ClientReferenceContact>().IgnoreQueryFilters()
-                .SingleAsync(contact => contact.Id == removedContactId, TestContext.Current.CancellationToken);
-            removedContact.DeletedAt.Should().NotBeNull();
-        }
-    }
-
-    [Fact]
-    public async Task Update_WithAContactIdOfAnotherTenantsClient_FailsAndLeavesThatContactAlone()
-    {
-        var databaseName = Guid.NewGuid().ToString();
-        var tenantA = Guid.NewGuid();
-        var tenantB = Guid.NewGuid();
-        var mine = NewClient("Maria Souza", guardians: [Guardian()]);
-        var theirs = NewClient("João Pereira", guardians: [new GuardianData("Pai do João", "Pai", null, null)]);
-        await using (var context = CreateContext(databaseName, tenantA))
-        {
-            await Save(context, mine);
-        }
-
-        await using (var context = CreateContext(databaseName, tenantB))
-        {
-            await Save(context, theirs);
-        }
-
-        var foreignGuardianId = theirs.Guardians.Single().Id;
-
-        await using (var context = CreateContext(databaseName, tenantA))
-        {
-            var loaded = (await new ClientRepository(context).GetByIdAsync(mine.Id, CancellationToken.None))!;
-
-            var result = loaded.Update(
-                FullName.Create("Maria Souza").Value,
-                null,
-                null,
-                null,
-                null,
-                null,
-                Today,
-                [new ContactChange<GuardianData>(foreignGuardianId, new GuardianData("Invasor", "Pai", null, null))],
-                []);
-
-            result.IsFailure.Should().BeTrue();
-            result.Error.Code.Should().Be("Client.ContactNotFound");
-            (await context.SaveChangesAsync(TestContext.Current.CancellationToken)).Should().Be(0);
-        }
-
-        await using (var context = CreateContext(databaseName, tenantB))
-        {
-            var untouched = (await new ClientRepository(context).GetByIdAsync(theirs.Id, CancellationToken.None))!;
-
-            untouched.Guardians.Should().ContainSingle().Which.Name.Should().Be("Pai do João");
+            var removedGuardians = await context.Set<ClientGuardian>().IgnoreQueryFilters()
+                .Where(guardian => previousGuardianIds.Contains(guardian.Id))
+                .ToListAsync(TestContext.Current.CancellationToken);
+            removedGuardians.Should().OnlyContain(guardian => guardian.DeletedAt != null);
+            var removedReferenceContacts = await context.Set<ClientReferenceContact>().IgnoreQueryFilters()
+                .Where(contact => previousReferenceContactIds.Contains(contact.Id))
+                .ToListAsync(TestContext.Current.CancellationToken);
+            removedReferenceContacts.Should().OnlyContain(contact => contact.DeletedAt != null);
         }
     }
 

@@ -27,9 +27,9 @@ public class UpdateClientCommandBindingTests
         typeof(UpdateClientCommand).GetProperties().Select(property => property.Name)
             .Should().NotContain(name => name.Contains("Tenant") || name.Contains("Status"));
         typeof(UpdateGuardianInput).GetProperties().Select(property => property.Name)
-            .Should().NotContain(name => name.Contains("Tenant") || name.Contains("Client"));
+            .Should().NotContain(name => name.Contains("Tenant") || name.Contains("Client") || name == "Id");
         typeof(UpdateReferenceContactInput).GetProperties().Select(property => property.Name)
-            .Should().NotContain(name => name.Contains("Tenant") || name.Contains("Client"));
+            .Should().NotContain(name => name.Contains("Tenant") || name.Contains("Client") || name == "Id");
     }
 
     [Fact]
@@ -61,10 +61,8 @@ public class UpdateClientCommandBindingTests
         command.Email!.Value.Should().Be("maria@example.com");
         command.Cpf!.Value.Should().Be(ClientTestData.ValidCpfDigits);
         command.AdministrativeNotes!.Value.Should().Be("Prefere contato pela manhã.");
-        command.Guardians!.Select(guardian => guardian.Id).Should()
-            .Equal(Guid.Parse("44444444-4444-4444-4444-444444444444"), null);
-        command.ReferenceContacts.Should().ContainSingle().Which.Id
-            .Should().Be(Guid.Parse("55555555-5555-5555-5555-555555555555"));
+        command.Guardians.Should().HaveCount(2).And.Contain(guardian => guardian.Name == "Ana Souza");
+        command.ReferenceContacts.Should().ContainSingle().Which.Name.Value.Should().Be("Carlos Lima");
         command.ReferenceContacts![0].Name.Value.Should().Be("Carlos Lima");
         command.ReferenceContacts![0].Purposes.Should().Equal("emergency", "dailyCommunication");
     }

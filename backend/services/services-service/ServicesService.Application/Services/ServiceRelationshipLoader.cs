@@ -37,9 +37,9 @@ public sealed class ServiceRelationshipLoader
         IReadOnlyList<Tag> tags = [];
         if (tagIds is { Count: > 0 })
         {
-            tags = await _tagRepository.GetByIdsAsync(tagIds, cancellationToken);
+            tags = await _tagRepository.GetByIdsForUpdateAsync(tagIds, cancellationToken);
 
-            // GetByIdsAsync returns one row per distinct matching id, so a
+            // GetByIdsForUpdateAsync returns one row per distinct matching id, so a
             // repeated id in tagIds must not be compared against the raw list
             // count - that would misreport a fully-valid tag list as Tag.NotFound.
             var distinctTagIdCount = tagIds.Distinct().Count();

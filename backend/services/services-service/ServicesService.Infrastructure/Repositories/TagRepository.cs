@@ -18,11 +18,13 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
                 ? query
                 : query.Where(t => EF.Functions.ILike(t.Name, $"%{search.Trim()}%")))
                 .OrderBy(t => t.Name),
-            cancellationToken,
-            asNoTracking: true);
+            cancellationToken);
 
     public Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken) =>
         FindAsync(t => t.Id == tagId, cancellationToken);
+
+    public Task<Tag?> GetForUpdateAsync(Guid tagId, CancellationToken cancellationToken) =>
+        FindForUpdateAsync(t => t.Id == tagId, cancellationToken);
 
     public Task<bool> NameExistsAsync(string name, Guid? excludeTagId, CancellationToken cancellationToken)
     {
@@ -33,6 +35,6 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
             cancellationToken);
     }
 
-    public Task<IReadOnlyList<Tag>> GetByIdsAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken) =>
-        ListAsync(t => tagIds.Contains(t.Id), order: null, cancellationToken);
+    public async Task<IReadOnlyList<Tag>> GetByIdsForUpdateAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken) =>
+        await Set.AsTracking().Where(t => tagIds.Contains(t.Id)).ToListAsync(cancellationToken);
 }

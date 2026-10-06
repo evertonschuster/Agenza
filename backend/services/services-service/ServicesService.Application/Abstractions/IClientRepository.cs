@@ -2,7 +2,7 @@ namespace ServicesService.Application.Abstractions;
 
 public interface IClientRepository
 {
-    Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken);
+    Task<Client?> GetForUpdateAsync(Guid clientId, CancellationToken cancellationToken);
 
     // excludeClientId ignores the client being edited, so saving a client without changing its CPF isn't a self-conflict.
     Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken);

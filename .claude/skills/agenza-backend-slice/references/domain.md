@@ -62,8 +62,8 @@ Writing a service's own (a value that is shared by every service is a different 
   Nothing is assigned before the last check passes.
 - A whole-record `Update(…)` is for an edit form over free data with no transition. It runs the same
   private validations as `Create`, so both refuse the same input.
-- Children change through the root: one method receives the desired state as data records, syncs the
-  children by id, and re-checks the aggregate's rules (limits, "a minor has a guardian") on the result.
+- Children change through the root: one method receives the desired state as data records, applies the
+  aggregate's defined composition semantics, and re-checks its rules (limits, "a minor has a guardian") on the result.
 - What the behaviour needs from outside — today, a generated number, the fact that another aggregate
   exists — arrives as a parameter the handler already resolved. The domain never asks for it.
 
@@ -72,14 +72,14 @@ Writing a service's own (a value that is shared by every service is a different 
 | Type | Factory | Called by |
 | --- | --- | --- |
 | Root | `public static DomainResult<T> Create(Guid id, <value objects>, <context>, <child data>)` | `ToModel` in the Application |
-| Child | `internal static DomainResult<TChild> Create(Guid id, Guid rootId, <Child>Data data)` | its root only |
+| Child | `internal static DomainResult<TChild> Create(Guid rootId, <Child>Data data)` | its root only |
 | Value object | `Create(raw)` and `Restore(stored)` | `ToModel`, `ApplyTo`, EF conversions; a shared one: the JSON converter and the EF convention, never `ToModel` |
 
 - A root's `Create` takes value objects already built, not raw strings, for fields that are value
   objects; its own primitive fields it validates itself.
 - `<Child>Data` is a record next to the child, carrying value objects; it is how the outside describes a
   child without creating one.
-- Ids are `Guid.CreateVersion7()`: the root's minted by `ToModel`, a child's by the root.
+- Ids are `Guid.CreateVersion7()`: the root's minted by `ToModel`, a child's by its internal factory.
 - EF gets a private parameterless constructor; required reference properties are set to `null!` there.
 - No `<X>Factory` class, no builder, no public constructor, no static "create from command" on the
   entity — the entity never sees a command.

@@ -16,7 +16,7 @@ public sealed class UpdateClientCommandHandler(
     {
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
-        var client = await clientRepository.GetByIdAsync(command.ClientId, cancellationToken);
+        var client = await clientRepository.GetForUpdateAsync(command.ClientId, cancellationToken);
         if (client is null)
         {
             return Result.Failure<ClientResponse>(Error.NotFound("Client.NotFound", "A pessoa não foi encontrada."));
@@ -58,13 +58,6 @@ public sealed class UpdateClientCommandHandler(
 
     private static Error ToError(DomainError error)
     {
-        if (error.Code == Client.ContactNotFound.Code)
-        {
-            return Error.NotFound(
-                error.Code,
-                "Um dos contatos não foi encontrado neste cadastro. Recarregue a pessoa e tente novamente.");
-        }
-
         return error.ToApplicationError();
     }
 

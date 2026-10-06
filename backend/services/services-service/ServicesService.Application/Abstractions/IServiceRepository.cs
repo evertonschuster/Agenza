@@ -10,7 +10,7 @@ public interface IServiceRepository
         Guid? tagId,
         CancellationToken cancellationToken);
 
-    Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken);
+    Task<Service?> GetForUpdateAsync(Guid serviceId, CancellationToken cancellationToken);
 
     Task<bool> NameExistsAsync(string name, Guid? excludeServiceId, CancellationToken cancellationToken);
 

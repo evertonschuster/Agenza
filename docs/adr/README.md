@@ -8,9 +8,9 @@ superseded is historical evidence, not current implementation guidance.
 | Concern | Current ADRs |
 | --- | --- |
 | Service and data topology | 0001, 0002, 0003, 0024, 0029 |
-| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049, 0051 |
+| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049, 0051, 0057 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
-| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051, 0046, 0048, 0049, 0053, 0055 |
+| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051, 0046, 0048, 0049, 0055, 0056 |
 | Dates, times and time zones | 0045 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
 | Authentication UX and AI delegation | 0020, 0022 |
@@ -32,6 +32,7 @@ superseded is historical evidence, not current implementation guidance.
 | 0023 | 0026 | Dedicated runtime-test project |
 | 0030 local-hook portion | 0031 | Repository-owned local Git hooks |
 | 0044 key-casing portion | 0051 | PascalCase keys in the conflict contract (`errors.Cpf`, `errors.Email`) |
+| 0053 | 0056 | Synchronizing client contacts by id |
 
 ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, 0030, and 0044
 contain explicitly marked historical passages. Their status header and the
@@ -75,5 +76,6 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 (proposed) · 0044 clients aggregate, uniqueness rules and conflict contract · 0045 backend works in UTC only ·
 0046 separate soft-delete and tenant query filters · 0048 database failures are generic to the user ·
 0049 conventions for new backend slices · 0050 xUnit v3 on VSTest and the Aspire CLI bundle ·
-0051 camelCase error keys on the wire · 0053 clients: editing a person synchronizes its contacts by id ·
-0054 Serilog logging pipeline · 0055 string value objects shared by every service.
+0051 camelCase error keys on the wire · 0053 superseded client-contact synchronization ·
+0054 Serilog logging pipeline · 0055 string value objects shared by every service ·
+0056 client contact composition replacement · 0057 explicit services query tracking.

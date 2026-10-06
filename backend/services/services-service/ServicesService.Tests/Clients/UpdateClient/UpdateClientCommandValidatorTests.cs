@@ -37,7 +37,6 @@ public class UpdateClientCommandValidatorTests
         string? phone = null,
         string? cpf = null) =>
         new(
-            id,
             name,
             relationship,
             phone is null ? null : ClientTestData.Phone(phone),
@@ -50,7 +49,6 @@ public class UpdateClientCommandValidatorTests
         string? phone = null,
         params string[] purposes) =>
         new(
-            id,
             ClientTestData.Name(name),
             relationship,
             phone is null ? null : ClientTestData.Phone(phone),
@@ -74,8 +72,6 @@ public class UpdateClientCommandValidatorTests
             { "minor without guardian", Command(birthDate: new DateOnly(2015, 3, 10)), "Guardians", "Client.GuardianRequired" },
             { "too many guardians", Command(guardians: tooManyGuardians), "Guardians", "Client.TooManyGuardians" },
             { "too many references", Command(referenceContacts: tooManyReferences), "ReferenceContacts", "Client.TooManyReferenceContacts" },
-            { "repeated guardian id", Command(guardians: [Guardian(repeatedId), Guardian(repeatedId)]), "Guardians", "Client.DuplicateContact" },
-            { "repeated reference id", Command(referenceContacts: [Reference(repeatedId), Reference(repeatedId)]), "ReferenceContacts", "Client.DuplicateContact" },
             { "null guardian", Command(guardians: [null!]), "Guardians[0]", "Client.GuardianMissing" },
             { "null reference", Command(referenceContacts: [null!]), "ReferenceContacts[0]", "Client.ReferenceContactMissing" },
             { "guardian name missing", Command(guardians: [Guardian(name: "")]), "Guardians[0].Name", "ClientContact.NameRequired" },
@@ -83,7 +79,7 @@ public class UpdateClientCommandValidatorTests
             { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
             { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
             { "reference relationship missing", Command(referenceContacts: [Reference(relationship: "")]), "ReferenceContacts[0].Relationship", "ClientContact.RelationshipRequired" },
-            { "reference without purposes", Command(referenceContacts: [new UpdateReferenceContactInput(null, ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
+            { "reference without purposes", Command(referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
             { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Unknown" },
         };
     }
@@ -176,7 +172,7 @@ public class UpdateClientCommandValidatorTests
 
         var result = await Validate(Command(guardians: [Guardian(id), Guardian(id, name: "Outro Nome")]));
 
-        MessagesFor(result, "Guardians").Should().Equal("O mesmo contato foi informado mais de uma vez.");
+        result.IsValid.Should().BeTrue();
     }
 
     [Fact]
@@ -191,7 +187,7 @@ public class UpdateClientCommandValidatorTests
     public async Task Validate_WithListsOverTheLimit_DoesNotValidateTheirItems()
     {
         var guardians = Enumerable.Range(0, 5_000).Select(_ => Guardian(name: "", relationship: "")).ToList();
-        var contacts = Enumerable.Range(0, 5_000).Select(_ => new UpdateReferenceContactInput(null, ClientTestData.Name("Carlos Lima"), "", null, [])).ToList();
+        var contacts = Enumerable.Range(0, 5_000).Select(_ => new UpdateReferenceContactInput(ClientTestData.Name("Carlos Lima"), "", null, [])).ToList();
 
         var result = await Validate(Command(guardians: guardians, referenceContacts: contacts));
 

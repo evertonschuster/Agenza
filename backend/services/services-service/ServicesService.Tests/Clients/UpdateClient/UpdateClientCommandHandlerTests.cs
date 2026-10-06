@@ -18,7 +18,7 @@ public class UpdateClientCommandHandlerTests
 
     public UpdateClientCommandHandlerTests()
     {
-        _repository.GetByIdAsync(_client.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(_client));
+        _repository.GetForUpdateAsync(_client.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(_client));
         _repository.FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(null));
         _repository.FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
@@ -72,7 +72,6 @@ public class UpdateClientCommandHandlerTests
         string? phone = null,
         string? cpf = null) =>
         new(
-            id,
             name,
             relationship,
             phone is null ? null : ClientTestData.Phone(phone),
@@ -121,22 +120,21 @@ public class UpdateClientCommandHandlerTests
         var contact = _client.ReferenceContacts.Single();
         var command = Command(
             guardians: [Guardian(kept.Id, "Ana Lima"), Guardian(null, "Cris Souza", "Tia", "(11) 98888-0000", ClientTestData.OtherValidCpf)],
-            referenceContacts: [new UpdateReferenceContactInput(contact.Id, ClientTestData.Name("Carlos Dias"), "Primo", null, ["operationalSupport"])]);
+            referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Dias"), "Primo", null, ["operationalSupport"])]);
 
         var result = await Handler().Handle(command, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         var response = result.Value;
         response.Guardians.Select(guardian => guardian.Name).Should().BeEquivalentTo("Ana Lima", "Cris Souza");
-        response.Guardians.Should().Contain(guardian => guardian.Id == kept.Id && guardian.Name == "Ana Lima");
-        response.Guardians.Should().NotContain(guardian => guardian.Id == removed.Id);
+        response.Guardians.Should().NotContain(guardian => guardian.Id == kept.Id || guardian.Id == removed.Id);
         var added = response.Guardians.Single(guardian => guardian.Name == "Cris Souza");
         added.Id.Should().NotBe(Guid.Empty).And.NotBe(kept.Id);
         added.Relationship.Should().Be("Tia");
         added.Phone.Should().Be("(11) 98888-0000");
         added.Cpf.Should().Be("12345678909");
         var updatedContact = response.ReferenceContacts.Should().ContainSingle().Subject;
-        updatedContact.Id.Should().Be(contact.Id);
+        updatedContact.Id.Should().NotBe(contact.Id);
         updatedContact.Name.Should().Be("Carlos Dias");
         updatedContact.Purposes.Should().Equal("operationalSupport");
     }
@@ -156,7 +154,7 @@ public class UpdateClientCommandHandlerTests
     public async Task Handle_WithAClientThatDoesNotExistForTheTenant_ReturnsNotFoundAndTouchesNothing()
     {
         var missingId = Guid.NewGuid();
-        _repository.GetByIdAsync(missingId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(null));
+        _repository.GetForUpdateAsync(missingId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(null));
 
         var result = await Handler().Handle(Command(clientId: missingId, cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
@@ -165,31 +163,6 @@ public class UpdateClientCommandHandlerTests
         result.Error.Code.Should().Be("Client.NotFound");
         await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_WithAContactIdThatIsNotTheClients_ReturnsNotFoundAndDoesNotSave()
-    {
-        var result = await Handler().Handle(
-            Command(guardians: [Guardian(Guid.NewGuid())]),
-            CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Type.Should().Be(ErrorType.NotFound);
-        result.Error.Code.Should().Be("Client.ContactNotFound");
-        result.Error.FieldErrors.Should().BeNull();
-        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_WithAReferenceContactIdInTheGuardianList_ReturnsNotFound()
-    {
-        var result = await Handler().Handle(
-            Command(guardians: [Guardian(_client.ReferenceContacts.Single().Id)]),
-            CancellationToken.None);
-
-        result.Error.Type.Should().Be(ErrorType.NotFound);
-        result.Error.Code.Should().Be("Client.ContactNotFound");
     }
 
     [Fact]
@@ -243,7 +216,7 @@ public class UpdateClientCommandHandlerTests
     public async Task Handle_WithInvalidContactData_FailsAndDoesNotSave()
     {
         var result = await Handler().Handle(
-            Command(guardians: [new UpdateGuardianInput(null, "A", "Mãe", null, null)]),
+            Command(guardians: [new UpdateGuardianInput("A", "Mãe", null, null)]),
             CancellationToken.None);
 
         result.Error.Type.Should().Be(ErrorType.Validation);

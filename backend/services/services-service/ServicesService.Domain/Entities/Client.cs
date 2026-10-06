@@ -19,14 +19,6 @@ public class Client : TenantOwnedEntity
         "Client.GuardianRequired",
         $"Informe ao menos um responsável para pessoas menores de {BirthDate.AdultAgeInYears} anos.");
 
-    public static readonly DomainError ContactNotFound = new(
-        "Client.ContactNotFound",
-        "Um dos contatos informados não foi encontrado neste cadastro.");
-
-    public static readonly DomainError DuplicateContact = new(
-        "Client.DuplicateContact",
-        "O mesmo contato foi informado mais de uma vez.");
-
     public FullName FullName { get; private set; }
     public BirthDate? BirthDate { get; private set; }
     public PhoneNumber? Phone { get; private set; }
@@ -103,8 +95,8 @@ public class Client : TenantOwnedEntity
         CpfNumber? cpf,
         AdministrativeNotes? administrativeNotes,
         DateOnly today,
-        IReadOnlyCollection<ContactChange<GuardianData>> guardians,
-        IReadOnlyCollection<ContactChange<ReferenceContactData>> referenceContacts)
+        IReadOnlyCollection<GuardianData> guardians,
+        IReadOnlyCollection<ReferenceContactData> referenceContacts)
     {
         var contactRulesResult = ValidateContactRules(birthDate, today, guardians.Count, referenceContacts.Count);
         if (contactRulesResult.IsFailure)
@@ -112,10 +104,16 @@ public class Client : TenantOwnedEntity
             return contactRulesResult;
         }
 
-        var changesResult = ValidateContactChanges(guardians, referenceContacts);
-        if (changesResult.IsFailure)
+        var guardiansResult = CreateGuardians(guardians);
+        if (guardiansResult.IsFailure)
         {
-            return changesResult;
+            return guardiansResult;
+        }
+
+        var referenceContactsResult = CreateReferenceContacts(referenceContacts);
+        if (referenceContactsResult.IsFailure)
+        {
+            return referenceContactsResult;
         }
 
         FullName = fullName;
@@ -125,172 +123,71 @@ public class Client : TenantOwnedEntity
         Cpf = cpf;
         AdministrativeNotes = administrativeNotes;
 
-        var guardiansResult = SyncGuardians(guardians);
-        if (guardiansResult.IsFailure)
-        {
-            return guardiansResult;
-        }
+        _guardians.Clear();
+        _guardians.AddRange(guardiansResult.Value);
+        _referenceContacts.Clear();
+        _referenceContacts.AddRange(referenceContactsResult.Value);
 
-        return SyncReferenceContacts(referenceContacts);
+        return DomainResult.Success();
     }
 
     private DomainResult AddContacts(
         IReadOnlyCollection<GuardianData> guardians,
         IReadOnlyCollection<ReferenceContactData> referenceContacts)
     {
+        var guardiansResult = CreateGuardians(guardians);
+        if (guardiansResult.IsFailure)
+        {
+            return guardiansResult;
+        }
+
+        var referenceContactsResult = CreateReferenceContacts(referenceContacts);
+        if (referenceContactsResult.IsFailure)
+        {
+            return referenceContactsResult;
+        }
+
+        _guardians.AddRange(guardiansResult.Value);
+        _referenceContacts.AddRange(referenceContactsResult.Value);
+
+        return DomainResult.Success();
+    }
+
+    private DomainResult<List<ClientGuardian>> CreateGuardians(IReadOnlyCollection<GuardianData> guardians)
+    {
+        var contacts = new List<ClientGuardian>();
+
         foreach (var data in guardians)
         {
-            var guardianResult = ClientGuardian.Create(Guid.CreateVersion7(), Id, data);
+            var guardianResult = ClientGuardian.Create(Id, data);
             if (guardianResult.IsFailure)
             {
-                return DomainResult.Failure(guardianResult.Error);
+                return DomainResult.Failure<List<ClientGuardian>>(guardianResult.Error);
             }
 
-            _guardians.Add(guardianResult.Value);
+            contacts.Add(guardianResult.Value);
         }
+
+        return DomainResult.Success(contacts);
+    }
+
+    private DomainResult<List<ClientReferenceContact>> CreateReferenceContacts(
+        IReadOnlyCollection<ReferenceContactData> referenceContacts)
+    {
+        var contacts = new List<ClientReferenceContact>();
 
         foreach (var data in referenceContacts)
         {
-            var referenceContactResult = ClientReferenceContact.Create(Guid.CreateVersion7(), Id, data);
-            if (referenceContactResult.IsFailure)
+            var contactResult = ClientReferenceContact.Create(Id, data);
+            if (contactResult.IsFailure)
             {
-                return DomainResult.Failure(referenceContactResult.Error);
+                return DomainResult.Failure<List<ClientReferenceContact>>(contactResult.Error);
             }
 
-            _referenceContacts.Add(referenceContactResult.Value);
+            contacts.Add(contactResult.Value);
         }
 
-        return DomainResult.Success();
-    }
-
-    private DomainResult SyncGuardians(IReadOnlyCollection<ContactChange<GuardianData>> changes)
-    {
-        var keptIds = KeptIds(changes);
-        _guardians.RemoveAll(guardian => !keptIds.Contains(guardian.Id));
-
-        foreach (var change in changes)
-        {
-            if (change.Id is not { } id)
-            {
-                var guardianResult = ClientGuardian.Create(Guid.CreateVersion7(), Id, change.Data);
-                if (guardianResult.IsFailure)
-                {
-                    return guardianResult;
-                }
-
-                _guardians.Add(guardianResult.Value);
-                continue;
-            }
-
-            var updateResult = _guardians.Single(guardian => guardian.Id == id).Update(change.Data);
-            if (updateResult.IsFailure)
-            {
-                return updateResult;
-            }
-        }
-
-        return DomainResult.Success();
-    }
-
-    private DomainResult SyncReferenceContacts(IReadOnlyCollection<ContactChange<ReferenceContactData>> changes)
-    {
-        var keptIds = KeptIds(changes);
-        _referenceContacts.RemoveAll(contact => !keptIds.Contains(contact.Id));
-
-        foreach (var change in changes)
-        {
-            if (change.Id is not { } id)
-            {
-                var contactResult = ClientReferenceContact.Create(Guid.CreateVersion7(), Id, change.Data);
-                if (contactResult.IsFailure)
-                {
-                    return contactResult;
-                }
-
-                _referenceContacts.Add(contactResult.Value);
-                continue;
-            }
-
-            var updateResult = _referenceContacts.Single(contact => contact.Id == id).Update(change.Data);
-            if (updateResult.IsFailure)
-            {
-                return updateResult;
-            }
-        }
-
-        return DomainResult.Success();
-    }
-
-    private static HashSet<Guid> KeptIds<TData>(IReadOnlyCollection<ContactChange<TData>> changes)
-    {
-        return changes.Where(change => change.Id.HasValue).Select(change => change.Id!.Value).ToHashSet();
-    }
-
-    private DomainResult ValidateContactChanges(
-        IReadOnlyCollection<ContactChange<GuardianData>> guardians,
-        IReadOnlyCollection<ContactChange<ReferenceContactData>> referenceContacts)
-    {
-        var guardianIdsResult = ValidateContactIds(guardians, _guardians.Select(guardian => guardian.Id));
-        if (guardianIdsResult.IsFailure)
-        {
-            return guardianIdsResult;
-        }
-
-        var referenceContactIdsResult = ValidateContactIds(
-            referenceContacts,
-            _referenceContacts.Select(contact => contact.Id));
-        if (referenceContactIdsResult.IsFailure)
-        {
-            return referenceContactIdsResult;
-        }
-
-        foreach (var change in guardians)
-        {
-            var detailsResult = ClientContact.ValidateDetails(change.Data.Name, change.Data.Relationship);
-            if (detailsResult.IsFailure)
-            {
-                return detailsResult;
-            }
-        }
-
-        foreach (var change in referenceContacts)
-        {
-            var detailsResult = ClientContact.ValidateDetails(change.Data.Name.Value, change.Data.Relationship);
-            if (detailsResult.IsFailure)
-            {
-                return detailsResult;
-            }
-        }
-
-        return DomainResult.Success();
-    }
-
-    private static DomainResult ValidateContactIds<TData>(
-        IReadOnlyCollection<ContactChange<TData>> changes,
-        IEnumerable<Guid> currentIds)
-    {
-        var knownIds = currentIds.ToHashSet();
-        var seenIds = new HashSet<Guid>();
-
-        foreach (var change in changes)
-        {
-            if (change.Id is not { } id)
-            {
-                continue;
-            }
-
-            if (!knownIds.Contains(id))
-            {
-                return DomainResult.Failure(ContactNotFound);
-            }
-
-            if (!seenIds.Add(id))
-            {
-                return DomainResult.Failure(DuplicateContact);
-            }
-        }
-
-        return DomainResult.Success();
+        return DomainResult.Success(contacts);
     }
 
     private static DomainResult ValidateContactRules(

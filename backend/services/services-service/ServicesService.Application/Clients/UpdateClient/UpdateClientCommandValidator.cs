@@ -19,11 +19,6 @@ public sealed class UpdateClientCommandValidator : AbstractValidator<UpdateClien
             .MustHaveAGuardian()
             .When(command => command.BirthDate is { } birthDate && birthDate.IsMinorOn(Today()));
 
-        RuleFor(command => command.Guardians)
-            .Must(guardians => HasDistinctIds(guardians, guardian => guardian.Id))
-            .WithErrorCode(Client.DuplicateContact.Code)
-            .WithMessage(Client.DuplicateContact.Message);
-
         RuleForEach(command => command.Guardians)
             .NotNull()
             .WithErrorCode(ClientRuleBuilderExtensions.GuardianMissingCode)
@@ -33,11 +28,6 @@ public sealed class UpdateClientCommandValidator : AbstractValidator<UpdateClien
 
         RuleFor(command => command.ReferenceContacts).MustNotExceedTheReferenceContactLimit();
 
-        RuleFor(command => command.ReferenceContacts)
-            .Must(contacts => HasDistinctIds(contacts, contact => contact.Id))
-            .WithErrorCode(Client.DuplicateContact.Code)
-            .WithMessage(Client.DuplicateContact.Message);
-
         RuleForEach(command => command.ReferenceContacts)
             .NotNull()
             .WithErrorCode(ClientRuleBuilderExtensions.ReferenceContactMissingCode)
@@ -45,13 +35,6 @@ public sealed class UpdateClientCommandValidator : AbstractValidator<UpdateClien
             .SetValidator(new UpdateReferenceContactInputValidator())
             .When(command => command.ReferenceContacts is null
                 || command.ReferenceContacts.Count <= Client.MaxReferenceContacts);
-    }
-
-    private static bool HasDistinctIds<TItem>(IReadOnlyList<TItem?>? items, Func<TItem, Guid?> id)
-        where TItem : class
-    {
-        var ids = (items ?? []).OfType<TItem>().Select(id).Where(value => value.HasValue).ToList();
-        return ids.Distinct().Count() == ids.Count;
     }
 }
 

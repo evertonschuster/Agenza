@@ -24,7 +24,7 @@ public class ClientReferenceContact : ClientContact
         Purposes = purposes;
     }
 
-    internal static DomainResult<ClientReferenceContact> Create(Guid id, Guid clientId, ReferenceContactData data)
+    internal static DomainResult<ClientReferenceContact> Create(Guid clientId, ReferenceContactData data)
     {
         var relationshipResult = ValidateRelationship(data.Relationship);
         if (relationshipResult.IsFailure)
@@ -33,7 +33,7 @@ public class ClientReferenceContact : ClientContact
         }
 
         return DomainResult.Success(new ClientReferenceContact(
-            id,
+            Guid.CreateVersion7(),
             clientId,
             data.Name.Value,
             relationshipResult.Value,

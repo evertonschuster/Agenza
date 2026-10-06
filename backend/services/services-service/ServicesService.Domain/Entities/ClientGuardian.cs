@@ -18,7 +18,7 @@ public class ClientGuardian : ClientContact
         Cpf = cpf;
     }
 
-    internal static DomainResult<ClientGuardian> Create(Guid id, Guid clientId, GuardianData data)
+    internal static DomainResult<ClientGuardian> Create(Guid clientId, GuardianData data)
     {
         var nameResult = ValidateName(data.Name);
         if (nameResult.IsFailure)
@@ -33,7 +33,7 @@ public class ClientGuardian : ClientContact
         }
 
         return DomainResult.Success(new ClientGuardian(
-            id,
+            Guid.CreateVersion7(),
             clientId,
             nameResult.Value,
             relationshipResult.Value,

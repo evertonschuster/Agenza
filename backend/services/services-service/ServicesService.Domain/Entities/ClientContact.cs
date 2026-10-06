@@ -1,7 +1,5 @@
 namespace ServicesService.Domain.Entities;
 
-public sealed record ContactChange<TData>(Guid? Id, TData Data);
-
 public abstract class ClientContact : TenantOwnedEntity
 {
     public const int NameMinLength = 2;

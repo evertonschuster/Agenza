@@ -12,9 +12,10 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
     {
     }
 
-    public Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken)
+    public Task<Client?> GetForUpdateAsync(Guid clientId, CancellationToken cancellationToken)
     {
         return Set
+            .AsTracking()
             .Include(c => c.Guardians)
             .Include(c => c.ReferenceContacts)
             .FirstOrDefaultAsync(c => c.Id == clientId, cancellationToken);

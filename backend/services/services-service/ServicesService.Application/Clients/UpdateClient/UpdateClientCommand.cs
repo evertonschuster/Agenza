@@ -13,10 +13,9 @@ public sealed record UpdateClientCommand(
     IReadOnlyList<UpdateGuardianInput>? Guardians,
     IReadOnlyList<UpdateReferenceContactInput>? ReferenceContacts) : ICommand<ClientResponse>;
 
-public sealed record UpdateGuardianInput(Guid? Id, string Name, string Relationship, PhoneNumber? Phone, CpfNumber? Cpf);
+public sealed record UpdateGuardianInput(string Name, string Relationship, PhoneNumber? Phone, CpfNumber? Cpf);
 
 public sealed record UpdateReferenceContactInput(
-    Guid? Id,
     FullName Name,
     string Relationship,
     PhoneNumber? Phone,
