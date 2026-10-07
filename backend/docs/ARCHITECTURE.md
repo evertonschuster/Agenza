@@ -71,8 +71,8 @@ Shared projects in `backend/shared/` hold infrastructure, never business rules:
 
 | Project | Holds | Referenced by |
 | --- | --- | --- |
-| `Admin.SharedKernel` | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PagedResult` | Application |
-| `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler` | Api |
+| `Admin.SharedKernel` | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PagedResult`, the JSON converters of the wire (value objects, enum names) | Application |
+| `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler`, `AddWireJson()` | Api |
 | `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>`, `ApplyAuditableConventions` (soft-delete and tenant filters), the column conversion of the shared value objects | Infrastructure |
 | `Admin.SharedKernel.ValueObjects` | `IStringValueObject<T>` and the string value objects every service shares (`CpfNumber`); no reference at all | Domain |
 | `Admin.Identity.Client` | JWT validation, `ITenantAccessor`, `ICurrentUserAccessor`, `TenantHeaderFilter`, `[IgnoreTenant]` | Infrastructure, Api |
@@ -106,7 +106,6 @@ Vertical slices organise the Application layer; they do not replace the layers
   <Feature>/
     <Entity>Response.cs                    wire DTO with a static From<Entity>(…), shared by the operations
     <Feature>RuleBuilderExtensions.cs      validator rules used by more than one validator — when needed
-    <Feature>JsonOptionsExtensions.cs      registers the JSON converter of the feature's wire enums — when needed (§6)
     <Operation>/
       <Operation>Command.cs | Query.cs     a record; nested input records live in the same file
       <Operation>CommandHandler.cs | QueryHandler.cs
@@ -372,11 +371,11 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
 - The success envelope and the problem shapes come from the shared kernel; never build them by hand.
 - A body with a list is bounded twice: the validator caps the count and the action has a
   `[RequestSizeLimit]`.
-- Enums travel as camelCase strings: a plain enum named by a `JsonStringEnumConverter<T>` with integers
-  refused, registered by the feature (`<Feature>JsonOptionsExtensions`) and added by the Api to the MVC
-  options and to the minimal-API options, which the OpenAPI generator reads — one registration is not
-  enough. No translation class. Each item of a list of enums has an `IsInEnum` rule with the domain's
-  code ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
+- Enums travel as camelCase strings: a plain enum, named by the kernel for every enum with integers
+  refused (`AddEnumNameConverter`, registered by `AddWireJson()` in the MVC options and in the
+  minimal-API options, which the OpenAPI generator reads). Nothing to register per enum and no
+  translation class. Each item of a list of enums has an `IsInEnum` rule with the domain's code
+  ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
 - The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`); instants are UTC.
 - A paged list takes `Page`/`PageSize` with defaults and a validator bounding them, and returns
   `PagedResult<T>`; an unpaged list returns `IReadOnlyList<T>`.

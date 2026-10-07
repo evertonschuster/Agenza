@@ -41,7 +41,7 @@ Ask in order and stop at the first no:
    had, `ToModel` makes no call for it, and the EF configuration keeps only `HasMaxLength` (with the
    type's length constant) and `IsRequired`.
 4. **The service**, once per service: its Domain references `Admin.SharedKernel.ValueObjects`; the MVC setup
-   calls `.AddValueObjectJson()`; the OpenAPI setup calls `MapValueObjectsToStrings()`; the `DbContext`
+   calls `.AddWireJson()`; the OpenAPI setup calls `MapValueObjectsToStrings()`; the `DbContext`
    calls `AddValueObjectConversions()` from `ConfigureConventions`. A service that has the three does
    nothing here.
 5. **The wire test**: `<Operation>Command<Type>BindingTests` ([tests.md](tests.md) §1).

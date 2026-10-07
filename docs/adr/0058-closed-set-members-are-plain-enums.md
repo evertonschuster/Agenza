@@ -25,12 +25,13 @@ the enum. And the unknown-name rule was a second copy of what the binder already
   `IReadOnlySet<ContactPurpose>`; `ClientReferenceContact.Create` and `Update` refuse an empty set
   (`ClientReferenceContact.PurposesRequired`) and a value that is not a member
   (`ClientReferenceContact.PurposeUnknown`), and keep their own copy of the set.
-- Commands and responses carry `IReadOnlyList<ContactPurpose>`. The Application registers
-  `JsonStringEnumConverter<ContactPurpose>` with camelCase names and integers refused
-  (`AddClientEnumConverters`); the Api registers it for both the MVC and the minimal-API JSON options
-  (`AddClientEnumJson`), because the OpenAPI generator reads the latter and would otherwise publish the
-  enum as `integer`. An unknown name now fails at binding (gate 1), with the framework's English
-  message and the generic code `Validation.Failed`.
+- Commands and responses carry `IReadOnlyList<ContactPurpose>`. The shared kernel names **every** enum
+  on the wire in camelCase and refuses integers: `JsonSerializerOptions.AddEnumNameConverter()`
+  (`Admin.SharedKernel`), which `AddWireJson()` (`Admin.SharedKernel.AspNetCore`, formerly
+  `AddValueObjectJson()`) registers in both the MVC and the minimal-API JSON options — the OpenAPI
+  generator reads the latter and would otherwise publish the enum as `integer`. A service that already
+  calls `AddWireJson()` registers nothing per enum. An unknown name now fails at binding (gate 1), with
+  the framework's English message and the generic code `Validation.Failed`.
 - The validator keeps two rules per input: the list is not null or empty (`PurposesRequired`), and each
   item is a member (`PurposeUnknown`, `IsInEnum`). The second exists because the converter accepts several
   names in one string (`"emergency, operationalSupport"`) and yields a value that is not a member of the
@@ -50,8 +51,8 @@ the enum. And the unknown-name rule was a second copy of what the binder already
   them.
 - Repeated names are tolerated and collapse to one; the response lists the purposes in the enum's order.
 - The rule is general. An enum on a request or a response is a plain enum, named in camelCase on the
-  wire by a registered `JsonStringEnumConverter<T>` with integers refused; no `<Concept>Names`
-  translation class. A closed set of independent options with no rule beyond membership and a minimum
+  wire by the kernel's converter with integers refused; no `<Concept>Names` translation class and no
+  converter per enum. No enum was on the wire before this change, so none changes shape. A closed set of independent options with no rule beyond membership and a minimum
   size is that enum in an `IReadOnlySet` on the entity, not a value object. A closed set that carries a
   rule of its own (a palette with a format) stays a value object.
 - An enum member of a request needs a validator rule `IsInEnum` per item, with the domain's code, because
@@ -62,6 +63,9 @@ the enum. And the unknown-name rule was a second copy of what the binder already
 - **A JSON converter for the whole `ContactPurposes` value object.** It needs a converter for an array,
   a schema mapping so the OpenAPI does not publish an object, and an exception to the rule that
   commands carry no domain type, to save one validator rule.
+- **A converter registered per enum, or per feature.** It was the first version of this change; each new
+  enum would repeat the same two registrations, and forgetting the second one is silent (the API works,
+  the OpenAPI says `integer`).
 - **A `[JsonConverter]` attribute on the enum.** It puts a wire concern in the Domain, which does not
   know the wire format.
 - **A custom strict converter that refuses combined names.** It removes the `PurposeUnknown` rule at

@@ -11,11 +11,10 @@ messages", plus the earlier slices for reads, edits and paging. This file is how
 - Members are what crosses the wire: primitives, strings, `DateOnly?`, `Guid`, and lists as
   `IReadOnlyList<<Thing>Input>?`, with the `<Thing>Input` records in the same file. No domain type —
   except a shared string value object such as `CpfNumber?`, which binds from the JSON string and needs
-  no validator rule (ADR 0055) — no tenant. An enum is allowed: it travels as a camelCase name through a
-  `JsonStringEnumConverter<T>` (integers refused) that the feature registers in
-  `<Feature>JsonOptionsExtensions` and the Api adds to the MVC **and** the minimal-API JSON options (the
-  OpenAPI generator reads the latter). A list of enums gets an `IsInEnum` rule per item with the domain's
-  code (ADR 0058); there is no `<Concept>Names` class.
+  no validator rule (ADR 0055) — no tenant. An enum is allowed: the kernel's `AddWireJson()` already names
+  every enum in camelCase and refuses integers, in the MVC and the minimal-API JSON options, so there is
+  nothing to register and no `<Concept>Names` class. A list of enums gets an `IsInEnum` rule per item with
+  the domain's code (ADR 0058).
 - A route id is a member (`<Entity>Id`) that the controller fills with `with { … }`.
 - A list query carries its filters as optional members and `Page`/`PageSize` with defaults.
 
