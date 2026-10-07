@@ -44,7 +44,7 @@ public class GetClientByIdQueryHandlerTests
 
     private static void MakeInactive(Client client)
     {
-        typeof(Client).GetProperty(nameof(Client.Status))!.SetValue(client, ClientStatus.Inactive);
+        client.Inactivate();
     }
 
     [Fact]

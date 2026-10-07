@@ -37,6 +37,15 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
         DbContext.Set<ClientReferenceContact>().AddRange(client.ReferenceContacts);
     }
 
+    public Task UpdateStatusAsync(Client client, CancellationToken cancellationToken)
+    {
+        var entry = DbContext.Entry(client);
+        entry.State = EntityState.Unchanged;
+        entry.Property(c => c.Status).IsModified = true;
+
+        return Task.CompletedTask;
+    }
+
     public Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken)
     {
         return Set

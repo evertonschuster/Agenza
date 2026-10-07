@@ -19,6 +19,14 @@ public class Client : TenantOwnedEntity
         "Client.GuardianRequired",
         $"Informe ao menos um responsável para pessoas menores de {BirthDate.AdultAgeInYears} anos.");
 
+    public static readonly DomainError AlreadyInactive = new(
+        "Client.AlreadyInactive",
+        "A pessoa já está inativa.");
+
+    public static readonly DomainError AlreadyActive = new(
+        "Client.AlreadyActive",
+        "A pessoa já está ativa.");
+
     public FullName FullName { get; private set; }
     public BirthDate? BirthDate { get; private set; }
     public PhoneNumber? Phone { get; private set; }
@@ -123,6 +131,30 @@ public class Client : TenantOwnedEntity
         _guardians.AddRange(guardiansResult.Value);
         _referenceContacts.Clear();
         _referenceContacts.AddRange(referenceContactsResult.Value);
+
+        return DomainResult.Success();
+    }
+
+    public DomainResult Inactivate()
+    {
+        if (Status == ClientStatus.Inactive)
+        {
+            return DomainResult.Failure(AlreadyInactive);
+        }
+
+        Status = ClientStatus.Inactive;
+
+        return DomainResult.Success();
+    }
+
+    public DomainResult Reactivate()
+    {
+        if (Status == ClientStatus.Active)
+        {
+            return DomainResult.Failure(AlreadyActive);
+        }
+
+        Status = ClientStatus.Active;
 
         return DomainResult.Success();
     }
