@@ -22,10 +22,11 @@ public sealed class UpdateClientCommandHandler(
             return Result.Failure<ClientResponse>(Error.NotFound("Client.NotFound", "A pessoa não foi encontrada."));
         }
 
-        var applyResult = command.ApplyTo(client, today);
-        if (applyResult.IsFailure)
+        var clientData = command.ToClientData();
+        var updateResult = client.Update(clientData, today);
+        if (updateResult.IsFailure)
         {
-            return Result.Failure<ClientResponse>(ToError(applyResult.Error));
+            return Result.Failure<ClientResponse>(ToError(updateResult.Error));
         }
 
         var cpfConflict = await FindCpfConflictAsync(client, cancellationToken);

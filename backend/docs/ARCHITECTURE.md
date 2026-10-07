@@ -110,7 +110,7 @@ Vertical slices organise the Application layer; they do not replace the layers
       <Operation>Command.cs | Query.cs     a record; nested input records live in the same file
       <Operation>CommandHandler.cs | QueryHandler.cs
       <Operation>CommandValidator.cs | QueryValidator.cs      whenever the request carries input
-      <Operation>CommandExtensions.cs      extension methods ToModel(…) / ApplyTo(entity): command → domain calls
+      <Operation>CommandExtensions.cs      extension methods ToModel(…) / ApplyTo(entity) / To<Entity>Data(): command → domain input
 <Service>.Infrastructure/
   Persistence/Configurations/<Entity>Configuration.cs
   Persistence/Migrations/
@@ -128,7 +128,10 @@ Vertical slices organise the Application layer; they do not replace the layers
 - `ToModel`/`ApplyTo` are extension methods on the command and keep the handler reading as
   orchestration; conversion helpers with a natural receiver prefer them too. The mapping only calls
   the domain's public factories and behaviour, it adds no rule
-  ([0007](../../docs/adr/0007-direct-command-binding-and-mapping-extensions.md)).
+  ([0007](../../docs/adr/0007-direct-command-binding-and-mapping-extensions.md)). A root with many
+  members takes an `<Entity>Data` record instead (`ClientData`): the extension only builds it
+  (`To<Entity>Data()`) and the handler calls `Create` / `Update` itself
+  ([0059](../../docs/adr/0059-aggregate-data-records-and-handler-owned-domain-calls.md)).
 
 **A use case owns its orchestration**
 ([0049](../../docs/adr/0049-conventions-for-new-backend-slices.md)). One handler per operation, no base
@@ -227,7 +230,8 @@ add a `Deleted` status beside it. Other states are an enum on the entity, stored
 **What the domain does not know**: the tenant (assigned on save, §5), the wire format (§6), the clock
 (`today` is a parameter, §7), persistence, and other aggregates — a rule that needs another aggregate
 or the current state of the database belongs to the handler (§4). Ids are `Guid.CreateVersion7()`: a
-root's by its caller (`ToModel`), and a child's by its own internal factory.
+root's by its caller (`ToModel`) or, for a root created from an `<Entity>Data`, by its own `Create`;
+a child's by its own internal factory.
 
 ## 4. Errors — one pipeline, five gates
 
@@ -446,7 +450,7 @@ touches that slice, not in bulk.
 | Domain errors | `static readonly DomainError` per rule on `Client` and on the value objects | one inline `new DomainError("<Entity>.Invalid", …)` shared by every rule of an entity | §3 |
 | Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore`; a shared one, `Admin.SharedKernel.ValueObjects/CpfNumber.cs` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md), [0055](../../docs/adr/0055-shared-string-value-objects.md) |
 | Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
-| Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: `GetByIdAsync` → `NotFound` → `ApplyTo` → pre-checks that exclude the aggregate itself → `UpdateAsync` → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
+| Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: `GetByIdAsync` → `NotFound` → `client.Update(command.ToClientData(), today)` → pre-checks that exclude the aggregate itself → `UpdateAsync` → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
 | Read, delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 

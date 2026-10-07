@@ -52,6 +52,10 @@ base validator class.
   with the value objects and the children's data records.
 - `ApplyTo(this <Command>, <Entity>, <context>)` → `DomainResult`: build the value objects, call the
   behaviour.
+- `To<Entity>Data(this <Command>)` → `<Entity>Data`, for a root that takes a data record (ADR 0059): the
+  value objects as they are, the nested inputs turned into child data records. It adds no call to the
+  domain: the handler runs `<Entity>.Create(command.To<Entity>Data(), today)` or
+  `<entity>.Update(command.To<Entity>Data(), today)` itself.
 - Helpers named `To...` with a natural source object are extension methods and are called from that
   object. Keep domain factories such as `Create` and `Restore` as static methods.
 - No rule, no I/O, no tenant. Each step is an explicit `if (x.IsFailure) return …` — no helper chains
@@ -67,7 +71,8 @@ or `ITenantAccessor`.
 validator already ran before the handler):
 
 1. Resolve context: `today` from `TimeProvider`.
-2. Get the aggregate: `ToModel` for a create; the repository plus `NotFound` for anything else.
+2. Get the aggregate: `ToModel` (or `<Entity>.Create(command.To<Entity>Data(), today)`) for a create; the
+   repository plus `NotFound` for anything else.
 3. A domain failure returns `error.ToApplicationError()`.
 4. Pre-checks against current state, cheapest first and before any side effect: each a private
    `Find<Thing>ConflictAsync` returning `Error?`; a conflict a form can show is keyed by field, with
@@ -77,7 +82,7 @@ validator already ran before the handler):
    `<Entity>.SaveFailed`.
 7. Return `<Entity>Response.From<Entity>(…)`.
 
-An edit runs `ApplyTo` at step 3, before the pre-checks, because they compare the values it just assigned
+An edit runs `ApplyTo` (or `<entity>.Update(command.To<Entity>Data(), today)`) at step 3, before the pre-checks, because they compare the values it just assigned
 (a uniqueness lookup excludes the aggregate itself); nothing is persisted until step 6, so a rejected
 pre-check discards the change.
 

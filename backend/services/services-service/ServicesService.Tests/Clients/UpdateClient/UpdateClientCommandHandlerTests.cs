@@ -33,16 +33,13 @@ public class UpdateClientCommandHandlerTests
     private static Client ClientWithContacts()
     {
         return Client.Create(
-            Guid.NewGuid(),
-            ClientTestData.Name("Paula Rocha"),
-            null,
-            null,
-            ClientTestData.Email("paula@example.com"),
-            ClientTestData.Cpf(),
-            null,
-            ClientTestData.Today,
-            [ClientTestData.Guardian("Ana Souza"), ClientTestData.Guardian("Bia Souza")],
-            [ClientTestData.ReferenceContact()]).Value;
+            ClientTestData.Data(
+                ClientTestData.Name("Paula Rocha"),
+                email: ClientTestData.Email("paula@example.com"),
+                cpf: ClientTestData.Cpf(),
+                guardians: [ClientTestData.Guardian("Ana Souza"), ClientTestData.Guardian("Bia Souza")],
+                referenceContacts: [ClientTestData.ReferenceContact()]),
+            ClientTestData.Today).Value;
     }
 
     private UpdateClientCommand Command(

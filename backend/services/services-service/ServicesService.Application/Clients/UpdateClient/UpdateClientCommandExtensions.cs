@@ -2,16 +2,15 @@ namespace ServicesService.Application.Clients.UpdateClient;
 
 public static class UpdateClientCommandExtensions
 {
-    public static DomainResult ApplyTo(this UpdateClientCommand command, Client client, DateOnly today)
+    public static ClientData ToClientData(this UpdateClientCommand command)
     {
-        return client.Update(
+        return new ClientData(
             command.FullName,
             command.BirthDate,
             command.Phone,
             command.Email,
             command.Cpf,
             command.AdministrativeNotes,
-            today,
             command.Guardians.ToGuardians(),
             command.ReferenceContacts.ToReferenceContacts());
     }

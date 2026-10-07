@@ -57,9 +57,22 @@ internal static class ClientTestData
             Purposes(purposes.Length == 0 ? [ContactPurpose.Emergency] : purposes));
     }
 
+    public static ClientData Data(
+        FullName? fullName = null,
+        BirthDate? birthDate = null,
+        PhoneNumber? phone = null,
+        EmailAddress? email = null,
+        CpfNumber? cpf = null,
+        AdministrativeNotes? notes = null,
+        IReadOnlyCollection<GuardianData>? guardians = null,
+        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null)
+    {
+        return new ClientData(fullName ?? Name(), birthDate, phone, email, cpf, notes, guardians ?? [], referenceContacts ?? []);
+    }
+
     public static Client ExistingClient()
     {
-        return Client.Create(Guid.NewGuid(), Name("Paula Rocha"), null, null, null, Cpf(), null, Today, [], []).Value;
+        return Client.Create(Data(Name("Paula Rocha"), cpf: Cpf()), Today).Value;
     }
 }
 

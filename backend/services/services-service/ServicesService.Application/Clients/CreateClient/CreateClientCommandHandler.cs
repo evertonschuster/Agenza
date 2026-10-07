@@ -13,7 +13,8 @@ public sealed class CreateClientCommandHandler(
     public async Task<Result<ClientResponse>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
     {
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
-        var clientResult = command.ToModel(today);
+        var clientData = command.ToClientData();
+        var clientResult = Client.Create(clientData, today);
 
         if (clientResult.IsFailure)
         {

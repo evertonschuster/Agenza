@@ -7,16 +7,8 @@ public class ClientContactTests
         ReferenceContactData[]? referenceContacts = null)
     {
         return Client.Create(
-            Guid.NewGuid(),
-            ClientTestData.Name(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            ClientTestData.Today,
-            guardians ?? [],
-            referenceContacts ?? []);
+            ClientTestData.Data(guardians: guardians, referenceContacts: referenceContacts),
+            ClientTestData.Today);
     }
 
     [Fact]

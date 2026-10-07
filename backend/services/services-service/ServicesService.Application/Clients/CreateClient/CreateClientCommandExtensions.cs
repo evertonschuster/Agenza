@@ -2,19 +2,15 @@ namespace ServicesService.Application.Clients.CreateClient;
 
 public static class CreateClientCommandExtensions
 {
-    // TenantId is intentionally Guid.Empty - AuditableEntitySaveChangesInterceptor
-    // assigns it on save (docs/adr/0008).
-    public static DomainResult<Client> ToModel(this CreateClientCommand command, DateOnly today)
+    public static ClientData ToClientData(this CreateClientCommand command)
     {
-        return Client.Create(
-            Guid.CreateVersion7(),
+        return new ClientData(
             command.FullName,
             command.BirthDate,
             command.Phone,
             command.Email,
             command.Cpf,
             command.AdministrativeNotes,
-            today,
             command.Guardians.ToGuardians(),
             command.ReferenceContacts.ToReferenceContacts());
     }

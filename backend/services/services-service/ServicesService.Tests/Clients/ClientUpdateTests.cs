@@ -14,16 +14,15 @@ public class ClientUpdateTests
         int referenceContacts = 1)
     {
         return Client.Create(
-            Guid.NewGuid(),
-            ClientTestData.Name("Paula Rocha"),
-            ClientTestData.Birth(birthDate),
-            ClientTestData.Phone(),
-            ClientTestData.Email("paula@example.com"),
-            ClientTestData.Cpf(),
-            null,
-            Today,
-            Enumerable.Range(0, guardians).Select(index => ClientTestData.Guardian($"Responsável {index}")).ToArray(),
-            Enumerable.Range(0, referenceContacts).Select(_ => ClientTestData.ReferenceContact()).ToArray()).Value;
+            ClientTestData.Data(
+                ClientTestData.Name("Paula Rocha"),
+                ClientTestData.Birth(birthDate),
+                ClientTestData.Phone(),
+                ClientTestData.Email("paula@example.com"),
+                ClientTestData.Cpf(),
+                guardians: Enumerable.Range(0, guardians).Select(index => ClientTestData.Guardian($"Responsável {index}")).ToArray(),
+                referenceContacts: Enumerable.Range(0, referenceContacts).Select(_ => ClientTestData.ReferenceContact()).ToArray()),
+            Today).Value;
     }
 
     private static DomainResult Update(
@@ -34,15 +33,12 @@ public class ClientUpdateTests
         DateOnly? birthDate = null)
     {
         return client.Update(
-            ClientTestData.Name(fullName),
-            ClientTestData.Birth(birthDate),
-            null,
-            null,
-            null,
-            null,
-            Today,
-            guardians ?? [],
-            referenceContacts ?? []);
+            ClientTestData.Data(
+                ClientTestData.Name(fullName),
+                ClientTestData.Birth(birthDate),
+                guardians: guardians,
+                referenceContacts: referenceContacts),
+            Today);
     }
 
     [Fact]
@@ -58,15 +54,16 @@ public class ClientUpdateTests
         ReferenceContactData[] referenceContacts = [new ReferenceContactData(ClientTestData.Name("Carlos Dias"), "Primo", null, purposes)];
 
         var result = client.Update(
-            ClientTestData.Name("Paula Souza"),
-            BirthDate.Restore(new DateOnly(1990, 5, 20)),
-            ClientTestData.Phone("11 4000-1000"),
-            ClientTestData.Email("souza@example.com"),
-            ClientTestData.Cpf(ClientTestData.OtherValidCpf),
-            notes,
-            Today,
-            guardians,
-            referenceContacts);
+            ClientTestData.Data(
+                ClientTestData.Name("Paula Souza"),
+                BirthDate.Restore(new DateOnly(1990, 5, 20)),
+                ClientTestData.Phone("11 4000-1000"),
+                ClientTestData.Email("souza@example.com"),
+                ClientTestData.Cpf(ClientTestData.OtherValidCpf),
+                notes,
+                guardians,
+                referenceContacts),
+            Today);
 
         result.IsSuccess.Should().BeTrue();
         client.Id.Should().Be(id);

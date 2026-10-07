@@ -73,14 +73,17 @@ Writing a service's own (a value that is shared by every service is a different 
 | Type | Factory | Called by |
 | --- | --- | --- |
 | Root | `public static DomainResult<T> Create(Guid id, <value objects>, <context>, <child data>)` | `ToModel` in the Application |
+| Root with many members | `public static DomainResult<T> Create(<Entity>Data data, <context>)`, which mints its own id; `Update(<Entity>Data data, <context>)` | the handler, with `command.To<Entity>Data()` (ADR 0059) |
 | Child | `internal static DomainResult<TChild> Create(Guid rootId, <Child>Data data)` | its root only |
 | Value object | `Create(raw)` and `Restore(stored)` | `ToModel`, `ApplyTo`, EF conversions; a shared one: the JSON converter and the EF convention, never `ToModel` |
 
 - A root's `Create` takes value objects already built, not raw strings, for fields that are value
   objects; its own primitive fields it validates itself.
 - `<Child>Data` is a record next to the child, carrying value objects; it is how the outside describes a
-  child without creating one.
-- Ids are `Guid.CreateVersion7()`: the root's minted by `ToModel`, a child's by its internal factory.
+  child without creating one. A root with many members has its own `<Entity>Data` (`ClientData`): the
+  value objects as received plus the child data lists, shared by `Create` and `Update`.
+- Ids are `Guid.CreateVersion7()`: the root's minted by `ToModel`, or by its own `Create` when it takes an
+  `<Entity>Data`; a child's by its internal factory.
 - EF gets a private parameterless constructor; required reference properties are set to `null!` there.
 - No `<X>Factory` class, no builder, no public constructor, no static "create from command" on the
   entity — the entity never sees a command.

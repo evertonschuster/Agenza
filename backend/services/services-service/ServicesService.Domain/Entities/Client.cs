@@ -58,27 +58,28 @@ public class Client : TenantOwnedEntity
         Status = ClientStatus.Active;
     }
 
-    public static DomainResult<Client> Create(
-        Guid id,
-        FullName fullName,
-        BirthDate? birthDate,
-        PhoneNumber? phone,
-        EmailAddress? email,
-        CpfNumber? cpf,
-        AdministrativeNotes? administrativeNotes,
-        DateOnly today,
-        IReadOnlyCollection<GuardianData> guardians,
-        IReadOnlyCollection<ReferenceContactData> referenceContacts)
+    public static DomainResult<Client> Create(ClientData data, DateOnly today)
     {
-        var contactRulesResult = ValidateContactRules(birthDate, today, guardians.Count, referenceContacts.Count);
+        var contactRulesResult = ValidateContactRules(
+            data.BirthDate,
+            today,
+            data.Guardians.Count,
+            data.ReferenceContacts.Count);
         if (contactRulesResult.IsFailure)
         {
             return DomainResult.Failure<Client>(contactRulesResult.Error);
         }
 
-        var client = new Client(id, fullName, birthDate, phone, email, cpf, administrativeNotes);
+        var client = new Client(
+            Guid.CreateVersion7(),
+            data.FullName,
+            data.BirthDate,
+            data.Phone,
+            data.Email,
+            data.Cpf,
+            data.AdministrativeNotes);
 
-        var addContactsResult = client.AddContacts(guardians, referenceContacts);
+        var addContactsResult = client.AddContacts(data.Guardians, data.ReferenceContacts);
         if (addContactsResult.IsFailure)
         {
             return DomainResult.Failure<Client>(addContactsResult.Error);
@@ -87,41 +88,36 @@ public class Client : TenantOwnedEntity
         return DomainResult.Success(client);
     }
 
-    public DomainResult Update(
-        FullName fullName,
-        BirthDate? birthDate,
-        PhoneNumber? phone,
-        EmailAddress? email,
-        CpfNumber? cpf,
-        AdministrativeNotes? administrativeNotes,
-        DateOnly today,
-        IReadOnlyCollection<GuardianData> guardians,
-        IReadOnlyCollection<ReferenceContactData> referenceContacts)
+    public DomainResult Update(ClientData data, DateOnly today)
     {
-        var contactRulesResult = ValidateContactRules(birthDate, today, guardians.Count, referenceContacts.Count);
+        var contactRulesResult = ValidateContactRules(
+            data.BirthDate,
+            today,
+            data.Guardians.Count,
+            data.ReferenceContacts.Count);
         if (contactRulesResult.IsFailure)
         {
             return contactRulesResult;
         }
 
-        var guardiansResult = CreateGuardians(guardians);
+        var guardiansResult = CreateGuardians(data.Guardians);
         if (guardiansResult.IsFailure)
         {
             return guardiansResult;
         }
 
-        var referenceContactsResult = CreateReferenceContacts(referenceContacts);
+        var referenceContactsResult = CreateReferenceContacts(data.ReferenceContacts);
         if (referenceContactsResult.IsFailure)
         {
             return referenceContactsResult;
         }
 
-        FullName = fullName;
-        BirthDate = birthDate;
-        Phone = phone;
-        Email = email;
-        Cpf = cpf;
-        AdministrativeNotes = administrativeNotes;
+        FullName = data.FullName;
+        BirthDate = data.BirthDate;
+        Phone = data.Phone;
+        Email = data.Email;
+        Cpf = data.Cpf;
+        AdministrativeNotes = data.AdministrativeNotes;
 
         _guardians.Clear();
         _guardians.AddRange(guardiansResult.Value);

@@ -45,16 +45,16 @@ public class ClientPersistenceTests
         IReadOnlyCollection<GuardianData>? guardians = null,
         IReadOnlyCollection<ReferenceContactData>? referenceContacts = null) =>
         Client.Create(
-            Guid.NewGuid(),
-            FullName.Create(fullName).Value,
-            birthDate is null ? null : BirthDate.Create(birthDate.Value, Today).Value,
-            null,
-            email is null ? null : EmailAddress.Create(email).Value,
-            cpf is null ? null : CpfNumber.Create(cpf).Value,
-            null,
-            Today,
-            guardians ?? [],
-            referenceContacts ?? []).Value;
+            new ClientData(
+                FullName.Create(fullName).Value,
+                birthDate is null ? null : BirthDate.Create(birthDate.Value, Today).Value,
+                null,
+                email is null ? null : EmailAddress.Create(email).Value,
+                cpf is null ? null : CpfNumber.Create(cpf).Value,
+                null,
+                guardians ?? [],
+                referenceContacts ?? []),
+            Today).Value;
 
     private static GuardianData Guardian()
     {
@@ -436,18 +436,19 @@ public class ClientPersistenceTests
             var loaded = (await repository.GetByIdAsync(client.Id, CancellationToken.None))!;
 
             var result = loaded.Update(
-                FullName.Create("Maria Souza Lima").Value,
-                null,
-                null,
-                null,
-                null,
-                null,
-                Today,
-                [
-                    new GuardianData("Ana Lima", "Mãe", null, null),
-                    new GuardianData("Cris Souza", "Prima", null, null),
-                ],
-                [ReferenceContact()]);
+                new ClientData(
+                    FullName.Create("Maria Souza Lima").Value,
+                    null,
+                    null,
+                    null,
+                    null,
+                    null,
+                    [
+                        new GuardianData("Ana Lima", "Mãe", null, null),
+                        new GuardianData("Cris Souza", "Prima", null, null),
+                    ],
+                    [ReferenceContact()]),
+                Today);
             result.IsSuccess.Should().BeTrue();
             await repository.UpdateAsync(loaded, TestContext.Current.CancellationToken);
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
