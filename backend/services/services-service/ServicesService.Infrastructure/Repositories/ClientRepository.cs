@@ -12,19 +12,34 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
     {
     }
 
-    public Task<Client?> GetForUpdateAsync(Guid clientId, CancellationToken cancellationToken)
+    public Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken)
     {
         return Set
-            .AsTracking()
-            .Include(c => c.Guardians)
-            .Include(c => c.ReferenceContacts)
-            .FirstOrDefaultAsync(c => c.Id == clientId, cancellationToken);
+            .Include(client => client.Guardians)
+            .Include(client => client.ReferenceContacts)
+            .FirstOrDefaultAsync(client => client.Id == clientId, cancellationToken);
+    }
+
+    public async Task UpdateAsync(Client client, CancellationToken cancellationToken)
+    {
+        var existingGuardians = await DbContext.Set<ClientGuardian>()
+            .Where(guardian => guardian.ClientId == client.Id)
+            .ToListAsync(cancellationToken);
+
+        var existingReferenceContacts = await DbContext.Set<ClientReferenceContact>()
+            .Where(contact => contact.ClientId == client.Id)
+            .ToListAsync(cancellationToken);
+
+        DbContext.RemoveRange(existingGuardians);
+        DbContext.RemoveRange(existingReferenceContacts);
+        DbContext.Entry(client).State = EntityState.Modified;
+        DbContext.Set<ClientGuardian>().AddRange(client.Guardians);
+        DbContext.Set<ClientReferenceContact>().AddRange(client.ReferenceContacts);
     }
 
     public Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken)
     {
         return Set
-            .AsNoTracking()
             .FirstOrDefaultAsync(c => c.Cpf == cpf && (excludeClientId == null || c.Id != excludeClientId), cancellationToken);
     }
 
@@ -34,7 +49,6 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
         CancellationToken cancellationToken)
     {
         return Set
-            .AsNoTracking()
             .FirstOrDefaultAsync(
                 c => c.Email == email
                     && c.Status == ClientStatus.Active

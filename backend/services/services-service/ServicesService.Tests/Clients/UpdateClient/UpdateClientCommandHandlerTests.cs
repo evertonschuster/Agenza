@@ -18,7 +18,8 @@ public class UpdateClientCommandHandlerTests
 
     public UpdateClientCommandHandlerTests()
     {
-        _repository.GetForUpdateAsync(_client.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(_client));
+        _repository.GetByIdAsync(_client.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(_client));
+        _repository.UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _repository.FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(null));
         _repository.FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
@@ -66,7 +67,6 @@ public class UpdateClientCommandHandlerTests
             referenceContacts);
 
     private static UpdateGuardianInput Guardian(
-        Guid? id = null,
         string name = "Ana Souza",
         string relationship = "Mãe",
         string? phone = null,
@@ -108,18 +108,19 @@ public class UpdateClientCommandHandlerTests
         response.Cpf.Should().Be("12345678909");
         response.AdministrativeNotes.Should().Be("Prefere a tarde.");
         response.Status.Should().Be("active");
+        await _repository.Received(1).UpdateAsync(_client, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
     }
 
     [Fact]
-    public async Task Handle_KeepsChangesAndRemovesContactsByTheirIds()
+    public async Task Handle_ReplacesEveryContact()
     {
         var kept = _client.Guardians.First();
         var removed = _client.Guardians.Last();
         var contact = _client.ReferenceContacts.Single();
         var command = Command(
-            guardians: [Guardian(kept.Id, "Ana Lima"), Guardian(null, "Cris Souza", "Tia", "(11) 98888-0000", ClientTestData.OtherValidCpf)],
+            guardians: [Guardian("Ana Lima"), Guardian("Cris Souza", "Tia", "(11) 98888-0000", ClientTestData.OtherValidCpf)],
             referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Dias"), "Primo", null, ["operationalSupport"])]);
 
         var result = await Handler().Handle(command, CancellationToken.None);
@@ -154,7 +155,7 @@ public class UpdateClientCommandHandlerTests
     public async Task Handle_WithAClientThatDoesNotExistForTheTenant_ReturnsNotFoundAndTouchesNothing()
     {
         var missingId = Guid.NewGuid();
-        _repository.GetForUpdateAsync(missingId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(null));
+        _repository.GetByIdAsync(missingId, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(null));
 
         var result = await Handler().Handle(Command(clientId: missingId, cpf: ClientTestData.ValidCpf), CancellationToken.None);
 
@@ -162,6 +163,7 @@ public class UpdateClientCommandHandlerTests
         result.Error.Type.Should().Be(ErrorType.NotFound);
         result.Error.Code.Should().Be("Client.NotFound");
         await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -173,6 +175,7 @@ public class UpdateClientCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Validation);
         result.Error.Code.Should().Be("Client.GuardianRequired");
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -180,7 +183,7 @@ public class UpdateClientCommandHandlerTests
     public async Task Handle_WithMinorBirthDateKeepingOneGuardian_Saves()
     {
         var result = await Handler().Handle(
-            Command(birthDate: new DateOnly(2015, 3, 10), guardians: [Guardian(_client.Guardians.First().Id)]),
+            Command(birthDate: new DateOnly(2015, 3, 10), guardians: [Guardian()]),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -221,6 +224,7 @@ public class UpdateClientCommandHandlerTests
 
         result.Error.Type.Should().Be(ErrorType.Validation);
         result.Error.Code.Should().Be("ClientContact.InvalidNameLength");
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -266,6 +270,7 @@ public class UpdateClientCommandHandlerTests
             ["clientId"] = other.Id.ToString(),
             ["clientName"] = "Paula Rocha",
         });
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -286,6 +291,7 @@ public class UpdateClientCommandHandlerTests
             ["clientId"] = other.Id.ToString(),
             ["clientName"] = "Paula Rocha",
         });
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

@@ -70,7 +70,7 @@ validator already ran before the handler):
 4. Pre-checks against current state, cheapest first and before any side effect: each a private
    `Find<Thing>ConflictAsync` returning `Error?`; a conflict a form can show is keyed by field, with
    `meta`; one per answer.
-5. Behaviour, or `Add`.
+5. Behaviour, `Add`, or `UpdateAsync`.
 6. `SaveChangesAsync`; a failure logs kind and constraint at `Warning` and returns
    `<Entity>.SaveFailed`.
 7. Return `<Entity>Response.From<Entity>(…)`.

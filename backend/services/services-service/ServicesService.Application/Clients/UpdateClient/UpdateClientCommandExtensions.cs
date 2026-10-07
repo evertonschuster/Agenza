@@ -10,6 +10,8 @@ public static class UpdateClientCommandExtensions
             return referenceContactsResult;
         }
 
+        var guardians = command.Guardians.ToGuardians();
+
         return client.Update(
             command.FullName,
             command.BirthDate,
@@ -18,7 +20,7 @@ public static class UpdateClientCommandExtensions
             command.Cpf,
             command.AdministrativeNotes,
             today,
-            command.Guardians.ToGuardians(),
+            guardians,
             referenceContactsResult.Value);
     }
 

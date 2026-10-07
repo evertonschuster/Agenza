@@ -324,13 +324,15 @@ in `Application/Abstractions` and declares only what a handler calls; the adapte
 `RepositoryBase<T>` in Infrastructure. It returns its own root (with its children), a list or a page
 of them, a `bool` or a count — never a DTO, an `IQueryable` or another aggregate. Methods say what they
 are for (`FindActiveByEmailAsync`), take value objects for value-object columns, and use
-`AsNoTracking` for reads. A command that changes an aggregate asks for it through an explicit
-`GetForUpdateAsync`, which uses `AsTracking`; a read never reuses that method. Paged reads go through
-`ListPagedAsync`. The tenant
+no tracking for reads. `ServicesDataContext` sets that behavior globally; shared helpers may preserve
+it explicitly for a service outside that decision. A command loads its aggregate with `GetByIdAsync`,
+applies the domain behaviour, then stages persistence with `UpdateAsync`; the port does not expose EF
+tracking. An EF adapter makes any required state changes explicitly inside that operation. Paged reads
+go through `ListPagedAsync`. The tenant
 and soft-delete filters come from the `DbContext`: a repository never writes a `TenantId` or
 `DeletedAt` predicate. A query cannot reach `.Value` through a converter: compare whole value objects,
 order by the property, or use `EF.Property<string>(e, "<Property>")` for text matching. Repositories
-only stage (`Add`, `Remove`); the handler commits through `IUnitOfWork`, whose shape follows the
+only stage (`Add`, `UpdateAsync`, `Remove`); the handler commits through `IUnitOfWork`, whose shape follows the
 service's real transactional need ([0005](../../docs/adr/0005-cqrs-vertical-slice-result-pattern.md)).
 
 **Migrations.** One additive migration per change, named after it (`Add<Thing>`), generated with the
@@ -434,7 +436,7 @@ touches that slice, not in bulk.
 | Domain errors | `static readonly DomainError` per rule on `Client` and on the value objects | one inline `new DomainError("<Entity>.Invalid", …)` shared by every rule of an entity | §3 |
 | Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore`; a shared one, `Admin.SharedKernel.ValueObjects/CpfNumber.cs` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md), [0055](../../docs/adr/0055-shared-string-value-objects.md) |
 | Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
-| Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: load → `NotFound` → `ApplyTo` → pre-checks that exclude the aggregate itself → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
+| Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: `GetByIdAsync` → `NotFound` → `ApplyTo` → pre-checks that exclude the aggregate itself → `UpdateAsync` → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
 | Read, delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 

@@ -11,12 +11,14 @@ reads and a repository method shared by reads and writes could begin tracking im
 ## Decision
 
 `ServicesDataContext` is configured with `QueryTrackingBehavior.NoTracking` in both runtime and
-design-time options. Repository reads also use `AsNoTracking()` explicitly.
+design-time options. Direct service repositories inherit that default. The shared repository helper
+retains `AsNoTracking()` because it is also used by `identity-service`, which is outside this decision.
 
-A command that changes or removes an aggregate must request it through `GetForUpdateAsync`; that
-method uses `AsTracking()` explicitly. A tracked tag lookup used to change a service's tag association
-is named `GetByIdsForUpdateAsync` for the same reason. Ports expose only operations their handlers
-currently use.
+A command loads an aggregate through `GetByIdAsync`, applies domain behaviour, then calls its
+repository's `UpdateAsync`. The application port describes persistence intent rather than EF tracking.
+An EF Core adapter makes the required state changes explicitly inside `UpdateAsync`; another adapter
+can persist the same aggregate through its own native mechanism. Ports expose only operations their
+handlers currently use.
 
 This decision applies to `services-service`. `identity-service` remains unchanged because ASP.NET
 Identity and OpenIddict own query and mutation paths inside their framework stores; changing its
@@ -25,7 +27,8 @@ default needs separate framework-level validation.
 ## Consequences
 
 - Read handlers cannot accidentally retain entity graphs in the change tracker.
-- A mutation's dependency on EF tracking is visible at its repository call site.
+- The application depends on aggregate persistence, not on EF tracking semantics.
+- The infrastructure chooses and makes explicit the EF state transitions necessary for a mutation.
 - The part of ADR 0049 that kept a shared `GetByIdAsync` tracked no longer applies to
   `services-service`.
 
@@ -33,7 +36,7 @@ default needs separate framework-level validation.
 
 - **Leaving EF's tracking default enabled and relying on reviewers to add `AsNoTracking`.** An
   omitted call silently costs memory and change detection on every ordinary read.
-- **A second method differing only by tracking without an intention-revealing name.** It conceals
-  whether the caller is reading or preparing a mutation.
+- **Exposing `GetForUpdateAsync` from the application port.** It makes the caller depend on an
+  EF-oriented loading strategy that MongoDB, Cassandra and non-EF SQL adapters do not share.
 - **Applying the default to the identity provider immediately.** Its framework stores require their
   own integration validation and are outside this API change.

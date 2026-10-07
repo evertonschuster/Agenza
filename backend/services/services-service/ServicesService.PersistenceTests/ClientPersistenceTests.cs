@@ -364,7 +364,7 @@ public class ClientPersistenceTests
     }
 
     [Fact]
-    public async Task QueriesLoadWithoutTracking_AndGetForUpdateLoadsTheClientWithItsContactsTracked()
+    public async Task GetById_LoadsWithoutTracking()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -376,18 +376,13 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var loaded = await context.Clients
-                .Include(c => c.Guardians)
-                .Include(c => c.ReferenceContacts)
-                .SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
+            var loaded = await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None);
 
+            loaded.Should().NotBeNull();
             loaded!.Guardians.Should().HaveCount(2);
             loaded.ReferenceContacts.Should().ContainSingle();
-            context.Entry(loaded).State.Should().Be(EntityState.Detached);
-
-            var tracked = await new ClientRepository(context).GetForUpdateAsync(client.Id, CancellationToken.None);
-
-            context.Entry(tracked!).State.Should().Be(EntityState.Unchanged);
+            context.Entry(loaded!).State.Should().Be(EntityState.Detached);
+            context.ChangeTracker.Entries().Should().BeEmpty();
         }
     }
 
@@ -437,7 +432,8 @@ public class ClientPersistenceTests
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
-            var loaded = (await new ClientRepository(context).GetForUpdateAsync(client.Id, CancellationToken.None))!;
+            var repository = new ClientRepository(context);
+            var loaded = (await repository.GetByIdAsync(client.Id, CancellationToken.None))!;
 
             var result = loaded.Update(
                 FullName.Create("Maria Souza Lima").Value,
@@ -453,6 +449,7 @@ public class ClientPersistenceTests
                 ],
                 [ReferenceContact()]);
             result.IsSuccess.Should().BeTrue();
+            await repository.UpdateAsync(loaded, TestContext.Current.CancellationToken);
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
 

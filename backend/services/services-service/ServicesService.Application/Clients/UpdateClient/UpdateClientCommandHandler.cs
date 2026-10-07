@@ -16,7 +16,7 @@ public sealed class UpdateClientCommandHandler(
     {
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
-        var client = await clientRepository.GetForUpdateAsync(command.ClientId, cancellationToken);
+        var client = await clientRepository.GetByIdAsync(command.ClientId, cancellationToken);
         if (client is null)
         {
             return Result.Failure<ClientResponse>(Error.NotFound("Client.NotFound", "A pessoa não foi encontrada."));
@@ -39,6 +39,8 @@ public sealed class UpdateClientCommandHandler(
         {
             return Result.Failure<ClientResponse>(emailError);
         }
+
+        await clientRepository.UpdateAsync(client, cancellationToken);
 
         var saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
