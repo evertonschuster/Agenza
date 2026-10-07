@@ -1574,6 +1574,8 @@ export interface components {
       guardians: components['schemas']['GuardianResponse'][];
       referenceContacts: components['schemas']['ReferenceContactResponse'][];
     };
+    /** @enum {unknown} */
+    ContactPurpose: 'emergency' | 'operationalSupport' | 'dailyCommunication';
     CreateCategoryCommand: {
       name: string;
     };
@@ -1644,7 +1646,7 @@ export interface components {
       name: string;
       relationship: string;
       phone: null | string;
-      purposes: null | string[];
+      purposes: null | components['schemas']['ContactPurpose'][];
     };
     ReferenceContactResponse: {
       /** Format: uuid */
@@ -1652,7 +1654,7 @@ export interface components {
       name: string;
       relationship: string;
       phone: null | string;
-      purposes: string[];
+      purposes: components['schemas']['ContactPurpose'][];
     };
     ServiceResponse: {
       /** Format: uuid */
@@ -1717,7 +1719,7 @@ export interface components {
       name: string;
       relationship: string;
       phone: null | string;
-      purposes: null | string[];
+      purposes: null | components['schemas']['ContactPurpose'][];
     };
     UpdateServiceCommand: {
       /** Format: uuid */

@@ -64,7 +64,7 @@ public class UpdateClientCommandBindingTests
         command.Guardians.Should().HaveCount(2).And.Contain(guardian => guardian.Name == "Ana Souza");
         command.ReferenceContacts.Should().ContainSingle().Which.Name.Value.Should().Be("Carlos Lima");
         command.ReferenceContacts![0].Name.Value.Should().Be("Carlos Lima");
-        command.ReferenceContacts![0].Purposes.Should().Equal("emergency", "dailyCommunication");
+        command.ReferenceContacts![0].Purposes.Should().Equal(ContactPurpose.Emergency, ContactPurpose.DailyCommunication);
     }
 
     [Fact]

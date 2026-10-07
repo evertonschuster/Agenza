@@ -38,8 +38,8 @@ public class CreateClientCommandValidatorTests
         string name = "Carlos Lima",
         string relationship = "Tio",
         string? phone = null,
-        params string[] purposes) =>
-        new(ClientTestData.Name(name), relationship, phone is null ? null : ClientTestData.Phone(phone), purposes.Length == 0 ? ["emergency"] : purposes);
+        params ContactPurpose[] purposes) =>
+        new(ClientTestData.Name(name), relationship, phone is null ? null : ClientTestData.Phone(phone), purposes.Length == 0 ? [ContactPurpose.Emergency] : purposes);
 
     private async Task<ValidationResult> Validate(CreateClientCommand command) =>
         await _validator.ValidateAsync(command);
@@ -63,8 +63,9 @@ public class CreateClientCommandValidatorTests
             { "guardian name too short", Command(guardians: [Guardian(name: "A")]), "Guardians[0].Name", "ClientContact.InvalidNameLength" },
             { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
             { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
-            { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
-            { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Unknown" },
+            { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
+            { "reference with an undefined purpose", Command(referenceContacts: [Reference(purposes: [(ContactPurpose)3])]), "ReferenceContacts[0].Purposes[0]", "ClientReferenceContact.PurposeUnknown" },
+            { "reference with null purposes", Command(referenceContacts: [new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, null)]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
         };
     }
 
@@ -86,7 +87,7 @@ public class CreateClientCommandValidatorTests
             cpf: ClientTestData.Cpf(),
             notes: "Prefere atendimento à tarde.",
             guardians: [Guardian(phone: "(11) 98888-0000", cpf: ClientTestData.Cpf(ClientTestData.OtherValidCpf))],
-            referenceContacts: [Reference(phone: "11 4000-1000", purposes: ["emergency", "dailyCommunication"])]));
+            referenceContacts: [Reference(phone: "11 4000-1000", purposes: [ContactPurpose.Emergency, ContactPurpose.DailyCommunication])]));
 
         result.IsValid.Should().BeTrue();
     }
@@ -185,15 +186,16 @@ public class CreateClientCommandValidatorTests
         var result = await Validate(Command(referenceContacts:
         [
             new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "", null, []),
-            new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, ["billing"]),
+            new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, []),
         ]));
 
         MessagesFor(result, "ReferenceContacts[0].Relationship").Should()
             .Equal("O vínculo da pessoa de referência é obrigatório.");
         MessagesFor(result, "ReferenceContacts[0].Purposes").Should()
             .Equal("Informe ao menos uma finalidade para a pessoa de referência.");
-        MessagesFor(result, "ReferenceContacts[1].Purposes").Should().ContainSingle()
-            .Which.Should().Contain("emergency");
+        MessagesFor(result, "ReferenceContacts[1].Purposes").Should()
+            .Equal("Informe ao menos uma finalidade para a pessoa de referência.");
+        MessagesFor(result, "ReferenceContacts[1].Relationship").Should().BeEmpty();
     }
 
     [Fact]
@@ -201,9 +203,9 @@ public class CreateClientCommandValidatorTests
     {
         var result = await Validate(Command(referenceContacts:
         [
-            Reference(purposes: ["emergency"]),
-            Reference(purposes: ["operationalSupport", "dailyCommunication"]),
-            Reference(purposes: ["emergency", "operationalSupport", "dailyCommunication"]),
+            Reference(purposes: [ContactPurpose.Emergency]),
+            Reference(purposes: [ContactPurpose.OperationalSupport, ContactPurpose.DailyCommunication]),
+            Reference(purposes: [ContactPurpose.Emergency, ContactPurpose.OperationalSupport, ContactPurpose.DailyCommunication]),
         ]));
 
         result.IsValid.Should().BeTrue();

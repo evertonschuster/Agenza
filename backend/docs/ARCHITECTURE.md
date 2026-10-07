@@ -106,7 +106,7 @@ Vertical slices organise the Application layer; they do not replace the layers
   <Feature>/
     <Entity>Response.cs                    wire DTO with a static From<Entity>(…), shared by the operations
     <Feature>RuleBuilderExtensions.cs      validator rules used by more than one validator — when needed
-    <Concept>Names.cs                      wire string ↔ domain enum translation — when needed (§6)
+    <Feature>JsonOptionsExtensions.cs      registers the JSON converter of the feature's wire enums — when needed (§6)
     <Operation>/
       <Operation>Command.cs | Query.cs     a record; nested input records live in the same file
       <Operation>CommandHandler.cs | QueryHandler.cs
@@ -140,7 +140,7 @@ lines repeated between the create and the edit of the same aggregate are accepte
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
 nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`) — no other domain type,
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`) and enums (§6) — no other domain type,
 no tenant. The
 output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
 the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
@@ -187,10 +187,15 @@ create a child or move it to another root.
   building the value.
 
 A value **is** a value object when it has a format or a normalization (CPF, e-mail, phone), a rule over
-several values (a duration range), a closed set (a palette), a rule that needs a parameter (a birth date
+several values (a duration range), a closed set that carries a rule (a palette with a format), a rule that needs a parameter (a birth date
 and today), when it is money or a percentage, or when more than one type uses its rule. Free text bounded
 only by its length (a name, a description) **may** stay a primitive, validated by its owner with a named
 `DomainError`. The column stores the normalized value.
+
+A set of independent options with no rule beyond membership (the purposes of a contact) is not a value
+object ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)): the options are a plain enum,
+and the entity holds an `IReadOnlySet<TEnum>` of them, keeps its own copy, and refuses an empty set and a
+value that is not a member with named errors, in `Create` and in every behaviour that replaces the set.
 
 **Shared value objects** ([0055](../../docs/adr/0055-shared-string-value-objects.md)) live in
 `Admin.SharedKernel.ValueObjects` when the value has a format and no business context (CPF, full name,
@@ -214,7 +219,7 @@ three pieces from the kernel. A value that is neither a string nor a date stays 
 
 **Errors.** `DomainError(Code, Message)`, declared once per rule as `static readonly` on the type that
 owns it. The code is `<Type>.<Rule>` and talks about the value, not about who uses it
-(`ContactPurposes.Required`, `Client.GuardianRequired`), so it can be reused elsewhere. Messages are pt-BR.
+(`Client.GuardianRequired`, `ClientReferenceContact.PurposesRequired`), so it can be reused elsewhere. Messages are pt-BR.
 
 **Lifecycle.** "Deleted" is `BaseEntity`'s soft delete and nothing else: a repository `Remove`s, the
 save interceptor stamps `DeletedAt`, the query filter hides the row, a deleted id answers 404. Never
@@ -269,10 +274,11 @@ and transactional cleanup. A `try/catch` in a handler is a finding.
 **What dies in gate 1** — malformed JSON, a non-nullable member absent from the body, a value of the
 wrong JSON type, an unknown JSON enum — reaches the client in the canonical shape
 (`AddModelStateProblemDetails`), but with the framework's English message and the generic code
-`Validation.Failed`; only a shared value object brings its own pt-BR message. That is why enums travel
-as strings (§6). A failed body read also carries the framework's entry for the body parameter
-(`command`), which the backend does not remove. The shape is described in
-[`docs/API.md`](../../docs/API.md) §4.3.
+`Validation.Failed`; only a shared value object brings its own pt-BR message. An enum is bound by name
+(§6), so an unknown name dies here too; the converter can also yield a value that is not a member
+(several names in one string), which the validator refuses with `IsInEnum`. A failed body read also
+carries the framework's entry for the body parameter (`command`), which the backend does not remove.
+The shape is described in [`docs/API.md`](../../docs/API.md) §4.3.
 
 **Codes and messages.** `code` is English (`<Type>.<Rule>`, `<Entity>.<Reason>`) and is the contract
 clients branch on. Messages are pt-BR copy written for the end user; the frontend shows them as they
@@ -305,7 +311,9 @@ either; `IgnoreQueryFilters()` belongs to a persistence test that asserts a soft
   ones are converted by `AddValueObjectConversions()` in `ConfigureConventions`. Lengths from the value
   object's constants, never literals. No EF complex types — the InMemory persistence tests do not
   support them.
-- Enums: text, with a `CHECK` built from `Enum.GetNames<T>()`.
+- Enums: text, with a `CHECK` built from `Enum.GetNames<T>()`. A set of options kept in one column is the
+  sum of the members' fixed codes, with a `CHECK` on the range and a `ValueComparer` by set equality; a
+  stored value that no rule would accept today still reads back.
 - Uniqueness: a unique index that includes `TenantId` and filters `"DeletedAt" IS NULL`, plus any
   predicate of the rule itself. The index is the authority; the handler's pre-check only exists to
   give the per-field answer. Case-insensitive uniqueness follows what is displayed: when the
@@ -364,8 +372,11 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
 - The success envelope and the problem shapes come from the shared kernel; never build them by hand.
 - A body with a list is bounded twice: the validator caps the count and the action has a
   `[RequestSizeLimit]`.
-- Enums travel as camelCase strings, translated in Application (`<Concept>Names`), never as JSON
-  enums.
+- Enums travel as camelCase strings: a plain enum named by a `JsonStringEnumConverter<T>` with integers
+  refused, registered by the feature (`<Feature>JsonOptionsExtensions`) and added by the Api to the MVC
+  options and to the minimal-API options, which the OpenAPI generator reads — one registration is not
+  enough. No translation class. Each item of a list of enums has an `IsInEnum` rule with the domain's
+  code ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
 - The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`); instants are UTC.
 - A paged list takes `Page`/`PageSize` with defaults and a validator bounding them, and returns
   `PagedResult<T>`; an unpaged list returns `IReadOnlyList<T>`.
@@ -477,7 +488,8 @@ Re-proposing any of these needs a new ADR that says what changed.
 | Validators that query repositories | duplicated queries and wrong status codes | [0010](../../docs/adr/0010-cross-aggregate-checks-in-validators.md) → [0012](../../docs/adr/0012-revert-cross-aggregate-checks-to-handlers-and-domain.md) |
 | Conflict messages per constraint | Application would know index names | [0048](../../docs/adr/0048-database-failures-are-generic-to-the-user.md) |
 | Several conflicts merged in one answer (`Error.Combine`) | a kernel-wide helper for one call site | [0044](../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md) |
-| A `Deleted` status; JSON enums; EF complex types | see §3, §6, §5 | [0044](../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md) |
+| A `Deleted` status; EF complex types | see §3, §5 | [0044](../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md) |
+| A `<Concept>Names` translation class, a value object wrapping a set of enum options, `[Flags]` for a set of options | a plain enum named by a converter, and a set on the entity | [0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md) |
 | `IgnoreQueryFilters()` in a repository | tenant scope would depend on remembering a predicate | [0046](../../docs/adr/0046-separate-soft-delete-and-tenant-query-filters.md) |
 | Time zones | UTC only | [0045](../../docs/adr/0045-backend-works-in-utc.md) |
 | Testcontainers, `WebApplicationFactory` | maintenance cost; manual verification instead | [0015](../../docs/adr/0015-remove-integration-tests-unit-tests-only-in-ci.md), [0026](../../docs/adr/0026-remove-dedicated-runtime-tests.md) |

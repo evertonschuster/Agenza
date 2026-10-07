@@ -121,7 +121,7 @@ public class UpdateClientCommandHandlerTests
         var contact = _client.ReferenceContacts.Single();
         var command = Command(
             guardians: [Guardian("Ana Lima"), Guardian("Cris Souza", "Tia", "(11) 98888-0000", ClientTestData.OtherValidCpf)],
-            referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Dias"), "Primo", null, ["operationalSupport"])]);
+            referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Dias"), "Primo", null, [ContactPurpose.OperationalSupport])]);
 
         var result = await Handler().Handle(command, CancellationToken.None);
 
@@ -137,7 +137,7 @@ public class UpdateClientCommandHandlerTests
         var updatedContact = response.ReferenceContacts.Should().ContainSingle().Subject;
         updatedContact.Id.Should().NotBe(contact.Id);
         updatedContact.Name.Should().Be("Carlos Dias");
-        updatedContact.Purposes.Should().Equal("operationalSupport");
+        updatedContact.Purposes.Should().Equal(ContactPurpose.OperationalSupport);
     }
 
     [Fact]

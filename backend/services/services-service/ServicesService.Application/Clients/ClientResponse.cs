@@ -37,7 +37,7 @@ public sealed record ReferenceContactResponse(
     string Name,
     string Relationship,
     string? Phone,
-    IReadOnlyList<string> Purposes)
+    IReadOnlyList<ContactPurpose> Purposes)
 {
     public static ReferenceContactResponse FromReferenceContact(ClientReferenceContact contact) =>
         new(
@@ -45,5 +45,5 @@ public sealed record ReferenceContactResponse(
             contact.Name,
             contact.Relationship,
             contact.Phone?.Value,
-            ContactPurposeNames.ToNames(contact.Purposes.Value));
+            contact.Purposes.Order().ToList());
 }

@@ -19,4 +19,4 @@ public sealed record UpdateReferenceContactInput(
     FullName Name,
     string Relationship,
     PhoneNumber? Phone,
-    IReadOnlyList<string>? Purposes);
+    IReadOnlyList<ContactPurpose>? Purposes);

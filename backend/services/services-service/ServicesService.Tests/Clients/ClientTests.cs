@@ -91,7 +91,7 @@ public class ClientTests
         var result = Create(
             birthDate: new DateOnly(2015, 3, 10),
             guardians: [ClientTestData.Guardian()],
-            referenceContacts: [ClientTestData.ReferenceContact(ContactPurpose.Emergency | ContactPurpose.OperationalSupport)]);
+            referenceContacts: [ClientTestData.ReferenceContact(ContactPurpose.Emergency, ContactPurpose.OperationalSupport)]);
 
         result.IsSuccess.Should().BeTrue();
         var client = result.Value;
@@ -101,7 +101,7 @@ public class ClientTests
         guardian.Name.Should().Be("Ana Souza");
         var reference = client.ReferenceContacts.Should().ContainSingle().Subject;
         reference.ClientId.Should().Be(client.Id);
-        reference.Purposes.Value.Should().Be(ContactPurpose.Emergency | ContactPurpose.OperationalSupport);
+        reference.Purposes.Should().BeEquivalentTo([ContactPurpose.Emergency, ContactPurpose.OperationalSupport]);
     }
 
     [Fact]

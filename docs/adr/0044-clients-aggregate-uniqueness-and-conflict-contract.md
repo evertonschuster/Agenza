@@ -1,7 +1,9 @@
 # ADR 0044 — Clients: person aggregate, uniqueness rules and conflict contract
 
 Status: accepted (2026-10); the PascalCase key casing of the conflict contract (`Cpf`, `Email`) is superseded by
-[ADR 0051](0051-camelcase-error-keys-on-the-wire.md), which writes them as `cpf`, `email` on the wire
+[ADR 0051](0051-camelcase-error-keys-on-the-wire.md), which writes them as `cpf`, `email` on the wire; the
+`ContactPurposes` value object, the `ContactPurposeNames` translation and the "not a JSON enum" rule for
+reference-contact purposes are superseded by [ADR 0058](0058-closed-set-members-are-plain-enums.md)
 
 ## Context
 

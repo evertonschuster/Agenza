@@ -4,14 +4,6 @@ public static class UpdateClientCommandExtensions
 {
     public static DomainResult ApplyTo(this UpdateClientCommand command, Client client, DateOnly today)
     {
-        var referenceContactsResult = command.ReferenceContacts.ToReferenceContacts();
-        if (referenceContactsResult.IsFailure)
-        {
-            return referenceContactsResult;
-        }
-
-        var guardians = command.Guardians.ToGuardians();
-
         return client.Update(
             command.FullName,
             command.BirthDate,
@@ -20,8 +12,8 @@ public static class UpdateClientCommandExtensions
             command.Cpf,
             command.AdministrativeNotes,
             today,
-            guardians,
-            referenceContactsResult.Value);
+            command.Guardians.ToGuardians(),
+            command.ReferenceContacts.ToReferenceContacts());
     }
 
     private static List<GuardianData> ToGuardians(this IReadOnlyList<UpdateGuardianInput>? inputs)
@@ -41,38 +33,25 @@ public static class UpdateClientCommandExtensions
         return new GuardianData(input.Name, input.Relationship, input.Phone, input.Cpf);
     }
 
-    private static DomainResult<List<ReferenceContactData>> ToReferenceContacts(
+    private static List<ReferenceContactData> ToReferenceContacts(
         this IReadOnlyList<UpdateReferenceContactInput>? inputs)
     {
         var referenceContacts = new List<ReferenceContactData>();
 
         foreach (var input in inputs ?? [])
         {
-            var contactResult = input.ToReferenceContact();
-            if (contactResult.IsFailure)
-            {
-                return DomainResult.Failure<List<ReferenceContactData>>(contactResult.Error);
-            }
-
-            referenceContacts.Add(contactResult.Value);
+            referenceContacts.Add(input.ToReferenceContact());
         }
 
-        return DomainResult.Success(referenceContacts);
+        return referenceContacts;
     }
 
-    private static DomainResult<ReferenceContactData> ToReferenceContact(
-        this UpdateReferenceContactInput input)
+    private static ReferenceContactData ToReferenceContact(this UpdateReferenceContactInput input)
     {
-        var purposesResult = ContactPurposes.Create(ContactPurposeNames.ToPurposes(input.Purposes));
-        if (purposesResult.IsFailure)
-        {
-            return DomainResult.Failure<ReferenceContactData>(purposesResult.Error);
-        }
-
-        return DomainResult.Success(new ReferenceContactData(
+        return new ReferenceContactData(
             input.Name,
             input.Relationship,
             input.Phone,
-            purposesResult.Value));
+            new HashSet<ContactPurpose>(input.Purposes ?? []));
     }
 }

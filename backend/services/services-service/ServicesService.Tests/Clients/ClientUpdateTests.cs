@@ -54,7 +54,7 @@ public class ClientUpdateTests
         var oldReferenceContactId = client.ReferenceContacts.Single().Id;
         var notes = AdministrativeNotes.Create("Prefere a tarde.").Value;
         GuardianData[] guardians = [new GuardianData("Ana Lima", "Tia", ClientTestData.Phone(), ClientTestData.Cpf())];
-        var purposes = ContactPurposes.Create(ContactPurpose.OperationalSupport | ContactPurpose.DailyCommunication).Value;
+        var purposes = ClientTestData.Purposes(ContactPurpose.OperationalSupport, ContactPurpose.DailyCommunication);
         ReferenceContactData[] referenceContacts = [new ReferenceContactData(ClientTestData.Name("Carlos Dias"), "Primo", null, purposes)];
 
         var result = client.Update(
@@ -84,7 +84,7 @@ public class ClientUpdateTests
         var referenceContact = client.ReferenceContacts.Should().ContainSingle().Subject;
         referenceContact.Id.Should().NotBe(oldReferenceContactId);
         referenceContact.Name.Should().Be("Carlos Dias");
-        referenceContact.Purposes.Should().Be(purposes);
+        referenceContact.Purposes.Should().BeEquivalentTo([ContactPurpose.OperationalSupport, ContactPurpose.DailyCommunication]);
     }
 
     [Fact]
@@ -112,6 +112,22 @@ public class ClientUpdateTests
         result.Error.Code.Should().Be("ClientContact.InvalidNameLength");
         client.FullName.Should().Be(ClientTestData.Name("Paula Rocha"));
         client.Guardians.Select(guardian => guardian.Id).Should().Equal(oldGuardianIds);
+    }
+
+    [Fact]
+    public void Update_WithAReferenceContactWithoutPurposes_LeavesTheAggregateUntouched()
+    {
+        var client = ClientWithContacts();
+        var oldReferenceContactId = client.ReferenceContacts.Single().Id;
+
+        var result = Update(
+            client,
+            referenceContacts: [new ReferenceContactData(ClientTestData.Name("Carlos Dias"), "Primo", null, ClientTestData.Purposes())]);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("ClientReferenceContact.PurposesRequired");
+        client.FullName.Should().Be(ClientTestData.Name("Paula Rocha"));
+        client.ReferenceContacts.Single().Id.Should().Be(oldReferenceContactId);
     }
 
     [Fact]

@@ -47,12 +47,12 @@ public class UpdateClientCommandValidatorTests
         string name = "Carlos Lima",
         string relationship = "Tio",
         string? phone = null,
-        params string[] purposes) =>
+        params ContactPurpose[] purposes) =>
         new(
             ClientTestData.Name(name),
             relationship,
             phone is null ? null : ClientTestData.Phone(phone),
-            purposes.Length == 0 ? ["emergency"] : purposes);
+            purposes.Length == 0 ? [ContactPurpose.Emergency] : purposes);
 
     private async Task<ValidationResult> Validate(UpdateClientCommand command) =>
         await _validator.ValidateAsync(command);
@@ -79,8 +79,9 @@ public class UpdateClientCommandValidatorTests
             { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
             { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
             { "reference relationship missing", Command(referenceContacts: [Reference(relationship: "")]), "ReferenceContacts[0].Relationship", "ClientContact.RelationshipRequired" },
-            { "reference without purposes", Command(referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Required" },
-            { "reference unknown purpose", Command(referenceContacts: [Reference(purposes: ["billing"])]), "ReferenceContacts[0].Purposes", "ContactPurposes.Unknown" },
+            { "reference without purposes", Command(referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
+            { "reference with an undefined purpose", Command(referenceContacts: [Reference(purposes: [(ContactPurpose)3])]), "ReferenceContacts[0].Purposes[0]", "ClientReferenceContact.PurposeUnknown" },
+            { "reference with null purposes", Command(referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, null)]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
         };
     }
 
@@ -108,7 +109,7 @@ public class UpdateClientCommandValidatorTests
             ],
             referenceContacts:
             [
-                Reference(Guid.NewGuid(), phone: "11 4000-1000", purposes: ["emergency", "dailyCommunication"]),
+                Reference(Guid.NewGuid(), phone: "11 4000-1000", purposes: [ContactPurpose.Emergency, ContactPurpose.DailyCommunication]),
                 Reference(),
             ]));
 

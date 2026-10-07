@@ -63,7 +63,7 @@ public class ClientPersistenceTests
 
     private static ReferenceContactData ReferenceContact()
     {
-        return new ReferenceContactData(FullName.Create("Carlos Lima").Value, "Tio", null, ContactPurposes.Create(ContactPurpose.Emergency).Value);
+        return new ReferenceContactData(FullName.Create("Carlos Lima").Value, "Tio", null, new HashSet<ContactPurpose> { ContactPurpose.Emergency });
     }
 
     private static CpfNumber Cpf(string digits)
@@ -128,7 +128,7 @@ public class ClientPersistenceTests
             loaded.Status.Should().Be(ClientStatus.Active);
             loaded.TenantId.Should().Be(tenantId);
             loaded.Guardians.Should().ContainSingle().Which.ClientId.Should().Be(client.Id);
-            loaded.ReferenceContacts.Should().ContainSingle().Which.Purposes.Value.Should().Be(ContactPurpose.Emergency);
+            loaded.ReferenceContacts.Should().ContainSingle().Which.Purposes.Should().BeEquivalentTo([ContactPurpose.Emergency]);
         }
     }
 

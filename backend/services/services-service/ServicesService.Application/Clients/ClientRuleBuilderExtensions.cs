@@ -60,15 +60,19 @@ public static class ClientRuleBuilderExtensions
             .WithMessage($"O vínculo {subject} deve ter no máximo {ClientContact.RelationshipMaxLength} caracteres.");
     }
 
-    public static IRuleBuilderOptions<T, IReadOnlyList<string>?> MustHaveValidPurposes<T>(
-        this IRuleBuilderInitial<T, IReadOnlyList<string>?> rule)
+    public static IRuleBuilderOptions<T, IReadOnlyList<ContactPurpose>?> MustHaveAPurpose<T>(
+        this IRuleBuilder<T, IReadOnlyList<ContactPurpose>?> rule)
     {
-        return rule.Cascade(CascadeMode.Stop)
-            .Must(purposes => purposes is { Count: > 0 })
-            .WithErrorCode(ContactPurposes.Required.Code)
-            .WithMessage("Informe ao menos uma finalidade para a pessoa de referência.")
-            .Must(ContactPurposeNames.AreKnown)
-            .WithErrorCode(ContactPurposeNames.UnknownCode)
-            .WithMessage(ContactPurposeNames.UnknownMessage);
+        return rule.Must(purposes => purposes is { Count: > 0 })
+            .WithErrorCode(ClientReferenceContact.PurposesRequired.Code)
+            .WithMessage("Informe ao menos uma finalidade para a pessoa de referência.");
+    }
+
+    public static IRuleBuilderOptions<T, ContactPurpose> MustBeAKnownPurpose<T>(
+        this IRuleBuilder<T, ContactPurpose> rule)
+    {
+        return rule.IsInEnum()
+            .WithErrorCode(ClientReferenceContact.PurposeUnknown.Code)
+            .WithMessage("Informe apenas finalidades válidas para a pessoa de referência.");
     }
 }

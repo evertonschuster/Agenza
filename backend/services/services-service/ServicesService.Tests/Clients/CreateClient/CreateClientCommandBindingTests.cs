@@ -53,7 +53,7 @@ public class CreateClientCommandBindingTests
         command.Cpf!.Value.Should().Be(ClientTestData.ValidCpfDigits);
         command.AdministrativeNotes!.Value.Should().Be("Prefere contato pela manhã.");
         command.ReferenceContacts.Should().ContainSingle()
-            .Which.Purposes.Should().Equal("emergency", "dailyCommunication");
+            .Which.Purposes.Should().Equal(ContactPurpose.Emergency, ContactPurpose.DailyCommunication);
     }
 
     [Fact]

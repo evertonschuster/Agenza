@@ -79,7 +79,7 @@ public class CreateClientCommandHandlerTests
             guardians: [new GuardianInput("Ana Souza", "Mãe", ClientTestData.Phone("(11) 98888-0000"), ClientTestData.Cpf(ClientTestData.OtherValidCpf))],
             referenceContacts:
             [
-                new ReferenceContactInput(ClientTestData.Name(" Carlos Lima "), "Tio", ClientTestData.Phone("11 4000-1000"), ["emergency", "dailyCommunication"]),
+                new ReferenceContactInput(ClientTestData.Name(" Carlos Lima "), "Tio", ClientTestData.Phone("11 4000-1000"), [ContactPurpose.DailyCommunication, ContactPurpose.Emergency, ContactPurpose.Emergency]),
             ]);
 
         var result = await Handler().Handle(command, CancellationToken.None);
@@ -101,7 +101,7 @@ public class CreateClientCommandHandlerTests
         var reference = response.ReferenceContacts.Should().ContainSingle().Subject;
         reference.Name.Should().Be("Carlos Lima");
         reference.Phone.Should().Be("11 4000-1000");
-        reference.Purposes.Should().Equal("emergency", "dailyCommunication");
+        reference.Purposes.Should().Equal(ContactPurpose.Emergency, ContactPurpose.DailyCommunication);
     }
 
     [Fact]

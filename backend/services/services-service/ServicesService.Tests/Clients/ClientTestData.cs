@@ -43,9 +43,18 @@ internal static class ClientTestData
         return new GuardianData(name, relationship, null, null);
     }
 
-    public static ReferenceContactData ReferenceContact(ContactPurpose purposes = ContactPurpose.Emergency)
+    public static IReadOnlySet<ContactPurpose> Purposes(params ContactPurpose[] purposes)
     {
-        return new ReferenceContactData(Name("Carlos Lima"), "Tio", null, ContactPurposes.Create(purposes).Value);
+        return new HashSet<ContactPurpose>(purposes);
+    }
+
+    public static ReferenceContactData ReferenceContact(params ContactPurpose[] purposes)
+    {
+        return new ReferenceContactData(
+            Name("Carlos Lima"),
+            "Tio",
+            null,
+            Purposes(purposes.Length == 0 ? [ContactPurpose.Emergency] : purposes));
     }
 
     public static Client ExistingClient()
