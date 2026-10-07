@@ -451,7 +451,8 @@ touches that slice, not in bulk.
 | Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore`; a shared one, `Admin.SharedKernel.ValueObjects/CpfNumber.cs` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md), [0055](../../docs/adr/0055-shared-string-value-objects.md) |
 | Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
 | Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: `GetByIdAsync` → `NotFound` → `client.Update(command.ToClientData(), today)` → pre-checks that exclude the aggregate itself → `UpdateAsync` → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
-| Read, delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
+| Read by id | `GetClientByIdQueryHandler.cs`, `GetClientByIdQueryValidator.cs`: repository → `NotFound` or `<Entity>Response.From<Entity>`; the id rule shared through `ClientRuleBuilderExtensions` | `GetTagByIdQueryHandler.cs`: a message built from the id, no validator | §4, §6, [0060](../../docs/adr/0060-clients-read-by-id-contract.md) |
+| Delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 
 This table is the only place that names reference files. When a newer slice supersedes one, change

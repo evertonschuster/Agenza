@@ -562,7 +562,89 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    get: {
+      parameters: {
+        query?: never;
+        header?: never;
+        path: {
+          id: string;
+          version: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'text/plain': components['schemas']['ApiResponseOfClientResponse'];
+            'application/json': components['schemas']['ApiResponseOfClientResponse'];
+            'text/json': components['schemas']['ApiResponseOfClientResponse'];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'text/plain': components['schemas']['ApiProblemDetails'];
+            'application/json': components['schemas']['ApiProblemDetails'];
+            'text/json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'text/plain': components['schemas']['ApiProblemDetails'];
+            'application/json': components['schemas']['ApiProblemDetails'];
+            'text/json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+      };
+    };
     put: {
       parameters: {
         query?: never;

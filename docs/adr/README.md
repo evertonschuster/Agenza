@@ -10,7 +10,7 @@ superseded is historical evidence, not current implementation guidance.
 | Service and data topology | 0001, 0002, 0003, 0024, 0029 |
 | Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049, 0051, 0057 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
-| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059 |
+| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059, 0060 |
 | Dates, times and time zones | 0045 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
 | Authentication UX and AI delegation | 0020, 0022 |
@@ -81,4 +81,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0054 Serilog logging pipeline · 0055 string value objects shared by every service ·
 0056 client contact composition replacement · 0057 explicit services query tracking ·
 0058 closed-set members are plain enums bound by name ·
-0059 aggregate data records and handler-owned domain calls.
+0059 aggregate data records and handler-owned domain calls ·
+0060 clients read by id: one response, no age on the wire, contacts ordered by name.

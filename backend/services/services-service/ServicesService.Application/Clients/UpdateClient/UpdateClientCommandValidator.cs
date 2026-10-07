@@ -8,10 +8,7 @@ public sealed class UpdateClientCommandValidator : AbstractValidator<UpdateClien
     {
         DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
-        RuleFor(command => command.ClientId)
-            .NotEmpty()
-            .WithErrorCode("Client.IdRequired")
-            .WithMessage("O id da pessoa é obrigatório.");
+        RuleFor(command => command.ClientId).MustHaveAClientId();
 
         RuleFor(command => command.Guardians).MustNotExceedTheGuardianLimit();
 
