@@ -8,7 +8,6 @@ public sealed class DeactivateClientCommandHandler(
     IClientRepository clientRepository,
     IAppointmentRepository appointmentRepository,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider,
     ILogger<DeactivateClientCommandHandler> logger) : ICommandHandler<DeactivateClientCommand, ClientResponse>
 {
     public async Task<Result<ClientResponse>> Handle(DeactivateClientCommand command, CancellationToken cancellationToken)
@@ -56,13 +55,8 @@ public sealed class DeactivateClientCommandHandler(
 
     private async Task<Error?> FindUpcomingAppointmentConflictAsync(Client client, CancellationToken cancellationToken)
     {
-        var now = timeProvider.GetUtcNow();
-
-        var hasUpcomingAppointment = await appointmentRepository.ExistsNotCancelledStartingAfterAsync(
-            client.Id,
-            now,
-            cancellationToken);
-        if (!hasUpcomingAppointment)
+        var hasUpcomingAppointments = await appointmentRepository.HasUpcomingAppointmentsAsync(client.Id, cancellationToken);
+        if (!hasUpcomingAppointments)
         {
             return null;
         }

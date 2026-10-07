@@ -34,19 +34,21 @@ snapshot the handler loaded, overwriting an edit saved meanwhile. `ClientPersist
 second one against the all-columns write.
 
 **Deactivation is blocked by upcoming appointments (#157).** The handler asks a port,
-`IAppointmentRepository.ExistsNotCancelledStartingAfterAsync(clientId, instant)`, with the operation's instant
-(`TimeProvider`, UTC, [ADR 0045](0045-backend-works-in-utc.md)). The rule is **strict**: an appointment blocks when its
-start is after the instant. An appointment that starts exactly at the instant, one already in progress (it started in
-the past) and a cancelled one never block. A blocked deactivation answers `409 Client.HasUpcomingAppointments`, in
-pt-BR telling the user to resolve the appointments, and the person stays active.
+`IAppointmentRepository.HasUpcomingAppointmentsAsync(clientId)`, and the adapter decides what "upcoming" means with
+`TimeProvider` in UTC ([ADR 0045](0045-backend-works-in-utc.md)), so the port carries no instant. The rule is
+**strict**: an appointment is upcoming when its start (the start of the service, not of the preparation) is after the
+instant the query runs, and it is not cancelled. An appointment that starts exactly at that instant, one already in
+progress (it started in the past) and a cancelled one never block. A blocked deactivation answers
+`409 Client.HasUpcomingAppointments`, in pt-BR telling the user to resolve the appointments, and the person stays
+active.
 
 **Until #153 exists the port has a provisional adapter**, `PendingAppointmentRepository`, which answers "none". That is
 true today, because nothing can create an appointment, and it lets the rule and its endpoint ship now. #153 replaces the
-registration in `Infrastructure/DependencyInjection.cs` with the real repository in the same change that creates the
-first appointment, and deletes the adapter. What this change's unit tests prove is the handler's half: it passes the
-operation's instant, it honours the answer, and a blocked or repeated call writes nothing. What they cannot prove is
-the query's half (the strict start comparison and the cancelled status over real rows); those two tests belong to
-#153's persistence tests.
+registration in `Infrastructure/DependencyInjection.cs` with the real repository, which reads the clock and applies the
+rule above, in the same change that creates the first appointment, and deletes the adapter. What this change's unit
+tests prove is the handler's half: it asks once, it honours the answer, and a blocked or repeated call writes nothing.
+What they cannot prove is the query's half (the strict start comparison and the cancelled status over real rows, with a
+fixed clock); those tests belong to #153's persistence tests.
 
 **Reactivation is blocked by an active person's e-mail (#158).** Before the transition the handler runs
 `FindActiveByEmailAsync(email, excludeClientId: self)`. A conflict answers `409 Client.DuplicateEmail`, keyed `email`,
@@ -90,5 +92,8 @@ rows with the e-mail), 6 parallel deactivations, and the OpenAPI document.
   the transition and the rule's handler half undone for no gain; the port makes the later swap one registration.
 - **`>=` instead of `>` for the start.** Also defensible; the issue says "início futuro" and an appointment that starts at
   the instant of the click has started. A one-line change in the adapter #153 writes.
+- **An instant parameter on the port** (`ExistsNotCancelledStartingAfterAsync(clientId, instant)`, the first version of
+  this change). It kept the clock in the handler, but put a `DateTimeOffset` and a three-condition name on a question
+  the handler only needs answered as yes or no; changed after review.
 - **A code of its own for the reactivation e-mail conflict.** `Client.DuplicateEmail` already carries the field and the
   `meta` the interface uses to open the other person; a second code would make the interface handle two for one cause.

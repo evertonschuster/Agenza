@@ -4,10 +4,7 @@ namespace ServicesService.Infrastructure.Repositories;
 
 public class PendingAppointmentRepository : IAppointmentRepository
 {
-    public Task<bool> ExistsNotCancelledStartingAfterAsync(
-        Guid clientId,
-        DateTimeOffset instant,
-        CancellationToken cancellationToken)
+    public Task<bool> HasUpcomingAppointmentsAsync(Guid clientId, CancellationToken cancellationToken)
     {
         return Task.FromResult(false);
     }

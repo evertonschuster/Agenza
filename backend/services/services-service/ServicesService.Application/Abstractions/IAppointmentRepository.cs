@@ -2,5 +2,5 @@ namespace ServicesService.Application.Abstractions;
 
 public interface IAppointmentRepository
 {
-    Task<bool> ExistsNotCancelledStartingAfterAsync(Guid clientId, DateTimeOffset instant, CancellationToken cancellationToken);
+    Task<bool> HasUpcomingAppointmentsAsync(Guid clientId, CancellationToken cancellationToken);
 }

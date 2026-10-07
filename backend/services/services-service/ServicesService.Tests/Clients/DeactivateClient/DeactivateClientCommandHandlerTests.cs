@@ -7,8 +7,6 @@ namespace ServicesService.Tests.Clients.DeactivateClient;
 
 public class DeactivateClientCommandHandlerTests
 {
-    private static readonly DateTimeOffset Now = new(2026, 10, 7, 14, 0, 0, TimeSpan.Zero);
-
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
     private readonly IAppointmentRepository _appointments = Substitute.For<IAppointmentRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
@@ -19,13 +17,12 @@ public class DeactivateClientCommandHandlerTests
     {
         _repository.GetByIdAsync(_client.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(_client));
         _repository.UpdateStatusAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
-        _appointments.ExistsNotCancelledStartingAfterAsync(Arg.Any<Guid>(), Arg.Any<DateTimeOffset>(), Arg.Any<CancellationToken>())
+        _appointments.HasUpcomingAppointmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(false));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
 
-    private DeactivateClientCommandHandler Handler(DateTimeOffset? utcNow = null) =>
-        new(_repository, _appointments, _unitOfWork, new FixedTimeProvider(utcNow ?? Now), _logger);
+    private DeactivateClientCommandHandler Handler() => new(_repository, _appointments, _unitOfWork, _logger);
 
     private static Client ClientWithContacts()
     {
@@ -77,17 +74,17 @@ public class DeactivateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_AsksForAnAppointmentStartingAfterTheInstantOfTheOperation()
+    public async Task Handle_AsksOnceForTheUpcomingAppointmentsOfTheClient()
     {
-        await Handler(Now).Handle(new DeactivateClientCommand(_client.Id), CancellationToken.None);
+        await Handler().Handle(new DeactivateClientCommand(_client.Id), CancellationToken.None);
 
-        await _appointments.Received(1).ExistsNotCancelledStartingAfterAsync(_client.Id, Now, Arg.Any<CancellationToken>());
+        await _appointments.Received(1).HasUpcomingAppointmentsAsync(_client.Id, Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_WithAnUpcomingNotCancelledAppointment_ReturnsAConflictAndKeepsTheClientActive()
+    public async Task Handle_WithUpcomingAppointments_ReturnsAConflictAndKeepsTheClientActive()
     {
-        _appointments.ExistsNotCancelledStartingAfterAsync(_client.Id, Now, Arg.Any<CancellationToken>())
+        _appointments.HasUpcomingAppointmentsAsync(_client.Id, Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(true));
 
         var result = await Handler().Handle(new DeactivateClientCommand(_client.Id), CancellationToken.None);
@@ -113,10 +110,7 @@ public class DeactivateClientCommandHandlerTests
         result.Error.Type.Should().Be(ErrorType.NotFound);
         result.Error.Code.Should().Be("Client.NotFound");
         result.Error.Message.Should().Be("A pessoa não foi encontrada.");
-        await _appointments.DidNotReceive().ExistsNotCancelledStartingAfterAsync(
-            Arg.Any<Guid>(),
-            Arg.Any<DateTimeOffset>(),
-            Arg.Any<CancellationToken>());
+        await _appointments.DidNotReceive().HasUpcomingAppointmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await AssertNothingWasPersisted();
     }
 
@@ -131,10 +125,7 @@ public class DeactivateClientCommandHandlerTests
         result.Value.Id.Should().Be(_client.Id);
         result.Value.Status.Should().Be("inactive");
         result.Value.Guardians.Should().HaveCount(2);
-        await _appointments.DidNotReceive().ExistsNotCancelledStartingAfterAsync(
-            Arg.Any<Guid>(),
-            Arg.Any<DateTimeOffset>(),
-            Arg.Any<CancellationToken>());
+        await _appointments.DidNotReceive().HasUpcomingAppointmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await AssertNothingWasPersisted();
     }
 
