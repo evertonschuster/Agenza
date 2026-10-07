@@ -37,7 +37,8 @@ facts about the input, one `RuleFor` per property:
   under `.When(count is within the cap)`, so an oversized list is not validated item by item. The item
   validator is a `sealed class` in the same file.
 - Rules that need "today" inject `TimeProvider` and compute it in a local `Today()`.
-- A rule used by two validators moves to `<Feature>RuleBuilderExtensions` as `MustBeValid<Thing>()`.
+- A rule two validators share is written in both. There is no shared rule class or extension (ADR 0061);
+  the domain's constants and codes keep the copies aligned.
 
 Never in a validator: `async` rules, a repository, the `DbContext`, existence or uniqueness, a call to a
 value object's `Create` to decide (the validator restates the rule and reuses the code — ADR 0044), a
@@ -96,7 +97,7 @@ Where shared logic goes:
 | --- | --- |
 | a rule | the domain |
 | a read | a repository method |
-| an input rule | `<Feature>RuleBuilderExtensions` |
+| an input rule | stays repeated in each validator |
 | a mapping to the wire | `<Entity>Response.From<Entity>` |
 | a few lines of orchestration | stays repeated in each handler |
 

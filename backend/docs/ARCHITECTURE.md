@@ -105,7 +105,6 @@ Vertical slices organise the Application layer; they do not replace the layers
                                            DomainErrorMapper; PersistenceResult
   <Feature>/
     <Entity>Response.cs                    wire DTO with a static From<Entity>(…), shared by the operations
-    <Feature>RuleBuilderExtensions.cs      validator rules used by more than one validator — when needed
     <Operation>/
       <Operation>Command.cs | Query.cs     a record; nested input records live in the same file
       <Operation>CommandHandler.cs | QueryHandler.cs
@@ -136,9 +135,9 @@ Vertical slices organise the Application layer; they do not replace the layers
 **A use case owns its orchestration**
 ([0049](../../docs/adr/0049-conventions-for-new-backend-slices.md)). One handler per operation, no base
 handler, and no class between handlers that orchestrates — no loader, manager, service or helper. What
-two handlers share has a home: a rule goes to the domain, a read to a repository method, an input rule
-to `<Feature>RuleBuilderExtensions`, a mapping to `<Entity>Response.From<Entity>`. A few orchestration
-lines repeated between the create and the edit of the same aggregate are accepted.
+two handlers share has a home: a rule goes to the domain, a read to a repository method, a mapping to
+`<Entity>Response.From<Entity>`. A few orchestration lines repeated between the create and the edit of the
+same aggregate are accepted, and so is an input rule repeated between their validators (§4).
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
 nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
@@ -253,7 +252,9 @@ different kind of rule:
 carries the domain's code with `.WithErrorCode(<DomainError>.Code)` and its own pt-BR message naming
 the field; limits come from the domain's constants. It restates the rule rather than calling the
 domain to decide, and reuses the code, so a rule answers the same code whichever gate catches it. A
-rule shared by several validators moves to `<Feature>RuleBuilderExtensions`.
+rule two validators share is written in both: there is no `<Feature>RuleBuilderExtensions`
+([0061](../../docs/adr/0061-validators-write-their-own-rules.md)). The domain's constants and codes keep the copies
+aligned, and each validator's tests assert the code.
 
 **Domain.** Defence in depth. Its messages are the fallback; the validator's are what the user
 normally sees.
@@ -446,7 +447,7 @@ touches that slice, not in bulk.
 | --- | --- | --- | --- |
 | Handler: pre-checks, field conflicts with `meta`, generic save failure | `ServicesService.Application/Clients/CreateClient/CreateClientCommandHandler.cs` | `*PersistenceErrorMapper.cs` mapping constraint names to messages | §4, [0048](../../docs/adr/0048-database-failures-are-generic-to-the-user.md) |
 | Orchestration owned by the handler | `CreateClientCommandHandler.cs` | `ServiceRelationshipLoader`, a class shared by two handlers | §2, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
-| Validator codes and messages | `CreateClientCommandValidator.cs`, `ClientRuleBuilderExtensions.cs` | rules without `.WithErrorCode`, which leak `NotEmptyValidator`/`PredicateValidator` to the API | §4, [0044](../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md) |
+| Validator codes and messages | `CreateClientCommandValidator.cs`, `UpdateClientCommandValidator.cs` | rules without `.WithErrorCode`, which leak `NotEmptyValidator`/`PredicateValidator` to the API | §4, [0044](../../docs/adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md) |
 | Domain errors | `static readonly DomainError` per rule on `Client` and on the value objects | one inline `new DomainError("<Entity>.Invalid", …)` shared by every rule of an entity | §3 |
 | Value objects | `ServicesService.Domain/ValueObjects/` with `Create`/`Restore`; a shared one, `Admin.SharedKernel.ValueObjects/CpfNumber.cs` | money and a percentage as primitives validated inside the entity (`Service`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md), [0055](../../docs/adr/0055-shared-string-value-objects.md) |
 | Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
@@ -483,6 +484,7 @@ Re-proposing any of these needs a new ADR that says what changed.
 | --- | --- | --- |
 | MediatR, FluentAssertions | commercial licences; the dispatcher is a hundred lines | [0005](../../docs/adr/0005-cqrs-vertical-slice-result-pattern.md) |
 | A base handler, generic CRUD, loader/manager/service classes between handlers | each use case reads alone; the repository is the shared seam | [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
+| `<Feature>RuleBuilderExtensions`, a base validator | each validator reads alone; a rule two validators share is repeated | [0061](../../docs/adr/0061-validators-write-their-own-rules.md) |
 | `<X>Factory` and builder classes, public constructors, mapping libraries | static `Create`/`Restore` and `From<Entity>` are explicit | [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
 | Navigations between aggregates | couples two consistency boundaries to save a query | [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
 | Caching, projections in repositories, raw SQL, gap-free sequences — without evidence | the simplest correct form first | [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |

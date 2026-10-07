@@ -13,24 +13,32 @@ public sealed class UpdateClientCommandValidator : AbstractValidator<UpdateClien
             .WithErrorCode("Client.IdRequired")
             .WithMessage("O id da pessoa é obrigatório.");
 
-        RuleFor(command => command.Guardians).MustNotExceedTheGuardianLimit();
+        RuleFor(command => command.Guardians)
+            .Must(guardians => guardians is null || guardians.Count <= Client.MaxGuardians)
+            .WithErrorCode(Client.TooManyGuardians.Code)
+            .WithMessage($"Informe no máximo {Client.MaxGuardians} responsáveis.");
 
         RuleFor(command => command.Guardians)
-            .MustHaveAGuardian()
+            .Must(guardians => guardians is { Count: > 0 })
+            .WithErrorCode(Client.GuardianRequired.Code)
+            .WithMessage($"Informe ao menos um responsável para pessoas menores de {BirthDate.AdultAgeInYears} anos.")
             .When(command => command.BirthDate is { } birthDate && birthDate.IsMinorOn(Today()));
 
         RuleForEach(command => command.Guardians)
             .NotNull()
-            .WithErrorCode(ClientRuleBuilderExtensions.GuardianMissingCode)
+            .WithErrorCode("Client.GuardianMissing")
             .WithMessage("Informe os dados do responsável.")
             .SetValidator(new UpdateGuardianInputValidator())
             .When(command => command.Guardians is null || command.Guardians.Count <= Client.MaxGuardians);
 
-        RuleFor(command => command.ReferenceContacts).MustNotExceedTheReferenceContactLimit();
+        RuleFor(command => command.ReferenceContacts)
+            .Must(contacts => contacts is null || contacts.Count <= Client.MaxReferenceContacts)
+            .WithErrorCode(Client.TooManyReferenceContacts.Code)
+            .WithMessage($"Informe no máximo {Client.MaxReferenceContacts} pessoas de referência.");
 
         RuleForEach(command => command.ReferenceContacts)
             .NotNull()
-            .WithErrorCode(ClientRuleBuilderExtensions.ReferenceContactMissingCode)
+            .WithErrorCode("Client.ReferenceContactMissing")
             .WithMessage("Informe os dados da pessoa de referência.")
             .SetValidator(new UpdateReferenceContactInputValidator())
             .When(command => command.ReferenceContacts is null
@@ -42,8 +50,26 @@ public sealed class UpdateGuardianInputValidator : AbstractValidator<UpdateGuard
 {
     public UpdateGuardianInputValidator()
     {
-        RuleFor(guardian => guardian.Name).MustBeValidContactName("do responsável");
-        RuleFor(guardian => guardian.Relationship).MustBeValidContactRelationship("do responsável");
+        RuleFor(guardian => guardian.Name)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty()
+            .WithErrorCode(ClientContact.NameRequired.Code)
+            .WithMessage("O nome do responsável é obrigatório.")
+            .Must(name => name.Trim().Length >= ClientContact.NameMinLength)
+            .WithErrorCode(ClientContact.InvalidNameLength.Code)
+            .WithMessage($"O nome do responsável deve ter pelo menos {ClientContact.NameMinLength} caracteres.")
+            .Must(name => name.Trim().Length <= ClientContact.NameMaxLength)
+            .WithErrorCode(ClientContact.InvalidNameLength.Code)
+            .WithMessage($"O nome do responsável deve ter no máximo {ClientContact.NameMaxLength} caracteres.");
+
+        RuleFor(guardian => guardian.Relationship)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty()
+            .WithErrorCode(ClientContact.RelationshipRequired.Code)
+            .WithMessage("O vínculo do responsável é obrigatório.")
+            .Must(relationship => relationship.Trim().Length <= ClientContact.RelationshipMaxLength)
+            .WithErrorCode(ClientContact.RelationshipTooLong.Code)
+            .WithMessage($"O vínculo do responsável deve ter no máximo {ClientContact.RelationshipMaxLength} caracteres.");
     }
 }
 
@@ -51,8 +77,23 @@ public sealed class UpdateReferenceContactInputValidator : AbstractValidator<Upd
 {
     public UpdateReferenceContactInputValidator()
     {
-        RuleFor(contact => contact.Relationship).MustBeValidContactRelationship("da pessoa de referência");
-        RuleFor(contact => contact.Purposes).MustHaveAPurpose();
-        RuleForEach(contact => contact.Purposes).MustBeAKnownPurpose();
+        RuleFor(contact => contact.Relationship)
+            .Cascade(CascadeMode.Stop)
+            .NotEmpty()
+            .WithErrorCode(ClientContact.RelationshipRequired.Code)
+            .WithMessage("O vínculo da pessoa de referência é obrigatório.")
+            .Must(relationship => relationship.Trim().Length <= ClientContact.RelationshipMaxLength)
+            .WithErrorCode(ClientContact.RelationshipTooLong.Code)
+            .WithMessage($"O vínculo da pessoa de referência deve ter no máximo {ClientContact.RelationshipMaxLength} caracteres.");
+
+        RuleFor(contact => contact.Purposes)
+            .Must(purposes => purposes is { Count: > 0 })
+            .WithErrorCode(ClientReferenceContact.PurposesRequired.Code)
+            .WithMessage("Informe ao menos uma finalidade para a pessoa de referência.");
+
+        RuleForEach(contact => contact.Purposes)
+            .IsInEnum()
+            .WithErrorCode(ClientReferenceContact.PurposeUnknown.Code)
+            .WithMessage("Informe apenas finalidades válidas para a pessoa de referência.");
     }
 }

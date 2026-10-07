@@ -8,7 +8,7 @@ superseded is historical evidence, not current implementation guidance.
 | Concern | Current ADRs |
 | --- | --- |
 | Service and data topology | 0001, 0002, 0003, 0024, 0029 |
-| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049, 0051, 0057 |
+| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049 as narrowed by 0061, 0051, 0057, 0061 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
 | Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059 |
 | Dates, times and time zones | 0045 |
@@ -33,6 +33,7 @@ superseded is historical evidence, not current implementation guidance.
 | 0030 local-hook portion | 0031 | Repository-owned local Git hooks |
 | 0044 key-casing portion | 0051 | PascalCase keys in the conflict contract (`errors.Cpf`, `errors.Email`) |
 | 0044 contact-purposes portion | 0058 | The `ContactPurposes` value object, `ContactPurposeNames` and purposes as strings translated in Application |
+| 0049 shared-input-rule portion | 0061 | `<Feature>RuleBuilderExtensions` as the home of a rule two validators share |
 | 0053 | 0056 | Synchronizing client contacts by id |
 
 ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, 0030, and 0044
@@ -81,4 +82,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0054 Serilog logging pipeline · 0055 string value objects shared by every service ·
 0056 client contact composition replacement · 0057 explicit services query tracking ·
 0058 closed-set members are plain enums bound by name ·
-0059 aggregate data records and handler-owned domain calls.
+0059 aggregate data records and handler-owned domain calls ·
+0061 validators write their own rules.
