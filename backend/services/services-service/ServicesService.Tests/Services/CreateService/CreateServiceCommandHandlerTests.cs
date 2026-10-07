@@ -57,7 +57,7 @@ public class CreateServiceCommandHandlerTests
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
-        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });
 
         var result = await _handler.Handle(
@@ -106,7 +106,7 @@ public class CreateServiceCommandHandlerTests
     [Fact]
     public async Task Handle_WithUnknownTagId_ReturnsNotFound()
     {
-        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag>());
 
         var result = await _handler.Handle(

@@ -12,7 +12,7 @@ public class DeleteServiceCommandHandlerTests
     {
         var service = Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
         var repository = Substitute.For<IServiceRepository>();
-        repository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        repository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
         var handler = new DeleteServiceCommandHandler(
@@ -30,7 +30,7 @@ public class DeleteServiceCommandHandlerTests
     {
         var unknownId = Guid.NewGuid();
         var repository = Substitute.For<IServiceRepository>();
-        repository.GetForUpdateAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Service?)null);
+        repository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Service?)null);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         var handler = new DeleteServiceCommandHandler(
             repository, unitOfWork, Substitute.For<ILogger<DeleteServiceCommandHandler>>());
@@ -48,7 +48,7 @@ public class DeleteServiceCommandHandlerTests
     {
         var service = Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
         var repository = Substitute.For<IServiceRepository>();
-        repository.GetForUpdateAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        repository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
         var unitOfWork = Substitute.For<IUnitOfWork>();
         unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(

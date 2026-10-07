@@ -25,7 +25,7 @@ public class ServiceRelationshipLoaderTests
         result.Value.Tags.Should().BeEmpty();
         await _categoryRepository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await _tagRepository.DidNotReceive()
-            .GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
+            .GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -57,7 +57,7 @@ public class ServiceRelationshipLoaderTests
     public async Task LoadAsync_WithKnownTags_ReturnsThem()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });
 
         var result = await _loader.LoadAsync(categoryId: null, tagIds: [tag.Id], CancellationToken.None);
@@ -69,7 +69,7 @@ public class ServiceRelationshipLoaderTests
     [Fact]
     public async Task LoadAsync_WithUnknownTag_ReturnsNotFound()
     {
-        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag>());
 
         var result = await _loader.LoadAsync(categoryId: null, tagIds: [Guid.NewGuid()], CancellationToken.None);
@@ -87,7 +87,7 @@ public class ServiceRelationshipLoaderTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Tags.Should().BeEmpty();
         await _tagRepository.DidNotReceive()
-            .GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
+            .GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -95,7 +95,7 @@ public class ServiceRelationshipLoaderTests
     {
         var first = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         var second = Tag.Create(Guid.NewGuid(), "Returning", TagColor.Create("#ef4444").Value, null).Value;
-        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { first, second });
 
         var result = await _loader.LoadAsync(categoryId: null, tagIds: [first.Id, second.Id], CancellationToken.None);
@@ -108,10 +108,10 @@ public class ServiceRelationshipLoaderTests
     public async Task LoadAsync_WithADuplicatedKnownTagId_SucceedsInsteadOfMisreportingNotFound()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        // GetByIdsForUpdateAsync returns one row per distinct id even when the caller
+        // GetByIdsAsync returns one row per distinct id even when the caller
         // passes the same id twice - the loader must compare against the
         // distinct count, not the raw list length.
-        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });
 
         var result = await _loader.LoadAsync(categoryId: null, tagIds: [tag.Id, tag.Id], CancellationToken.None);
@@ -125,7 +125,7 @@ public class ServiceRelationshipLoaderTests
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
         var unknownId = Guid.NewGuid();
-        _tagRepository.GetByIdsForUpdateAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });
 
         var result = await _loader.LoadAsync(

@@ -21,29 +21,21 @@ public static class CreateClientCommandExtensions
 
     private static List<GuardianData> ToGuardians(this IReadOnlyList<GuardianInput>? inputs)
     {
-        var guardians = new List<GuardianData>();
-
-        foreach (var input in inputs ?? [])
-        {
-            guardians.Add(new GuardianData(input.Name, input.Relationship, input.Phone, input.Cpf));
-        }
-
-        return guardians;
+        return (inputs ?? []).Select(input => new GuardianData(input.Name, input.Relationship, input.Phone, input.Cpf)).ToList();
     }
 
-    private static List<ReferenceContactData> ToReferenceContacts(this IReadOnlyList<ReferenceContactInput>? inputs)
+    private static List<ReferenceContactData> ToReferenceContacts(
+        this IReadOnlyList<ReferenceContactInput>? inputs)
     {
-        var referenceContacts = new List<ReferenceContactData>();
+        return inputs?.Select(input => input.ToReferenceContact()).ToList() ?? [];
+    }
 
-        foreach (var input in inputs ?? [])
-        {
-            referenceContacts.Add(new ReferenceContactData(
-                input.Name,
-                input.Relationship,
-                input.Phone,
-                new HashSet<ContactPurpose>(input.Purposes ?? [])));
-        }
-
-        return referenceContacts;
+    private static ReferenceContactData ToReferenceContact(this ReferenceContactInput input)
+    {
+        return new ReferenceContactData(
+            input.Name,
+            input.Relationship,
+            input.Phone,
+            new HashSet<ContactPurpose>(input.Purposes ?? []));
     }
 }

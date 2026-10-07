@@ -35,6 +35,6 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
             cancellationToken);
     }
 
-    public async Task<IReadOnlyList<Tag>> GetByIdsForUpdateAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken) =>
-        await Set.AsTracking().Where(t => tagIds.Contains(t.Id)).ToListAsync(cancellationToken);
+    public Task<IReadOnlyList<Tag>> GetByIdsAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken) =>
+        ListAsync(t => tagIds.Contains(t.Id), order: null, cancellationToken);
 }

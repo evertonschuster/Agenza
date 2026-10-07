@@ -22,7 +22,7 @@ public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategor
 
     public async Task<Result<CategoryResponse>> Handle(UpdateCategoryCommand command, CancellationToken cancellationToken)
     {
-        var category = await _categoryRepository.GetForUpdateAsync(command.CategoryId, cancellationToken);
+        var category = await _categoryRepository.GetByIdAsync(command.CategoryId, cancellationToken);
         if (category is null)
         {
             return Result.Failure<CategoryResponse>(
@@ -40,6 +40,8 @@ public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategor
         {
             return Result.Failure<CategoryResponse>(applyResult.Error.ToApplicationError());
         }
+
+        await _categoryRepository.UpdateAsync(category, cancellationToken);
 
         var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)

@@ -18,14 +18,7 @@ public static class UpdateClientCommandExtensions
 
     private static List<GuardianData> ToGuardians(this IReadOnlyList<UpdateGuardianInput>? inputs)
     {
-        var guardians = new List<GuardianData>();
-
-        foreach (var input in inputs ?? [])
-        {
-            guardians.Add(input.ToGuardian());
-        }
-
-        return guardians;
+        return (inputs ?? []).Select(input => input.ToGuardian()).ToList();
     }
 
     private static GuardianData ToGuardian(this UpdateGuardianInput input)
@@ -36,14 +29,7 @@ public static class UpdateClientCommandExtensions
     private static List<ReferenceContactData> ToReferenceContacts(
         this IReadOnlyList<UpdateReferenceContactInput>? inputs)
     {
-        var referenceContacts = new List<ReferenceContactData>();
-
-        foreach (var input in inputs ?? [])
-        {
-            referenceContacts.Add(input.ToReferenceContact());
-        }
-
-        return referenceContacts;
+        return inputs?.Select(input => input.ToReferenceContact()).ToList() ?? [];
     }
 
     private static ReferenceContactData ToReferenceContact(this UpdateReferenceContactInput input)

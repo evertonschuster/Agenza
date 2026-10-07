@@ -6,7 +6,7 @@ public interface ICategoryRepository
 
     Task<Category?> GetByIdAsync(Guid categoryId, CancellationToken cancellationToken);
 
-    Task<Category?> GetForUpdateAsync(Guid categoryId, CancellationToken cancellationToken);
+    Task UpdateAsync(Category category, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<Category>> GetByIdsAsync(IReadOnlyCollection<Guid> categoryIds, CancellationToken cancellationToken);
 

@@ -25,7 +25,7 @@ public sealed class UpdateServiceCommandHandler : ICommandHandler<UpdateServiceC
 
     public async Task<Result<ServiceResponse>> Handle(UpdateServiceCommand command, CancellationToken cancellationToken)
     {
-        var service = await _serviceRepository.GetForUpdateAsync(command.ServiceId, cancellationToken);
+        var service = await _serviceRepository.GetByIdAsync(command.ServiceId, cancellationToken);
         if (service is null)
         {
             return Result.Failure<ServiceResponse>(
@@ -58,6 +58,8 @@ public sealed class UpdateServiceCommandHandler : ICommandHandler<UpdateServiceC
         {
             return Result.Failure<ServiceResponse>(applyResult.Error.ToApplicationError());
         }
+
+        await _serviceRepository.UpdateAsync(service, cancellationToken);
 
         var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)

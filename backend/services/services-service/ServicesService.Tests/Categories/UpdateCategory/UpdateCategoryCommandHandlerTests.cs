@@ -25,13 +25,14 @@ public class UpdateCategoryCommandHandlerTests
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        _repository.GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
         var result = await _handler.Handle(
             new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Name.Should().Be("Nails");
+        await _repository.Received(1).UpdateAsync(category, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -39,13 +40,14 @@ public class UpdateCategoryCommandHandlerTests
     public async Task Handle_WithUnknownCategoryId_ReturnsNotFound()
     {
         var unknownId = Guid.NewGuid();
-        _repository.GetForUpdateAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Category?)null);
+        _repository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Category?)null);
 
         var result = await _handler.Handle(new UpdateCategoryCommand(unknownId, "Hair"), CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.NotFound);
         result.Error.Code.Should().Be("Category.NotFound");
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Category>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -53,7 +55,7 @@ public class UpdateCategoryCommandHandlerTests
     public async Task Handle_RenamingToAnotherCategorysName_ReturnsConflict()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        _repository.GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _repository.NameExistsAsync("Nails", category.Id, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _handler.Handle(new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
@@ -61,6 +63,21 @@ public class UpdateCategoryCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Category.DuplicateName");
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Category>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithAnInvalidName_ReturnsTheDomainErrorAndPersistsNothing()
+    {
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+
+        var result = await _handler.Handle(new UpdateCategoryCommand(category.Id, "  "), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        category.Name.Should().Be("Hair");
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Category>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -68,18 +85,18 @@ public class UpdateCategoryCommandHandlerTests
     public async Task Handle_LoadsTheCategoryExactlyOnce()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        _repository.GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
         await _handler.Handle(new UpdateCategoryCommand(category.Id, "Nails"), CancellationToken.None);
 
-        await _repository.Received(1).GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>());
+        await _repository.Received(1).GetByIdAsync(category.Id, Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        _repository.GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Categories_TenantId_NameNormalized")));
@@ -95,7 +112,7 @@ public class UpdateCategoryCommandHandlerTests
     public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        _repository.GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));

@@ -23,8 +23,11 @@ public class CategoryRepository : RepositoryBase<Category>, ICategoryRepository
     public Task<Category?> GetByIdAsync(Guid categoryId, CancellationToken cancellationToken) =>
         FindAsync(c => c.Id == categoryId, cancellationToken);
 
-    public Task<Category?> GetForUpdateAsync(Guid categoryId, CancellationToken cancellationToken) =>
-        FindForUpdateAsync(c => c.Id == categoryId, cancellationToken);
+    public Task UpdateAsync(Category category, CancellationToken cancellationToken)
+    {
+        DbContext.Entry(category).State = EntityState.Modified;
+        return Task.CompletedTask;
+    }
 
     public Task<IReadOnlyList<Category>> GetByIdsAsync(IReadOnlyCollection<Guid> categoryIds, CancellationToken cancellationToken) =>
         ListAsync(c => categoryIds.Contains(c.Id), order: null, cancellationToken);

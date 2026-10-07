@@ -25,7 +25,7 @@ public class DeleteCategoryCommandHandlerTests
     public async Task Handle_WithExistingUnusedCategory_RemovesItAndCommits()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        _categoryRepository.GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
         var result = await _handler.Handle(new DeleteCategoryCommand(category.Id), CancellationToken.None);
 
@@ -38,7 +38,7 @@ public class DeleteCategoryCommandHandlerTests
     public async Task Handle_WithUnknownCategoryId_ReturnsNotFound()
     {
         var unknownId = Guid.NewGuid();
-        _categoryRepository.GetForUpdateAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Category?)null);
+        _categoryRepository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Category?)null);
 
         var result = await _handler.Handle(new DeleteCategoryCommand(unknownId), CancellationToken.None);
 
@@ -51,7 +51,7 @@ public class DeleteCategoryCommandHandlerTests
     public async Task Handle_WithCategoryInUse_ReturnsConflictAndDoesNotRemove()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        _categoryRepository.GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _serviceRepository.CountByCategoryIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(3);
 
         var result = await _handler.Handle(new DeleteCategoryCommand(category.Id), CancellationToken.None);
@@ -68,7 +68,7 @@ public class DeleteCategoryCommandHandlerTests
     public async Task Handle_WithConcurrentConflictAtSaveTime_ReturnsConflict()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;
-        _categoryRepository.GetForUpdateAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+        _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));
