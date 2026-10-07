@@ -7,16 +7,8 @@ public class ClientContactTests
         ReferenceContactData[]? referenceContacts = null)
     {
         return Client.Create(
-            Guid.NewGuid(),
-            ClientTestData.Name(),
-            null,
-            null,
-            null,
-            null,
-            null,
-            ClientTestData.Today,
-            guardians ?? [],
-            referenceContacts ?? []);
+            ClientTestData.Data(guardians: guardians, referenceContacts: referenceContacts),
+            ClientTestData.Today);
     }
 
     [Fact]
@@ -73,7 +65,7 @@ public class ClientContactTests
     [Fact]
     public void ReferenceContact_KeepsItsPurposes()
     {
-        var purposes = ContactPurposes.Create(ContactPurpose.Emergency | ContactPurpose.DailyCommunication).Value;
+        var purposes = ClientTestData.Purposes(ContactPurpose.Emergency, ContactPurpose.DailyCommunication);
 
         var client = CreateClient(referenceContacts:
         [
@@ -84,7 +76,39 @@ public class ClientContactTests
         contact.Name.Should().Be("Carlos Lima");
         contact.Relationship.Should().Be("Tio");
         contact.Phone!.Value.Should().Be("11 4000-1000");
-        contact.Purposes.Should().Be(purposes);
+        contact.Purposes.Should().BeEquivalentTo([ContactPurpose.Emergency, ContactPurpose.DailyCommunication]);
+    }
+
+    [Fact]
+    public void ReferenceContact_KeepsItsOwnCopyOfThePurposes()
+    {
+        var purposes = new HashSet<ContactPurpose> { ContactPurpose.Emergency };
+        var client = CreateClient(referenceContacts:
+            [new ReferenceContactData(ClientTestData.Name("Carlos Lima"), "Tio", null, purposes)]).Value;
+
+        purposes.Add(ContactPurpose.OperationalSupport);
+
+        client.ReferenceContacts.Single().Purposes.Should().BeEquivalentTo([ContactPurpose.Emergency]);
+    }
+
+    [Fact]
+    public void ReferenceContact_WithAnUndefinedPurpose_FailsTheClient()
+    {
+        var result = CreateClient(referenceContacts:
+            [new ReferenceContactData(ClientTestData.Name("Carlos Lima"), "Tio", null, ClientTestData.Purposes((ContactPurpose)3))]);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("ClientReferenceContact.PurposeUnknown");
+    }
+
+    [Fact]
+    public void ReferenceContact_WithoutPurposes_FailsTheClient()
+    {
+        var result = CreateClient(referenceContacts:
+            [new ReferenceContactData(ClientTestData.Name("Carlos Lima"), "Tio", null, ClientTestData.Purposes())]);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("ClientReferenceContact.PurposesRequired");
     }
 
     [Theory]
@@ -92,10 +116,8 @@ public class ClientContactTests
     [InlineData("   ")]
     public void ReferenceContact_WithoutRelationship_FailsTheClient(string relationship)
     {
-        var purposes = ContactPurposes.Create(ContactPurpose.Emergency).Value;
-
         var result = CreateClient(referenceContacts:
-            [new ReferenceContactData(ClientTestData.Name("Carlos Lima"), relationship, null, purposes)]);
+            [new ReferenceContactData(ClientTestData.Name("Carlos Lima"), relationship, null, ClientTestData.Purposes(ContactPurpose.Emergency))]);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("ClientContact.RelationshipRequired");

@@ -11,29 +11,32 @@ no `Remove` until a delete exists, no `ListAsync` until a list exists.
 
 | Method family | Returns | Use |
 | --- | --- | --- |
-| `GetByIdAsync(id)` | `T?`, tracked, with its children | load to change or to show |
+| `GetByIdAsync(id)` | `T?`, no tracking | load the aggregate's current state |
 | `Find<Criterion>Async(valueObject)` | `T?`, `AsNoTracking` | pre-check lookups (`FindByCpfAsync`) |
 | `<Thing>ExistsAsync(…)` | `bool` | a pre-check that needs no record back |
 | `CountBy<Thing>Async(id)` | `int` | an "in use" rule |
 | `GetByIdsAsync(ids)` | `IReadOnlyList<T>` | one query for a set — never one per row |
 | `ListAsync(filters)` | `IReadOnlyList<T>` | an unpaged list, ordered |
 | `ListAsync(page, pageSize, filters)` | `(IReadOnlyList<T> Items, int TotalCount)` | a paged list, ordered |
-| `Add(entity)`, `Remove(entity)` | `void` | stage; the handler commits |
+| `Add(entity)`, `UpdateAsync(entity)`, `Remove(entity)` | `void` / `Task` | stage; the handler commits |
 
 Parameters are ids, value objects for value-object columns and plain filter values — never a tenant,
 an expression, an `IQueryable` or a specification. Results are the root with its own children — never a
 DTO, a projection or another aggregate.
 
-A `GetByIdAsync` shared by a query and a command stays tracked: `AsNoTracking` is required only on
-pre-check lookups (`Find…Async`), and a second method that differs only by tracking is the premature
-optimization this codebase avoids (ARCHITECTURE, rules of thumb).
+`GetByIdAsync` returns an aggregate without tracking. In a service with a global no-tracking default,
+it inherits that default; shared helpers may also state it explicitly when they serve another context.
+A command applies domain behaviour to that aggregate, then calls `UpdateAsync`; the adapter makes any
+state transition needed by its persistence technology explicitly. Do not expose a second port method
+that differs only by tracking (ARCHITECTURE, rules of thumb).
 
 ## 2. The adapter — `<Entity>Repository`
 
 - `public class <Entity>Repository : RepositoryBase<<Entity>>, I<Entity>Repository`, constructed from
   the service's `DbContext`; registered in Infrastructure's `DependencyInjection.cs`.
 - Use the base helpers (`FindAsync`, `ListAsync`, `ListPagedAsync`, `AnyAsync`) and `Set` for the
-  rest. `Include` only the root's own children.
+  rest. An update adapter can query only the persisted children it must replace, then explicitly
+  stage their removal and the new composition. `Include` only the root's own children.
 - Order every list and page explicitly, on a key that is unique or ends in one — otherwise rows repeat
   or vanish between pages.
 - A value-object column is compared as a whole (`c.Cpf == cpf`); text search on it goes through
@@ -48,8 +51,9 @@ Check each line of ARCHITECTURE §5 "Entity configuration" against your entity: 
 composite foreign keys between tenant-owned entities, value objects with lengths from their constants
 (a service's own through `HasConversion(v => v.Value, s => <Vo>.Restore(s))`; a shared one needs only
 `HasMaxLength` — the `DbContext`'s `ConfigureConventions` already calls `AddValueObjectConversions()`),
-enums as text with a `CHECK`, unique indexes with `TenantId` and
-`"DeletedAt" IS NULL`, children through the backing field. Never add a soft-delete or tenant filter by
+enums as text with a `CHECK`, unique indexes with `TenantId` and `"DeletedAt" IS NULL`, children through
+the backing field, and a child's key `ValueGeneratedNever()` (its internal factory mints it; otherwise a child added
+to a loaded root is tracked as `Modified` and the save fails). Never add a soft-delete or tenant filter by
 hand.
 
 A set of ids of another aggregate is a child entity of the owner — its own configuration, keyed

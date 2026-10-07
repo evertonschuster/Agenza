@@ -22,7 +22,7 @@ public sealed class UpdateTagCommandHandler : ICommandHandler<UpdateTagCommand, 
 
     public async Task<Result<TagResponse>> Handle(UpdateTagCommand command, CancellationToken cancellationToken)
     {
-        var tag = await _tagRepository.GetByIdAsync(command.TagId, cancellationToken);
+        var tag = await _tagRepository.GetForUpdateAsync(command.TagId, cancellationToken);
         if (tag is null)
         {
             return Result.Failure<TagResponse>(

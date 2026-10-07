@@ -9,27 +9,20 @@ public class ClientTests
         GuardianData[]? guardians = null,
         ReferenceContactData[]? referenceContacts = null) =>
         Client.Create(
-            Guid.NewGuid(),
-            ClientTestData.Name(),
-            ClientTestData.Birth(birthDate),
-            null,
-            null,
-            null,
-            null,
-            Today,
-            guardians ?? [],
-            referenceContacts ?? []);
+            ClientTestData.Data(
+                birthDate: ClientTestData.Birth(birthDate),
+                guardians: guardians,
+                referenceContacts: referenceContacts),
+            Today);
 
     [Fact]
     public void Create_WithOnlyTheRequiredName_StartsActiveWithoutTenantOrContacts()
     {
-        var id = Guid.NewGuid();
-
-        var result = Client.Create(id, ClientTestData.Name(), null, null, null, null, null, Today, [], []);
+        var result = Client.Create(ClientTestData.Data(), Today);
 
         result.IsSuccess.Should().BeTrue();
         var client = result.Value;
-        client.Id.Should().Be(id);
+        client.Id.Should().NotBe(Guid.Empty);
         client.TenantId.Should().Be(Guid.Empty);
         client.Status.Should().Be(ClientStatus.Active);
         client.FullName.Should().Be(ClientTestData.Name());
@@ -48,16 +41,13 @@ public class ClientTests
         var notes = ClientTestData.Notes();
 
         var client = Client.Create(
-            Guid.NewGuid(),
-            ClientTestData.Name(),
-            BirthDate.Restore(new DateOnly(1990, 5, 20)),
-            ClientTestData.Phone(),
-            ClientTestData.Email(),
-            ClientTestData.Cpf(),
-            notes,
-            Today,
-            [],
-            []).Value;
+            ClientTestData.Data(
+                birthDate: BirthDate.Restore(new DateOnly(1990, 5, 20)),
+                phone: ClientTestData.Phone(),
+                email: ClientTestData.Email(),
+                cpf: ClientTestData.Cpf(),
+                notes: notes),
+            Today).Value;
 
         client.BirthDate!.Value.Should().Be(new DateOnly(1990, 5, 20));
         client.Phone.Should().Be(ClientTestData.Phone());
@@ -91,7 +81,7 @@ public class ClientTests
         var result = Create(
             birthDate: new DateOnly(2015, 3, 10),
             guardians: [ClientTestData.Guardian()],
-            referenceContacts: [ClientTestData.ReferenceContact(ContactPurpose.Emergency | ContactPurpose.OperationalSupport)]);
+            referenceContacts: [ClientTestData.ReferenceContact(ContactPurpose.Emergency, ContactPurpose.OperationalSupport)]);
 
         result.IsSuccess.Should().BeTrue();
         var client = result.Value;
@@ -101,7 +91,7 @@ public class ClientTests
         guardian.Name.Should().Be("Ana Souza");
         var reference = client.ReferenceContacts.Should().ContainSingle().Subject;
         reference.ClientId.Should().Be(client.Id);
-        reference.Purposes.Value.Should().Be(ContactPurpose.Emergency | ContactPurpose.OperationalSupport);
+        reference.Purposes.Should().BeEquivalentTo([ContactPurpose.Emergency, ContactPurpose.OperationalSupport]);
     }
 
     [Fact]

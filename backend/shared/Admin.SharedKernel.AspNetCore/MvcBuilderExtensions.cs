@@ -6,11 +6,15 @@ namespace Admin.SharedKernel.AspNetCore;
 
 public static class MvcBuilderExtensions
 {
-    public static IMvcBuilder AddValueObjectJson(this IMvcBuilder builder)
+    public static IMvcBuilder AddWireJson(this IMvcBuilder builder)
     {
         builder.Services.AddOptions<JsonOptions>()
             .Configure<TimeProvider>((options, timeProvider) =>
-                options.JsonSerializerOptions.AddValueObjectConverters(timeProvider));
+                options.JsonSerializerOptions
+                    .AddValueObjectConverters(timeProvider)
+                    .AddEnumNameConverter());
+
+        builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.AddEnumNameConverter());
 
         return builder;
     }

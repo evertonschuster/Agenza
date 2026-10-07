@@ -27,13 +27,14 @@ Apply the threshold in §3. In this codebase it reads as:
 | --- | --- |
 | CPF, e-mail, phone | format and normalization |
 | a duration range | a rule over several values |
-| a colour from a palette, contact purposes | a closed set |
+| a colour from a palette | a closed set that carries a rule |
 | a birth date | its rule needs `today` |
 | price, discount | money and a percentage |
 
-| May stay a primitive | Validated by |
+| May stay a primitive or a plain enum | Validated by |
 | --- | --- |
 | a tag's name, a guardian's name, a contact's relationship, a description | its owner, with a named `DomainError` |
+| a set of independent options with no rule beyond membership (contact purposes) | a plain enum in an `IReadOnlySet` on the entity: its own copy, refused when empty or when a value is not a member (ADR 0058) |
 
 Writing a service's own (a value that is shared by every service is a different job — see the last bullet):
 
@@ -62,8 +63,8 @@ Writing a service's own (a value that is shared by every service is a different 
   Nothing is assigned before the last check passes.
 - A whole-record `Update(…)` is for an edit form over free data with no transition. It runs the same
   private validations as `Create`, so both refuse the same input.
-- Children change through the root: one method receives the desired state as data records, syncs the
-  children by id, and re-checks the aggregate's rules (limits, "a minor has a guardian") on the result.
+- Children change through the root: one method receives the desired state as data records, applies the
+  aggregate's defined composition semantics, and re-checks its rules (limits, "a minor has a guardian") on the result.
 - What the behaviour needs from outside — today, a generated number, the fact that another aggregate
   exists — arrives as a parameter the handler already resolved. The domain never asks for it.
 
@@ -72,14 +73,17 @@ Writing a service's own (a value that is shared by every service is a different 
 | Type | Factory | Called by |
 | --- | --- | --- |
 | Root | `public static DomainResult<T> Create(Guid id, <value objects>, <context>, <child data>)` | `ToModel` in the Application |
-| Child | `internal static DomainResult<TChild> Create(Guid id, Guid rootId, <Child>Data data)` | its root only |
+| Root with many members | `public static DomainResult<T> Create(<Entity>Data data, <context>)`, which mints its own id; `Update(<Entity>Data data, <context>)` | the handler, with `command.To<Entity>Data()` (ADR 0059) |
+| Child | `internal static DomainResult<TChild> Create(Guid rootId, <Child>Data data)` | its root only |
 | Value object | `Create(raw)` and `Restore(stored)` | `ToModel`, `ApplyTo`, EF conversions; a shared one: the JSON converter and the EF convention, never `ToModel` |
 
 - A root's `Create` takes value objects already built, not raw strings, for fields that are value
   objects; its own primitive fields it validates itself.
 - `<Child>Data` is a record next to the child, carrying value objects; it is how the outside describes a
-  child without creating one.
-- Ids are `Guid.CreateVersion7()`: the root's minted by `ToModel`, a child's by the root.
+  child without creating one. A root with many members has its own `<Entity>Data` (`ClientData`): the
+  value objects as received plus the child data lists, shared by `Create` and `Update`.
+- Ids are `Guid.CreateVersion7()`: the root's minted by `ToModel`, or by its own `Create` when it takes an
+  `<Entity>Data`; a child's by its internal factory.
 - EF gets a private parameterless constructor; required reference properties are set to `null!` there.
 - No `<X>Factory` class, no builder, no public constructor, no static "create from command" on the
   entity — the entity never sees a command.
@@ -88,7 +92,7 @@ Writing a service's own (a value that is shared by every service is a different 
 
 One `static readonly DomainError` per rule, on the type that owns the rule, `<Type>.<Rule>`, pt-BR
 message. A rule over the whole aggregate belongs to the root (`Client.GuardianRequired`); a rule over a
-value belongs to the value object (`ContactPurposes.Required`). The validator reuses these codes. A shared
+value belongs to the value object, or to the entity that owns the set (`ClientReferenceContact.PurposesRequired`). The validator reuses these codes. A shared
 string value object has no `DomainError`: its failure is the message of the rule that broke, in the
 `ParseResult<T>` that `Create` returns.
 

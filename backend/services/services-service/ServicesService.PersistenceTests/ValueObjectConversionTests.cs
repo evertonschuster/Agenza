@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.PersistenceTests;
@@ -45,15 +46,36 @@ public class ValueObjectConversionTests
     [Fact]
     public void ReadingStoredPurposes_RestoresThemWithoutTodaysRules()
     {
+        var converter = PurposesConverter();
+
+        ((IReadOnlySet<ContactPurpose>)converter.ConvertFromProvider(0)!).Should().BeEmpty();
+    }
+
+    [Theory]
+    [InlineData(new[] { ContactPurpose.Emergency }, 1)]
+    [InlineData(new[] { ContactPurpose.OperationalSupport }, 2)]
+    [InlineData(new[] { ContactPurpose.DailyCommunication }, 4)]
+    [InlineData(new[] { ContactPurpose.Emergency, ContactPurpose.DailyCommunication }, 5)]
+    [InlineData(new[] { ContactPurpose.Emergency, ContactPurpose.OperationalSupport, ContactPurpose.DailyCommunication }, 7)]
+    public void Purposes_AreStoredAsTheSumOfTheirCodes(ContactPurpose[] purposes, int stored)
+    {
+        var converter = PurposesConverter();
+        var set = new HashSet<ContactPurpose>(purposes);
+
+        converter.ConvertToProvider(set).Should().Be(stored);
+        ((IReadOnlySet<ContactPurpose>)converter.ConvertFromProvider(stored)!).Should().BeEquivalentTo(purposes);
+    }
+
+    private static ValueConverter PurposesConverter()
+    {
         var options = new DbContextOptionsBuilder<ServicesDataContext>()
             .UseInMemoryDatabase(Guid.NewGuid().ToString())
             .Options;
         using var context = new ServicesDataContext(options);
-        var converter = context.Model
+
+        return context.Model
             .FindEntityType(typeof(ClientReferenceContact))!
             .FindProperty(nameof(ClientReferenceContact.Purposes))!
             .GetValueConverter()!;
-
-        converter.ConvertFromProvider(0).Should().Be(ContactPurposes.Restore(ContactPurpose.None));
     }
 }

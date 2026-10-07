@@ -58,27 +58,28 @@ public class Client : TenantOwnedEntity
         Status = ClientStatus.Active;
     }
 
-    public static DomainResult<Client> Create(
-        Guid id,
-        FullName fullName,
-        BirthDate? birthDate,
-        PhoneNumber? phone,
-        EmailAddress? email,
-        CpfNumber? cpf,
-        AdministrativeNotes? administrativeNotes,
-        DateOnly today,
-        IReadOnlyCollection<GuardianData> guardians,
-        IReadOnlyCollection<ReferenceContactData> referenceContacts)
+    public static DomainResult<Client> Create(ClientData data, DateOnly today)
     {
-        var contactsResult = ValidateContacts(birthDate, today, guardians, referenceContacts);
-        if (contactsResult.IsFailure)
+        var contactRulesResult = ValidateContactRules(
+            data.BirthDate,
+            today,
+            data.Guardians.Count,
+            data.ReferenceContacts.Count);
+        if (contactRulesResult.IsFailure)
         {
-            return DomainResult.Failure<Client>(contactsResult.Error);
+            return DomainResult.Failure<Client>(contactRulesResult.Error);
         }
 
-        var client = new Client(id, fullName, birthDate, phone, email, cpf, administrativeNotes);
+        var client = new Client(
+            Guid.CreateVersion7(),
+            data.FullName,
+            data.BirthDate,
+            data.Phone,
+            data.Email,
+            data.Cpf,
+            data.AdministrativeNotes);
 
-        var addContactsResult = client.AddContacts(guardians, referenceContacts);
+        var addContactsResult = client.AddContacts(data.Guardians, data.ReferenceContacts);
         if (addContactsResult.IsFailure)
         {
             return DomainResult.Failure<Client>(addContactsResult.Error);
@@ -87,52 +88,121 @@ public class Client : TenantOwnedEntity
         return DomainResult.Success(client);
     }
 
-    private DomainResult AddContacts(
-        IReadOnlyCollection<GuardianData> guardians,
-        IReadOnlyCollection<ReferenceContactData> referenceContacts)
+    public DomainResult Update(ClientData data, DateOnly today)
     {
-        foreach (var data in guardians)
+        var contactRulesResult = ValidateContactRules(
+            data.BirthDate,
+            today,
+            data.Guardians.Count,
+            data.ReferenceContacts.Count);
+        if (contactRulesResult.IsFailure)
         {
-            var guardianResult = ClientGuardian.Create(Guid.CreateVersion7(), Id, data);
-            if (guardianResult.IsFailure)
-            {
-                return DomainResult.Failure(guardianResult.Error);
-            }
-
-            _guardians.Add(guardianResult.Value);
+            return contactRulesResult;
         }
 
-        foreach (var data in referenceContacts)
+        var guardiansResult = CreateGuardians(data.Guardians);
+        if (guardiansResult.IsFailure)
         {
-            var referenceContactResult = ClientReferenceContact.Create(Guid.CreateVersion7(), Id, data);
-            if (referenceContactResult.IsFailure)
-            {
-                return DomainResult.Failure(referenceContactResult.Error);
-            }
-
-            _referenceContacts.Add(referenceContactResult.Value);
+            return guardiansResult;
         }
+
+        var referenceContactsResult = CreateReferenceContacts(data.ReferenceContacts);
+        if (referenceContactsResult.IsFailure)
+        {
+            return referenceContactsResult;
+        }
+
+        FullName = data.FullName;
+        BirthDate = data.BirthDate;
+        Phone = data.Phone;
+        Email = data.Email;
+        Cpf = data.Cpf;
+        AdministrativeNotes = data.AdministrativeNotes;
+
+        _guardians.Clear();
+        _guardians.AddRange(guardiansResult.Value);
+        _referenceContacts.Clear();
+        _referenceContacts.AddRange(referenceContactsResult.Value);
 
         return DomainResult.Success();
     }
 
-    private static DomainResult ValidateContacts(
-        BirthDate? birthDate,
-        DateOnly today,
+    private DomainResult AddContacts(
         IReadOnlyCollection<GuardianData> guardians,
         IReadOnlyCollection<ReferenceContactData> referenceContacts)
     {
-        if (guardians.Count > MaxGuardians)
+        var guardiansResult = CreateGuardians(guardians);
+        if (guardiansResult.IsFailure)
+        {
+            return guardiansResult;
+        }
+
+        var referenceContactsResult = CreateReferenceContacts(referenceContacts);
+        if (referenceContactsResult.IsFailure)
+        {
+            return referenceContactsResult;
+        }
+
+        _guardians.AddRange(guardiansResult.Value);
+        _referenceContacts.AddRange(referenceContactsResult.Value);
+
+        return DomainResult.Success();
+    }
+
+    private DomainResult<List<ClientGuardian>> CreateGuardians(IReadOnlyCollection<GuardianData> guardians)
+    {
+        var contacts = new List<ClientGuardian>();
+
+        foreach (var data in guardians)
+        {
+            var guardianResult = ClientGuardian.Create(Id, data);
+            if (guardianResult.IsFailure)
+            {
+                return DomainResult.Failure<List<ClientGuardian>>(guardianResult.Error);
+            }
+
+            contacts.Add(guardianResult.Value);
+        }
+
+        return DomainResult.Success(contacts);
+    }
+
+    private DomainResult<List<ClientReferenceContact>> CreateReferenceContacts(
+        IReadOnlyCollection<ReferenceContactData> referenceContacts)
+    {
+        var contacts = new List<ClientReferenceContact>();
+
+        foreach (var data in referenceContacts)
+        {
+            var contactResult = ClientReferenceContact.Create(Id, data);
+            if (contactResult.IsFailure)
+            {
+                return DomainResult.Failure<List<ClientReferenceContact>>(contactResult.Error);
+            }
+
+            contacts.Add(contactResult.Value);
+        }
+
+        return DomainResult.Success(contacts);
+    }
+
+    private static DomainResult ValidateContactRules(
+        BirthDate? birthDate,
+        DateOnly today,
+        int guardianCount,
+        int referenceContactCount)
+    {
+        if (guardianCount > MaxGuardians)
         {
             return DomainResult.Failure(TooManyGuardians);
         }
 
-        if (referenceContacts.Count > MaxReferenceContacts)
+        if (referenceContactCount > MaxReferenceContacts)
         {
             return DomainResult.Failure(TooManyReferenceContacts);
         }
 
-        if (birthDate is not null && birthDate.IsMinorOn(today) && guardians.Count == 0)
+        if (birthDate is not null && birthDate.IsMinorOn(today) && guardianCount == 0)
         {
             return DomainResult.Failure(GuardianRequired);
         }

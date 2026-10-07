@@ -256,10 +256,9 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | CPF já cadastrado (pessoa ativa ou inativa) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.cpf[0].meta.clientId`) |
 | E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.email[0].meta.clientId`) |
 | Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`guardians`: `Client.GuardianRequired`) |
-| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `referenceContacts[0].purposes`: `ContactPurposes.Required`…) |
+| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `referenceContacts[0].purposes`: `ClientReferenceContact.PurposesRequired`…) |
 | CPF inválido, em qualquer formatação (§4.3) | `POST /api/v1/clients` (`cpf` ou `guardians[0].cpf`) | 400 | `Validation.Failed` (`cpf`: `Validation.Failed`, "O CPF informado é inválido.") |
 | `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (§4.3: mensagem do framework, em inglês) | `Validation.Failed` (`fullName`: `Validation.Failed`) |
-
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
 constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado passa pelo roteamento
 normalmente e só é rejeitado dentro do `DeleteTagCommandValidator` (`NotEmpty`) — chega como 400 de

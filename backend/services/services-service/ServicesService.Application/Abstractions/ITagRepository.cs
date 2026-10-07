@@ -6,6 +6,8 @@ public interface ITagRepository
 
     Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken);
 
+    Task<Tag?> GetForUpdateAsync(Guid tagId, CancellationToken cancellationToken);
+
     // excludeTagId ignores the tag being renamed, so updating a tag without changing its name isn't a self-conflict.
     Task<bool> NameExistsAsync(string name, Guid? excludeTagId, CancellationToken cancellationToken);
 

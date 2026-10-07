@@ -18,4 +18,4 @@ public sealed record ReferenceContactInput(
     FullName Name,
     string Relationship,
     PhoneNumber? Phone,
-    IReadOnlyList<string>? Purposes);
+    IReadOnlyList<ContactPurpose>? Purposes);

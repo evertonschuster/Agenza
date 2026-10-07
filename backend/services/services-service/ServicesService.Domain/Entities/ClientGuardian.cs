@@ -18,7 +18,7 @@ public class ClientGuardian : ClientContact
         Cpf = cpf;
     }
 
-    internal static DomainResult<ClientGuardian> Create(Guid id, Guid clientId, GuardianData data)
+    internal static DomainResult<ClientGuardian> Create(Guid clientId, GuardianData data)
     {
         var nameResult = ValidateName(data.Name);
         if (nameResult.IsFailure)
@@ -33,11 +33,23 @@ public class ClientGuardian : ClientContact
         }
 
         return DomainResult.Success(new ClientGuardian(
-            id,
+            Guid.CreateVersion7(),
             clientId,
             nameResult.Value,
             relationshipResult.Value,
             data.Phone,
             data.Cpf));
+    }
+
+    internal DomainResult Update(GuardianData data)
+    {
+        var reviseResult = Revise(data.Name, data.Relationship, data.Phone);
+        if (reviseResult.IsFailure)
+        {
+            return reviseResult;
+        }
+
+        Cpf = data.Cpf;
+        return DomainResult.Success();
     }
 }

@@ -29,6 +29,7 @@ public static class DependencyInjection
                 // would otherwise be shared with identity-service on this same database
                 // (docs/adr/0017).
                 .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "services"))
+                .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking)
                 .AddInterceptors(serviceProvider.GetRequiredService<AuditableEntitySaveChangesInterceptor>()));
         services.AddHealthChecks()
             .AddDbContextCheck<ServicesDataContext>("database", tags: ["ready"]);

@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc.Abstractions;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
+using HttpJsonOptions = Microsoft.AspNetCore.Http.Json.JsonOptions;
 
 namespace Admin.SharedKernel.Tests;
 
@@ -17,12 +18,9 @@ public class MvcBuilderExtensionsTests
     }
 
     [Fact]
-    public void AddValueObjectJson_ReadsTheDateValueObjectsAgainstTheClockOfTheContainer()
+    public void AddWireJson_ReadsTheDateValueObjectsAgainstTheClockOfTheContainer()
     {
-        var services = new ServiceCollection();
-        services.AddSingleton<TimeProvider>(new FixedClock(new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero)));
-        services.AddControllers().AddValueObjectJson();
-        var json = services.BuildServiceProvider().GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
+        var json = MvcJsonOptions(new FixedClock(new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero)));
 
         var today = () => JsonSerializer.Deserialize<DateSample>("{ \"born\": \"2026-10-02\" }", json);
 
@@ -32,6 +30,45 @@ public class MvcBuilderExtensionsTests
     }
 
     private sealed record DateSample(BirthDate? Born);
+
+    [Fact]
+    public void AddWireJson_NamesEnumsInCamelCaseInTheMvcOptions()
+    {
+        var json = MvcJsonOptions(TimeProvider.System);
+
+        JsonSerializer.Serialize(new EnumSample(Level.VeryHigh), json).Should().Be("{\"level\":\"veryHigh\"}");
+        JsonSerializer.Deserialize<EnumSample>("{ \"level\": \"veryHigh\" }", json)!.Level.Should().Be(Level.VeryHigh);
+        var integer = () => JsonSerializer.Deserialize<EnumSample>("{ \"level\": 1 }", json);
+        integer.Should().Throw<JsonException>();
+    }
+
+    [Fact]
+    public void AddWireJson_NamesEnumsInTheMinimalApiOptionsThatTheOpenApiGeneratorReads()
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(TimeProvider.System);
+        services.AddControllers().AddWireJson();
+        var json = services.BuildServiceProvider().GetRequiredService<IOptions<HttpJsonOptions>>().Value.SerializerOptions;
+
+        JsonSerializer.Serialize(new EnumSample(Level.VeryHigh), json).Should().Be("{\"level\":\"veryHigh\"}");
+    }
+
+    private static JsonSerializerOptions MvcJsonOptions(TimeProvider timeProvider)
+    {
+        var services = new ServiceCollection();
+        services.AddSingleton(timeProvider);
+        services.AddControllers().AddWireJson();
+
+        return services.BuildServiceProvider().GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
+    }
+
+    private enum Level
+    {
+        Low = 1,
+        VeryHigh = 2,
+    }
+
+    private sealed record EnumSample(Level Level);
 
     [Fact]
     public void AddModelStateProblemDetails_AnswersAnInvalidModelWithTheCanonicalProblem()

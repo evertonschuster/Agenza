@@ -41,6 +41,31 @@ public abstract class ClientContact : TenantOwnedEntity
         Phone = phone;
     }
 
+    internal static DomainResult ValidateDetails(string name, string relationship)
+    {
+        var nameResult = ValidateName(name);
+        if (nameResult.IsFailure)
+        {
+            return nameResult;
+        }
+
+        return ValidateRelationship(relationship);
+    }
+
+    protected DomainResult Revise(string name, string relationship, PhoneNumber? phone)
+    {
+        var detailsResult = ValidateDetails(name, relationship);
+        if (detailsResult.IsFailure)
+        {
+            return detailsResult;
+        }
+
+        Name = name.Trim();
+        Relationship = relationship.Trim();
+        Phone = phone;
+        return DomainResult.Success();
+    }
+
     protected static DomainResult<string> ValidateName(string name)
     {
         var trimmed = name?.Trim() ?? string.Empty;

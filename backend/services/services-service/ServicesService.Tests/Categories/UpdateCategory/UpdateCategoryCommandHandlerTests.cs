@@ -32,6 +32,7 @@ public class UpdateCategoryCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Name.Should().Be("Nails");
+        await _repository.Received(1).UpdateAsync(category, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -46,6 +47,7 @@ public class UpdateCategoryCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.NotFound);
         result.Error.Code.Should().Be("Category.NotFound");
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Category>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -61,6 +63,21 @@ public class UpdateCategoryCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Category.DuplicateName");
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Category>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithAnInvalidName_ReturnsTheDomainErrorAndPersistsNothing()
+    {
+        var category = Category.Create(Guid.NewGuid(), "Hair").Value;
+        _repository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
+
+        var result = await _handler.Handle(new UpdateCategoryCommand(category.Id, "  "), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        category.Name.Should().Be("Hair");
+        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Category>(), Arg.Any<CancellationToken>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 

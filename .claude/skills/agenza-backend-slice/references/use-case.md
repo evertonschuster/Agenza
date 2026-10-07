@@ -11,8 +11,10 @@ messages", plus the earlier slices for reads, edits and paging. This file is how
 - Members are what crosses the wire: primitives, strings, `DateOnly?`, `Guid`, and lists as
   `IReadOnlyList<<Thing>Input>?`, with the `<Thing>Input` records in the same file. No domain type —
   except a shared string value object such as `CpfNumber?`, which binds from the JSON string and needs
-  no validator rule (ADR 0055) — no tenant, no C# enum: an enum travels as a string and
-  `<Concept>Names` translates it.
+  no validator rule (ADR 0055) — no tenant. An enum is allowed: the kernel's `AddWireJson()` already names
+  every enum in camelCase and refuses integers, in the MVC and the minimal-API JSON options, so there is
+  nothing to register and no `<Concept>Names` class. A list of enums gets an `IsInEnum` rule per item with
+  the domain's code (ADR 0058).
 - A route id is a member (`<Entity>Id`) that the controller fills with `with { … }`.
 - A list query carries its filters as optional members and `Page`/`PageSize` with defaults.
 
@@ -50,6 +52,10 @@ base validator class.
   with the value objects and the children's data records.
 - `ApplyTo(this <Command>, <Entity>, <context>)` → `DomainResult`: build the value objects, call the
   behaviour.
+- `To<Entity>Data(this <Command>)` → `<Entity>Data`, for a root that takes a data record (ADR 0059): the
+  value objects as they are, the nested inputs turned into child data records. It adds no call to the
+  domain: the handler runs `<Entity>.Create(command.To<Entity>Data(), today)` or
+  `<entity>.Update(command.To<Entity>Data(), today)` itself.
 - Helpers named `To...` with a natural source object are extension methods and are called from that
   object. Keep domain factories such as `Create` and `Restore` as static methods.
 - No rule, no I/O, no tenant. Each step is an explicit `if (x.IsFailure) return …` — no helper chains
@@ -65,15 +71,20 @@ or `ITenantAccessor`.
 validator already ran before the handler):
 
 1. Resolve context: `today` from `TimeProvider`.
-2. Get the aggregate: `ToModel` for a create; the repository plus `NotFound` for anything else.
+2. Get the aggregate: `ToModel` (or `<Entity>.Create(command.To<Entity>Data(), today)`) for a create; the
+   repository plus `NotFound` for anything else.
 3. A domain failure returns `error.ToApplicationError()`.
 4. Pre-checks against current state, cheapest first and before any side effect: each a private
    `Find<Thing>ConflictAsync` returning `Error?`; a conflict a form can show is keyed by field, with
    `meta`; one per answer.
-5. Behaviour, or `Add`.
+5. Behaviour, `Add`, or `UpdateAsync`.
 6. `SaveChangesAsync`; a failure logs kind and constraint at `Warning` and returns
    `<Entity>.SaveFailed`.
 7. Return `<Entity>Response.From<Entity>(…)`.
+
+An edit runs `ApplyTo` (or `<entity>.Update(command.To<Entity>Data(), today)`) at step 3, before the pre-checks, because they compare the values it just assigned
+(a uniqueness lookup excludes the aggregate itself); nothing is persisted until step 6, so a rejected
+pre-check discards the change.
 
 A query handler: read through the repository → `NotFound` or map. When the response shows another
 aggregate, collect its ids from the page, read them in one call through that aggregate's repository,
@@ -105,7 +116,7 @@ No `try/catch`, no base class, no loader or service class between handlers.
 
 ## 6. Red flags in a use case
 
-- a domain type (other than a shared string value object) or a C# enum in a command, an input or a response
+- a domain type (other than a shared string value object or a plain enum with a registered converter) in a command, an input or a response
 - `TenantId` anywhere in the request, the mapping or the handler
 - an async rule, a repository or a uniqueness check in a validator; a rule without `.WithErrorCode`
 - `try`/`catch` in a handler; a handler that injects the `DbContext` or calls another handler

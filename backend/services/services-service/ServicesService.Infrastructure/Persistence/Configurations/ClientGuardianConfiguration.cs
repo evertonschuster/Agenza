@@ -9,6 +9,7 @@ public class ClientGuardianConfiguration : IEntityTypeConfiguration<ClientGuardi
     {
         builder.ToTable("ClientGuardians");
         builder.HasKey(g => g.Id);
+        builder.Property(g => g.Id).ValueGeneratedNever();
 
         builder.Property(g => g.TenantId).IsRequired();
         builder.Property(g => g.ClientId).IsRequired();
