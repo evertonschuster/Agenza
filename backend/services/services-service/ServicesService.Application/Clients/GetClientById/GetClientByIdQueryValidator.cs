@@ -6,6 +6,9 @@ public sealed class GetClientByIdQueryValidator : AbstractValidator<GetClientByI
 {
     public GetClientByIdQueryValidator()
     {
-        RuleFor(query => query.ClientId).MustHaveAClientId();
+        RuleFor(query => query.ClientId)
+            .NotEmpty()
+            .WithErrorCode("Client.IdRequired")
+            .WithMessage("O id da pessoa é obrigatório.");
     }
 }

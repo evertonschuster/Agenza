@@ -7,13 +7,6 @@ public static class ClientRuleBuilderExtensions
     public const string GuardianMissingCode = "Client.GuardianMissing";
     public const string ReferenceContactMissingCode = "Client.ReferenceContactMissing";
 
-    public static IRuleBuilderOptions<T, Guid> MustHaveAClientId<T>(this IRuleBuilder<T, Guid> rule)
-    {
-        return rule.NotEmpty()
-            .WithErrorCode("Client.IdRequired")
-            .WithMessage("O id da pessoa é obrigatório.");
-    }
-
     public static IRuleBuilderOptions<T, IReadOnlyList<TItem>?> MustNotExceedTheGuardianLimit<T, TItem>(
         this IRuleBuilder<T, IReadOnlyList<TItem>?> rule)
     {
