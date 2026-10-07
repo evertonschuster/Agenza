@@ -2,7 +2,9 @@
 
 Status: accepted (2026-10); supersedes, as a pattern for new code, the shared `ServiceRelationshipLoader`
 of [ADR 0012](0012-revert-cross-aggregate-checks-to-handlers-and-domain.md); item 8 ("no domain type" in a command) is
-amended by [ADR 0055](0055-shared-string-value-objects.md) for the shared string value objects
+amended by [ADR 0055](0055-shared-string-value-objects.md) for the shared string value objects; item 3's
+`<Feature>RuleBuilderExtensions` as the home of a shared input rule is superseded by
+[ADR 0061](0061-validators-write-their-own-rules.md)
 
 ## Context
 

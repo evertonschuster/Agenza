@@ -15,8 +15,8 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
     public Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken)
     {
         return Set
-            .Include(client => client.Guardians)
-            .Include(client => client.ReferenceContacts)
+            .Include(client => client.Guardians.OrderBy(guardian => guardian.Name).ThenBy(guardian => guardian.Id))
+            .Include(client => client.ReferenceContacts.OrderBy(contact => contact.Name).ThenBy(contact => contact.Id))
             .FirstOrDefaultAsync(client => client.Id == clientId, cancellationToken);
     }
 

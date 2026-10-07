@@ -4,6 +4,7 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using ServicesService.Application.Clients;
 using ServicesService.Application.Clients.CreateClient;
+using ServicesService.Application.Clients.GetClientById;
 using ServicesService.Application.Clients.UpdateClient;
 
 namespace ServicesService.Api.Controllers;
@@ -31,6 +32,16 @@ public class ClientsController : AgenzaControllerBase
     {
         var result = await _dispatcher.Send(command, cancellationToken);
         return result.ToActionResult(this, client => Created($"/api/v1/clients/{client.Id}", client));
+    }
+
+    [HttpGet("{id:guid}")]
+    [ProducesResponseType<ApiResponse<ClientResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    public async Task<IActionResult> GetById(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Query(new GetClientByIdQuery(id), cancellationToken);
+        return result.ToActionResult(this, client => Ok(client));
     }
 
     [HttpPut("{id:guid}")]
