@@ -2,8 +2,6 @@ using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.UpdateTag;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Tags.UpdateTag;
 
@@ -27,7 +25,7 @@ public class UpdateTagCommandHandlerTests
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _repository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
 
         var result = await _handler.Handle(
             new UpdateTagCommand(tag.Id, "Returning", "#ef4444", "Came back"),
@@ -44,7 +42,7 @@ public class UpdateTagCommandHandlerTests
     public async Task Handle_WithUnknownTagId_ReturnsNotFound()
     {
         var unknownId = Guid.NewGuid();
-        _repository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Tag?)null);
+        _repository.GetForUpdateAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Tag?)null);
 
         var result = await _handler.Handle(
             new UpdateTagCommand(unknownId, "VIP", "#0d9488", null), CancellationToken.None);
@@ -58,7 +56,7 @@ public class UpdateTagCommandHandlerTests
     public async Task Handle_RenamingToAnotherTagsName_ReturnsConflict()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _repository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
         _repository.NameExistsAsync("Returning", tag.Id, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _handler.Handle(
@@ -73,18 +71,18 @@ public class UpdateTagCommandHandlerTests
     public async Task Handle_LoadsTheTagExactlyOnce()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _repository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
 
         await _handler.Handle(new UpdateTagCommand(tag.Id, "Returning", "#0d9488", null), CancellationToken.None);
 
-        await _repository.Received(1).GetByIdAsync(tag.Id, Arg.Any<CancellationToken>());
+        await _repository.Received(1).GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>());
     }
 
     [Fact]
     public async Task Handle_WithConcurrentDuplicateNameAtSaveTime_ReturnsConflict()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _repository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Tags_TenantId_NameNormalized")));
@@ -101,7 +99,7 @@ public class UpdateTagCommandHandlerTests
     public async Task Handle_WithUnrecognizedConstraintAtSaveTime_ReturnsGenericConflictNotDuplicateName()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _repository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _repository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));

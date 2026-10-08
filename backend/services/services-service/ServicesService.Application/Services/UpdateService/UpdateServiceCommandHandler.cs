@@ -59,6 +59,8 @@ public sealed class UpdateServiceCommandHandler : ICommandHandler<UpdateServiceC
             return Result.Failure<ServiceResponse>(applyResult.Error.ToApplicationError());
         }
 
+        await _serviceRepository.UpdateAsync(service, cancellationToken);
+
         var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {

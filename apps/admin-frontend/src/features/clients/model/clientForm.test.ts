@@ -21,7 +21,9 @@ function guardian(overrides: Partial<ReturnType<typeof emptyGuardian>> = {}) {
   return { ...emptyGuardian(), name: 'Ana Souza', relationship: 'Mãe', ...overrides };
 }
 
-function reference(overrides: Partial<ReturnType<typeof emptyReferenceContact>> = {}) {
+function reference(
+  overrides: Partial<ReturnType<typeof emptyReferenceContact>> = {},
+): ReturnType<typeof emptyReferenceContact> {
   return {
     ...emptyReferenceContact(),
     name: 'Carlos Lima',

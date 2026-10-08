@@ -1,6 +1,3 @@
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Tests;
 
 public class TagTests
@@ -194,5 +191,11 @@ public class TagColorTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Tag.Invalid");
+    }
+
+    [Fact]
+    public void Restore_AcceptsAColorOutsideTheCurrentPalette()
+    {
+        TagColor.Restore("#123456").Value.Should().Be("#123456");
     }
 }

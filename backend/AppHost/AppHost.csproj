@@ -1,4 +1,4 @@
-<Project Sdk="Aspire.AppHost.Sdk/13.4.6">
+<Project Sdk="Aspire.AppHost.Sdk/13.6.0">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -6,6 +6,7 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <UserSecretsId>4e3bd65e-834c-46d4-8592-e03bc42d7f94</UserSecretsId>
+    <AspireUseCliBundle>true</AspireUseCliBundle>
   </PropertyGroup>
 
   <ItemGroup>
@@ -13,12 +14,13 @@
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.Python" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
-    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" VersionOverride="10.0.11" />
+    <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
     <PackageReference Include="OpenTelemetry.Extensions.Hosting" />
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\shared\Admin.Logging\Admin.Logging.csproj" IsAspireProjectResource="false" />
     <ProjectReference Include="..\services\identity-service\IdentityService.Api\IdentityService.Api.csproj" />
     <ProjectReference Include="..\services\services-service\ServicesService.Api\ServicesService.Api.csproj" />
   </ItemGroup>

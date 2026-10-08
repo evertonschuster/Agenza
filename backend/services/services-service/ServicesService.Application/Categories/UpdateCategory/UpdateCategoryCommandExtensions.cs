@@ -1,6 +1,3 @@
-using ServicesService.Domain.Common;
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Application.Categories.UpdateCategory;
 
 public static class UpdateCategoryCommandExtensions

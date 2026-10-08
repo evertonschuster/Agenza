@@ -1,6 +1,5 @@
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Categories.ListCategories;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Tests.Categories.ListCategories;
 

@@ -10,7 +10,7 @@ public class UpdateCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
     {
-        var result = await _validator.ValidateAsync(new UpdateCategoryCommand(_categoryId, "Hair"));
+        var result = await _validator.ValidateAsync(new UpdateCategoryCommand(_categoryId, "Hair"), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeTrue();
     }
@@ -18,7 +18,7 @@ public class UpdateCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyCategoryId_Fails()
     {
-        var result = await _validator.ValidateAsync(new UpdateCategoryCommand(Guid.Empty, "Hair"));
+        var result = await _validator.ValidateAsync(new UpdateCategoryCommand(Guid.Empty, "Hair"), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -26,7 +26,7 @@ public class UpdateCategoryCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyName_Fails()
     {
-        var result = await _validator.ValidateAsync(new UpdateCategoryCommand(_categoryId, ""));
+        var result = await _validator.ValidateAsync(new UpdateCategoryCommand(_categoryId, ""), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }
@@ -36,7 +36,7 @@ public class UpdateCategoryCommandValidatorTests
     {
         var name = new string('x', 61);
 
-        var result = await _validator.ValidateAsync(new UpdateCategoryCommand(_categoryId, name));
+        var result = await _validator.ValidateAsync(new UpdateCategoryCommand(_categoryId, name), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }

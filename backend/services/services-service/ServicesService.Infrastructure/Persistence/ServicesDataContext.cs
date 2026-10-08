@@ -1,8 +1,6 @@
 using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Common;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Infrastructure.Persistence;
 
@@ -23,7 +21,13 @@ public class ServicesDataContext : DbContext
     public DbSet<Tag> Tags => Set<Tag>();
     public DbSet<Service> Services => Set<Service>();
     public DbSet<Category> Categories => Set<Category>();
+    public DbSet<Client> Clients => Set<Client>();
     public DbSet<TenantSequence> TenantSequences => Set<TenantSequence>();
+
+    protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+    {
+        configurationBuilder.AddValueObjectConversions();
+    }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {

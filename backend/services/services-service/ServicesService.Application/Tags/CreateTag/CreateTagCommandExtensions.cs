@@ -1,7 +1,3 @@
-using ServicesService.Domain.Common;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
-
 namespace ServicesService.Application.Tags.CreateTag;
 
 public static class CreateTagCommandExtensions

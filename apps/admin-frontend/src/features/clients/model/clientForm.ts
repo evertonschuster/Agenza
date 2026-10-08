@@ -9,6 +9,7 @@ import {
   isWithinMaxAge,
   parseBirthDate,
 } from './birthDate';
+import { CONTACT_PURPOSES } from './client';
 import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH, isValidEmail, isValidPhone } from './contactFormats';
 import { isValidCpf, stripCpfMask } from './cpf';
 
@@ -100,7 +101,7 @@ const referenceContactSchema = z.object({
   relationship: relationshipField('da pessoa de referência'),
   phone: phoneField,
   purposes: z
-    .array(z.string())
+    .array(z.enum(CONTACT_PURPOSES))
     .min(1, 'Informe ao menos uma finalidade para a pessoa de referência.'),
 });
 

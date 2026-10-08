@@ -1,7 +1,6 @@
 using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Entities;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.Infrastructure.Repositories;
@@ -29,11 +28,32 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
                 .OrderBy(s => s.Name),
             page,
             pageSize,
-            cancellationToken,
-            asNoTracking: true);
+            cancellationToken);
 
     public Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken) =>
         Set.Include(s => s.Tags).FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
+
+    public async Task UpdateAsync(Service service, CancellationToken cancellationToken)
+    {
+        var persisted = await Set.AsTracking()
+            .Include(s => s.Tags)
+            .SingleAsync(s => s.Id == service.Id, cancellationToken);
+
+        var tagIds = service.Tags.Select(tag => tag.Id).ToList();
+        var tags = await DbContext.Set<Tag>()
+            .AsTracking()
+            .Where(tag => tagIds.Contains(tag.Id))
+            .ToListAsync(cancellationToken);
+
+        DbContext.Entry(persisted).CurrentValues.SetValues(service);
+        persisted.SetTags(tags);
+    }
+
+    public override void Add(Service service)
+    {
+        DbContext.AttachRange(service.Tags);
+        base.Add(service);
+    }
 
     public Task<bool> NameExistsAsync(string name, Guid? excludeServiceId, CancellationToken cancellationToken)
     {

@@ -2,7 +2,6 @@ using Admin.Identity.Client;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Common;
 
 namespace ServicesService.Infrastructure.Persistence.Interceptors;
 

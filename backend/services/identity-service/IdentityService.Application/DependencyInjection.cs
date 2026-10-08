@@ -1,7 +1,7 @@
-using System.Reflection;
 using Admin.SharedKernel;
 using FluentValidation;
 using Microsoft.Extensions.DependencyInjection;
+using System.Reflection;
 
 namespace IdentityService.Application;
 

@@ -9,7 +9,7 @@ public class DeleteTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithNonEmptyTagId_Passes()
     {
-        var result = await _validator.ValidateAsync(new DeleteTagCommand(Guid.NewGuid()));
+        var result = await _validator.ValidateAsync(new DeleteTagCommand(Guid.NewGuid()), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeTrue();
     }
@@ -17,7 +17,7 @@ public class DeleteTagCommandValidatorTests
     [Fact]
     public async Task Validate_WithEmptyTagId_Fails()
     {
-        var result = await _validator.ValidateAsync(new DeleteTagCommand(Guid.Empty));
+        var result = await _validator.ValidateAsync(new DeleteTagCommand(Guid.Empty), TestContext.Current.CancellationToken);
 
         result.IsValid.Should().BeFalse();
     }

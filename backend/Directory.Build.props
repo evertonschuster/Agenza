@@ -5,6 +5,11 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
 
+  <!-- xUnit v3 test projects (*.Tests, *.PersistenceTests) are executables. -->
+  <PropertyGroup Condition="$(MSBuildProjectName.EndsWith('Tests'))">
+    <OutputType>Exe</OutputType>
+  </PropertyGroup>
+
   <!--
     Coverage gate for unit-test projects (*.Tests): coverlet instruments
     the assemblies each test project references (Domain + Application)

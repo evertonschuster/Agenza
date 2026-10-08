@@ -41,6 +41,8 @@ public sealed class UpdateCategoryCommandHandler : ICommandHandler<UpdateCategor
             return Result.Failure<CategoryResponse>(applyResult.Error.ToApplicationError());
         }
 
+        await _categoryRepository.UpdateAsync(category, cancellationToken);
+
         var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {

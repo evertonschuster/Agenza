@@ -2,7 +2,9 @@
 
 Status: accepted (2026-07); BusinessException hierarchy / per-service
 BusinessExceptionHandler convention superseded by docs/adr/0014 (Domain
-returns DomainResult, no exception-based flow for expected outcomes)
+returns DomainResult, no exception-based flow for expected outcomes); the
+single combined soft-delete + tenant query filter split into two named
+filters by docs/adr/0046
 
 ## Context
 
@@ -233,6 +235,11 @@ adds `HasQueryFilter(e => e.DeletedAt == null && e.TenantId ==
 CurrentTenantId)` (EF Core only allows one `HasQueryFilter` per entity
 type, so it's one combined predicate) and a `TenantId` index for any
 `ITenantOwned` type.
+
+> **2026-10 update:** EF Core 10 allows named filters, and the combined
+> predicate is now two of them — `SoftDelete` and `Tenant` — so a read can
+> include soft-deleted rows without leaving the tenant (docs/adr/0046).
+> The live-context access described below lives in `BuildTenantFilter`.
 
 **The filter must read `CurrentTenantId` off the live DbContext instance,
 not a value snapshotted at model-build time.** EF Core compiles and

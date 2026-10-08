@@ -1,4 +1,8 @@
+using Admin.Logging;
+
 var builder = DistributedApplication.CreateBuilder(args);
+
+builder.Services.AddReadableLogging(builder.Configuration, builder.Environment);
 
 var developmentPassword = builder.AddParameter(
     "development-password",

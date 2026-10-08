@@ -1,5 +1,3 @@
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Application.Abstractions;
 
 public interface ICategoryRepository
@@ -7,6 +5,8 @@ public interface ICategoryRepository
     Task<IReadOnlyList<Category>> ListAsync(string? search, CancellationToken cancellationToken);
 
     Task<Category?> GetByIdAsync(Guid categoryId, CancellationToken cancellationToken);
+
+    Task UpdateAsync(Category category, CancellationToken cancellationToken);
 
     Task<IReadOnlyList<Category>> GetByIdsAsync(IReadOnlyCollection<Guid> categoryIds, CancellationToken cancellationToken);
 

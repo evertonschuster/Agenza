@@ -23,7 +23,7 @@ não se traduzem.
 | Caminho | Stack | Leia primeiro |
 | --- | --- | --- |
 | `apps/admin-frontend` | Vite + React + TypeScript estrito | [AGENTS.md local](apps/admin-frontend/AGENTS.md) |
-| `backend` | .NET / ASP.NET Core, Clean Architecture por serviço | [backend/README.md](backend/README.md) |
+| `backend` | .NET / ASP.NET Core, Clean Architecture por serviço | [AGENTS.md local](backend/AGENTS.md) |
 | `ai-services` | Python + FastAPI | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md) |
 | `infra` | Scripts de init do PostgreSQL | — |
 | `docs/adr` | 38+ decisões arquiteturais | [índice](docs/adr/README.md) |
@@ -66,6 +66,10 @@ Features começam pelo Spec Kit: `/speckit-specify` → `/speckit-plan` → `/sp
 `/speckit-implement`. As specs vivem em `apps/admin-frontend/specs/NNN-nome/`.
 
 Trabalho por PR. Não faça commit na `main` diretamente.
+
+Uma feature que atravessa backend e frontend vira dois PRs, ambos cortados da `main`: o do backend
+primeiro, levando os tipos do OpenAPI regenerados; o do frontend depois. Cada um passa sozinho nos
+seus portões.
 
 ## Skills
 

@@ -29,7 +29,7 @@ and has no input to attach to: render it in the section.
 | RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem<T>(problem, fields, setError)` — calls the above, then `setError` per field plus `setError('root.serverError', …)`. Knows both shapes; the only file that does. |
 | Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero domain knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
-Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (PascalCase
+Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed
 keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s
 `references/errors.md` for that taxonomy in full.
 

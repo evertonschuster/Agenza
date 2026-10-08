@@ -1,5 +1,3 @@
-using ServicesService.Domain.Entities;
-
 namespace ServicesService.Application.Abstractions;
 
 public interface IServiceRepository
@@ -13,6 +11,8 @@ public interface IServiceRepository
         CancellationToken cancellationToken);
 
     Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken);
+
+    Task UpdateAsync(Service service, CancellationToken cancellationToken);
 
     Task<bool> NameExistsAsync(string name, Guid? excludeServiceId, CancellationToken cancellationToken);
 

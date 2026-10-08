@@ -3,8 +3,6 @@ using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services;
 using ServicesService.Application.Services.UpdateService;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Services.UpdateService;
 
@@ -46,6 +44,7 @@ public class UpdateServiceCommandHandlerTests
         result.Value.MinDurationMinutes.Should().Be(60);
         result.Value.MaxDurationMinutes.Should().Be(120);
         result.Value.MaxDiscountPercentage.Should().Be(25m);
+        await _serviceRepository.Received(1).UpdateAsync(service, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -68,6 +67,7 @@ public class UpdateServiceCommandHandlerTests
         result.Value.CategoryId.Should().Be(category.Id);
         result.Value.CategoryName.Should().Be("Hair");
         result.Value.Tags.Should().ContainSingle(t => t.Id == tag.Id);
+        await _serviceRepository.Received(1).UpdateAsync(service, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -87,6 +87,7 @@ public class UpdateServiceCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Tags.Should().BeEmpty();
+        await _serviceRepository.Received(1).UpdateAsync(service, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -105,6 +106,7 @@ public class UpdateServiceCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Tags.Should().ContainSingle(t => t.Id == tag.Id);
         await _tagRepository.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
+        await _serviceRepository.Received(1).UpdateAsync(service, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -121,6 +123,8 @@ public class UpdateServiceCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.NotFound);
         result.Error.Code.Should().Be("Service.NotFound");
+        await _serviceRepository.DidNotReceive().UpdateAsync(Arg.Any<Service>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -137,6 +141,8 @@ public class UpdateServiceCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Service.DuplicateName");
+        await _serviceRepository.DidNotReceive().UpdateAsync(Arg.Any<Service>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -154,6 +160,24 @@ public class UpdateServiceCommandHandlerTests
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.NotFound);
         result.Error.Code.Should().Be("Category.NotFound");
+        await _serviceRepository.DidNotReceive().UpdateAsync(Arg.Any<Service>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithAnInvalidName_ReturnsTheDomainErrorAndPersistsNothing()
+    {
+        var service = ValidService();
+        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+
+        var result = await _handler.Handle(
+            new UpdateServiceCommand(service.Id, "  ", null, 30, 15, 60, 45.50m, 10m, null, null),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        service.Name.Should().Be("Haircut");
+        await _serviceRepository.DidNotReceive().UpdateAsync(Arg.Any<Service>(), Arg.Any<CancellationToken>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]

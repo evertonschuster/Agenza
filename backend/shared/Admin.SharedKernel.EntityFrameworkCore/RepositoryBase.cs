@@ -1,5 +1,5 @@
-using System.Linq.Expressions;
 using Microsoft.EntityFrameworkCore;
+using System.Linq.Expressions;
 
 namespace Admin.SharedKernel.EntityFrameworkCore;
 
@@ -16,18 +16,16 @@ public abstract class RepositoryBase<TEntity>
     protected DbSet<TEntity> Set => DbContext.Set<TEntity>();
 
     protected Task<TEntity?> FindAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken) =>
-        Set.FirstOrDefaultAsync(predicate, cancellationToken);
+        Set.AsNoTracking().FirstOrDefaultAsync(predicate, cancellationToken);
 
-    // asNoTracking is opt-in (defaults false) - only safe for a caller that
-    // never attaches the returned entities to another aggregate being saved
-    // in the same request (e.g. Category/Tag rows reused to build a
-    // Service's response). A caller that does must keep tracking on.
+    protected Task<TEntity?> FindForUpdateAsync(Expression<Func<TEntity, bool>> predicate, CancellationToken cancellationToken) =>
+        Set.AsTracking().FirstOrDefaultAsync(predicate, cancellationToken);
+
     protected async Task<IReadOnlyList<TEntity>> ListAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? order,
-        CancellationToken cancellationToken,
-        bool asNoTracking = false)
+        CancellationToken cancellationToken)
     {
-        IQueryable<TEntity> query = asNoTracking ? Set.AsNoTracking() : Set;
+        IQueryable<TEntity> query = Set.AsNoTracking();
         if (order is not null)
         {
             query = order(query);
@@ -39,10 +37,9 @@ public abstract class RepositoryBase<TEntity>
     protected async Task<IReadOnlyList<TEntity>> ListAsync(
         Expression<Func<TEntity, bool>> predicate,
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? order,
-        CancellationToken cancellationToken,
-        bool asNoTracking = false)
+        CancellationToken cancellationToken)
     {
-        var query = (asNoTracking ? Set.AsNoTracking() : Set).Where(predicate);
+        var query = Set.AsNoTracking().Where(predicate);
         if (order is not null)
         {
             query = order(query);
@@ -55,10 +52,9 @@ public abstract class RepositoryBase<TEntity>
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? order,
         int page,
         int pageSize,
-        CancellationToken cancellationToken,
-        bool asNoTracking = false)
+        CancellationToken cancellationToken)
     {
-        IQueryable<TEntity> query = asNoTracking ? Set.AsNoTracking() : Set;
+        IQueryable<TEntity> query = Set.AsNoTracking();
         if (order is not null)
         {
             query = order(query);

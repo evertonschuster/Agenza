@@ -1,6 +1,7 @@
 # ADR 0001 — Context-aggregated services, not fine-grained microservices
 
-Status: accepted (2026-07)
+Status: accepted (2026-07); the rule that shared code never holds business logic is amended for
+`Admin.SharedKernel.ValueObjects` by [ADR 0055](0055-shared-string-value-objects.md)
 
 ## Context
 

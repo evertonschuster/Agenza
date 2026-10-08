@@ -1,5 +1,3 @@
-using ServicesService.Domain.Common;
-
 namespace ServicesService.Domain.ValueObjects;
 
 // Fixed 8-color palette (frontend docs/API.md) - not a free-form hex value.
@@ -39,5 +37,10 @@ public sealed record TagColor
         }
 
         return DomainResult.Success(new TagColor(normalized));
+    }
+
+    public static TagColor Restore(string value)
+    {
+        return new TagColor(value);
     }
 }

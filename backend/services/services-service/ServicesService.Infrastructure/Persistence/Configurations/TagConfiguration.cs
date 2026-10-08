@@ -1,7 +1,5 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Infrastructure.Persistence.Configurations;
 
@@ -18,7 +16,7 @@ public class TagConfiguration : IEntityTypeConfiguration<Tag>
         builder.Property(t => t.Description).HasMaxLength(Tag.DescriptionMaxLength);
 
         builder.Property(t => t.Color)
-            .HasConversion(color => color.Value, value => TagColor.Create(value).Value)
+            .HasConversion(color => color.Value, value => TagColor.Restore(value))
             .IsRequired()
             .HasMaxLength(7);
 

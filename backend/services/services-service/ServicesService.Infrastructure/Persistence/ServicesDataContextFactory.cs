@@ -28,7 +28,9 @@ public class ServicesDataContextFactory : IDesignTimeDbContextFactory<ServicesDa
         // configuration (docs/adr/0017) - design-time tooling (`dotnet ef migrations
         // list`/`database update`) must resolve migrations against the same
         // schema-scoped history table the running service uses.
-        optionsBuilder.UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "services"));
+        optionsBuilder
+            .UseNpgsql(connectionString, npgsql => npgsql.MigrationsHistoryTable("__EFMigrationsHistory", "services"))
+            .UseQueryTrackingBehavior(QueryTrackingBehavior.NoTracking);
 
         return new ServicesDataContext(optionsBuilder.Options);
     }

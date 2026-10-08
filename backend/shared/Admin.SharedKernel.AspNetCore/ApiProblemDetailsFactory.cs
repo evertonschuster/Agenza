@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Primitives;
+using System.Text.Json;
 
 namespace Admin.SharedKernel.AspNetCore;
 
@@ -9,11 +10,18 @@ public static class ApiProblemDetailsFactory
     private const string ApplicationProblemType = "https://agenza/errors/application";
     private const string AuthorizationProblemType = "https://agenza/errors/authorization";
     private const string UnexpectedProblemType = "https://agenza/errors/unexpected";
+    private const string RequestProblemType = "https://agenza/errors/request";
     private const string CorrelationIdHeaderName = "X-Correlation-Id";
 
     public static ApiProblemDetails CreateValidationProblem(Error error, HttpContext? httpContext = null)
     {
-        return CreateProblem(httpContext, ValidationProblemType, "Ocorreram erros de validação.", StatusCodes.Status400BadRequest, error.Code, error.FieldErrors ?? EmptyErrors);
+        return CreateProblem(
+            httpContext,
+            ValidationProblemType,
+            "Ocorreram erros de validação.",
+            StatusCodes.Status400BadRequest,
+            error.Code,
+            error.FieldErrors ?? CreateSingleErrorDictionary(error));
     }
 
     public static ApiProblemDetails CreateApplicationProblem(Error error, HttpContext? httpContext = null)
@@ -49,6 +57,28 @@ public static class ApiProblemDetailsFactory
             EmptyErrors);
     }
 
+    public static ApiProblemDetails CreateRequestProblem(int status, HttpContext? httpContext = null)
+    {
+        if (status == StatusCodes.Status413PayloadTooLarge)
+        {
+            return CreateProblem(
+                httpContext,
+                RequestProblemType,
+                "Os dados enviados excedem o tamanho permitido.",
+                status,
+                "Request.TooLarge",
+                EmptyErrors);
+        }
+
+        return CreateProblem(
+            httpContext,
+            RequestProblemType,
+            "Não foi possível ler os dados enviados.",
+            status,
+            "Request.Invalid",
+            EmptyErrors);
+    }
+
     private static ApiProblemDetails CreateProblem(
         HttpContext? httpContext,
         string type,
@@ -65,8 +95,19 @@ public static class ApiProblemDetailsFactory
             Code = code,
             TraceId = httpContext?.TraceIdentifier,
             CorrelationId = ResolveCorrelationId(httpContext),
-            Errors = errors,
+            Errors = ToWireKeys(errors),
         };
+    }
+
+    private static IReadOnlyDictionary<string, IReadOnlyList<FieldError>> ToWireKeys(
+        IReadOnlyDictionary<string, IReadOnlyList<FieldError>> errors)
+    {
+        return errors.ToDictionary(entry => ToWirePath(entry.Key), entry => entry.Value);
+    }
+
+    private static string ToWirePath(string propertyPath)
+    {
+        return string.Join('.', propertyPath.Split('.').Select(JsonNamingPolicy.CamelCase.ConvertName));
     }
 
     private static string? ResolveCorrelationId(HttpContext? httpContext)

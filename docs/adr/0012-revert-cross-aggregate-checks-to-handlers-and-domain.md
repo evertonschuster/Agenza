@@ -3,7 +3,9 @@
 Status: accepted (2026-07); supersedes docs/adr/0010 and docs/adr/0011;
 Domain-throws-again / DuplicateEntityException convention superseded by
 docs/adr/0014 (Domain returns DomainResult, persistence conflicts return
-PersistenceResult)
+PersistenceResult); `ServiceRelationshipLoader` as a pattern for new code
+superseded by docs/adr/0049 (handlers own their orchestration; shared reads
+are repository methods)
 
 ## Context
 

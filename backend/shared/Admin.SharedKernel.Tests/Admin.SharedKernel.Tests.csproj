@@ -7,23 +7,30 @@
     <IsPackable>false</IsPackable>
   </PropertyGroup>
 
+  <!-- Microsoft.AspNetCore.OpenApi adds this generated file to Admin.SharedKernel.AspNetCore; no test can reach it. -->
+  <PropertyGroup>
+    <ExcludeByFile>**/OpenApiXmlCommentSupport.generated.cs</ExcludeByFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="AwesomeAssertions" />
     <PackageReference Include="coverlet.msbuild" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.NET.Test.Sdk" />
-    <PackageReference Include="xunit" />
+    <PackageReference Include="xunit.v3.mtp-off" />
     <PackageReference Include="xunit.runner.visualstudio" />
   </ItemGroup>
 
   <ItemGroup>
     <Using Include="Xunit" />
     <Using Include="AwesomeAssertions" />
+    <Using Include="Admin.SharedKernel.ValueObjects" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\Admin.SharedKernel\Admin.SharedKernel.csproj" />
     <ProjectReference Include="..\Admin.SharedKernel.AspNetCore\Admin.SharedKernel.AspNetCore.csproj" />
+    <ProjectReference Include="..\Admin.SharedKernel.ValueObjects\Admin.SharedKernel.ValueObjects.csproj" />
   </ItemGroup>
 
 </Project>

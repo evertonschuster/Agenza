@@ -1,5 +1,4 @@
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Common;
 
 namespace ServicesService.Tests;
 

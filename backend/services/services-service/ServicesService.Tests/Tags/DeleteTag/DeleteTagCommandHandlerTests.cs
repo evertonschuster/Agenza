@@ -2,8 +2,6 @@ using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Tags.DeleteTag;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Tags.DeleteTag;
 
@@ -27,7 +25,7 @@ public class DeleteTagCommandHandlerTests
     public async Task Handle_WithExistingUnusedTag_RemovesItAndCommits()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _tagRepository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _tagRepository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
 
         var result = await _handler.Handle(new DeleteTagCommand(tag.Id), CancellationToken.None);
 
@@ -40,7 +38,7 @@ public class DeleteTagCommandHandlerTests
     public async Task Handle_WithUnknownTagId_ReturnsNotFound()
     {
         var unknownId = Guid.NewGuid();
-        _tagRepository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Tag?)null);
+        _tagRepository.GetForUpdateAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Tag?)null);
 
         var result = await _handler.Handle(new DeleteTagCommand(unknownId), CancellationToken.None);
 
@@ -53,7 +51,7 @@ public class DeleteTagCommandHandlerTests
     public async Task Handle_WithTagInUse_ReturnsConflictAndDoesNotRemove()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _tagRepository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _tagRepository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
         _serviceRepository.CountByTagIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(2);
 
         var result = await _handler.Handle(new DeleteTagCommand(tag.Id), CancellationToken.None);
@@ -68,7 +66,7 @@ public class DeleteTagCommandHandlerTests
     public async Task Handle_WithConcurrentConflictAtSaveTime_ReturnsConflict()
     {
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _tagRepository.GetByIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _tagRepository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>())
             .Returns(PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));

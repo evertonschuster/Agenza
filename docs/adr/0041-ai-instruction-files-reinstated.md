@@ -1,9 +1,16 @@
 # ADR 0041 — AI instruction files reinstated, without the sync machinery
 
-Status: accepted (2026-09)
+Status: accepted (2026-09); extended to `backend/` (2026-10)
 
 Replaces the open concern left by [ADR 0016](0016-ai-agent-governance-framework.md)
 (abandoned).
+
+> **2026-10 update:** `backend/` joins the set under the same constraint — `backend/AGENTS.md`
+> and its `CLAUDE.md` import, `backend/docs/ARCHITECTURE.md` as the backend's counterpart of the
+> frontend's architecture guide, and the `agenza-backend-slice` (building) and `agenza-backend-review`
+> (reviewing) skills, which route to the architecture guide instead of restating it. Until then the backend had
+> no agent entry point since `bfd16b8`, and sessions copied whichever slice was nearest, including
+> shapes later ADRs had already replaced.
 
 ## Context
 

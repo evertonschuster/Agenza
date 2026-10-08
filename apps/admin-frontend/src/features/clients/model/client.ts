@@ -6,12 +6,16 @@ export interface ClientGuardian {
   cpf: string | null;
 }
 
+export const CONTACT_PURPOSES = ['emergency', 'operationalSupport', 'dailyCommunication'] as const;
+
+export type ContactPurpose = (typeof CONTACT_PURPOSES)[number];
+
 export interface ClientReferenceContact {
   id: string;
   name: string;
   relationship: string;
   phone: string | null;
-  purposes: string[];
+  purposes: ContactPurpose[];
 }
 
 export interface Client {
@@ -46,7 +50,7 @@ export interface ClientInput {
 }
 
 export interface ContactPurposeOption {
-  value: string;
+  value: ContactPurpose;
   label: string;
 }
 

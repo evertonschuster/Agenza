@@ -1,3 +1,5 @@
+using System.Text.Json.Serialization;
+
 namespace Admin.SharedKernel;
 
 public enum ErrorType
@@ -11,8 +13,13 @@ public enum ErrorType
 
 // One FluentValidation failure, kept intact instead of collapsed into a
 // joined string - lets the Api return a structured, per-field response
-// (docs/adr/0012) instead of one opaque message.
-public readonly record struct FieldError(string Code, string Message);
+// (docs/adr/0012) instead of one opaque message. Meta is machine-readable
+// context for the client (docs/adr/0044) and is omitted from the payload when null.
+public readonly record struct FieldError(
+    string Code,
+    string Message,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)]
+    IReadOnlyDictionary<string, string>? Meta = null);
 
 public readonly record struct Error(
     string Code,
@@ -35,6 +42,19 @@ public readonly record struct Error(
     public static Error NotFound(string code, string message) => new(code, message, ErrorType.NotFound);
 
     public static Error Conflict(string code, string message) => new(code, message, ErrorType.Conflict);
+
+    public static Error Conflict(
+        string code,
+        string message,
+        string field,
+        IReadOnlyDictionary<string, string>? meta = null)
+    {
+        return new Error(
+            code,
+            message,
+            ErrorType.Conflict,
+            new Dictionary<string, IReadOnlyList<FieldError>> { [field] = [new FieldError(code, message, meta)] });
+    }
 
     public static Error Forbidden(string code, string message) => new(code, message, ErrorType.Forbidden);
 }
