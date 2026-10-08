@@ -1,7 +1,7 @@
 using Admin.Identity.Client;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Metadata;
 using ServicesService.Application.Abstractions;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Persistence.Interceptors;
@@ -580,6 +580,94 @@ public class ClientPersistenceTests
                 .Where(contact => previousReferenceContactIds.Contains(contact.Id))
                 .ToListAsync(TestContext.Current.CancellationToken);
             removedReferenceContacts.Should().OnlyContain(contact => contact.DeletedAt != null);
+        }
+    }
+
+    private static async Task ChangeStatusAndUpdate(
+        string databaseName,
+        Guid tenantId,
+        Guid clientId,
+        Func<Client, DomainResult> transition)
+    {
+        await using var context = CreateContext(databaseName, tenantId);
+        var repository = new ClientRepository(context);
+        var loaded = (await repository.GetByIdAsync(clientId, CancellationToken.None))!;
+
+        transition(loaded).IsSuccess.Should().BeTrue();
+        await repository.UpdateAsync(loaded, CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Update_AfterAStatusChange_KeepsTheSameContactRows()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(
+            cpf: CpfDigits,
+            email: "maria@example.com",
+            guardians: [Guardian(), Guardian("Bia Souza")],
+            referenceContacts: [ReferenceContact()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        var guardianIds = client.Guardians.Select(guardian => guardian.Id).ToArray();
+        var referenceContactIds = client.ReferenceContacts.Select(contact => contact.Id).ToArray();
+
+        await ChangeStatusAndUpdate(databaseName, tenantId, client.Id, loaded => loaded.Inactivate());
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var stored = await verification.Clients
+            .Include(c => c.Guardians)
+            .Include(c => c.ReferenceContacts)
+            .SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
+        stored.Status.Should().Be(ClientStatus.Inactive);
+        stored.UpdatedAt.Should().NotBeNull();
+        stored.Cpf.Should().Be(Cpf(CpfDigits));
+        stored.Email.Should().Be(Email("maria@example.com"));
+        stored.Guardians.Select(guardian => guardian.Id).Should().BeEquivalentTo(guardianIds);
+        stored.ReferenceContacts.Select(contact => contact.Id).Should().BeEquivalentTo(referenceContactIds);
+        (await verification.Set<ClientGuardian>().IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken))
+            .Should().Be(2, "no contact row is inserted or soft-deleted by a status change");
+        (await verification.Set<ClientReferenceContact>().IgnoreQueryFilters().CountAsync(TestContext.Current.CancellationToken))
+            .Should().Be(1);
+        (await verification.Set<ClientGuardian>().IgnoreQueryFilters().AnyAsync(guardian => guardian.DeletedAt != null, TestContext.Current.CancellationToken))
+            .Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Update_InactivatesAndReactivatesTheSameClient_FreeingAndTakingTheEmailBack()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(email: "maria@example.com", guardians: [Guardian()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        await ChangeStatusAndUpdate(databaseName, tenantId, client.Id, loaded => loaded.Inactivate());
+
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            var repository = new ClientRepository(context);
+            (await repository.GetByIdAsync(client.Id, CancellationToken.None))!.Status.Should().Be(ClientStatus.Inactive);
+            (await repository.FindActiveByEmailAsync(Email("maria@example.com"), null, CancellationToken.None)).Should().BeNull();
+        }
+
+        await ChangeStatusAndUpdate(databaseName, tenantId, client.Id, loaded => loaded.Reactivate());
+
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            var repository = new ClientRepository(context);
+            var reactivated = (await repository.GetByIdAsync(client.Id, CancellationToken.None))!;
+            reactivated.Id.Should().Be(client.Id);
+            reactivated.Status.Should().Be(ClientStatus.Active);
+            reactivated.Guardians.Should().ContainSingle().Which.Id.Should().Be(client.Guardians.Single().Id);
+            (await repository.FindActiveByEmailAsync(Email("maria@example.com"), null, CancellationToken.None))!.Id
+                .Should().Be(client.Id);
         }
     }
 

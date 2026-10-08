@@ -22,19 +22,26 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
 
     public async Task UpdateAsync(Client client, CancellationToken cancellationToken)
     {
-        var existingGuardians = await DbContext.Set<ClientGuardian>()
-            .Where(guardian => guardian.ClientId == client.Id)
-            .ToListAsync(cancellationToken);
+        await SyncContactsAsync(client.Id, client.Guardians, cancellationToken);
+        await SyncContactsAsync(client.Id, client.ReferenceContacts, cancellationToken);
 
-        var existingReferenceContacts = await DbContext.Set<ClientReferenceContact>()
-            .Where(contact => contact.ClientId == client.Id)
-            .ToListAsync(cancellationToken);
-
-        DbContext.RemoveRange(existingGuardians);
-        DbContext.RemoveRange(existingReferenceContacts);
         DbContext.Entry(client).State = EntityState.Modified;
-        DbContext.Set<ClientGuardian>().AddRange(client.Guardians);
-        DbContext.Set<ClientReferenceContact>().AddRange(client.ReferenceContacts);
+    }
+
+    private async Task SyncContactsAsync<TContact>(Guid clientId, IReadOnlyCollection<TContact> currentContacts, CancellationToken cancellationToken) where TContact : ClientContact
+    {
+        var existingContacts = await DbContext.Set<TContact>()
+            .Where(contact => contact.ClientId == clientId)
+            .ToListAsync(cancellationToken);
+
+        var currentIds = currentContacts.Select(contact => contact.Id).ToHashSet();
+        var existingIds = existingContacts.Select(contact => contact.Id).ToHashSet();
+
+        var removedContacts = existingContacts.ExceptBy(currentIds, contact => contact.Id);
+        var addedContacts = currentContacts.ExceptBy(existingIds, contact => contact.Id);
+
+        DbContext.RemoveRange(removedContacts);
+        DbContext.Set<TContact>().AddRange(addedContacts);
     }
 
     public Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken)

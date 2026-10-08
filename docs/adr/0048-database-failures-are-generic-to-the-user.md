@@ -19,6 +19,10 @@ entity: `409 <Entity>.SaveFailed`, "Não foi possível salvar … Tente novament
 failure and the constraint name go to the log (`Warning`), not to the response. Per-field answers come only from the
 handler's pre-checks, and a retry passes through them again.
 
+> **2026-10 update:** the log moved from the handlers to `UnitOfWork`
+> ([ADR 0062](0062-clients-deactivate-and-reactivate.md)): it writes the `Warning` once for every failed save, and the
+> clients handlers no longer take an `ILogger`. The rest of this decision stands.
+
 Clients follows this now (`CreateClientCommandHandler`). Tags, Categories and Services drop their persistence error
 mappers when they are next touched.
 

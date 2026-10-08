@@ -6,8 +6,6 @@ using IdentityService.Api.Setup;
 using IdentityService.Application;
 using IdentityService.Infrastructure;
 using OpenIddict.Abstractions;
-using OpenIddict.Server.AspNetCore;
-using OpenIddict.Validation.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 

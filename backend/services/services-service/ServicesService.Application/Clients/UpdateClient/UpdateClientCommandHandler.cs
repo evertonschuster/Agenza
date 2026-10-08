@@ -1,16 +1,12 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
-using ServicesService.Domain.Common;
-using ServicesService.Domain.Entities;
 
 namespace ServicesService.Application.Clients.UpdateClient;
 
 public sealed class UpdateClientCommandHandler(
     IClientRepository clientRepository,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider,
-    ILogger<UpdateClientCommandHandler> logger) : ICommandHandler<UpdateClientCommand, ClientResponse>
+    TimeProvider timeProvider) : ICommandHandler<UpdateClientCommand, ClientResponse>
 {
     public async Task<Result<ClientResponse>> Handle(UpdateClientCommand command, CancellationToken cancellationToken)
     {
@@ -46,11 +42,6 @@ public sealed class UpdateClientCommandHandler(
         var saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            logger.LogWarning(
-                "Saving a client failed with {Kind} on {ConstraintName}",
-                saveResult.Error.Kind,
-                saveResult.Error.ConstraintName);
-
             return Result.Failure<ClientResponse>(Error.Conflict(
                 "Client.SaveFailed",
                 "Não foi possível salvar a pessoa. Tente novamente."));

@@ -1,12 +1,11 @@
-using System.Security.Claims;
 using IdentityService.Infrastructure.Identity;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using OpenIddict.Abstractions;
 using OpenIddict.Server.AspNetCore;
+using System.Security.Claims;
 
 namespace IdentityService.Api.Controllers;
 

@@ -1,6 +1,6 @@
-using System.Text.Json;
 using Admin.SharedKernel.AspNetCore;
 using Microsoft.AspNetCore.OpenApi;
+using System.Text.Json;
 
 namespace Admin.SharedKernel.Tests;
 

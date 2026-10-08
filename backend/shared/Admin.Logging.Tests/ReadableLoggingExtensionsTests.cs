@@ -1,4 +1,3 @@
-using System.Globalization;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
@@ -6,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using NSubstitute;
 using Serilog;
 using Serilog.Sinks.OpenTelemetry;
+using System.Globalization;
 
 namespace Admin.Logging.Tests;
 

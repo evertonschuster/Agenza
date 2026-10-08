@@ -4,7 +4,9 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using ServicesService.Application.Clients;
 using ServicesService.Application.Clients.CreateClient;
+using ServicesService.Application.Clients.DeactivateClient;
 using ServicesService.Application.Clients.GetClientById;
+using ServicesService.Application.Clients.ReactivateClient;
 using ServicesService.Application.Clients.UpdateClient;
 
 namespace ServicesService.Api.Controllers;
@@ -53,6 +55,28 @@ public class ClientsController : AgenzaControllerBase
     public async Task<IActionResult> Update(Guid id, UpdateClientCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command with { ClientId = id }, cancellationToken);
+        return result.ToActionResult(this, client => Ok(client));
+    }
+
+    [HttpPost("{id:guid}/deactivate")]
+    [ProducesResponseType<ApiResponse<ClientResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Send(new DeactivateClientCommand(id), cancellationToken);
+        return result.ToActionResult(this, client => Ok(client));
+    }
+
+    [HttpPost("{id:guid}/reactivate")]
+    [ProducesResponseType<ApiResponse<ClientResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Reactivate(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Send(new ReactivateClientCommand(id), cancellationToken);
         return result.ToActionResult(this, client => Ok(client));
     }
 }

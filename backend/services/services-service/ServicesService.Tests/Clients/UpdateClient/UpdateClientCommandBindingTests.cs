@@ -1,5 +1,5 @@
-using System.Text.Json;
 using ServicesService.Application.Clients.UpdateClient;
+using System.Text.Json;
 
 namespace ServicesService.Tests.Clients.UpdateClient;
 

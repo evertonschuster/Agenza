@@ -265,9 +265,9 @@ meta)`, with `meta` carrying machine context such as the existing record's id an
 per answer, in a fixed order. Cheap rejections run before work with side effects (consuming a
 sequence, calling out).
 
-**Unit of work.** A failed save is logged at `Warning` with its kind and constraint, and answered as
-`Error.Conflict("<Entity>.SaveFailed", "Não foi possível salvar … Tente novamente.")` — no field, no
-claim about which rule broke. Application never knows a constraint or index name; the retry goes
+**Unit of work.** The unit of work logs a failed save at `Warning` with its kind and constraint, once, for every
+handler; the handler only answers `Error.Conflict("<Entity>.SaveFailed", "Não foi possível salvar … Tente
+novamente.")` — no field, no claim about which rule broke, no logger. Application never knows a constraint or index name; the retry goes
 through the pre-checks and gets the specific answer
 ([0048](../../docs/adr/0048-database-failures-are-generic-to-the-user.md)).
 
@@ -453,6 +453,7 @@ touches that slice, not in bulk.
 | Aggregate with children; references to other aggregates | `Client`, `ClientConfiguration` | a navigation to another root filled by an unchecked `SetTags` (`Service.Tags`) | §3, [0049](../../docs/adr/0049-conventions-for-new-backend-slices.md) |
 | Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: `GetByIdAsync` → `NotFound` → `client.Update(command.ToClientData(), today)` → pre-checks that exclude the aggregate itself → `UpdateAsync` → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
 | Read by id | `GetClientByIdQueryHandler.cs`, `GetClientByIdQueryValidator.cs`: repository → `NotFound` or `<Entity>Response.From<Entity>`; the id rule written inline in the validator | `GetTagByIdQueryHandler.cs`: a message built from the id, no validator | §4, §6, [0060](../../docs/adr/0060-clients-read-by-id-contract.md) |
+| State transition: behaviour method, idempotent repeat, pre-check through a port, status-only save | `DeactivateClientCommandHandler.cs`, `ReactivateClientCommandHandler.cs`, `Client.Inactivate` | | §3, §4, [0062](../../docs/adr/0062-clients-deactivate-and-reactivate.md) |
 | Delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 

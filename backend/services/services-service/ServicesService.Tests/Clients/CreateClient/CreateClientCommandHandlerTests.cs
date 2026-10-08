@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.CreateClient;
 
@@ -11,7 +10,6 @@ public class CreateClientCommandHandlerTests
 
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly ILogger<CreateClientCommandHandler> _logger = Substitute.For<ILogger<CreateClientCommandHandler>>();
 
     public CreateClientCommandHandlerTests()
     {
@@ -23,7 +21,7 @@ public class CreateClientCommandHandlerTests
     }
 
     private CreateClientCommandHandler Handler(DateTimeOffset? utcNow = null) =>
-        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc), _logger);
+        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc));
 
     private static CreateClientCommand Command(
         string fullName = "Maria Souza",

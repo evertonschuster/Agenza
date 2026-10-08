@@ -79,8 +79,8 @@ validator already ran before the handler):
    `Find<Thing>ConflictAsync` returning `Error?`; a conflict a form can show is keyed by field, with
    `meta`; one per answer.
 5. Behaviour, `Add`, or `UpdateAsync`.
-6. `SaveChangesAsync`; a failure logs kind and constraint at `Warning` and returns
-   `<Entity>.SaveFailed`.
+6. `SaveChangesAsync`; a failure returns `<Entity>.SaveFailed`. The unit of work has already logged its
+   kind and constraint at `Warning`, so the handler does not.
 7. Return `<Entity>Response.From<Entity>(…)`.
 
 An edit runs `ApplyTo` (or `<entity>.Update(command.To<Entity>Data(), today)`) at step 3, before the pre-checks, because they compare the values it just assigned

@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Clients.CreateClient;
@@ -7,8 +6,7 @@ namespace ServicesService.Application.Clients.CreateClient;
 public sealed class CreateClientCommandHandler(
     IClientRepository clientRepository,
     IUnitOfWork unitOfWork,
-    TimeProvider timeProvider,
-    ILogger<CreateClientCommandHandler> logger) : ICommandHandler<CreateClientCommand, ClientResponse>
+    TimeProvider timeProvider) : ICommandHandler<CreateClientCommand, ClientResponse>
 {
     public async Task<Result<ClientResponse>> Handle(CreateClientCommand command, CancellationToken cancellationToken)
     {
@@ -40,11 +38,6 @@ public sealed class CreateClientCommandHandler(
         var saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            logger.LogWarning(
-                "Saving a client failed with {Kind} on {ConstraintName}",
-                saveResult.Error.Kind,
-                saveResult.Error.ConstraintName);
-
             return Result.Failure<ClientResponse>(Error.Conflict(
                 "Client.SaveFailed",
                 "Não foi possível salvar a pessoa. Tente novamente."));
