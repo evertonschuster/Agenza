@@ -1,7 +1,7 @@
-using System.Globalization;
 using Serilog.Formatting;
 using Serilog.Templates;
 using Serilog.Templates.Themes;
+using System.Globalization;
 
 namespace Admin.Logging;
 

@@ -1,5 +1,5 @@
-using System.Text.Json;
 using ServicesService.Application.Clients.CreateClient;
+using System.Text.Json;
 
 namespace ServicesService.Tests.Clients.CreateClient;
 

@@ -1,8 +1,6 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.UpdateClient;
-using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 
 namespace ServicesService.Tests.Clients.UpdateClient;
 

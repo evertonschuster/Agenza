@@ -1,7 +1,7 @@
-using System.Text.Json;
 using Admin.SharedKernel.AspNetCore;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging.Abstractions;
+using System.Text.Json;
 
 namespace Admin.SharedKernel.Tests;
 

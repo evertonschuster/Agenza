@@ -1,5 +1,3 @@
-using System.Reflection;
-
 namespace Admin.SharedKernel.ValueObjects;
 
 internal static class ValueObjectContract

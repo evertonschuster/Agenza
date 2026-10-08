@@ -1,6 +1,6 @@
+using Microsoft.EntityFrameworkCore;
 using System.Linq.Expressions;
 using System.Reflection;
-using Microsoft.EntityFrameworkCore;
 
 namespace Admin.SharedKernel.EntityFrameworkCore;
 

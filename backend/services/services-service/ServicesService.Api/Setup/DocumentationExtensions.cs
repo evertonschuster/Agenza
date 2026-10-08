@@ -1,6 +1,5 @@
 using Admin.Identity.Client;
 using Admin.SharedKernel.AspNetCore;
-using Microsoft.AspNetCore.OpenApi;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
 using System.Text.Json.Nodes;

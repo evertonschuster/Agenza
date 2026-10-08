@@ -1,6 +1,6 @@
-using System.Text.Json;
 using Admin.SharedKernel;
 using ServicesService.Tests.Clients;
+using System.Text.Json;
 
 namespace ServicesService.Tests;
 

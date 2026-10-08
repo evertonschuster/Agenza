@@ -1,7 +1,7 @@
-using System.Globalization;
 using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Extensions.Logging;
+using System.Globalization;
 
 namespace Admin.Logging.Tests;
 
