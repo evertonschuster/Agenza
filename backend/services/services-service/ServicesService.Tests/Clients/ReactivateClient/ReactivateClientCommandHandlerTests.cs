@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.ReactivateClient;
 
@@ -9,19 +8,20 @@ public class ReactivateClientCommandHandlerTests
 {
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly ILogger<ReactivateClientCommandHandler> _logger = Substitute.For<ILogger<ReactivateClientCommandHandler>>();
     private readonly Client _client = InactiveClientWithContacts();
 
     public ReactivateClientCommandHandlerTests()
     {
         _repository.GetByIdAsync(_client.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(_client));
-        _repository.UpdateStatusAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        _repository.UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        _repository.FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Client?>(null));
         _repository.FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult<Client?>(null));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
 
-    private ReactivateClientCommandHandler Handler() => new(_repository, _unitOfWork, _logger);
+    private ReactivateClientCommandHandler Handler() => new(_repository, _unitOfWork);
 
     private static Client InactiveClientWithContacts(EmailAddress? email = null)
     {
@@ -29,6 +29,7 @@ public class ReactivateClientCommandHandlerTests
             ClientTestData.Data(
                 ClientTestData.Name("Paula Rocha"),
                 email: email ?? ClientTestData.Email("paula@example.com"),
+                cpf: ClientTestData.Cpf(),
                 guardians: [ClientTestData.Guardian("Ana Souza"), ClientTestData.Guardian("Bia Souza")],
                 referenceContacts: [ClientTestData.ReferenceContact()]),
             ClientTestData.Today).Value;
@@ -38,14 +39,13 @@ public class ReactivateClientCommandHandlerTests
 
     private async Task AssertNothingWasPersisted()
     {
-        await _repository.DidNotReceive().UpdateStatusAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
-    public async Task Handle_WithAnEmailNoOtherActiveClientUses_ReactivatesTheClientAndSavesItsStatus()
+    public async Task Handle_WithNoConflict_ReactivatesTheClientAndSavesItsStatus()
     {
         var result = await Handler().Handle(new ReactivateClientCommand(_client.Id), CancellationToken.None);
 
@@ -53,9 +53,8 @@ public class ReactivateClientCommandHandlerTests
         result.Value.Id.Should().Be(_client.Id);
         result.Value.Status.Should().Be("active");
         _client.Status.Should().Be(ClientStatus.Active);
-        await _repository.Received(1).UpdateStatusAsync(_client, Arg.Any<CancellationToken>());
+        await _repository.Received(1).UpdateAsync(_client, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
     }
 
@@ -71,7 +70,15 @@ public class ReactivateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithoutAnEmail_ReactivatesWithoutCheckingUniqueness()
+    public async Task Handle_ChecksTheCpfOfTheClientExcludingTheClientItself()
+    {
+        await Handler().Handle(new ReactivateClientCommand(_client.Id), CancellationToken.None);
+
+        await _repository.Received(1).FindByCpfAsync(ClientTestData.Cpf(), _client.Id, Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithoutEmailAndCpf_ReactivatesWithoutCheckingUniqueness()
     {
         var client = Client.Create(ClientTestData.Data(), ClientTestData.Today).Value;
         client.Inactivate();
@@ -82,6 +89,7 @@ public class ReactivateClientCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Status.Should().Be("active");
         await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -95,6 +103,7 @@ public class ReactivateClientCommandHandlerTests
         var response = result.Value;
         response.FullName.Should().Be("Paula Rocha");
         response.Email.Should().Be("paula@example.com");
+        response.Cpf.Should().Be(ClientTestData.ValidCpfDigits);
         response.Guardians.Select(guardian => guardian.Id).Should().BeEquivalentTo(guardianIds);
         response.ReferenceContacts.Should().ContainSingle().Which.Id.Should().Be(referenceContactId);
     }
@@ -125,6 +134,45 @@ public class ReactivateClientCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_WithTheCpfOfAnotherClient_ReturnsAConflictPointingAtItAndKeepsTheClientInactive()
+    {
+        var other = ClientTestData.ExistingClient();
+        _repository.FindByCpfAsync(ClientTestData.Cpf(), _client.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Client?>(other));
+
+        var result = await Handler().Handle(new ReactivateClientCommand(_client.Id), CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Client.DuplicateCpf");
+        result.Error.FieldErrors!.Keys.Should().Equal("Cpf");
+        var fieldError = result.Error.FieldErrors["Cpf"].Should().ContainSingle().Subject;
+        fieldError.Message.Should().Be(
+            "Não é possível reativar esta pessoa porque outra pessoa já usa este CPF. Corrija o CPF deste cadastro e tente novamente.");
+        fieldError.Meta.Should().BeEquivalentTo(new Dictionary<string, string>
+        {
+            ["clientId"] = other.Id.ToString(),
+            ["clientName"] = "Paula Rocha",
+        });
+        _client.Status.Should().Be(ClientStatus.Inactive);
+        await AssertNothingWasPersisted();
+    }
+
+    [Fact]
+    public async Task Handle_WithBothConflicts_ReportsTheCpfOnly()
+    {
+        _repository.FindByCpfAsync(ClientTestData.Cpf(), _client.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
+        _repository.FindActiveByEmailAsync(ClientTestData.Email("paula@example.com"), _client.Id, Arg.Any<CancellationToken>())
+            .Returns(Task.FromResult<Client?>(ClientTestData.ExistingClient()));
+
+        var result = await Handler().Handle(new ReactivateClientCommand(_client.Id), CancellationToken.None);
+
+        result.Error.Code.Should().Be("Client.DuplicateCpf");
+        await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Handle_WithAnIdTheRepositoryDoesNotKnow_ReturnsNotFound()
     {
         var unknownId = Guid.NewGuid();
@@ -136,6 +184,7 @@ public class ReactivateClientCommandHandlerTests
         result.Error.Type.Should().Be(ErrorType.NotFound);
         result.Error.Code.Should().Be("Client.NotFound");
         result.Error.Message.Should().Be("A pessoa não foi encontrada.");
+        await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
         await AssertNothingWasPersisted();
     }
@@ -151,6 +200,7 @@ public class ReactivateClientCommandHandlerTests
         result.Value.Id.Should().Be(_client.Id);
         result.Value.Status.Should().Be("active");
         result.Value.Guardians.Should().HaveCount(2);
+        await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
         await AssertNothingWasPersisted();
     }

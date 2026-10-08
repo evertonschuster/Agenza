@@ -35,8 +35,8 @@ that differs only by tracking (ARCHITECTURE, rules of thumb).
 - `public class <Entity>Repository : RepositoryBase<<Entity>>, I<Entity>Repository`, constructed from
   the service's `DbContext`; registered in Infrastructure's `DependencyInjection.cs`.
 - Use the base helpers (`FindAsync`, `ListAsync`, `ListPagedAsync`, `AnyAsync`) and `Set` for the
-  rest. An update adapter can query only the persisted children it must replace, then explicitly
-  stage their removal and the new composition. `Include` only the root's own children.
+  rest. An update adapter can query the persisted children and stage only the difference by id: remove
+  the ones the aggregate no longer holds, add the ones the database does not have yet. `Include` only the root's own children.
 - Order every list and page explicitly, on a key that is unique or ends in one — otherwise rows repeat
   or vanish between pages.
 - A value-object column is compared as a whole (`c.Cpf == cpf`); text search on it goes through

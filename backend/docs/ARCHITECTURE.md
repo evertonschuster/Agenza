@@ -265,9 +265,9 @@ meta)`, with `meta` carrying machine context such as the existing record's id an
 per answer, in a fixed order. Cheap rejections run before work with side effects (consuming a
 sequence, calling out).
 
-**Unit of work.** A failed save is logged at `Warning` with its kind and constraint, and answered as
-`Error.Conflict("<Entity>.SaveFailed", "Não foi possível salvar … Tente novamente.")` — no field, no
-claim about which rule broke. Application never knows a constraint or index name; the retry goes
+**Unit of work.** The unit of work logs a failed save at `Warning` with its kind and constraint, once, for every
+handler; the handler only answers `Error.Conflict("<Entity>.SaveFailed", "Não foi possível salvar … Tente
+novamente.")` — no field, no claim about which rule broke, no logger. Application never knows a constraint or index name; the retry goes
 through the pre-checks and gets the specific answer
 ([0048](../../docs/adr/0048-database-failures-are-generic-to-the-user.md)).
 

@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.DeactivateClient;
 
@@ -10,19 +9,18 @@ public class DeactivateClientCommandHandlerTests
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
     private readonly IAppointmentRepository _appointments = Substitute.For<IAppointmentRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly ILogger<DeactivateClientCommandHandler> _logger = Substitute.For<ILogger<DeactivateClientCommandHandler>>();
     private readonly Client _client = ClientWithContacts();
 
     public DeactivateClientCommandHandlerTests()
     {
         _repository.GetByIdAsync(_client.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(_client));
-        _repository.UpdateStatusAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
+        _repository.UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>()).Returns(Task.CompletedTask);
         _appointments.HasUpcomingAppointmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>())
             .Returns(Task.FromResult(false));
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
 
-    private DeactivateClientCommandHandler Handler() => new(_repository, _appointments, _unitOfWork, _logger);
+    private DeactivateClientCommandHandler Handler() => new(_repository, _appointments, _unitOfWork);
 
     private static Client ClientWithContacts()
     {
@@ -37,7 +35,6 @@ public class DeactivateClientCommandHandlerTests
 
     private async Task AssertNothingWasPersisted()
     {
-        await _repository.DidNotReceive().UpdateStatusAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
         await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -52,9 +49,8 @@ public class DeactivateClientCommandHandlerTests
         result.Value.Id.Should().Be(_client.Id);
         result.Value.Status.Should().Be("inactive");
         _client.Status.Should().Be(ClientStatus.Inactive);
-        await _repository.Received(1).UpdateStatusAsync(_client, Arg.Any<CancellationToken>());
+        await _repository.Received(1).UpdateAsync(_client, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-        await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
     }
 

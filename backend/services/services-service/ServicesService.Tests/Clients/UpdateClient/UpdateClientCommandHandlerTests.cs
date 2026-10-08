@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.UpdateClient;
 using ServicesService.Domain.Entities;
@@ -13,7 +12,6 @@ public class UpdateClientCommandHandlerTests
 
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
-    private readonly ILogger<UpdateClientCommandHandler> _logger = Substitute.For<ILogger<UpdateClientCommandHandler>>();
     private readonly Client _client = ClientWithContacts();
 
     public UpdateClientCommandHandlerTests()
@@ -28,7 +26,7 @@ public class UpdateClientCommandHandlerTests
     }
 
     private UpdateClientCommandHandler Handler(DateTimeOffset? utcNow = null) =>
-        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc), _logger);
+        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc));
 
     private static Client ClientWithContacts()
     {

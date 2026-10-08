@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Clients.DeactivateClient;
@@ -7,8 +6,7 @@ namespace ServicesService.Application.Clients.DeactivateClient;
 public sealed class DeactivateClientCommandHandler(
     IClientRepository clientRepository,
     IAppointmentRepository appointmentRepository,
-    IUnitOfWork unitOfWork,
-    ILogger<DeactivateClientCommandHandler> logger) : ICommandHandler<DeactivateClientCommand, ClientResponse>
+    IUnitOfWork unitOfWork) : ICommandHandler<DeactivateClientCommand, ClientResponse>
 {
     public async Task<Result<ClientResponse>> Handle(DeactivateClientCommand command, CancellationToken cancellationToken)
     {
@@ -35,16 +33,11 @@ public sealed class DeactivateClientCommandHandler(
             return Result.Failure<ClientResponse>(inactivateResult.Error.ToApplicationError());
         }
 
-        await clientRepository.UpdateStatusAsync(client, cancellationToken);
+        await clientRepository.UpdateAsync(client, cancellationToken);
 
         var saveResult = await unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            logger.LogWarning(
-                "Saving a client failed with {Kind} on {ConstraintName}",
-                saveResult.Error.Kind,
-                saveResult.Error.ConstraintName);
-
             return Result.Failure<ClientResponse>(Error.Conflict(
                 "Client.SaveFailed",
                 "Não foi possível salvar a pessoa. Tente novamente."));

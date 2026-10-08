@@ -583,7 +583,7 @@ public class ClientPersistenceTests
         }
     }
 
-    private static async Task ChangeStatusThroughTheRepository(
+    private static async Task ChangeStatusAndUpdate(
         string databaseName,
         Guid tenantId,
         Guid clientId,
@@ -594,12 +594,12 @@ public class ClientPersistenceTests
         var loaded = (await repository.GetByIdAsync(clientId, CancellationToken.None))!;
 
         transition(loaded).IsSuccess.Should().BeTrue();
-        await repository.UpdateStatusAsync(loaded, CancellationToken.None);
+        await repository.UpdateAsync(loaded, CancellationToken.None);
         await context.SaveChangesAsync(CancellationToken.None);
     }
 
     [Fact]
-    public async Task UpdateStatus_ChangesTheStatusAndKeepsTheSameContactRows()
+    public async Task Update_AfterAStatusChange_KeepsTheSameContactRows()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -616,7 +616,7 @@ public class ClientPersistenceTests
         var guardianIds = client.Guardians.Select(guardian => guardian.Id).ToArray();
         var referenceContactIds = client.ReferenceContacts.Select(contact => contact.Id).ToArray();
 
-        await ChangeStatusThroughTheRepository(databaseName, tenantId, client.Id, loaded => loaded.Inactivate());
+        await ChangeStatusAndUpdate(databaseName, tenantId, client.Id, loaded => loaded.Inactivate());
 
         await using var verification = CreateContext(databaseName, tenantId);
         var stored = await verification.Clients
@@ -638,43 +638,7 @@ public class ClientPersistenceTests
     }
 
     [Fact]
-    public async Task UpdateStatus_LeavesAColumnChangedByAnotherSessionAfterTheLoadUntouched()
-    {
-        var databaseName = Guid.NewGuid().ToString();
-        var tenantId = Guid.NewGuid();
-        var client = NewClient("Maria Souza", guardians: [Guardian()]);
-        await using (var context = CreateContext(databaseName, tenantId))
-        {
-            await Save(context, client);
-        }
-
-        await using (var context = CreateContext(databaseName, tenantId))
-        {
-            var repository = new ClientRepository(context);
-            var loaded = (await repository.GetByIdAsync(client.Id, CancellationToken.None))!;
-
-            await using (var other = CreateContext(databaseName, tenantId))
-            {
-                var tracked = await other.Clients.AsTracking().SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
-                other.Entry(tracked).Property(c => c.FullName).CurrentValue = FullName.Create("Maria Lima").Value;
-                await other.SaveChangesAsync(TestContext.Current.CancellationToken);
-            }
-
-            loaded.Inactivate().IsSuccess.Should().BeTrue();
-            await repository.UpdateStatusAsync(loaded, CancellationToken.None);
-            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
-        }
-
-        await using (var context = CreateContext(databaseName, tenantId))
-        {
-            var stored = await context.Clients.SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
-            stored.Status.Should().Be(ClientStatus.Inactive);
-            stored.FullName.Value.Should().Be("Maria Lima");
-        }
-    }
-
-    [Fact]
-    public async Task UpdateStatus_InactivatesAndReactivatesTheSameClient_FreeingAndTakingTheEmailBack()
+    public async Task Update_InactivatesAndReactivatesTheSameClient_FreeingAndTakingTheEmailBack()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -684,7 +648,7 @@ public class ClientPersistenceTests
             await Save(context, client);
         }
 
-        await ChangeStatusThroughTheRepository(databaseName, tenantId, client.Id, loaded => loaded.Inactivate());
+        await ChangeStatusAndUpdate(databaseName, tenantId, client.Id, loaded => loaded.Inactivate());
 
         await using (var context = CreateContext(databaseName, tenantId))
         {
@@ -693,7 +657,7 @@ public class ClientPersistenceTests
             (await repository.FindActiveByEmailAsync(Email("maria@example.com"), null, CancellationToken.None)).Should().BeNull();
         }
 
-        await ChangeStatusThroughTheRepository(databaseName, tenantId, client.Id, loaded => loaded.Reactivate());
+        await ChangeStatusAndUpdate(databaseName, tenantId, client.Id, loaded => loaded.Reactivate());
 
         await using (var context = CreateContext(databaseName, tenantId))
         {

@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Npgsql;
 using ServicesService.Application.Abstractions;
 
@@ -9,10 +10,12 @@ public class UnitOfWork : IUnitOfWork
     private const string UniqueViolationSqlState = "23505";
 
     private readonly ServicesDataContext _dbContext;
+    private readonly ILogger<UnitOfWork> _logger;
 
-    public UnitOfWork(ServicesDataContext dbContext)
+    public UnitOfWork(ServicesDataContext dbContext, ILogger<UnitOfWork> logger)
     {
         _dbContext = dbContext;
+        _logger = logger;
     }
 
     public async Task<PersistenceResult<int>> SaveChangesAsync(CancellationToken cancellationToken)
@@ -38,6 +41,11 @@ public class UnitOfWork : IUnitOfWork
             {
                 await ambientTransaction.RollbackAsync(cancellationToken);
             }
+
+            _logger.LogWarning(
+                "Saving changes failed with {Kind} on {ConstraintName}",
+                PersistenceErrorKind.UniqueConstraintViolation,
+                constraintName);
 
             return PersistenceResult.Failure<int>(
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, constraintName));
