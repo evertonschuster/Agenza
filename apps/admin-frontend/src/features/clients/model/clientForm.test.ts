@@ -11,7 +11,7 @@ import {
   type ClientFormFieldValues,
 } from './clientForm';
 
-const NOON_IN_SAO_PAULO = new Date('2026-10-02T15:00:00Z');
+const LOCAL_NOON = new Date(2026, 9, 2, 12, 0);
 
 function values(overrides: Partial<ClientFormFieldValues> = {}): ClientFormFieldValues {
   return { ...toClientFormFieldValues(), fullName: 'Maria Souza', ...overrides };
@@ -45,7 +45,7 @@ function issuesOf(input: ClientFormFieldValues): Record<string, string> {
 }
 
 beforeEach(() => {
-  vi.useFakeTimers({ now: NOON_IN_SAO_PAULO, toFake: ['Date'] });
+  vi.useFakeTimers({ now: LOCAL_NOON, toFake: ['Date'] });
 });
 
 afterEach(() => {
@@ -220,8 +220,8 @@ describe('clientFormSchema', () => {
       expect(issues['guardians']).toBeUndefined();
     });
 
-    it('counts the São Paulo day, not the UTC day', () => {
-      vi.setSystemTime(new Date('2026-10-03T01:00:00Z'));
+    it('counts the local day late in the evening, before the next day starts', () => {
+      vi.setSystemTime(new Date(2026, 9, 2, 23, 30));
 
       expect(
         issuesOf(values({ birthDate: '03/10/2008', guardians: [] }))['guardians'],

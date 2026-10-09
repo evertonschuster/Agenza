@@ -1,7 +1,8 @@
 import { Link } from 'react-router';
-import { MaskedField, TextField, TextareaField } from '@/shared/form/fields';
+import { todayLocal } from '@/shared/format/date';
+import { DateField, MaskedField, TextField, TextareaField } from '@/shared/form/fields';
 import { buttonVariants } from '@/shared/ui/button';
-import { formatAge, maskBirthDate } from '../../../../model/birthDate';
+import { earliestBirthDate, formatAge, latestBirthDate } from '../../../../model/birthDate';
 import {
   CLIENT_NAME_MAX_LENGTH,
   CLIENT_NOTES_MAX_LENGTH,
@@ -17,6 +18,8 @@ interface ClientPersonSectionProps {
 }
 
 function ClientPersonSection({ age, existingClientId }: ClientPersonSectionProps) {
+  const today = todayLocal();
+
   return (
     <ClientFormSection title="Dados da pessoa" hideTitle>
       <div className="grid gap-4 md:grid-cols-2">
@@ -31,13 +34,12 @@ function ClientPersonSection({ age, existingClientId }: ClientPersonSectionProps
           />
         </div>
 
-        <MaskedField<ClientFormFieldValues>
+        <DateField<ClientFormFieldValues>
           name="birthDate"
           label="Data de nascimento"
           hint={age === null ? 'opcional' : formatAge(age)}
-          mask={maskBirthDate}
-          inputMode="numeric"
-          placeholder="dd/mm/aaaa"
+          minDate={earliestBirthDate(today)}
+          maxDate={latestBirthDate(today)}
           autoComplete="off"
         />
 

@@ -1,60 +1,15 @@
 import { describe, expect, it } from 'vitest';
 import {
   calculateAge,
+  earliestBirthDate,
   formatAge,
   isInThePast,
   isMinorOn,
   isWithinMaxAge,
-  maskBirthDate,
-  parseBirthDate,
+  latestBirthDate,
 } from './birthDate';
 
 const TODAY = '2026-10-02';
-
-describe('maskBirthDate', () => {
-  it.each([
-    ['', ''],
-    ['1', '1'],
-    ['10', '10'],
-    ['103', '10/3'],
-    ['1003', '10/03'],
-    ['10032', '10/03/2'],
-    ['10032015', '10/03/2015'],
-    ['100320159999', '10/03/2015'],
-    ['10/03/2015', '10/03/2015'],
-    ['ab10-03', '10/03'],
-  ] as const)('masks %j as %j while typing', (typed, expected) => {
-    expect(maskBirthDate(typed)).toBe(expected);
-  });
-});
-
-describe('parseBirthDate', () => {
-  it.each([
-    ['10/03/2015', '2015-03-10'],
-    ['01/01/1900', '1900-01-01'],
-    ['29/02/2000', '2000-02-29'],
-    [' 05/12/1990 ', '1990-12-05'],
-  ] as const)('reads %j as %s', (masked, expected) => {
-    expect(parseBirthDate(masked)).toBe(expected);
-  });
-
-  it.each([
-    '',
-    '10/03',
-    '10/03/15',
-    '31/02/2020',
-    '29/02/2001',
-    '00/10/2020',
-    '10/00/2020',
-    '10/13/2020',
-    '32/01/2020',
-    '10/03/0999',
-    'aa/bb/cccc',
-    '10-03-2015',
-  ])('rejects %j', (masked) => {
-    expect(parseBirthDate(masked)).toBeNull();
-  });
-});
 
 describe('calculateAge', () => {
   it.each([
@@ -100,6 +55,27 @@ describe('birth date rules', () => {
   it('is never a minor on a date that is not in the past', () => {
     expect(isMinorOn('2026-10-03', TODAY)).toBe(false);
     expect(isMinorOn('2026-10-02', TODAY)).toBe(false);
+  });
+});
+
+describe('birth date picker bounds', () => {
+  it('ends the day before today, since a birth date must be in the past', () => {
+    expect(latestBirthDate(TODAY)).toBe('2026-10-01');
+    expect(isInThePast(latestBirthDate(TODAY), TODAY)).toBe(true);
+  });
+
+  it.each([
+    ['2026-03-01', '2026-02-28'],
+    ['2024-03-01', '2024-02-29'],
+    ['2027-01-01', '2026-12-31'],
+  ] as const)('ends the day before %s on %s', (today, expected) => {
+    expect(latestBirthDate(today)).toBe(expected);
+  });
+
+  it('starts on January 1st of the first year that can still be within the maximum age', () => {
+    expect(earliestBirthDate(TODAY)).toBe('1905-01-01');
+    expect(isWithinMaxAge('1905-12-31', '2026-01-01')).toBe(true);
+    expect(isWithinMaxAge('1905-01-01', '2026-12-31')).toBe(false);
   });
 });
 

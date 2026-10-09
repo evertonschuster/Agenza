@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { todayInSaoPaulo } from '@/shared/format/date';
+import { parseMaskedDate, todayLocal } from '@/shared/format/date';
 import {
   ADULT_AGE_IN_YEARS,
   MAX_AGE_IN_YEARS,
@@ -7,7 +7,6 @@ import {
   isInThePast,
   isMinorOn,
   isWithinMaxAge,
-  parseBirthDate,
 } from './birthDate';
 import { CONTACT_PURPOSES } from './client';
 import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH, isValidEmail, isValidPhone } from './contactFormats';
@@ -77,10 +76,10 @@ const birthDateField = z.string().transform((value, ctx) => {
     return z.NEVER;
   };
 
-  const birthDate = parseBirthDate(value);
+  const birthDate = parseMaskedDate(value);
   if (birthDate === null) return fail('Informe uma data válida no formato dd/mm/aaaa.');
 
-  const today = todayInSaoPaulo();
+  const today = todayLocal();
   if (!isInThePast(birthDate, today)) return fail('A data de nascimento deve estar no passado.');
   if (!isWithinMaxAge(birthDate, today)) {
     return fail(`A data de nascimento não pode indicar idade superior a ${MAX_AGE_IN_YEARS} anos.`);
@@ -132,9 +131,7 @@ const clientFormObject = z.object({
 
 export const clientFormSchema = clientFormObject.refine(
   (value) =>
-    !value.birthDate ||
-    !isMinorOn(value.birthDate, todayInSaoPaulo()) ||
-    value.guardians.length > 0,
+    !value.birthDate || !isMinorOn(value.birthDate, todayLocal()) || value.guardians.length > 0,
   {
     path: ['guardians'],
     message: `Informe ao menos um responsável para pessoas menores de ${ADULT_AGE_IN_YEARS} anos.`,
@@ -175,8 +172,8 @@ export function emptyReferenceContact(): ReferenceContactFormFieldValues {
 }
 
 export function ageFromBirthDate(masked: string): number | null {
-  const birthDate = parseBirthDate(masked);
-  const today = todayInSaoPaulo();
+  const birthDate = parseMaskedDate(masked);
+  const today = todayLocal();
   if (birthDate === null || !isInThePast(birthDate, today) || !isWithinMaxAge(birthDate, today)) {
     return null;
   }

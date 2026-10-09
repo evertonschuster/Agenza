@@ -59,7 +59,7 @@ function lastPayload() {
 describe('ClientFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers({ now: new Date('2026-10-02T15:00:00Z'), toFake: ['Date'] });
+    vi.useFakeTimers({ now: new Date(2026, 9, 2, 12, 0), toFake: ['Date'] });
     mockCreate.mockResolvedValue({ ok: true, data: CREATED });
   });
 
@@ -198,6 +198,51 @@ describe('ClientFormPage', () => {
       expect(screen.getByLabelText('CPF')).toHaveValue('529.982.247-25');
       expect(screen.getByLabelText('Data de nascimento')).toHaveValue('20/05/1990');
       expect(screen.getByText('36 anos')).toBeInTheDocument();
+    });
+
+    it('picks the birth date from the calendar, shows the age and sends the ISO date', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+      await user.click(
+        screen.getByRole('button', { name: 'Abrir calendário de data de nascimento' }),
+      );
+      const calendar = await screen.findByRole('dialog');
+      await user.selectOptions(
+        within(calendar).getByRole('combobox', { name: 'Escolha o ano' }),
+        '1990',
+      );
+      await user.selectOptions(
+        within(calendar).getByRole('combobox', { name: 'Escolha o mês' }),
+        '4',
+      );
+      await user.click(within(calendar).getByRole('button', { name: /, 20 de maio de 1990/ }));
+
+      expect(screen.getByLabelText('Data de nascimento')).toHaveValue('20/05/1990');
+      expect(screen.getByText('36 anos')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+      expect(lastPayload()).toMatchObject({ birthDate: '1990-05-20' });
+    });
+
+    it('does not let the calendar pick today or later as a birth date', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.click(
+        screen.getByRole('button', { name: 'Abrir calendário de data de nascimento' }),
+      );
+      const calendar = await screen.findByRole('dialog');
+
+      expect(
+        within(calendar).getByRole('button', { name: /, 1 de outubro de 2026/ }),
+      ).toBeEnabled();
+      expect(
+        within(calendar).getByRole('button', { name: /, 2 de outubro de 2026/ }),
+      ).toBeDisabled();
     });
 
     it('does not demand a guardian for an adult', async () => {

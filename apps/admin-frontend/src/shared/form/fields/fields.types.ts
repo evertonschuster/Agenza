@@ -25,6 +25,15 @@ export type MaskedFieldProps<T extends FieldValues> = BaseFieldProps<T> &
     mask: (value: string) => string;
   };
 
+export type DateFieldProps<T extends FieldValues> = BaseFieldProps<T> &
+  Omit<
+    ComponentProps<typeof Input>,
+    RegisterOwnedProps | FormFieldOwnedProps | 'value' | 'type' | 'inputMode'
+  > & {
+    minDate: string;
+    maxDate: string;
+  };
+
 export interface ControlledFieldProps<T extends FieldValues> {
   name: Path<T>;
   label: string;
