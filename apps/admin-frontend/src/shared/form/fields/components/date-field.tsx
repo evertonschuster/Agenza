@@ -20,7 +20,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import type { DateFieldProps } from '../fields.types';
 import { ControlledField } from './controlled-field';
 
-type DateFieldControlProps = Omit<DateFieldProps<FieldValues>, 'hint'> &
+type DateFieldControlProps = Omit<DateFieldProps<FieldValues>, 'hint' | 'label'> &
   FormFieldControlProps & {
     value: unknown;
     inputRef: Ref<HTMLInputElement>;
@@ -40,7 +40,6 @@ export function DateField<T extends FieldValues>({
         <DateFieldControl
           {...rest}
           {...controlProps}
-          label={label}
           name={field.name}
           value={field.value}
           inputRef={field.ref}
@@ -53,7 +52,6 @@ export function DateField<T extends FieldValues>({
 }
 
 function DateFieldControl({
-  label,
   value: fieldValue,
   inputRef,
   onChange,
@@ -63,11 +61,15 @@ function DateFieldControl({
   ...inputProps
 }: DateFieldControlProps) {
   const [open, setOpen] = useState(false);
+  const { disabled, readOnly } = inputProps;
+  const isLocked = Boolean(disabled || readOnly);
 
   const value = typeof fieldValue === 'string' ? fieldValue : '';
   const typedDate = parseMaskedDate(value);
   const isSelectable = typedDate !== null && typedDate >= minDate && typedDate <= maxDate;
   const selected = isSelectable ? isoToLocalDate(typedDate) : undefined;
+  const firstDay = isoToLocalDate(minDate);
+  const lastDay = isoToLocalDate(maxDate);
 
   function selectDate(date: Date) {
     onChange(formatMaskedDate(localDateToIso(date)));
@@ -75,7 +77,7 @@ function DateFieldControl({
   }
 
   function openOnArrowDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key !== 'ArrowDown') return;
+    if (event.key !== 'ArrowDown' || isLocked) return;
     event.preventDefault();
     setOpen(true);
   }
@@ -95,10 +97,7 @@ function DateFieldControl({
         <InputGroupAddon align="inline-end">
           <PopoverTrigger
             render={
-              <InputGroupButton
-                size="icon-xs"
-                aria-label={`Abrir calendário de ${label.toLowerCase()}`}
-              />
+              <InputGroupButton size="icon-xs" aria-label="Abrir calendário" disabled={isLocked} />
             }
           >
             <CalendarIcon aria-hidden="true" />
@@ -117,10 +116,10 @@ function DateFieldControl({
             autoFocus
             captionLayout="dropdown"
             selected={selected}
-            defaultMonth={selected ?? isoToLocalDate(maxDate)}
-            startMonth={isoToLocalDate(minDate)}
-            endMonth={isoToLocalDate(maxDate)}
-            disabled={[{ before: isoToLocalDate(minDate) }, { after: isoToLocalDate(maxDate) }]}
+            defaultMonth={selected ?? lastDay}
+            startMonth={firstDay}
+            endMonth={lastDay}
+            disabled={[{ before: firstDay }, { after: lastDay }]}
             onSelect={selectDate}
           />
         </PopoverContent>

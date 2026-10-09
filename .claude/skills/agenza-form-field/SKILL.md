@@ -8,7 +8,7 @@ description: Use when building or changing a form in admin-frontend — wiring R
 `TagFormPage` (`src/features/tags/ui/pages/TagFormPage/`) is the reference implementation for a
 dialog form. `ClientFormPage` (`src/features/clients/ui/pages/ClientFormPage/`) is the second
 consumer and the reference for a full-page form with **field arrays** (`useFieldArray`, nested paths
-such as `guardians.${number}.name`), masked inputs (`MaskedField`) and a custom multi-value control
+such as `guardians.${number}.name`), masked inputs (`MaskedField`), a typed-or-picked date (`DateField`: mask plus calendar popover, bounded by `minDate`/`maxDate`) and a custom multi-value control
 (`CheckboxGroup` through a `ControlledField` render function). Read
 [`docs/ARCHITECTURE.md` §5](../../../apps/admin-frontend/docs/ARCHITECTURE.md) (the "Tag create/edit
 UI reintroduced on React Hook Form + Zod" row and the row right after it) for the decision history
@@ -27,7 +27,7 @@ and has no input to attach to: render it in the section.
 | --- | --- | --- |
 | Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
 | RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem<T>(problem, fields, setError)` — calls the above, then `setError` per field plus `setError('root.serverError', …)`. Knows both shapes; the only file that does. |
-| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero domain knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
+| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero domain knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed
 keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s

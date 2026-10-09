@@ -205,9 +205,7 @@ describe('ClientFormPage', () => {
       renderPage();
 
       await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
-      await user.click(
-        screen.getByRole('button', { name: 'Abrir calendário de data de nascimento' }),
-      );
+      await user.click(screen.getByRole('button', { name: 'Abrir calendário' }));
       const calendar = await screen.findByRole('dialog');
       await user.selectOptions(
         within(calendar).getByRole('combobox', { name: 'Escolha o ano' }),
@@ -232,9 +230,7 @@ describe('ClientFormPage', () => {
       const user = userEvent.setup();
       renderPage();
 
-      await user.click(
-        screen.getByRole('button', { name: 'Abrir calendário de data de nascimento' }),
-      );
+      await user.click(screen.getByRole('button', { name: 'Abrir calendário' }));
       const calendar = await screen.findByRole('dialog');
 
       expect(

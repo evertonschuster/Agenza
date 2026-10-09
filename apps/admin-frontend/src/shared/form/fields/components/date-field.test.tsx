@@ -8,7 +8,13 @@ interface DummyValues {
   birthDate: string;
 }
 
-function Harness({ initial = '' }: { initial?: string }) {
+interface HarnessProps {
+  initial?: string;
+  disabled?: boolean;
+  readOnly?: boolean;
+}
+
+function Harness({ initial = '', disabled = false, readOnly = false }: HarnessProps) {
   const methods = useForm<DummyValues>({ defaultValues: { birthDate: initial } });
 
   return (
@@ -19,6 +25,8 @@ function Harness({ initial = '' }: { initial?: string }) {
         hint="opcional"
         minDate="1990-01-01"
         maxDate="2026-10-01"
+        disabled={disabled}
+        readOnly={readOnly}
       />
       <CurrentValue />
     </FormProvider>
@@ -35,8 +43,12 @@ function input() {
   return screen.getByLabelText('Data de nascimento');
 }
 
+function calendarButton() {
+  return screen.getByRole('button', { name: 'Abrir calendário' });
+}
+
 async function openCalendar(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole('button', { name: 'Abrir calendário de data de nascimento' }));
+  await user.click(calendarButton());
   return screen.findByRole('dialog');
 }
 
@@ -57,6 +69,27 @@ describe('DateField', () => {
     expect(input()).toHaveAttribute('placeholder', 'dd/mm/aaaa');
     expect(input()).toHaveAttribute('inputmode', 'numeric');
   });
+
+  it('names the calendar button without repeating the field label, so the label still finds one control', () => {
+    render(<Harness />);
+
+    expect(calendarButton()).not.toHaveAccessibleName(/data de nascimento/i);
+    expect(screen.getAllByLabelText(/data de nascimento/i)).toHaveLength(1);
+  });
+
+  it.each([['disabled'], ['readOnly']] as const)(
+    'does not open the calendar from the button or the arrow key while the field is %s',
+    async (mode) => {
+      const user = userEvent.setup();
+      render(<Harness {...{ [mode]: true }} />);
+
+      expect(calendarButton()).toBeDisabled();
+      await user.click(input());
+      await user.keyboard('{ArrowDown}');
+
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    },
+  );
 
   it('keeps the calendar closed until it is asked for', () => {
     render(<Harness />);
