@@ -11,7 +11,7 @@ export interface NavDestination {
 export const NAV_DESTINATIONS: NavDestination[] = [
   { label: 'Início', href: '/', icon: Home, comingSoon: false },
   { label: 'Agenda', href: '/agenda', icon: CalendarDays, comingSoon: true },
-  { label: 'Clientes', href: '/clientes', icon: Users, comingSoon: true },
+  { label: 'Pessoas', href: '/pessoas', icon: Users, comingSoon: false },
   { label: 'Conversas', href: '/conversas', icon: MessageCircle, comingSoon: true },
   { label: 'Serviços', href: '/servicos', icon: Wrench, comingSoon: false },
   { label: 'Etiquetas', href: '/tags', icon: Tag, comingSoon: false },

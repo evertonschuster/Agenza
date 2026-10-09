@@ -20,6 +20,20 @@ export type TextFieldProps<T extends FieldValues> = BaseFieldProps<T> &
 export type TextareaFieldProps<T extends FieldValues> = BaseFieldProps<T> &
   Omit<ComponentProps<typeof Textarea>, RegisterOwnedProps | FormFieldOwnedProps>;
 
+export type MaskedFieldProps<T extends FieldValues> = BaseFieldProps<T> &
+  Omit<ComponentProps<typeof Input>, RegisterOwnedProps | FormFieldOwnedProps | 'value'> & {
+    mask: (value: string) => string;
+  };
+
+export type DateFieldProps<T extends FieldValues> = BaseFieldProps<T> &
+  Omit<
+    ComponentProps<typeof Input>,
+    RegisterOwnedProps | FormFieldOwnedProps | 'value' | 'type' | 'inputMode'
+  > & {
+    minDate: string;
+    maxDate: string;
+  };
+
 export interface ControlledFieldProps<T extends FieldValues> {
   name: Path<T>;
   label: string;
