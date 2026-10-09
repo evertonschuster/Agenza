@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type SubmitEvent } from 'react';
+import { useEffect, useRef, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router';
 import { useFieldArray, useForm, useWatch, type FieldErrors, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -6,7 +6,6 @@ import { toFormErrors } from '@/shared/api/formErrors';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
-import { existingClientIdFrom } from '../../../api/existingClientId';
 import { ADULT_AGE_IN_YEARS } from '../../../model/birthDate';
 import {
   CLIENT_FORM_FIELDS,
@@ -40,7 +39,6 @@ export function useClientFormPage(): UseClientFormPageResult {
   const navigate = useNavigate();
   const isMountedRef = useRef(true);
   const addGuardianButtonRef = useRef<HTMLButtonElement>(null);
-  const [conflict, setConflict] = useState<{ cpf: string; clientId: string } | null>(null);
 
   const methods = useForm<ClientFormFieldValues, unknown, ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -49,12 +47,10 @@ export function useClientFormPage(): UseClientFormPageResult {
   const guardians = useFieldArray({ control: methods.control, name: 'guardians' });
   const referenceContacts = useFieldArray({ control: methods.control, name: 'referenceContacts' });
   const birthDate = useWatch({ control: methods.control, name: 'birthDate' });
-  const cpf = useWatch({ control: methods.control, name: 'cpf' });
 
   const isSaving = methods.formState.isSubmitting;
   const age = ageFromBirthDate(birthDate);
   const isMinor = age !== null && age < ADULT_AGE_IN_YEARS;
-  const existingClientId = conflict?.cpf === cpf ? conflict.clientId : null;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -79,9 +75,6 @@ export function useClientFormPage(): UseClientFormPageResult {
     const paths = fieldPathsOf(methods.getValues());
     applyApiProblem<ClientFormFieldValues>(result.error, paths, methods.setError);
 
-    const clientId = existingClientIdFrom(result.error);
-    setConflict(clientId ? { cpf: methods.getValues('cpf'), clientId } : null);
-
     const { fieldErrors } = toFormErrors(result.error, paths);
     const firstInvalid = paths.find((path) => fieldErrors[path]);
     if (firstInvalid) methods.setFocus(firstInvalid);
@@ -103,7 +96,6 @@ export function useClientFormPage(): UseClientFormPageResult {
     referenceContacts,
     age,
     isMinor,
-    existingClientId,
     isSaving,
     addGuardianButtonRef,
     onSubmit: submit,

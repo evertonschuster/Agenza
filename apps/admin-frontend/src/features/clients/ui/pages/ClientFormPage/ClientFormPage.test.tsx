@@ -13,8 +13,6 @@ vi.mock('../../../api/clientsRepository', () => ({
   clientsRepository: { create: mockCreate },
 }));
 
-const EXISTING_ID = '0197f2a0-0000-7000-8000-000000000001';
-
 const CREATED: Client = {
   id: '0197f2a0-0000-7000-8000-0000000000aa',
   fullName: 'Maria Souza',
@@ -522,7 +520,7 @@ describe('ClientFormPage', () => {
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
     }
 
-    it('shows the duplicate CPF message on the CPF field, focuses it and offers the existing record', async () => {
+    it('shows the duplicate CPF message on the CPF field and focuses it', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue(
         problem({
@@ -534,7 +532,6 @@ describe('ClientFormPage', () => {
               {
                 code: 'Client.DuplicateCpf',
                 message: 'Já existe uma pessoa cadastrada com este CPF.',
-                meta: { clientId: EXISTING_ID },
               },
             ],
           },
@@ -549,43 +546,12 @@ describe('ClientFormPage', () => {
       ).toBeInTheDocument();
       expect(screen.getByLabelText('CPF')).toHaveAttribute('aria-invalid', 'true');
       await waitFor(() => expect(screen.getByLabelText('CPF')).toHaveFocus());
-      const link = screen.getByRole('link', { name: /Abrir cadastro existente/ });
-      expect(link).toHaveAttribute('href', `/pessoas/${EXISTING_ID}`);
-      expect(link).toHaveAttribute('target', '_blank');
       expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
       expect(screen.getByLabelText('E-mail')).toHaveValue('maria@example.com');
       expect(screen.getByTestId('location')).toHaveTextContent('/pessoas/nova');
     });
 
-    it('stops offering the existing record once the CPF is changed', async () => {
-      const user = userEvent.setup();
-      mockCreate.mockResolvedValue(
-        problem({
-          status: 409,
-          code: 'Client.DuplicateCpf',
-          errors: {
-            Cpf: [
-              {
-                code: 'Client.DuplicateCpf',
-                message: 'Já existe uma pessoa cadastrada com este CPF.',
-                meta: { clientId: EXISTING_ID },
-              },
-            ],
-          },
-        }),
-      );
-      renderPage();
-      await fillAndSubmit(user);
-      await screen.findByRole('link', { name: /Abrir cadastro existente/ });
-
-      await user.type(screen.getByLabelText('CPF'), '{Backspace}');
-
-      expect(
-        screen.queryByRole('link', { name: /Abrir cadastro existente/ }),
-      ).not.toBeInTheDocument();
-    });
-
-    it('explains a CPF that belongs to a deleted record, with nothing to open', async () => {
+    it('explains a CPF that belongs to a deleted record', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue(
         problem({
@@ -607,9 +573,6 @@ describe('ClientFormPage', () => {
       await fillAndSubmit(user);
 
       expect(await screen.findByText(/pertence a um cadastro excluído/)).toBeInTheDocument();
-      expect(
-        screen.queryByRole('link', { name: /Abrir cadastro existente/ }),
-      ).not.toBeInTheDocument();
     });
 
     it('shows a duplicate e-mail on the e-mail field and keeps everything typed', async () => {

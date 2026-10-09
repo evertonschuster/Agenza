@@ -1,7 +1,5 @@
-import { Link } from 'react-router';
 import { todayLocal } from '@/shared/format/date';
 import { DateField, MaskedField, TextField, TextareaField } from '@/shared/form/fields';
-import { buttonVariants } from '@/shared/ui/button';
 import { earliestBirthDate, formatAge, latestBirthDate } from '../../../../model/birthDate';
 import {
   CLIENT_NAME_MAX_LENGTH,
@@ -14,10 +12,9 @@ import { ClientFormSection } from './ClientFormSection';
 
 interface ClientPersonSectionProps {
   age: number | null;
-  existingClientId: string | null;
 }
 
-function ClientPersonSection({ age, existingClientId }: ClientPersonSectionProps) {
+function ClientPersonSection({ age }: ClientPersonSectionProps) {
   const today = todayLocal();
 
   return (
@@ -63,28 +60,15 @@ function ClientPersonSection({ age, existingClientId }: ClientPersonSectionProps
           autoComplete="off"
         />
 
-        <div className="space-y-1.5">
-          <MaskedField<ClientFormFieldValues>
-            name="cpf"
-            label="CPF"
-            hint="opcional"
-            mask={formatCpf}
-            inputMode="numeric"
-            placeholder="000.000.000-00"
-            autoComplete="off"
-          />
-          {existingClientId && (
-            <Link
-              to={`/pessoas/${existingClientId}`}
-              target="_blank"
-              rel="noreferrer"
-              className={buttonVariants({ variant: 'link', size: 'sm' })}
-            >
-              Abrir cadastro existente
-              <span className="sr-only"> (abre em outra aba)</span>
-            </Link>
-          )}
-        </div>
+        <MaskedField<ClientFormFieldValues>
+          name="cpf"
+          label="CPF"
+          hint="opcional"
+          mask={formatCpf}
+          inputMode="numeric"
+          placeholder="000.000.000-00"
+          autoComplete="off"
+        />
 
         <div className="space-y-1.5 md:col-span-2">
           <TextareaField<ClientFormFieldValues>

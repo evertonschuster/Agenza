@@ -8,7 +8,6 @@ export interface UseClientFormPageResult {
   referenceContacts: UseFieldArrayReturn<ClientFormFieldValues, 'referenceContacts'>;
   age: number | null;
   isMinor: boolean;
-  existingClientId: string | null;
   isSaving: boolean;
   addGuardianButtonRef: RefObject<HTMLButtonElement | null>;
   onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;

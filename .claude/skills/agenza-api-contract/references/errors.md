@@ -75,8 +75,8 @@ different ways** (`ApiProblemDetailsFactory`):
 
 `meta` is an optional string map on one entry, absent when empty. It carries context for the client,
 never prose: the CPF and e-mail conflicts put `clientId` and `clientName` there, and the record can always
-be opened because neither conflict matches a deleted person. The CPF one is read in
-`features/clients/api/existingClientId.ts`. Branch on the entry's `code` before trusting a `meta` key.
+be opened because neither conflict matches a deleted person. Branch on the entry's `code` before
+trusting a `meta` key.
 
 Authorization and unexpected problems carry an empty `errors` object, never `null` in practice —
 but the type says nullable, so guard anyway.

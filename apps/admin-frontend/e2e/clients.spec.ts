@@ -77,7 +77,7 @@ test.describe('Register a person', () => {
     await expect(page.getByText('Pessoa cadastrada')).toBeVisible();
   });
 
-  test('refuses a CPF that already belongs to someone and offers the existing record', async ({
+  test('refuses a CPF that already belongs to someone and keeps what was typed', async ({
     page,
   }) => {
     const cpf = validCpf();
@@ -97,9 +97,5 @@ test.describe('Register a person', () => {
     await expect(person.getByText('Já existe uma pessoa cadastrada com este CPF.')).toBeVisible();
     await expect(person.getByLabel('Nome completo')).toHaveValue(secondName);
     await expect(page).toHaveURL(/\/pessoas\/nova$/);
-    await expect(person.getByRole('link', { name: /Abrir cadastro existente/ })).toHaveAttribute(
-      'href',
-      /\/pessoas\/[0-9a-f-]{36}$/,
-    );
   });
 });

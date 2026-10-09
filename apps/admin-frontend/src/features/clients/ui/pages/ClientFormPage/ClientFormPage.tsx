@@ -16,7 +16,6 @@ export function ClientFormPage() {
     referenceContacts,
     age,
     isMinor,
-    existingClientId,
     isSaving,
     addGuardianButtonRef,
     onSubmit,
@@ -29,7 +28,7 @@ export function ClientFormPage() {
       <PageHeader parents={PAGE_PARENTS} title="Nova pessoa" />
       <FormProvider {...methods}>
         <form onSubmit={onSubmit} noValidate className="space-y-6">
-          <ClientPersonSection age={age} existingClientId={existingClientId} />
+          <ClientPersonSection age={age} />
           <ClientGuardiansSection
             fieldIds={guardians.fields.map((field) => field.id)}
             isMinor={isMinor}
