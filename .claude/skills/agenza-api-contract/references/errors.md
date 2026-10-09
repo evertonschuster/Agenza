@@ -100,6 +100,8 @@ speculative. Revisit if a real case needs multiple messages per field; don't bui
 
 ```ts
 // shared/api/formErrors.ts (verbatim)
+const toFieldPath = (key: string) => key.replace(/\[(\d+)\]/g, '.$1').toLowerCase();
+
 export function toFormErrors<F extends string>(
   problem: ApiProblem,
   fields: readonly F[],
@@ -111,7 +113,7 @@ export function toFormErrors<F extends string>(
   for (const [key, entries] of Object.entries(problem.errors ?? {})) {
     const message = entries[0]?.message;
     if (!message) continue;
-    const field = byField.get(key.toLowerCase());
+    const field = byField.get(toFieldPath(key));
     if (field) fieldErrors[field] = message;
     else formLevel.push(message);
   }
