@@ -24,7 +24,7 @@ function ClientReferenceContactsSection({
   return (
     <ClientFormSection
       title="Pessoas de referência"
-      description="Familiares, amigos ou outras pessoas de apoio. Não são cadastros de pessoas atendidas: registrar um contato não dá acesso aos dados da pessoa nem envia mensagens."
+      description="Familiares, amigos ou pessoas de apoio. Registrar não dá acesso aos dados nem envia mensagens."
       action={
         <Button
           type="button"
@@ -38,12 +38,8 @@ function ClientReferenceContactsSection({
         </Button>
       }
     >
-      {fieldIds.length === 0 ? (
-        <p className="text-sm text-muted-foreground">
-          Nenhuma pessoa de referência adicionada ainda.
-        </p>
-      ) : (
-        <div className="space-y-3">
+      {fieldIds.length > 0 && (
+        <div className="divide-y divide-border border-t border-border">
           {fieldIds.map((id, index) => (
             <ClientReferenceContactItem key={id} index={index} onRemove={() => onRemove(index)} />
           ))}

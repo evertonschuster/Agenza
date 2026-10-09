@@ -104,10 +104,10 @@ describe('ClientFormPage', () => {
     it('starts with no contacts and never asks whether the person is a minor', () => {
       renderPage();
 
-      expect(screen.getByText('Nenhum responsável adicionado ainda.')).toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: /^Responsável \d$/ })).not.toBeInTheDocument();
       expect(
-        screen.getByText('Nenhuma pessoa de referência adicionada ainda.'),
-      ).toBeInTheDocument();
+        screen.queryByRole('group', { name: /^Pessoa de referência \d$/ }),
+      ).not.toBeInTheDocument();
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
   });
@@ -373,7 +373,7 @@ describe('ClientFormPage', () => {
 
       expect(screen.getAllByRole('group', { name: /^Responsável \d$/ })).toHaveLength(1);
       await user.click(screen.getByRole('button', { name: 'Remover responsável 1' }));
-      expect(screen.getByText('Nenhum responsável adicionado ainda.')).toBeInTheDocument();
+      expect(screen.queryByRole('group', { name: /^Responsável \d$/ })).not.toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
       await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
@@ -440,7 +440,6 @@ describe('ClientFormPage', () => {
 
       await addReferenceContact(user);
 
-      expect(screen.getByText('Nenhum responsável adicionado ainda.')).toBeInTheDocument();
       expect(screen.queryByRole('group', { name: 'Responsável 1' })).not.toBeInTheDocument();
     });
 
@@ -452,8 +451,8 @@ describe('ClientFormPage', () => {
       await user.click(screen.getByRole('button', { name: 'Remover pessoa de referência 1' }));
 
       expect(
-        screen.getByText('Nenhuma pessoa de referência adicionada ainda.'),
-      ).toBeInTheDocument();
+        screen.queryByRole('group', { name: 'Pessoa de referência 1' }),
+      ).not.toBeInTheDocument();
     });
   });
 

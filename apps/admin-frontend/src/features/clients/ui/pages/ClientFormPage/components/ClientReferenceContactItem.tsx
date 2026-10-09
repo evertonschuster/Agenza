@@ -21,11 +21,7 @@ function ClientReferenceContactItem({ index, onRemove }: ClientReferenceContactI
   const position = index + 1;
 
   return (
-    <div
-      role="group"
-      aria-labelledby={headingId}
-      className="space-y-3 rounded-lg border border-border p-3"
-    >
+    <div role="group" aria-labelledby={headingId} className="space-y-3 py-4 last:pb-0">
       <div className="flex items-center justify-between gap-2">
         <h3 id={headingId} className="text-sm font-medium">
           Pessoa de referência {position}

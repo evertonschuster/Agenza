@@ -30,7 +30,7 @@ function ClientGuardiansSection({
   return (
     <ClientFormSection
       title="Responsáveis"
-      description={`Quem responde pela pessoa. É obrigatório ter ao menos um quando a data de nascimento indicar menos de ${ADULT_AGE_IN_YEARS} anos.`}
+      description={`Quem responde pela pessoa. Obrigatório para menores de ${ADULT_AGE_IN_YEARS} anos.`}
       action={
         <Button
           ref={addButtonRef}
@@ -51,10 +51,8 @@ function ClientGuardiansSection({
         </p>
       )}
 
-      {fieldIds.length === 0 ? (
-        <p className="text-sm text-muted-foreground">Nenhum responsável adicionado ainda.</p>
-      ) : (
-        <div className="space-y-3">
+      {fieldIds.length > 0 && (
+        <div className="divide-y divide-border border-t border-border">
           {fieldIds.map((id, index) => (
             <ClientGuardianItem key={id} index={index} onRemove={() => onRemove(index)} />
           ))}

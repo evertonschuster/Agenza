@@ -4,8 +4,15 @@ import { buttonVariants } from '@/shared/ui/button';
 
 function ClientFormHeader() {
   return (
-    <header className="space-y-3">
-      <Link to="/pessoas" className={buttonVariants({ variant: 'ghost', size: 'sm' })}>
+    <header className="space-y-2">
+      <Link
+        to="/pessoas"
+        className={buttonVariants({
+          variant: 'ghost',
+          size: 'sm',
+          className: '-ml-2.5 text-muted-foreground',
+        })}
+      >
         <ArrowLeftIcon aria-hidden="true" />
         Voltar para Pessoas
       </Link>
