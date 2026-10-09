@@ -32,7 +32,8 @@ src/
 │   │                        state) + route.ts (loader/action), all re-exported by index.ts
 │   └── index.ts             The slice's ONLY public surface
 ├── widgets/                 Generic UI compositions with behaviour but no domain (confirm-dialog,
-│                            list-section); import shared/ only, consumed by features (ADR 0042)
+│                            list-section, page-header); import shared/ only, consumed by features
+│                            (ADR 0042)
 └── shared/                  Cross-cutting, no business logic
     ├── api/                 servicesFacade, servicesApi (its composition), apiClient,
     │                        unwrap (Result → exception at the framework boundary), formErrors

@@ -89,10 +89,27 @@ describe('ClientFormPage', () => {
         screen.getByRole('button', { name: 'Adicionar pessoa de referência' }),
       ).toBeInTheDocument();
       expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/pessoas');
-      expect(screen.getByRole('link', { name: 'Voltar para Pessoas' })).toHaveAttribute(
-        'href',
-        '/pessoas',
+    });
+
+    it('shows where the page sits with a breadcrumb back to Pessoas', () => {
+      renderPage();
+
+      const trail = within(screen.getByRole('navigation', { name: 'Caminho de navegação' }));
+      expect(trail.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('href', '/pessoas');
+      expect(trail.getByRole('heading', { name: 'Nova pessoa', level: 1 })).toHaveAttribute(
+        'aria-current',
+        'page',
       );
+    });
+
+    it('names the person section for assistive tech without showing a heading', () => {
+      renderPage();
+
+      const person = screen.getByRole('region', { name: 'Dados da pessoa' });
+      expect(within(person).getByRole('heading', { name: 'Dados da pessoa' })).toHaveClass(
+        'sr-only',
+      );
+      expect(screen.queryByText(/Só o nome é obrigatório/)).not.toBeInTheDocument();
     });
 
     it('warns that notes are administrative only', () => {

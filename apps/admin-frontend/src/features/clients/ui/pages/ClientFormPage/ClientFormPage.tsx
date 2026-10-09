@@ -1,11 +1,13 @@
 import { FormProvider } from 'react-hook-form';
 import { FormErrorBanner } from '@/shared/form/fields';
+import { PageHeader } from '@/widgets/page-header';
 import { ClientFormFooter } from './components/ClientFormFooter';
-import { ClientFormHeader } from './components/ClientFormHeader';
 import { ClientGuardiansSection } from './components/ClientGuardiansSection';
 import { ClientPersonSection } from './components/ClientPersonSection';
 import { ClientReferenceContactsSection } from './components/ClientReferenceContactsSection';
 import { useClientFormPage } from './useClientFormPage';
+
+const PAGE_PARENTS = [{ label: 'Pessoas', to: '/pessoas' }];
 
 export function ClientFormPage() {
   const {
@@ -24,7 +26,7 @@ export function ClientFormPage() {
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <ClientFormHeader />
+      <PageHeader parents={PAGE_PARENTS} title="Nova pessoa" />
       <FormProvider {...methods}>
         <form onSubmit={onSubmit} noValidate className="space-y-6">
           <ClientPersonSection age={age} existingClientId={existingClientId} />

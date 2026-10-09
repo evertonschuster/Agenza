@@ -18,10 +18,7 @@ interface ClientPersonSectionProps {
 
 function ClientPersonSection({ age, existingClientId }: ClientPersonSectionProps) {
   return (
-    <ClientFormSection
-      title="Dados da pessoa"
-      description="Só o nome é obrigatório. Complete o restante quando precisar."
-    >
+    <ClientFormSection title="Dados da pessoa" hideTitle>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <TextField<ClientFormFieldValues>
