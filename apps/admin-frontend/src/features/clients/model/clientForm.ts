@@ -1,9 +1,8 @@
 import { z } from 'zod';
-import { parseMaskedDate, todayLocal } from '@/shared/format/date';
+import { fullYearsBetween, parseMaskedDate, todayLocal } from '@/shared/format/date';
 import {
   ADULT_AGE_IN_YEARS,
   MAX_AGE_IN_YEARS,
-  calculateAge,
   isInThePast,
   isMinorOn,
   isWithinMaxAge,
@@ -178,5 +177,5 @@ export function ageFromBirthDate(masked: string): number | null {
     return null;
   }
 
-  return calculateAge(birthDate, today);
+  return fullYearsBetween(birthDate, today);
 }

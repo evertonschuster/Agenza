@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
 import {
-  calculateAge,
   earliestBirthDate,
   formatAge,
   isInThePast,
@@ -10,28 +9,6 @@ import {
 } from './birthDate';
 
 const TODAY = '2026-10-02';
-
-describe('calculateAge', () => {
-  it.each([
-    ['2008-10-02', 18],
-    ['2008-10-03', 17],
-    ['2008-10-01', 18],
-    ['2026-10-01', 0],
-    ['2000-02-29', 26],
-    ['1906-10-02', 120],
-    ['1906-10-03', 119],
-    ['1905-10-02', 121],
-  ] as const)('counts completed years for %s as %i', (birthDate, expected) => {
-    expect(calculateAge(birthDate, TODAY)).toBe(expected);
-  });
-
-  it('treats a leap-day birthday as February 28 in common years, like the backend', () => {
-    expect(calculateAge('2008-02-29', '2026-02-27')).toBe(17);
-    expect(calculateAge('2008-02-29', '2026-02-28')).toBe(18);
-    expect(calculateAge('2008-02-29', '2028-02-28')).toBe(19);
-    expect(calculateAge('2008-02-29', '2028-02-29')).toBe(20);
-  });
-});
 
 describe('birth date rules', () => {
   it('requires a date strictly in the past', () => {

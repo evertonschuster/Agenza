@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   daysInMonth,
   formatMaskedDate,
+  fullYearsBetween,
   isoToLocalDate,
   localDateToIso,
   maskDate,
@@ -108,5 +109,34 @@ describe('daysInMonth', () => {
     [2026, 12, 31],
   ] as const)('counts %i-%i as %i days', (year, month, expected) => {
     expect(daysInMonth(year, month)).toBe(expected);
+  });
+});
+
+describe('fullYearsBetween', () => {
+  it.each([
+    ['2008-10-02', '2026-10-02', 18],
+    ['2008-10-03', '2026-10-02', 17],
+    ['2008-10-01', '2026-10-02', 18],
+    ['2026-10-01', '2026-10-02', 0],
+    ['2026-10-02', '2026-10-02', 0],
+    ['2000-02-29', '2026-10-02', 26],
+    ['1906-10-02', '2026-10-02', 120],
+    ['1906-10-03', '2026-10-02', 119],
+    ['1905-10-02', '2026-10-02', 121],
+  ] as const)('counts the completed years from %s to %s as %i', (from, to, expected) => {
+    expect(fullYearsBetween(from, to)).toBe(expected);
+  });
+
+  it('moves a February 29 anniversary to February 28 in common years, like the backend', () => {
+    expect(fullYearsBetween('2008-02-29', '2026-02-27')).toBe(17);
+    expect(fullYearsBetween('2008-02-29', '2026-02-28')).toBe(18);
+    expect(fullYearsBetween('2008-02-29', '2028-02-28')).toBe(19);
+    expect(fullYearsBetween('2008-02-29', '2028-02-29')).toBe(20);
+  });
+
+  it('counts below zero when the end comes before the start', () => {
+    expect(fullYearsBetween('2026-10-03', '2026-10-02')).toBe(-1);
+    expect(fullYearsBetween('2026-10-02', '2025-10-02')).toBe(-1);
+    expect(fullYearsBetween('2026-10-02', '2025-10-01')).toBe(-2);
   });
 });

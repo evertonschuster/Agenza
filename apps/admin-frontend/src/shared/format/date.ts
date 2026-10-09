@@ -44,6 +44,26 @@ export function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
+export function fullYearsBetween(from: string, to: string): number {
+  const start = toParts(from);
+  const end = toParts(to);
+
+  const anniversary = {
+    month: start.month,
+    day: Math.min(start.day, daysInMonth(end.year, start.month)),
+  };
+  const reachedAnniversary =
+    end.month > anniversary.month ||
+    (end.month === anniversary.month && end.day >= anniversary.day);
+
+  return end.year - start.year - (reachedAnniversary ? 0 : 1);
+}
+
+function toParts(isoDate: string): { year: number; month: number; day: number } {
+  const [year = 0, month = 0, day = 0] = isoDate.split('-').map(Number);
+  return { year, month, day };
+}
+
 function pad(value: number, length: number): string {
   return String(value).padStart(length, '0');
 }
