@@ -4,7 +4,7 @@ import {
   fullYearsBetween,
   maskDate,
   parseMaskedDate,
-  todayLocal,
+  todayUtc,
   utcDate,
 } from './date';
 
@@ -14,23 +14,20 @@ describe('utcDate', () => {
   });
 });
 
-describe('todayLocal', () => {
+describe('todayUtc', () => {
   it.each([
-    [new Date(2026, 9, 2, 0, 0, 0), utcDate(2026, 10, 2)],
-    [new Date(2026, 9, 2, 23, 59, 59), utcDate(2026, 10, 2)],
-    [new Date(2025, 11, 31, 23, 30), utcDate(2025, 12, 31)],
-    [new Date(2026, 0, 1, 0, 30), utcDate(2026, 1, 1)],
-  ] as const)(
-    'reads %s as the calendar day on the device, held as midnight UTC',
-    (now, expected) => {
-      expect(todayLocal(now)).toEqual(expected);
-    },
-  );
+    ['2026-10-02T00:00:00Z', utcDate(2026, 10, 2)],
+    ['2026-10-02T23:59:59Z', utcDate(2026, 10, 2)],
+    ['2025-12-31T23:30:00Z', utcDate(2025, 12, 31)],
+    ['2026-01-01T00:30:00Z', utcDate(2026, 1, 1)],
+  ] as const)('reads %s as that UTC calendar day, at midnight', (instant, expected) => {
+    expect(todayUtc(new Date(instant))).toEqual(expected);
+  });
 
   it('defaults to the current instant', () => {
-    vi.useFakeTimers({ now: new Date(2026, 9, 2, 12, 0), toFake: ['Date'] });
+    vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
 
-    expect(todayLocal()).toEqual(utcDate(2026, 10, 2));
+    expect(todayUtc()).toEqual(utcDate(2026, 10, 2));
 
     vi.useRealTimers();
   });
@@ -76,6 +73,8 @@ describe('parseMaskedDate', () => {
     '10/03/0999',
     'aa/bb/cccc',
     '10-03-2015',
+    '1 /03/2015',
+    '10/03/2015/',
   ])('rejects %j', (masked) => {
     expect(parseMaskedDate(masked)).toBeNull();
   });

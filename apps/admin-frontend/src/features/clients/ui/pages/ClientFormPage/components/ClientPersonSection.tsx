@@ -1,5 +1,5 @@
 import { useFormContext, useWatch } from 'react-hook-form';
-import { todayLocal } from '@/shared/format/date';
+import { todayUtc } from '@/shared/format/date';
 import { DateField, MaskedField, TextField, TextareaField } from '@/shared/form/fields';
 import { PageSection } from '@/widgets/page-section';
 import { earliestBirthDate, formatAge, latestBirthDate } from '../../../../model/birthDate';
@@ -16,7 +16,7 @@ function ClientPersonSection() {
   const { control } = useFormContext<ClientFormFieldValues>();
   const birthDate = useWatch({ control, name: 'birthDate' });
   const age = ageFromBirthDate(birthDate);
-  const today = todayLocal();
+  const today = todayUtc();
 
   return (
     <PageSection title="Dados da pessoa" hideTitle>

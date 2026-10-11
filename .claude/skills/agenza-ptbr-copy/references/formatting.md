@@ -88,12 +88,12 @@ appointment renders one day early.
 In `admin-frontend` that is `utcDate` in `shared/format/date.ts`; the app holds a calendar day as a
 `Date` and only turns it into text where it is shown (`formatMaskedDate`).
 
-**"Today" for a form rule is the person's own day, not São Paulo's.** `todayLocal()`
-(`shared/format/date.ts`) reads the browser's calendar day. The pinned zone above is for *rendering
-instants*; it is not the answer to "what is today?" when validating a date the person typed
-([ADR 0045](../../../../docs/adr/0045-backend-works-in-utc.md)). In a test, build the clock with
-`new Date(2026, 9, 2, 12, 0)` (local fields), not an ISO string with `Z`, so it passes on a machine in
-any zone.
+**"Today" for a form rule is the UTC day, like the backend's, not São Paulo's.** `todayUtc()`
+(`shared/format/date.ts`) is the same calendar date the API uses, so a date the form accepts is one the
+API accepts. The pinned zone above is for *rendering instants*; it is not the answer to "what is
+today?" when validating a date the person typed
+([ADR 0045](../../../../docs/adr/0045-backend-works-in-utc.md)). In a test, build the clock with an ISO
+instant with `Z` (`new Date('2026-10-02T12:00:00Z')`), so it passes on a machine in any zone.
 
 Brazil has had no daylight saving since 2019, so the offset itself never moves — which is exactly why
 this bug survives review: the only thing that shifts is a date-only value, and only by one day.

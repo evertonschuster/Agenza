@@ -57,7 +57,7 @@ function lastPayload() {
 describe('ClientFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.useFakeTimers({ now: new Date(2026, 9, 2, 12, 0), toFake: ['Date'] });
+    vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
     mockCreate.mockResolvedValue({ ok: true, data: CREATED });
   });
 

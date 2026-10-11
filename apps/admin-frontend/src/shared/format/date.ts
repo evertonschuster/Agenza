@@ -1,11 +1,12 @@
-const MASKED_LENGTH = 10;
+const MASKED_DATE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
+const MIN_YEAR = 1000;
 
 export function utcDate(year: number, month: number, day: number): Date {
   return new Date(Date.UTC(year, month - 1, day));
 }
 
-export function todayLocal(now: Date = new Date()): Date {
-  return utcDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+export function todayUtc(now: Date = new Date()): Date {
+  return utcDate(now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate());
 }
 
 export function maskDate(value: string): string {
@@ -17,17 +18,16 @@ export function maskDate(value: string): string {
 }
 
 export function parseMaskedDate(masked: string): Date | null {
-  const value = masked.trim();
-  if (value.length !== MASKED_LENGTH) return null;
+  const match = MASKED_DATE.exec(masked.trim());
+  if (match === null) return null;
 
-  const [day, month, year] = value.split('/').map(Number);
-  if (day === undefined || month === undefined || year === undefined) return null;
-  if (!Number.isInteger(day) || !Number.isInteger(month) || !Number.isInteger(year)) return null;
-  if (year < 1000 || month < 1 || month > 12 || day < 1 || day > daysInMonth(year, month)) {
-    return null;
-  }
+  const day = Number(match[1]);
+  const month = Number(match[2]);
+  const year = Number(match[3]);
+  if (year < MIN_YEAR) return null;
 
-  return utcDate(year, month, day);
+  const date = utcDate(year, month, day);
+  return date.getUTCMonth() + 1 === month && date.getUTCDate() === day ? date : null;
 }
 
 export function formatMaskedDate(date: Date): string {
@@ -39,13 +39,10 @@ export function formatMaskedDate(date: Date): string {
 export function fullYearsBetween(from: Date, to: Date): number {
   const year = to.getUTCFullYear();
   const month = from.getUTCMonth() + 1;
-  const anniversary = utcDate(year, month, Math.min(from.getUTCDate(), daysInMonth(year, month)));
+  const lastDayOfMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  const anniversary = utcDate(year, month, Math.min(from.getUTCDate(), lastDayOfMonth));
 
   return year - from.getUTCFullYear() - (anniversary > to ? 1 : 0);
-}
-
-function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
 function pad(value: number, length: number): string {

@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { fullYearsBetween, parseMaskedDate, todayLocal } from '@/shared/format/date';
+import { fullYearsBetween, parseMaskedDate, todayUtc } from '@/shared/format/date';
 import {
   ADULT_AGE_IN_YEARS,
   MAX_AGE_IN_YEARS,
@@ -78,7 +78,7 @@ const birthDateField = z.string().transform((value, ctx) => {
   const birthDate = parseMaskedDate(value);
   if (birthDate === null) return fail('Informe uma data válida no formato dd/mm/aaaa.');
 
-  const today = todayLocal();
+  const today = todayUtc();
   if (!isInThePast(birthDate, today)) return fail('A data de nascimento deve estar no passado.');
   if (!isWithinMaxAge(birthDate, today)) {
     return fail(`A data de nascimento não pode indicar idade superior a ${MAX_AGE_IN_YEARS} anos.`);
@@ -130,7 +130,7 @@ const clientFormObject = z.object({
 
 export const clientFormSchema = clientFormObject.refine(
   (value) =>
-    !value.birthDate || !isMinorOn(value.birthDate, todayLocal()) || value.guardians.length > 0,
+    !value.birthDate || !isMinorOn(value.birthDate, todayUtc()) || value.guardians.length > 0,
   {
     path: ['guardians'],
     message: `Informe ao menos um responsável para pessoas menores de ${ADULT_AGE_IN_YEARS} anos.`,
@@ -174,5 +174,5 @@ export function ageFromBirthDate(masked: string): number | null {
   const parsed = birthDateField.safeParse(masked);
   if (!parsed.success || parsed.data === null) return null;
 
-  return fullYearsBetween(parsed.data, todayLocal());
+  return fullYearsBetween(parsed.data, todayUtc());
 }
