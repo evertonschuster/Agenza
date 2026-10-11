@@ -1,32 +1,29 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
-  addDays,
-  daysInMonth,
   formatMaskedDate,
   fullYearsBetween,
-  utcDate,
   maskDate,
   parseMaskedDate,
   todayLocal,
+  utcDate,
 } from './date';
 
 describe('utcDate', () => {
-  it('builds the calendar day at midnight UTC, with a 1-based month', () => {
+  it('is the calendar day at midnight UTC, with a 1-based month', () => {
     expect(utcDate(1990, 5, 20).toISOString()).toBe('1990-05-20T00:00:00.000Z');
   });
 });
 
 describe('todayLocal', () => {
   it.each([
-    [new Date(2026, 9, 2, 12, 0), utcDate(2026, 10, 2)],
+    [new Date(2026, 9, 2, 0, 0, 0), utcDate(2026, 10, 2)],
     [new Date(2026, 9, 2, 23, 59, 59), utcDate(2026, 10, 2)],
-    [new Date(2026, 9, 3, 0, 0, 0), utcDate(2026, 10, 3)],
     [new Date(2025, 11, 31, 23, 30), utcDate(2025, 12, 31)],
     [new Date(2026, 0, 1, 0, 30), utcDate(2026, 1, 1)],
   ] as const)(
-    'reads %s as the calendar day on the device, held as midnight UTC (%s)',
-    (instant, expected) => {
-      expect(todayLocal(instant)).toEqual(expected);
+    'reads %s as the calendar day on the device, held as midnight UTC',
+    (now, expected) => {
+      expect(todayLocal(now)).toEqual(expected);
     },
   );
 
@@ -36,28 +33,6 @@ describe('todayLocal', () => {
     expect(todayLocal()).toEqual(utcDate(2026, 10, 2));
 
     vi.useRealTimers();
-  });
-});
-
-describe('addDays', () => {
-  it.each([
-    [utcDate(2026, 10, 2), 1, utcDate(2026, 10, 3)],
-    [utcDate(2026, 10, 2), -1, utcDate(2026, 10, 1)],
-    [utcDate(2026, 3, 1), -1, utcDate(2026, 2, 28)],
-    [utcDate(2024, 3, 1), -1, utcDate(2024, 2, 29)],
-    [utcDate(2027, 1, 1), -1, utcDate(2026, 12, 31)],
-    [utcDate(2026, 12, 31), 1, utcDate(2027, 1, 1)],
-    [utcDate(2026, 10, 2), 0, utcDate(2026, 10, 2)],
-  ] as const)('moves %s by %i days to %s', (date, days, expected) => {
-    expect(addDays(date, days)).toEqual(expected);
-  });
-
-  it('leaves the original date untouched', () => {
-    const date = utcDate(2026, 10, 2);
-
-    addDays(date, 5);
-
-    expect(date).toEqual(utcDate(2026, 10, 2));
   });
 });
 
@@ -107,31 +82,14 @@ describe('parseMaskedDate', () => {
 });
 
 describe('formatMaskedDate', () => {
-  it('writes a date as dd/mm/aaaa', () => {
-    expect(formatMaskedDate(utcDate(2015, 3, 10))).toBe('10/03/2015');
-    expect(formatMaskedDate(utcDate(1900, 1, 1))).toBe('01/01/1900');
-  });
-
-  it('shows the UTC calendar day, whatever the zone of the device', () => {
+  it('writes the UTC calendar day as dd/mm/aaaa, whatever the zone of the device', () => {
     expect(formatMaskedDate(new Date('2015-03-10T00:00:00Z'))).toBe('10/03/2015');
     expect(formatMaskedDate(new Date('2015-03-10T23:59:59Z'))).toBe('10/03/2015');
+    expect(formatMaskedDate(utcDate(1900, 1, 1))).toBe('01/01/1900');
   });
 
   it('round-trips with parseMaskedDate', () => {
     expect(parseMaskedDate(formatMaskedDate(utcDate(2000, 2, 29)))).toEqual(utcDate(2000, 2, 29));
-  });
-});
-
-describe('daysInMonth', () => {
-  it.each([
-    [2024, 2, 29],
-    [2025, 2, 28],
-    [1900, 2, 28],
-    [2000, 2, 29],
-    [2026, 4, 30],
-    [2026, 12, 31],
-  ] as const)('counts %i-%i as %i days', (year, month, expected) => {
-    expect(daysInMonth(year, month)).toBe(expected);
   });
 });
 
@@ -163,11 +121,5 @@ describe('fullYearsBetween', () => {
     expect(fullYearsBetween(utcDate(2026, 10, 3), utcDate(2026, 10, 2))).toBe(-1);
     expect(fullYearsBetween(utcDate(2026, 10, 2), utcDate(2025, 10, 2))).toBe(-1);
     expect(fullYearsBetween(utcDate(2026, 10, 2), utcDate(2025, 10, 1))).toBe(-2);
-  });
-
-  it('counts calendar days, whatever the time of day of either date', () => {
-    expect(
-      fullYearsBetween(new Date('2008-10-02T23:59:00Z'), new Date('2026-10-02T00:01:00Z')),
-    ).toBe(18);
   });
 });

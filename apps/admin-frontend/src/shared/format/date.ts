@@ -8,10 +8,6 @@ export function todayLocal(now: Date = new Date()): Date {
   return utcDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
 }
 
-export function addDays(date: Date, days: number): Date {
-  return utcDate(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate() + days);
-}
-
 export function maskDate(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 8);
 
@@ -40,27 +36,16 @@ export function formatMaskedDate(date: Date): string {
   return `${day}/${month}/${pad(date.getUTCFullYear(), 4)}`;
 }
 
-export function daysInMonth(year: number, month: number): number {
-  return new Date(Date.UTC(year, month, 0)).getUTCDate();
+export function fullYearsBetween(from: Date, to: Date): number {
+  const year = to.getUTCFullYear();
+  const month = from.getUTCMonth() + 1;
+  const anniversary = utcDate(year, month, Math.min(from.getUTCDate(), daysInMonth(year, month)));
+
+  return year - from.getUTCFullYear() - (anniversary > to ? 1 : 0);
 }
 
-export function fullYearsBetween(from: Date, to: Date): number {
-  const start = {
-    year: from.getUTCFullYear(),
-    month: from.getUTCMonth() + 1,
-    day: from.getUTCDate(),
-  };
-  const end = { year: to.getUTCFullYear(), month: to.getUTCMonth() + 1, day: to.getUTCDate() };
-
-  const anniversary = {
-    month: start.month,
-    day: Math.min(start.day, daysInMonth(end.year, start.month)),
-  };
-  const reachedAnniversary =
-    end.month > anniversary.month ||
-    (end.month === anniversary.month && end.day >= anniversary.day);
-
-  return end.year - start.year - (reachedAnniversary ? 0 : 1);
+function daysInMonth(year: number, month: number): number {
+  return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
 function pad(value: number, length: number): string {

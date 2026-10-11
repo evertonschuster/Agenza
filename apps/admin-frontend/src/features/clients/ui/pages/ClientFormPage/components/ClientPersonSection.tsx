@@ -1,3 +1,4 @@
+import { useFormContext, useWatch } from 'react-hook-form';
 import { todayLocal } from '@/shared/format/date';
 import { DateField, MaskedField, TextField, TextareaField } from '@/shared/form/fields';
 import { PageSection } from '@/widgets/page-section';
@@ -5,16 +6,16 @@ import { earliestBirthDate, formatAge, latestBirthDate } from '../../../../model
 import {
   CLIENT_NAME_MAX_LENGTH,
   CLIENT_NOTES_MAX_LENGTH,
+  ageFromBirthDate,
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
 import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH } from '../../../../model/contactFormats';
 import { formatCpf } from '../../../../model/cpf';
 
-interface ClientPersonSectionProps {
-  age: number | null;
-}
-
-function ClientPersonSection({ age }: ClientPersonSectionProps) {
+function ClientPersonSection() {
+  const { control } = useFormContext<ClientFormFieldValues>();
+  const birthDate = useWatch({ control, name: 'birthDate' });
+  const age = ageFromBirthDate(birthDate);
   const today = todayLocal();
 
   return (

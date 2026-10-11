@@ -21,7 +21,6 @@ export interface ClientReferenceContact {
 export interface Client {
   id: string;
   fullName: string;
-  birthDate: Date | null;
   phone: string | null;
   email: string | null;
   cpf: string | null;

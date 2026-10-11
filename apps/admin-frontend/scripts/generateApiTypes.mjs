@@ -34,8 +34,10 @@ function stripTenantHeaderParam(document) {
   return document;
 }
 
-function calendarDateAsDate(schemaObject) {
-  if (schemaObject.format !== 'date') return undefined;
+const REQUEST_SCHEMA_PROPERTY = /^#\/components\/schemas\/\w+(Command|Input)\//;
+
+function requestDateAsDate(schemaObject, { path: schemaPath = '' }) {
+  if (schemaObject.format !== 'date' || !REQUEST_SCHEMA_PROPERTY.test(schemaPath)) return undefined;
 
   const date = ts.factory.createTypeReferenceNode('Date');
   if (!Array.isArray(schemaObject.type) || !schemaObject.type.includes('null')) return date;
@@ -49,7 +51,7 @@ function calendarDateAsDate(schemaObject) {
 export async function generate() {
   const document = await fetch(new URL(OPENAPI_URL)).then((response) => response.json());
   const ast = await openapiTS(stripTenantHeaderParam(document), {
-    transform: calendarDateAsDate,
+    transform: requestDateAsDate,
   });
   const raw = astToString(ast);
   const prettierConfig = (await prettier.resolveConfig(__dirname)) ?? {};

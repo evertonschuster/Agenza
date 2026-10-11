@@ -171,11 +171,8 @@ export function emptyReferenceContact(): ReferenceContactFormFieldValues {
 }
 
 export function ageFromBirthDate(masked: string): number | null {
-  const birthDate = parseMaskedDate(masked);
-  const today = todayLocal();
-  if (birthDate === null || !isInThePast(birthDate, today) || !isWithinMaxAge(birthDate, today)) {
-    return null;
-  }
+  const parsed = birthDateField.safeParse(masked);
+  if (!parsed.success || parsed.data === null) return null;
 
-  return fullYearsBetween(birthDate, today);
+  return fullYearsBetween(parsed.data, todayLocal());
 }

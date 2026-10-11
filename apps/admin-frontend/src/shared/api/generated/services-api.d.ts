@@ -1847,7 +1847,7 @@ export interface components {
       id: string;
       fullName: string;
       /** Format: date */
-      birthDate: null | Date;
+      birthDate: null | string;
       phone: null | string;
       email: null | string;
       cpf: null | string;

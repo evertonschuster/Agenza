@@ -1,10 +1,10 @@
-import { addDays, fullYearsBetween, utcDate } from '@/shared/format/date';
+import { fullYearsBetween, utcDate } from '@/shared/format/date';
 
 export const ADULT_AGE_IN_YEARS = 18;
 export const MAX_AGE_IN_YEARS = 120;
 
 export function isInThePast(birthDate: Date, today: Date): boolean {
-  return birthDate.getTime() < today.getTime();
+  return birthDate < today;
 }
 
 export function isWithinMaxAge(birthDate: Date, today: Date): boolean {
@@ -16,7 +16,7 @@ export function isMinorOn(birthDate: Date, today: Date): boolean {
 }
 
 export function latestBirthDate(today: Date): Date {
-  return addDays(today, -1);
+  return utcDate(today.getUTCFullYear(), today.getUTCMonth() + 1, today.getUTCDate() - 1);
 }
 
 export function earliestBirthDate(today: Date): Date {

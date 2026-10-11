@@ -10,15 +10,15 @@ import { useClientFormPage } from './useClientFormPage';
 const PAGE_PARENTS = [{ label: 'Pessoas', to: '/pessoas' }];
 
 export function ClientFormPage() {
-  const { methods, age, isMinor, isSaving, addGuardianButtonRef, onSubmit } = useClientFormPage();
+  const { methods, isSaving, onSubmit } = useClientFormPage();
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
       <PageHeader parents={PAGE_PARENTS} title="Nova pessoa" />
       <FormProvider {...methods}>
         <form onSubmit={onSubmit} noValidate className="space-y-6">
-          <ClientPersonSection age={age} />
-          <ClientGuardiansSection isMinor={isMinor} addButtonRef={addGuardianButtonRef} />
+          <ClientPersonSection />
+          <ClientGuardiansSection />
           <ClientReferenceContactsSection />
           <FormErrorBanner />
           <FormFooter isSaving={isSaving} cancelTo="/pessoas" />

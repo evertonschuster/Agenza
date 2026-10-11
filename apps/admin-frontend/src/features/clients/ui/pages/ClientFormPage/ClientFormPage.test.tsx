@@ -17,7 +17,6 @@ vi.mock('../../../api/clientsRepository', () => ({
 const CREATED: Client = {
   id: '0197f2a0-0000-7000-8000-0000000000aa',
   fullName: 'Maria Souza',
-  birthDate: null,
   phone: null,
   email: null,
   cpf: null,
@@ -328,18 +327,6 @@ describe('ClientFormPage', () => {
       );
       expect(mockCreate).not.toHaveBeenCalled();
       expect(screen.getByLabelText('Nome completo')).toHaveValue('Joana Souza');
-    });
-
-    it('moves focus to the way out of the problem when only the guardian is missing', async () => {
-      const user = userEvent.setup();
-      renderPage();
-
-      await user.type(screen.getByLabelText('Nome completo'), 'Joana Souza');
-      await user.type(screen.getByLabelText('Data de nascimento'), '10032015');
-      await user.click(screen.getByRole('button', { name: 'Salvar' }));
-
-      await screen.findByRole('alert');
-      expect(screen.getByRole('button', { name: 'Adicionar responsável' })).toHaveFocus();
     });
 
     it('keeps focus on the first invalid field when something else is wrong too', async () => {

@@ -60,11 +60,8 @@ function DateFieldControl({
 
   const value = typeof fieldValue === 'string' ? fieldValue : '';
   const typedDate = parseMaskedDate(value);
-  const isSelectable =
-    typedDate !== null &&
-    typedDate.getTime() >= minDate.getTime() &&
-    typedDate.getTime() <= maxDate.getTime();
-  const selected = isSelectable ? typedDate : undefined;
+  const selected =
+    typedDate !== null && typedDate >= minDate && typedDate <= maxDate ? typedDate : undefined;
 
   function selectDate(date: Date) {
     onChange(formatMaskedDate(date));

@@ -1,17 +1,15 @@
 import { useEffect, useRef, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { useForm, useWatch, type FieldErrors, type Path } from 'react-hook-form';
+import { useForm, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toFormErrors } from '@/shared/api/formErrors';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
-import { ADULT_AGE_IN_YEARS } from '../../../model/birthDate';
 import {
   CLIENT_FORM_FIELDS,
   GUARDIAN_FORM_FIELDS,
   REFERENCE_CONTACT_FORM_FIELDS,
-  ageFromBirthDate,
   clientFormSchema,
   toClientFormFieldValues,
   type ClientFormFieldValues,
@@ -36,17 +34,12 @@ function fieldPathsOf(values: ClientFormFieldValues): Path<ClientFormFieldValues
 export function useClientFormPage(): UseClientFormPageResult {
   const navigate = useNavigate();
   const isMountedRef = useRef(true);
-  const addGuardianButtonRef = useRef<HTMLButtonElement>(null);
 
   const methods = useForm<ClientFormFieldValues, unknown, ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: toClientFormFieldValues(),
   });
-  const birthDate = useWatch({ control: methods.control, name: 'birthDate' });
-
   const isSaving = methods.formState.isSubmitting;
-  const age = ageFromBirthDate(birthDate);
-  const isMinor = age !== null && age < ADULT_AGE_IN_YEARS;
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -76,22 +69,14 @@ export function useClientFormPage(): UseClientFormPageResult {
     if (firstInvalid) methods.setFocus(firstInvalid);
   }
 
-  function onInvalid(errors: FieldErrors<ClientFormFieldValues>) {
-    const onlyGuardianMissing = Object.keys(errors).join() === 'guardians';
-    if (onlyGuardianMissing) addGuardianButtonRef.current?.focus();
-  }
-
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!isSaving) void methods.handleSubmit(onValid, onInvalid)(event);
+    if (!isSaving) void methods.handleSubmit(onValid)(event);
   }
 
   return {
     methods,
-    age,
-    isMinor,
     isSaving,
-    addGuardianButtonRef,
     onSubmit: submit,
   };
 }
