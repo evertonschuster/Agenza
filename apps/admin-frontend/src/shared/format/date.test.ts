@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import {
+  formatIsoDate,
   formatMaskedDate,
   fullYearsBetween,
   maskDate,
@@ -89,6 +90,18 @@ describe('formatMaskedDate', () => {
 
   it('round-trips with parseMaskedDate', () => {
     expect(parseMaskedDate(formatMaskedDate(utcDate(2000, 2, 29)))).toEqual(utcDate(2000, 2, 29));
+  });
+});
+
+describe('formatIsoDate', () => {
+  it('writes the UTC calendar day as yyyy-MM-dd, whatever the zone of the device', () => {
+    expect(formatIsoDate(new Date('2015-03-10T00:00:00Z'))).toBe('2015-03-10');
+    expect(formatIsoDate(new Date('2015-03-10T23:59:59Z'))).toBe('2015-03-10');
+    expect(formatIsoDate(utcDate(1900, 1, 1))).toBe('1900-01-01');
+  });
+
+  it('round-trips with utcDate', () => {
+    expect(formatIsoDate(utcDate(2000, 2, 29))).toBe('2000-02-29');
   });
 });
 

@@ -36,6 +36,12 @@ export function formatMaskedDate(date: Date): string {
   return `${day}/${month}/${pad(date.getUTCFullYear(), 4)}`;
 }
 
+export function formatIsoDate(date: Date): string {
+  const month = pad(date.getUTCMonth() + 1, 2);
+  const day = pad(date.getUTCDate(), 2);
+  return `${pad(date.getUTCFullYear(), 4)}-${month}-${day}`;
+}
+
 export function fullYearsBetween(from: Date, to: Date): number {
   const year = to.getUTCFullYear();
   const month = from.getUTCMonth() + 1;
