@@ -2,9 +2,9 @@ import type { RefObject } from 'react';
 import { PlusIcon } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
+import { PageSection } from '@/widgets/page-section';
 import { ADULT_AGE_IN_YEARS } from '../../../../model/birthDate';
 import { MAX_GUARDIANS, type ClientFormFieldValues } from '../../../../model/clientForm';
-import { ClientFormSection } from './ClientFormSection';
 import { ClientGuardianItem } from './ClientGuardianItem';
 
 interface ClientGuardiansSectionProps {
@@ -28,7 +28,7 @@ function ClientGuardiansSection({
   const listError = errors.guardians?.root?.message ?? errors.guardians?.message;
 
   return (
-    <ClientFormSection
+    <PageSection
       title="Responsáveis"
       description={`Quem responde pela pessoa. Obrigatório para menores de ${ADULT_AGE_IN_YEARS} anos.`}
       action={
@@ -64,7 +64,7 @@ function ClientGuardiansSection({
           {listError}
         </p>
       )}
-    </ClientFormSection>
+    </PageSection>
   );
 }
 

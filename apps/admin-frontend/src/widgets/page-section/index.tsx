@@ -1,23 +1,23 @@
 import { useId, type ReactNode } from 'react';
 
-interface ClientFormSectionBase {
+interface PageSectionBase {
   title: string;
   children: ReactNode;
 }
 
-interface ClientFormSectionWithHeader extends ClientFormSectionBase {
+interface PageSectionWithHeader extends PageSectionBase {
   hideTitle?: false;
-  description: string;
+  description?: string;
   action?: ReactNode;
 }
 
-interface ClientFormSectionWithoutHeader extends ClientFormSectionBase {
+interface PageSectionWithoutHeader extends PageSectionBase {
   hideTitle: true;
 }
 
-type ClientFormSectionProps = ClientFormSectionWithHeader | ClientFormSectionWithoutHeader;
+type PageSectionProps = PageSectionWithHeader | PageSectionWithoutHeader;
 
-function ClientFormSection(props: ClientFormSectionProps) {
+function PageSection(props: PageSectionProps) {
   const headingId = useId();
 
   return (
@@ -35,7 +35,9 @@ function ClientFormSection(props: ClientFormSectionProps) {
             <h2 id={headingId} className="text-base font-semibold">
               {props.title}
             </h2>
-            <p className="text-sm text-muted-foreground">{props.description}</p>
+            {props.description && (
+              <p className="text-sm text-muted-foreground">{props.description}</p>
+            )}
           </div>
           {props.action && <div className="shrink-0">{props.action}</div>}
         </div>
@@ -45,4 +47,5 @@ function ClientFormSection(props: ClientFormSectionProps) {
   );
 }
 
-export { ClientFormSection };
+export { PageSection };
+export type { PageSectionProps };

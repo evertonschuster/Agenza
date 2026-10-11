@@ -1,5 +1,6 @@
 import { todayLocal } from '@/shared/format/date';
 import { DateField, MaskedField, TextField, TextareaField } from '@/shared/form/fields';
+import { PageSection } from '@/widgets/page-section';
 import { earliestBirthDate, formatAge, latestBirthDate } from '../../../../model/birthDate';
 import {
   CLIENT_NAME_MAX_LENGTH,
@@ -8,7 +9,6 @@ import {
 } from '../../../../model/clientForm';
 import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH } from '../../../../model/contactFormats';
 import { formatCpf } from '../../../../model/cpf';
-import { ClientFormSection } from './ClientFormSection';
 
 interface ClientPersonSectionProps {
   age: number | null;
@@ -18,7 +18,7 @@ function ClientPersonSection({ age }: ClientPersonSectionProps) {
   const today = todayLocal();
 
   return (
-    <ClientFormSection title="Dados da pessoa" hideTitle>
+    <PageSection title="Dados da pessoa" hideTitle>
       <div className="grid gap-4 md:grid-cols-2">
         <div className="md:col-span-2">
           <TextField<ClientFormFieldValues>
@@ -84,7 +84,7 @@ function ClientPersonSection({ age }: ClientPersonSectionProps) {
           </p>
         </div>
       </div>
-    </ClientFormSection>
+    </PageSection>
   );
 }
 

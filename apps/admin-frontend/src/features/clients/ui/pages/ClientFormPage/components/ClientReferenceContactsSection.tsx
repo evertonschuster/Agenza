@@ -1,8 +1,8 @@
 import { PlusIcon } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
+import { PageSection } from '@/widgets/page-section';
 import { MAX_REFERENCE_CONTACTS, type ClientFormFieldValues } from '../../../../model/clientForm';
-import { ClientFormSection } from './ClientFormSection';
 import { ClientReferenceContactItem } from './ClientReferenceContactItem';
 
 interface ClientReferenceContactsSectionProps {
@@ -22,7 +22,7 @@ function ClientReferenceContactsSection({
   const listError = errors.referenceContacts?.root?.message ?? errors.referenceContacts?.message;
 
   return (
-    <ClientFormSection
+    <PageSection
       title="Pessoas de referência"
       description="Familiares, amigos ou pessoas de apoio. Registrar não dá acesso aos dados nem envia mensagens."
       action={
@@ -51,7 +51,7 @@ function ClientReferenceContactsSection({
           {listError}
         </p>
       )}
-    </ClientFormSection>
+    </PageSection>
   );
 }
 
