@@ -28,7 +28,7 @@ function ClientReferenceContactItem({ index, onRemove }: ClientReferenceContactI
         </h3>
         <Button
           type="button"
-          variant="ghost"
+          variant="destructive"
           size="sm"
           onClick={onRemove}
           aria-label={`Remover pessoa de referência ${position}`}

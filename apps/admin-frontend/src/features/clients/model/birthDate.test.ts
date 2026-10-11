@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { utcDate } from '@/shared/format/date';
 import {
   earliestBirthDate,
@@ -54,6 +54,15 @@ describe('birth date picker bounds', () => {
     expect(earliestBirthDate(TODAY)).toEqual(utcDate(1905, 1, 1));
     expect(isWithinMaxAge(utcDate(1905, 12, 31), utcDate(2026, 1, 1))).toBe(true);
     expect(isWithinMaxAge(utcDate(1905, 1, 1), utcDate(2026, 12, 31))).toBe(false);
+  });
+
+  it('reads today from the clock when none is given', () => {
+    vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
+
+    expect(latestBirthDate()).toEqual(utcDate(2026, 10, 1));
+    expect(earliestBirthDate()).toEqual(utcDate(1905, 1, 1));
+
+    vi.useRealTimers();
   });
 });
 

@@ -1,5 +1,4 @@
 import { useFormContext, useWatch } from 'react-hook-form';
-import { todayUtc } from '@/shared/format/date';
 import { DateField, MaskedField, TextField, TextareaField } from '@/shared/form/fields';
 import { PageSection } from '@/widgets/page-section';
 import { earliestBirthDate, formatAge, latestBirthDate } from '../../../../model/birthDate';
@@ -16,7 +15,6 @@ function ClientPersonSection() {
   const { control } = useFormContext<ClientFormFieldValues>();
   const birthDate = useWatch({ control, name: 'birthDate' });
   const age = ageFromBirthDate(birthDate);
-  const today = todayUtc();
 
   return (
     <PageSection title="Dados da pessoa" hideTitle>
@@ -36,8 +34,8 @@ function ClientPersonSection() {
           name="birthDate"
           label="Data de nascimento"
           hint={age === null ? 'opcional' : formatAge(age)}
-          minDate={earliestBirthDate(today)}
-          maxDate={latestBirthDate(today)}
+          minDate={earliestBirthDate()}
+          maxDate={latestBirthDate()}
           autoComplete="off"
         />
 
@@ -71,7 +69,7 @@ function ClientPersonSection() {
           autoComplete="off"
         />
 
-        <div className="space-y-1.5 md:col-span-2">
+        <div className="md:col-span-2">
           <TextareaField<ClientFormFieldValues>
             name="administrativeNotes"
             label="Observações administrativas"
@@ -79,10 +77,6 @@ function ClientPersonSection() {
             maxLength={CLIENT_NOTES_MAX_LENGTH}
             placeholder="Ex.: prefere contato por WhatsApp pela manhã."
           />
-          <p className="text-xs text-muted-foreground">
-            Use só para informações administrativas. Não registre prontuário, diagnóstico ou outros
-            dados clínicos.
-          </p>
         </div>
       </div>
     </PageSection>

@@ -27,7 +27,7 @@ function ClientGuardianItem({ index, onRemove }: ClientGuardianItemProps) {
         </h3>
         <Button
           type="button"
-          variant="ghost"
+          variant="destructive"
           size="sm"
           onClick={onRemove}
           aria-label={`Remover responsável ${position}`}
