@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import openapiTS, { astToString } from 'openapi-typescript';
 import prettier from 'prettier';
+import ts from 'typescript';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = path.join(
@@ -33,9 +34,23 @@ function stripTenantHeaderParam(document) {
   return document;
 }
 
+function calendarDateAsDate(schemaObject) {
+  if (schemaObject.format !== 'date') return undefined;
+
+  const date = ts.factory.createTypeReferenceNode('Date');
+  if (!Array.isArray(schemaObject.type) || !schemaObject.type.includes('null')) return date;
+
+  return ts.factory.createUnionTypeNode([
+    ts.factory.createLiteralTypeNode(ts.factory.createNull()),
+    date,
+  ]);
+}
+
 export async function generate() {
   const document = await fetch(new URL(OPENAPI_URL)).then((response) => response.json());
-  const ast = await openapiTS(stripTenantHeaderParam(document));
+  const ast = await openapiTS(stripTenantHeaderParam(document), {
+    transform: calendarDateAsDate,
+  });
   const raw = astToString(ast);
   const prettierConfig = (await prettier.resolveConfig(__dirname)) ?? {};
   const formatted = await prettier.format(raw, { ...prettierConfig, parser: 'typescript' });

@@ -30,8 +30,8 @@ export type DateFieldProps<T extends FieldValues> = BaseFieldProps<T> &
     ComponentProps<typeof Input>,
     RegisterOwnedProps | FormFieldOwnedProps | 'value' | 'type' | 'inputMode'
   > & {
-    minDate: string;
-    maxDate: string;
+    minDate: Date;
+    maxDate: Date;
   };
 
 export interface ControlledFieldProps<T extends FieldValues> {

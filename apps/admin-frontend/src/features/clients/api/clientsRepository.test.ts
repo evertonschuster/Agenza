@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { utcDate } from '@/shared/format/date';
 import type { ClientInput } from '../model/client';
 import { clientsRepository } from './clientsRepository';
 
@@ -10,7 +11,7 @@ vi.mock('@/shared/api/servicesApi', () => ({
 
 const INPUT: ClientInput = {
   fullName: 'Maria Souza',
-  birthDate: '2015-03-10',
+  birthDate: utcDate(2015, 3, 10),
   phone: null,
   email: 'maria@example.com',
   cpf: '52998224725',
@@ -30,6 +31,17 @@ describe('clientsRepository.create', () => {
 
     expect(mockPost).toHaveBeenCalledWith('/api/v{version}/clients', { body: INPUT });
     expect(result).toEqual({ ok: true, data: client });
+  });
+
+  it('hands the birth date over as the Date itself, which JSON writes as an instant at midnight UTC', async () => {
+    mockPost.mockResolvedValue({ ok: true, data: {} });
+
+    await clientsRepository.create(INPUT);
+
+    const [, options] = mockPost.mock.calls.at(-1) as [string, { body: unknown }];
+    expect(JSON.parse(JSON.stringify(options.body))).toMatchObject({
+      birthDate: '2015-03-10T00:00:00.000Z',
+    });
   });
 
   it('never sends a tenant, only what the person typed', async () => {

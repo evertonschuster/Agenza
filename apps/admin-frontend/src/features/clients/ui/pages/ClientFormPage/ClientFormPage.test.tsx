@@ -4,6 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
+import { utcDate } from '@/shared/format/date';
 import type { Client } from '../../../model/client';
 import { ClientFormPage } from './ClientFormPage';
 
@@ -158,7 +159,7 @@ describe('ClientFormPage', () => {
       expect(await screen.findByRole('heading', { name: 'Lista de pessoas' })).toBeInTheDocument();
     });
 
-    it('sends every field normalized: ISO birth date, CPF without mask, lowercase e-mail', async () => {
+    it('sends every field normalized: birth date as a Date, CPF without mask, lowercase e-mail', async () => {
       const user = userEvent.setup();
       renderPage();
 
@@ -176,7 +177,7 @@ describe('ClientFormPage', () => {
       await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
       expect(lastPayload()).toEqual({
         fullName: 'Maria Souza',
-        birthDate: '1990-05-20',
+        birthDate: utcDate(1990, 5, 20),
         phone: '(11) 99999-0000',
         email: 'maria.souza@example.com',
         cpf: '52998224725',
@@ -198,7 +199,7 @@ describe('ClientFormPage', () => {
       expect(screen.getByText('36 anos')).toBeInTheDocument();
     });
 
-    it('picks the birth date from the calendar, shows the age and sends the ISO date', async () => {
+    it('picks the birth date from the calendar, shows the age and sends the date', async () => {
       const user = userEvent.setup();
       renderPage();
 
@@ -221,7 +222,7 @@ describe('ClientFormPage', () => {
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
-      expect(lastPayload()).toMatchObject({ birthDate: '1990-05-20' });
+      expect(lastPayload()).toMatchObject({ birthDate: utcDate(1990, 5, 20) });
     });
 
     it('does not let the calendar pick today or later as a birth date', async () => {
@@ -394,7 +395,7 @@ describe('ClientFormPage', () => {
 
       await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
       expect(lastPayload()).toMatchObject({
-        birthDate: '2015-03-10',
+        birthDate: utcDate(2015, 3, 10),
         guardians: [
           { name: 'Ana Souza', relationship: 'Mãe', phone: '11 98888-0000', cpf: '12345678909' },
         ],

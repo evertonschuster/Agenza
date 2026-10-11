@@ -1,28 +1,63 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import {
+  addDays,
   daysInMonth,
   formatMaskedDate,
   fullYearsBetween,
-  isoToLocalDate,
-  localDateToIso,
+  utcDate,
   maskDate,
   parseMaskedDate,
   todayLocal,
 } from './date';
 
+describe('utcDate', () => {
+  it('builds the calendar day at midnight UTC, with a 1-based month', () => {
+    expect(utcDate(1990, 5, 20).toISOString()).toBe('1990-05-20T00:00:00.000Z');
+  });
+});
+
 describe('todayLocal', () => {
   it.each([
-    [new Date(2026, 9, 2, 12, 0), '2026-10-02'],
-    [new Date(2026, 9, 2, 23, 59, 59), '2026-10-02'],
-    [new Date(2026, 9, 3, 0, 0, 0), '2026-10-03'],
-    [new Date(2025, 11, 31, 23, 30), '2025-12-31'],
-    [new Date(2026, 0, 1, 0, 30), '2026-01-01'],
-  ] as const)('reads %s as the calendar day on the device, %s', (instant, expected) => {
-    expect(todayLocal(instant)).toBe(expected);
-  });
+    [new Date(2026, 9, 2, 12, 0), utcDate(2026, 10, 2)],
+    [new Date(2026, 9, 2, 23, 59, 59), utcDate(2026, 10, 2)],
+    [new Date(2026, 9, 3, 0, 0, 0), utcDate(2026, 10, 3)],
+    [new Date(2025, 11, 31, 23, 30), utcDate(2025, 12, 31)],
+    [new Date(2026, 0, 1, 0, 30), utcDate(2026, 1, 1)],
+  ] as const)(
+    'reads %s as the calendar day on the device, held as midnight UTC (%s)',
+    (instant, expected) => {
+      expect(todayLocal(instant)).toEqual(expected);
+    },
+  );
 
   it('defaults to the current instant', () => {
-    expect(todayLocal()).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    vi.useFakeTimers({ now: new Date(2026, 9, 2, 12, 0), toFake: ['Date'] });
+
+    expect(todayLocal()).toEqual(utcDate(2026, 10, 2));
+
+    vi.useRealTimers();
+  });
+});
+
+describe('addDays', () => {
+  it.each([
+    [utcDate(2026, 10, 2), 1, utcDate(2026, 10, 3)],
+    [utcDate(2026, 10, 2), -1, utcDate(2026, 10, 1)],
+    [utcDate(2026, 3, 1), -1, utcDate(2026, 2, 28)],
+    [utcDate(2024, 3, 1), -1, utcDate(2024, 2, 29)],
+    [utcDate(2027, 1, 1), -1, utcDate(2026, 12, 31)],
+    [utcDate(2026, 12, 31), 1, utcDate(2027, 1, 1)],
+    [utcDate(2026, 10, 2), 0, utcDate(2026, 10, 2)],
+  ] as const)('moves %s by %i days to %s', (date, days, expected) => {
+    expect(addDays(date, days)).toEqual(expected);
+  });
+
+  it('leaves the original date untouched', () => {
+    const date = utcDate(2026, 10, 2);
+
+    addDays(date, 5);
+
+    expect(date).toEqual(utcDate(2026, 10, 2));
   });
 });
 
@@ -45,12 +80,12 @@ describe('maskDate', () => {
 
 describe('parseMaskedDate', () => {
   it.each([
-    ['10/03/2015', '2015-03-10'],
-    ['01/01/1900', '1900-01-01'],
-    ['29/02/2000', '2000-02-29'],
-    [' 05/12/1990 ', '1990-12-05'],
+    ['10/03/2015', utcDate(2015, 3, 10)],
+    ['01/01/1900', utcDate(1900, 1, 1)],
+    ['29/02/2000', utcDate(2000, 2, 29)],
+    [' 05/12/1990 ', utcDate(1990, 12, 5)],
   ] as const)('reads %j as %s', (masked, expected) => {
-    expect(parseMaskedDate(masked)).toBe(expected);
+    expect(parseMaskedDate(masked)).toEqual(expected);
   });
 
   it.each([
@@ -72,31 +107,19 @@ describe('parseMaskedDate', () => {
 });
 
 describe('formatMaskedDate', () => {
-  it('writes an ISO date as dd/mm/aaaa', () => {
-    expect(formatMaskedDate('2015-03-10')).toBe('10/03/2015');
-    expect(formatMaskedDate('1900-01-01')).toBe('01/01/1900');
+  it('writes a date as dd/mm/aaaa', () => {
+    expect(formatMaskedDate(utcDate(2015, 3, 10))).toBe('10/03/2015');
+    expect(formatMaskedDate(utcDate(1900, 1, 1))).toBe('01/01/1900');
+  });
+
+  it('shows the UTC calendar day, whatever the zone of the device', () => {
+    expect(formatMaskedDate(new Date('2015-03-10T00:00:00Z'))).toBe('10/03/2015');
+    expect(formatMaskedDate(new Date('2015-03-10T23:59:59Z'))).toBe('10/03/2015');
   });
 
   it('round-trips with parseMaskedDate', () => {
-    expect(parseMaskedDate(formatMaskedDate('2000-02-29'))).toBe('2000-02-29');
+    expect(parseMaskedDate(formatMaskedDate(utcDate(2000, 2, 29)))).toEqual(utcDate(2000, 2, 29));
   });
-});
-
-describe('local date conversion', () => {
-  it('turns an ISO date into the same calendar day in local time', () => {
-    const date = isoToLocalDate('1990-05-20');
-
-    expect(date.getFullYear()).toBe(1990);
-    expect(date.getMonth()).toBe(4);
-    expect(date.getDate()).toBe(20);
-  });
-
-  it.each(['1990-05-20', '2000-02-29', '1900-01-01', '2026-12-31'])(
-    'round-trips %s through a local Date',
-    (isoDate) => {
-      expect(localDateToIso(isoToLocalDate(isoDate))).toBe(isoDate);
-    },
-  );
 });
 
 describe('daysInMonth', () => {
@@ -124,19 +147,27 @@ describe('fullYearsBetween', () => {
     ['1906-10-03', '2026-10-02', 119],
     ['1905-10-02', '2026-10-02', 121],
   ] as const)('counts the completed years from %s to %s as %i', (from, to, expected) => {
-    expect(fullYearsBetween(from, to)).toBe(expected);
+    expect(fullYearsBetween(new Date(from), new Date(to))).toBe(expected);
   });
 
   it('moves a February 29 anniversary to February 28 in common years, like the backend', () => {
-    expect(fullYearsBetween('2008-02-29', '2026-02-27')).toBe(17);
-    expect(fullYearsBetween('2008-02-29', '2026-02-28')).toBe(18);
-    expect(fullYearsBetween('2008-02-29', '2028-02-28')).toBe(19);
-    expect(fullYearsBetween('2008-02-29', '2028-02-29')).toBe(20);
+    const birth = utcDate(2008, 2, 29);
+
+    expect(fullYearsBetween(birth, utcDate(2026, 2, 27))).toBe(17);
+    expect(fullYearsBetween(birth, utcDate(2026, 2, 28))).toBe(18);
+    expect(fullYearsBetween(birth, utcDate(2028, 2, 28))).toBe(19);
+    expect(fullYearsBetween(birth, utcDate(2028, 2, 29))).toBe(20);
   });
 
   it('counts below zero when the end comes before the start', () => {
-    expect(fullYearsBetween('2026-10-03', '2026-10-02')).toBe(-1);
-    expect(fullYearsBetween('2026-10-02', '2025-10-02')).toBe(-1);
-    expect(fullYearsBetween('2026-10-02', '2025-10-01')).toBe(-2);
+    expect(fullYearsBetween(utcDate(2026, 10, 3), utcDate(2026, 10, 2))).toBe(-1);
+    expect(fullYearsBetween(utcDate(2026, 10, 2), utcDate(2025, 10, 2))).toBe(-1);
+    expect(fullYearsBetween(utcDate(2026, 10, 2), utcDate(2025, 10, 1))).toBe(-2);
+  });
+
+  it('counts calendar days, whatever the time of day of either date', () => {
+    expect(
+      fullYearsBetween(new Date('2008-10-02T23:59:00Z'), new Date('2026-10-02T00:01:00Z')),
+    ).toBe(18);
   });
 });

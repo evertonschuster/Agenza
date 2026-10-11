@@ -1,13 +1,7 @@
 import { useState, type KeyboardEvent, type Ref } from 'react';
 import type { FieldValues } from 'react-hook-form';
 import { CalendarIcon } from 'lucide-react';
-import {
-  formatMaskedDate,
-  isoToLocalDate,
-  localDateToIso,
-  maskDate,
-  parseMaskedDate,
-} from '@/shared/format/date';
+import { formatMaskedDate, maskDate, parseMaskedDate } from '@/shared/format/date';
 import { Calendar } from '@/shared/ui/calendar';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
 import {
@@ -66,13 +60,14 @@ function DateFieldControl({
 
   const value = typeof fieldValue === 'string' ? fieldValue : '';
   const typedDate = parseMaskedDate(value);
-  const isSelectable = typedDate !== null && typedDate >= minDate && typedDate <= maxDate;
-  const selected = isSelectable ? isoToLocalDate(typedDate) : undefined;
-  const firstDay = isoToLocalDate(minDate);
-  const lastDay = isoToLocalDate(maxDate);
+  const isSelectable =
+    typedDate !== null &&
+    typedDate.getTime() >= minDate.getTime() &&
+    typedDate.getTime() <= maxDate.getTime();
+  const selected = isSelectable ? typedDate : undefined;
 
   function selectDate(date: Date) {
-    onChange(formatMaskedDate(localDateToIso(date)));
+    onChange(formatMaskedDate(date));
     setOpen(false);
   }
 
@@ -115,11 +110,12 @@ function DateFieldControl({
             required
             autoFocus
             captionLayout="dropdown"
+            timeZone="UTC"
             selected={selected}
-            defaultMonth={selected ?? lastDay}
-            startMonth={firstDay}
-            endMonth={lastDay}
-            disabled={[{ before: firstDay }, { after: lastDay }]}
+            defaultMonth={selected ?? maxDate}
+            startMonth={minDate}
+            endMonth={maxDate}
+            disabled={[{ before: minDate }, { after: maxDate }]}
             onSelect={selectDate}
           />
         </PopoverContent>

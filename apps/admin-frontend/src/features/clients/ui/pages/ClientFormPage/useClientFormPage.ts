@@ -1,6 +1,6 @@
 import { useEffect, useRef, type SubmitEvent } from 'react';
 import { useNavigate } from 'react-router';
-import { useFieldArray, useForm, useWatch, type FieldErrors, type Path } from 'react-hook-form';
+import { useForm, useWatch, type FieldErrors, type Path } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toFormErrors } from '@/shared/api/formErrors';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
@@ -13,8 +13,6 @@ import {
   REFERENCE_CONTACT_FORM_FIELDS,
   ageFromBirthDate,
   clientFormSchema,
-  emptyGuardian,
-  emptyReferenceContact,
   toClientFormFieldValues,
   type ClientFormFieldValues,
   type ClientFormValues,
@@ -44,8 +42,6 @@ export function useClientFormPage(): UseClientFormPageResult {
     resolver: zodResolver(clientFormSchema),
     defaultValues: toClientFormFieldValues(),
   });
-  const guardians = useFieldArray({ control: methods.control, name: 'guardians' });
-  const referenceContacts = useFieldArray({ control: methods.control, name: 'referenceContacts' });
   const birthDate = useWatch({ control: methods.control, name: 'birthDate' });
 
   const isSaving = methods.formState.isSubmitting;
@@ -92,14 +88,10 @@ export function useClientFormPage(): UseClientFormPageResult {
 
   return {
     methods,
-    guardians,
-    referenceContacts,
     age,
     isMinor,
     isSaving,
     addGuardianButtonRef,
     onSubmit: submit,
-    addGuardian: () => guardians.append(emptyGuardian()),
-    addReferenceContact: () => referenceContacts.append(emptyReferenceContact()),
   };
 }

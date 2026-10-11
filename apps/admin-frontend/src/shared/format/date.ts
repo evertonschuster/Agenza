@@ -1,7 +1,15 @@
 const MASKED_LENGTH = 10;
 
-export function todayLocal(now: Date = new Date()): string {
-  return localDateToIso(now);
+export function utcDate(year: number, month: number, day: number): Date {
+  return new Date(Date.UTC(year, month - 1, day));
+}
+
+export function todayLocal(now: Date = new Date()): Date {
+  return utcDate(now.getFullYear(), now.getMonth() + 1, now.getDate());
+}
+
+export function addDays(date: Date, days: number): Date {
+  return utcDate(date.getUTCFullYear(), date.getUTCMonth() + 1, date.getUTCDate() + days);
 }
 
 export function maskDate(value: string): string {
@@ -12,7 +20,7 @@ export function maskDate(value: string): string {
   return `${digits.slice(0, 2)}/${digits.slice(2, 4)}/${digits.slice(4)}`;
 }
 
-export function parseMaskedDate(masked: string): string | null {
+export function parseMaskedDate(masked: string): Date | null {
   const value = masked.trim();
   if (value.length !== MASKED_LENGTH) return null;
 
@@ -23,30 +31,26 @@ export function parseMaskedDate(masked: string): string | null {
     return null;
   }
 
-  return `${pad(year, 4)}-${pad(month, 2)}-${pad(day, 2)}`;
+  return utcDate(year, month, day);
 }
 
-export function formatMaskedDate(isoDate: string): string {
-  const [year, month, day] = isoDate.split('-');
-  return `${day}/${month}/${year}`;
-}
-
-export function isoToLocalDate(isoDate: string): Date {
-  const [year = 0, month = 1, day = 1] = isoDate.split('-').map(Number);
-  return new Date(year, month - 1, day);
-}
-
-export function localDateToIso(date: Date): string {
-  return `${pad(date.getFullYear(), 4)}-${pad(date.getMonth() + 1, 2)}-${pad(date.getDate(), 2)}`;
+export function formatMaskedDate(date: Date): string {
+  const day = pad(date.getUTCDate(), 2);
+  const month = pad(date.getUTCMonth() + 1, 2);
+  return `${day}/${month}/${pad(date.getUTCFullYear(), 4)}`;
 }
 
 export function daysInMonth(year: number, month: number): number {
   return new Date(Date.UTC(year, month, 0)).getUTCDate();
 }
 
-export function fullYearsBetween(from: string, to: string): number {
-  const start = toParts(from);
-  const end = toParts(to);
+export function fullYearsBetween(from: Date, to: Date): number {
+  const start = {
+    year: from.getUTCFullYear(),
+    month: from.getUTCMonth() + 1,
+    day: from.getUTCDate(),
+  };
+  const end = { year: to.getUTCFullYear(), month: to.getUTCMonth() + 1, day: to.getUTCDate() };
 
   const anniversary = {
     month: start.month,
@@ -57,11 +61,6 @@ export function fullYearsBetween(from: string, to: string): number {
     (end.month === anniversary.month && end.day >= anniversary.day);
 
   return end.year - start.year - (reachedAnniversary ? 0 : 1);
-}
-
-function toParts(isoDate: string): { year: number; month: number; day: number } {
-  const [year = 0, month = 0, day = 0] = isoDate.split('-').map(Number);
-  return { year, month, day };
 }
 
 function pad(value: number, length: number): string {

@@ -1,30 +1,25 @@
 import type { RefObject } from 'react';
 import { PlusIcon } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
+import { useFieldArray, useFormContext, useFormState } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
 import { ADULT_AGE_IN_YEARS } from '../../../../model/birthDate';
-import { MAX_GUARDIANS, type ClientFormFieldValues } from '../../../../model/clientForm';
+import {
+  MAX_GUARDIANS,
+  emptyGuardian,
+  type ClientFormFieldValues,
+} from '../../../../model/clientForm';
 import { ClientGuardianItem } from './ClientGuardianItem';
 
 interface ClientGuardiansSectionProps {
-  fieldIds: string[];
   isMinor: boolean;
   addButtonRef: RefObject<HTMLButtonElement | null>;
-  onAdd: () => void;
-  onRemove: (index: number) => void;
 }
 
-function ClientGuardiansSection({
-  fieldIds,
-  isMinor,
-  addButtonRef,
-  onAdd,
-  onRemove,
-}: ClientGuardiansSectionProps) {
-  const {
-    formState: { errors },
-  } = useFormContext<ClientFormFieldValues>();
+function ClientGuardiansSection({ isMinor, addButtonRef }: ClientGuardiansSectionProps) {
+  const { control } = useFormContext<ClientFormFieldValues>();
+  const { fields, append, remove } = useFieldArray({ control, name: 'guardians' });
+  const { errors } = useFormState({ control, name: 'guardians' });
   const listError = errors.guardians?.root?.message ?? errors.guardians?.message;
 
   return (
@@ -37,24 +32,24 @@ function ClientGuardiansSection({
           type="button"
           variant="outline"
           size="sm"
-          disabled={fieldIds.length >= MAX_GUARDIANS}
-          onClick={onAdd}
+          disabled={fields.length >= MAX_GUARDIANS}
+          onClick={() => append(emptyGuardian())}
         >
           <PlusIcon aria-hidden="true" />
           Adicionar responsável
         </Button>
       }
     >
-      {isMinor && fieldIds.length === 0 && (
+      {isMinor && fields.length === 0 && (
         <p role="status" className="rounded-md border border-border bg-muted p-3 text-sm">
           Esta pessoa tem menos de {ADULT_AGE_IN_YEARS} anos. Informe ao menos um responsável.
         </p>
       )}
 
-      {fieldIds.length > 0 && (
+      {fields.length > 0 && (
         <div className="divide-y divide-border border-t border-border">
-          {fieldIds.map((id, index) => (
-            <ClientGuardianItem key={id} index={index} onRemove={() => onRemove(index)} />
+          {fields.map((field, index) => (
+            <ClientGuardianItem key={field.id} index={index} onRemove={() => remove(index)} />
           ))}
         </div>
       )}

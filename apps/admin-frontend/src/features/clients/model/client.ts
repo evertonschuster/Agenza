@@ -21,7 +21,7 @@ export interface ClientReferenceContact {
 export interface Client {
   id: string;
   fullName: string;
-  birthDate: string | null;
+  birthDate: Date | null;
   phone: string | null;
   email: string | null;
   cpf: string | null;
@@ -40,7 +40,7 @@ export type ReferenceContactInput = Pick<
 
 export interface ClientInput {
   fullName: string;
-  birthDate: string | null;
+  birthDate: Date | null;
   phone: string | null;
   email: string | null;
   cpf: string | null;

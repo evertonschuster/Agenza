@@ -1,29 +1,26 @@
-import { fullYearsBetween, isoToLocalDate, localDateToIso } from '@/shared/format/date';
+import { addDays, fullYearsBetween, utcDate } from '@/shared/format/date';
 
 export const ADULT_AGE_IN_YEARS = 18;
 export const MAX_AGE_IN_YEARS = 120;
 
-export function isInThePast(birthDate: string, today: string): boolean {
-  return birthDate < today;
+export function isInThePast(birthDate: Date, today: Date): boolean {
+  return birthDate.getTime() < today.getTime();
 }
 
-export function isWithinMaxAge(birthDate: string, today: string): boolean {
+export function isWithinMaxAge(birthDate: Date, today: Date): boolean {
   return fullYearsBetween(birthDate, today) <= MAX_AGE_IN_YEARS;
 }
 
-export function isMinorOn(birthDate: string, today: string): boolean {
+export function isMinorOn(birthDate: Date, today: Date): boolean {
   return isInThePast(birthDate, today) && fullYearsBetween(birthDate, today) < ADULT_AGE_IN_YEARS;
 }
 
-export function latestBirthDate(today: string): string {
-  const yesterday = isoToLocalDate(today);
-  yesterday.setDate(yesterday.getDate() - 1);
-  return localDateToIso(yesterday);
+export function latestBirthDate(today: Date): Date {
+  return addDays(today, -1);
 }
 
-export function earliestBirthDate(today: string): string {
-  const year = Number(today.slice(0, 4)) - MAX_AGE_IN_YEARS - 1;
-  return `${year}-01-01`;
+export function earliestBirthDate(today: Date): Date {
+  return utcDate(today.getUTCFullYear() - MAX_AGE_IN_YEARS - 1, 1, 1);
 }
 
 export function formatAge(age: number): string {

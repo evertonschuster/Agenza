@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { utcDate } from '@/shared/format/date';
 import {
   CLIENT_FORM_FIELDS,
   GUARDIAN_FORM_FIELDS,
@@ -88,7 +89,7 @@ describe('clientFormSchema', () => {
     expect(result.success).toBe(true);
     expect(result.data).toEqual({
       fullName: 'Maria Souza',
-      birthDate: '1990-05-20',
+      birthDate: utcDate(1990, 5, 20),
       phone: '(11) 99999-0000',
       email: 'maria.souza@example.com',
       cpf: '52998224725',

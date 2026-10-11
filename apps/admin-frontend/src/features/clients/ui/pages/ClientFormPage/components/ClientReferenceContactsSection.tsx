@@ -1,24 +1,18 @@
 import { PlusIcon } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
+import { useFieldArray, useFormContext, useFormState } from 'react-hook-form';
 import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
-import { MAX_REFERENCE_CONTACTS, type ClientFormFieldValues } from '../../../../model/clientForm';
+import {
+  MAX_REFERENCE_CONTACTS,
+  emptyReferenceContact,
+  type ClientFormFieldValues,
+} from '../../../../model/clientForm';
 import { ClientReferenceContactItem } from './ClientReferenceContactItem';
 
-interface ClientReferenceContactsSectionProps {
-  fieldIds: string[];
-  onAdd: () => void;
-  onRemove: (index: number) => void;
-}
-
-function ClientReferenceContactsSection({
-  fieldIds,
-  onAdd,
-  onRemove,
-}: ClientReferenceContactsSectionProps) {
-  const {
-    formState: { errors },
-  } = useFormContext<ClientFormFieldValues>();
+function ClientReferenceContactsSection() {
+  const { control } = useFormContext<ClientFormFieldValues>();
+  const { fields, append, remove } = useFieldArray({ control, name: 'referenceContacts' });
+  const { errors } = useFormState({ control, name: 'referenceContacts' });
   const listError = errors.referenceContacts?.root?.message ?? errors.referenceContacts?.message;
 
   return (
@@ -30,18 +24,22 @@ function ClientReferenceContactsSection({
           type="button"
           variant="outline"
           size="sm"
-          disabled={fieldIds.length >= MAX_REFERENCE_CONTACTS}
-          onClick={onAdd}
+          disabled={fields.length >= MAX_REFERENCE_CONTACTS}
+          onClick={() => append(emptyReferenceContact())}
         >
           <PlusIcon aria-hidden="true" />
           Adicionar pessoa de referência
         </Button>
       }
     >
-      {fieldIds.length > 0 && (
+      {fields.length > 0 && (
         <div className="divide-y divide-border border-t border-border">
-          {fieldIds.map((id, index) => (
-            <ClientReferenceContactItem key={id} index={index} onRemove={() => onRemove(index)} />
+          {fields.map((field, index) => (
+            <ClientReferenceContactItem
+              key={field.id}
+              index={index}
+              onRemove={() => remove(index)}
+            />
           ))}
         </div>
       )}

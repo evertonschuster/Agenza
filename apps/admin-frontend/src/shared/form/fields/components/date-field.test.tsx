@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
+import { utcDate } from '@/shared/format/date';
 import { DateField } from './date-field';
 
 interface DummyValues {
@@ -23,8 +24,8 @@ function Harness({ initial = '', disabled = false, readOnly = false }: HarnessPr
         name="birthDate"
         label="Data de nascimento"
         hint="opcional"
-        minDate="1990-01-01"
-        maxDate="2026-10-01"
+        minDate={utcDate(1990, 1, 1)}
+        maxDate={utcDate(2026, 10, 1)}
         disabled={disabled}
         readOnly={readOnly}
       />
