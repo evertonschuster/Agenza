@@ -98,6 +98,72 @@ describe('DateField', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
+  describe('clearing the date', () => {
+    function clearButton() {
+      return screen.queryByRole('button', { name: 'Limpar data' });
+    }
+
+    it('offers the clear button only while the field holds a date', async () => {
+      const user = userEvent.setup();
+      render(<Harness />);
+
+      expect(clearButton()).not.toBeInTheDocument();
+
+      await user.type(input(), '2');
+
+      expect(clearButton()).toBeInTheDocument();
+    });
+
+    it('names the clear button without repeating the field label, so the label still finds one control', () => {
+      render(<Harness initial="07/08/1995" />);
+
+      expect(clearButton()).not.toHaveAccessibleName(/data de nascimento/i);
+      expect(screen.getAllByLabelText(/data de nascimento/i)).toHaveLength(1);
+    });
+
+    it('empties the field and the form from the clear button, and puts the cursor back in the field', async () => {
+      const user = userEvent.setup();
+      render(<Harness initial="07/08/1995" />);
+
+      await user.click(clearButton()!);
+
+      expect(input()).toHaveValue('');
+      expect(screen.getByLabelText('valor do formulário')).toBeEmptyDOMElement();
+      expect(input()).toHaveFocus();
+      expect(clearButton()).not.toBeInTheDocument();
+    });
+
+    it.each([['disabled'], ['readOnly']] as const)(
+      'hides the clear button while the field is %s',
+      (mode) => {
+        render(<Harness initial="07/08/1995" {...{ [mode]: true }} />);
+
+        expect(clearButton()).not.toBeInTheDocument();
+      },
+    );
+
+    it('disables Limpar in the calendar while the field is empty', async () => {
+      const user = userEvent.setup();
+      render(<Harness />);
+
+      const calendar = await openCalendar(user);
+
+      expect(within(calendar).getByRole('button', { name: 'Limpar' })).toBeDisabled();
+    });
+
+    it('empties the field from Limpar in the calendar and closes it', async () => {
+      const user = userEvent.setup();
+      render(<Harness initial="07/08/1995" />);
+
+      const calendar = await openCalendar(user);
+      await user.click(within(calendar).getByRole('button', { name: 'Limpar' }));
+
+      expect(input()).toHaveValue('');
+      expect(screen.getByLabelText('valor do formulário')).toBeEmptyDOMElement();
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+  });
+
   it('opens the calendar from the button on the month of the latest allowed date', async () => {
     const user = userEvent.setup();
     render(<Harness />);

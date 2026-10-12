@@ -198,6 +198,25 @@ describe('ClientFormPage', () => {
       expect(screen.getByText('36 anos')).toBeInTheDocument();
     });
 
+    it('clears the birth date, drops the age and sends no birth date', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+      await user.type(screen.getByLabelText('Data de nascimento'), '20051990');
+      expect(screen.getByText('36 anos')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Limpar data' }));
+
+      expect(screen.getByLabelText('Data de nascimento')).toHaveValue('');
+      expect(screen.queryByText('36 anos')).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+      expect(lastPayload()).toMatchObject({ birthDate: null });
+    });
+
     it('picks the birth date from the calendar, shows the age and sends the date', async () => {
       const user = userEvent.setup();
       renderPage();

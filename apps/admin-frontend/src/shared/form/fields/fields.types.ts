@@ -11,6 +11,10 @@ interface BaseFieldProps<T extends FieldValues> {
   hint?: string | undefined;
 }
 
+export interface FieldErrorProps<T extends FieldValues> {
+  name: Path<T>;
+}
+
 type RegisterOwnedProps = 'name' | 'onChange' | 'onBlur' | 'ref';
 type FormFieldOwnedProps = 'id' | 'aria-invalid' | 'aria-describedby';
 

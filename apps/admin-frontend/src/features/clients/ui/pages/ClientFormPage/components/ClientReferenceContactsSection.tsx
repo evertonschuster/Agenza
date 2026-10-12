@@ -1,5 +1,6 @@
 import { PlusIcon } from 'lucide-react';
-import { useFieldArray, useFormContext, useFormState } from 'react-hook-form';
+import { useFieldArray, useFormContext } from 'react-hook-form';
+import { FieldError } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
 import {
@@ -12,12 +13,9 @@ import { ClientReferenceContactItem } from './ClientReferenceContactItem';
 function ClientReferenceContactsSection() {
   const { control } = useFormContext<ClientFormFieldValues>();
   const { fields, append, remove } = useFieldArray({ control, name: 'referenceContacts' });
-  const { errors } = useFormState({ control, name: 'referenceContacts' });
 
   const hasReferenceContacts = fields.length > 0;
   const hasReachedReferenceContactLimit = fields.length >= MAX_REFERENCE_CONTACTS;
-  const referenceContactsError =
-    errors.referenceContacts?.root?.message ?? errors.referenceContacts?.message;
 
   return (
     <PageSection
@@ -48,11 +46,7 @@ function ClientReferenceContactsSection() {
         </div>
       )}
 
-      {referenceContactsError && (
-        <p role="alert" className="text-sm text-destructive">
-          {referenceContactsError}
-        </p>
-      )}
+      <FieldError<ClientFormFieldValues> name="referenceContacts" />
     </PageSection>
   );
 }

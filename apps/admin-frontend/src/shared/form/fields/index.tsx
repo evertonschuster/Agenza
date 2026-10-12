@@ -4,7 +4,9 @@ export { DateField } from './components/date-field';
 export { ControlledField } from './components/controlled-field';
 export { ColorField } from './components/color-field';
 export { FormErrorBanner } from './components/form-error-banner';
+export { FieldError } from './components/field-error';
 export type {
+  FieldErrorProps,
   TextFieldProps,
   TextareaFieldProps,
   MaskedFieldProps,

@@ -7,7 +7,6 @@ import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { createTag, updateTag } from '../../../application/tagUseCases';
 import {
-  TAG_FORM_FIELDS,
   tagFormSchema,
   toTagFormFieldValues,
   type TagFormFieldValues,
@@ -88,7 +87,7 @@ export function useTagFormPage(): UseTagFormPageResult {
       return;
     }
 
-    applyApiProblem<TagFormFieldValues>(result.error, TAG_FORM_FIELDS, methods.setError);
+    applyApiProblem(result.error, methods);
   }
 
   function submit(event: SubmitEvent<HTMLFormElement>) {

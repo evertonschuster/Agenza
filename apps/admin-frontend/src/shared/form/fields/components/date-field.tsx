@@ -1,7 +1,8 @@
 import { useState, type KeyboardEvent, type Ref } from 'react';
-import type { FieldValues } from 'react-hook-form';
-import { CalendarIcon } from 'lucide-react';
+import { useFormContext, type FieldValues } from 'react-hook-form';
+import { CalendarIcon, XIcon } from 'lucide-react';
 import { formatMaskedDate, maskDate, parseMaskedDate } from '@/shared/format/date';
+import { Button } from '@/shared/ui/button';
 import { Calendar } from '@/shared/ui/calendar';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
 import {
@@ -54,17 +55,29 @@ function DateFieldControl({
   placeholder = 'dd/mm/aaaa',
   ...inputProps
 }: DateFieldControlProps) {
+  const { setFocus } = useFormContext();
   const [open, setOpen] = useState(false);
-  const { disabled, readOnly } = inputProps;
+  const { name, disabled, readOnly } = inputProps;
   const isLocked = Boolean(disabled || readOnly);
 
   const value = typeof fieldValue === 'string' ? fieldValue : '';
+  const hasValue = value !== '';
   const typedDate = parseMaskedDate(value);
   const selected =
     typedDate !== null && typedDate >= minDate && typedDate <= maxDate ? typedDate : undefined;
 
   function selectDate(date: Date) {
     onChange(formatMaskedDate(date));
+    setOpen(false);
+  }
+
+  function clearFromField() {
+    onChange('');
+    setFocus(name);
+  }
+
+  function clearFromCalendar() {
+    onChange('');
     setOpen(false);
   }
 
@@ -86,7 +99,12 @@ function DateFieldControl({
           onChange={(event) => onChange(maskDate(event.target.value))}
           onKeyDown={openOnArrowDown}
         />
-        <InputGroupAddon align="inline-end">
+        <InputGroupAddon align="inline-end" className="gap-0.5">
+          {hasValue && !isLocked && (
+            <InputGroupButton size="icon-xs" aria-label="Limpar data" onClick={clearFromField}>
+              <XIcon aria-hidden="true" />
+            </InputGroupButton>
+          )}
           <PopoverTrigger
             render={
               <InputGroupButton size="icon-xs" aria-label="Abrir calendário" disabled={isLocked} />
@@ -115,6 +133,17 @@ function DateFieldControl({
             disabled={[{ before: minDate }, { after: maxDate }]}
             onSelect={selectDate}
           />
+          <div className="border-t border-border p-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={!hasValue}
+              onClick={clearFromCalendar}
+            >
+              Limpar
+            </Button>
+          </div>
         </PopoverContent>
       </Popover>
     </InputGroup>
