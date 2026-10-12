@@ -17,6 +17,7 @@ vi.mock('../../../api/clientsRepository', () => ({
 const CREATED: Client = {
   id: '0197f2a0-0000-7000-8000-0000000000aa',
   fullName: 'Maria Souza',
+  birthDate: null,
   phone: null,
   email: null,
   cpf: null,

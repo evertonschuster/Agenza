@@ -7,7 +7,7 @@ import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
 import {
   clientFormSchema,
-  toClientFormFieldValues,
+  emptyClientFormFieldValues,
   type ClientFormFieldValues,
   type ClientFormValues,
 } from './clientForm';
@@ -21,7 +21,7 @@ export function useClientFormPage(): UseClientFormPageResult {
 
   const methods = useForm<ClientFormFieldValues, unknown, ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
-    defaultValues: toClientFormFieldValues(),
+    defaultValues: emptyClientFormFieldValues(),
   });
   const isSaving = methods.formState.isSubmitting;
 

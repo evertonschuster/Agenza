@@ -3,7 +3,7 @@ import { XIcon } from 'lucide-react';
 import { ControlledField, PhoneField, TextField } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { CheckboxGroup } from '@/shared/ui/checkbox-group';
-import { CONTACT_PURPOSE_OPTIONS } from '../../../../model/client';
+import { CONTACT_PURPOSE_OPTIONS } from '../../../../model/contactPurpose';
 import {
   CLIENT_NAME_MAX_LENGTH,
   CONTACT_RELATIONSHIP_MAX_LENGTH,

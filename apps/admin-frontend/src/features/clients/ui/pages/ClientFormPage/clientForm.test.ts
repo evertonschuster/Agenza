@@ -7,14 +7,14 @@ import {
   clientFormSchema,
   emptyGuardian,
   emptyReferenceContact,
-  toClientFormFieldValues,
+  emptyClientFormFieldValues,
   type ClientFormFieldValues,
 } from './clientForm';
 
 const NOON_UTC = new Date('2026-10-02T12:00:00Z');
 
 function values(overrides: Partial<ClientFormFieldValues> = {}): ClientFormFieldValues {
-  return { ...toClientFormFieldValues(), fullName: 'Maria Souza', ...overrides };
+  return { ...emptyClientFormFieldValues(), fullName: 'Maria Souza', ...overrides };
 }
 
 function guardian(overrides: Partial<ReturnType<typeof emptyGuardian>> = {}) {
@@ -334,7 +334,7 @@ describe('form field lists', () => {
   });
 
   it('starts empty so nothing is asked up front', () => {
-    expect(toClientFormFieldValues()).toEqual({
+    expect(emptyClientFormFieldValues()).toEqual({
       fullName: '',
       birthDate: '',
       phone: '',

@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ADULT_AGE_IN_YEARS, isMinorOn } from '@/shared/format/birthDate';
 import { todayUtc } from '@/shared/format/date';
 import { birthDateSchema, cpfSchema, emailSchema, phoneSchema } from '@/shared/form/schemas';
-import { CONTACT_PURPOSES } from '../../../model/client';
+import { CONTACT_PURPOSES } from '../../../model/contactPurpose';
 
 // Mirrors the backend limits (ServicesService.Domain.Entities.Client / ClientContact). UX pre-check
 // only - the backend response stays the source of truth.
@@ -99,7 +99,7 @@ export const CLIENT_FORM_FIELDS = clientFormObject.keyof().options;
 export const GUARDIAN_FORM_FIELDS = guardianSchema.keyof().options;
 export const REFERENCE_CONTACT_FORM_FIELDS = referenceContactSchema.keyof().options;
 
-export function toClientFormFieldValues(): ClientFormFieldValues {
+export function emptyClientFormFieldValues(): ClientFormFieldValues {
   return {
     fullName: '',
     birthDate: '',
