@@ -70,6 +70,11 @@ palette.
 | **Nenhum(a) … ainda** | Sem resultados, Lista vazia, Nada por aqui | The never-created empty state. |
 | **Não foi possível …** | Erro ao …, Falha ao …, Ops! | Names the action that failed, then the next step. |
 
+The domain nouns follow the same rule from the other side: the screen says **Pessoa**, **Responsável**,
+**Pessoa de referência**, **Etiqueta**, while the code keeps the backend's English names (`Client`,
+`ClientGuardian`, `ClientReferenceContact`, `Tag`). The full screen × code table is in
+[`docs/ARCHITECTURE.md` §1](../../../apps/admin-frontend/docs/ARCHITECTURE.md), under "Vocabulary".
+
 ## Where strings and formatters live
 
 **There is no message catalog and no `t()`.** Internationalisation beyond pt-BR is explicitly out of

@@ -136,7 +136,10 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    `FieldValues`), but silently accepts any string as `name`, losing the one thing worth keeping. A
    native-input field (`register()`-bound) is `TextField`/`TextareaField`. A custom control needs
    `ControlledField` (pass a render function) or a named specialization built on top of it, per the
-   rule below.
+   rule below. When the render function needs the value's own type, pass the path as the second type
+   argument and drop any cast: with
+   ``<ControlledField<XFormFieldValues, `contacts.${number}.purposes`> …>``, `field.value` is that
+   array, not the union of every value in the form.
 
 5. **A CPF, phone, e-mail or birth date is not configured by hand: reuse the pair.** The schema half
    comes from that value's file in `@/shared/values/` (`cpfSchema` from `@/shared/values/cpf`, then
