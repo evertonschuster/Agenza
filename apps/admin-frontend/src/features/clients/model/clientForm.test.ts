@@ -4,7 +4,6 @@ import {
   CLIENT_FORM_FIELDS,
   GUARDIAN_FORM_FIELDS,
   REFERENCE_CONTACT_FORM_FIELDS,
-  ageFromBirthDate,
   clientFormSchema,
   emptyGuardian,
   emptyReferenceContact,
@@ -316,26 +315,6 @@ describe('clientFormSchema', () => {
       expect(issues['referenceContacts']).toBe('Informe no máximo 10 pessoas de referência.');
     });
   });
-});
-
-describe('ageFromBirthDate', () => {
-  it.each([
-    ['10/03/2015', 11],
-    ['03/10/2008', 17],
-    ['02/10/2008', 18],
-    ['20/05/1990', 36],
-    ['01/10/2026', 0],
-    ['02/10/1906', 120],
-  ] as const)('reads %j as %i years old today', (birthDate, expected) => {
-    expect(ageFromBirthDate(birthDate)).toBe(expected);
-  });
-
-  it.each(['', '10/03', '31/02/2020', '02/10/2026', '01/01/2030', '02/10/1905'])(
-    'has no age for %j',
-    (birthDate) => {
-      expect(ageFromBirthDate(birthDate)).toBeNull();
-    },
-  );
 });
 
 describe('form field lists', () => {

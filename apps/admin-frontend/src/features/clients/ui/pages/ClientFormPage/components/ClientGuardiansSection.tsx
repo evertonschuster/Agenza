@@ -4,9 +4,9 @@ import { FieldError } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
 import { ADULT_AGE_IN_YEARS } from '@/shared/format/birthDate';
+import { isMinorBirthDate } from '@/shared/form/schemas';
 import {
   MAX_GUARDIANS,
-  ageFromBirthDate,
   emptyGuardian,
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
@@ -20,9 +20,7 @@ function ClientGuardiansSection() {
   const hasGuardians = fields.length > 0;
   const hasReachedGuardianLimit = fields.length >= MAX_GUARDIANS;
 
-  const age = ageFromBirthDate(birthDate);
-  const isMinor = age !== null && age < ADULT_AGE_IN_YEARS;
-  const needsGuardian = isMinor && !hasGuardians;
+  const needsGuardian = isMinorBirthDate(birthDate) && !hasGuardians;
 
   return (
     <PageSection

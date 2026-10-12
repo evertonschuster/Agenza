@@ -15,15 +15,9 @@ export function isMinorOn(birthDate: Date, today: Date): boolean {
   return isInThePast(birthDate, today) && fullYearsBetween(birthDate, today) < ADULT_AGE_IN_YEARS;
 }
 
-export function latestBirthDate(today: Date = todayUtc()): Date {
-  return utcDate(today.getUTCFullYear(), today.getUTCMonth() + 1, today.getUTCDate() - 1);
-}
-
-export function earliestBirthDate(today: Date = todayUtc()): Date {
-  return utcDate(today.getUTCFullYear() - MAX_AGE_IN_YEARS - 1, 1, 1);
-}
-
-export function formatAge(age: number): string {
-  if (age < 1) return 'menos de 1 ano';
-  return age === 1 ? '1 ano' : `${age} anos`;
+export function birthDatePickerBounds(today: Date = todayUtc()): { min: Date; max: Date } {
+  return {
+    min: utcDate(today.getUTCFullYear() - MAX_AGE_IN_YEARS - 1, 1, 1),
+    max: utcDate(today.getUTCFullYear(), today.getUTCMonth() + 1, today.getUTCDate() - 1),
+  };
 }

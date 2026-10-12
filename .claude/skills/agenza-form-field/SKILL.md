@@ -27,7 +27,7 @@ and has no input to attach to: render it in the section.
 | --- | --- | --- |
 | Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
 | RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem<T>(problem, fields, setError)` — calls the above, then `setError` per field plus `setError('root.serverError', …)`. Knows both shapes; the only file that does. |
-| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero domain knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
+| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed
 keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s
@@ -122,6 +122,26 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    `ControlledField` (pass a render function) or a named specialization built on top of it, per the
    rule below.
 
+5. **A CPF, phone, e-mail or birth date is not configured by hand: reuse the pair.** The schema half
+   comes from `@/shared/form/schemas` (`cpfSchema`, `phoneSchema`, `emailSchema`, `birthDateSchema`:
+   an empty field becomes `null`, anything else is parsed and fails with the pt-BR message), the
+   field half from `@/shared/form/fields` (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`:
+   mask, input type, limit, placeholder, default label and `opcional` hint already set, each one
+   overridable by prop):
+   ```ts
+   const personSchema = z.object({ phone: phoneSchema, cpf: cpfSchema });
+   ```
+   ```tsx
+   <CpfField<XFormFieldValues> name="cpf" />
+   <PhoneField<XFormFieldValues> name="phone" label="Telefone do contato" />
+   ```
+   The parsing underneath is `shared/format/` (`parseCpf`, `parsePhone`, `parseEmail`: canonical value
+   or `null`, mirroring the backend's `Create`), so never re-validate with a regex of your own. A new
+   value type is a `parseX` in `shared/format/`, a schema built with `optionalValue(parse)` (its
+   `fail(message)` becomes the Zod issue) and, only if several forms will configure it the same way, a
+   preset field. The schemas have no required variant yet; add it to `optionalValue` when the first
+   form needs one.
+
 ## Editing an existing entity: fetch fresh, don't trust what the list already had
 
 An edit route fetches its own record from the backend on mount — it does not reuse whatever the list
@@ -164,6 +184,11 @@ itself became `ControlledField`'s first consumer, so `ControlledField` didn't sh
 already applies to `entities/` and to not rebuilding `color-swatch-picker` before something used it
 (ARCHITECTURE §1, §5) — a one-off specialization for a control only `ControlledField` has ever wrapped
 is guessing at an API shape with a sample size of one.
+
+The value presets (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`) are a different thing:
+they are not custom controls but fixed configurations of `MaskedField`/`TextField`/`DateField`, kept in
+one place because the same value was being configured by hand at several call sites (the phone three
+times). Add another only for a value type that will be configured the same way in more than one form.
 
 ## Two gotchas, both caught by `tsc`/review, not by a test
 

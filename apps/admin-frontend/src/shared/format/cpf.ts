@@ -1,20 +1,18 @@
 const CPF_LENGTH = 11;
 
-export function stripCpfMask(value: string): string {
-  return value.replace(/[.\-\s]/g, '');
-}
+export function parseCpf(raw: string): string | null {
+  const digits = raw.replace(/[.\-\s]/g, '');
+  if (digits.length !== CPF_LENGTH || !/^\d+$/.test(digits) || new Set(digits).size === 1) {
+    return null;
+  }
 
-export function isValidCpf(value: string): boolean {
-  const digits = stripCpfMask(value);
-  if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false;
-
-  return (
+  const hasValidCheckDigits =
     checkDigit(digits, 9) === Number(digits.charAt(9)) &&
-    checkDigit(digits, 10) === Number(digits.charAt(10))
-  );
+    checkDigit(digits, 10) === Number(digits.charAt(10));
+  return hasValidCheckDigits ? digits : null;
 }
 
-export function formatCpf(value: string): string {
+export function maskCpf(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, CPF_LENGTH);
 
   if (digits.length <= 3) return digits;
@@ -23,10 +21,10 @@ export function formatCpf(value: string): string {
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
 
-function checkDigit(digits: string, length: number): number {
+function checkDigit(digits: string, digitCount: number): number {
   let sum = 0;
-  for (let index = 0; index < length; index += 1) {
-    sum += Number(digits.charAt(index)) * (length + 1 - index);
+  for (let index = 0; index < digitCount; index += 1) {
+    sum += Number(digits.charAt(index)) * (digitCount + 1 - index);
   }
 
   const remainder = (sum * 10) % 11;

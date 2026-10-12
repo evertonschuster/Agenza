@@ -1,20 +1,8 @@
 import { z } from 'zod';
-import { fullYearsBetween, parseMaskedDate, todayUtc } from '@/shared/format/date';
-import {
-  ADULT_AGE_IN_YEARS,
-  MAX_AGE_IN_YEARS,
-  isInThePast,
-  isMinorOn,
-  isWithinMaxAge,
-} from '@/shared/format/birthDate';
+import { ADULT_AGE_IN_YEARS, isMinorOn } from '@/shared/format/birthDate';
+import { todayUtc } from '@/shared/format/date';
+import { birthDateSchema, cpfSchema, emailSchema, phoneSchema } from '@/shared/form/schemas';
 import { CONTACT_PURPOSES } from './client';
-import {
-  EMAIL_MAX_LENGTH,
-  PHONE_MAX_LENGTH,
-  isValidEmail,
-  isValidPhone,
-} from '@/shared/format/contactFormats';
-import { isValidCpf, stripCpfMask } from '@/shared/format/cpf';
 
 // Mirrors the backend limits (ServicesService.Domain.Entities.Client / ClientContact). UX pre-check
 // only - the backend response stays the source of truth.
@@ -49,60 +37,17 @@ const relationshipField = (subject: string) =>
       `O vínculo ${subject} deve ter no máximo ${CONTACT_RELATIONSHIP_MAX_LENGTH} caracteres.`,
     );
 
-const phoneField = z
-  .string()
-  .trim()
-  .refine(
-    (value) => value === '' || isValidPhone(value),
-    `Informe um telefone válido, com até ${PHONE_MAX_LENGTH} caracteres entre dígitos, espaços, +, parênteses e hífen.`,
-  )
-  .transform((value) => value || null);
-
-const cpfField = z
-  .string()
-  .trim()
-  .refine((value) => value === '' || isValidCpf(value), 'Informe um CPF válido.')
-  .transform((value) => (value ? stripCpfMask(value) : null));
-
-const emailField = z
-  .string()
-  .trim()
-  .toLowerCase()
-  .max(EMAIL_MAX_LENGTH, `O e-mail deve ter no máximo ${EMAIL_MAX_LENGTH} caracteres.`)
-  .refine((value) => value === '' || isValidEmail(value), 'Informe um e-mail válido.')
-  .transform((value) => value || null);
-
-const birthDateField = z.string().transform((value, ctx) => {
-  if (value.trim() === '') return null;
-
-  const fail = (message: string) => {
-    ctx.addIssue({ code: 'custom', message });
-    return z.NEVER;
-  };
-
-  const birthDate = parseMaskedDate(value);
-  if (birthDate === null) return fail('Informe uma data válida no formato dd/mm/aaaa.');
-
-  const today = todayUtc();
-  if (!isInThePast(birthDate, today)) return fail('A data de nascimento deve estar no passado.');
-  if (!isWithinMaxAge(birthDate, today)) {
-    return fail(`A data de nascimento não pode indicar idade superior a ${MAX_AGE_IN_YEARS} anos.`);
-  }
-
-  return birthDate;
-});
-
 const guardianSchema = z.object({
   name: nameField('do responsável'),
   relationship: relationshipField('do responsável'),
-  phone: phoneField,
-  cpf: cpfField,
+  phone: phoneSchema,
+  cpf: cpfSchema,
 });
 
 const referenceContactSchema = z.object({
   name: nameField('da pessoa de referência'),
   relationship: relationshipField('da pessoa de referência'),
-  phone: phoneField,
+  phone: phoneSchema,
   purposes: z
     .array(z.enum(CONTACT_PURPOSES))
     .min(1, 'Informe ao menos uma finalidade para a pessoa de referência.'),
@@ -110,10 +55,10 @@ const referenceContactSchema = z.object({
 
 const clientFormObject = z.object({
   fullName: nameField('completo'),
-  birthDate: birthDateField,
-  phone: phoneField,
-  email: emailField,
-  cpf: cpfField,
+  birthDate: birthDateSchema,
+  phone: phoneSchema,
+  email: emailSchema,
+  cpf: cpfSchema,
   administrativeNotes: z
     .string()
     .trim()
@@ -173,11 +118,4 @@ export function emptyGuardian(): GuardianFormFieldValues {
 
 export function emptyReferenceContact(): ReferenceContactFormFieldValues {
   return { name: '', relationship: '', phone: '', purposes: [] };
-}
-
-export function ageFromBirthDate(masked: string): number | null {
-  const parsed = birthDateField.safeParse(masked);
-  if (!parsed.success || parsed.data === null) return null;
-
-  return fullYearsBetween(parsed.data, todayUtc());
 }

@@ -1,6 +1,6 @@
 import { useId } from 'react';
 import { XIcon } from 'lucide-react';
-import { ControlledField, TextField } from '@/shared/form/fields';
+import { ControlledField, PhoneField, TextField } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { CheckboxGroup } from '@/shared/ui/checkbox-group';
 import { CONTACT_PURPOSE_OPTIONS } from '../../../../model/client';
@@ -9,7 +9,6 @@ import {
   CONTACT_RELATIONSHIP_MAX_LENGTH,
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
-import { PHONE_MAX_LENGTH } from '@/shared/format/contactFormats';
 
 interface ClientReferenceContactItemProps {
   index: number;
@@ -54,14 +53,7 @@ function ClientReferenceContactItem({ index, onRemove }: ClientReferenceContactI
           placeholder="Ex.: tio, vizinha, amigo"
           autoComplete="off"
         />
-        <TextField<ClientFormFieldValues>
-          name={`referenceContacts.${index}.phone`}
-          label="Telefone"
-          hint="opcional"
-          type="tel"
-          maxLength={PHONE_MAX_LENGTH}
-          autoComplete="off"
-        />
+        <PhoneField<ClientFormFieldValues> name={`referenceContacts.${index}.phone`} />
         <ControlledField<ClientFormFieldValues>
           name={`referenceContacts.${index}.purposes`}
           label="Finalidades"

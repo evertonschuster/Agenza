@@ -38,6 +38,24 @@ export type DateFieldProps<T extends FieldValues> = BaseFieldProps<T> &
     maxDate: Date;
   };
 
+type WithOptionalLabel<P> = Omit<P, 'label'> & { label?: string | undefined };
+
+export type CpfFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<MaskedFieldProps<T>, 'mask'>
+>;
+
+export type PhoneFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<TextFieldProps<T>, 'type'>
+>;
+
+export type EmailFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<TextFieldProps<T>, 'type'>
+>;
+
+export type BirthDateFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<DateFieldProps<T>, 'minDate' | 'maxDate'>
+>;
+
 export interface ControlledFieldProps<T extends FieldValues> {
   name: Path<T>;
   label: string;

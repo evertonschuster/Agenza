@@ -1,14 +1,12 @@
 import { useId } from 'react';
 import { XIcon } from 'lucide-react';
-import { MaskedField, TextField } from '@/shared/form/fields';
+import { CpfField, PhoneField, TextField } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import {
   CLIENT_NAME_MAX_LENGTH,
   CONTACT_RELATIONSHIP_MAX_LENGTH,
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
-import { PHONE_MAX_LENGTH } from '@/shared/format/contactFormats';
-import { formatCpf } from '@/shared/format/cpf';
 
 interface ClientGuardianItemProps {
   index: number;
@@ -53,23 +51,8 @@ function ClientGuardianItem({ index, onRemove }: ClientGuardianItemProps) {
           placeholder="Ex.: mãe, pai, tutor legal"
           autoComplete="off"
         />
-        <TextField<ClientFormFieldValues>
-          name={`guardians.${index}.phone`}
-          label="Telefone"
-          hint="opcional"
-          type="tel"
-          maxLength={PHONE_MAX_LENGTH}
-          autoComplete="off"
-        />
-        <MaskedField<ClientFormFieldValues>
-          name={`guardians.${index}.cpf`}
-          label="CPF"
-          hint="opcional"
-          mask={formatCpf}
-          inputMode="numeric"
-          placeholder="000.000.000-00"
-          autoComplete="off"
-        />
+        <PhoneField<ClientFormFieldValues> name={`guardians.${index}.phone`} />
+        <CpfField<ClientFormFieldValues> name={`guardians.${index}.cpf`} />
       </div>
     </div>
   );

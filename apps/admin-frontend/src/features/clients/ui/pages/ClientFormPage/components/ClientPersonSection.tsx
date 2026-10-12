@@ -1,21 +1,19 @@
-import { useFormContext, useWatch } from 'react-hook-form';
-import { DateField, MaskedField, TextField, TextareaField } from '@/shared/form/fields';
+import {
+  BirthDateField,
+  CpfField,
+  EmailField,
+  PhoneField,
+  TextField,
+  TextareaField,
+} from '@/shared/form/fields';
 import { PageSection } from '@/widgets/page-section';
-import { earliestBirthDate, formatAge, latestBirthDate } from '@/shared/format/birthDate';
 import {
   CLIENT_NAME_MAX_LENGTH,
   CLIENT_NOTES_MAX_LENGTH,
-  ageFromBirthDate,
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
-import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH } from '@/shared/format/contactFormats';
-import { formatCpf } from '@/shared/format/cpf';
 
 function ClientPersonSection() {
-  const { control } = useFormContext<ClientFormFieldValues>();
-  const birthDate = useWatch({ control, name: 'birthDate' });
-  const age = ageFromBirthDate(birthDate);
-
   return (
     <PageSection title="Dados da pessoa" hideTitle>
       <div className="grid gap-4 md:grid-cols-2">
@@ -30,44 +28,10 @@ function ClientPersonSection() {
           />
         </div>
 
-        <DateField<ClientFormFieldValues>
-          name="birthDate"
-          label="Data de nascimento"
-          hint={age === null ? 'opcional' : formatAge(age)}
-          minDate={earliestBirthDate()}
-          maxDate={latestBirthDate()}
-          autoComplete="off"
-        />
-
-        <TextField<ClientFormFieldValues>
-          name="phone"
-          label="Telefone"
-          hint="opcional"
-          type="tel"
-          maxLength={PHONE_MAX_LENGTH}
-          placeholder="(11) 91234-5678"
-          autoComplete="off"
-        />
-
-        <TextField<ClientFormFieldValues>
-          name="email"
-          label="E-mail"
-          hint="opcional"
-          type="email"
-          maxLength={EMAIL_MAX_LENGTH}
-          placeholder="nome@exemplo.com"
-          autoComplete="off"
-        />
-
-        <MaskedField<ClientFormFieldValues>
-          name="cpf"
-          label="CPF"
-          hint="opcional"
-          mask={formatCpf}
-          inputMode="numeric"
-          placeholder="000.000.000-00"
-          autoComplete="off"
-        />
+        <BirthDateField<ClientFormFieldValues> name="birthDate" />
+        <PhoneField<ClientFormFieldValues> name="phone" />
+        <EmailField<ClientFormFieldValues> name="email" />
+        <CpfField<ClientFormFieldValues> name="cpf" />
 
         <div className="space-y-1.5 md:col-span-2">
           <TextareaField<ClientFormFieldValues>
