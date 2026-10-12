@@ -1,7 +1,10 @@
 export { TextField, TextareaField } from './components/text-fields';
 export { MaskedField } from './components/masked-field';
 export { DateField } from './components/date-field';
-export { BirthDateField, CpfField, EmailField, PhoneField } from './components/value-fields';
+export { CpfField } from './components/cpf-field';
+export { PhoneField } from './components/phone-field';
+export { EmailField } from './components/email-field';
+export { BirthDateField } from './components/birth-date-field';
 export { ControlledField } from './components/controlled-field';
 export { ColorField } from './components/color-field';
 export { FormErrorBanner } from './components/form-error-banner';
