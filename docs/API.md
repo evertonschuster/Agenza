@@ -71,6 +71,22 @@ o único campo que muda por endpoint.
 {"data":{"items":[{"id":"...","code":1,"name":"Teste","description":null,"durationMinutes":2,"minDurationMinutes":1,"maxDurationMinutes":3,"price":10.00,"maxDiscountPercentage":10.00,"categoryId":null,"categoryName":null,"tags":[]}],"totalCount":1,"page":1,"pageSize":20},"success":true, "...":"..."}
 ```
 
+**Lista paginada com busca e filtro** — o mesmo `PagedResult<T>`, com `q` (texto) e `status` (string) além de
+`page`/`pageSize`. Exemplo, `GET /api/v1/clients` (padrão: `page=1`, `pageSize=20`, `status=active`, sem `q`),
+verificado em 2026-10-12 num PostgreSQL descartável com a stack real em portas privadas
+([ADR 0063](adr/0063-clients-list-and-search-contract.md)):
+
+```json
+{"data":{"items":[{"id":"01a131d6-2bd6-7fcc-a1eb-aeaff8ac3721","fullName":"a_b Cliente","birthDate":null,"phone":null,"email":null,"cpf":null,"status":"active"},{"id":"01a131d6-2b9a-7a60-9c63-949aab1e7054","fullName":"Álvaro Reis","birthDate":null,"phone":null,"email":"alvaro@example.com","cpf":"39053344705","status":"active"}],"totalCount":21,"page":1,"pageSize":20},"success":true,"...":"..."}
+```
+
+Uma página além da última não é erro: `GET /api/v1/clients?page=99` responde `200` com a lista vazia, o total real e a
+página pedida:
+
+```json
+{"data":{"items":[],"totalCount":21,"page":99,"pageSize":20},"success":true,"...":"..."}
+```
+
 **Criação** (`201 Created`, header `Location` presente, `data` é o recurso criado):
 
 ```
@@ -259,6 +275,10 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `referenceContacts[0].purposes`: `ClientReferenceContact.PurposesRequired`…) |
 | CPF inválido, em qualquer formatação (§4.3) | `POST /api/v1/clients` (`cpf` ou `guardians[0].cpf`) | 400 | `Validation.Failed` (`cpf`: `Validation.Failed`, "O CPF informado é inválido.") |
 | `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (§4.3: mensagem do framework, em inglês) | `Validation.Failed` (`fullName`: `Validation.Failed`) |
+| Filtro de situação desconhecido | `GET /api/v1/clients?status=deleted` | 400 | `Validation.Failed` (`status`: `Client.StatusFilterInvalid`, "A situação deve ser active, inactive ou all.") |
+| Página abaixo de 1, tamanho fora de 1–100 | `GET /api/v1/clients?page=0` | 400 | `Validation.Failed` (`page`: `Client.PageInvalid`; `pageSize`: `Client.PageSizeInvalid`) |
+| Página cujo deslocamento não cabe em `int` | `GET /api/v1/clients?page=21474838&pageSize=100` | 400 | `Validation.Failed` (`page`: `Client.PageTooLarge`) |
+| Parâmetro de query que não é número (§4.3) | `GET /api/v1/clients?page=abc` | 400 (mensagem do framework, em inglês) | `Validation.Failed` (`page`: `Validation.Failed`) |
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
 constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado passa pelo roteamento
 normalmente e só é rejeitado dentro do `DeleteTagCommandValidator` (`NotEmpty`) — chega como 400 de

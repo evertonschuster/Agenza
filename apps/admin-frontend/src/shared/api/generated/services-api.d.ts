@@ -459,7 +459,91 @@ export interface paths {
       path?: never;
       cookie?: never;
     };
-    get?: never;
+    get: {
+      parameters: {
+        query?: {
+          Page?: number | string;
+          PageSize?: number | string;
+          Q?: string;
+          Status?: string;
+        };
+        header?: never;
+        path: {
+          version: string;
+        };
+        cookie?: never;
+      };
+      requestBody?: never;
+      responses: {
+        /** @description OK */
+        200: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'text/plain': components['schemas']['ApiResponseOfPagedResultOfClientListItemResponse'];
+            'application/json': components['schemas']['ApiResponseOfPagedResultOfClientListItemResponse'];
+            'text/json': components['schemas']['ApiResponseOfPagedResultOfClientListItemResponse'];
+          };
+        };
+        /** @description Bad Request */
+        400: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'text/plain': components['schemas']['ApiProblemDetails'];
+            'application/json': components['schemas']['ApiProblemDetails'];
+            'text/json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Unauthorized */
+        401: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Forbidden */
+        403: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Not Found */
+        404: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Conflict */
+        409: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+        /** @description Internal Server Error */
+        500: {
+          headers: {
+            [name: string]: unknown;
+          };
+          content: {
+            'application/problem+json': components['schemas']['ApiProblemDetails'];
+          };
+        };
+      };
+    };
     put?: never;
     post: {
       parameters: {
@@ -1813,6 +1897,14 @@ export interface components {
       traceId?: null | string;
       correlationId?: null | string;
     };
+    ApiResponseOfPagedResultOfClientListItemResponse: {
+      data: null | components['schemas']['PagedResultOfClientListItemResponse'];
+      success?: boolean;
+      /** Format: date-time */
+      timestamp?: string;
+      traceId?: null | string;
+      correlationId?: null | string;
+    };
     ApiResponseOfPagedResultOfServiceResponse: {
       data: null | components['schemas']['PagedResultOfServiceResponse'];
       success?: boolean;
@@ -1841,6 +1933,17 @@ export interface components {
       /** Format: uuid */
       id: string;
       name: string;
+    };
+    ClientListItemResponse: {
+      /** Format: uuid */
+      id: string;
+      fullName: string;
+      /** Format: date */
+      birthDate: null | string;
+      phone: null | string;
+      email: null | string;
+      cpf: null | string;
+      status: string;
     };
     ClientResponse: {
       /** Format: uuid */
@@ -1914,6 +2017,15 @@ export interface components {
       relationship: string;
       phone: null | string;
       cpf: null | string;
+    };
+    PagedResultOfClientListItemResponse: {
+      items: components['schemas']['ClientListItemResponse'][];
+      /** Format: int32 */
+      totalCount: number | string;
+      /** Format: int32 */
+      page: number | string;
+      /** Format: int32 */
+      pageSize: number | string;
     };
     PagedResultOfServiceResponse: {
       items: components['schemas']['ServiceResponse'][];

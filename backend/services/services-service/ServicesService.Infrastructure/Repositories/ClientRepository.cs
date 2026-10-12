@@ -20,6 +20,51 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
             .FirstOrDefaultAsync(client => client.Id == clientId, cancellationToken);
     }
 
+    public Task<(IReadOnlyList<Client> Items, int TotalCount)> ListAsync(
+        int page,
+        int pageSize,
+        string? text,
+        string? cpfDigits,
+        ClientStatus? status,
+        CancellationToken cancellationToken)
+    {
+        return ListPagedAsync(
+            query => FilterAndOrder(query, text, cpfDigits, status),
+            page,
+            pageSize,
+            cancellationToken);
+    }
+
+    private static IQueryable<Client> FilterAndOrder(
+        IQueryable<Client> query,
+        string? text,
+        string? cpfDigits,
+        ClientStatus? status)
+    {
+        if (status is { } wantedStatus)
+        {
+            query = query.Where(client => client.Status == wantedStatus);
+        }
+
+        if (text is not null && cpfDigits is not null)
+        {
+            query = query.Where(client =>
+                EF.Property<string>(client, "NameNormalized").Contains(text)
+                || EF.Property<string>(client, "EmailNormalized").Contains(text)
+                || EF.Property<string>(client, "CpfNormalized").Contains(cpfDigits));
+        }
+        else if (text is not null)
+        {
+            query = query.Where(client =>
+                EF.Property<string>(client, "NameNormalized").Contains(text)
+                || EF.Property<string>(client, "EmailNormalized").Contains(text));
+        }
+
+        return query
+            .OrderBy(client => EF.Property<string>(client, "NameNormalized"))
+            .ThenBy(client => client.Id);
+    }
+
     public async Task UpdateAsync(Client client, CancellationToken cancellationToken)
     {
         await SyncContactsAsync(client.Id, client.Guardians, cancellationToken);

@@ -4,6 +4,14 @@ public interface IClientRepository
 {
     Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken);
 
+    Task<(IReadOnlyList<Client> Items, int TotalCount)> ListAsync(
+        int page,
+        int pageSize,
+        string? text,
+        string? cpfDigits,
+        ClientStatus? status,
+        CancellationToken cancellationToken);
+
     Task UpdateAsync(Client client, CancellationToken cancellationToken);
 
     // excludeClientId ignores the client being edited, so saving a client without changing its CPF isn't a self-conflict.

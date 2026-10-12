@@ -39,8 +39,10 @@ that differs only by tracking (ARCHITECTURE, rules of thumb).
   the ones the aggregate no longer holds, add the ones the database does not have yet. `Include` only the root's own children.
 - Order every list and page explicitly, on a key that is unique or ends in one — otherwise rows repeat
   or vanish between pages.
-- A value-object column is compared as a whole (`c.Cpf == cpf`); text search on it goes through
-  `EF.Property<string>(e, "<Property>")`, because a query cannot reach `.Value` through a converter.
+- A value-object column is compared as a whole (`c.Cpf == cpf`). A query cannot reach `.Value` through a
+  converter, and `EF.Property<string>` over such a column throws, so text search or a case-insensitive order on it
+  needs a stored generated `string` column (`HasComputedColumnSql("lower(\"FullName\")", stored: true)`, read with
+  `EF.Property<string>(e, "<Column>")`); see `ClientConfiguration` and ADR 0063.
 - The `DbContext` already scopes every query to the tenant and hides soft-deleted rows. A repository
   never writes a `TenantId` or `DeletedAt` predicate, never calls `IgnoreQueryFilters()`, never calls
   `SaveChanges`.
