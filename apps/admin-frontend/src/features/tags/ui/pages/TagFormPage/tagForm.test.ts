@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import type { Tag } from './tag';
+import type { Tag } from '../../../model/tag';
 import {
   TAG_DESCRIPTION_MAX_LENGTH,
   TAG_FORM_FIELDS,

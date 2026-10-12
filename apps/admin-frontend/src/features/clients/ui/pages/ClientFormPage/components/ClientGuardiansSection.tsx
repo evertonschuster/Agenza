@@ -5,11 +5,7 @@ import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
 import { ADULT_AGE_IN_YEARS } from '@/shared/format/birthDate';
 import { isMinorBirthDate } from '@/shared/form/schemas';
-import {
-  MAX_GUARDIANS,
-  emptyGuardian,
-  type ClientFormFieldValues,
-} from '../../../../model/clientForm';
+import { MAX_GUARDIANS, emptyGuardian, type ClientFormFieldValues } from '../clientForm';
 import { ClientGuardianItem } from './ClientGuardianItem';
 
 function ClientGuardiansSection() {

@@ -11,7 +11,7 @@ import {
   CLIENT_NAME_MAX_LENGTH,
   CLIENT_NOTES_MAX_LENGTH,
   type ClientFormFieldValues,
-} from '../../../../model/clientForm';
+} from '../clientForm';
 
 function ClientPersonSection() {
   return (

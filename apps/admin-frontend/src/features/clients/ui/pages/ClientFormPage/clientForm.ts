@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { ADULT_AGE_IN_YEARS, isMinorOn } from '@/shared/format/birthDate';
 import { todayUtc } from '@/shared/format/date';
 import { birthDateSchema, cpfSchema, emailSchema, phoneSchema } from '@/shared/form/schemas';
-import { CONTACT_PURPOSES } from './client';
+import { CONTACT_PURPOSES } from '../../../model/client';
 
 // Mirrors the backend limits (ServicesService.Domain.Entities.Client / ClientContact). UX pre-check
 // only - the backend response stays the source of truth.

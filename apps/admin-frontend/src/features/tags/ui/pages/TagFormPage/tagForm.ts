@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { Tag } from './tag';
+import type { Tag } from '../../../model/tag';
 
 // Mirrors backend length limits (ServicesService.Domain.Entities.Tag.NameMaxLength /
 // DescriptionMaxLength) so the maxLength attributes and messages below match what the backend

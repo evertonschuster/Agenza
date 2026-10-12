@@ -7,7 +7,7 @@ import {
   MAX_REFERENCE_CONTACTS,
   emptyReferenceContact,
   type ClientFormFieldValues,
-} from '../../../../model/clientForm';
+} from '../clientForm';
 import { ClientReferenceContactItem } from './ClientReferenceContactItem';
 
 function ClientReferenceContactsSection() {

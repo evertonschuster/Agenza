@@ -4,7 +4,7 @@ import {
   TAG_DESCRIPTION_MAX_LENGTH,
   TAG_NAME_MAX_LENGTH,
   type TagFormFieldValues,
-} from '../../../../model/tagForm';
+} from '../tagForm';
 
 function TagFormBody() {
   return (

@@ -11,7 +11,7 @@ import {
   toTagFormFieldValues,
   type TagFormFieldValues,
   type TagFormValues,
-} from '../../../model/tagForm';
+} from './tagForm';
 import { TagFormStatus, type UseTagFormPageResult } from './useTagFormPage.types';
 
 export function useTagFormPage(): UseTagFormPageResult {

@@ -8,7 +8,7 @@ import {
   CLIENT_NAME_MAX_LENGTH,
   CONTACT_RELATIONSHIP_MAX_LENGTH,
   type ClientFormFieldValues,
-} from '../../../../model/clientForm';
+} from '../clientForm';
 
 interface ClientReferenceContactItemProps {
   index: number;

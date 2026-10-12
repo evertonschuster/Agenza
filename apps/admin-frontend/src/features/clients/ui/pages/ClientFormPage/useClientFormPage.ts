@@ -10,7 +10,7 @@ import {
   toClientFormFieldValues,
   type ClientFormFieldValues,
   type ClientFormValues,
-} from '../../../model/clientForm';
+} from './clientForm';
 import type { UseClientFormPageResult } from './useClientFormPage.types';
 
 const CLIENTS_PATH = '/pessoas';

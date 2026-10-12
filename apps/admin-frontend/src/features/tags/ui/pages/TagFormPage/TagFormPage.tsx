@@ -2,7 +2,7 @@ import { FormProvider } from 'react-hook-form';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { FormFieldsSkeleton } from '@/shared/ui/form-field';
 import { FormFooter } from '@/widgets/form-footer';
-import { TAG_FORM_FIELDS } from '../../../model/tagForm';
+import { TAG_FORM_FIELDS } from './tagForm';
 import { TagFormBody } from './components/TagFormBody';
 import { TagFormHeader } from './components/TagFormHeader';
 import { useTagFormPage } from './useTagFormPage';
