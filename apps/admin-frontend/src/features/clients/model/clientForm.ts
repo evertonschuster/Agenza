@@ -8,7 +8,12 @@ import {
   isWithinMaxAge,
 } from '@/shared/format/birthDate';
 import { CONTACT_PURPOSES } from './client';
-import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH, isValidEmail, isValidPhone } from './contactFormats';
+import {
+  EMAIL_MAX_LENGTH,
+  PHONE_MAX_LENGTH,
+  isValidEmail,
+  isValidPhone,
+} from '@/shared/format/contactFormats';
 import { isValidCpf, stripCpfMask } from '@/shared/format/cpf';
 
 // Mirrors the backend limits (ServicesService.Domain.Entities.Client / ClientContact). UX pre-check

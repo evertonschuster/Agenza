@@ -9,7 +9,7 @@ import {
   CONTACT_RELATIONSHIP_MAX_LENGTH,
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
-import { PHONE_MAX_LENGTH } from '../../../../model/contactFormats';
+import { PHONE_MAX_LENGTH } from '@/shared/format/contactFormats';
 
 interface ClientReferenceContactItemProps {
   index: number;

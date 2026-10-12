@@ -8,7 +8,7 @@ import {
   ageFromBirthDate,
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
-import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH } from '../../../../model/contactFormats';
+import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH } from '@/shared/format/contactFormats';
 import { formatCpf } from '@/shared/format/cpf';
 
 function ClientPersonSection() {
