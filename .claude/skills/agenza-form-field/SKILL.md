@@ -36,9 +36,18 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
 
 ## Wiring a new entity's form
 
-1. **Schema** in that entity's `model/<entity>Form.ts`, mirroring `tagForm.ts`:
+1. **Limits and invariants** in the slice's `model/<entity>.ts`, beside the entity's types, mirroring
+   the backend aggregate: plain constants (`TAG_NAME_MAX_LENGTH`, `MAX_GUARDIANS`) and pure functions
+   over the plain types (`needsGuardian(birthDate, guardianCount, today)`). No Zod, no pt-BR copy, no
+   class. Anything outside the form that needs the rule (a list badge, another page) imports it from
+   there, and so does the form's own UI when it shows the rule before submit.
+
+   **Schema** in the page that owns the form, `ui/pages/<X>FormPage/<x>Form.ts`, mirroring
+   `tagForm.ts`, built from those limits and composing those invariants:
    ```ts
-   export const xFormSchema = z.object({ /* z.string().trim().min(1, '…') etc */ });
+   export const xFormSchema = z.object({
+     name: z.string().trim().min(1, '…').max(X_NAME_MAX_LENGTH, `… ${X_NAME_MAX_LENGTH} …`),
+   });
    export type XFormFieldValues = z.input<typeof xFormSchema>;
    export type XFormValues = z.output<typeof xFormSchema>;
    export const X_FORM_FIELDS = xFormSchema.keyof().options;
@@ -49,8 +58,8 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    ```
    **Use `z.input`/`z.output`, never a single `z.infer`, the moment the schema has a `.refine()` or
    `.transform()`.** See Gotcha 1 below — this is not optional once either is present.
-   `keyof().options` is already typed as the key union, so the model needs no `as` cast and no
-   `react-hook-form` import — `model/` stays library-free. `toXFormFieldValues` is the inverse of the
+   `keyof().options` is already typed as the key union, so the schema file needs no `as` cast and no
+   `react-hook-form` import. `toXFormFieldValues` is the inverse of the
    schema's `.transform()`s (a `null` description back to `''`) and sits beside them: `useForm`'s
    `defaultValues` is `toXFormFieldValues()`, the edit fetch's `reset` is `toXFormFieldValues(entity)`.
 

@@ -1,9 +1,4 @@
-import {
-  MAX_AGE_IN_YEARS,
-  isInThePast,
-  isMinorOn,
-  isWithinMaxAge,
-} from '@/shared/format/birthDate';
+import { MAX_AGE_IN_YEARS, isInThePast, isWithinMaxAge } from '@/shared/format/birthDate';
 import { fullYearsBetween, parseMaskedDate, todayUtc } from '@/shared/format/date';
 import { optionalValue } from './optionalValue';
 
@@ -25,13 +20,6 @@ export function ageFromBirthDate(masked: string): number | null {
   if (birthDate === null) return null;
 
   return fullYearsBetween(birthDate, todayUtc());
-}
-
-export function isMinorBirthDate(masked: string): boolean {
-  const birthDate = parseBirthDate(masked);
-  if (birthDate === null) return false;
-
-  return isMinorOn(birthDate, todayUtc());
 }
 
 function parseBirthDate(masked: string): Date | null {

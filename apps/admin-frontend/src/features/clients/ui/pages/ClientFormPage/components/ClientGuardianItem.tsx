@@ -3,10 +3,10 @@ import { XIcon } from 'lucide-react';
 import { CpfField, PhoneField, TextField } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import {
-  CLIENT_NAME_MAX_LENGTH,
+  CONTACT_NAME_MAX_LENGTH,
   CONTACT_RELATIONSHIP_MAX_LENGTH,
-  type ClientFormFieldValues,
-} from '../clientForm';
+} from '../../../../model/clientContact';
+import type { ClientFormFieldValues } from '../clientForm';
 
 interface ClientGuardianItemProps {
   index: number;
@@ -40,7 +40,7 @@ function ClientGuardianItem({ index, onRemove }: ClientGuardianItemProps) {
           name={`guardians.${index}.name`}
           label="Nome"
           hint="obrigatório"
-          maxLength={CLIENT_NAME_MAX_LENGTH}
+          maxLength={CONTACT_NAME_MAX_LENGTH}
           autoComplete="off"
         />
         <TextField<ClientFormFieldValues>

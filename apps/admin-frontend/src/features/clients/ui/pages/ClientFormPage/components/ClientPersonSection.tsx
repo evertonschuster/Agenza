@@ -7,11 +7,8 @@ import {
   TextareaField,
 } from '@/shared/form/fields';
 import { PageSection } from '@/widgets/page-section';
-import {
-  CLIENT_NAME_MAX_LENGTH,
-  CLIENT_NOTES_MAX_LENGTH,
-  type ClientFormFieldValues,
-} from '../clientForm';
+import { CLIENT_FULL_NAME_MAX_LENGTH, CLIENT_NOTES_MAX_LENGTH } from '../../../../model/client';
+import type { ClientFormFieldValues } from '../clientForm';
 
 function ClientPersonSection() {
   return (
@@ -22,7 +19,7 @@ function ClientPersonSection() {
             name="fullName"
             label="Nome completo"
             hint="obrigatório"
-            maxLength={CLIENT_NAME_MAX_LENGTH}
+            maxLength={CLIENT_FULL_NAME_MAX_LENGTH}
             autoComplete="off"
             autoFocus
           />

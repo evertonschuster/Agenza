@@ -3,11 +3,8 @@ import { useFieldArray, useFormContext } from 'react-hook-form';
 import { FieldError } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
-import {
-  MAX_REFERENCE_CONTACTS,
-  emptyReferenceContact,
-  type ClientFormFieldValues,
-} from '../clientForm';
+import { MAX_REFERENCE_CONTACTS } from '../../../../model/client';
+import { emptyReferenceContact, type ClientFormFieldValues } from '../clientForm';
 import { ClientReferenceContactItem } from './ClientReferenceContactItem';
 
 function ClientReferenceContactsSection() {

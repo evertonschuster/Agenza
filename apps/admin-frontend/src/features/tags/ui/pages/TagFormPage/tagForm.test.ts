@@ -1,13 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { z } from 'zod';
-import type { Tag } from '../../../model/tag';
-import {
-  TAG_DESCRIPTION_MAX_LENGTH,
-  TAG_FORM_FIELDS,
-  TAG_NAME_MAX_LENGTH,
-  tagFormSchema,
-  toTagFormFieldValues,
-} from './tagForm';
+import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH, type Tag } from '../../../model/tag';
+import { TAG_FORM_FIELDS, tagFormSchema, toTagFormFieldValues } from './tagForm';
 
 function fieldError(input: unknown, field: 'name' | 'color' | 'description') {
   const result = tagFormSchema.safeParse(input);

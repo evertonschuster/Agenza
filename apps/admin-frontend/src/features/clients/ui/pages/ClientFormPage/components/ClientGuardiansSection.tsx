@@ -4,8 +4,9 @@ import { FieldError } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
 import { ADULT_AGE_IN_YEARS } from '@/shared/format/birthDate';
-import { isMinorBirthDate } from '@/shared/form/schemas';
-import { MAX_GUARDIANS, emptyGuardian, type ClientFormFieldValues } from '../clientForm';
+import { parseMaskedDate } from '@/shared/format/date';
+import { MAX_GUARDIANS, needsGuardian } from '../../../../model/client';
+import { emptyGuardian, type ClientFormFieldValues } from '../clientForm';
 import { ClientGuardianItem } from './ClientGuardianItem';
 
 function ClientGuardiansSection() {
@@ -16,7 +17,7 @@ function ClientGuardiansSection() {
   const hasGuardians = fields.length > 0;
   const hasReachedGuardianLimit = fields.length >= MAX_GUARDIANS;
 
-  const needsGuardian = isMinorBirthDate(birthDate) && !hasGuardians;
+  const showGuardianNotice = needsGuardian(parseMaskedDate(birthDate), fields.length);
 
   return (
     <PageSection
@@ -35,7 +36,7 @@ function ClientGuardiansSection() {
         </Button>
       }
     >
-      {needsGuardian && (
+      {showGuardianNotice && (
         <p role="status" className="rounded-md border border-border bg-muted p-3 text-sm">
           Esta pessoa tem menos de {ADULT_AGE_IN_YEARS} anos. Informe ao menos um responsável.
         </p>

@@ -1,31 +1,31 @@
 import { z } from 'zod';
-import { ADULT_AGE_IN_YEARS, isMinorOn } from '@/shared/format/birthDate';
-import { todayUtc } from '@/shared/format/date';
+import { ADULT_AGE_IN_YEARS } from '@/shared/format/birthDate';
 import { birthDateSchema, cpfSchema, emailSchema, phoneSchema } from '@/shared/form/schemas';
+import {
+  CLIENT_FULL_NAME_MAX_LENGTH,
+  CLIENT_FULL_NAME_MIN_LENGTH,
+  CLIENT_NOTES_MAX_LENGTH,
+  MAX_GUARDIANS,
+  MAX_REFERENCE_CONTACTS,
+  needsGuardian,
+} from '../../../model/client';
+import {
+  CONTACT_NAME_MAX_LENGTH,
+  CONTACT_NAME_MIN_LENGTH,
+  CONTACT_RELATIONSHIP_MAX_LENGTH,
+} from '../../../model/clientContact';
 import { CONTACT_PURPOSES } from '../../../model/contactPurpose';
 
-// Mirrors the backend limits (ServicesService.Domain.Entities.Client / ClientContact). UX pre-check
-// only - the backend response stays the source of truth.
-export const CLIENT_NAME_MIN_LENGTH = 2;
-export const CLIENT_NAME_MAX_LENGTH = 150;
-export const CLIENT_NOTES_MAX_LENGTH = 500;
-export const CONTACT_RELATIONSHIP_MAX_LENGTH = 60;
-export const MAX_GUARDIANS = 10;
-export const MAX_REFERENCE_CONTACTS = 10;
-
-const nameField = (subject: string) =>
+const nameField = (subject: string, minLength: number, maxLength: number) =>
   z
     .string()
     .trim()
     .min(1, `O nome ${subject} é obrigatório.`)
-    .min(
-      CLIENT_NAME_MIN_LENGTH,
-      `O nome ${subject} deve ter pelo menos ${CLIENT_NAME_MIN_LENGTH} caracteres.`,
-    )
-    .max(
-      CLIENT_NAME_MAX_LENGTH,
-      `O nome ${subject} deve ter no máximo ${CLIENT_NAME_MAX_LENGTH} caracteres.`,
-    );
+    .min(minLength, `O nome ${subject} deve ter pelo menos ${minLength} caracteres.`)
+    .max(maxLength, `O nome ${subject} deve ter no máximo ${maxLength} caracteres.`);
+
+const contactNameField = (subject: string) =>
+  nameField(subject, CONTACT_NAME_MIN_LENGTH, CONTACT_NAME_MAX_LENGTH);
 
 const relationshipField = (subject: string) =>
   z
@@ -38,14 +38,14 @@ const relationshipField = (subject: string) =>
     );
 
 const guardianSchema = z.object({
-  name: nameField('do responsável'),
+  name: contactNameField('do responsável'),
   relationship: relationshipField('do responsável'),
   phone: phoneSchema,
   cpf: cpfSchema,
 });
 
 const referenceContactSchema = z.object({
-  name: nameField('da pessoa de referência'),
+  name: contactNameField('da pessoa de referência'),
   relationship: relationshipField('da pessoa de referência'),
   phone: phoneSchema,
   purposes: z
@@ -54,7 +54,7 @@ const referenceContactSchema = z.object({
 });
 
 const clientFormObject = z.object({
-  fullName: nameField('completo'),
+  fullName: nameField('completo', CLIENT_FULL_NAME_MIN_LENGTH, CLIENT_FULL_NAME_MAX_LENGTH),
   birthDate: birthDateSchema,
   phone: phoneSchema,
   email: emailSchema,
@@ -79,8 +79,7 @@ const clientFormObject = z.object({
 });
 
 export const clientFormSchema = clientFormObject.refine(
-  (value) =>
-    !value.birthDate || !isMinorOn(value.birthDate, todayUtc()) || value.guardians.length > 0,
+  (value) => !needsGuardian(value.birthDate, value.guardians.length),
   {
     path: ['guardians'],
     message: `Informe ao menos um responsável para pessoas menores de ${ADULT_AGE_IN_YEARS} anos.`,

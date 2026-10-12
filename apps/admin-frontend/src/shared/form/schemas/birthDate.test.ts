@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utcDate } from '@/shared/format/date';
-import { ageFromBirthDate, birthDateSchema, isMinorBirthDate } from './birthDate';
+import { ageFromBirthDate, birthDateSchema } from './birthDate';
 
 beforeEach(() => {
   vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
@@ -50,19 +50,6 @@ describe('ageFromBirthDate', () => {
     'has no age for %j',
     (birthDate) => {
       expect(ageFromBirthDate(birthDate)).toBeNull();
-    },
-  );
-});
-
-describe('isMinorBirthDate', () => {
-  it.each(['03/10/2008', '10/03/2015', '01/10/2026'])('is true for %j', (birthDate) => {
-    expect(isMinorBirthDate(birthDate)).toBe(true);
-  });
-
-  it.each(['02/10/2008', '20/05/1990', '', '10/03', '02/10/2026', '01/01/2030', '02/10/1905'])(
-    'is false for %j',
-    (birthDate) => {
-      expect(isMinorBirthDate(birthDate)).toBe(false);
     },
   );
 });

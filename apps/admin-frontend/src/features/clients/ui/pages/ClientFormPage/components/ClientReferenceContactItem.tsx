@@ -3,12 +3,12 @@ import { XIcon } from 'lucide-react';
 import { ControlledField, PhoneField, TextField } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { CheckboxGroup } from '@/shared/ui/checkbox-group';
-import { CONTACT_PURPOSE_OPTIONS } from '../../../../model/contactPurpose';
 import {
-  CLIENT_NAME_MAX_LENGTH,
+  CONTACT_NAME_MAX_LENGTH,
   CONTACT_RELATIONSHIP_MAX_LENGTH,
-  type ClientFormFieldValues,
-} from '../clientForm';
+} from '../../../../model/clientContact';
+import { CONTACT_PURPOSE_OPTIONS } from '../../../../model/contactPurpose';
+import type { ClientFormFieldValues } from '../clientForm';
 
 interface ClientReferenceContactItemProps {
   index: number;
@@ -42,7 +42,7 @@ function ClientReferenceContactItem({ index, onRemove }: ClientReferenceContactI
           name={`referenceContacts.${index}.name`}
           label="Nome"
           hint="obrigatório"
-          maxLength={CLIENT_NAME_MAX_LENGTH}
+          maxLength={CONTACT_NAME_MAX_LENGTH}
           autoComplete="off"
         />
         <TextField<ClientFormFieldValues>
