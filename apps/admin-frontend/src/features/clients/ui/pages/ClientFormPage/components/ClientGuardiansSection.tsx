@@ -16,9 +16,14 @@ function ClientGuardiansSection() {
   const { fields, append, remove } = useFieldArray({ control, name: 'guardians' });
   const { errors } = useFormState({ control, name: 'guardians' });
   const birthDate = useWatch({ control, name: 'birthDate' });
+
+  const hasGuardians = fields.length > 0;
+  const hasReachedGuardianLimit = fields.length >= MAX_GUARDIANS;
+  const guardiansError = errors.guardians?.root?.message ?? errors.guardians?.message;
+
   const age = ageFromBirthDate(birthDate);
   const isMinor = age !== null && age < ADULT_AGE_IN_YEARS;
-  const listError = errors.guardians?.root?.message ?? errors.guardians?.message;
+  const needsGuardian = isMinor && !hasGuardians;
 
   return (
     <PageSection
@@ -29,7 +34,7 @@ function ClientGuardiansSection() {
           type="button"
           variant="outline"
           size="sm"
-          disabled={fields.length >= MAX_GUARDIANS}
+          disabled={hasReachedGuardianLimit}
           onClick={() => append(emptyGuardian())}
         >
           <PlusIcon aria-hidden="true" />
@@ -37,13 +42,13 @@ function ClientGuardiansSection() {
         </Button>
       }
     >
-      {isMinor && fields.length === 0 && (
+      {needsGuardian && (
         <p role="status" className="rounded-md border border-border bg-muted p-3 text-sm">
           Esta pessoa tem menos de {ADULT_AGE_IN_YEARS} anos. Informe ao menos um responsável.
         </p>
       )}
 
-      {fields.length > 0 && (
+      {hasGuardians && (
         <div className="divide-y divide-border border-t border-border">
           {fields.map((field, index) => (
             <ClientGuardianItem key={field.id} index={index} onRemove={() => remove(index)} />
@@ -51,9 +56,9 @@ function ClientGuardiansSection() {
         </div>
       )}
 
-      {listError && (
+      {guardiansError && (
         <p role="alert" className="text-sm text-destructive">
-          {listError}
+          {guardiansError}
         </p>
       )}
     </PageSection>

@@ -13,7 +13,11 @@ function ClientReferenceContactsSection() {
   const { control } = useFormContext<ClientFormFieldValues>();
   const { fields, append, remove } = useFieldArray({ control, name: 'referenceContacts' });
   const { errors } = useFormState({ control, name: 'referenceContacts' });
-  const listError = errors.referenceContacts?.root?.message ?? errors.referenceContacts?.message;
+
+  const hasReferenceContacts = fields.length > 0;
+  const hasReachedReferenceContactLimit = fields.length >= MAX_REFERENCE_CONTACTS;
+  const referenceContactsError =
+    errors.referenceContacts?.root?.message ?? errors.referenceContacts?.message;
 
   return (
     <PageSection
@@ -24,7 +28,7 @@ function ClientReferenceContactsSection() {
           type="button"
           variant="outline"
           size="sm"
-          disabled={fields.length >= MAX_REFERENCE_CONTACTS}
+          disabled={hasReachedReferenceContactLimit}
           onClick={() => append(emptyReferenceContact())}
         >
           <PlusIcon aria-hidden="true" />
@@ -32,7 +36,7 @@ function ClientReferenceContactsSection() {
         </Button>
       }
     >
-      {fields.length > 0 && (
+      {hasReferenceContacts && (
         <div className="divide-y divide-border border-t border-border">
           {fields.map((field, index) => (
             <ClientReferenceContactItem
@@ -44,9 +48,9 @@ function ClientReferenceContactsSection() {
         </div>
       )}
 
-      {listError && (
+      {referenceContactsError && (
         <p role="alert" className="text-sm text-destructive">
-          {listError}
+          {referenceContactsError}
         </p>
       )}
     </PageSection>
