@@ -6,10 +6,10 @@ import {
   isInThePast,
   isMinorOn,
   isWithinMaxAge,
-} from './birthDate';
+} from '@/shared/format/birthDate';
 import { CONTACT_PURPOSES } from './client';
 import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH, isValidEmail, isValidPhone } from './contactFormats';
-import { isValidCpf, stripCpfMask } from './cpf';
+import { isValidCpf, stripCpfMask } from '@/shared/format/cpf';
 
 // Mirrors the backend limits (ServicesService.Domain.Entities.Client / ClientContact). UX pre-check
 // only - the backend response stays the source of truth.

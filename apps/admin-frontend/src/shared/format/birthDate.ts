@@ -1,4 +1,4 @@
-import { fullYearsBetween, todayUtc, utcDate } from '@/shared/format/date';
+import { fullYearsBetween, todayUtc, utcDate } from './date';
 
 export const ADULT_AGE_IN_YEARS = 18;
 export const MAX_AGE_IN_YEARS = 120;

@@ -3,7 +3,7 @@ import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { FieldError } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
-import { ADULT_AGE_IN_YEARS } from '../../../../model/birthDate';
+import { ADULT_AGE_IN_YEARS } from '@/shared/format/birthDate';
 import {
   MAX_GUARDIANS,
   ageFromBirthDate,

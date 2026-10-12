@@ -8,7 +8,7 @@ import {
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
 import { PHONE_MAX_LENGTH } from '../../../../model/contactFormats';
-import { formatCpf } from '../../../../model/cpf';
+import { formatCpf } from '@/shared/format/cpf';
 
 interface ClientGuardianItemProps {
   index: number;

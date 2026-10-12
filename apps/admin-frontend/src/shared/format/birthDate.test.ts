@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
-import { utcDate } from '@/shared/format/date';
+import { utcDate } from './date';
 import {
   earliestBirthDate,
   formatAge,

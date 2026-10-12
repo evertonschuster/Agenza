@@ -1,7 +1,7 @@
 import { useFormContext, useWatch } from 'react-hook-form';
 import { DateField, MaskedField, TextField, TextareaField } from '@/shared/form/fields';
 import { PageSection } from '@/widgets/page-section';
-import { earliestBirthDate, formatAge, latestBirthDate } from '../../../../model/birthDate';
+import { earliestBirthDate, formatAge, latestBirthDate } from '@/shared/format/birthDate';
 import {
   CLIENT_NAME_MAX_LENGTH,
   CLIENT_NOTES_MAX_LENGTH,
@@ -9,7 +9,7 @@ import {
   type ClientFormFieldValues,
 } from '../../../../model/clientForm';
 import { EMAIL_MAX_LENGTH, PHONE_MAX_LENGTH } from '../../../../model/contactFormats';
-import { formatCpf } from '../../../../model/cpf';
+import { formatCpf } from '@/shared/format/cpf';
 
 function ClientPersonSection() {
   const { control } = useFormContext<ClientFormFieldValues>();
