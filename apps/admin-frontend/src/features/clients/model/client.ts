@@ -1,5 +1,5 @@
-import { isMinorOn } from '@/shared/format/birthDate';
 import { todayUtc } from '@/shared/format/date';
+import { isMinorOn } from '@/shared/values/birthDate';
 import type { ClientGuardian } from './clientGuardian';
 import type { ClientReferenceContact } from './clientReferenceContact';
 

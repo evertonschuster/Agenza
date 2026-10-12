@@ -1,5 +1,5 @@
 import type { FieldValues } from 'react-hook-form';
-import { PHONE_MAX_LENGTH } from '@/shared/format/phone';
+import { PHONE_MAX_LENGTH } from '@/shared/values/phone';
 import type { PhoneFieldProps } from '../fields.types';
 import { TextField } from './text-fields';
 

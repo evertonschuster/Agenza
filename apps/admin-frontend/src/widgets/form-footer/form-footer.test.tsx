@@ -3,21 +3,26 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
-import { FormFooter, type FormFooterProps } from './index';
+import {
+  DialogFormFooter,
+  PageFormFooter,
+  type DialogFormFooterProps,
+  type PageFormFooterProps,
+} from './index';
 
-function renderOnPage(props: FormFooterProps) {
+function renderOnPage(props: PageFormFooterProps) {
   const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
   render(
     <MemoryRouter>
       <form onSubmit={onSubmit}>
-        <FormFooter {...props} />
+        <PageFormFooter {...props} />
       </form>
     </MemoryRouter>,
   );
   return { onSubmit };
 }
 
-function renderInDialog(props: FormFooterProps, onOpenChange = vi.fn()) {
+function renderInDialog(props: DialogFormFooterProps, onOpenChange = vi.fn()) {
   const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
   render(
     <Dialog open onOpenChange={onOpenChange}>
@@ -25,7 +30,7 @@ function renderInDialog(props: FormFooterProps, onOpenChange = vi.fn()) {
         <DialogTitle>Título</DialogTitle>
         <DialogDescription>Descrição</DialogDescription>
         <form onSubmit={onSubmit}>
-          <FormFooter {...props} />
+          <DialogFormFooter {...props} />
         </form>
       </DialogContent>
     </Dialog>,
@@ -33,8 +38,8 @@ function renderInDialog(props: FormFooterProps, onOpenChange = vi.fn()) {
   return { onSubmit, onOpenChange };
 }
 
-describe('FormFooter', () => {
-  describe('on a page (cancelTo)', () => {
+describe('form footers', () => {
+  describe('PageFormFooter', () => {
     it('offers Cancelar as a link to cancelTo and Salvar as the submit button', async () => {
       const user = userEvent.setup();
       const { onSubmit } = renderOnPage({ isSaving: false, cancelTo: '/pessoas' });
@@ -69,7 +74,7 @@ describe('FormFooter', () => {
     });
   });
 
-  describe('inside a dialog (no cancelTo)', () => {
+  describe('DialogFormFooter', () => {
     it('closes the dialog from Cancelar', async () => {
       const user = userEvent.setup();
       const { onOpenChange } = renderInDialog({ isSaving: false });

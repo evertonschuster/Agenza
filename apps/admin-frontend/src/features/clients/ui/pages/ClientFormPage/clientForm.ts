@@ -1,6 +1,8 @@
 import { z } from 'zod';
-import { ADULT_AGE_IN_YEARS } from '@/shared/format/birthDate';
-import { birthDateSchema, cpfSchema, emailSchema, phoneSchema } from '@/shared/form/schemas';
+import { ADULT_AGE_IN_YEARS, birthDateSchema } from '@/shared/values/birthDate';
+import { cpfSchema } from '@/shared/values/cpf';
+import { emailSchema } from '@/shared/values/email';
+import { phoneSchema } from '@/shared/values/phone';
 import {
   CLIENT_FULL_NAME_MAX_LENGTH,
   CLIENT_FULL_NAME_MIN_LENGTH,

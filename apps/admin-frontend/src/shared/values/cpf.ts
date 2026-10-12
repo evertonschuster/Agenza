@@ -1,3 +1,5 @@
+import { optionalValue } from './optionalValue';
+
 const CPF_LENGTH = 11;
 
 export function parseCpf(raw: string): string | null {
@@ -20,6 +22,10 @@ export function maskCpf(value: string): string {
   if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
   return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
 }
+
+export const cpfSchema = optionalValue(
+  (raw, fail) => parseCpf(raw) ?? fail('Informe um CPF válido.'),
+);
 
 function checkDigit(digits: string, digitCount: number): number {
   let sum = 0;

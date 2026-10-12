@@ -1,6 +1,6 @@
 import { FormProvider } from 'react-hook-form';
 import { FormErrorBanner } from '@/shared/form/fields';
-import { FormFooter } from '@/widgets/form-footer';
+import { PageFormFooter } from '@/widgets/form-footer';
 import { PageHeader } from '@/widgets/page-header';
 import { ClientGuardiansSection } from './components/ClientGuardiansSection';
 import { ClientPersonSection } from './components/ClientPersonSection';
@@ -21,7 +21,7 @@ export function ClientFormPage() {
           <ClientGuardiansSection />
           <ClientReferenceContactsSection />
           <FormErrorBanner />
-          <FormFooter isSaving={isSaving} cancelTo="/pessoas" />
+          <PageFormFooter isSaving={isSaving} cancelTo="/pessoas" />
         </form>
       </FormProvider>
     </div>

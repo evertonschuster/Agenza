@@ -1,5 +1,5 @@
 import type { FieldValues } from 'react-hook-form';
-import { maskCpf } from '@/shared/format/cpf';
+import { maskCpf } from '@/shared/values/cpf';
 import type { CpfFieldProps } from '../fields.types';
 import { MaskedField } from './masked-field';
 

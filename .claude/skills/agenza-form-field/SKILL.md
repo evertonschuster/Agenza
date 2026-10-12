@@ -133,8 +133,9 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    rule below.
 
 5. **A CPF, phone, e-mail or birth date is not configured by hand: reuse the pair.** The schema half
-   comes from `@/shared/form/schemas` (`cpfSchema`, `phoneSchema`, `emailSchema`, `birthDateSchema`:
-   an empty field becomes `null`, anything else is parsed and fails with the pt-BR message), the
+   comes from that value's file in `@/shared/values/` (`cpfSchema` from `@/shared/values/cpf`, then
+   `phoneSchema`, `emailSchema`, `birthDateSchema`: an empty field becomes `null`, anything else is
+   parsed and fails with the pt-BR message), the
    field half from `@/shared/form/fields` (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`:
    mask, input type, limit, placeholder, default label and `opcional` hint already set, each one
    overridable by prop):
@@ -145,11 +146,12 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    <CpfField<XFormFieldValues> name="cpf" />
    <PhoneField<XFormFieldValues> name="phone" label="Telefone do contato" />
    ```
-   The parsing underneath is `shared/format/` (`parseCpf`, `parsePhone`, `parseEmail`: canonical value
-   or `null`, mirroring the backend's `Create`), so never re-validate with a regex of your own. A new
-   value type is a `parseX` in `shared/format/`, a schema built with `optionalValue(parse)` (its
-   `fail(message)` becomes the Zod issue) and, only if several forms will configure it the same way, a
-   preset field. The schemas have no required variant yet; add it to `optionalValue` when the first
+   The parsing underneath sits in the same file as the schema (`parseCpf`, `parsePhone`, `parseEmail`:
+   canonical value or `null`, mirroring the backend's `Create`), so never re-validate with a regex of
+   your own. A new value type (a CNPJ) is one file, `shared/values/cnpj.ts`, mirroring the backend's
+   value object: its `parseX`, its limits and a schema built with `optionalValue(parse)` (its
+   `fail(message)` becomes the Zod issue); plus, only if several forms will configure it the same way,
+   a preset field in `shared/form/fields/`. The schemas have no required variant yet; add it to `optionalValue` when the first
    form needs one.
 
 ## Editing an existing entity: fetch fresh, don't trust what the list already had

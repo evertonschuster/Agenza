@@ -1,7 +1,6 @@
 import { useFormContext, useWatch, type FieldValues } from 'react-hook-form';
 import { formatAge } from '@/shared/format/age';
-import { birthDatePickerBounds } from '@/shared/format/birthDate';
-import { ageFromBirthDate } from '@/shared/form/schemas';
+import { ageFromBirthDate, birthDatePickerBounds } from '@/shared/values/birthDate';
 import type { BirthDateFieldProps } from '../fields.types';
 import { DateField } from './date-field';
 
