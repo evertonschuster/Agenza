@@ -56,15 +56,12 @@ export type BirthDateFieldProps<T extends FieldValues> = WithOptionalLabel<
   Omit<DateFieldProps<T>, 'minDate' | 'maxDate'>
 >;
 
-export interface ControlledFieldProps<T extends FieldValues> {
-  name: Path<T>;
+export interface ControlledFieldProps<T extends FieldValues, N extends Path<T> = Path<T>> {
+  name: N;
   label: string;
   hint?: string | undefined;
   labelHtmlFor?: boolean | undefined;
-  children: (
-    field: ControllerRenderProps<T, Path<T>>,
-    controlProps: FormFieldControlProps,
-  ) => ReactNode;
+  children: (field: ControllerRenderProps<T, N>, controlProps: FormFieldControlProps) => ReactNode;
 }
 
 export interface ColorFieldProps<T extends FieldValues> {

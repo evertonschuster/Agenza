@@ -54,7 +54,7 @@ function ClientReferenceContactItem({ index, onRemove }: ClientReferenceContactI
           autoComplete="off"
         />
         <PhoneField<ClientFormFieldValues> name={`referenceContacts.${index}.phone`} />
-        <ControlledField<ClientFormFieldValues>
+        <ControlledField<ClientFormFieldValues, `referenceContacts.${number}.purposes`>
           name={`referenceContacts.${index}.purposes`}
           label="Finalidades"
           hint="escolha ao menos uma"
@@ -64,7 +64,7 @@ function ClientReferenceContactItem({ index, onRemove }: ClientReferenceContactI
             <CheckboxGroup
               ref={field.ref}
               options={CONTACT_PURPOSE_OPTIONS}
-              value={Array.isArray(field.value) ? (field.value as string[]) : []}
+              value={field.value}
               onValueChange={field.onChange}
               onBlur={field.onBlur}
               aria-label={`Finalidades da pessoa de referência ${position}`}

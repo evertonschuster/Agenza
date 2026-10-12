@@ -5,6 +5,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
+import { CLIENTS_PATH } from '../../clientsPaths';
 import {
   clientFormSchema,
   emptyClientFormFieldValues,
@@ -12,8 +13,6 @@ import {
   type ClientFormValues,
 } from './clientForm';
 import type { UseClientFormPageResult } from './useClientFormPage.types';
-
-const CLIENTS_PATH = '/pessoas';
 
 export function useClientFormPage(): UseClientFormPageResult {
   const navigate = useNavigate();

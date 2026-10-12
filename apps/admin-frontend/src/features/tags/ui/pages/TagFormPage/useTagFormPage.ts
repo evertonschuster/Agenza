@@ -6,6 +6,7 @@ import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { createTag, updateTag } from '../../../application/tagUseCases';
+import { TAGS_PATH } from '../../tagsPaths';
 import {
   tagFormSchema,
   toTagFormFieldValues,
@@ -36,7 +37,7 @@ export function useTagFormPage(): UseTagFormPageResult {
       void navigate(-1);
       return;
     }
-    void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+    void navigate({ pathname: TAGS_PATH, search: location.search }, { replace: true });
   }, [navigate, canGoBack, location.search]);
 
   useEffect(() => {

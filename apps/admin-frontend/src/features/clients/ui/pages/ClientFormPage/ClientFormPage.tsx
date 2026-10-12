@@ -2,12 +2,13 @@ import { FormProvider } from 'react-hook-form';
 import { FormErrorBanner } from '@/shared/form/fields';
 import { PageFormFooter } from '@/widgets/form-footer';
 import { PageHeader } from '@/widgets/page-header';
+import { CLIENTS_PATH } from '../../clientsPaths';
 import { ClientGuardiansSection } from './components/ClientGuardiansSection';
 import { ClientPersonSection } from './components/ClientPersonSection';
 import { ClientReferenceContactsSection } from './components/ClientReferenceContactsSection';
 import { useClientFormPage } from './useClientFormPage';
 
-const PAGE_PARENTS = [{ label: 'Pessoas', to: '/pessoas' }];
+const PAGE_PARENTS = [{ label: 'Pessoas', to: CLIENTS_PATH }];
 
 export function ClientFormPage() {
   const { methods, isSaving, onSubmit } = useClientFormPage();
@@ -21,7 +22,7 @@ export function ClientFormPage() {
           <ClientGuardiansSection />
           <ClientReferenceContactsSection />
           <FormErrorBanner />
-          <PageFormFooter isSaving={isSaving} cancelTo="/pessoas" />
+          <PageFormFooter isSaving={isSaving} cancelTo={CLIENTS_PATH} />
         </form>
       </FormProvider>
     </div>

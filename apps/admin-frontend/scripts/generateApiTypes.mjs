@@ -95,14 +95,17 @@ function requestDateAsDate(requestOnly) {
   };
 }
 
-export async function generate() {
-  const document = stripTenantHeaderParam(
-    await fetch(new URL(OPENAPI_URL)).then((response) => response.json()),
-  );
+export async function typesFromDocument(openApiDocument) {
+  const document = stripTenantHeaderParam(openApiDocument);
   const ast = await openapiTS(document, {
     transform: requestDateAsDate(requestBodyOnlySchemas(document)),
   });
-  const raw = astToString(ast);
+  return astToString(ast);
+}
+
+export async function generate() {
+  const document = await fetch(new URL(OPENAPI_URL)).then((response) => response.json());
+  const raw = await typesFromDocument(document);
   const prettierConfig = (await prettier.resolveConfig(__dirname)) ?? {};
   const formatted = await prettier.format(raw, { ...prettierConfig, parser: 'typescript' });
   const banner =
