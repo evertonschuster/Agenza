@@ -15,9 +15,10 @@ UI reintroduced on React Hook Form + Zod" row and the row right after it) for th
 and the two gotchas below in their original context, and §6's "Provisional" section for what's still
 unproven.
 
-Backend errors on a list item arrive keyed `Guardians[1].Name`; `toFormErrors` normalizes that to
-`guardians.1.name`, so the hook passes it the **current** field paths (top-level plus one per item),
-not a static list — see `useClientFormPage.ts`'s `fieldPathsOf`. A field-array root error (e.g.
+Backend errors on a list item arrive keyed `guardians[1].name`; `toFormErrors` normalizes that to
+`guardians.1.name`, and `applyApiProblem` matches it against the **current** field paths: it derives
+them from `methods.getValues()` when the response arrives (top-level plus one per item), so a page
+keeps no path list of its own. A field-array root error (e.g.
 "informe ao menos um responsável") lives at `errors.guardians.message` / `errors.guardians.root.message`
 and has no input to attach to: render it in the section.
 
@@ -26,7 +27,7 @@ and has no input to attach to: render it in the section.
 | Layer | File | Job |
 | --- | --- | --- |
 | Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
-| RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem<T>(problem, fields, setError)` — calls the above, then `setError` per field plus `setError('root.serverError', …)`. Knows both shapes; the only file that does. |
+| RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem(problem, methods)` — builds the current field paths from `methods.getValues()`, calls the above, then `setError` per field, `setError('root.serverError', …)` for the form-level message and `setFocus` on the first invalid field. Knows both shapes; the only file that does. |
 | Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed
@@ -67,7 +68,7 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    async function onValid(values: XFormValues) {
      const result = isEdit ? await xRepository.update(id, values) : await xRepository.create(values);
      if (result.ok) { /* publish, toast, navigate */ return; }
-     applyApiProblem<XFormFieldValues>(result.error, X_FORM_FIELDS, methods.setError);
+     applyApiProblem(result.error, methods);
    }
 
    function submit(event: SubmitEvent<HTMLFormElement>) {
@@ -201,7 +202,7 @@ TTransformedValues>` needs the input shape as its first generic, the output shap
 Modeling both as one `z.infer<typeof schema>` type — the natural first guess — compiles right up
 until `resolver: zodResolver(schema)` is attached to `useForm`, where `tsc` names a `Resolver<Input,
 any, Output>` mismatch. Fix: `z.input<typeof schema>` for the field components and
-`applyApiProblem`'s generic, `z.output<typeof schema>` for `onValid`'s parameter — see
+`useForm`'s first generic (`applyApiProblem` infers its own from `methods`), `z.output<typeof schema>` for `onValid`'s parameter — see
 `TagFormFieldValues`/`TagFormValues` in `tagForm.ts`.
 
 **2. Not every control accepts `id`/`htmlFor`.** `FormField`'s `<Label htmlFor={id}>` assumes the
