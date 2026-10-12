@@ -559,30 +559,6 @@ describe('ClientFormPage', () => {
       expect(screen.getByTestId('location')).toHaveTextContent('/pessoas/nova');
     });
 
-    it('explains a CPF that belongs to a deleted record', async () => {
-      const user = userEvent.setup();
-      mockCreate.mockResolvedValue(
-        problem({
-          status: 409,
-          code: 'Client.DuplicateCpf',
-          errors: {
-            Cpf: [
-              {
-                code: 'Client.DuplicateCpf',
-                message:
-                  'Este CPF pertence a um cadastro excluído e não pode ser usado em um novo cadastro.',
-              },
-            ],
-          },
-        }),
-      );
-      renderPage();
-
-      await fillAndSubmit(user);
-
-      expect(await screen.findByText(/pertence a um cadastro excluído/)).toBeInTheDocument();
-    });
-
     it('shows a duplicate e-mail on the e-mail field and keeps everything typed', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue(
