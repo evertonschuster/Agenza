@@ -1,3 +1,4 @@
+using Admin.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
@@ -65,7 +66,7 @@ public class ClientListPersistenceTests
         await context.SaveChangesAsync();
     }
 
-    private static async Task<(IReadOnlyList<Client> Items, int TotalCount)> List(
+    private static async Task<PagedResult<Client>> List(
         string databaseName,
         Guid tenantId,
         int page = 1,
@@ -75,10 +76,11 @@ public class ClientListPersistenceTests
         ClientStatus? status = null)
     {
         await using var context = PersistenceContext.Create(databaseName, tenantId);
-        return await new ClientRepository(context).ListAsync(page, pageSize, text, cpfDigits, status, CancellationToken.None);
+        return await new ClientRepository(context)
+            .ListAsync(new PageRequest(page, pageSize), text, cpfDigits, status, CancellationToken.None);
     }
 
-    private static string[] Names((IReadOnlyList<Client> Items, int TotalCount) page)
+    private static string[] Names(PagedResult<Client> page)
     {
         return page.Items.Select(client => client.FullName.Value).ToArray();
     }
@@ -131,7 +133,7 @@ public class ClientListPersistenceTests
         await using var tenantlessContext = new ServicesDataContext(options, tenantProvider);
 
         var page = await new ClientRepository(tenantlessContext)
-            .ListAsync(1, 20, null, null, null, CancellationToken.None);
+            .ListAsync(new PageRequest(1, 20), null, null, null, CancellationToken.None);
 
         page.Items.Should().BeEmpty();
         page.TotalCount.Should().Be(0);
@@ -232,6 +234,7 @@ public class ClientListPersistenceTests
         third.Items.Should().HaveCount(1);
         past.Items.Should().BeEmpty();
         new[] { first, second, third, past }.Select(page => page.TotalCount).Should().OnlyContain(total => total == 7);
+        new[] { first, second, third, past }.Select(page => (page.Page, page.PageSize)).Should().Equal((1, 3), (2, 3), (3, 3), (4, 3));
         var seen = first.Items.Concat(second.Items).Concat(third.Items).Select(client => client.Id).ToArray();
         seen.Should().OnlyHaveUniqueItems();
         seen.Should().BeEquivalentTo(clients.Select(client => client.Id));

@@ -17,7 +17,7 @@ no `Remove` until a delete exists, no `ListAsync` until a list exists.
 | `CountBy<Thing>Async(id)` | `int` | an "in use" rule |
 | `GetByIdsAsync(ids)` | `IReadOnlyList<T>` | one query for a set — never one per row |
 | `ListAsync(filters)` | `IReadOnlyList<T>` | an unpaged list, ordered |
-| `ListAsync(page, pageSize, filters)` | `(IReadOnlyList<T> Items, int TotalCount)` | a paged list, ordered |
+| `ListAsync(PageRequest, filters)` | `PagedResult<T>` | a paged list, ordered: the adapter calls `ListPagedAsync(page, filterAndOrder, ct)` |
 | `Add(entity)`, `UpdateAsync(entity)`, `Remove(entity)` | `void` / `Task` | stage; the handler commits |
 
 Parameters are ids, value objects for value-object columns and plain filter values — never a tenant,

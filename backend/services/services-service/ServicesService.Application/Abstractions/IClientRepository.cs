@@ -1,12 +1,13 @@
+using Admin.SharedKernel;
+
 namespace ServicesService.Application.Abstractions;
 
 public interface IClientRepository
 {
     Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken);
 
-    Task<(IReadOnlyList<Client> Items, int TotalCount)> ListAsync(
-        int page,
-        int pageSize,
+    Task<PagedResult<Client>> ListAsync(
+        PageRequest page,
         string? text,
         string? cpfDigits,
         ClientStatus? status,

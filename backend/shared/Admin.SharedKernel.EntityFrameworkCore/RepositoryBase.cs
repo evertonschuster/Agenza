@@ -48,6 +48,18 @@ public abstract class RepositoryBase<TEntity>
         return await query.ToListAsync(cancellationToken);
     }
 
+    protected async Task<PagedResult<TEntity>> ListPagedAsync(
+        PageRequest page,
+        Func<IQueryable<TEntity>, IQueryable<TEntity>> filterAndOrder,
+        CancellationToken cancellationToken)
+    {
+        var query = filterAndOrder(Set.AsNoTracking());
+
+        var (items, totalCount) = await ReadPageAsync(query, page.Offset, page.PageSize, cancellationToken);
+
+        return new PagedResult<TEntity>(items, totalCount, page.Page, page.PageSize);
+    }
+
     protected async Task<(IReadOnlyList<TEntity> Items, int TotalCount)> ListPagedAsync(
         Func<IQueryable<TEntity>, IQueryable<TEntity>>? order,
         int page,
@@ -60,8 +72,17 @@ public abstract class RepositoryBase<TEntity>
             query = order(query);
         }
 
+        return await ReadPageAsync(query, (page - 1) * pageSize, pageSize, cancellationToken);
+    }
+
+    private static async Task<(IReadOnlyList<TEntity> Items, int TotalCount)> ReadPageAsync(
+        IQueryable<TEntity> query,
+        int skip,
+        int take,
+        CancellationToken cancellationToken)
+    {
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query.Skip((page - 1) * pageSize).Take(pageSize).ToListAsync(cancellationToken);
+        var items = await query.Skip(skip).Take(take).ToListAsync(cancellationToken);
         return (items, totalCount);
     }
 

@@ -14,17 +14,11 @@ public sealed class ListClientsQueryHandler(IClientRepository clientRepository)
         var cpfDigits = ExtractCpfDigits(text);
         var status = ToStatusFilter(query.Status);
 
-        var (clients, totalCount) = await clientRepository.ListAsync(
-            query.Page,
-            query.PageSize,
-            text,
-            cpfDigits,
-            status,
-            cancellationToken);
+        var page = new PageRequest(query.Page, query.PageSize);
 
-        var items = clients.Select(ClientListItemResponse.FromClient).ToList();
+        var clients = await clientRepository.ListAsync(page, text, cpfDigits, status, cancellationToken);
 
-        return Result.Success(new PagedResult<ClientListItemResponse>(items, totalCount, query.Page, query.PageSize));
+        return Result.Success(clients.Map(ClientListItemResponse.FromClient));
     }
 
     private static string? NormalizeText(string? term)

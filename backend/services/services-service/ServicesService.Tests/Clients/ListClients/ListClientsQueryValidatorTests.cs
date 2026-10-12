@@ -10,12 +10,12 @@ public class ListClientsQueryValidatorTests
     {
         return new TheoryData<string, ListClientsQuery, string, string>
         {
-            { "page below one", new ListClientsQuery(Page: 0), "Page", "Client.PageInvalid" },
-            { "negative page", new ListClientsQuery(Page: -3), "Page", "Client.PageInvalid" },
-            { "page whose offset overflows", new ListClientsQuery(Page: int.MaxValue), "Page", "Client.PageTooLarge" },
-            { "page just past the offset limit", new ListClientsQuery(Page: 21_474_838, PageSize: 100), "Page", "Client.PageTooLarge" },
-            { "page size below one", new ListClientsQuery(PageSize: 0), "PageSize", "Client.PageSizeInvalid" },
-            { "page size above the maximum", new ListClientsQuery(PageSize: 101), "PageSize", "Client.PageSizeInvalid" },
+            { "page below one", new ListClientsQuery(Page: 0), "Page", "Paging.PageInvalid" },
+            { "negative page", new ListClientsQuery(Page: -3), "Page", "Paging.PageInvalid" },
+            { "page whose offset overflows", new ListClientsQuery(Page: int.MaxValue), "Page", "Paging.PageTooLarge" },
+            { "page just past the offset limit", new ListClientsQuery(Page: 21_474_838, PageSize: 100), "Page", "Paging.PageTooLarge" },
+            { "page size below one", new ListClientsQuery(PageSize: 0), "PageSize", "Paging.PageSizeInvalid" },
+            { "page size above the maximum", new ListClientsQuery(PageSize: 101), "PageSize", "Paging.PageSizeInvalid" },
             { "search above the longest searchable value", new ListClientsQuery(Q: new string('a', 255)), "Q", "Client.SearchTooLong" },
             { "unknown status", new ListClientsQuery(Status: "deleted"), "Status", "Client.StatusFilterInvalid" },
             { "numeric status", new ListClientsQuery(Status: "1"), "Status", "Client.StatusFilterInvalid" },
@@ -89,7 +89,7 @@ public class ListClientsQueryValidatorTests
     {
         var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 100));
 
-        result.Errors.Select(error => error.ErrorCode).Should().Equal("Client.PageInvalid");
+        result.Errors.Select(error => error.ErrorCode).Should().Equal("Paging.PageInvalid");
     }
 
     [Fact]
@@ -99,8 +99,8 @@ public class ListClientsQueryValidatorTests
 
         result.Errors.Select(error => (error.PropertyName, error.ErrorCode)).Should().BeEquivalentTo(
         [
-            ("Page", "Client.PageInvalid"),
-            ("PageSize", "Client.PageSizeInvalid"),
+            ("Page", "Paging.PageInvalid"),
+            ("PageSize", "Paging.PageSizeInvalid"),
             ("Status", "Client.StatusFilterInvalid"),
         ]);
     }

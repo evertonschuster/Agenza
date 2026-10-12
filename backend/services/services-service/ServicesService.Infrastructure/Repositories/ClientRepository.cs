@@ -1,3 +1,4 @@
+using Admin.SharedKernel;
 using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
@@ -20,18 +21,16 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
             .FirstOrDefaultAsync(client => client.Id == clientId, cancellationToken);
     }
 
-    public Task<(IReadOnlyList<Client> Items, int TotalCount)> ListAsync(
-        int page,
-        int pageSize,
+    public Task<PagedResult<Client>> ListAsync(
+        PageRequest page,
         string? text,
         string? cpfDigits,
         ClientStatus? status,
         CancellationToken cancellationToken)
     {
         return ListPagedAsync(
-            query => FilterAndOrder(query, text, cpfDigits, status),
             page,
-            pageSize,
+            query => FilterAndOrder(query, text, cpfDigits, status),
             cancellationToken);
     }
 

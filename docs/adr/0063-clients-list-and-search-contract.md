@@ -81,13 +81,14 @@ client load now reads three more short strings, because EF loads every mapped co
 
 | Rule | Code |
 | --- | --- |
-| `page` at least 1 | `Client.PageInvalid` |
-| `(page - 1) * pageSize` fits an `int` | `Client.PageTooLarge` |
-| `pageSize` from 1 to 100 | `Client.PageSizeInvalid` |
+| `page` at least 1 | `Paging.PageInvalid` |
+| `(page - 1) * pageSize` fits an `int` | `Paging.PageTooLarge` |
+| `pageSize` from 1 to 100 | `Paging.PageSizeInvalid` |
 | `q` up to 254 characters, the longest searchable value (an e-mail) | `Client.SearchTooLong` |
 | `status` one of the three words, or blank | `Client.StatusFilterInvalid` |
 
-`Client.PageTooLarge` exists because `RepositoryBase.ListPagedAsync` computes the offset in `int`: the older list
+The three page rules are shared by every paged list ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)).
+`Paging.PageTooLarge` exists because `RepositoryBase.ListPagedAsync(order, page, pageSize)` computes the offset in `int`: the older list
 `GET /api/v1/services?page=2147483647&pageSize=100` answers `500 Unexpected.Error`, and `page=43000000` silently
 computes an offset of 5,032,604 instead of 4,299,999,900, so a large enough table would answer a wrong page instead of
 an empty one. A framework binding failure (`page=abc`)
@@ -116,14 +117,16 @@ and an ADR of its own.
   codes above.
 
 Verified by hand on a disposable PostgreSQL 18.3 (`agenza-scratch-pg`, port 5433, `log_statement=all`), with the real
-identity and services on private ports and a real login, 89 checks: the default list, the exact item keys and values
+identity and services on private ports and a real login, 89 checks on the list: the default list, the exact item keys and values
 (whole CPF, `null` for the absent fields), the three situations and their case, a blank and a numeric `status`;
 name, e-mail, masked and partial CPF searches; `%`, `_` and `\` as literal characters; a term with quotes; a long
 term; paging with no repeat or omission and a stable total; ties of the same name ordered by id; a page past the
 last; every validation code; `401` without a token and `403` for another tenant's header; people of another tenant,
 inactive and soft-deleted people never leaking into a list, a total or a search; and a list writing nothing. The
 migration was applied over five legacy rows (mixed-case name and e-mail, no e-mail, no CPF, inactive, deleted,
-another tenant), reverted and applied again, with the rows intact in between.
+another tenant), reverted and applied again, with the rows intact in between, and all three migrations were applied
+from an empty database when the service started. Ten more checks cover the edit, deactivate and reactivate path with
+the generated columns present: they follow a rename, a new CPF and a new e-mail, and the list order follows them.
 
 ## Considered and rejected
 
@@ -140,5 +143,5 @@ another tenant), reverted and applied again, with the rows intact in between.
 - **One combined `SearchText` column.** A term with a space could match across two fields.
 - **`EF.Functions.ILike` with an escape character.** It cannot reach a value-object column.
 - **A fixed cap on the page** instead of the offset rule. Any number is arbitrary.
-- **Fixing the offset in `RepositoryBase.ListPagedAsync` in this change.** It is a shared project and changes the
-  services, tags and categories lists; it deserves its own change.
+- **Fixing the offset of the older `RepositoryBase.ListPagedAsync(order, page, pageSize)` in this change.** It changes
+  the services list; converting it to `PageRequest` is a change of its own (ADR 0064).

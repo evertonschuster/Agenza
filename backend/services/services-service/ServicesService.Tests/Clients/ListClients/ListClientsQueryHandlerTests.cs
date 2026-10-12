@@ -1,3 +1,4 @@
+using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.ListClients;
 
@@ -18,13 +19,16 @@ public class ListClientsQueryHandlerTests
     {
         _repository
             .ListAsync(
-                Arg.Any<int>(),
-                Arg.Any<int>(),
+                Arg.Any<PageRequest>(),
                 Arg.Any<string?>(),
                 Arg.Any<string?>(),
                 Arg.Any<ClientStatus?>(),
                 Arg.Any<CancellationToken>())
-            .Returns(Task.FromResult((clients, totalCount)));
+            .Returns(callInfo =>
+            {
+                var page = callInfo.Arg<PageRequest>();
+                return Task.FromResult(new PagedResult<Client>(clients, totalCount, page.Page, page.PageSize));
+            });
     }
 
     private static Client CompleteClient()
@@ -49,7 +53,7 @@ public class ListClientsQueryHandlerTests
 
     private async Task AssertListed(string? text, string? cpfDigits, ClientStatus? status, int page = 1, int pageSize = 20)
     {
-        await _repository.Received(1).ListAsync(page, pageSize, text, cpfDigits, status, Arg.Any<CancellationToken>());
+        await _repository.Received(1).ListAsync(new PageRequest(page, pageSize), text, cpfDigits, status, Arg.Any<CancellationToken>());
     }
 
     [Fact]

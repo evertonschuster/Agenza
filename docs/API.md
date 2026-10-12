@@ -276,8 +276,8 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | CPF inválido, em qualquer formatação (§4.3) | `POST /api/v1/clients` (`cpf` ou `guardians[0].cpf`) | 400 | `Validation.Failed` (`cpf`: `Validation.Failed`, "O CPF informado é inválido.") |
 | `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (§4.3: mensagem do framework, em inglês) | `Validation.Failed` (`fullName`: `Validation.Failed`) |
 | Filtro de situação desconhecido | `GET /api/v1/clients?status=deleted` | 400 | `Validation.Failed` (`status`: `Client.StatusFilterInvalid`, "A situação deve ser active, inactive ou all.") |
-| Página abaixo de 1, tamanho fora de 1–100 | `GET /api/v1/clients?page=0` | 400 | `Validation.Failed` (`page`: `Client.PageInvalid`; `pageSize`: `Client.PageSizeInvalid`) |
-| Página cujo deslocamento não cabe em `int` | `GET /api/v1/clients?page=21474838&pageSize=100` | 400 | `Validation.Failed` (`page`: `Client.PageTooLarge`) |
+| Página abaixo de 1, tamanho fora de 1–100 | `GET /api/v1/clients?page=0` | 400 | `Validation.Failed` (`page`: `Paging.PageInvalid`; `pageSize`: `Paging.PageSizeInvalid`) |
+| Página cujo deslocamento não cabe em `int` | `GET /api/v1/clients?page=21474838&pageSize=100` | 400 | `Validation.Failed` (`page`: `Paging.PageTooLarge`) |
 | Parâmetro de query que não é número (§4.3) | `GET /api/v1/clients?page=abc` | 400 (mensagem do framework, em inglês) | `Validation.Failed` (`page`: `Validation.Failed`) |
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
 constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado passa pelo roteamento
