@@ -1,12 +1,5 @@
 import { z } from 'zod';
-import type { Tag } from './tag';
-
-// Mirrors backend length limits (ServicesService.Domain.Entities.Tag.NameMaxLength /
-// DescriptionMaxLength) so the maxLength attributes and messages below match what the backend
-// itself enforces. UX pre-check only, never the source of truth — the backend's response is
-// (spec FR-012); this only avoids a pointless round-trip for empty/too-long input.
-export const TAG_NAME_MAX_LENGTH = 40;
-export const TAG_DESCRIPTION_MAX_LENGTH = 200;
+import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH, type Tag } from '../../../model/tag';
 
 export const tagFormSchema = z.object({
   name: z

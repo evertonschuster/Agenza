@@ -54,6 +54,25 @@ document. It also fires on a backend-only PR, by design — that is the drift it
    resolved config, so regenerate rather than reformat by hand.
 4. Never relax the check, never hand-patch the `.d.ts`.
 
+## Calendar dates cross as `Date`, instants as `string`
+
+Two rules, one per direction, that only hold together:
+
+- **Types.** `generateApiTypes.mjs` turns `format: date` into `Date` only in schemas reached solely
+  from request bodies: it follows the `$ref`s from each operation's `requestBody`, so the DTO's name
+  (`*Command`, `*Input`, `*Request`) does not matter. A schema that a response or a parameter also
+  uses stays `string`. A date in a response is therefore always a `string`, and the repository that
+  reads it converts it (`new Date(isoDate)` is midnight UTC). `format: date-time` is never mapped.
+  `scripts/generateApiTypes.test.mjs` pins each case against a fixture document (`typesFromDocument`,
+  no backend needed); change the rule there first.
+- **Wire.** `serializeBody` (`apiClient.ts`, the client's `bodySerializer`) writes **every** `Date`
+  in a request body as `yyyy-MM-dd`, its UTC calendar day; the backend's `DateOnly` binding answers
+  400 to an instant. A `Date` in a body always means a calendar day: never carry an instant in one,
+  send it as the ISO `string` its `date-time` type already asks for.
+
+Build calendar days with `utcDate`/`todayUtc` (`shared/format/date.ts`), never `new Date(y, m, d)`:
+that is local midnight, which east of UTC serializes as the previous day.
+
 ## Write a repository
 
 None exists today ([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)

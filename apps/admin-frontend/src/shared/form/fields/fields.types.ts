@@ -11,6 +11,10 @@ interface BaseFieldProps<T extends FieldValues> {
   hint?: string | undefined;
 }
 
+export interface FieldErrorProps<T extends FieldValues> {
+  name: Path<T>;
+}
+
 type RegisterOwnedProps = 'name' | 'onChange' | 'onBlur' | 'ref';
 type FormFieldOwnedProps = 'id' | 'aria-invalid' | 'aria-describedby';
 
@@ -20,15 +24,44 @@ export type TextFieldProps<T extends FieldValues> = BaseFieldProps<T> &
 export type TextareaFieldProps<T extends FieldValues> = BaseFieldProps<T> &
   Omit<ComponentProps<typeof Textarea>, RegisterOwnedProps | FormFieldOwnedProps>;
 
-export interface ControlledFieldProps<T extends FieldValues> {
-  name: Path<T>;
+export type MaskedFieldProps<T extends FieldValues> = BaseFieldProps<T> &
+  Omit<ComponentProps<typeof Input>, RegisterOwnedProps | FormFieldOwnedProps | 'value'> & {
+    mask: (value: string) => string;
+  };
+
+export type DateFieldProps<T extends FieldValues> = BaseFieldProps<T> &
+  Omit<
+    ComponentProps<typeof Input>,
+    RegisterOwnedProps | FormFieldOwnedProps | 'value' | 'type' | 'inputMode'
+  > & {
+    minDate: Date;
+    maxDate: Date;
+  };
+
+type WithOptionalLabel<P> = Omit<P, 'label'> & { label?: string | undefined };
+
+export type CpfFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<MaskedFieldProps<T>, 'mask'>
+>;
+
+export type PhoneFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<TextFieldProps<T>, 'type'>
+>;
+
+export type EmailFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<TextFieldProps<T>, 'type'>
+>;
+
+export type BirthDateFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<DateFieldProps<T>, 'minDate' | 'maxDate'>
+>;
+
+export interface ControlledFieldProps<T extends FieldValues, N extends Path<T> = Path<T>> {
+  name: N;
   label: string;
   hint?: string | undefined;
   labelHtmlFor?: boolean | undefined;
-  children: (
-    field: ControllerRenderProps<T, Path<T>>,
-    controlProps: FormFieldControlProps,
-  ) => ReactNode;
+  children: (field: ControllerRenderProps<T, N>, controlProps: FormFieldControlProps) => ReactNode;
 }
 
 export interface ColorFieldProps<T extends FieldValues> {

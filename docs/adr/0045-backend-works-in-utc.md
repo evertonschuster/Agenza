@@ -30,8 +30,8 @@ Showing an instant in local time, and reading a local date or time from the user
 - From 21:00 to midnight in Brasília (earlier in UTC−4/−5) the backend's "today" is already tomorrow. For the client
   rules that means: a person turning 18 tomorrow in Brazil is treated as an adult, and a birth date equal to the
   local today is accepted as "in the past". Accepted: nothing in the product depends on the exact hour.
-- A frontend that pre-validates with the browser's local date is stricter than the backend in that window, never
-  looser; the backend stays the authority.
+- The frontend pre-validates with the same UTC calendar date (`todayUtc`), so a birth date the form accepts is one the
+  backend accepts, in every time zone; the backend stays the authority.
 - When a rule does need the business's day — the day's agenda, opening hours, "no booking in the past" — that is a
   new decision (most likely a per-tenant IANA zone), recorded in its own ADR that supersedes this one.
 

@@ -79,14 +79,21 @@ Two kinds of value, and conflating them is the classic bug:
 owner's phone in Brazil, wrong on a CI runner in UTC, and wrong in a way that only shows up as a
 flaky test at 21:00 BRT.
 
-**A date-only value** (`2026-09-04`, no time) — **never hand it to `new Date()`**. The string parses
-as UTC midnight, which is 3 September in São Paulo, so the appointment renders one day early. Split
-the parts and build a local date, or format the string's parts directly:
+**A date-only value** (`2026-09-04`, no time) is a `Date` at midnight UTC, and it is **read only in
+UTC**: `getUTCDate()` and friends, or `Intl.DateTimeFormat` with `timeZone: 'UTC'`. `new Date('2026-09-04')`
+is already that midnight; the bug is reading it back with the device's zone (`getDate()`,
+`toLocaleDateString()` without `timeZone: 'UTC'`), which prints 3 September in São Paulo, so the
+appointment renders one day early.
 
-```ts
-const [year, month, day] = isoDate.split('-').map(Number);
-const localDate = new Date(year, month - 1, day);
-```
+In `admin-frontend` that is `utcDate` in `shared/format/date.ts`; the app holds a calendar day as a
+`Date` and only turns it into text where it is shown (`formatMaskedDate`).
+
+**"Today" for a form rule is the UTC day, like the backend's, not São Paulo's.** `todayUtc()`
+(`shared/format/date.ts`) is the same calendar date the API uses, so a date the form accepts is one the
+API accepts. The pinned zone above is for *rendering instants*; it is not the answer to "what is
+today?" when validating a date the person typed
+([ADR 0045](../../../../docs/adr/0045-backend-works-in-utc.md)). In a test, build the clock with an ISO
+instant with `Z` (`new Date('2026-10-02T12:00:00Z')`), so it passes on a machine in any zone.
 
 Brazil has had no daylight saving since 2019, so the offset itself never moves — which is exactly why
 this bug survives review: the only thing that shifts is a date-only value, and only by one day.

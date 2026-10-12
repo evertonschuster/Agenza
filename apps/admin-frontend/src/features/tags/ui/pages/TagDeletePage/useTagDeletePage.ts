@@ -4,6 +4,7 @@ import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { deleteTag } from '../../../application/tagUseCases';
 import type { Tag } from '../../../model/tag';
+import { TAGS_PATH } from '../../tagsPaths';
 import type { UseTagDeletePageResult } from './useTagDeletePage.types';
 
 export function useTagDeletePage(): UseTagDeletePageResult {
@@ -18,7 +19,7 @@ export function useTagDeletePage(): UseTagDeletePageResult {
       void navigate(-1);
       return;
     }
-    void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+    void navigate({ pathname: TAGS_PATH, search: location.search }, { replace: true });
   }, [navigate, canGoBack, location.search]);
 
   useEffect(() => {

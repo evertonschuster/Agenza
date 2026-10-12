@@ -75,6 +75,30 @@ describe('toFormErrors', () => {
     );
   });
 
+  it('maps an indexed FluentValidation key to the matching nested field path', () => {
+    const problem: ApiProblem = {
+      status: 400,
+      title: 'Ocorreram erros de validação.',
+      errors: {
+        'Guardians[1].Name': [{ message: 'O nome do responsável é obrigatório.' }],
+        'ReferenceContacts[0].Purposes': [{ message: 'Informe ao menos uma finalidade.' }],
+        'Guardians[7].Name': [{ message: 'Um índice que o formulário não tem.' }],
+      },
+    };
+
+    const { fieldErrors, formError } = toFormErrors(problem, [
+      'guardians.0.name',
+      'guardians.1.name',
+      'referenceContacts.0.purposes',
+    ] as const);
+
+    expect(fieldErrors).toEqual({
+      'guardians.1.name': 'O nome do responsável é obrigatório.',
+      'referenceContacts.0.purposes': 'Informe ao menos uma finalidade.',
+    });
+    expect(formError).toBe('Um índice que o formulário não tem.');
+  });
+
   it('ignores an error entry with no message', () => {
     const problem: ApiProblem = {
       status: 400,

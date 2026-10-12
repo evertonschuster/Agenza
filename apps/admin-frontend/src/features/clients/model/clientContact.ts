@@ -1,0 +1,3 @@
+export const CONTACT_NAME_MIN_LENGTH = 2;
+export const CONTACT_NAME_MAX_LENGTH = 150;
+export const CONTACT_RELATIONSHIP_MAX_LENGTH = 60;

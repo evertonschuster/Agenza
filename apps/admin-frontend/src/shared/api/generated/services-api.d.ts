@@ -1864,7 +1864,7 @@ export interface components {
     CreateClientCommand: {
       fullName: string;
       /** Format: date */
-      birthDate: null | string;
+      birthDate: null | Date;
       phone: null | string;
       email: null | string;
       cpf: null | string;
@@ -1983,7 +1983,7 @@ export interface components {
       clientId: string;
       fullName: string;
       /** Format: date */
-      birthDate: null | string;
+      birthDate: null | Date;
       phone: null | string;
       email: null | string;
       cpf: null | string;

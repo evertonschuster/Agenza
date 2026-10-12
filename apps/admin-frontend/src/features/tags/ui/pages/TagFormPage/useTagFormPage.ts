@@ -6,13 +6,13 @@ import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { createTag, updateTag } from '../../../application/tagUseCases';
+import { TAGS_PATH } from '../../tagsPaths';
 import {
-  TAG_FORM_FIELDS,
   tagFormSchema,
   toTagFormFieldValues,
   type TagFormFieldValues,
   type TagFormValues,
-} from '../../../model/tagForm';
+} from './tagForm';
 import { TagFormStatus, type UseTagFormPageResult } from './useTagFormPage.types';
 
 export function useTagFormPage(): UseTagFormPageResult {
@@ -37,7 +37,7 @@ export function useTagFormPage(): UseTagFormPageResult {
       void navigate(-1);
       return;
     }
-    void navigate({ pathname: '/tags', search: location.search }, { replace: true });
+    void navigate({ pathname: TAGS_PATH, search: location.search }, { replace: true });
   }, [navigate, canGoBack, location.search]);
 
   useEffect(() => {
@@ -88,7 +88,7 @@ export function useTagFormPage(): UseTagFormPageResult {
       return;
     }
 
-    applyApiProblem<TagFormFieldValues>(result.error, TAG_FORM_FIELDS, methods.setError);
+    applyApiProblem(result.error, methods);
   }
 
   function submit(event: SubmitEvent<HTMLFormElement>) {

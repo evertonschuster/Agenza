@@ -1,9 +1,9 @@
 import { FormProvider } from 'react-hook-form';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { FormFieldsSkeleton } from '@/shared/ui/form-field';
-import { TAG_FORM_FIELDS } from '../../../model/tagForm';
+import { DialogFormFooter } from '@/widgets/form-footer';
+import { TAG_FORM_FIELDS } from './tagForm';
 import { TagFormBody } from './components/TagFormBody';
-import { TagFormFooter } from './components/TagFormFooter';
 import { TagFormHeader } from './components/TagFormHeader';
 import { useTagFormPage } from './useTagFormPage';
 import { TagFormStatus } from './useTagFormPage.types';
@@ -23,7 +23,7 @@ export function TagFormPage() {
             ) : (
               <TagFormBody />
             )}
-            <TagFormFooter canSubmit={canSubmit} isSaving={isSaving} />
+            <DialogFormFooter canSubmit={canSubmit} isSaving={isSaving} />
           </form>
         </FormProvider>
       </DialogContent>

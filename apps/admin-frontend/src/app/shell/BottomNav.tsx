@@ -5,7 +5,7 @@ import { cn } from '@/shared/lib/utils';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from '@/shared/ui/sheet';
 import { NAV_DESTINATIONS } from './navigation';
 
-const PRIMARY_HREFS = ['/', '/agenda', '/clientes', '/servicos'];
+const PRIMARY_HREFS = ['/', '/agenda', '/pessoas', '/servicos'];
 
 const TAB_CLASS =
   'flex min-h-11 flex-1 flex-col items-center justify-center gap-0.5 py-1 text-xs text-muted-foreground';

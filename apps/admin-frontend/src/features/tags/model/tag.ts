@@ -1,3 +1,6 @@
+export const TAG_NAME_MAX_LENGTH = 40;
+export const TAG_DESCRIPTION_MAX_LENGTH = 200;
+
 export interface Tag {
   id: string;
   name: string;
@@ -6,19 +9,3 @@ export interface Tag {
 }
 
 export type TagInput = Pick<Tag, 'name' | 'color' | 'description'>;
-
-export interface TagColorOption {
-  value: string;
-  label: string;
-}
-
-export const TAG_COLOR_PALETTE: readonly TagColorOption[] = [
-  { value: '#0d9488', label: 'Verde-azulado' },
-  { value: '#0ea5e9', label: 'Azul' },
-  { value: '#8b5cf6', label: 'Violeta' },
-  { value: '#ec4899', label: 'Rosa' },
-  { value: '#ef4444', label: 'Vermelho' },
-  { value: '#f59e0b', label: 'Âmbar' },
-  { value: '#22c55e', label: 'Verde' },
-  { value: '#64748b', label: 'Cinza' },
-];

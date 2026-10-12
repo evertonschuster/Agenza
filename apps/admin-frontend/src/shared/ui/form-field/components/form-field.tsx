@@ -15,10 +15,10 @@ export function FormField({ label, hint, error, labelHtmlFor = true, children }:
 
   return (
     <div className="space-y-1.5">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         <Label htmlFor={labelHtmlFor ? id : undefined}>{label}</Label>
         {hint && (
-          <span id={hintId} className="text-xs text-muted-foreground">
+          <span id={hintId} className="ml-auto text-xs whitespace-nowrap text-muted-foreground">
             {hint}
           </span>
         )}

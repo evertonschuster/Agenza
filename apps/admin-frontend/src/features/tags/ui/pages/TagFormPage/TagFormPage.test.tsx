@@ -12,8 +12,7 @@ import {
 } from 'react-router';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagFormPage } from './TagFormPage';
-import type { Tag } from '../../../model/tag';
-import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH } from '../../../model/tagForm';
+import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH, type Tag } from '../../../model/tag';
 
 const { mockList, mockGet, mockCreate, mockUpdate } = vi.hoisted(() => ({
   mockList: vi.fn(),

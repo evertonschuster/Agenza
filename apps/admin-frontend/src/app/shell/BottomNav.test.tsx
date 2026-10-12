@@ -7,13 +7,13 @@ import { BottomNav } from './BottomNav';
 describe('BottomNav', () => {
   it('shows the four primary destinations directly and marks the active one', () => {
     render(
-      <MemoryRouter initialEntries={['/clientes']}>
+      <MemoryRouter initialEntries={['/pessoas']}>
         <BottomNav />
       </MemoryRouter>,
     );
 
     expect(screen.getByRole('link', { name: /Início/ })).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /Clientes/ })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('button', { name: 'Mais' })).toBeInTheDocument();
   });
 

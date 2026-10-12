@@ -52,14 +52,15 @@ not read as "sem conexão", because the user's actual next step is entirely diff
 
 ## `errors` is not always field errors
 
-This is the trap. `errors` is `Record<string, { code?, message? }[]>` and gets filled **three
+This is the trap. `errors` is `Record<string, { code?, message?, meta? }[]>` and gets filled **three
 different ways** (`ApiProblemDetailsFactory`):
 
 1. **Validation (400).** Keys come from FluentValidation's `PropertyName`, grouped in
    `Dispatcher.cs`, and `ApiProblemDetailsFactory` writes them as the **camelCase path of the JSON
    body** (`name`, `durationMinutes`, `guardians[0].name`; ADR 0051). A cross-field rule can be re-keyed onto one
    field with `OverridePropertyName` (see `CreateServiceCommandValidator.cs`), so the key set is not
-   mechanically the command's properties either.
+   mechanically the command's properties either. `toFormErrors` turns the index of a list item into a
+   path segment: `guardians[1].name` becomes `guardians.1.name`.
 2. **A body that did not bind (400).** Before any validator runs, MVC fills the keys from the JSON
    member path (`cpf`, `guardians[0].cpf`), each item with `code: "Validation.Failed"`. The `message` is
    pt-BR only when a shared value object rejected the value; otherwise it is the framework's English
@@ -69,7 +70,13 @@ different ways** (`ApiProblemDetailsFactory`):
 3. **Any error without field errors** (Conflict, NotFound, Failure, and a Validation the domain
    rejected after the validator let it through). `CreateSingleErrorDictionary`
    puts the error itself under the **empty-string key `""`**. So a 409 arrives with a populated
-   `errors` that maps to no field at all.
+   `errors` that maps to no field at all. The exception: a handler may build the `Error` with its own
+   `FieldErrors`, and then the 409 is keyed by field (`cpf`, `email` in `CreateClient`).
+
+`meta` is an optional string map on one entry, absent when empty. It carries context for the client,
+never prose: the CPF and e-mail conflicts put `clientId` and `clientName` there, and the record can always
+be opened because neither conflict matches a deleted person. Branch on the entry's `code` before
+trusting a `meta` key.
 
 Authorization and unexpected problems carry an empty `errors` object, never `null` in practice —
 but the type says nullable, so guard anyway.
@@ -93,6 +100,8 @@ speculative. Revisit if a real case needs multiple messages per field; don't bui
 
 ```ts
 // shared/api/formErrors.ts (verbatim)
+const toFieldPath = (key: string) => key.replace(/\[(\d+)\]/g, '.$1').toLowerCase();
+
 export function toFormErrors<F extends string>(
   problem: ApiProblem,
   fields: readonly F[],
@@ -104,7 +113,7 @@ export function toFormErrors<F extends string>(
   for (const [key, entries] of Object.entries(problem.errors ?? {})) {
     const message = entries[0]?.message;
     if (!message) continue;
-    const field = byField.get(key.toLowerCase());
+    const field = byField.get(toFieldPath(key));
     if (field) fieldErrors[field] = message;
     else formLevel.push(message);
   }

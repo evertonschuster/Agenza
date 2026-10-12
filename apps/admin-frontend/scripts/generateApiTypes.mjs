@@ -3,6 +3,7 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import path from 'node:path';
 import openapiTS, { astToString } from 'openapi-typescript';
 import prettier from 'prettier';
+import ts from 'typescript';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const OUTPUT_PATH = path.join(
@@ -33,10 +34,78 @@ function stripTenantHeaderParam(document) {
   return document;
 }
 
+const SCHEMA_REF = '#/components/schemas/';
+
+function schemaRefsIn(value, refs = new Set()) {
+  if (Array.isArray(value)) {
+    for (const item of value) schemaRefsIn(item, refs);
+  } else if (value !== null && typeof value === 'object') {
+    for (const [key, item] of Object.entries(value)) {
+      if (key === '$ref' && typeof item === 'string' && item.startsWith(SCHEMA_REF)) {
+        refs.add(item.slice(SCHEMA_REF.length));
+      } else {
+        schemaRefsIn(item, refs);
+      }
+    }
+  }
+  return refs;
+}
+
+function reachableSchemas(document, roots) {
+  const reached = new Set();
+  const pending = [...schemaRefsIn(roots)];
+  while (pending.length > 0) {
+    const name = pending.pop();
+    if (reached.has(name)) continue;
+    reached.add(name);
+    pending.push(...schemaRefsIn(document.components?.schemas?.[name]));
+  }
+  return reached;
+}
+
+function requestBodyOnlySchemas(document) {
+  const operations = Object.values(document.paths ?? {}).flatMap((pathItem) =>
+    HTTP_METHODS.map((method) => pathItem[method]).filter(Boolean),
+  );
+  const sent = reachableSchemas(
+    document,
+    operations.map((operation) => operation.requestBody),
+  );
+  const usedElsewhere = reachableSchemas(
+    document,
+    operations.map(({ requestBody: _requestBody, ...rest }) => rest),
+  );
+  return new Set([...sent].filter((name) => !usedElsewhere.has(name)));
+}
+
+function requestDateAsDate(requestOnly) {
+  return (schemaObject, { path: schemaPath = '' }) => {
+    const schemaName = schemaPath.startsWith(SCHEMA_REF)
+      ? schemaPath.slice(SCHEMA_REF.length).split('/')[0]
+      : undefined;
+    if (schemaObject.format !== 'date' || !requestOnly.has(schemaName)) return undefined;
+
+    const date = ts.factory.createTypeReferenceNode('Date');
+    if (!Array.isArray(schemaObject.type) || !schemaObject.type.includes('null')) return date;
+
+    return ts.factory.createUnionTypeNode([
+      ts.factory.createLiteralTypeNode(ts.factory.createNull()),
+      date,
+    ]);
+  };
+}
+
+export async function typesFromDocument(openApiDocument) {
+  const document = stripTenantHeaderParam(openApiDocument);
+  const ast = await openapiTS(document, {
+    transform: requestDateAsDate(requestBodyOnlySchemas(document)),
+  });
+  return astToString(ast);
+}
+
 export async function generate() {
   const document = await fetch(new URL(OPENAPI_URL)).then((response) => response.json());
-  const ast = await openapiTS(stripTenantHeaderParam(document));
-  const raw = astToString(ast);
+  const raw = await typesFromDocument(document);
   const prettierConfig = (await prettier.resolveConfig(__dirname)) ?? {};
   const formatted = await prettier.format(raw, { ...prettierConfig, parser: 'typescript' });
   const banner =

@@ -70,6 +70,11 @@ palette.
 | **Nenhum(a) … ainda** | Sem resultados, Lista vazia, Nada por aqui | The never-created empty state. |
 | **Não foi possível …** | Erro ao …, Falha ao …, Ops! | Names the action that failed, then the next step. |
 
+The domain nouns follow the same rule from the other side: the screen says **Pessoa**, **Responsável**,
+**Pessoa de referência**, **Etiqueta**, while the code keeps the backend's English names (`Client`,
+`ClientGuardian`, `ClientReferenceContact`, `Tag`). The full screen × code table is in
+[`docs/ARCHITECTURE.md` §1](../../../apps/admin-frontend/docs/ARCHITECTURE.md), under "Vocabulary".
+
 ## Where strings and formatters live
 
 **There is no message catalog and no `t()`.** Internationalisation beyond pt-BR is explicitly out of
@@ -79,11 +84,12 @@ i18n layer to "prepare" for a language nobody asked for.
 The one exception: a **code → message map is data, not markup**. It belongs in the slice's `model/`,
 where it is pure and testable without React, next to the branch that consumes it.
 
-**Formatters live in `src/shared/format/`** — cross-cutting, no business rule, so `shared/` by the
-dependency direction in [`docs/ARCHITECTURE.md` §1](../../../apps/admin-frontend/docs/ARCHITECTURE.md).
-The folder does not exist yet; create it with the first screen that needs it, not before. Note that
-the coverage exclusion covers `src/shared/ui/**` only — `shared/format/**` is measured, and these are
-exactly the pure functions that make the gate easy.
+**Formatters live in `src/shared/format/`** (`date.ts`, `age.ts`) — cross-cutting, no business rule,
+so `shared/` by the dependency direction in
+[`docs/ARCHITECTURE.md` §1](../../../apps/admin-frontend/docs/ARCHITECTURE.md). A value with its own
+validation and limits (CPF, phone, e-mail, birth date) is not a formatter: its mask and parse live with
+its schema in `src/shared/values/<value>.ts`. Note that the coverage exclusion covers `src/shared/ui/**`
+only — both folders are measured, and these are exactly the pure functions that make the gate easy.
 
 ## What breaks
 

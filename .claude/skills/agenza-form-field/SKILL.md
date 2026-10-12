@@ -5,20 +5,30 @@ description: Use when building or changing a form in admin-frontend — wiring R
 
 # Forms — React Hook Form + Zod + `shared/form/fields/`
 
-`TagFormPage` (`src/features/tags/ui/pages/TagFormPage/`) is the reference implementation and, as of
-this writing, the **only** consumer of everything described here. Read
+`TagFormPage` (`src/features/tags/ui/pages/TagFormPage/`) is the reference implementation for a
+dialog form. `ClientFormPage` (`src/features/clients/ui/pages/ClientFormPage/`) is the second
+consumer and the reference for a full-page form with **field arrays** (`useFieldArray`, nested paths
+such as `guardians.${number}.name`), masked inputs (`MaskedField`), a typed-or-picked date (`DateField`: mask plus calendar popover, bounded by `minDate`/`maxDate`) and a custom multi-value control
+(`CheckboxGroup` through a `ControlledField` render function). Read
 [`docs/ARCHITECTURE.md` §5](../../../apps/admin-frontend/docs/ARCHITECTURE.md) (the "Tag create/edit
 UI reintroduced on React Hook Form + Zod" row and the row right after it) for the decision history
 and the two gotchas below in their original context, and §6's "Provisional" section for what's still
-unproven with only one consumer.
+unproven.
+
+Backend errors on a list item arrive keyed `guardians[1].name`; `toFormErrors` normalizes that to
+`guardians.1.name`, and `applyApiProblem` matches it against the **current** field paths: it derives
+them from `methods.getValues()` when the response arrives (top-level plus one per item), so a page
+keeps no path list of its own. A field-array root error (e.g.
+"informe ao menos um responsável") lives at `errors.guardians.message` / `errors.guardians.root.message`
+and has no input to attach to: render it in the section.
 
 ## The three layers, one job each
 
 | Layer | File | Job |
 | --- | --- | --- |
 | Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
-| RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem<T>(problem, fields, setError)` — calls the above, then `setError` per field plus `setError('root.serverError', …)`. Knows both shapes; the only file that does. |
-| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero domain knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
+| RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem(problem, methods)` — builds the current field paths from `methods.getValues()`, calls the above, then `setError` per field, `setError('root.serverError', …)` for the form-level message and `setFocus` on the first invalid field. Knows both shapes; the only file that does. |
+| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed
 keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s
@@ -26,12 +36,20 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
 
 ## Wiring a new entity's form
 
-1. **Schema** in that entity's `model/<entity>Form.ts`, mirroring `tagForm.ts`:
+1. **Limits and invariants** in the slice's `model/<entity>.ts`, beside the entity's types, mirroring
+   the backend aggregate: plain constants (`TAG_NAME_MAX_LENGTH`, `MAX_GUARDIANS`) and pure functions
+   over the plain types (`needsGuardian(birthDate, guardianCount, today)`). No Zod, no pt-BR copy, no
+   class. Anything outside the form that needs the rule (a list badge, another page) imports it from
+   there, and so does the form's own UI when it shows the rule before submit.
+
+   **Schema** in the page that owns the form, `ui/pages/<X>FormPage/<x>Form.ts`, mirroring
+   `tagForm.ts`, built from those limits and composing those invariants:
    ```ts
-   export const xFormSchema = z.object({ /* z.string().trim().min(1, '…') etc */ });
+   export const xFormSchema = z.object({
+     name: z.string().trim().min(1, '…').max(X_NAME_MAX_LENGTH, `… ${X_NAME_MAX_LENGTH} …`),
+   });
    export type XFormFieldValues = z.input<typeof xFormSchema>;
    export type XFormValues = z.output<typeof xFormSchema>;
-   export const X_FORM_FIELDS = xFormSchema.keyof().options;
 
    export function toXFormFieldValues(x?: X): XFormFieldValues {
      return { name: x?.name ?? '', description: x?.description ?? '' };
@@ -39,8 +57,11 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    ```
    **Use `z.input`/`z.output`, never a single `z.infer`, the moment the schema has a `.refine()` or
    `.transform()`.** See Gotcha 1 below — this is not optional once either is present.
-   `keyof().options` is already typed as the key union, so the model needs no `as` cast and no
-   `react-hook-form` import — `model/` stays library-free. `toXFormFieldValues` is the inverse of the
+   **No field list for errors**: `applyApiProblem` derives the paths from `methods.getValues()`, so
+   `toXFormFieldValues()` must return every field (the `z.input` return type already forces it).
+   Export `X_FORM_FIELDS = xFormSchema.keyof().options` only when something renders from it, like
+   the loading skeleton below; an export kept alive only by its own test is dead code.
+   `toXFormFieldValues` is the inverse of the
    schema's `.transform()`s (a `null` description back to `''`) and sits beside them: `useForm`'s
    `defaultValues` is `toXFormFieldValues()`, the edit fetch's `reset` is `toXFormFieldValues(entity)`.
 
@@ -58,7 +79,7 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    async function onValid(values: XFormValues) {
      const result = isEdit ? await xRepository.update(id, values) : await xRepository.create(values);
      if (result.ok) { /* publish, toast, navigate */ return; }
-     applyApiProblem<XFormFieldValues>(result.error, X_FORM_FIELDS, methods.setError);
+     applyApiProblem(result.error, methods);
    }
 
    function submit(event: SubmitEvent<HTMLFormElement>) {
@@ -74,20 +95,23 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    trips `@typescript-eslint/no-misused-promises`; `tsc` alone won't catch it, only `npm run lint`.
 
    `canSubmit` is the rule behind the **Salvar** button's `disabled` state. The form's
-   `onSubmit` calls `submit`. The footer uses:
+   `onSubmit` calls `submit`. The footer is a widget, chosen by where the form lives:
    ```tsx
-   <DialogClose disabled={isSaving} render={<Button variant="outline" />}>Cancelar</DialogClose>
-   <ActionButton type="submit" disabled={!canSubmit} pending={isSaving}>
-     {isSaving ? 'Salvando…' : 'Salvar'}
-   </ActionButton>
+   import { DialogFormFooter, PageFormFooter } from '@/widgets/form-footer';
+
+   <DialogFormFooter canSubmit={canSubmit} isSaving={isSaving} />
+   <PageFormFooter isSaving={isSaving} cancelTo="/pessoas" />
    ```
-   `ActionButton` turns `pending` into a spinner and disables the button.
+   `DialogFormFooter` goes inside a `Dialog` (its Cancelar is a `DialogClose`); `PageFormFooter` goes on
+   a full page and requires `cancelTo` (its Cancelar is a link that turns into a disabled button while
+   saving). Both render **Salvar**/**Salvando…** as an `ActionButton`, which turns `pending` into a
+   spinner and disables the button.
 
    **While saving, the dialog offers no way out** — a Cancelar clicked mid-request would close the
    dialog while the save still lands, a Cancel that doesn't cancel. Three lines, all with APIs the
    dialog already had: the hook's `onOpenChange` ignores a close while `isSaving` (a controlled dialog
-   stays open when its handler doesn't close it, which covers Esc and outside press), Cancelar is
-   `<DialogClose disabled={isSaving}>`, and the shell passes `showCloseButton={!isSaving}` to
+   stays open when its handler doesn't close it, which covers Esc and outside press),
+   `DialogFormFooter` disables its Cancelar, and the shell passes `showCloseButton={!isSaving}` to
    `DialogContent`. `shared/ui/dialog` itself stays a plain wrapper — a `busy` prop with a context was
    tried there and reverted as more machinery than three lines per dialog.
 
@@ -101,9 +125,10 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    field-values type as an explicit JSX type argument:
    ```tsx
    import { ColorField, TextField } from '@/shared/form/fields';
-   import type { XFormFieldValues } from '../../model/xForm';
+   import { X_NAME_MAX_LENGTH } from '../../../../model/x';
+   import type { XFormFieldValues } from '../xForm';
 
-   <TextField<XFormFieldValues> name="name" label="Nome" hint="…" maxLength={40} placeholder="…" />
+   <TextField<XFormFieldValues> name="name" label="Nome" hint="…" maxLength={X_NAME_MAX_LENGTH} />
    <ColorField<XFormFieldValues> name="color" label="Cor" aria-label="Cor…" options={PALETTE} />
    ```
    The type argument is what makes `name` type-check against `Path<XFormFieldValues>` — a bare
@@ -111,7 +136,32 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    `FieldValues`), but silently accepts any string as `name`, losing the one thing worth keeping. A
    native-input field (`register()`-bound) is `TextField`/`TextareaField`. A custom control needs
    `ControlledField` (pass a render function) or a named specialization built on top of it, per the
-   rule below.
+   rule below. When the render function needs the value's own type, pass the path as the second type
+   argument and drop any cast: with
+   ``<ControlledField<XFormFieldValues, `contacts.${number}.purposes`> …>``, `field.value` is that
+   array, not the union of every value in the form.
+
+5. **A CPF, phone, e-mail or birth date is not configured by hand: reuse the pair.** The schema half
+   comes from that value's file in `@/shared/values/` (`cpfSchema` from `@/shared/values/cpf`, then
+   `phoneSchema`, `emailSchema`, `birthDateSchema`: an empty field becomes `null`, anything else is
+   parsed and fails with the pt-BR message), the
+   field half from `@/shared/form/fields` (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`:
+   mask, input type, limit, placeholder, default label and `opcional` hint already set, each one
+   overridable by prop):
+   ```ts
+   const personSchema = z.object({ phone: phoneSchema, cpf: cpfSchema });
+   ```
+   ```tsx
+   <CpfField<XFormFieldValues> name="cpf" />
+   <PhoneField<XFormFieldValues> name="phone" label="Telefone do contato" />
+   ```
+   The parsing underneath sits in the same file as the schema (`parseCpf`, `parsePhone`, `parseEmail`:
+   canonical value or `null`, mirroring the backend's `Create`), so never re-validate with a regex of
+   your own. A new value type (a CNPJ) is one file, `shared/values/cnpj.ts`, mirroring the backend's
+   value object: its `parseX`, its limits and a schema built with `optionalValue(parse)` (its
+   `fail(message)` becomes the Zod issue); plus, only if several forms will configure it the same way,
+   a preset field in `shared/form/fields/`. The schemas have no required variant yet; add it to `optionalValue` when the first
+   form needs one.
 
 ## Editing an existing entity: fetch fresh, don't trust what the list already had
 
@@ -156,6 +206,11 @@ already applies to `entities/` and to not rebuilding `color-swatch-picker` befor
 (ARCHITECTURE §1, §5) — a one-off specialization for a control only `ControlledField` has ever wrapped
 is guessing at an API shape with a sample size of one.
 
+The value presets (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`) are a different thing:
+they are not custom controls but fixed configurations of `MaskedField`/`TextField`/`DateField`, kept in
+one place because the same value was being configured by hand at several call sites (the phone three
+times). Add another only for a value type that will be configured the same way in more than one form.
+
 ## Two gotchas, both caught by `tsc`/review, not by a test
 
 **1. `z.infer` is not enough once a schema has `.refine()` or `.transform()`.** A schema's *input*
@@ -167,7 +222,7 @@ TTransformedValues>` needs the input shape as its first generic, the output shap
 Modeling both as one `z.infer<typeof schema>` type — the natural first guess — compiles right up
 until `resolver: zodResolver(schema)` is attached to `useForm`, where `tsc` names a `Resolver<Input,
 any, Output>` mismatch. Fix: `z.input<typeof schema>` for the field components and
-`applyApiProblem`'s generic, `z.output<typeof schema>` for `onValid`'s parameter — see
+`useForm`'s first generic (`applyApiProblem` infers its own from `methods`), `z.output<typeof schema>` for `onValid`'s parameter — see
 `TagFormFieldValues`/`TagFormValues` in `tagForm.ts`.
 
 **2. Not every control accepts `id`/`htmlFor`.** `FormField`'s `<Label htmlFor={id}>` assumes the
