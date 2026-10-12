@@ -50,7 +50,6 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    });
    export type XFormFieldValues = z.input<typeof xFormSchema>;
    export type XFormValues = z.output<typeof xFormSchema>;
-   export const X_FORM_FIELDS = xFormSchema.keyof().options;
 
    export function toXFormFieldValues(x?: X): XFormFieldValues {
      return { name: x?.name ?? '', description: x?.description ?? '' };
@@ -58,8 +57,11 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
    ```
    **Use `z.input`/`z.output`, never a single `z.infer`, the moment the schema has a `.refine()` or
    `.transform()`.** See Gotcha 1 below — this is not optional once either is present.
-   `keyof().options` is already typed as the key union, so the schema file needs no `as` cast and no
-   `react-hook-form` import. `toXFormFieldValues` is the inverse of the
+   **No field list for errors**: `applyApiProblem` derives the paths from `methods.getValues()`, so
+   `toXFormFieldValues()` must return every field (the `z.input` return type already forces it).
+   Export `X_FORM_FIELDS = xFormSchema.keyof().options` only when something renders from it, like
+   the loading skeleton below; an export kept alive only by its own test is dead code.
+   `toXFormFieldValues` is the inverse of the
    schema's `.transform()`s (a `null` description back to `''`) and sits beside them: `useForm`'s
    `defaultValues` is `toXFormFieldValues()`, the edit fetch's `reset` is `toXFormFieldValues(entity)`.
 

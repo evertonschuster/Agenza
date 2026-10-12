@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
 import { utcDate } from '@/shared/format/date';
@@ -79,14 +79,13 @@ describe('DateField', () => {
   });
 
   it.each([['disabled'], ['readOnly']] as const)(
-    'does not open the calendar from the button or the arrow key while the field is %s',
+    'does not open the calendar while the field is %s',
     async (mode) => {
       const user = userEvent.setup();
       render(<Harness {...{ [mode]: true }} />);
 
       expect(calendarButton()).toBeDisabled();
-      await user.click(input());
-      await user.keyboard('{ArrowDown}');
+      await user.click(calendarButton());
 
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     },
@@ -173,14 +172,30 @@ describe('DateField', () => {
     expect(within(calendar).getByRole('grid', { name: 'outubro 2026' })).toBeInTheDocument();
   });
 
-  it('opens the calendar with the arrow down key from the input', async () => {
+  it('opens the calendar from the keyboard through its button and closes it with Esc', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.click(input());
+    await user.tab();
+    expect(calendarButton()).toHaveFocus();
+
+    await user.keyboard('{Enter}');
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(calendarButton()).toHaveFocus();
+  });
+
+  it('leaves the arrow keys to the input', async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     await user.click(input());
     await user.keyboard('{ArrowDown}');
 
-    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
   it('fills the field with the picked day and closes the calendar', async () => {

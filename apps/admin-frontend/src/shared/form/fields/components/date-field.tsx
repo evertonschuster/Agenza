@@ -1,4 +1,4 @@
-import { useState, type KeyboardEvent, type Ref } from 'react';
+import { useState, type Ref } from 'react';
 import { useFormContext, type FieldValues } from 'react-hook-form';
 import { CalendarIcon, XIcon } from 'lucide-react';
 import { formatMaskedDate, maskDate, parseMaskedDate } from '@/shared/format/date';
@@ -81,12 +81,6 @@ function DateFieldControl({
     setOpen(false);
   }
 
-  function openOnArrowDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key !== 'ArrowDown' || isLocked) return;
-    event.preventDefault();
-    setOpen(true);
-  }
-
   return (
     <InputGroup>
       <Popover open={open} onOpenChange={setOpen}>
@@ -97,7 +91,6 @@ function DateFieldControl({
           inputMode="numeric"
           placeholder={placeholder}
           onChange={(event) => onChange(maskDate(event.target.value))}
-          onKeyDown={openOnArrowDown}
         />
         <InputGroupAddon align="inline-end" className="gap-0.5">
           {hasValue && !isLocked && (

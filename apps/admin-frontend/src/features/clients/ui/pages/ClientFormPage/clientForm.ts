@@ -96,10 +96,6 @@ export type ClientFormValues = z.output<typeof clientFormSchema>;
 export type GuardianFormFieldValues = ClientFormFieldValues['guardians'][number];
 export type ReferenceContactFormFieldValues = ClientFormFieldValues['referenceContacts'][number];
 
-export const CLIENT_FORM_FIELDS = clientFormObject.keyof().options;
-export const GUARDIAN_FORM_FIELDS = guardianSchema.keyof().options;
-export const REFERENCE_CONTACT_FORM_FIELDS = referenceContactSchema.keyof().options;
-
 export function emptyClientFormFieldValues(): ClientFormFieldValues {
   return {
     fullName: '',

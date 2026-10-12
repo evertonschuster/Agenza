@@ -83,7 +83,7 @@ describe('tagFormSchema', () => {
     }
   });
 
-  it('lists every schema field in TAG_FORM_FIELDS, so a backend error on any of them maps to its input', () => {
+  it('lists every schema field in TAG_FORM_FIELDS, so the loading skeleton has one row per field', () => {
     expect(TAG_FORM_FIELDS).toEqual(['name', 'color', 'description']);
   });
 });

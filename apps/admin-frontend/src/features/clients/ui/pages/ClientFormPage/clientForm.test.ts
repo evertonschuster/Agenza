@@ -1,9 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { utcDate } from '@/shared/format/date';
 import {
-  CLIENT_FORM_FIELDS,
-  GUARDIAN_FORM_FIELDS,
-  REFERENCE_CONTACT_FORM_FIELDS,
   clientFormSchema,
   emptyGuardian,
   emptyReferenceContact,
@@ -317,23 +314,8 @@ describe('clientFormSchema', () => {
   });
 });
 
-describe('form field lists', () => {
-  it('names every field the backend can report on', () => {
-    expect(CLIENT_FORM_FIELDS).toEqual([
-      'fullName',
-      'birthDate',
-      'phone',
-      'email',
-      'cpf',
-      'administrativeNotes',
-      'guardians',
-      'referenceContacts',
-    ]);
-    expect(GUARDIAN_FORM_FIELDS).toEqual(['name', 'relationship', 'phone', 'cpf']);
-    expect(REFERENCE_CONTACT_FORM_FIELDS).toEqual(['name', 'relationship', 'phone', 'purposes']);
-  });
-
-  it('starts empty so nothing is asked up front', () => {
+describe('emptyClientFormFieldValues', () => {
+  it('holds every field, empty, so nothing is asked up front and a backend error on any of them finds its input', () => {
     expect(emptyClientFormFieldValues()).toEqual({
       fullName: '',
       birthDate: '',
