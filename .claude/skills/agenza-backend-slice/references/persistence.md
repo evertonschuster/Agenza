@@ -17,7 +17,7 @@ no `Remove` until a delete exists, no `ListAsync` until a list exists.
 | `CountBy<Thing>Async(id)` | `int` | an "in use" rule |
 | `GetByIdsAsync(ids)` | `IReadOnlyList<T>` | one query for a set — never one per row |
 | `ListAsync(filters)` | `IReadOnlyList<T>` | an unpaged list, ordered |
-| `ListAsync(<Entity>ListFilter)` | `PagedResult<T>` | a paged list, ordered: the filter extends `PageRequest` and carries the list's plain filters; the adapter calls `ListPagedAsync(filter, filterAndOrder, ct)` |
+| `ListAsync(<Entity>ListFilter)` | `PagedResult<T>` | a paged list, ordered: the filter extends `PageRequest` and carries the list's plain filters; the adapter calls `ListPagedAsync(filter, filterAndOrder, ct)` with the root's `Include`s, and `filterAndOrder` returns an `IOrderedQueryable` |
 | `Add(entity)`, `UpdateAsync(entity)`, `Remove(entity)` | `void` / `Task` | stage; the handler commits |
 
 Parameters are ids, value objects for value-object columns and plain filter values — a list with several of them takes
@@ -87,5 +87,6 @@ The index decides under concurrency. The pre-check exists only to answer with th
 - `SqlQuery`, `FromSql`, `ExecuteSql`, `BeginTransaction`, a cache — without evidence in the PR
 - an `Id`-only foreign key between two tenant-owned entities
 - a list or page without an explicit order
+- a list or page whose roots come without their children: `UpdateAsync` on one deletes them
 - a literal length in a configuration where a constant exists
 - an edited migration that was already committed

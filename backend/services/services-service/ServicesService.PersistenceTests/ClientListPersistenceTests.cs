@@ -17,7 +17,12 @@ public class ClientListPersistenceTests
     private const string PauloCpf = "11144477735";
     private static readonly DateOnly Today = new(2026, 10, 12);
 
-    private static Client NewClient(string fullName, string? cpf = null, string? email = null)
+    private static Client NewClient(
+        string fullName,
+        string? cpf = null,
+        string? email = null,
+        IReadOnlyCollection<GuardianData>? guardians = null,
+        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null)
     {
         var data = new ClientData(
             FullName.Create(fullName).Value,
@@ -26,9 +31,19 @@ public class ClientListPersistenceTests
             email is null ? null : EmailAddress.Create(email).Value,
             cpf is null ? null : CpfNumber.Create(cpf).Value,
             null,
-            [],
-            []);
+            guardians ?? [],
+            referenceContacts ?? []);
         return Client.Create(data, Today).Value;
+    }
+
+    private static GuardianData Guardian(string name)
+    {
+        return new GuardianData(name, "Mãe", null, null);
+    }
+
+    private static ReferenceContactData ReferenceContact(string name)
+    {
+        return new ReferenceContactData(FullName.Create(name).Value, "Tio", null, new HashSet<ContactPurpose> { ContactPurpose.Emergency });
     }
 
     private static async Task Save(ServicesDataContext context, Client client)
@@ -351,24 +366,58 @@ public class ClientListPersistenceTests
     }
 
     [Fact]
-    public async Task List_ReturnsTheRootWithoutLoadingItsContacts()
+    public async Task List_ReturnsEachClientWithItsContacts_WithoutChangingThePageOrTheTotal()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
-        var data = new ClientData(
-            FullName.Create("Ana Lima").Value,
-            null,
-            null,
-            null,
-            null,
-            null,
-            [new GuardianData("Bia Lima", "Mãe", null, null)],
-            []);
-        await SaveAll(databaseName, tenantId, Client.Create(data, Today).Value);
+        await SaveAll(
+            databaseName,
+            tenantId,
+            NewClient(
+                "Ana Lima",
+                guardians: [Guardian("Bia Lima"), Guardian("Abel Lima")],
+                referenceContacts: [ReferenceContact("Davi Lima"), ReferenceContact("Caio Lima")]),
+            NewClient(
+                "Bruno Dias",
+                guardians: [Guardian("Eva Dias"), Guardian("Fabio Dias")],
+                referenceContacts: [ReferenceContact("Gil Dias")]),
+            NewClient("Carla Souza"));
 
-        var page = await List(databaseName, tenantId);
+        var page = await List(databaseName, tenantId, page: 1, pageSize: 2);
 
-        page.Items.Should().ContainSingle().Which.Guardians.Should().BeEmpty();
+        Names(page).Should().Equal("Ana Lima", "Bruno Dias");
+        page.TotalCount.Should().Be(3);
+        page.Items[0].Guardians.Select(guardian => guardian.Name).Should().Equal("Abel Lima", "Bia Lima");
+        page.Items[0].ReferenceContacts.Select(contact => contact.Name).Should().Equal("Caio Lima", "Davi Lima");
+        page.Items[1].Guardians.Should().HaveCount(2);
+        page.Items[1].ReferenceContacts.Should().ContainSingle();
+    }
+
+    [Fact]
+    public async Task List_AClientChangedFromThePageAndSaved_KeepsItsContacts()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient("Ana Lima", guardians: [Guardian("Bia Lima")], referenceContacts: [ReferenceContact("Caio Lima")]);
+        await SaveAll(databaseName, tenantId, client);
+
+        await using (var context = PersistenceContext.Create(databaseName, tenantId))
+        {
+            var repository = new ClientRepository(context);
+            var page = await repository.ListAsync(new ListClientsQuery().ToFilter(), CancellationToken.None);
+            var listed = page.Items.Single();
+            listed.Inactivate();
+            await repository.UpdateAsync(listed, CancellationToken.None);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using (var context = PersistenceContext.Create(databaseName, tenantId))
+        {
+            var reloaded = await new ClientRepository(context).GetByIdAsync(client.Id, CancellationToken.None);
+            reloaded!.Status.Should().Be(ClientStatus.Inactive);
+            reloaded.Guardians.Should().ContainSingle().Which.Name.Should().Be("Bia Lima");
+            reloaded.ReferenceContacts.Should().ContainSingle().Which.Name.Should().Be("Caio Lima");
+        }
     }
 
     [Fact]

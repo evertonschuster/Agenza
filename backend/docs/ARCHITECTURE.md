@@ -339,15 +339,16 @@ either; `IgnoreQueryFilters()` belongs to a persistence test that asserts a soft
 
 **Repositories.** One per aggregate root — never one for a child. The port `I<Entity>Repository` lives
 in `Application/Abstractions` and declares only what a handler calls; the adapter extends
-`RepositoryBase<T>` in Infrastructure. It returns its own root (with its children), a list or a page
-of them, a `bool` or a count — never a DTO, an `IQueryable` or another aggregate. Methods say what they
+`RepositoryBase<T>` in Infrastructure. It returns its own root with its children, a list or a page
+of them (each root whole there too, because `UpdateAsync` stages the children the root holds), a `bool` or a count —
+never a DTO, an `IQueryable` or another aggregate. Methods say what they
 are for (`FindActiveByEmailAsync`), take value objects for value-object columns, and use
 no tracking for reads. `ServicesDataContext` sets that behavior globally; shared helpers may preserve
 it explicitly for a service outside that decision. A command loads its aggregate with `GetByIdAsync`,
 applies the domain behaviour, then stages persistence with `UpdateAsync`; the port does not expose EF
 tracking. An EF adapter makes any required state changes explicitly inside that operation. Paged reads
 take a `PageRequest` — or the filter of the list, a record that extends it with the list's plain filters — and return a
-`PagedResult<T>` through `ListPagedAsync` ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)). The tenant
+`PagedResult<T>` through `ListPagedAsync`, whose filter-and-order function returns an `IOrderedQueryable<T>` ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)). The tenant
 and soft-delete filters come from the `DbContext`: a repository never writes a `TenantId` or
 `DeletedAt` predicate. A query cannot reach `.Value` through a converter: compare whole value objects or order by the
 property. Matching or sorting a value-object column as text — `EF.Property<string>` over it throws — goes through a

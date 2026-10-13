@@ -28,8 +28,9 @@ error codes below and `OffsetFits(page, pageSize)`, the one formula the validato
 not `sealed` on purpose: the filter of a list extends it (below), so the guard comes with the page.
 
 **`RepositoryBase.ListPagedAsync(PageRequest, filterAndOrder, ct)`** returns `PagedResult<TEntity>`: the items, the
-real total, and the page and size it was asked for. The filter-and-order function is required: a page without an
-explicit order is a bug.
+real total, and the page and size it was asked for. The filter-and-order function is required, because a page without an
+explicit order is a bug, and it returns an `IOrderedQueryable<TEntity>`, so a page without an `OrderBy` does not compile.
+Ending the order in a unique key (`ThenBy(e => e.Id)`) stays the repository's to write.
 
 **`PagedResult<T>.Map(...)`** converts the items and keeps the total, the page and the size, so a handler is
 `repository.ListAsync(query.ToFilter(), ct)` followed by `.Map(<Entity>ListItemResponse.From<Entity>)`.

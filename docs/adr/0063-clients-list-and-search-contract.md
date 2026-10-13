@@ -34,8 +34,9 @@ services, tags and categories lists, and not the `q` the issue #155 wrote; the t
 as the CPF. The old `?q=` is not an error: nothing binds it and the list is not filtered.
 
 **The item.** `ClientListItemResponse`: `id`, `fullName`, `birthDate`, `phone`, `email`, `cpf`, `status`. No
-guardians, reference contacts or notes, no `age` (ADR 0060). The repository returns the client roots without their
-contacts loaded, and the mapping reads the root only; the list is not a place to load children.
+guardians, reference contacts or notes, no `age` (ADR 0060). The mapping reads the root only, but the repository still
+returns each client whole, with its guardians and reference contacts, in the shape `GetByIdAsync` loads: `UpdateAsync`
+stages the contacts the root holds in memory, so a client read from a page without them and saved would lose them.
 
 **The CPF is not masked.** It comes whole, digits only, as the detail returns it. This is a product decision of the
 owner on 2026-10-12, taken against the text of #155 ("Mascarar CPF na lista") and the criterion of the parent #139
@@ -130,6 +131,8 @@ and an ADR of its own.
   and search.
 - `count` and the page are two statements without a transaction, so with concurrent writes the total and the page
   can disagree, as in the other lists.
+- The page statement also reads the guardians and reference contacts of its clients, in one query like
+  `GetByIdAsync`. The timings under **No index** were measured before that change and were not taken again.
 - The InMemory persistence tests do not compute generated columns: they fill the three columns the way PostgreSQL
   would, and a model test pins the expressions. What the real columns produce was verified by hand.
 - Accent-insensitive search is a known limit. `jose` does not find `José`; typing the accent does.
@@ -169,6 +172,11 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
   using it for a fragment would break the invariant of the type.
 - **A `CpfDigits` in the shared kernel.** It would share the mask rule with `CpfNumber`, but the kernel needs a second real
   caller and today there is one.
+- **Client roots without their contacts in the page** (the first version of this change). Two joins fewer, but the port
+  returned a `Client` that looked whole and was not: a client from the page, inactivated and staged with `UpdateAsync`,
+  lost every guardian and reference contact on save (a persistence test now pins the opposite). Changed after review.
+- **A split query for the two collections of the page.** An optimization without a measured problem; `GetByIdAsync`
+  loads them in one query too.
 - **One combined search column.** A term with a space could match across two fields.
 - **`search` as a plain string normalized in the handler** (the first version of this change). The rule sat in the use case and
   in a validator rule instead of in a type; changed after review (ADR 0065).
