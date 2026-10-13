@@ -1,5 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ListSection } from './index';
 
 interface Item {
@@ -74,6 +75,132 @@ describe('ListSection', () => {
 
     expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument();
     expect(screen.queryByRole('table')).not.toBeInTheDocument();
+  });
+
+  describe('empty copy and search', () => {
+    const COPY = {
+      title: 'Nenhum cadastro ainda',
+      description: 'Use o botão Novo para cadastrar o primeiro.',
+      searchTitle: (term: string) => `Nada encontrado para «${term}»`,
+      searchDescription: 'Confira a grafia.',
+    };
+
+    function renderEmpty(props: {
+      emptyCopy?: typeof COPY;
+      search?: { term: string; onClear: () => void };
+      status?: 'ready' | 'loading';
+      items?: Item[];
+    }) {
+      const { status = 'ready', items = [] } = props;
+      return render(
+        <ListSection
+          status={status}
+          items={items}
+          getKey={(item) => item.id}
+          renderItem={(item) => item.name}
+          emptyCopy={props.emptyCopy}
+          search={props.search}
+          aria-label="Itens"
+        />,
+      );
+    }
+
+    it('shows the title and description given for an empty list nobody searched', () => {
+      renderEmpty({ emptyCopy: COPY, search: { term: '', onClear: vi.fn() } });
+
+      expect(screen.getByText('Nenhum cadastro ainda')).toBeInTheDocument();
+      expect(screen.getByText('Use o botão Novo para cadastrar o primeiro.')).toBeInTheDocument();
+      expect(screen.queryByText('Nenhum item encontrado.')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
+    });
+
+    it('names the searched term, with its description and a way to clear it, when a search finds nothing', () => {
+      renderEmpty({ emptyCopy: COPY, search: { term: 'ana', onClear: vi.fn() } });
+
+      expect(screen.getByText('Nada encontrado para «ana»')).toBeInTheDocument();
+      expect(screen.getByText('Confira a grafia.')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Limpar busca' })).toBeInTheDocument();
+      expect(screen.queryByText('Nenhum cadastro ainda')).not.toBeInTheDocument();
+    });
+
+    it('calls onClear when "Limpar busca" is pressed', async () => {
+      const onClear = vi.fn();
+      renderEmpty({ emptyCopy: COPY, search: { term: 'ana', onClear } });
+
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Limpar busca' }));
+
+      expect(onClear).toHaveBeenCalledTimes(1);
+    });
+
+    it('falls back to generic copy for a search that finds nothing when no copy is given', () => {
+      renderEmpty({ search: { term: 'ana', onClear: vi.fn() } });
+
+      expect(screen.getByText('Nenhum item encontrado para «ana»')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Limpar busca' })).toBeInTheDocument();
+    });
+
+    it('shows neither variant while there are items or before the list is ready', () => {
+      const search = { term: 'ana', onClear: vi.fn() };
+      const { rerender } = renderEmpty({ emptyCopy: COPY, search, items: ITEMS });
+      expect(screen.queryByText('Nada encontrado para «ana»')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
+
+      rerender(
+        <ListSection
+          status="loading"
+          items={[] as Item[]}
+          getKey={(item) => item.id}
+          renderItem={(item) => item.name}
+          emptyCopy={COPY}
+          search={search}
+          aria-label="Itens"
+        />,
+      );
+      expect(screen.queryByText('Nada encontrado para «ana»')).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('shows the error slot instead of the generic error state when status is error', () => {
+    render(
+      <ListSection
+        status="error"
+        items={[] as Item[]}
+        getKey={(item) => item.id}
+        renderItem={(item) => item.name}
+        error={<div role="alert">Falha específica</div>}
+        aria-label="Itens"
+      />,
+    );
+
+    expect(screen.getByRole('alert')).toHaveTextContent('Falha específica');
+    expect(screen.queryByText('Não foi possível carregar.')).not.toBeInTheDocument();
+  });
+
+  it('does not show the error slot while loading or when ready', () => {
+    const { rerender } = render(
+      <ListSection
+        status="loading"
+        items={[] as Item[]}
+        getKey={(item) => item.id}
+        renderItem={(item) => item.name}
+        error={<div role="alert">Falha específica</div>}
+        aria-label="Itens"
+      />,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+    rerender(
+      <ListSection
+        status="ready"
+        items={ITEMS}
+        getKey={(item) => item.id}
+        renderItem={(item) => item.name}
+        error={<div role="alert">Falha específica</div>}
+        aria-label="Itens"
+      />,
+    );
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
   it('renders one listitem per item via renderItem in list mode', () => {

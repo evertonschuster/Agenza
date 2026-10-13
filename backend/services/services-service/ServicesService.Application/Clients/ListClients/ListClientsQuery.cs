@@ -3,8 +3,8 @@ using Admin.SharedKernel;
 namespace ServicesService.Application.Clients.ListClients;
 
 public sealed record ListClientsQuery(
-    SearchText? Search = null,
-    ClientStatusFilter? Status = ClientStatusFilter.Active) : PagedQuery, IQuery<PagedResult<ClientListItemResponse>>
+    SearchText? Search,
+    ClientStatusFilter? Status) : PagedQuery, IQuery<PagedResult<ClientListItemResponse>>
 {
     public ClientListFilter ToFilter()
     {
@@ -33,7 +33,7 @@ public sealed record ListClientsQuery(
 
     private static ClientStatus? ToClientStatus(ClientStatusFilter? status)
     {
-        if (status == ClientStatusFilter.All)
+        if (status == ClientStatusFilter.All || status is null)
         {
             return null;
         }

@@ -1,16 +1,25 @@
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { buttonVariants } from '@/shared/ui/button';
+import { ErrorState } from '@/shared/ui/error-state';
 import {
   InputGroup,
   InputGroupAddon,
   InputGroupButton,
   InputGroupInput,
 } from '@/shared/ui/input-group';
+import { ListSection, type ListSectionEmptyCopy } from '@/widgets/list-section';
 import { CLIENT_SEARCH_MAX_LENGTH } from '../../../model/client';
 import { NEW_CLIENT_PATH } from '../../clientsPaths';
-import { ClientListResults } from './components/ClientListResults';
+import { clientColumns } from './components/clientColumns';
 import { useClientListPage } from './useClientListPage';
+
+const EMPTY_COPY: ListSectionEmptyCopy = {
+  title: 'Nenhuma pessoa ativa ainda',
+  description: 'Use o botão Nova pessoa para cadastrar a primeira.',
+  searchTitle: (term) => `Nenhuma pessoa encontrada para «${term}»`,
+  searchDescription: 'Confira a grafia ou busque pelo e-mail ou pelo CPF.',
+};
 
 export function ClientListPage() {
   const {
@@ -55,13 +64,24 @@ export function ClientListPage() {
         </InputGroup>
       </form>
 
-      <ClientListResults
+      <ListSection
         status={status}
-        clients={clients}
-        failure={failure}
-        query={query}
-        onClearSearch={onClearSearch}
-        onRetry={onRetry}
+        items={clients}
+        getKey={(client) => client.id}
+        aria-label="Pessoas"
+        columns={clientColumns()}
+        emptyCopy={EMPTY_COPY}
+        search={{ term: query, onClear: onClearSearch }}
+        error={
+          failure && (
+            <ErrorState
+              title="Não foi possível carregar as pessoas."
+              description={failure.message}
+              code={failure.code}
+              onRetry={onRetry}
+            />
+          )
+        }
       />
 
       {isTruncated && (

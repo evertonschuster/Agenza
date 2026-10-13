@@ -34,9 +34,11 @@ points of the issue text disagree with that contract or with the state of the ap
    until #167 replaces it. The link already points at its final URL.
 6. **Two empty states and a failure, as the copy rules ask**: nobody active yet ("Nenhuma pessoa ativa ainda", no button,
    the header already has **Nova pessoa**) and a search that found nobody ("Nenhuma pessoa encontrada para «ana»" with
-   **Limpar busca**). The page builds them with `EmptyState`/`ErrorState` and gives `list-section` only the loading
-   and ready-with-rows states, the way `TagListPage` already does for failures. A failure shows the problem's message,
-   its code and **Tentar novamente**.
+   **Limpar busca**). `list-section` renders both itself, from `search` (`{ term, onClear }`) and `emptyCopy`
+   (phrases the page writes, all optional, with generic defaults), so every list shares the logic and supplies only
+   the words. It also takes an optional `error` slot, which Pessoas fills with an `ErrorState` showing the
+   problem's message, its code and **Tentar novamente** (ARCHITECTURE §2 and §5). `TagListPage` moves onto the
+   `error` slot and `search` in a following step.
 7. **The repository maps the total and nothing else.** The wire `totalCount` is `number | string`, so verbatim
    forwarding does not compile; `list` returns `{ items, totalCount }` with the total as a `number`, the items
    untouched, and `page`/`pageSize` dropped (nothing reads them yet).

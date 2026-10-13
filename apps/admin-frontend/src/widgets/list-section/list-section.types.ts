@@ -19,11 +19,26 @@ type ListSectionRenderMode<T> =
   | { renderItem: (item: T) => ReactNode; columns?: never }
   | { columns: ListSectionColumn<T>[]; renderItem?: never };
 
+interface ListSectionEmptyCopy {
+  title?: string | undefined;
+  description?: string | undefined;
+  searchTitle?: ((term: string) => string) | undefined;
+  searchDescription?: string | undefined;
+}
+
+interface ListSectionSearch {
+  term: string;
+  onClear: () => void;
+}
+
 type ListSectionProps<T> = ListSectionRenderMode<T> & {
   status: ListSectionStatus;
   items: readonly T[];
   getKey: (item: T) => string;
   skeletonRowCount?: number | undefined;
+  emptyCopy?: ListSectionEmptyCopy | undefined;
+  search?: ListSectionSearch | undefined;
+  error?: ReactNode | undefined;
   'aria-label': string;
   className?: string | undefined;
 };
@@ -40,6 +55,13 @@ interface ListSectionItemsProps<T> {
 
 interface ListSectionReadyProps<T> extends ListSectionItemsProps<T> {
   renderMode: ListSectionRenderMode<T>;
+  emptyCopy?: ListSectionEmptyCopy | undefined;
+  search?: ListSectionSearch | undefined;
+}
+
+interface ListSectionEmptyProps {
+  copy?: ListSectionEmptyCopy | undefined;
+  search?: ListSectionSearch | undefined;
 }
 
 interface ListSectionTableProps<T> extends ListSectionItemsProps<T> {
@@ -52,6 +74,9 @@ interface ListSectionListProps<T> extends ListSectionItemsProps<T> {
 
 export type {
   ListSectionColumn,
+  ListSectionEmptyCopy,
+  ListSectionEmptyProps,
+  ListSectionSearch,
   ListSectionProps,
   ListSectionRenderMode,
   ListSectionSkeletonProps,
