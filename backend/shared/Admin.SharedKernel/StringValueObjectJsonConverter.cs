@@ -11,7 +11,7 @@ internal sealed class StringValueObjectJsonConverter<T> : JsonConverter<T>
     {
         if (reader.TokenType != JsonTokenType.String)
         {
-            throw new JsonException(T.Create(null).Error);
+            throw new JsonException(NotText());
         }
 
         var text = reader.GetString();
@@ -29,6 +29,17 @@ internal sealed class StringValueObjectJsonConverter<T> : JsonConverter<T>
         var result = T.Create(text);
 
         return result.IsSuccess ? result.Value : throw new JsonException(result.Error);
+    }
+
+    private static string NotText()
+    {
+        var result = T.Create(null);
+        if (result.IsFailure)
+        {
+            return result.Error;
+        }
+
+        return "O valor informado deve ser um texto.";
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)

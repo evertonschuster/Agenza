@@ -204,7 +204,9 @@ phone, e-mail, birth date, administrative notes). They
 behave like a scalar on the wire: a `sealed record` implementing `IStringValueObject<T>`, with `Value`,
 `Restore` and a `Create(raw)` that returns a `ParseResult<T>` — the value, or the pt-BR message of the
 rule that failed; no `DomainResult`, no `DomainError`, no `Parse`. A blank string is not a value —
-`Create("")` fails — and an optional member is nullable. What a blank means is the type's to say:
+`Create("")` fails — and an optional member is nullable. The one exception is `SearchText`: an empty search is a search
+with nothing in it, so its `Create` accepts a blank and returns the empty value
+([0065](../../docs/adr/0065-string-value-objects-in-a-query-or-route.md)). What a blank means is the type's to say:
 `BlankIsAbsent` (default `true`) binds it to `null`, for an optional field; a type that declares it
 `false` (`FullName`) answers its own message instead. The kernel does the rest for every implementer: the JSON converter
 (`AddValueObjectConverters`), the OpenAPI `string` schema (`MapValueObjectsToStrings`) and the column

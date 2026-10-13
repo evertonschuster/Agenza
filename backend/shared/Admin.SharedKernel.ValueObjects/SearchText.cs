@@ -7,11 +7,11 @@ public sealed record SearchText : IStringValueObject<SearchText>
 {
     public const int MaxLength = 254;
 
-    private const string NotText = "Informe um texto para a busca.";
-
     private static readonly string TooLong = $"A busca deve ter no máximo {MaxLength} caracteres.";
 
     public string Value { get; }
+
+    public bool IsEmpty => Value.Length == 0;
 
     private SearchText(string value)
     {
@@ -20,12 +20,7 @@ public sealed record SearchText : IStringValueObject<SearchText>
 
     public static ParseResult<SearchText> Create(string? raw)
     {
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return ParseResult<SearchText>.Failure(NotText);
-        }
-
-        var normalized = raw.Trim().ToLowerInvariant();
+        var normalized = raw?.Trim().ToLowerInvariant() ?? string.Empty;
 
         if (normalized.Length > MaxLength)
         {

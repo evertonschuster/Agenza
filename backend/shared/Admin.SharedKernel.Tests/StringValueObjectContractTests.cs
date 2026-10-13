@@ -5,10 +5,12 @@ namespace Admin.SharedKernel.Tests;
 
 public class StringValueObjectContractTests
 {
+    private static readonly Type[] AcceptBlankText = [typeof(SearchText)];
+
     public static TheoryData<Type> SharedValueObjects()
     {
         var data = new TheoryData<Type>();
-        foreach (var type in StringValueObjects.InThisProject())
+        foreach (var type in StringValueObjects.InThisProject().Except(AcceptBlankText))
         {
             data.Add(type);
         }
@@ -28,6 +30,18 @@ public class StringValueObjectContractTests
 
             ((bool)result.GetType().GetProperty(nameof(ParseResult<string>.IsFailure))!.GetValue(result)!).Should().BeTrue();
             ((string)result.GetType().GetProperty(nameof(ParseResult<string>.Error))!.GetValue(result)!).Should().NotBeEmpty();
+        }
+    }
+
+    [Fact]
+    public void SearchText_AcceptsABlankText_BecauseAnEmptySearchIsASearchWithNothingInIt()
+    {
+        foreach (var raw in new string?[] { null, "", "   " })
+        {
+            var result = SearchText.Create(raw);
+
+            result.IsSuccess.Should().BeTrue();
+            result.Value.IsEmpty.Should().BeTrue();
         }
     }
 

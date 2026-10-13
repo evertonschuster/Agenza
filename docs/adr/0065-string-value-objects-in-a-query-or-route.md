@@ -22,9 +22,19 @@ The kernel reads those types from a JSON body only. Probes with this repository'
 ## Decision
 
 **`SearchText`**, a shared string value object in `Admin.SharedKernel.ValueObjects`: trimmed, lowercased with the
-invariant culture, at most 254 characters, and its pt-BR message when it is too long. `Create` of a blank text fails like
-every string value object; the binder turns a blank into "absent" (`BlankIsAbsent`, the default), so the member is
-nullable. The 254 is the longest thing a list searches (an e-mail).
+invariant culture, at most 254 characters, and its pt-BR message when it is too long. The 254 is the longest thing a
+list searches (an e-mail).
+
+**A blank text is a valid `SearchText`.** Every other string value object refuses a blank in `Create`, because a blank
+is not a value of a CPF or a name. An empty search is different: it is a search with nothing in it, and a user filtering
+by another field sends exactly that. `Create(null)`, `Create("")` and `Create("   ")` succeed with the empty value
+(`IsEmpty`). The type keeps `BlankIsAbsent` at its default, so the binder and the converter still turn a blank
+parameter into `null`; the member is nullable, and an absent parameter, a blank one and an empty instance all mean "do
+not filter by text". The handler reads the three the same way.
+
+The exception is explicit in `StringValueObjectContractTests`, which lists the types that accept a blank text. The only
+generic code that assumed `Create(null)` fails, the JSON converter's answer to a token that is not a string, now falls
+back to "O valor informado deve ser um texto." when `Create(null)` succeeds.
 
 **The opt-in is a type converter.** `StringValueObjectTypeConverter<T>`, in the same project and built only on the
 base class library, converts a `string` through `Create`. A type declares
