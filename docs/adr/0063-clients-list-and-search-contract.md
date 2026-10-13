@@ -69,7 +69,9 @@ it as "contains":
 The three matches are joined by "or" and combined with the situation by "and". A person with no e-mail and no CPF is
 found by name. The search is part of the list's filter, `ClientListFilter` ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)): the
 query's `ToFilter()` derives two values: `Text`, from the `SearchText` of `query.Search`, and `CpfDigits`, a `string?`
-with the digits of the term without the CPF mask, from one to eleven ASCII digits, and absent for anything else. A digit
+with the digits of the term without the CPF mask, from one to eleven ASCII digits, and absent for anything else. The mask
+is removed by `CpfNumber.StripMask`, the same method that `CpfNumber.Create` uses, so the search and the registration accept
+the same mask; the rule of one to eleven digits is the query's own. A digit
 string longer than a CPF cannot be part of one, so it simply does not search the CPF (the name and the e-mail are still
 searched). The
 repository port takes the filter.
@@ -175,8 +177,10 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
   It had one producer (`ToFilter()`) and one reader (the repository, through `.Value`), and no invariant beyond the
   extraction itself, so it added a type without adding a guarantee. Removed after review; the extraction is a private
   method of the query.
-- **The extraction in the shared kernel.** It would share the mask rule with `CpfNumber`, but the kernel needs a second
-  real caller and today there is one.
+- **A copy of the mask rule in the query** (the version before this one). The query repeated, character for character,
+  the private `StripMask` of `CpfNumber`, on the argument that the kernel needs a second real caller. `CpfNumber.Create` is
+  the first one and the query the second, and a mask accepted by one and not by the other would register a CPF that the
+  search cannot find from the same text. `StripMask` became public; only the mask is shared, not the fragment rule.
 - **Client roots without their contacts in the page** (the first version of this change). Two joins fewer, but the port
   returned a `Client` that looked whole and was not: a client from the page, inactivated and staged with `UpdateAsync`,
   lost every guardian and reference contact on save (a persistence test now pins the opposite). Changed after review.

@@ -22,7 +22,7 @@ public sealed record ListClientsQuery(
             return null;
         }
 
-        var digits = new string(text.Where(character => character is not ('.' or '-') && !char.IsWhiteSpace(character)).ToArray());
+        var digits = CpfNumber.StripMask(text);
         if (digits.Length == 0 || digits.Length > CpfNumber.Length || !digits.All(char.IsAsciiDigit))
         {
             return null;
