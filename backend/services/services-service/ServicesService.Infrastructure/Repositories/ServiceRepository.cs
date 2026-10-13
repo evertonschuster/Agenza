@@ -23,9 +23,9 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
     {
         query = query.Include(service => service.Tags);
 
-        if (filter.Search is { } search)
+        if (filter.Text is { } text)
         {
-            query = query.Where(service => EF.Functions.ILike(service.Name, $"%{search}%"));
+            query = query.Where(service => EF.Property<string>(service, "NameNormalized").Contains(text));
         }
 
         if (filter.CategoryId is { } categoryId)

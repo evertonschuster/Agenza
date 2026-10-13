@@ -59,17 +59,19 @@ A parameter that comes from the body is left to the JSON converters.
 `AdministrativeNotes` do not declare the converter, and a test pins it. A new type that may appear in a URL declares it on
 purpose.
 
-**`ListClientsQuery.Search` is a `SearchText?`.** The validator lost its length rule and the handler its normalization: the
-handler reads `query.Search?.Value`. The digits of a CPF mask stay in the handler, because they are a rule of the clients
-search and not of a text.
+**`ListClientsQuery.Search` and `ListServicesQuery.Search` are `SearchText?`.** The validator has no length rule and nothing
+normalizes the term again: the query's `ToFilter()` reads its `Value` ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)).
+The digits of a CPF mask stay in the clients query (`CpfDigits`), because they are a rule of the clients search and not of
+a text.
 
 ## Consequences
 
 - A term longer than 254 characters now fails at binding: `400 Validation.Failed` under `search`, with the message "A busca
   deve ter no máximo 254 caracteres.". The code `Client.SearchTooLong` of the first version never reached a merged build.
 - The generated frontend types change only by the rename of the member: `Search?: string`, as in the other lists.
-- Other free-text searches (`Search` of services, tags and categories, each trimmed in its repository) can adopt
-  `SearchText` when their lists are touched. That is the second caller that justifies the shared type; none is converted here.
+- The services list, converted to the paged shape in the same change, takes `SearchText` too: the second caller that
+  justifies the shared type. Its term was unbounded and matched by an unescaped `ILike`; it is now bounded at binding and
+  matched as literal text. Tags and categories keep a `string?` trimmed in the repository until their lists are touched.
 - The probe of the document is a test: `StringValueObjectContractTests` fails if `SearchText` becomes a complex type
   to MVC again, and the provider tests fail if personal data starts binding from a URL.
 - A date value object is not bound from a URL. This ADR covers strings.

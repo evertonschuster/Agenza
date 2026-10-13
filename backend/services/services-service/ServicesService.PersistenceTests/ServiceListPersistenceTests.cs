@@ -29,13 +29,18 @@ public class ServiceListPersistenceTests
         return Tag.Create(Guid.NewGuid(), name, TagColor.Create("#0d9488").Value, null).Value;
     }
 
+    private static void Add(ServicesDataContext context, Service service)
+    {
+        new ServiceRepository(context).Add(service);
+        context.Entry(service).Property<string>("NameNormalized").CurrentValue = service.Name.ToLowerInvariant();
+    }
+
     private static async Task Save(string databaseName, Guid tenantId, params Service[] services)
     {
         await using var context = PersistenceContext.Create(databaseName, tenantId);
-        var serviceRepository = new ServiceRepository(context);
         foreach (var service in services)
         {
-            serviceRepository.Add(service);
+            Add(context, service);
         }
 
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
@@ -63,7 +68,7 @@ public class ServiceListPersistenceTests
             await using var context = PersistenceContext.Create(databaseName, tenantId);
             var ids = serviceTags.Select(tag => tag.Id).ToList();
             service.SetTags(await new TagRepository(context).GetByIdsAsync(ids, CancellationToken.None));
-            new ServiceRepository(context).Add(service);
+            Add(context, service);
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }
     }
@@ -82,10 +87,15 @@ public class ServiceListPersistenceTests
         int page = 1,
         int pageSize = 20,
         Guid? categoryId = null,
-        Guid? tagId = null)
+        Guid? tagId = null,
+        string? search = null)
     {
         await using var context = PersistenceContext.Create(databaseName, tenantId);
-        var query = new ListServicesQuery(CategoryId: categoryId, TagId: tagId) { Page = page, PageSize = pageSize };
+        var query = new ListServicesQuery(search is null ? null : SearchText.Create(search).Value, categoryId, tagId)
+        {
+            Page = page,
+            PageSize = pageSize,
+        };
         return await new ServiceRepository(context).ListAsync(query.ToFilter(), CancellationToken.None);
     }
 
@@ -185,6 +195,19 @@ public class ServiceListPersistenceTests
         var page = await List(databaseName, tenantId, categoryId: hair);
 
         Names(page).Should().Equal("Barba", "Corte");
+        page.TotalCount.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task List_SearchesTheNameAnywhereIgnoringCase()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        await Save(databaseName, tenantId, NewService("Corte Masculino"), NewService("Barba e CORTE"), NewService("Manicure"));
+
+        var page = await List(databaseName, tenantId, search: "  Corte ");
+
+        Names(page).Should().Equal("Barba e CORTE", "Corte Masculino");
         page.TotalCount.Should().Be(2);
     }
 

@@ -396,7 +396,8 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
   its validator writes the three rules
   (page at least 1, size from 1 to `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared
   `Paging.*` codes; the query's own `ToFilter()` method builds the list's filter (`ClientListFilter`, a `PageRequest` with the
-  plain filters; it maps into an Application record, not into the domain, so there is no extension file as for a command), the port takes it and returns `PagedResult<T>`, and the handler `Map`s it to the response. An unpaged list returns `IReadOnlyList<T>`. A page past the last answers `200`
+  plain filters; it maps into an Application record, not into the domain, so there is no extension file as for a command), the port takes it and returns `PagedResult<T>`, and the handler `Map`s it to the response.
+  A free-text search is a `SearchText`. An unpaged list returns `IReadOnlyList<T>`. A page past the last answers `200`
   with no items ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)).
 
 A change to an endpoint's contract regenerates the frontend's types in the same change — skill
@@ -468,7 +469,7 @@ touches that slice, not in bulk.
 | Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: `GetByIdAsync` → `NotFound` → `client.Update(command.ToClientData(), today)` → pre-checks that exclude the aggregate itself → `UpdateAsync` → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
 | Read by id | `GetClientByIdQueryHandler.cs`, `GetClientByIdQueryValidator.cs`: repository → `NotFound` or `<Entity>Response.From<Entity>`; the id rule written inline in the validator | `GetTagByIdQueryHandler.cs`: a message built from the id, no validator | §4, §6, [0060](../../docs/adr/0060-clients-read-by-id-contract.md) |
 | State transition: behaviour method, idempotent repeat, pre-check through a port, status-only save | `DeactivateClientCommandHandler.cs`, `ReactivateClientCommandHandler.cs`, `Client.Inactivate` | | §3, §4, [0062](../../docs/adr/0062-clients-deactivate-and-reactivate.md) |
-| List, paging, search | `ListClientsQueryHandler.cs`, `ListClientsQueryValidator.cs`, `ClientRepository.ListAsync`: a `ClientListFilter` (a `PageRequest` with the list's plain filters) in and a `PagedResult` out, a validator with the `Paging.*` codes, a query whose `ToFilter()` normalizes the search term, a repository that filters and orders over generated string columns | `EF.Functions.ILike` with an unescaped pattern (`ServiceRepository`, `TagRepository`, `CategoryRepository`) | §4, §5, §6, [0063](../../docs/adr/0063-clients-list-and-search-contract.md) |
+| List, paging, search | `ListClientsQueryHandler.cs`, `ListClientsQueryValidator.cs`, `ClientRepository.ListAsync`: a `ClientListFilter` (a `PageRequest` with the list's plain filters) in and a `PagedResult` out, a validator with the `Paging.*` codes, a query whose `ToFilter()` normalizes the search term, a repository that filters and orders over generated string columns | `EF.Functions.ILike` with an unescaped pattern and a `string?` search (`TagRepository`, `CategoryRepository`) | §4, §5, §6, [0063](../../docs/adr/0063-clients-list-and-search-contract.md) |
 | Delete | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 

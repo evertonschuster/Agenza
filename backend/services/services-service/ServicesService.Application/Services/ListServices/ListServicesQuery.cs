@@ -3,22 +3,22 @@ using Admin.SharedKernel;
 namespace ServicesService.Application.Services.ListServices;
 
 public sealed record ListServicesQuery(
-    string? Search = null,
+    SearchText? Search = null,
     Guid? CategoryId = null,
     Guid? TagId = null) : PagedQuery, IQuery<PagedResult<ServiceResponse>>
 {
     public ServiceListFilter ToFilter()
     {
-        return new ServiceListFilter(Page, PageSize, SearchOf(Search), CategoryId, TagId);
+        return new ServiceListFilter(Page, PageSize, TextOf(Search), CategoryId, TagId);
     }
 
-    private static string? SearchOf(string? search)
+    private static string? TextOf(SearchText? search)
     {
-        if (string.IsNullOrWhiteSpace(search))
+        if (search is null || search.IsEmpty)
         {
             return null;
         }
 
-        return search.Trim();
+        return search.Value;
     }
 }

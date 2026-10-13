@@ -70,13 +70,15 @@ extension file. `PagedQuery` and `PageRequest` are two types on purpose: one is 
 is a page a repository can serve. The query is never the filter, and the filter is never bound from the wire.
 
 **Services follows.** The services list was converted after review, in the same pull request, the way clients was:
-`ServiceListFilter : PageRequest` (`Search`, `CategoryId`, `TagId`), `ListServicesQuery : PagedQuery`, the port
+`ServiceListFilter : PageRequest` (`Text`, `CategoryId`, `TagId`), `ListServicesQuery : PagedQuery`, the port
 `ListAsync(ServiceListFilter, ct)`, a `Map` in the handler (which still reads the names of the page's categories in one
 query) and the three `Paging.*` rules in its validator. The older `ListPagedAsync(order, page, pageSize)` was removed,
 because nothing else called it. `GET /api/v1/services?page=2147483647&pageSize=100` now answers `400 Paging.PageTooLarge`
 instead of `500`, and `page=43000000` answers the same `400` instead of a wrong offset. The services order also ends in
-the id, so a tie cannot repeat or skip a record. The `Search` of services stays a plain `string?` and its `ILike` pattern
-stays unescaped (`%` and `_` are wildcards in it), as before: neither belongs to this change.
+the id, so a tie cannot repeat or skip a record. Its `Search` is a `SearchText` as in the clients list
+([ADR 0065](0065-string-value-objects-in-a-query-or-route.md)): trimmed and lowercased at binding, at most 254 characters,
+and matched as "contains" over the generated column the service already had (`NameNormalized`, `lower("Name")`), so `%`
+and `_` are literal characters instead of the wildcards of the older unescaped `ILike`. The order is unchanged.
 
 ## Consequences
 
@@ -94,6 +96,9 @@ stays unescaped (`%` and `_` are wildcards in it), as before: neither belongs to
   members in the generated `query` object, because the properties are inherited.
 - A filter that extends `PageRequest` is never equal to a plain `PageRequest` of the same page: record equality includes
   the type. A test that wants the filter compares the filter.
+- `GET /services?search=` changes too: a term is trimmed and lowercased at binding, one longer than 254 characters
+  answers `400 Validation.Failed` under `search` with the message of `SearchText` (it had no limit), and `%` and `_`
+  match themselves. The generated type stays `Search?: string`.
 
 Verified on the same disposable PostgreSQL 18.3 as [ADR 0063](0063-clients-list-and-search-contract.md), on the final
 code: the 90 checks of the clients list with the `Paging.*` codes and a page echoed from the repository's answer;
@@ -103,6 +108,14 @@ every `Paging.*` code, `page=2147483647` and `page=43000000` as `400`, no leak o
 service, nothing written by a listing, and an edit followed by the list); the volume run of the clients list with
 50,000 people (30 to 45 ms at the median, 133 ms at page 2000); and the generated frontend types equal to a fresh
 generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.SharedKernel.Tests`.
+
+The `SearchText` of services and the clients page with its contacts were verified again on the final code, on a fresh
+disposable PostgreSQL 18.3 with the real services and a real login, in 23 checks: for services, a trimmed and
+case-insensitive search, `%`, `_` and `e_f` as literal text, a blank search, 255 characters refused under `search`
+without echoing the term, 254 accepted after the trim, a searched list paged with no repeat, and the three `Paging.*`
+codes; for clients, two pages with the contacts joined and no repeat or omission, the order, an item still without
+contacts, a partial CPF, a deactivation that keeps the contacts, and the three codes. The logged SQL shows
+`"NameNormalized" LIKE $2` with `$2 = '%\%%'`, and the generated frontend types are equal to a fresh generation.
 
 ## Considered and rejected
 
@@ -116,8 +129,14 @@ generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.Shared
 - **`ListClientsQuery` extending `PageRequest`.** Binding would run the guard on raw input (`?page=0` would throw
   instead of answering `Paging.PageInvalid`), and the handler would hand the port a query carrying the wire's `Search`
   and `Status`. The filter, built after the validator, can extend it.
-- **The filter holding a `PageRequest`** instead of extending it. Equally simple; one flat object was preferred, and
-  `ListPagedAsync(PageRequest, …)` accepts the filter as it is.
+- **The filter holding a `PageRequest`** (`ClientListFilter(Text, CpfDigits, Status, PageRequest Page)`, tried after
+  review). One positional parameter instead of two forwarded ones, and `PageRequest` could be `sealed`; but `Page`,
+  `PageSize` and `Offset` would be read through `filter.Page`, and the filter would no longer be the page that
+  `ListPagedAsync` takes. The owner found the inheritance simpler and clearer, and accepts its costs: each filter
+  redeclares and forwards the two members, `PageRequest` stays open, and equality across the hierarchy is pinned by a test.
+- **The page beside the filter** (`ListAsync(ClientListFilter filter, PageRequest page, ct)`, tried after review). The
+  criteria could exist without a page, for an unpaged read of the same list (an export, a count by filter), but no such
+  read exists, and a list's filter is always paged.
 - **`ToFilter()` as an extension method in a file of its own** (the version before this one), the pattern of ADR 0007 for
   commands. The conversion has no other user and calls nothing of the domain, so a second file only separates it from the
   data it reads. Changed after review.

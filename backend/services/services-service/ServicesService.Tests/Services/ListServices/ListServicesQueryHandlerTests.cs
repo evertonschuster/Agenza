@@ -140,24 +140,20 @@ public class ListServicesQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_PassesThePageAndTheFiltersToTheRepositoryAsOneFilter()
+    public async Task Handle_PassesTheFiltersAndThePageToTheRepositoryAsOneFilter()
     {
         var handler = CreateHandler(out var serviceRepository, out _);
         var categoryId = Guid.NewGuid();
         var tagId = Guid.NewGuid();
+        var search = SearchText.Create("  Cut ").Value;
 
         var result = await handler.Handle(
-            new ListServicesQuery(Search: "  cut ", CategoryId: categoryId, TagId: tagId) { Page = 2, PageSize = 5 },
+            new ListServicesQuery(Search: search, CategoryId: categoryId, TagId: tagId) { Page = 2, PageSize = 5 },
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         await serviceRepository.Received(1).ListAsync(
-            Arg.Is<ServiceListFilter>(filter =>
-                filter.Page == 2
-                && filter.PageSize == 5
-                && filter.Search == "cut"
-                && filter.CategoryId == categoryId
-                && filter.TagId == tagId),
+            Arg.Is(new ServiceListFilter(2, 5, "cut", categoryId, tagId)),
             Arg.Any<CancellationToken>());
     }
 
@@ -169,12 +165,7 @@ public class ListServicesQueryHandlerTests
         await handler.Handle(new ListServicesQuery(), CancellationToken.None);
 
         await serviceRepository.Received(1).ListAsync(
-            Arg.Is<ServiceListFilter>(filter =>
-                filter.Page == 1
-                && filter.PageSize == 20
-                && filter.Search == null
-                && filter.CategoryId == null
-                && filter.TagId == null),
+            Arg.Is(new ServiceListFilter(1, 20, null, null, null)),
             Arg.Any<CancellationToken>());
     }
 

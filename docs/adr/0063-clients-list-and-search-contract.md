@@ -91,8 +91,8 @@ migration `AddClientSearchColumns`:
 
 They are shadow properties of type `string` in `ClientConfiguration`, so `EF.Property<string>(c, "NameNormalized")
 .Contains(text)` translates to `LIKE @p`, and EF escapes `%`, `_` and `\` in the term: they are literal. (The `ILike`
-of `Service`, `Tag` and `Category` sends `ESCAPE ''`, so `%` and `_` are wildcards there. This change does not touch
-them.) PostgreSQL fills the columns for existing rows when the migration runs, and `Down` drops only them. Each
+of `Tag` and `Category` sends `ESCAPE ''`, so `%` and `_` are wildcards there; the services list moved to the same
+`Contains` over its own `NameNormalized` in [ADR 0064](0064-paged-reads-page-request-and-paged-result.md).) PostgreSQL fills the columns for existing rows when the migration runs, and `Down` drops only them. Each
 client load now reads three more short strings, because EF loads every mapped column of an entity.
 `lower()` follows the database ctype, as it already does for the service names.
 
@@ -132,7 +132,8 @@ and an ADR of its own.
 - `count` and the page are two statements without a transaction, so with concurrent writes the total and the page
   can disagree, as in the other lists.
 - The page statement also reads the guardians and reference contacts of its clients, in one query like
-  `GetByIdAsync`. The timings under **No index** were measured before that change and were not taken again.
+  `GetByIdAsync`: the page is limited in a subquery and the contacts are joined to it. Measured again with them, on
+  50,003 people with 28,576 guardians and 12,861 reference contacts: 25 to 45 ms at the median, 63 ms at page 2000.
 - The InMemory persistence tests do not compute generated columns: they fill the three columns the way PostgreSQL
   would, and a model test pins the expressions. What the real columns produce was verified by hand.
 - Accent-insensitive search is a known limit. `jose` does not find `José`; typing the accent does.

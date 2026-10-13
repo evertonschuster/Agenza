@@ -28,14 +28,14 @@ public class ServiceListFilterTests
     }
 
     [Fact]
-    public void TheSearchTheCategoryAndTheTag_AreKeptExactlyAsGiven()
+    public void TheTextTheCategoryAndTheTag_AreKeptExactlyAsGiven()
     {
         var categoryId = Guid.NewGuid();
         var tagId = Guid.NewGuid();
 
         var filter = new ServiceListFilter(1, 20, "  Cut ", categoryId, tagId);
 
-        filter.Search.Should().Be("  Cut ");
+        filter.Text.Should().Be("  Cut ");
         filter.CategoryId.Should().Be(categoryId);
         filter.TagId.Should().Be(tagId);
     }

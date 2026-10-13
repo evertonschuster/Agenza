@@ -17,8 +17,9 @@ messages", plus the earlier slices for reads, edits and paging. This file is how
   the domain's code (ADR 0058).
 - A route id is a member (`<Entity>Id`) that the controller fills with `with { … }`.
 - A list query extends `PagedQuery` (`Page`/`PageSize`, defaults from `PageRequest`) and carries its filters as
-  optional members; its own `ToFilter()` method builds the `<Entity>ListFilter` (a `PageRequest` with the list's
-  filters), and the validator writes the three `Paging.*` rules (ADR 0064).
+  optional members, a free-text search as a `SearchText?`; its own `ToFilter()` method builds the
+  `<Entity>ListFilter` (a `PageRequest` with the list's filters), and the validator writes the three `Paging.*`
+  rules (ADR 0064).
 
 ## 2. The validator — simple and clean
 
