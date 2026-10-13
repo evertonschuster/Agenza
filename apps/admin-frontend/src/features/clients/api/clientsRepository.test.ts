@@ -3,11 +3,79 @@ import { utcDate } from '@/shared/format/date';
 import type { ClientInput } from '../model/client';
 import { clientsRepository } from './clientsRepository';
 
-const { mockPost } = vi.hoisted(() => ({ mockPost: vi.fn() }));
+const { mockGet, mockPost } = vi.hoisted(() => ({ mockGet: vi.fn(), mockPost: vi.fn() }));
 
 vi.mock('@/shared/api/servicesApi', () => ({
-  servicesApi: { post: mockPost },
+  servicesApi: { get: mockGet, post: mockPost },
 }));
+
+const LIST_ITEM = {
+  id: 'abc',
+  fullName: 'Maria Souza',
+  birthDate: null,
+  phone: null,
+  email: 'maria@example.com',
+  cpf: '52998224725',
+  status: 'active',
+};
+
+describe('clientsRepository.list', () => {
+  it('sends the search term as Search and nothing else, leaving the backend defaults (active, first page) in charge', async () => {
+    mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
+
+    await clientsRepository.list('maria');
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v{version}/clients', {
+      query: { Search: 'maria' },
+      signal: undefined,
+    });
+  });
+
+  it('sends no query at all without a search term', async () => {
+    mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
+
+    await clientsRepository.list();
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v{version}/clients', {
+      query: undefined,
+      signal: undefined,
+    });
+  });
+
+  it('hands the abort signal over to the request', async () => {
+    mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
+    const controller = new AbortController();
+
+    await clientsRepository.list('maria', controller.signal);
+
+    const [, options] = mockGet.mock.calls.at(-1) as [string, { signal: AbortSignal }];
+    expect(options.signal).toBe(controller.signal);
+  });
+
+  it('keeps the items as they came and turns the wire total, which may be a string, into a number', async () => {
+    mockGet.mockResolvedValue({
+      ok: true,
+      data: { items: [LIST_ITEM], totalCount: '21', page: 1, pageSize: 20 },
+    });
+
+    const result = await clientsRepository.list();
+
+    expect(result).toEqual({ ok: true, data: { items: [LIST_ITEM], totalCount: 21 } });
+  });
+
+  it('forwards a failed result verbatim, without throwing (e.g. a search past the limit)', async () => {
+    const error = {
+      status: 400,
+      code: 'Validation.Failed',
+      title: 'A busca deve ter no máximo 254 caracteres.',
+    };
+    mockGet.mockResolvedValue({ ok: false, error });
+
+    const result = await clientsRepository.list('x');
+
+    expect(result).toEqual({ ok: false, error });
+  });
+});
 
 const INPUT: ClientInput = {
   fullName: 'Maria Souza',

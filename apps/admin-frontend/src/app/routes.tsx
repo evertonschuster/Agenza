@@ -27,12 +27,18 @@ export const router = createBrowserRouter([
             children: [
               {
                 index: true,
-                lazy: () => import('./pages/Clients').then((m) => ({ Component: m.Clients })),
+                lazy: () =>
+                  import('@/features/clients').then((m) => ({ Component: m.ClientListPage })),
               },
               {
                 path: 'nova',
                 lazy: () =>
                   import('@/features/clients').then((m) => ({ Component: m.ClientFormPage })),
+              },
+              {
+                path: ':id',
+                lazy: () =>
+                  import('./pages/ClientDetails').then((m) => ({ Component: m.ClientDetails })),
               },
             ],
           },
