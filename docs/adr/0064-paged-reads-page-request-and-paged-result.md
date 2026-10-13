@@ -9,8 +9,8 @@ Two lists are paged: services and, with #155, clients. Each one repeated the sam
 
 - the port took `int page, int pageSize` and returned a tuple `(Items, TotalCount)`;
 - `RepositoryBase.ListPagedAsync(order, page, pageSize)` computed the offset in `int`, so the older list
-  `GET /api/v1/services?page=2147483647&pageSize=100` answers `500 Unexpected.Error` and `page=43000000` silently
-  computes an offset of 5,032,604 instead of 4,299,999,900;
+  `GET /api/v1/services?page=2147483647&pageSize=100` answered `500 Unexpected.Error` and `page=43000000` silently
+  computed an offset of 5,032,604 instead of 4,299,999,900;
 - the handler rebuilt the `PagedResult<T>` envelope by hand from the tuple and the query;
 - each validator wrote the limits as literals (`1`, `100`) and, for services, with the validator library's internal
   codes.
@@ -64,10 +64,14 @@ and a paging value is set with an initializer (`new ListClientsQuery { Page = 2 
 the validator ran. `PagedQuery` and `PageRequest` are two types on purpose: one is input that may be wrong, the other
 is a page a repository can serve. The query is never the filter, and the filter is never bound from the wire.
 
-**Only clients adopt it for now.** `ServiceRepository` and `ListServicesQueryHandler` keep the older
-`ListPagedAsync(order, page, pageSize)`, which stays beside the new overload and shares its private slice-reading
-step, so services behave exactly as before, including the two wrong answers above. Converting services means a
-`PageRequest` in its port, a `Map` in its handler and the three rules with the shared codes in its validator.
+**Services follows.** The services list was converted after review, in the same pull request, the way clients was:
+`ServiceListFilter : PageRequest` (`Search`, `CategoryId`, `TagId`), `ListServicesQuery : PagedQuery`, the port
+`ListAsync(ServiceListFilter, ct)`, a `Map` in the handler (which still reads the names of the page's categories in one
+query) and the three `Paging.*` rules in its validator. The older `ListPagedAsync(order, page, pageSize)` was removed,
+because nothing else called it. `GET /api/v1/services?page=2147483647&pageSize=100` now answers `400 Paging.PageTooLarge`
+instead of `500`, and `page=43000000` answers the same `400` instead of a wrong offset. The services order also ends in
+the id, so a tie cannot repeat or skip a record. The `Search` of services stays a plain `string?` and its `ILike` pattern
+stays unescaped (`%` and `_` are wildcards in it), as before: neither belongs to this change.
 
 ## Consequences
 
@@ -76,7 +80,9 @@ step, so services behave exactly as before, including the two wrong answers abov
   through its Application project.
 - Clients' error codes for the page rules are `Paging.*`, not `Client.Page*`. The frontend does not branch on the
   services codes, so nothing there changes; the codes only existed on this unmerged branch for clients.
-- Two ways to page exist in `RepositoryBase` until services is converted. The older one is the only unguarded one.
+- The `GET /services` contract changes in two ways: its page errors carry the `Paging.*` codes instead of the validator
+  library's internal names (the frontend does not branch on them), and a huge page is a `400` instead of a `500` or a
+  wrong page. `RepositoryBase` has one paged read.
 - A repository test cannot live in `Admin.SharedKernel.Tests` (it has no EF). The paged helper is proven through the
   clients persistence tests (items, total, echoed page and size, a page past the last, no repeat or omission).
 - The frontend's generated types keep the same query parameters; `Page` and `PageSize` come after the list's own
@@ -86,8 +92,10 @@ step, so services behave exactly as before, including the two wrong answers abov
 
 Verified on the same disposable PostgreSQL 18.3 as [ADR 0063](0063-clients-list-and-search-contract.md), on the final
 code: the 90 checks of the clients list with the `Paging.*` codes and a page echoed from the repository's answer;
-eleven checks that the services list did not change (five services created, paging with no repeat or omission, search,
-a page past the last, `page=0` still `400`, and the `500` of `page=2147483647` still there); the volume run again with
+forty checks of the converted services list (paging with no repeat or omission and the order of the database, a
+case-insensitive and trimmed search, the category and tag filters alone and together with paging, a page past the last,
+every `Paging.*` code, `page=2147483647` and `page=43000000` as `400`, no leak of another tenant or of a deleted
+service, nothing written by a listing, and an edit followed by the list); the volume run of the clients list with
 50,000 people (30 to 45 ms at the median, 133 ms at page 2000); and the generated frontend types equal to a fresh
 generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.SharedKernel.Tests`.
 
@@ -118,5 +126,5 @@ generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.Shared
 - **Clamping to an empty page in the helper, and dropping `Paging.PageTooLarge`.** Safe by construction for every
   future list; the owner preferred the explicit `400`.
 - **Codes per feature** (`Client.PageInvalid`, `Service.PageInvalid`). The same rule would have a code per list.
-- **Converting services in the same change.** It touches an older slice and the `GET /services` contract inside the
-  #155 change; it is a change of its own.
+- **Converting services in a change of its own** (the first plan). It touches an older slice and the `GET /services`
+  contract; the owner asked for it in the same pull request, after the clients list was reviewed.

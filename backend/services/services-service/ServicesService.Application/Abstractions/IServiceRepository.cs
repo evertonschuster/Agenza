@@ -1,14 +1,11 @@
+using Admin.SharedKernel;
+using ServicesService.Application.Services;
+
 namespace ServicesService.Application.Abstractions;
 
 public interface IServiceRepository
 {
-    Task<(IReadOnlyList<Service> Items, int TotalCount)> ListAsync(
-        int page,
-        int pageSize,
-        string? search,
-        Guid? categoryId,
-        Guid? tagId,
-        CancellationToken cancellationToken);
+    Task<PagedResult<Service>> ListAsync(ServiceListFilter filter, CancellationToken cancellationToken);
 
     Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken);
 

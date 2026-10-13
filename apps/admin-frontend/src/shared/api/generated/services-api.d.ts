@@ -1037,11 +1037,11 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          Page?: number | string;
-          PageSize?: number | string;
           Search?: string;
           CategoryId?: string;
           TagId?: string;
+          Page?: number | string;
+          PageSize?: number | string;
         };
         header?: never;
         path: {

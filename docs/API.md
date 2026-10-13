@@ -267,8 +267,8 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | Recurso em uso (regra cruzando entidades) | `DELETE /api/v1/tags/{id}` (tag usada por um `service`) | 409 | `Tag.InUse` |
 | Categoria não encontrada | `GET /api/v1/categories/{id}` (id não existe) | 404 | `Category.NotFound` |
 | Id vazio ≠ id inexistente | `DELETE /api/v1/tags/00000000-0000-0000-0000-000000000000` | 400 (não 404!) | `Validation.Failed` (`tagId`: `NotEmptyValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`page`: `GreaterThanOrEqualValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`pageSize`: `InclusiveBetweenValidator`) |
+| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`page`: `Paging.PageInvalid`) |
+| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`pageSize`: `Paging.PageSizeInvalid`) |
 | CPF já cadastrado (pessoa ativa ou inativa) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.cpf[0].meta.clientId`) |
 | E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.email[0].meta.clientId`) |
 | Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`guardians`: `Client.GuardianRequired`) |

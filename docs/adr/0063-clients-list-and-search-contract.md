@@ -105,10 +105,10 @@ client load now reads three more short strings, because EF loads every mapped co
 binding (gate 1), as `400 Validation.Failed` under `search` with its own pt-BR message.
 
 The three page rules are shared by every paged list ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)).
-`Paging.PageTooLarge` exists because `RepositoryBase.ListPagedAsync(order, page, pageSize)` computes the offset in `int`: the older list
-`GET /api/v1/services?page=2147483647&pageSize=100` answers `500 Unexpected.Error`, and `page=43000000` silently
-computes an offset of 5,032,604 instead of 4,299,999,900, so a large enough table would answer a wrong page instead of
-an empty one. A framework binding failure (`page=abc`)
+`Paging.PageTooLarge` exists because the offset `(page - 1) * pageSize` has to fit an `int`: before the services list was
+converted ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)), `GET /api/v1/services?page=2147483647&pageSize=100`
+answered `500 Unexpected.Error`, and `page=43000000` silently computed an offset of 5,032,604 instead of 4,299,999,900,
+so a large enough table would have answered a wrong page instead of an empty one. A framework binding failure (`page=abc`)
 stays gate 1: `400 Validation.Failed` with the framework's English text.
 
 **A page past the last** answers `200` with empty `items`, the real `totalCount` and the requested `page`.
@@ -166,5 +166,5 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
   in a validator rule instead of in a type; changed after review (ADR 0065).
 - **`EF.Functions.ILike` with an escape character.** It cannot reach a value-object column.
 - **A fixed cap on the page** instead of the offset rule. Any number is arbitrary.
-- **Fixing the offset of the older `RepositoryBase.ListPagedAsync(order, page, pageSize)` in this change.** It changes
-  the services list; converting it to `PageRequest` is a change of its own (ADR 0064).
+- **Fixing the offset of the older `RepositoryBase.ListPagedAsync(order, page, pageSize)` on its own.** The conversion of
+  the services list to `PageRequest` removed that helper (ADR 0064).
