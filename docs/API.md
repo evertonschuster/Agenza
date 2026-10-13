@@ -71,8 +71,8 @@ o único campo que muda por endpoint.
 {"data":{"items":[{"id":"...","code":1,"name":"Teste","description":null,"durationMinutes":2,"minDurationMinutes":1,"maxDurationMinutes":3,"price":10.00,"maxDiscountPercentage":10.00,"categoryId":null,"categoryName":null,"tags":[]}],"totalCount":1,"page":1,"pageSize":20},"success":true, "...":"..."}
 ```
 
-**Lista paginada com busca e filtro** — o mesmo `PagedResult<T>`, com `q` (texto) e `status` (string) além de
-`page`/`pageSize`. Exemplo, `GET /api/v1/clients` (padrão: `page=1`, `pageSize=20`, `status=active`, sem `q`),
+**Lista paginada com busca e filtro** — o mesmo `PagedResult<T>`, com `search` (texto) e `status` (string) além de
+`page`/`pageSize`. Exemplo, `GET /api/v1/clients` (padrão: `page=1`, `pageSize=20`, `status=active`, sem `search`),
 verificado em 2026-10-12 num PostgreSQL descartável com a stack real em portas privadas
 ([ADR 0063](adr/0063-clients-list-and-search-contract.md)):
 
@@ -279,7 +279,7 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | Página abaixo de 1, tamanho fora de 1–100 | `GET /api/v1/clients?page=0` | 400 | `Validation.Failed` (`page`: `Paging.PageInvalid`; `pageSize`: `Paging.PageSizeInvalid`) |
 | Página cujo deslocamento não cabe em `int` | `GET /api/v1/clients?page=21474838&pageSize=100` | 400 | `Validation.Failed` (`page`: `Paging.PageTooLarge`) |
 | Parâmetro de query que não é número (§4.3) | `GET /api/v1/clients?page=abc` | 400 (mensagem do framework, em inglês) | `Validation.Failed` (`page`: `Validation.Failed`) |
-| Busca acima de 254 caracteres (§4.3, [ADR 0065](adr/0065-string-value-objects-in-a-query-or-route.md)) | `GET /api/v1/clients?q=…` | 400 (mensagem do value object, em pt-BR) | `Validation.Failed` (`q`: `Validation.Failed`, "A busca deve ter no máximo 254 caracteres.") |
+| Busca acima de 254 caracteres (§4.3, [ADR 0065](adr/0065-string-value-objects-in-a-query-or-route.md)) | `GET /api/v1/clients?search=…` | 400 (mensagem do value object, em pt-BR) | `Validation.Failed` (`q`: `Validation.Failed`, "A busca deve ter no máximo 254 caracteres.") |
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
 constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado passa pelo roteamento
 normalmente e só é rejeitado dentro do `DeleteTagCommandValidator` (`NotEmpty`) — chega como 400 de

@@ -10,7 +10,7 @@ public sealed class ListClientsQueryHandler(IClientRepository clientRepository)
         ListClientsQuery query,
         CancellationToken cancellationToken)
     {
-        var text = TextOf(query.Q);
+        var text = TextOf(query.Search);
         var cpfDigits = ExtractCpfDigits(text);
         var status = ToStatusFilter(query.Status);
 

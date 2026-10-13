@@ -464,7 +464,7 @@ export interface paths {
         query?: {
           Page?: number | string;
           PageSize?: number | string;
-          Q?: string;
+          Search?: string;
           Status?: components['schemas']['ClientStatusFilter'];
         };
         header?: never;

@@ -6,9 +6,9 @@ situation) and [ADR 0060](0060-clients-read-by-id-contract.md) (the CPF on the w
 
 ## Context
 
-#155 adds `GET /api/v1/clients?page=&pageSize=&q=&status=` to list and search the people a business serves. The
+#155 adds `GET /api/v1/clients?page=&pageSize=&search=&status=` to list and search the people a business serves. The
 client aggregate, the situation, the soft-delete and tenant filters and the paged-list shape (`PagedResult<T>`)
-already existed. Open were: the shape of a list item, whether the CPF is masked, what `q` matches, what "normalized
+already existed. Open were: the shape of a list item, whether the CPF is masked, what `search` matches, what "normalized
 name" means for the order, and how an invalid parameter answers.
 
 One finding shaped the persistence of the search. `FullName`, `Email` and `Cpf` are shared value objects with a
@@ -25,11 +25,13 @@ versions showed:
 
 ## Decision
 
-**Endpoint.** `GET /api/v1/clients` with `page` (from 1), `pageSize` (default 20, 1 to 100), `q` and `status`. It
+**Endpoint.** `GET /api/v1/clients` with `page` (from 1), `pageSize` (default 20, 1 to 100), `search` and `status`. It
 answers `200` with `ApiResponse<PagedResult<ClientListItemResponse>>`: `items`, `totalCount`, `page`, `pageSize`.
-The members of the query are `Page`, `PageSize`, `Q` and `Status`: a validation error is keyed by the property path
+The members of the query are `Page`, `PageSize`, `Search` and `Status`: a validation error is keyed by the property path
 in camelCase, so the member is named after the wire parameter. The OpenAPI document lists the parameters in
-PascalCase, like every other list, and the binding is case-insensitive.
+PascalCase, like every other list, and the binding is case-insensitive. The search parameter is `search`, as in the
+services, tags and categories lists, and not the `q` the issue #155 wrote; the text of the issue needs the same update
+as the CPF. The old `?q=` is not an error: nothing binds it and the list is not filtered.
 
 **The item.** `ClientListItemResponse`: `id`, `fullName`, `birthDate`, `phone`, `email`, `cpf`, `status`. No
 guardians, reference contacts or notes, no `age` (ADR 0060). The repository returns the client roots without their
@@ -55,7 +57,7 @@ fails at binding (gate 1) with `400 Validation.Failed` under `status` and the fr
 anyway. A number that is a member is accepted by the binder (`status=4` is `all`): a known limit, left as it is,
 because refusing it needs a binder of its own.
 
-**Search.** `q` is a `SearchText` ([ADR 0065](0065-string-value-objects-in-a-query-or-route.md)): the framework reads
+**Search.** `search` is a `SearchText` ([ADR 0065](0065-string-value-objects-in-a-query-or-route.md)): the framework reads
 it from the query string trimmed and lowercased, and a blank one is absent, which means no search. The handler matches
 it as "contains":
 
@@ -64,7 +66,7 @@ it as "contains":
   that person; `982` finds the CPFs that contain 982 and, as any term, the names and e-mails that contain it.
 
 The three matches are joined by "or" and combined with the situation by "and". A person with no e-mail and no CPF is
-found by name. The handler derives the two plain values (`text`, from `query.Q`, and `cpfDigits`); the repository port takes them.
+found by name. The handler derives the two plain values (`text`, from `query.Search`, and `cpfDigits`); the repository port takes them.
 
 **Order.** The normalized name, then the id, so that a page never repeats or skips a record while the data does not
 change. "Normalized" is `lower("FullName")`, like `Service`, `Tag` and `Category`: accents stay, so `jose` does not
@@ -97,8 +99,8 @@ client load now reads three more short strings, because EF loads every mapped co
 | `pageSize` from 1 to 100 | `Paging.PageSizeInvalid` |
 | `status` a member of `ClientStatusFilter`, or absent | `Client.StatusFilterInvalid` |
 
-`q` has no validator rule: `SearchText` refuses a term past 254 characters, the longest searchable value (an e-mail), at
-binding (gate 1), as `400 Validation.Failed` under `q` with its own pt-BR message.
+`search` has no validator rule: `SearchText` refuses a term past 254 characters, the longest searchable value (an e-mail), at
+binding (gate 1), as `400 Validation.Failed` under `search` with its own pt-BR message.
 
 The three page rules are shared by every paged list ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)).
 `Paging.PageTooLarge` exists because `RepositoryBase.ListPagedAsync(order, page, pageSize)` computes the offset in `int`: the older list
@@ -126,15 +128,15 @@ and an ADR of its own.
 - The InMemory persistence tests do not compute generated columns: they fill the three columns the way PostgreSQL
   would, and a model test pins the expressions. What the real columns produce was verified by hand.
 - Accent-insensitive search is a known limit. `jose` does not find `José`; typing the accent does.
-- The frontend (#155 screen) is another change. It sends `status` (the generated union) and `q` and branches on the error
+- The frontend (#155 screen) is another change. It sends `status` (the generated union) and `search` and branches on the error
   codes above; a bad `status` cannot come from its typed client.
 
 Verified by hand on a disposable PostgreSQL 18.3 (`agenza-scratch-pg`, port 5433, `log_statement=all`), with the real
-identity and services on private ports and a real login, 94 checks on the list: the default list, the exact item keys and values
+identity and services on private ports and a real login, 97 checks on the list: the default list, the exact item keys and values
 (whole CPF, `null` for the absent fields), the three situations and their case, a blank `status`, an unknown name, a joined list, `0` and `7`, and a member given as a number;
 name, e-mail, masked and partial CPF searches; `%`, `_` and `\` as literal characters; a term with quotes; a term past
 the limit (refused at binding, with the message of the value object and without echoing it), a padded one of exactly
-254 characters, `q` given twice and `?Q=`; paging with no repeat or omission and a stable total; ties of the same name ordered by id; a page past the
+254 characters, `search` given twice, `?Search=` in another case and the old `?q=` ignored; paging with no repeat or omission and a stable total; ties of the same name ordered by id; a page past the
 last; every validation code; `401` without a token and `403` for another tenant's header; people of another tenant,
 inactive and soft-deleted people never leaking into a list, a total or a search; and a list writing nothing. The
 migration was applied over five legacy rows (mixed-case name and e-mail, no e-mail, no CPF, inactive, deleted,
@@ -158,7 +160,7 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
   and again in .NET, and the two could drift) or by the `unaccent` extension (a `CREATE EXTENSION` in the infra init,
   an `IMMUTABLE` wrapper to fit a generated column, a new mechanism). Nobody asked for it yet.
 - **One combined search column.** A term with a space could match across two fields.
-- **`q` as a plain string normalized in the handler** (the first version of this change). The rule sat in the use case and
+- **`search` as a plain string normalized in the handler** (the first version of this change). The rule sat in the use case and
   in a validator rule instead of in a type; changed after review (ADR 0065).
 - **`EF.Functions.ILike` with an escape character.** It cannot reach a value-object column.
 - **A fixed cap on the page** instead of the offset rule. Any number is arbitrary.
