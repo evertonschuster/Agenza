@@ -8,21 +8,11 @@ public sealed record ListClientsQuery(
 {
     public ClientListFilter ToFilter()
     {
-        var text = TextOf(Search);
+        var text = Search?.Value;
         var cpfDigits = CpfDigitsOf(text);
         var status = ToClientStatus(Status);
 
         return new ClientListFilter(Page, PageSize, text, cpfDigits, status);
-    }
-
-    private static string? TextOf(SearchText? search)
-    {
-        if (search is null || search.IsEmpty)
-        {
-            return null;
-        }
-
-        return search.Value;
     }
 
     private static string? CpfDigitsOf(string? text)

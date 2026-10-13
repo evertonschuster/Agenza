@@ -39,14 +39,6 @@ public class ListServicesQueryTests
         new ListServicesQuery(Search: SearchTextOf(raw)).ToFilter().Text.Should().Be(expected);
     }
 
-    [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ToFilter_WithAnEmptySearchText_IsNoSearch(string raw)
-    {
-        new ListServicesQuery(Search: SearchTextOf(raw)).ToFilter().Text.Should().BeNull();
-    }
-
     [Fact]
     public void ToFilter_WithAPageNoRepositoryCouldServe_Throws()
     {

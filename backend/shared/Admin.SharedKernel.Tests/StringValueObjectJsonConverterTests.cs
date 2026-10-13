@@ -39,22 +39,6 @@ public class StringValueObjectJsonConverterTests
         public static ThreeLetters Restore(string value) => new(value);
     }
 
-    private sealed record SearchSample(SearchText? Query);
-
-    [Fact]
-    public void Read_ANonStringTokenForATypeThatAcceptsBlank_StillAnswersWithAMessage()
-    {
-        var read = () => JsonSerializer.Deserialize<SearchSample>("{ \"query\": 5 }", Options);
-
-        read.Should().Throw<JsonException>().WithMessage("O valor informado deve ser um texto.");
-    }
-
-    [Fact]
-    public void Read_ABlankStringForATypeThatAcceptsBlank_IsAbsent()
-    {
-        JsonSerializer.Deserialize<SearchSample>("{ \"query\": \"  \" }", Options)!.Query.Should().BeNull();
-    }
-
     private sealed record RequiredSample(MustBeFilled? Field);
 
     private sealed record MustBeFilled : IStringValueObject<MustBeFilled>

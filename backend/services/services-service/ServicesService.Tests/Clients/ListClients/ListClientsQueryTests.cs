@@ -72,17 +72,6 @@ public class ListClientsQueryTests
     }
 
     [Theory]
-    [InlineData("")]
-    [InlineData("   ")]
-    public void ToFilter_WithAnEmptySearchText_IsNoSearch(string raw)
-    {
-        var filter = FilterOf(raw);
-
-        filter.Text.Should().BeNull();
-        filter.CpfDigits.Should().BeNull();
-    }
-
-    [Theory]
     [InlineData("  Maria SILVA ", "maria silva")]
     [InlineData("MARIA@Example.COM", "maria@example.com")]
     [InlineData("josé", "josé")]

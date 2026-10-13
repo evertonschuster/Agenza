@@ -191,14 +191,6 @@ public class ListClientsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithAnEmptySearchText_DoesNotSearch()
-    {
-        await _handler.Handle(new ListClientsQuery(Search: SearchTextOf("   ")), CancellationToken.None);
-
-        await AssertListed(null, null, ClientStatus.Active);
-    }
-
-    [Fact]
     public async Task Handle_CombinesTheSearchWithTheStatusFilter()
     {
         await _handler.Handle(new ListClientsQuery(Search: SearchTextOf("Silva"), Status: ClientStatusFilter.Inactive) { Page = 3, PageSize = 50 }, CancellationToken.None);

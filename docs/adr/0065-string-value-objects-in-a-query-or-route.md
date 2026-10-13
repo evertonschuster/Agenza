@@ -25,16 +25,10 @@ The kernel reads those types from a JSON body only. Probes with this repository'
 invariant culture, at most 254 characters, and its pt-BR message when it is too long. The 254 is the longest thing a
 list searches (an e-mail).
 
-**A blank text is a valid `SearchText`.** Every other string value object refuses a blank in `Create`, because a blank
-is not a value of a CPF or a name. An empty search is different: it is a search with nothing in it, and a user filtering
-by another field sends exactly that. `Create(null)`, `Create("")` and `Create("   ")` succeed with the empty value
-(`IsEmpty`). The type keeps `BlankIsAbsent` at its default, so the binder and the converter still turn a blank
-parameter into `null`; the member is nullable, and an absent parameter, a blank one and an empty instance all mean "do
-not filter by text". The handler reads the three the same way.
-
-The exception is explicit in `StringValueObjectContractTests`, which lists the types that accept a blank text. The only
-generic code that assumed `Create(null)` fails, the JSON converter's answer to a token that is not a string, now falls
-back to "O valor informado deve ser um texto." when `Create(null)` succeeds.
+**A blank search is an absent one.** `SearchText` follows the contract of every string value object: `Create(null)`,
+`Create("")` and `Create("   ")` fail ("Informe um texto para a busca."). The type keeps `BlankIsAbsent` at its default,
+so the binder and the JSON converter turn a blank parameter into `null` before `Create` runs; the member is nullable,
+and an absent parameter and a blank one both mean "do not filter by text". The query reads `Search?.Value`.
 
 **The opt-in is a type converter.** `StringValueObjectTypeConverter<T>`, in the same project and built only on the
 base class library, converts a `string` through `Create`. A type declares
@@ -96,5 +90,9 @@ including a term of 255 characters (`400`, the message of the value object, the 
   personal data included.
 - **A client-specific term type carrying the text and the CPF digits.** A request carries the shared string value
   objects and nothing else of the domain, and the CPF digits are a rule of one search.
+- **A blank text as a valid, empty `SearchText`** (an earlier version of this change, with `IsEmpty`). No request ever
+  built one: `BlankIsAbsent` binds a blank to `null` before `Create` runs, from a query and from a body alike. It still
+  cost an exception to the contract of every string value object, a fallback message in the generic JSON converter, and a
+  branch that turned the empty value into "no search" in every list query. Removed after review.
 - **`search` as a plain string normalized in the handler** (the first version of this change). It works, but the rule sits
   in the use case and in a validator rule instead of in the type, which is how every other shared text is carried.

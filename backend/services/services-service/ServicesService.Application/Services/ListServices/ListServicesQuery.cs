@@ -9,16 +9,6 @@ public sealed record ListServicesQuery(
 {
     public ServiceListFilter ToFilter()
     {
-        return new ServiceListFilter(Page, PageSize, TextOf(Search), CategoryId, TagId);
-    }
-
-    private static string? TextOf(SearchText? search)
-    {
-        if (search is null || search.IsEmpty)
-        {
-            return null;
-        }
-
-        return search.Value;
+        return new ServiceListFilter(Page, PageSize, Search?.Value, CategoryId, TagId);
     }
 }

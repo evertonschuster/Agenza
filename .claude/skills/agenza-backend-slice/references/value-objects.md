@@ -28,8 +28,8 @@ Ask in order and stop at the first no:
    - `Create(raw)` returns a `ParseResult<Self>`: trim and normalize, then validate; one pt-BR message per
      rule, and a message never carries the value (it reaches the logs and the client).
    - `Create(null)`, `""` and whitespace must fail — the converter takes the message of a non-string
-     token from `Create(null)`. The one exception is a search text, whose blank is the empty search
-     (`SearchText`, ADR 0065); `StringValueObjectContractTests` lists the types that accept a blank.
+     token from `Create(null)`. A search text too: a blank search is an absent one, and `BlankIsAbsent`
+     already binds it to `null` before `Create` runs (ADR 0065).
    - `Restore(stored)` only rebuilds; no rule runs. Limits are `public const`.
    - `BlankIsAbsent` stays `true` (blank binds to `null`, so the member is nullable). Declare `false` only
      for a required member that should answer with its own message (`FullName`).

@@ -28,19 +28,12 @@ public class SearchTextTests
     [InlineData("")]
     [InlineData("   ")]
     [InlineData("\t\n")]
-    public void Create_WithNoText_IsTheEmptySearch(string? raw)
+    public void Create_WithNoText_FailsLikeEveryOtherValueObject(string? raw)
     {
         var result = SearchText.Create(raw);
 
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Value.Should().BeEmpty();
-        result.Value.IsEmpty.Should().BeTrue();
-    }
-
-    [Fact]
-    public void Create_WithText_IsNotEmpty()
-    {
-        SearchText.Create(" a ").Value.IsEmpty.Should().BeFalse();
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be("Informe um texto para a busca.");
     }
 
     [Fact]
