@@ -36,7 +36,7 @@ public class EnumNameModelBinderTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(TimeProvider.System);
-        services.AddControllers().AddWireJson();
+        services.AddControllers().AddWireFormat();
 
         return services.BuildServiceProvider().GetRequiredService<IOptions<MvcOptions>>().Value.ModelBinderProviders;
     }
@@ -73,7 +73,7 @@ public class EnumNameModelBinderTests
         var services = new ServiceCollection();
         services.AddSingleton(TimeProvider.System);
         services.AddLogging();
-        services.AddControllers().AddWireJson();
+        services.AddControllers().AddWireFormat();
         var provider = services.BuildServiceProvider();
 
         var metadata = provider.GetRequiredService<IModelMetadataProvider>().GetMetadataForType(typeof(SituationQuery));
@@ -98,7 +98,7 @@ public class EnumNameModelBinderTests
     }
 
     [Fact]
-    public void AddWireJson_PutsTheEnumBinderBeforeTheFrameworkOnes()
+    public void AddWireFormat_PutsTheEnumBinderBeforeTheFrameworkOnes()
     {
         var names = Providers().Select(provider => provider.GetType().Name).ToList();
 

@@ -19,7 +19,7 @@ public class StringValueObjectModelBinderTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(TimeProvider.System);
-        services.AddControllers().AddWireJson();
+        services.AddControllers().AddWireFormat();
         var options = services.BuildServiceProvider().GetRequiredService<IOptions<MvcOptions>>().Value;
 
         return options.ModelBinderProviders[0];
@@ -53,7 +53,7 @@ public class StringValueObjectModelBinderTests
     }
 
     [Fact]
-    public void AddWireJson_PutsTheValueObjectBinderBeforeEveryDefaultOne()
+    public void AddWireFormat_PutsTheValueObjectBinderBeforeEveryDefaultOne()
     {
         Provider().GetType().Name.Should().Be("StringValueObjectModelBinderProvider");
     }

@@ -39,7 +39,7 @@ type the same way.
 3. **The kernel applies the contract once**, so a new value object in that project works everywhere with no per-service
    code:
    - `JsonSerializerOptions.AddValueObjectConverters(TimeProvider)` (`Admin.SharedKernel`), which MVC reaches through
-     `AddWireJson()` (formerly `AddValueObjectJson()`, [ADR 0058](0058-closed-set-members-are-plain-enums.md)) with the container's own `TimeProvider`: a JSON string in, any formatting the type
+     `AddWireFormat()` (formerly `AddWireJson()` and `AddValueObjectJson()`, ADRs [0058](0058-closed-set-members-are-plain-enums.md) and [0066](0066-enums-read-from-a-query-or-a-route-by-one-name.md)) with the container's own `TimeProvider`: a JSON string in, any formatting the type
      accepts; `null`, `""` and whitespace bind to `null` when the type's `BlankIsAbsent` is true; anything else throws a `JsonException` carrying the `Error` of
      the result — for a token that is not a string, the `Error` of `Create(null)` — and never the value (it is personal
      data and the message reaches the logs, so a type's errors must not echo it). A date value object reads the date the

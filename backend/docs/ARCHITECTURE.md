@@ -72,7 +72,7 @@ Shared projects in `backend/shared/` hold infrastructure, never business rules:
 | Project | Holds | Referenced by |
 | --- | --- | --- |
 | `Admin.SharedKernel` | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PagedQuery`, `PageRequest` and `PagedResult`, the JSON converters of the wire (value objects, enum names) | Application |
-| `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler`, `AddWireJson()` | Api |
+| `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler`, `AddWireFormat()` | Api |
 | `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>` (with the paged read over `PageRequest`), `ApplyAuditableConventions` (soft-delete and tenant filters), the column conversion of the shared value objects | Infrastructure |
 | `Admin.SharedKernel.ValueObjects` | `IStringValueObject<T>` and the string value objects every service shares (`CpfNumber`); no reference at all | Domain |
 | `Admin.Identity.Client` | JWT validation, `ITenantAccessor`, `ICurrentUserAccessor`, `TenantHeaderFilter`, `[IgnoreTenant]` | Infrastructure, Api |
@@ -387,7 +387,7 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
 - A body with a list is bounded twice: the validator caps the count and the action has a
   `[RequestSizeLimit]`.
 - Enums travel as camelCase strings: a plain enum, named by the kernel for every enum with integers
-  refused (`AddEnumNameConverter`, registered by `AddWireJson()` in the MVC options and in the
+  refused (`AddEnumNameConverter`, registered by `AddWireFormat()` in the MVC options and in the
   minimal-API options, which the OpenAPI generator reads). From a query or a route, the same call's binder reads
   exactly one name in any case and refuses a number or several names, with a pt-BR message that lists the names
   ([0066](../../docs/adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)). Nothing to register per enum, no

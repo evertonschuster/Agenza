@@ -22,7 +22,7 @@ would have to know, nothing pins it, and numbers stayed accepted.
 
 ## Decision
 
-**`EnumNameModelBinderProvider`**, in `Admin.SharedKernel.AspNetCore`, registered by `AddWireJson()` right after the
+**`EnumNameModelBinderProvider`**, in `Admin.SharedKernel.AspNetCore`, registered by `AddWireFormat()` right after the
 binder of string value objects ([ADR 0065](0065-string-value-objects-in-a-query-or-route.md)) and before every binder of
 the framework, so no service has to remember it. It gives every enum, nullable or not, read from anything but the body
 (a query, a route, a header, a form field) a binder that:
@@ -43,19 +43,23 @@ literal code `Client.StatusFilterInvalid`, because no value that is not a member
 
 ## Consequences
 
-- `GET /api/v1/clients?status=3` and `?status=active,inactive` answer `400 Validation.Failed` under `status`; before,
-  the first was `all`, and the second a `400` in English only because of the bit values. An unknown name keeps the `400`,
-  now in pt-BR and without the value.
+- `GET /api/v1/clients` answers `400 Validation.Failed` under `status` for any number and any join. Before, `?status=4`
+  (the bit value of `All`) was `all`, and `?status=active,inactive` was refused only because of the bit values. An unknown
+  name keeps the `400`, now in pt-BR and without the value.
+- `AddWireJson()` becomes `AddWireFormat()`. With this binder and the one of
+  [ADR 0065](0065-string-value-objects-in-a-query-or-route.md) it registers how the wire is read from a query and a route,
+  not only the JSON converters. Its one caller, `services-service`, is renamed in the same change; the older ADRs name it
+  with a "formerly" note.
 - The OpenAPI document does not change: the API explorer reads the metadata of the parameter, not its binder. The
   generated frontend types stay the same.
-- It reaches every service that calls `AddWireJson()`. `identity-service` does not call it and keeps the framework's
+- It reaches every service that calls `AddWireFormat()`. `identity-service` does not call it and keeps the framework's
   binder.
 - A list of enums in a body still needs `IsInEnum` per item (ADR 0058): the JSON converter can still yield a joined value.
 - A `[Flags]` enum read from a URL would need several names. None exists, and ADR 0058 keeps a set of options out of
   `[Flags]`; a first one would amend this ADR.
 
 Verified with the kernel's tests: the provider and the binder on their own (each case above, the message, no echo), and
-the MVC parameter binder built by `AddWireJson()` reading a query record, where `status=3` and `status=active,inactive`
+the MVC parameter binder built by `AddWireFormat()` reading a query record, where `status=3` and `status=active,inactive`
 on an enum with values `1, 2, 3` answer the canonical `Validation.Failed` under `Status` with the pt-BR message. The
 service's OpenAPI document, served on a private port with no database, generates frontend types identical to the
 committed ones. The binder was not exercised through an authenticated request to the running service.

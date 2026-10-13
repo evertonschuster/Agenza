@@ -27,10 +27,10 @@ the enum. And the unknown-name rule was a second copy of what the binder already
   (`ClientReferenceContact.PurposeUnknown`), and keep their own copy of the set.
 - Commands and responses carry `IReadOnlyList<ContactPurpose>`. The shared kernel names **every** enum
   on the wire in camelCase and refuses integers: `JsonSerializerOptions.AddEnumNameConverter()`
-  (`Admin.SharedKernel`), which `AddWireJson()` (`Admin.SharedKernel.AspNetCore`, formerly
+  (`Admin.SharedKernel`), which `AddWireFormat()` (`Admin.SharedKernel.AspNetCore`, formerly `AddWireJson()` and
   `AddValueObjectJson()`) registers in both the MVC and the minimal-API JSON options — the OpenAPI
   generator reads the latter and would otherwise publish the enum as `integer`. A service that already
-  calls `AddWireJson()` registers nothing per enum. An unknown name now fails at binding (gate 1), with
+  calls `AddWireFormat()` registers nothing per enum. An unknown name now fails at binding (gate 1), with
   the framework's English message and the generic code `Validation.Failed`.
 - The validator keeps two rules per input: the list is not null or empty (`PurposesRequired`), and each
   item is a member (`PurposeUnknown`, `IsInEnum`). The second exists because the converter accepts several

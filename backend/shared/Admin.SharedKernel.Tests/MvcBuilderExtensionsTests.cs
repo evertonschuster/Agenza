@@ -18,7 +18,7 @@ public class MvcBuilderExtensionsTests
     }
 
     [Fact]
-    public void AddWireJson_ReadsTheDateValueObjectsAgainstTheClockOfTheContainer()
+    public void AddWireFormat_ReadsTheDateValueObjectsAgainstTheClockOfTheContainer()
     {
         var json = MvcJsonOptions(new FixedClock(new DateTimeOffset(2026, 10, 2, 12, 0, 0, TimeSpan.Zero)));
 
@@ -32,7 +32,7 @@ public class MvcBuilderExtensionsTests
     private sealed record DateSample(BirthDate? Born);
 
     [Fact]
-    public void AddWireJson_NamesEnumsInCamelCaseInTheMvcOptions()
+    public void AddWireFormat_NamesEnumsInCamelCaseInTheMvcOptions()
     {
         var json = MvcJsonOptions(TimeProvider.System);
 
@@ -43,11 +43,11 @@ public class MvcBuilderExtensionsTests
     }
 
     [Fact]
-    public void AddWireJson_NamesEnumsInTheMinimalApiOptionsThatTheOpenApiGeneratorReads()
+    public void AddWireFormat_NamesEnumsInTheMinimalApiOptionsThatTheOpenApiGeneratorReads()
     {
         var services = new ServiceCollection();
         services.AddSingleton(TimeProvider.System);
-        services.AddControllers().AddWireJson();
+        services.AddControllers().AddWireFormat();
         var json = services.BuildServiceProvider().GetRequiredService<IOptions<HttpJsonOptions>>().Value.SerializerOptions;
 
         JsonSerializer.Serialize(new EnumSample(Level.VeryHigh), json).Should().Be("{\"level\":\"veryHigh\"}");
@@ -57,7 +57,7 @@ public class MvcBuilderExtensionsTests
     {
         var services = new ServiceCollection();
         services.AddSingleton(timeProvider);
-        services.AddControllers().AddWireJson();
+        services.AddControllers().AddWireFormat();
 
         return services.BuildServiceProvider().GetRequiredService<IOptions<JsonOptions>>().Value.JsonSerializerOptions;
     }

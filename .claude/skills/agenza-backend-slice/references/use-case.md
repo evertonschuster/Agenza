@@ -11,7 +11,7 @@ messages", plus the earlier slices for reads, edits and paging. This file is how
 - Members are what crosses the wire: primitives, strings, `DateOnly?`, `Guid`, and lists as
   `IReadOnlyList<<Thing>Input>?`, with the `<Thing>Input` records in the same file. No domain type —
   except a shared string value object such as `CpfNumber?`, which binds from the JSON string and needs
-  no validator rule (ADR 0055) — no tenant. An enum is allowed: the kernel's `AddWireJson()` already names
+  no validator rule (ADR 0055) — no tenant. An enum is allowed: the kernel's `AddWireFormat()` already names
   every enum in camelCase and refuses integers, in the MVC and the minimal-API JSON options, and reads one from
   a query or a route by exactly one name (ADR 0066), so there is nothing to register, no `<Concept>Names` class
   and no values chosen to dodge the parser. A list of enums in a body gets an `IsInEnum` rule per item with

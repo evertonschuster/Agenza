@@ -6,7 +6,7 @@ namespace Admin.SharedKernel.AspNetCore;
 
 public static class MvcBuilderExtensions
 {
-    public static IMvcBuilder AddWireJson(this IMvcBuilder builder)
+    public static IMvcBuilder AddWireFormat(this IMvcBuilder builder)
     {
         builder.Services.AddOptions<JsonOptions>()
             .Configure<TimeProvider>((options, timeProvider) =>

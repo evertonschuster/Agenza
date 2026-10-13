@@ -50,7 +50,7 @@ Cheap, and it catches most of what matters. Each hit is a question, not a verdic
 | `new DomainError(` inside a method | Domain | an unnamed error | Média |
 | a `RuleFor` chain with no `.WithErrorCode` | `*Validator.cs` | FluentValidation's internal name leaks to the API | Média |
 | a domain type as a member (a shared string value object such as `CpfNumber` is fine, ADR 0055; so is a plain enum, ADR 0058) | commands, inputs, responses | the wire carries strings and primitives | Média |
-| a list of enums with no `IsInEnum` rule, a `<Concept>Names` class, a per-enum or per-feature JSON converter | validators, Application, `Program.cs` | an unvalidated value reaches the response; `AddWireJson()` already names every enum (ADR 0058) | Média |
+| a list of enums with no `IsInEnum` rule, a `<Concept>Names` class, a per-enum or per-feature JSON converter | validators, Application, `Program.cs` | an unvalidated value reaches the response; `AddWireFormat()` already names every enum (ADR 0058) | Média |
 | `//`, `///` | anywhere | "what" comments are not allowed | Baixa |
 
 ## 3. Read it, in this order

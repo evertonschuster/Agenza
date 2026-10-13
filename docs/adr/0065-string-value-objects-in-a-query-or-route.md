@@ -38,7 +38,8 @@ two things:
 - MVC and the API explorer read the type as one value, so the document says `Search`, a `string`, with no extra schema;
 - the kernel's model binder binds exactly the types that declare it.
 
-**`StringValueObjectModelBinderProvider`**, in `Admin.SharedKernel.AspNetCore` and registered first by `AddWireJson()`, so
+**`StringValueObjectModelBinderProvider`**, in `Admin.SharedKernel.AspNetCore` and registered first by `AddWireFormat()`
+(formerly `AddWireJson()`, [ADR 0066](0066-enums-read-from-a-query-or-a-route-by-one-name.md)), so
 no service has to remember it, gives a declaring type a binder that:
 
 - binds nothing when the parameter is absent;
@@ -69,8 +70,8 @@ a text; the query removes the mask with `CpfNumber.StripMask` ([ADR 0063](0063-c
 - The probe of the document is a test: `StringValueObjectContractTests` fails if `SearchText` becomes a complex type
   to MVC again, and the provider tests fail if personal data starts binding from a URL.
 - A date value object is not bound from a URL. This ADR covers strings.
-- `AddWireJson()` is called by every service, so the provider reaches `identity-service` too; it binds nothing there,
-  since no parameter of that service is a declaring type.
+- The provider reaches every service that calls `AddWireFormat()`. `identity-service` does not call it, and has no
+  parameter of a declaring type either.
 
 Verified by hand on a disposable PostgreSQL 18.3 with the real services and a real login: 97 checks on the list,
 including a term of 255 characters (`400`, the message of the value object, the term not echoed), a padded term of

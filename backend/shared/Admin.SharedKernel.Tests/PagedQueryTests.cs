@@ -19,7 +19,7 @@ public class PagedQueryTests
         var services = new ServiceCollection();
         services.AddSingleton(TimeProvider.System);
         services.AddLogging();
-        services.AddControllers().AddWireJson();
+        services.AddControllers().AddWireFormat();
         var provider = services.BuildServiceProvider();
 
         var metadata = provider.GetRequiredService<IModelMetadataProvider>().GetMetadataForType(typeof(ThingsQuery));
