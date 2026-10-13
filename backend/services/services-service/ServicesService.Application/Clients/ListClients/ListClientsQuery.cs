@@ -9,8 +9,10 @@ public sealed record ListClientsQuery(
     public ClientListFilter ToFilter()
     {
         var text = TextOf(Search);
+        var cpfDigits = CpfDigitsOf(text);
+        var status = ToClientStatus(Status);
 
-        return new ClientListFilter(Page, PageSize, text, CpfDigitsOf(text), ToClientStatus(Status));
+        return new ClientListFilter(Page, PageSize, text, cpfDigits, status);
     }
 
     private static string? TextOf(SearchText? search)
