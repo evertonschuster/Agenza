@@ -145,8 +145,9 @@ nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shar
 no tenant. The
 output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
 the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
-response, value objects flatten to their primitive and enums to camelCase strings. No mapping library, no DTO in the
-domain, no entity past the handler.
+response, a value object flattens to its primitive, and an enum stays the enum: the kernel's converter writes it as a
+camelCase string (§6), so the mapping never calls `ToString()` on it. No mapping library, no DTO in the domain, no
+entity past the handler.
 
 ## 3. Domain
 

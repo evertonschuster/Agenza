@@ -7,7 +7,7 @@ public sealed record ClientListItemResponse(
     string? Phone,
     string? Email,
     string? Cpf,
-    string Status)
+    ClientStatus Status)
 {
     public static ClientListItemResponse FromClient(Client client)
     {
@@ -18,6 +18,6 @@ public sealed record ClientListItemResponse(
             client.Phone?.Value,
             client.Email?.Value,
             client.Cpf?.Value,
-            client.Status.ToString().ToLowerInvariant());
+            client.Status);
     }
 }

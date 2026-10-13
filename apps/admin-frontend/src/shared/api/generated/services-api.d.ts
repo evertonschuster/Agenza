@@ -1943,7 +1943,7 @@ export interface components {
       phone: null | string;
       email: null | string;
       cpf: null | string;
-      status: string;
+      status: components['schemas']['ClientStatus'];
     };
     ClientResponse: {
       /** Format: uuid */
@@ -1959,6 +1959,8 @@ export interface components {
       guardians: components['schemas']['GuardianResponse'][];
       referenceContacts: components['schemas']['ReferenceContactResponse'][];
     };
+    /** @enum {unknown} */
+    ClientStatus: 'active' | 'inactive';
     /** @enum {unknown} */
     ClientStatusFilter: 'active' | 'inactive' | 'all' | null;
     /** @enum {unknown} */

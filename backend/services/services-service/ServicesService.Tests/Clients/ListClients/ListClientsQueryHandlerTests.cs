@@ -84,7 +84,7 @@ public class ListClientsQueryHandlerTests
         item.Phone.Should().Be("(11) 99999-0000");
         item.Email.Should().Be("paula@example.com");
         item.Cpf.Should().Be("52998224725");
-        item.Status.Should().Be("active");
+        item.Status.Should().Be(ClientStatus.Active);
     }
 
     [Fact]
@@ -110,7 +110,7 @@ public class ListClientsQueryHandlerTests
 
         var result = await _handler.Handle(new ListClientsQuery(Status: ClientStatusFilter.All), CancellationToken.None);
 
-        result.Value.Items.Should().ContainSingle().Which.Status.Should().Be("inactive");
+        result.Value.Items.Should().ContainSingle().Which.Status.Should().Be(ClientStatus.Inactive);
     }
 
     [Fact]

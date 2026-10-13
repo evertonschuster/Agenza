@@ -110,7 +110,8 @@ No `try/catch`, no base class, no loader or service class between handlers.
 - `<Entity>Response`, a `sealed record`, born in the operation folder and moved to the feature root
   when a second operation returns it.
 - `public static <Entity>Response From<Entity>(<Entity> entity, …)`: a value object becomes its
-  `.Value` (`?.Value` when optional), an enum its camelCase wire name, each child its own
+  `.Value` (`?.Value` when optional), an enum stays the enum (the kernel's converter writes its camelCase name; no
+  `ToString()`), each child its own
   `<Child>Response.From<Child>`, another aggregate an `<Other>Summary(Id, Name, …)` built from what the
   handler read.
 - The DTO decides nothing. A derived value the interface needs is exposed by the domain and copied
