@@ -16,7 +16,7 @@ builder.Services
     {
         options.Filters.Add<TenantHeaderFilter>();
     })
-    .AddWireJson()
+    .AddWireFormat()
     .AddModelStateProblemDetails();
 builder.Services.AddApiDocumentation(builder.Configuration);
 

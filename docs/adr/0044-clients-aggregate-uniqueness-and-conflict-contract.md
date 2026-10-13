@@ -3,7 +3,9 @@
 Status: accepted (2026-10); the PascalCase key casing of the conflict contract (`Cpf`, `Email`) is superseded by
 [ADR 0051](0051-camelcase-error-keys-on-the-wire.md), which writes them as `cpf`, `email` on the wire; the
 `ContactPurposes` value object, the `ContactPurposeNames` translation and the "not a JSON enum" rule for
-reference-contact purposes are superseded by [ADR 0058](0058-closed-set-members-are-plain-enums.md)
+reference-contact purposes are superseded by [ADR 0058](0058-closed-set-members-are-plain-enums.md); the advice to use
+`EF.Property<string>` for text matching on a value-object column does not hold (it throws) and is corrected by
+[ADR 0063](0063-clients-list-and-search-contract.md)
 
 ## Context
 

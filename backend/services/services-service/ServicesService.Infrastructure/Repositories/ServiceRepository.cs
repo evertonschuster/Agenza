@@ -1,6 +1,8 @@
+using Admin.SharedKernel;
 using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
+using ServicesService.Application.Services;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.Infrastructure.Repositories;
@@ -12,23 +14,34 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
     {
     }
 
-    public Task<(IReadOnlyList<Service> Items, int TotalCount)> ListAsync(
-        int page,
-        int pageSize,
-        string? search,
-        Guid? categoryId,
-        Guid? tagId,
-        CancellationToken cancellationToken) =>
-        ListPagedAsync(
-            query => query
-                .Include(s => s.Tags)
-                .Where(s => string.IsNullOrWhiteSpace(search) || EF.Functions.ILike(s.Name, $"%{search.Trim()}%"))
-                .Where(s => categoryId == null || s.CategoryId == categoryId)
-                .Where(s => tagId == null || s.Tags.Any(t => t.Id == tagId))
-                .OrderBy(s => s.Name),
-            page,
-            pageSize,
-            cancellationToken);
+    public Task<PagedResult<Service>> ListAsync(ServiceListFilter filter, CancellationToken cancellationToken)
+    {
+        return ListPagedAsync(filter, query => FilterAndOrder(query, filter), cancellationToken);
+    }
+
+    private static IOrderedQueryable<Service> FilterAndOrder(IQueryable<Service> query, ServiceListFilter filter)
+    {
+        query = query.Include(service => service.Tags);
+
+        if (filter.Text is { } text)
+        {
+            query = query.Where(service => EF.Property<string>(service, "NameNormalized").Contains(text));
+        }
+
+        if (filter.CategoryId is { } categoryId)
+        {
+            query = query.Where(service => service.CategoryId == categoryId);
+        }
+
+        if (filter.TagId is { } tagId)
+        {
+            query = query.Where(service => service.Tags.Any(tag => tag.Id == tagId));
+        }
+
+        return query
+            .OrderBy(service => service.Name)
+            .ThenBy(service => service.Id);
+    }
 
     public Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken) =>
         Set.Include(s => s.Tags).FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);

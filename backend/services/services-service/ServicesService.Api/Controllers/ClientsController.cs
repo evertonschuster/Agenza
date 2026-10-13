@@ -6,6 +6,7 @@ using ServicesService.Application.Clients;
 using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Application.Clients.DeactivateClient;
 using ServicesService.Application.Clients.GetClientById;
+using ServicesService.Application.Clients.ListClients;
 using ServicesService.Application.Clients.ReactivateClient;
 using ServicesService.Application.Clients.UpdateClient;
 
@@ -23,6 +24,15 @@ public class ClientsController : AgenzaControllerBase
     public ClientsController(IDispatcher dispatcher)
     {
         _dispatcher = dispatcher;
+    }
+
+    [HttpGet]
+    [ProducesResponseType<ApiResponse<PagedResult<ClientListItemResponse>>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    public async Task<IActionResult> List([FromQuery] ListClientsQuery query, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Query(query, cancellationToken);
+        return result.ToActionResult(this, clients => Ok(clients));
     }
 
     [HttpPost]

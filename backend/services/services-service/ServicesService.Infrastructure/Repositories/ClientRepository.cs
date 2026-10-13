@@ -1,6 +1,8 @@
+using Admin.SharedKernel;
 using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
+using ServicesService.Application.Clients;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.Infrastructure.Repositories;
@@ -14,10 +16,51 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
 
     public Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken)
     {
-        return Set
+        return WithContacts(Set).FirstOrDefaultAsync(client => client.Id == clientId, cancellationToken);
+    }
+
+    public Task<PagedResult<Client>> ListAsync(ClientListFilter filter, CancellationToken cancellationToken)
+    {
+        return ListPagedAsync(filter, query => FilterAndOrder(WithContacts(query), filter), cancellationToken);
+    }
+
+    private static IQueryable<Client> WithContacts(IQueryable<Client> query)
+    {
+        return query
             .Include(client => client.Guardians.OrderBy(guardian => guardian.Name).ThenBy(guardian => guardian.Id))
-            .Include(client => client.ReferenceContacts.OrderBy(contact => contact.Name).ThenBy(contact => contact.Id))
-            .FirstOrDefaultAsync(client => client.Id == clientId, cancellationToken);
+            .Include(client => client.ReferenceContacts.OrderBy(contact => contact.Name).ThenBy(contact => contact.Id));
+    }
+
+    private static IOrderedQueryable<Client> FilterAndOrder(IQueryable<Client> query, ClientListFilter filter)
+    {
+        if (filter.Status is { } wantedStatus)
+        {
+            query = query.Where(client => client.Status == wantedStatus);
+        }
+
+        if (filter.Text is { } text)
+        {
+            query = Search(query, text, filter.CpfDigits);
+        }
+
+        return query
+            .OrderBy(client => EF.Property<string>(client, "NameNormalized"))
+            .ThenBy(client => client.Id);
+    }
+
+    private static IQueryable<Client> Search(IQueryable<Client> query, string text, string? cpfDigits)
+    {
+        if (cpfDigits is not null)
+        {
+            return query.Where(client =>
+                EF.Property<string>(client, "NameNormalized").Contains(text)
+                || EF.Property<string>(client, "EmailNormalized").Contains(text)
+                || EF.Property<string>(client, "CpfNormalized").Contains(cpfDigits));
+        }
+
+        return query.Where(client =>
+            EF.Property<string>(client, "NameNormalized").Contains(text)
+            || EF.Property<string>(client, "EmailNormalized").Contains(text));
     }
 
     public async Task UpdateAsync(Client client, CancellationToken cancellationToken)

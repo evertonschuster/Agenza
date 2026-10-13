@@ -71,6 +71,22 @@ o único campo que muda por endpoint.
 {"data":{"items":[{"id":"...","code":1,"name":"Teste","description":null,"durationMinutes":2,"minDurationMinutes":1,"maxDurationMinutes":3,"price":10.00,"maxDiscountPercentage":10.00,"categoryId":null,"categoryName":null,"tags":[]}],"totalCount":1,"page":1,"pageSize":20},"success":true, "...":"..."}
 ```
 
+**Lista paginada com busca e filtro** — o mesmo `PagedResult<T>`, com `search` (texto) e `status` (string) além de
+`page`/`pageSize`. Exemplo, `GET /api/v1/clients` (padrão: `page=1`, `pageSize=20`, `status=active`, sem `search`),
+verificado em 2026-10-12 num PostgreSQL descartável com a stack real em portas privadas
+([ADR 0063](adr/0063-clients-list-and-search-contract.md)):
+
+```json
+{"data":{"items":[{"id":"01a131d6-2bd6-7fcc-a1eb-aeaff8ac3721","fullName":"a_b Cliente","birthDate":null,"phone":null,"email":null,"cpf":null,"status":"active"},{"id":"01a131d6-2b9a-7a60-9c63-949aab1e7054","fullName":"Álvaro Reis","birthDate":null,"phone":null,"email":"alvaro@example.com","cpf":"39053344705","status":"active"}],"totalCount":21,"page":1,"pageSize":20},"success":true,"...":"..."}
+```
+
+Uma página além da última não é erro: `GET /api/v1/clients?page=99` responde `200` com a lista vazia, o total real e a
+página pedida:
+
+```json
+{"data":{"items":[],"totalCount":21,"page":99,"pageSize":20},"success":true,"...":"..."}
+```
+
 **Criação** (`201 Created`, header `Location` presente, `data` é o recurso criado):
 
 ```
@@ -171,7 +187,7 @@ Só `Tenant.ContextMismatch` (§2) usa essa forma menor — sem `traceId`/`corre
 Se o **model binder** do `[ApiController]` rejeita o corpo antes de qualquer `IValidator`/handler
 rodar — uma propriedade obrigatória do record **totalmente ausente** do JSON (não vazia: ausente),
 JSON malformado, um valor de tipo errado ou um value object compartilhado inválido
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`, `SearchText`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
 canônica de §4.1** (`AddModelStateProblemDetails`), não o `ValidationProblemDetails` do framework. O
 que muda é o conteúdo:
 
@@ -182,7 +198,9 @@ que muda é o conteúdo:
 - a `message` é o texto do framework, **em inglês** ("The FullName field is required.", "A non-empty
   request body is required."), exceto a de um value object compartilhado, que vem em pt-BR ("O CPF
   informado é inválido.", "O nome completo é obrigatório.", "Informe um e-mail válido.", "A data de nascimento deve estar no passado.") e nunca ecoa o valor
-  recebido. Um valor de tipo errado traz o texto do
+  recebido, e a de um enum lido da query ou da rota, que aceita um único nome em qualquer caixa e recusa número
+  ou nomes juntos com "O valor informado deve ser active, inactive ou all." (os nomes do enum, [ADR 0066](adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)),
+  também em pt-BR e sem ecoar o valor. Um valor de tipo errado traz o texto do
   `System.Text.Json` — nome interno do tipo e posição do parser, não texto para o usuário;
 - só a **primeira** falha de valor é reportada: o `System.Text.Json` para no primeiro valor inválido,
   então dois CPFs inválidos, ou um nome vazio e um CPF inválido, no mesmo corpo geram uma única entrada, a
@@ -251,14 +269,19 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | Recurso em uso (regra cruzando entidades) | `DELETE /api/v1/tags/{id}` (tag usada por um `service`) | 409 | `Tag.InUse` |
 | Categoria não encontrada | `GET /api/v1/categories/{id}` (id não existe) | 404 | `Category.NotFound` |
 | Id vazio ≠ id inexistente | `DELETE /api/v1/tags/00000000-0000-0000-0000-000000000000` | 400 (não 404!) | `Validation.Failed` (`tagId`: `NotEmptyValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`page`: `GreaterThanOrEqualValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`pageSize`: `InclusiveBetweenValidator`) |
+| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`page`: `Paging.PageInvalid`) |
+| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`pageSize`: `Paging.PageSizeInvalid`) |
 | CPF já cadastrado (pessoa ativa ou inativa) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.cpf[0].meta.clientId`) |
 | E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.email[0].meta.clientId`) |
 | Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`guardians`: `Client.GuardianRequired`) |
 | Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `referenceContacts[0].purposes`: `ClientReferenceContact.PurposesRequired`…) |
 | CPF inválido, em qualquer formatação (§4.3) | `POST /api/v1/clients` (`cpf` ou `guardians[0].cpf`) | 400 | `Validation.Failed` (`cpf`: `Validation.Failed`, "O CPF informado é inválido.") |
 | `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (§4.3: mensagem do framework, em inglês) | `Validation.Failed` (`fullName`: `Validation.Failed`) |
+| Filtro de situação desconhecido, numérico ou com nomes juntos (§4.3, [ADR 0066](adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)) | `GET /api/v1/clients?status=deleted`, `?status=3`, `?status=active,inactive` | 400 (mensagem do binder do kernel, em pt-BR) | `Validation.Failed` (`status`: `Validation.Failed`, "O valor informado deve ser active, inactive ou all.") |
+| Página abaixo de 1, tamanho fora de 1–100 | `GET /api/v1/clients?page=0` | 400 | `Validation.Failed` (`page`: `Paging.PageInvalid`; `pageSize`: `Paging.PageSizeInvalid`) |
+| Página cujo deslocamento não cabe em `int` | `GET /api/v1/clients?page=21474838&pageSize=100` | 400 | `Validation.Failed` (`page`: `Paging.PageTooLarge`) |
+| Parâmetro de query que não é número (§4.3) | `GET /api/v1/clients?page=abc` | 400 (mensagem do framework, em inglês) | `Validation.Failed` (`page`: `Validation.Failed`) |
+| Busca acima de 254 caracteres (§4.3, [ADR 0065](adr/0065-string-value-objects-in-a-query-or-route.md)) | `GET /api/v1/clients?search=…`, `GET /api/v1/services?search=…` | 400 (mensagem do value object, em pt-BR) | `Validation.Failed` (`search`: `Validation.Failed`, "A busca deve ter no máximo 254 caracteres.") |
 O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
 constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado passa pelo roteamento
 normalmente e só é rejeitado dentro do `DeleteTagCommandValidator` (`NotEmpty`) — chega como 400 de

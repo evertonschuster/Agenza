@@ -1,0 +1,162 @@
+# ADR 0064 — Paged reads: one page request in, one paged result out
+
+Status: accepted (2026-10); extends [ADR 0061](0061-validators-write-their-own-rules.md) (the validator keeps writing
+its own rules) and [ADR 0063](0063-clients-list-and-search-contract.md) (the first list to use it)
+
+## Context
+
+Two lists are paged: services and, with #155, clients. Each one repeated the same plumbing:
+
+- the port took `int page, int pageSize` and returned a tuple `(Items, TotalCount)`;
+- `RepositoryBase.ListPagedAsync(order, page, pageSize)` computed the offset in `int`, so the older list
+  `GET /api/v1/services?page=2147483647&pageSize=100` answered `500 Unexpected.Error` and `page=43000000` silently
+  computed an offset of 5,032,604 instead of 4,299,999,900;
+- the handler rebuilt the `PagedResult<T>` envelope by hand from the tuple and the query;
+- each validator wrote the limits as literals (`1`, `100`) and, for services, with the validator library's internal
+  codes.
+
+The next paged read would copy all of it. The change asks for the same behaviour to be reusable: the object the
+repository receives, and the repository operation itself.
+
+## Decision
+
+**`PageRequest(Page, PageSize)`**, in `Admin.SharedKernel` next to `PagedResult`, is what a paged read hands to the
+repository. Building one that cannot be served throws `ArgumentOutOfRangeException` (page below 1, size below 1, an
+offset that does not fit an `int`): a programmer-error guard, because the validator already refused those inputs
+with a `400`. It exposes `Offset`, the limits (`FirstPage` 1, `DefaultPageSize` 20, `MaxPageSize` 100), the stable
+error codes below and `OffsetFits(page, pageSize)`, the one formula the validators and the constructor share. It is
+not `sealed` on purpose: the filter of a list extends it (below), so the guard comes with the page.
+
+**`RepositoryBase.ListPagedAsync(PageRequest, filterAndOrder, ct)`** returns `PagedResult<TEntity>`: the items, the
+real total, and the page and size it was asked for. The filter-and-order function is required, because a page without an
+explicit order is a bug, and it returns an `IOrderedQueryable<TEntity>`, so a page without an `OrderBy` does not compile.
+Ending the order in a unique key (`ThenBy(e => e.Id)`) stays the repository's to write.
+
+**`PagedResult<T>.Map(...)`** converts the items and keeps the total, the page and the size, so a handler is
+`repository.ListAsync(query.ToFilter(), ct)` followed by `.Map(<Entity>ListItemResponse.From<Entity>)`.
+
+**The filter of a list extends it.** A paged list has one record, `ClientListFilter : PageRequest`, that carries the
+page and the plain filters of that list (`Text`, `CpfDigits`, `Status`): one object from the handler to the
+repository, where a new criterion is one more property and not one more parameter. It is a plain positional record, a
+DTO with no rule of its own: the query's `ToFilter()` normalizes what comes from the wire (the search text, the digits
+of the CPF, the status) and the base constructor keeps the guard. The port is
+`ListAsync(ClientListFilter filter, ct)` returning `PagedResult<Client>`, and the adapter hands the filter to
+`ListPagedAsync(filter, filterAndOrder, ct)`, which reads only the page from it. The filter holds plain values: no
+expression, no specification, nothing generic (see below). Only the filter of a list extends `PageRequest`; a query or
+a command never does, because they carry unvalidated input and have to be buildable with any number.
+
+**Validation** stays in each validator ([ADR 0061](0061-validators-write-their-own-rules.md)): the limits come from
+the constants of `PageRequest`, and the three rules carry codes that every list shares, so a client branches once:
+
+| Rule | Code |
+| --- | --- |
+| `page` at least 1 | `Paging.PageInvalid` |
+| `pageSize` from 1 to `MaxPageSize` | `Paging.PageSizeInvalid` |
+| `(page - 1) * pageSize` fits an `int` | `Paging.PageTooLarge` |
+
+A page whose offset does not fit an `int` is a `400`, not an empty page: the client asked for something no table
+holds, and the error says so.
+
+**A paged query extends `PagedQuery`.** `PagedQuery`, in `Admin.SharedKernel`, is an abstract record with `Page` and
+`PageSize` as `init` properties that default to the `PageRequest` constants, and no guard: it holds the raw input, and
+the validator is the gate. `ListClientsQuery` extends it and declares only its own members (`Search`, `Status`), so the
+wire stays flat (`?page=&pageSize=&search=&status=`), a new list does not redeclare the two members or their defaults,
+and a paging value is set with an initializer (`new ListClientsQuery { Page = 2 }`). The query turns itself into its filter
+with a `ToFilter()` method of the record, so the handler stays orchestration and the normalization and the mapping of the
+wire enum `ClientStatusFilter` to the domain's `ClientStatus?` live with the query that knows the wire's shape. A command
+maps into the domain through an extension method ([ADR 0007](0007-direct-command-binding-and-mapping-extensions.md)); a
+list query maps into an Application record, with no domain call, so it carries the method itself and there is no
+extension file. `PagedQuery` and `PageRequest` are two types on purpose: one is input that may be wrong, the other
+is a page a repository can serve. The query is never the filter, and the filter is never bound from the wire.
+
+**Services follows.** The services list was converted after review, in the same pull request, the way clients was:
+`ServiceListFilter : PageRequest` (`Text`, `CategoryId`, `TagId`), `ListServicesQuery : PagedQuery`, the port
+`ListAsync(ServiceListFilter, ct)`, a `Map` in the handler (which still reads the names of the page's categories in one
+query) and the three `Paging.*` rules in its validator. The older `ListPagedAsync(order, page, pageSize)` was removed,
+because nothing else called it. `GET /api/v1/services?page=2147483647&pageSize=100` now answers `400 Paging.PageTooLarge`
+instead of `500`, and `page=43000000` answers the same `400` instead of a wrong offset. The services order also ends in
+the id, so a tie cannot repeat or skip a record. Its `Search` is a `SearchText` as in the clients list
+([ADR 0065](0065-string-value-objects-in-a-query-or-route.md)): trimmed and lowercased at binding, at most 254 characters,
+and matched as "contains" over the generated column the service already had (`NameNormalized`, `lower("Name")`), so `%`
+and `_` are literal characters instead of the wildcards of the older unescaped `ILike`. The order is unchanged.
+
+## Consequences
+
+- `Admin.SharedKernel.EntityFrameworkCore` now references `Admin.SharedKernel`, the direction that cannot leak EF
+  into Application (`Admin.SharedKernel` has no EF reference). `identity-service`'s Infrastructure already received it
+  through its Application project.
+- Clients' error codes for the page rules are `Paging.*`, not `Client.Page*`. The frontend does not branch on the
+  services codes, so nothing there changes; the codes only existed on this unmerged branch for clients.
+- The `GET /services` contract changes in two ways: its page errors carry the `Paging.*` codes instead of the validator
+  library's internal names (the frontend does not branch on them), and a huge page is a `400` instead of a `500` or a
+  wrong page. `RepositoryBase` has one paged read.
+- A repository test cannot live in `Admin.SharedKernel.Tests` (it has no EF). The paged helper is proven through the
+  clients persistence tests (items, total, echoed page and size, a page past the last, no repeat or omission).
+- The frontend's generated types keep the same query parameters; `Page` and `PageSize` come after the list's own
+  members in the generated `query` object, because the properties are inherited.
+- A filter that extends `PageRequest` is never equal to a plain `PageRequest` of the same page: record equality includes
+  the type. A test that wants the filter compares the filter.
+- `GET /services?search=` changes too: a term is trimmed and lowercased at binding, one longer than 254 characters
+  answers `400 Validation.Failed` under `search` with the message of `SearchText` (it had no limit), and `%` and `_`
+  match themselves. The generated type stays `Search?: string`.
+
+Verified on the same disposable PostgreSQL 18.3 as [ADR 0063](0063-clients-list-and-search-contract.md), on the final
+code: the 90 checks of the clients list with the `Paging.*` codes and a page echoed from the repository's answer;
+forty checks of the converted services list (paging with no repeat or omission and the order of the database, a
+case-insensitive and trimmed search, the category and tag filters alone and together with paging, a page past the last,
+every `Paging.*` code, `page=2147483647` and `page=43000000` as `400`, no leak of another tenant or of a deleted
+service, nothing written by a listing, and an edit followed by the list); the volume run of the clients list with
+50,000 people (30 to 45 ms at the median, 133 ms at page 2000); and the generated frontend types equal to a fresh
+generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.SharedKernel.Tests`.
+
+The `SearchText` of services and the clients page with its contacts were verified again on the final code, on a fresh
+disposable PostgreSQL 18.3 with the real services and a real login, in 23 checks: for services, a trimmed and
+case-insensitive search, `%`, `_` and `e_f` as literal text, a blank search, 255 characters refused under `search`
+without echoing the term, 254 accepted after the trim, a searched list paged with no repeat, and the three `Paging.*`
+codes; for clients, two pages with the contacts joined and no repeat or omission, the order, an item still without
+contacts, a partial CPF, a deactivation that keeps the contacts, and the three codes. The logged SQL shows
+`"NameNormalized" LIKE $2` with `$2 = '%\%%'`, and the generated frontend types are equal to a fresh generation.
+
+## Considered and rejected
+
+- **A shared `PagedQueryValidator` (`Include`) over an `IPagedQuery` interface.** One source for the rules, but it
+  reopens [ADR 0061](0061-validators-write-their-own-rules.md) and adds an interface to the kernel for three
+  one-line rules.
+- **A generic filter or specification passed to the repository** (`ListAsync(PageRequest, ISpecification<T>)`, or an
+  `Expression<Func<T, bool>>`). It is what "filter any request" suggests, but the architecture keeps ports to plain
+  values ([ARCHITECTURE](../../backend/docs/ARCHITECTURE.md) §5): each list has its own filters, and the repository
+  stays the seam that knows how to apply them. A record of plain values that belongs to one list is not that.
+- **`ListClientsQuery` extending `PageRequest`.** Binding would run the guard on raw input (`?page=0` would throw
+  instead of answering `Paging.PageInvalid`), and the handler would hand the port a query carrying the wire's `Search`
+  and `Status`. The filter, built after the validator, can extend it.
+- **The filter holding a `PageRequest`** (`ClientListFilter(Text, CpfDigits, Status, PageRequest Page)`, tried after
+  review). One positional parameter instead of two forwarded ones, and `PageRequest` could be `sealed`; but `Page`,
+  `PageSize` and `Offset` would be read through `filter.Page`, and the filter would no longer be the page that
+  `ListPagedAsync` takes. The owner found the inheritance simpler and clearer, and accepts its costs: each filter
+  redeclares and forwards the two members, `PageRequest` stays open, and equality across the hierarchy is pinned by a test.
+- **The page beside the filter** (`ListAsync(ClientListFilter filter, PageRequest page, ct)`, tried after review). The
+  criteria could exist without a page, for an unpaged read of the same list (an export, a count by filter), but no such
+  read exists, and a list's filter is always paged.
+- **`ToFilter()` as an extension method in a file of its own** (the version before this one), the pattern of ADR 0007 for
+  commands. The conversion has no other user and calls nothing of the domain, so a second file only separates it from the
+  data it reads. Changed after review.
+- **A filter that normalizes in its own `Create`** (the version before this one): a private constructor and a static
+  `Create(page, pageSize, SearchText?, ClientStatus?)` holding the trim, the lowercase and the extraction of the CPF
+  digits. The rules belong to the query that knows the wire's shape, and the filter stays data. Changed after review.
+- **The handler building the filter** (the version before the extension): `ClientListFilter.Create(query.Page,
+  query.PageSize, query.Search, status)` and a private status mapping in every list handler. Changed after review.
+- **The first version of this change**: `ListAsync(PageRequest page, string? text, string? cpfDigits, ClientStatus?
+  status, ct)`. It grows by one parameter per criterion, and the text and the digits were one concept in two arguments.
+  Changed after review.
+- **A base query record with `Page` and `PageSize`** (rejected in the first version, adopted after review). The fears
+  were that MVC would not bind inherited members and that a base type goes against "no base handler, no generic CRUD".
+  A test of the MVC binder (`PagedQueryTests`) and the live service show that the inherited `init` properties are
+  bound from the query string in any case, and that the OpenAPI document keeps the same four parameters (only their
+  order changes). The rule is about handlers and CRUD, and a record with two properties is neither.
+- **A positional base (`PagedQuery(int Page, int PageSize)`).** A derived positional record has to repeat both
+  parameters to bind through its constructor, which is the duplication this removes.
+- **Clamping to an empty page in the helper, and dropping `Paging.PageTooLarge`.** Safe by construction for every
+  future list; the owner preferred the explicit `400`.
+- **Codes per feature** (`Client.PageInvalid`, `Service.PageInvalid`). The same rule would have a code per list.
+- **Converting services in a change of its own** (the first plan). It touches an older slice and the `GET /services`
+  contract; the owner asked for it in the same pull request, after the clients list was reviewed.

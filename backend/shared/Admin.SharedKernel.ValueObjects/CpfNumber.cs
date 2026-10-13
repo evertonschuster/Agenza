@@ -30,8 +30,10 @@ public sealed record CpfNumber : IStringValueObject<CpfNumber>
         return new CpfNumber(value);
     }
 
-    private static string StripMask(string value) =>
-        new(value.Where(character => character is not ('.' or '-') && !char.IsWhiteSpace(character)).ToArray());
+    public static string StripMask(string value)
+    {
+        return new string(value.Where(character => character is not ('.' or '-') && !char.IsWhiteSpace(character)).ToArray());
+    }
 
     private static bool HasValidCheckDigits(string digits)
     {

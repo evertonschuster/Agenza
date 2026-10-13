@@ -1,8 +1,13 @@
+using Admin.SharedKernel;
+using ServicesService.Application.Clients;
+
 namespace ServicesService.Application.Abstractions;
 
 public interface IClientRepository
 {
     Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken);
+
+    Task<PagedResult<Client>> ListAsync(ClientListFilter filter, CancellationToken cancellationToken);
 
     Task UpdateAsync(Client client, CancellationToken cancellationToken);
 

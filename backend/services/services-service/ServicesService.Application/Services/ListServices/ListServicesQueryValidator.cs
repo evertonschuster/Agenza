@@ -1,3 +1,4 @@
+using Admin.SharedKernel;
 using FluentValidation;
 
 namespace ServicesService.Application.Services.ListServices;
@@ -7,9 +8,17 @@ public sealed class ListServicesQueryValidator : AbstractValidator<ListServicesQ
     public ListServicesQueryValidator()
     {
         RuleFor(query => query.Page)
-            .GreaterThanOrEqualTo(1).WithMessage("A página deve ser maior ou igual a 1.");
+            .Cascade(CascadeMode.Stop)
+            .GreaterThanOrEqualTo(PageRequest.FirstPage)
+            .WithErrorCode(PageRequest.PageInvalidCode)
+            .WithMessage($"A página deve ser maior ou igual a {PageRequest.FirstPage}.")
+            .Must((query, page) => PageRequest.OffsetFits(page, query.PageSize))
+            .WithErrorCode(PageRequest.PageTooLargeCode)
+            .WithMessage("A página informada está além do limite permitido.");
 
         RuleFor(query => query.PageSize)
-            .InclusiveBetween(1, 100).WithMessage("O tamanho da página deve ser entre 1 e 100.");
+            .InclusiveBetween(1, PageRequest.MaxPageSize)
+            .WithErrorCode(PageRequest.PageSizeInvalidCode)
+            .WithMessage($"O tamanho da página deve ser entre 1 e {PageRequest.MaxPageSize}.");
     }
 }

@@ -55,4 +55,15 @@ public class CpfNumberTests
     {
         CpfNumber.Restore("00000000000").Value.Should().Be("00000000000");
     }
+
+    [Theory]
+    [InlineData("529.982.247-25", "52998224725")]
+    [InlineData("  529 982 247 25 ", "52998224725")]
+    [InlineData("982.2", "9822")]
+    [InlineData("529.98a", "52998a")]
+    [InlineData("", "")]
+    public void StripMask_RemovesOnlyTheMaskAndKeepsAnythingElseForTheCallerToJudge(string raw, string expected)
+    {
+        CpfNumber.StripMask(raw).Should().Be(expected);
+    }
 }

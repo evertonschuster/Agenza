@@ -11,12 +11,16 @@ messages", plus the earlier slices for reads, edits and paging. This file is how
 - Members are what crosses the wire: primitives, strings, `DateOnly?`, `Guid`, and lists as
   `IReadOnlyList<<Thing>Input>?`, with the `<Thing>Input` records in the same file. No domain type —
   except a shared string value object such as `CpfNumber?`, which binds from the JSON string and needs
-  no validator rule (ADR 0055) — no tenant. An enum is allowed: the kernel's `AddWireJson()` already names
-  every enum in camelCase and refuses integers, in the MVC and the minimal-API JSON options, so there is
-  nothing to register and no `<Concept>Names` class. A list of enums gets an `IsInEnum` rule per item with
-  the domain's code (ADR 0058).
+  no validator rule (ADR 0055) — no tenant. An enum is allowed: the kernel's `AddWireFormat()` already names
+  every enum in camelCase and refuses integers, in the MVC and the minimal-API JSON options, and reads one from
+  a query or a route by exactly one name (ADR 0066), so there is nothing to register, no `<Concept>Names` class
+  and no values chosen to dodge the parser. A list of enums in a body gets an `IsInEnum` rule per item with
+  the domain's code (ADR 0058); a query enum needs no rule.
 - A route id is a member (`<Entity>Id`) that the controller fills with `with { … }`.
-- A list query carries its filters as optional members and `Page`/`PageSize` with defaults.
+- A list query extends `PagedQuery` (`Page`/`PageSize`, defaults from `PageRequest`) and carries its filters as
+  optional members, a free-text search as a `SearchText?`; its own `ToFilter()` method builds the
+  `<Entity>ListFilter` (a `PageRequest` with the list's filters), and the validator writes the three `Paging.*`
+  rules (ADR 0064).
 
 ## 2. The validator — simple and clean
 
@@ -108,12 +112,14 @@ No `try/catch`, no base class, no loader or service class between handlers.
 - `<Entity>Response`, a `sealed record`, born in the operation folder and moved to the feature root
   when a second operation returns it.
 - `public static <Entity>Response From<Entity>(<Entity> entity, …)`: a value object becomes its
-  `.Value` (`?.Value` when optional), an enum its camelCase wire name, each child its own
+  `.Value` (`?.Value` when optional), an enum stays the enum (the kernel's converter writes its camelCase name; no
+  `ToString()`), each child its own
   `<Child>Response.From<Child>`, another aggregate an `<Other>Summary(Id, Name, …)` built from what the
   handler read.
 - The DTO decides nothing. A derived value the interface needs is exposed by the domain and copied
   here.
-- A paged read returns `PagedResult<<Entity>Response>`.
+- A paged read returns `PagedResult<<Entity>Response>`: `repository.ListAsync(…)` answers `PagedResult<Entity>` and the
+  handler `Map`s it.
 
 ## 6. Red flags in a use case
 

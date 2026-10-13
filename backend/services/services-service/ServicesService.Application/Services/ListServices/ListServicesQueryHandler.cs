@@ -18,36 +18,39 @@ public sealed class ListServicesQueryHandler : IQueryHandler<ListServicesQuery, 
         ListServicesQuery query,
         CancellationToken cancellationToken)
     {
-        var (services, totalCount) = await _serviceRepository.ListAsync(
-            query.Page,
-            query.PageSize,
-            query.Search,
-            query.CategoryId,
-            query.TagId,
-            cancellationToken);
+        var services = await _serviceRepository.ListAsync(query.ToFilter(), cancellationToken);
 
-        // Only the categories this page's services actually reference (at most
-        // pageSize distinct ids), not the tenant's entire Category catalog on
-        // every page (docs/adr/0012).
+        var categoryNamesById = await CategoryNamesAsync(services.Items, cancellationToken);
+
+        return Result.Success(services.Map(service => ServiceResponse.FromService(service, CategoryNameOf(service, categoryNamesById))));
+    }
+
+    private async Task<Dictionary<Guid, string>> CategoryNamesAsync(
+        IReadOnlyList<Service> services,
+        CancellationToken cancellationToken)
+    {
         var categoryIds = services
             .Select(service => service.CategoryId)
-            .Where(categoryId => categoryId is not null)
-            .Select(categoryId => categoryId!.Value)
+            .OfType<Guid>()
             .Distinct()
             .ToList();
-        var categoryNamesById = categoryIds.Count == 0
-            ? new Dictionary<Guid, string>()
-            : (await _categoryRepository.GetByIdsAsync(categoryIds, cancellationToken))
-                .ToDictionary(category => category.Id, category => category.Name);
+        if (categoryIds.Count == 0)
+        {
+            return [];
+        }
 
-        var items = services
-            .Select(service => ServiceResponse.FromService(
-                service,
-                service.CategoryId is { } categoryId && categoryNamesById.TryGetValue(categoryId, out var name)
-                    ? name
-                    : null))
-            .ToList();
+        var categories = await _categoryRepository.GetByIdsAsync(categoryIds, cancellationToken);
 
-        return Result.Success(new PagedResult<ServiceResponse>(items, totalCount, query.Page, query.PageSize));
+        return categories.ToDictionary(category => category.Id, category => category.Name);
+    }
+
+    private static string? CategoryNameOf(Service service, Dictionary<Guid, string> categoryNamesById)
+    {
+        if (service.CategoryId is not { } categoryId)
+        {
+            return null;
+        }
+
+        return categoryNamesById.GetValueOrDefault(categoryId);
     }
 }

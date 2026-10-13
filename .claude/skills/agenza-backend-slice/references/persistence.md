@@ -17,11 +17,11 @@ no `Remove` until a delete exists, no `ListAsync` until a list exists.
 | `CountBy<Thing>Async(id)` | `int` | an "in use" rule |
 | `GetByIdsAsync(ids)` | `IReadOnlyList<T>` | one query for a set — never one per row |
 | `ListAsync(filters)` | `IReadOnlyList<T>` | an unpaged list, ordered |
-| `ListAsync(page, pageSize, filters)` | `(IReadOnlyList<T> Items, int TotalCount)` | a paged list, ordered |
+| `ListAsync(<Entity>ListFilter)` | `PagedResult<T>` | a paged list, ordered: the filter extends `PageRequest` and carries the list's plain filters; the adapter calls `ListPagedAsync(filter, filterAndOrder, ct)` with the root's `Include`s, and `filterAndOrder` returns an `IOrderedQueryable` |
 | `Add(entity)`, `UpdateAsync(entity)`, `Remove(entity)` | `void` / `Task` | stage; the handler commits |
 
-Parameters are ids, value objects for value-object columns and plain filter values — never a tenant,
-an expression, an `IQueryable` or a specification. Results are the root with its own children — never a
+Parameters are ids, value objects for value-object columns and plain filter values — a list with several of them takes
+one record of them (`<Entity>ListFilter`) — never a tenant, an expression, an `IQueryable` or a specification. Results are the root with its own children — never a
 DTO, a projection or another aggregate.
 
 `GetByIdAsync` returns an aggregate without tracking. In a service with a global no-tracking default,
@@ -39,8 +39,10 @@ that differs only by tracking (ARCHITECTURE, rules of thumb).
   the ones the aggregate no longer holds, add the ones the database does not have yet. `Include` only the root's own children.
 - Order every list and page explicitly, on a key that is unique or ends in one — otherwise rows repeat
   or vanish between pages.
-- A value-object column is compared as a whole (`c.Cpf == cpf`); text search on it goes through
-  `EF.Property<string>(e, "<Property>")`, because a query cannot reach `.Value` through a converter.
+- A value-object column is compared as a whole (`c.Cpf == cpf`). A query cannot reach `.Value` through a
+  converter, and `EF.Property<string>` over such a column throws, so text search or a case-insensitive order on it
+  needs a stored generated `string` column (`HasComputedColumnSql("lower(\"FullName\")", stored: true)`, read with
+  `EF.Property<string>(e, "<Column>")`); see `ClientConfiguration` and ADR 0063.
 - The `DbContext` already scopes every query to the tenant and hides soft-deleted rows. A repository
   never writes a `TenantId` or `DeletedAt` predicate, never calls `IgnoreQueryFilters()`, never calls
   `SaveChanges`.
@@ -85,5 +87,6 @@ The index decides under concurrency. The pre-check exists only to answer with th
 - `SqlQuery`, `FromSql`, `ExecuteSql`, `BeginTransaction`, a cache — without evidence in the PR
 - an `Id`-only foreign key between two tenant-owned entities
 - a list or page without an explicit order
+- a list or page whose roots come without their children: `UpdateAsync` on one deletes them
 - a literal length in a configuration where a constant exists
 - an edited migration that was already committed

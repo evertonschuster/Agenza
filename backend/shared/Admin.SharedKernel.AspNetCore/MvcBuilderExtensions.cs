@@ -6,7 +6,7 @@ namespace Admin.SharedKernel.AspNetCore;
 
 public static class MvcBuilderExtensions
 {
-    public static IMvcBuilder AddWireJson(this IMvcBuilder builder)
+    public static IMvcBuilder AddWireFormat(this IMvcBuilder builder)
     {
         builder.Services.AddOptions<JsonOptions>()
             .Configure<TimeProvider>((options, timeProvider) =>
@@ -15,6 +15,12 @@ public static class MvcBuilderExtensions
                     .AddEnumNameConverter());
 
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.AddEnumNameConverter());
+
+        builder.AddMvcOptions(options =>
+        {
+            options.ModelBinderProviders.Insert(0, new StringValueObjectModelBinderProvider());
+            options.ModelBinderProviders.Insert(1, new EnumNameModelBinderProvider());
+        });
 
         return builder;
     }

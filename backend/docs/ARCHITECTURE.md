@@ -71,9 +71,9 @@ Shared projects in `backend/shared/` hold infrastructure, never business rules:
 
 | Project | Holds | Referenced by |
 | --- | --- | --- |
-| `Admin.SharedKernel` | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PagedResult`, the JSON converters of the wire (value objects, enum names) | Application |
-| `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler`, `AddWireJson()` | Api |
-| `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>`, `ApplyAuditableConventions` (soft-delete and tenant filters), the column conversion of the shared value objects | Infrastructure |
+| `Admin.SharedKernel` | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PagedQuery`, `PageRequest` and `PagedResult`, the JSON converters of the wire (value objects, enum names) | Application |
+| `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler`, `AddWireFormat()` | Api |
+| `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>` (with the paged read over `PageRequest`), `ApplyAuditableConventions` (soft-delete and tenant filters), the column conversion of the shared value objects | Infrastructure |
 | `Admin.SharedKernel.ValueObjects` | `IStringValueObject<T>` and the string value objects every service shares (`CpfNumber`); no reference at all | Domain |
 | `Admin.Identity.Client` | JWT validation, `ITenantAccessor`, `ICurrentUserAccessor`, `TenantHeaderFilter`, `[IgnoreTenant]` | Infrastructure, Api |
 | `Admin.Logging` | the Serilog pipeline: console format, default levels, OTLP export, one line per request | `ServiceDefaults`, `AppHost` — never a layer |
@@ -141,12 +141,13 @@ same aggregate are accepted, and so is an input rule repeated between their vali
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
 nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`) and enums (§6) — no other domain type,
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`, `SearchText`) and enums (§6) — no other domain type,
 no tenant. The
 output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
 the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
-response, value objects flatten to their primitive and enums to camelCase strings. No mapping library, no DTO in the
-domain, no entity past the handler.
+response, a value object flattens to its primitive, and an enum stays the enum: the kernel's converter writes it as a
+camelCase string (§6), so the mapping never calls `ToString()` on it. No mapping library, no DTO in the domain, no
+entity past the handler.
 
 ## 3. Domain
 
@@ -211,7 +212,10 @@ rule that failed; no `DomainResult`, no `DomainError`, no `Parse`. A blank strin
 conversion (`AddValueObjectConversions`, called from the `DbContext`'s `ConfigureConventions`). Only
 `HasMaxLength` is written in the entity configuration. A command may carry one (`CpfNumber? Cpf`, `FullName FullName`); it
 needs no validator rule and no call in `ToModel`. Binding stops at the first invalid value, so a body with
-two invalid fields answers one at a time. To add one: the type in that project and its tests in
+two invalid fields answers one at a time. A string one is read from a query or a route only when it declares
+`[TypeConverter(typeof(StringValueObjectTypeConverter<T>))]` (`SearchText` does; personal data never does, because a URL
+ends up in logs): a bad value answers `400 Validation.Failed` under the parameter with its own message
+([0065](../../docs/adr/0065-string-value-objects-in-a-query-or-route.md)). To add one: the type in that project and its tests in
 `Admin.SharedKernel.Tests`. A date whose rules depend on the day (`BirthDate`) implements
 `IDateValueObject<T>` instead — `Create(date, today)`, with `today` read at binding from the container's
 `TimeProvider` (the same one the handlers use, [0045](../../docs/adr/0045-backend-works-in-utc.md)) and the same
@@ -278,9 +282,11 @@ and transactional cleanup. A `try/catch` in a handler is a finding.
 **What dies in gate 1** — malformed JSON, a non-nullable member absent from the body, a value of the
 wrong JSON type, an unknown JSON enum — reaches the client in the canonical shape
 (`AddModelStateProblemDetails`), but with the framework's English message and the generic code
-`Validation.Failed`; only a shared value object brings its own pt-BR message. An enum is bound by name
-(§6), so an unknown name dies here too; the converter can also yield a value that is not a member
-(several names in one string), which the validator refuses with `IsInEnum`. A failed body read also
+`Validation.Failed`; only a shared value object and an enum read from a query or a route bring their own pt-BR
+message. An enum is bound by name (§6), so an unknown name dies here too. In a body, the JSON converter can also yield a
+value that is not a member (several names in one string), which the validator refuses with `IsInEnum`; from a query or
+a route the kernel's binder accepts exactly one name, so a number or several names die here
+([0066](../../docs/adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)). A failed body read also
 carries the framework's entry for the body parameter (`command`), which the backend does not remove.
 The shape is described in [`docs/API.md`](../../docs/API.md) §4.3.
 
@@ -333,17 +339,21 @@ either; `IgnoreQueryFilters()` belongs to a persistence test that asserts a soft
 
 **Repositories.** One per aggregate root — never one for a child. The port `I<Entity>Repository` lives
 in `Application/Abstractions` and declares only what a handler calls; the adapter extends
-`RepositoryBase<T>` in Infrastructure. It returns its own root (with its children), a list or a page
-of them, a `bool` or a count — never a DTO, an `IQueryable` or another aggregate. Methods say what they
+`RepositoryBase<T>` in Infrastructure. It returns its own root with its children, a list or a page
+of them (each root whole there too, because `UpdateAsync` stages the children the root holds), a `bool` or a count —
+never a DTO, an `IQueryable` or another aggregate. Methods say what they
 are for (`FindActiveByEmailAsync`), take value objects for value-object columns, and use
 no tracking for reads. `ServicesDataContext` sets that behavior globally; shared helpers may preserve
 it explicitly for a service outside that decision. A command loads its aggregate with `GetByIdAsync`,
 applies the domain behaviour, then stages persistence with `UpdateAsync`; the port does not expose EF
 tracking. An EF adapter makes any required state changes explicitly inside that operation. Paged reads
-go through `ListPagedAsync`. The tenant
+take a `PageRequest` — or the filter of the list, a record that extends it with the list's plain filters — and return a
+`PagedResult<T>` through `ListPagedAsync`, whose filter-and-order function returns an `IOrderedQueryable<T>` ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)). The tenant
 and soft-delete filters come from the `DbContext`: a repository never writes a `TenantId` or
-`DeletedAt` predicate. A query cannot reach `.Value` through a converter: compare whole value objects,
-order by the property, or use `EF.Property<string>(e, "<Property>")` for text matching. Repositories
+`DeletedAt` predicate. A query cannot reach `.Value` through a converter: compare whole value objects or order by the
+property. Matching or sorting a value-object column as text — `EF.Property<string>` over it throws — goes through a
+stored generated `string` column (`lower("FullName")`) added by an additive migration
+([0063](../../docs/adr/0063-clients-list-and-search-contract.md)). Repositories
 only stage (`Add`, `UpdateAsync`, `Remove`); the handler commits through `IUnitOfWork`, whose shape follows the
 service's real transactional need ([0005](../../docs/adr/0005-cqrs-vertical-slice-result-pattern.md)).
 
@@ -377,13 +387,20 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
 - A body with a list is bounded twice: the validator caps the count and the action has a
   `[RequestSizeLimit]`.
 - Enums travel as camelCase strings: a plain enum, named by the kernel for every enum with integers
-  refused (`AddEnumNameConverter`, registered by `AddWireJson()` in the MVC options and in the
-  minimal-API options, which the OpenAPI generator reads). Nothing to register per enum and no
-  translation class. Each item of a list of enums has an `IsInEnum` rule with the domain's code
-  ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
+  refused (`AddEnumNameConverter`, registered by `AddWireFormat()` in the MVC options and in the
+  minimal-API options, which the OpenAPI generator reads). From a query or a route, the same call's binder reads
+  exactly one name in any case and refuses a number or several names, with a pt-BR message that lists the names
+  ([0066](../../docs/adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)). Nothing to register per enum, no
+  translation class and no values chosen to dodge the parser. Each item of a list of enums in a body has an `IsInEnum`
+  rule with the domain's code ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
 - The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`); instants are UTC.
-- A paged list takes `Page`/`PageSize` with defaults and a validator bounding them, and returns
-  `PagedResult<T>`; an unpaged list returns `IReadOnlyList<T>`.
+- The query of a paged list extends `PagedQuery` (`Page` and `PageSize`, with the `PageRequest` defaults, unguarded) and
+  its validator writes the three rules
+  (page at least 1, size from 1 to `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared
+  `Paging.*` codes; the query's own `ToFilter()` method builds the list's filter (`ClientListFilter`, a `PageRequest` with the
+  plain filters; it maps into an Application record, not into the domain, so there is no extension file as for a command), the port takes it and returns `PagedResult<T>`, and the handler `Map`s it to the response.
+  A free-text search is a `SearchText`. An unpaged list returns `IReadOnlyList<T>`. A page past the last answers `200`
+  with no items ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)).
 
 A change to an endpoint's contract regenerates the frontend's types in the same change — skill
 [`agenza-api-contract`](../../.claude/skills/agenza-api-contract/SKILL.md). A change to a shape that
@@ -454,7 +471,8 @@ touches that slice, not in bulk.
 | Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: `GetByIdAsync` → `NotFound` → `client.Update(command.ToClientData(), today)` → pre-checks that exclude the aggregate itself → `UpdateAsync` → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
 | Read by id | `GetClientByIdQueryHandler.cs`, `GetClientByIdQueryValidator.cs`: repository → `NotFound` or `<Entity>Response.From<Entity>`; the id rule written inline in the validator | `GetTagByIdQueryHandler.cs`: a message built from the id, no validator | §4, §6, [0060](../../docs/adr/0060-clients-read-by-id-contract.md) |
 | State transition: behaviour method, idempotent repeat, pre-check through a port, status-only save | `DeactivateClientCommandHandler.cs`, `ReactivateClientCommandHandler.cs`, `Client.Inactivate` | | §3, §4, [0062](../../docs/adr/0062-clients-deactivate-and-reactivate.md) |
-| Delete, list, paging | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save; paged query + bounded validator + `PagedResult`) minus the rows above | | §4, §6 |
+| List, paging, search | `ListClientsQueryHandler.cs`, `ListClientsQueryValidator.cs`, `ClientRepository.ListAsync`: a `ClientListFilter` (a `PageRequest` with the list's plain filters) in and a `PagedResult` out, a validator with the `Paging.*` codes, a query whose `ToFilter()` normalizes the search term, a repository that filters and orders over generated string columns | `EF.Functions.ILike` with an unescaped pattern and a `string?` search (`TagRepository`, `CategoryRepository`) | §4, §5, §6, [0063](../../docs/adr/0063-clients-list-and-search-contract.md) |
+| Delete | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 
 This table is the only place that names reference files. When a newer slice supersedes one, change
