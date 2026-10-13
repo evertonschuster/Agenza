@@ -66,7 +66,9 @@ it as "contains":
   that person; `982` finds the CPFs that contain 982 and, as any term, the names and e-mails that contain it.
 
 The three matches are joined by "or" and combined with the situation by "and". A person with no e-mail and no CPF is
-found by name. The handler derives the two plain values (`text`, from `query.Search`, and `cpfDigits`); the repository port takes them.
+found by name. The search is part of the list's filter, `ClientListFilter` ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)): its
+`Create` derives the two plain values (`Text`, from the `SearchText` of `query.Search`, and `CpfDigits`), and the
+repository port takes the filter.
 
 **Order.** The normalized name, then the id, so that a page never repeats or skips a record while the data does not
 change. "Normalized" is `lower("FullName")`, like `Service`, `Tag` and `Category`: accents stay, so `jose` does not

@@ -17,11 +17,11 @@ no `Remove` until a delete exists, no `ListAsync` until a list exists.
 | `CountBy<Thing>Async(id)` | `int` | an "in use" rule |
 | `GetByIdsAsync(ids)` | `IReadOnlyList<T>` | one query for a set — never one per row |
 | `ListAsync(filters)` | `IReadOnlyList<T>` | an unpaged list, ordered |
-| `ListAsync(PageRequest, filters)` | `PagedResult<T>` | a paged list, ordered: the adapter calls `ListPagedAsync(page, filterAndOrder, ct)` |
+| `ListAsync(<Entity>ListFilter)` | `PagedResult<T>` | a paged list, ordered: the filter extends `PageRequest` and carries the list's plain filters; the adapter calls `ListPagedAsync(filter, filterAndOrder, ct)` |
 | `Add(entity)`, `UpdateAsync(entity)`, `Remove(entity)` | `void` / `Task` | stage; the handler commits |
 
-Parameters are ids, value objects for value-object columns and plain filter values — never a tenant,
-an expression, an `IQueryable` or a specification. Results are the root with its own children — never a
+Parameters are ids, value objects for value-object columns and plain filter values — a list with several of them takes
+one record of them (`<Entity>ListFilter`) — never a tenant, an expression, an `IQueryable` or a specification. Results are the root with its own children — never a
 DTO, a projection or another aggregate.
 
 `GetByIdAsync` returns an aggregate without tracking. In a service with a global no-tracking default,

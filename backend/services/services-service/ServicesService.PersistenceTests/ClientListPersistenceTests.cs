@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using ServicesService.Application.Abstractions;
+using ServicesService.Application.Clients;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Repositories;
 
@@ -71,13 +72,13 @@ public class ClientListPersistenceTests
         Guid tenantId,
         int page = 1,
         int pageSize = 20,
-        string? text = null,
-        string? cpfDigits = null,
+        string? search = null,
         ClientStatus? status = null)
     {
         await using var context = PersistenceContext.Create(databaseName, tenantId);
-        return await new ClientRepository(context)
-            .ListAsync(new PageRequest(page, pageSize), text, cpfDigits, status, CancellationToken.None);
+        var searchText = search is null ? null : SearchText.Create(search).Value;
+        var filter = ClientListFilter.Create(page, pageSize, searchText, status);
+        return await new ClientRepository(context).ListAsync(filter, CancellationToken.None);
     }
 
     private static string[] Names(PagedResult<Client> page)
@@ -112,9 +113,9 @@ public class ClientListPersistenceTests
         await SaveAll(databaseName, tenantA, NewClient("Ana Lima"));
         await SaveAll(databaseName, tenantB, NewClient("Maria Souza", MariaCpf, "maria@example.com"));
 
-        var byName = await List(databaseName, tenantA, text: "maria");
-        var byEmail = await List(databaseName, tenantA, text: "example.com");
-        var byCpf = await List(databaseName, tenantA, text: MariaCpf, cpfDigits: MariaCpf);
+        var byName = await List(databaseName, tenantA, search: "maria");
+        var byEmail = await List(databaseName, tenantA, search: "example.com");
+        var byCpf = await List(databaseName, tenantA, search: MariaCpf);
 
         byName.Items.Should().BeEmpty();
         byName.TotalCount.Should().Be(0);
@@ -133,7 +134,7 @@ public class ClientListPersistenceTests
         await using var tenantlessContext = new ServicesDataContext(options, tenantProvider);
 
         var page = await new ClientRepository(tenantlessContext)
-            .ListAsync(new PageRequest(1, 20), null, null, null, CancellationToken.None);
+            .ListAsync(ClientListFilter.Create(1, 20, null, null), CancellationToken.None);
 
         page.Items.Should().BeEmpty();
         page.TotalCount.Should().Be(0);
@@ -150,8 +151,8 @@ public class ClientListPersistenceTests
         await SoftDelete(databaseName, tenantId, deleted.Id);
 
         var all = await List(databaseName, tenantId);
-        var searched = await List(databaseName, tenantId, text: "ana");
-        var byCpf = await List(databaseName, tenantId, text: JoseCpf, cpfDigits: JoseCpf);
+        var searched = await List(databaseName, tenantId, search: "ana");
+        var byCpf = await List(databaseName, tenantId, search: JoseCpf);
 
         Names(all).Should().Equal("Ana Lima");
         all.TotalCount.Should().Be(1);
@@ -254,7 +255,7 @@ public class ClientListPersistenceTests
             NewClient("Silvana Reis"),
             NewClient("Ana Lima"));
 
-        var page = await List(databaseName, tenantId, text: "silva");
+        var page = await List(databaseName, tenantId, search: "silva");
 
         Names(page).Should().Equal("Maria SILVA Souza", "Silvana Reis");
         page.TotalCount.Should().Be(2);
@@ -272,9 +273,9 @@ public class ClientListPersistenceTests
             NewClient("Bruno Dias", MariaCpf, "bruno@gmail.com"),
             NewClient("Carla Souza"));
 
-        var byEmail = await List(databaseName, tenantId, text: "example");
-        var byProviderOnly = await List(databaseName, tenantId, text: "@gmail");
-        var byNameOfAClientWithoutEmail = await List(databaseName, tenantId, text: "carla");
+        var byEmail = await List(databaseName, tenantId, search: "example");
+        var byProviderOnly = await List(databaseName, tenantId, search: "@gmail");
+        var byNameOfAClientWithoutEmail = await List(databaseName, tenantId, search: "carla");
 
         Names(byEmail).Should().Equal("Ana Lima");
         Names(byProviderOnly).Should().Equal("Bruno Dias");
@@ -282,7 +283,7 @@ public class ClientListPersistenceTests
     }
 
     [Fact]
-    public async Task List_SearchesTheCpfDigitsAnywhere_OnlyWhenTheHandlerSentThem()
+    public async Task List_SearchesTheCpfDigitsAnywhere_WithOrWithoutTheMask()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
@@ -294,13 +295,11 @@ public class ClientListPersistenceTests
             NewClient("Paulo Reis", PauloCpf),
             NewClient("Ana Lima"));
 
-        var whole = await List(databaseName, tenantId, text: "529.982.247-25", cpfDigits: MariaCpf);
-        var partial = await List(databaseName, tenantId, text: "982", cpfDigits: "982");
-        var withoutDigits = await List(databaseName, tenantId, text: "982");
+        var whole = await List(databaseName, tenantId, search: "529.982.247-25");
+        var partial = await List(databaseName, tenantId, search: "982");
 
         Names(whole).Should().Equal("Maria Souza");
         Names(partial).Should().Equal("Maria Souza");
-        withoutDigits.Items.Should().BeEmpty();
     }
 
     [Fact]
@@ -320,10 +319,10 @@ public class ClientListPersistenceTests
         await SetStatus(databaseName, tenantId, clients[1].Id, ClientStatus.Inactive);
         await SetStatus(databaseName, tenantId, clients[4].Id, ClientStatus.Inactive);
 
-        var activeSilvaFirstPage = await List(databaseName, tenantId, page: 1, pageSize: 2, text: "silva", status: ClientStatus.Active);
-        var activeSilvaSecondPage = await List(databaseName, tenantId, page: 2, pageSize: 2, text: "silva", status: ClientStatus.Active);
-        var inactiveSilva = await List(databaseName, tenantId, text: "silva", status: ClientStatus.Inactive);
-        var anySilva = await List(databaseName, tenantId, text: "silva", status: null);
+        var activeSilvaFirstPage = await List(databaseName, tenantId, page: 1, pageSize: 2, search: "silva", status: ClientStatus.Active);
+        var activeSilvaSecondPage = await List(databaseName, tenantId, page: 2, pageSize: 2, search: "silva", status: ClientStatus.Active);
+        var inactiveSilva = await List(databaseName, tenantId, search: "silva", status: ClientStatus.Inactive);
+        var anySilva = await List(databaseName, tenantId, search: "silva", status: null);
 
         Names(activeSilvaFirstPage).Should().Equal("Ana Silva", "Caio Silva");
         Names(activeSilvaSecondPage).Should().Equal("Dani Silva");

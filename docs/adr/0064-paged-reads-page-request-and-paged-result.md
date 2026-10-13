@@ -24,19 +24,25 @@ repository receives, and the repository operation itself.
 repository. Building one that cannot be served throws `ArgumentOutOfRangeException` (page below 1, size below 1, an
 offset that does not fit an `int`): a programmer-error guard, because the validator already refused those inputs
 with a `400`. It exposes `Offset`, the limits (`FirstPage` 1, `DefaultPageSize` 20, `MaxPageSize` 100), the stable
-error codes below and `OffsetFits(page, pageSize)`, the one formula the validators and the constructor share.
+error codes below and `OffsetFits(page, pageSize)`, the one formula the validators and the constructor share. It is
+not `sealed` on purpose: the filter of a list extends it (below), so the guard comes with the page.
 
 **`RepositoryBase.ListPagedAsync(PageRequest, filterAndOrder, ct)`** returns `PagedResult<TEntity>`: the items, the
 real total, and the page and size it was asked for. The filter-and-order function is required: a page without an
 explicit order is a bug.
 
 **`PagedResult<T>.Map(...)`** converts the items and keeps the total, the page and the size, so a handler is
-`repository.ListAsync(new PageRequest(query.Page, query.PageSize), <filters>, ct)` followed by
+`repository.ListAsync(<Entity>ListFilter.Create(query.Page, query.PageSize, <filters>), ct)` followed by
 `.Map(<Entity>ListItemResponse.From<Entity>)`.
 
-**The port** of a paged list is `ListAsync(PageRequest page, <plain filters>, ct)` returning `PagedResult<Entity>`.
-The filters stay plain values per port: ids, value objects, strings, a status. Nothing generic filters for the
-repository (see below).
+**The filter of a list extends it.** A paged list has one record, `ClientListFilter : PageRequest`, that carries the
+page and the plain filters of that list (`Text`, `CpfDigits`, `Status`): one object from the handler to the
+repository, where a new criterion is one more property and not one more parameter. Its `Create` normalizes what comes
+from the query (the search text, the digits of the CPF) and the base constructor keeps the guard. The port is
+`ListAsync(ClientListFilter filter, ct)` returning `PagedResult<Client>`, and the adapter hands the filter to
+`ListPagedAsync(filter, filterAndOrder, ct)`, which reads only the page from it. The filter holds plain values: no
+expression, no specification, nothing generic (see below). Only the filter of a list extends `PageRequest`; a query or
+a command never does, because they carry unvalidated input and have to be buildable with any number.
 
 **Validation** stays in each validator ([ADR 0061](0061-validators-write-their-own-rules.md)): the limits come from
 the constants of `PageRequest`, and the three rules carry codes that every list shares, so a client branches once:
@@ -51,7 +57,7 @@ A page whose offset does not fit an `int` is a `400`, not an empty page: the cli
 holds, and the error says so.
 
 **The query stays flat.** `ListClientsQuery` keeps `Page` and `PageSize` as members, with `PageRequest` constants as
-defaults, because the wire is `?page=&pageSize=`. The handler builds the `PageRequest`.
+defaults, because the wire is `?page=&pageSize=`. The handler builds the filter after the validator ran.
 
 **Only clients adopt it for now.** `ServiceRepository` and `ListServicesQueryHandler` keep the older
 `ListPagedAsync(order, page, pageSize)`, which stays beside the new overload and shares its private slice-reading
@@ -69,6 +75,8 @@ step, so services behave exactly as before, including the two wrong answers abov
 - A repository test cannot live in `Admin.SharedKernel.Tests` (it has no EF). The paged helper is proven through the
   clients persistence tests (items, total, echoed page and size, a page past the last, no repeat or omission).
 - The frontend's generated types do not change: `PagedResult<T>` has the same schema.
+- A filter that extends `PageRequest` is never equal to a plain `PageRequest` of the same page: record equality includes
+  the type. A test that wants the filter compares the filter.
 
 Verified on the same disposable PostgreSQL 18.3 as [ADR 0063](0063-clients-list-and-search-contract.md), on the final
 code: the 90 checks of the clients list with the `Paging.*` codes and a page echoed from the repository's answer;
@@ -82,10 +90,18 @@ generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.Shared
 - **A shared `PagedQueryValidator` (`Include`) over an `IPagedQuery` interface.** One source for the rules, but it
   reopens [ADR 0061](0061-validators-write-their-own-rules.md) and adds an interface to the kernel for three
   one-line rules.
-- **A filter object or specification passed to the repository** (`ListAsync(PageRequest, ISpecification<T>)`, or an
+- **A generic filter or specification passed to the repository** (`ListAsync(PageRequest, ISpecification<T>)`, or an
   `Expression<Func<T, bool>>`). It is what "filter any request" suggests, but the architecture keeps ports to plain
   values ([ARCHITECTURE](../../backend/docs/ARCHITECTURE.md) §5): each list has its own filters, and the repository
-  stays the seam that knows how to apply them.
+  stays the seam that knows how to apply them. A record of plain values that belongs to one list is not that.
+- **`ListClientsQuery` extending `PageRequest`.** Binding would run the guard on raw input (`?page=0` would throw
+  instead of answering `Paging.PageInvalid`), and the handler would hand the port a query carrying the wire's `Search`
+  and `Status`. The filter, built after the validator, can extend it.
+- **The filter holding a `PageRequest`** instead of extending it. Equally simple; one flat object was preferred, and
+  `ListPagedAsync(PageRequest, …)` accepts the filter as it is.
+- **The first version of this change**: `ListAsync(PageRequest page, string? text, string? cpfDigits, ClientStatus?
+  status, ct)`. It grows by one parameter per criterion, and the text and the digits were one concept in two arguments.
+  Changed after review.
 - **A base query record with `Page` and `PageSize`.** Binding positional members inherited through `[FromQuery]`
   and a base type on every query go against "no base handler, no generic CRUD".
 - **Clamping to an empty page in the helper, and dropping `Paging.PageTooLarge`.** Safe by construction for every

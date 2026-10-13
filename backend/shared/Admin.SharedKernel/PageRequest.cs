@@ -1,6 +1,6 @@
 namespace Admin.SharedKernel;
 
-public sealed record PageRequest
+public record PageRequest
 {
     public const int FirstPage = 1;
     public const int DefaultPageSize = 20;

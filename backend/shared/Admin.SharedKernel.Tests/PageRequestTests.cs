@@ -2,6 +2,17 @@ namespace Admin.SharedKernel.Tests;
 
 public class PageRequestTests
 {
+    private sealed record FilteredPage : PageRequest
+    {
+        public FilteredPage(int page, int pageSize, string tag)
+            : base(page, pageSize)
+        {
+            Tag = tag;
+        }
+
+        public string Tag { get; }
+    }
+
     [Fact]
     public void Constructor_WithAValidPage_KeepsThePageAndThePageSize()
     {
@@ -73,6 +84,28 @@ public class PageRequestTests
         new PageRequest(2, 20).Should().Be(new PageRequest(2, 20));
         new PageRequest(2, 20).Should().NotBe(new PageRequest(3, 20));
         new PageRequest(2, 20).Should().NotBe(new PageRequest(2, 10));
+    }
+
+    [Fact]
+    public void ARecordThatExtendsIt_KeepsTheGuardAndTheOffset()
+    {
+        var filtered = new FilteredPage(3, 50, "tag");
+
+        filtered.Page.Should().Be(3);
+        filtered.PageSize.Should().Be(50);
+        filtered.Offset.Should().Be(100);
+        filtered.Should().BeAssignableTo<PageRequest>();
+
+        var act = () => new FilteredPage(0, 50, "tag");
+        act.Should().Throw<ArgumentOutOfRangeException>().WithParameterName("page");
+    }
+
+    [Fact]
+    public void ARecordThatExtendsIt_IsNeverEqualToAPlainRequestOfTheSamePage()
+    {
+        new FilteredPage(2, 20, "tag").Should().NotBe(new PageRequest(2, 20));
+        new FilteredPage(2, 20, "tag").Should().Be(new FilteredPage(2, 20, "tag"));
+        new FilteredPage(2, 20, "tag").Should().NotBe(new FilteredPage(2, 20, "other"));
     }
 
     [Fact]

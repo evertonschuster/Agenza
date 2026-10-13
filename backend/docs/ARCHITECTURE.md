@@ -345,7 +345,8 @@ no tracking for reads. `ServicesDataContext` sets that behavior globally; shared
 it explicitly for a service outside that decision. A command loads its aggregate with `GetByIdAsync`,
 applies the domain behaviour, then stages persistence with `UpdateAsync`; the port does not expose EF
 tracking. An EF adapter makes any required state changes explicitly inside that operation. Paged reads
-take a `PageRequest` and return a `PagedResult<T>` through `ListPagedAsync` ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)). The tenant
+take a `PageRequest` — or the filter of the list, a record that extends it with the list's plain filters — and return a
+`PagedResult<T>` through `ListPagedAsync` ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)). The tenant
 and soft-delete filters come from the `DbContext`: a repository never writes a `TenantId` or
 `DeletedAt` predicate. A query cannot reach `.Value` through a converter: compare whole value objects or order by the
 property. Matching or sorting a value-object column as text — `EF.Property<string>` over it throws — goes through a
@@ -391,7 +392,8 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
 - The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`); instants are UTC.
 - A paged list takes `Page`/`PageSize` with the `PageRequest` defaults and a validator that writes its three rules
   (page at least 1, size from 1 to `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared
-  `Paging.*` codes; the handler builds a `PageRequest`, the port takes it and returns `PagedResult<T>`, and the
+  `Paging.*` codes; the handler builds the list's filter (`ClientListFilter`, a `PageRequest` with the plain filters), the
+  port takes it and returns `PagedResult<T>`, and the
   handler `Map`s it to the response. An unpaged list returns `IReadOnlyList<T>`. A page past the last answers `200`
   with no items ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)).
 
@@ -464,7 +466,7 @@ touches that slice, not in bulk.
 | Update, with children replaced as a composition | `UpdateClientCommandHandler.cs`, `Client.Update`: `GetByIdAsync` → `NotFound` → `client.Update(command.ToClientData(), today)` → pre-checks that exclude the aggregate itself → `UpdateAsync` → save | | §3, §4, [0056](../../docs/adr/0056-clients-edit-replaces-contact-composition.md) |
 | Read by id | `GetClientByIdQueryHandler.cs`, `GetClientByIdQueryValidator.cs`: repository → `NotFound` or `<Entity>Response.From<Entity>`; the id rule written inline in the validator | `GetTagByIdQueryHandler.cs`: a message built from the id, no validator | §4, §6, [0060](../../docs/adr/0060-clients-read-by-id-contract.md) |
 | State transition: behaviour method, idempotent repeat, pre-check through a port, status-only save | `DeactivateClientCommandHandler.cs`, `ReactivateClientCommandHandler.cs`, `Client.Inactivate` | | §3, §4, [0062](../../docs/adr/0062-clients-deactivate-and-reactivate.md) |
-| List, paging, search | `ListClientsQueryHandler.cs`, `ListClientsQueryValidator.cs`, `ClientRepository.ListAsync`: a `PageRequest` in and a `PagedResult` out, a validator with the `Paging.*` codes, a handler that normalizes the term, a repository that filters and orders over generated string columns | `ListServicesQueryHandler.cs` (page and size as `int`, a tuple back), `ListServicesQueryValidator.cs` without codes; `EF.Functions.ILike` with an unescaped pattern | §4, §5, §6, [0063](../../docs/adr/0063-clients-list-and-search-contract.md) |
+| List, paging, search | `ListClientsQueryHandler.cs`, `ListClientsQueryValidator.cs`, `ClientRepository.ListAsync`: a `ClientListFilter` (a `PageRequest` with the list's plain filters) in and a `PagedResult` out, a validator with the `Paging.*` codes, a handler that normalizes the term, a repository that filters and orders over generated string columns | `ListServicesQueryHandler.cs` (page and size as `int`, a tuple back), `ListServicesQueryValidator.cs` without codes; `EF.Functions.ILike` with an unescaped pattern | §4, §5, §6, [0063](../../docs/adr/0063-clients-list-and-search-contract.md) |
 | Delete | the earlier slices are the only examples; their flow is current (load → `NotFound` → pre-checks → save) minus the rows above | | §4, §6 |
 | Code style | `CreateClientCommandHandler.cs` | expression-bodied methods with `&&`/ternaries, "what" comments | §8 |
 
