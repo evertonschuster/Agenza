@@ -46,6 +46,11 @@ public class ListClientsQueryHandlerTests
             ClientTestData.Today).Value;
     }
 
+    private static SearchText Search(string raw)
+    {
+        return SearchText.Create(raw).Value;
+    }
+
     private static Client MinimalClient(string name)
     {
         return Client.Create(ClientTestData.Data(ClientTestData.Name(name)), ClientTestData.Today).Value;
@@ -170,22 +175,11 @@ public class ListClientsQueryHandlerTests
     [InlineData("MARIA@Example.COM", "maria@example.com")]
     [InlineData("josé", "josé")]
     [InlineData("50%_off", "50%_off")]
-    public async Task Handle_SearchesTheTrimmedLowercaseText(string search, string expectedText)
+    public async Task Handle_SearchesTheNormalizedTextOfTheSearch(string search, string expectedText)
     {
-        await _handler.Handle(new ListClientsQuery(Q: search), CancellationToken.None);
+        await _handler.Handle(new ListClientsQuery(Q: Search(search)), CancellationToken.None);
 
         await AssertListed(expectedText, null, ClientStatus.Active);
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("   ")]
-    public async Task Handle_WithABlankSearch_DoesNotSearch(string? search)
-    {
-        await _handler.Handle(new ListClientsQuery(Q: search), CancellationToken.None);
-
-        await AssertListed(null, null, ClientStatus.Active);
     }
 
     [Theory]
@@ -196,7 +190,7 @@ public class ListClientsQueryHandlerTests
     [InlineData("456.789", "456.789", "456789")]
     public async Task Handle_WithDigitsAndCpfMask_AlsoSearchesTheCpfWithoutTheMask(string search, string expectedText, string expectedDigits)
     {
-        await _handler.Handle(new ListClientsQuery(Q: search), CancellationToken.None);
+        await _handler.Handle(new ListClientsQuery(Q: Search(search)), CancellationToken.None);
 
         await AssertListed(expectedText, expectedDigits, ClientStatus.Active);
     }
@@ -211,7 +205,7 @@ public class ListClientsQueryHandlerTests
     [InlineData("-")]
     public async Task Handle_WithTextThatIsNotADigitSequence_DoesNotSearchTheCpf(string search)
     {
-        await _handler.Handle(new ListClientsQuery(Q: search), CancellationToken.None);
+        await _handler.Handle(new ListClientsQuery(Q: Search(search)), CancellationToken.None);
 
         await AssertListed(search, null, ClientStatus.Active);
     }
@@ -219,7 +213,7 @@ public class ListClientsQueryHandlerTests
     [Fact]
     public async Task Handle_CombinesTheSearchWithTheStatusFilter()
     {
-        await _handler.Handle(new ListClientsQuery(Page: 3, PageSize: 50, Q: "Silva", Status: ClientStatusFilter.Inactive), CancellationToken.None);
+        await _handler.Handle(new ListClientsQuery(Page: 3, PageSize: 50, Q: Search("Silva"), Status: ClientStatusFilter.Inactive), CancellationToken.None);
 
         await AssertListed("silva", null, ClientStatus.Inactive, page: 3, pageSize: 50);
     }

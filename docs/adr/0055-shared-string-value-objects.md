@@ -2,7 +2,9 @@
 
 Status: accepted (2026-10); amends [ADR 0001](0001-context-aggregated-services.md) (shared code is infrastructure only)
 and item 8 of [ADR 0049](0049-conventions-for-new-backend-slices.md) (a command carries no domain type) **for these
-types only**; they do not use `DomainResult`/`DomainError` of [ADR 0014](0014-result-pattern-domain-and-persistence-no-exceptions.md)
+types only**; they do not use `DomainResult`/`DomainError` of [ADR 0014](0014-result-pattern-domain-and-persistence-no-exceptions.md); the consequence that a value object does not
+bind from a route or a query is amended, by opt-in for each type, by
+[ADR 0065](0065-string-value-objects-in-a-query-or-route.md)
 
 ## Context
 

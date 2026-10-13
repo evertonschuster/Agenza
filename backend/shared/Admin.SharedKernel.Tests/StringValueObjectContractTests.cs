@@ -1,3 +1,6 @@
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using System.ComponentModel;
+
 namespace Admin.SharedKernel.Tests;
 
 public class StringValueObjectContractTests
@@ -26,5 +29,26 @@ public class StringValueObjectContractTests
             ((bool)result.GetType().GetProperty(nameof(ParseResult<string>.IsFailure))!.GetValue(result)!).Should().BeTrue();
             ((string)result.GetType().GetProperty(nameof(ParseResult<string>.Error))!.GetValue(result)!).Should().NotBeEmpty();
         }
+    }
+
+    [Fact]
+    public void SearchText_DeclaresTheConverter_SoTheFrameworkReadsItAsOneValueNamedQ()
+    {
+        TypeDescriptor.GetConverter(typeof(SearchText)).CanConvertFrom(typeof(string)).Should().BeTrue();
+
+        var metadata = new EmptyModelMetadataProvider().GetMetadataForType(typeof(SearchText));
+
+        metadata.IsComplexType.Should().BeFalse();
+    }
+
+    [Theory]
+    [InlineData(typeof(CpfNumber))]
+    [InlineData(typeof(EmailAddress))]
+    [InlineData(typeof(FullName))]
+    [InlineData(typeof(PhoneNumber))]
+    [InlineData(typeof(AdministrativeNotes))]
+    public void PersonalData_DoesNotDeclareTheConverter_SoItNeverTravelsInAUrl(Type valueObject)
+    {
+        TypeDescriptor.GetConverter(valueObject).CanConvertFrom(typeof(string)).Should().BeFalse();
     }
 }

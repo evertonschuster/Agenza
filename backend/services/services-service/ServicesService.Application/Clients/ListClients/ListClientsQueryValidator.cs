@@ -21,11 +21,6 @@ public sealed class ListClientsQueryValidator : AbstractValidator<ListClientsQue
             .WithErrorCode(PageRequest.PageSizeInvalidCode)
             .WithMessage($"O tamanho da página deve ser entre 1 e {PageRequest.MaxPageSize}.");
 
-        RuleFor(query => query.Q)
-            .MaximumLength(EmailAddress.MaxLength)
-            .WithErrorCode("Client.SearchTooLong")
-            .WithMessage($"A busca deve ter no máximo {EmailAddress.MaxLength} caracteres.");
-
         RuleFor(query => query.Status)
             .IsInEnum()
             .WithErrorCode("Client.StatusFilterInvalid")

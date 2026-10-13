@@ -16,7 +16,6 @@ public class ListClientsQueryValidatorTests
             { "page just past the offset limit", new ListClientsQuery(Page: 21_474_838, PageSize: 100), "Page", "Paging.PageTooLarge" },
             { "page size below one", new ListClientsQuery(PageSize: 0), "PageSize", "Paging.PageSizeInvalid" },
             { "page size above the maximum", new ListClientsQuery(PageSize: 101), "PageSize", "Paging.PageSizeInvalid" },
-            { "search above the longest searchable value", new ListClientsQuery(Q: new string('a', 255)), "Q", "Client.SearchTooLong" },
             { "a status past the last member", new ListClientsQuery(Status: (ClientStatusFilter)7), "Status", "Client.StatusFilterInvalid" },
             { "a negative status", new ListClientsQuery(Status: (ClientStatusFilter)(-1)), "Status", "Client.StatusFilterInvalid" },
             { "zero, which is no member", new ListClientsQuery(Status: default(ClientStatusFilter)), "Status", "Client.StatusFilterInvalid" },
@@ -54,7 +53,6 @@ public class ListClientsQueryValidatorTests
         _validator.Validate(new ListClientsQuery(Page: 1, PageSize: 1)).IsValid.Should().BeTrue();
         _validator.Validate(new ListClientsQuery(Page: 21_474_837, PageSize: 100)).IsValid.Should().BeTrue();
         _validator.Validate(new ListClientsQuery(PageSize: 100)).IsValid.Should().BeTrue();
-        _validator.Validate(new ListClientsQuery(Q: new string('a', 254))).IsValid.Should().BeTrue();
     }
 
     [Theory]
@@ -65,19 +63,6 @@ public class ListClientsQueryValidatorTests
     public void Validate_WithAMemberOfTheEnumOrNoStatus_Passes(ClientStatusFilter? status)
     {
         var result = _validator.Validate(new ListClientsQuery(Status: status));
-
-        result.IsValid.Should().BeTrue();
-    }
-
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData("  ")]
-    [InlineData("maria")]
-    [InlineData("529.982.247-25")]
-    public void Validate_WithAnySearchWithinTheLimit_Passes(string? search)
-    {
-        var result = _validator.Validate(new ListClientsQuery(Q: search));
 
         result.IsValid.Should().BeTrue();
     }
@@ -106,13 +91,12 @@ public class ListClientsQueryValidatorTests
     [Fact]
     public void Validate_MessagesAreWrittenInPortugueseAndNameTheField()
     {
-        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 0, Q: new string('a', 255), Status: (ClientStatusFilter)9));
+        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 0, Status: (ClientStatusFilter)9));
 
         result.Errors.Select(error => error.ErrorMessage).Should().BeEquivalentTo(
         [
             "A página deve ser maior ou igual a 1.",
             "O tamanho da página deve ser entre 1 e 100.",
-            "A busca deve ter no máximo 254 caracteres.",
             "A situação deve ser active, inactive ou all.",
         ]);
     }

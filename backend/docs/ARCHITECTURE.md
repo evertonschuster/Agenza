@@ -141,7 +141,7 @@ same aggregate are accepted, and so is an input rule repeated between their vali
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
 nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`) and enums (§6) — no other domain type,
+(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`, `SearchText`) and enums (§6) — no other domain type,
 no tenant. The
 output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
 the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
@@ -211,7 +211,10 @@ rule that failed; no `DomainResult`, no `DomainError`, no `Parse`. A blank strin
 conversion (`AddValueObjectConversions`, called from the `DbContext`'s `ConfigureConventions`). Only
 `HasMaxLength` is written in the entity configuration. A command may carry one (`CpfNumber? Cpf`, `FullName FullName`); it
 needs no validator rule and no call in `ToModel`. Binding stops at the first invalid value, so a body with
-two invalid fields answers one at a time. To add one: the type in that project and its tests in
+two invalid fields answers one at a time. A string one is read from a query or a route only when it declares
+`[TypeConverter(typeof(StringValueObjectTypeConverter<T>))]` (`SearchText` does; personal data never does, because a URL
+ends up in logs): a bad value answers `400 Validation.Failed` under the parameter with its own message
+([0065](../../docs/adr/0065-string-value-objects-in-a-query-or-route.md)). To add one: the type in that project and its tests in
 `Admin.SharedKernel.Tests`. A date whose rules depend on the day (`BirthDate`) implements
 `IDateValueObject<T>` instead — `Create(date, today)`, with `today` read at binding from the container's
 `TimeProvider` (the same one the handlers use, [0045](../../docs/adr/0045-backend-works-in-utc.md)) and the same

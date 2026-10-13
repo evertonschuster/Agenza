@@ -55,14 +55,16 @@ fails at binding (gate 1) with `400 Validation.Failed` under `status` and the fr
 anyway. A number that is a member is accepted by the binder (`status=4` is `all`): a known limit, left as it is,
 because refusing it needs a binder of its own.
 
-**Search.** `q` is trimmed; blank means no search. The handler lowercases it and matches it as "contains":
+**Search.** `q` is a `SearchText` ([ADR 0065](0065-string-value-objects-in-a-query-or-route.md)): the framework reads
+it from the query string trimmed and lowercased, and a blank one is absent, which means no search. The handler matches
+it as "contains":
 
 - in the name and in the e-mail;
 - in the CPF digits too, when the term without `.`, `-` and spaces is only digits. A masked `529.982.247-25` finds
   that person; `982` finds the CPFs that contain 982 and, as any term, the names and e-mails that contain it.
 
 The three matches are joined by "or" and combined with the situation by "and". A person with no e-mail and no CPF is
-found by name. The handler derives the two plain values (`text`, `cpfDigits`); the repository port takes them.
+found by name. The handler derives the two plain values (`text`, from `query.Q`, and `cpfDigits`); the repository port takes them.
 
 **Order.** The normalized name, then the id, so that a page never repeats or skips a record while the data does not
 change. "Normalized" is `lower("FullName")`, like `Service`, `Tag` and `Category`: accents stay, so `jose` does not
@@ -93,8 +95,10 @@ client load now reads three more short strings, because EF loads every mapped co
 | `page` at least 1 | `Paging.PageInvalid` |
 | `(page - 1) * pageSize` fits an `int` | `Paging.PageTooLarge` |
 | `pageSize` from 1 to 100 | `Paging.PageSizeInvalid` |
-| `q` up to 254 characters, the longest searchable value (an e-mail) | `Client.SearchTooLong` |
 | `status` a member of `ClientStatusFilter`, or absent | `Client.StatusFilterInvalid` |
+
+`q` has no validator rule: `SearchText` refuses a term past 254 characters, the longest searchable value (an e-mail), at
+binding (gate 1), as `400 Validation.Failed` under `q` with its own pt-BR message.
 
 The three page rules are shared by every paged list ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)).
 `Paging.PageTooLarge` exists because `RepositoryBase.ListPagedAsync(order, page, pageSize)` computes the offset in `int`: the older list
@@ -126,10 +130,11 @@ and an ADR of its own.
   codes above; a bad `status` cannot come from its typed client.
 
 Verified by hand on a disposable PostgreSQL 18.3 (`agenza-scratch-pg`, port 5433, `log_statement=all`), with the real
-identity and services on private ports and a real login, 90 checks on the list: the default list, the exact item keys and values
+identity and services on private ports and a real login, 94 checks on the list: the default list, the exact item keys and values
 (whole CPF, `null` for the absent fields), the three situations and their case, a blank `status`, an unknown name, a joined list, `0` and `7`, and a member given as a number;
-name, e-mail, masked and partial CPF searches; `%`, `_` and `\` as literal characters; a term with quotes; a long
-term; paging with no repeat or omission and a stable total; ties of the same name ordered by id; a page past the
+name, e-mail, masked and partial CPF searches; `%`, `_` and `\` as literal characters; a term with quotes; a term past
+the limit (refused at binding, with the message of the value object and without echoing it), a padded one of exactly
+254 characters, `q` given twice and `?Q=`; paging with no repeat or omission and a stable total; ties of the same name ordered by id; a page past the
 last; every validation code; `401` without a token and `403` for another tenant's header; people of another tenant,
 inactive and soft-deleted people never leaking into a list, a total or a search; and a list writing nothing. The
 migration was applied over five legacy rows (mixed-case name and e-mail, no e-mail, no CPF, inactive, deleted,
@@ -152,7 +157,9 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
 - **An accent-insensitive normalization**, by `lower(translate(...))` (the character list would live in the migration
   and again in .NET, and the two could drift) or by the `unaccent` extension (a `CREATE EXTENSION` in the infra init,
   an `IMMUTABLE` wrapper to fit a generated column, a new mechanism). Nobody asked for it yet.
-- **One combined `SearchText` column.** A term with a space could match across two fields.
+- **One combined search column.** A term with a space could match across two fields.
+- **`q` as a plain string normalized in the handler** (the first version of this change). The rule sat in the use case and
+  in a validator rule instead of in a type; changed after review (ADR 0065).
 - **`EF.Functions.ILike` with an escape character.** It cannot reach a value-object column.
 - **A fixed cap on the page** instead of the offset rule. Any number is arbitrary.
 - **Fixing the offset of the older `RepositoryBase.ListPagedAsync(order, page, pageSize)` in this change.** It changes

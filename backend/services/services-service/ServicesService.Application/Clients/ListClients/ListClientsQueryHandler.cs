@@ -10,7 +10,7 @@ public sealed class ListClientsQueryHandler(IClientRepository clientRepository)
         ListClientsQuery query,
         CancellationToken cancellationToken)
     {
-        var text = NormalizeText(query.Q);
+        var text = query.Q?.Value;
         var cpfDigits = ExtractCpfDigits(text);
         var status = ToStatusFilter(query.Status);
 
@@ -19,16 +19,6 @@ public sealed class ListClientsQueryHandler(IClientRepository clientRepository)
         var clients = await clientRepository.ListAsync(page, text, cpfDigits, status, cancellationToken);
 
         return Result.Success(clients.Map(ClientListItemResponse.FromClient));
-    }
-
-    private static string? NormalizeText(string? term)
-    {
-        if (string.IsNullOrWhiteSpace(term))
-        {
-            return null;
-        }
-
-        return term.Trim().ToLowerInvariant();
     }
 
     private static string? ExtractCpfDigits(string? text)

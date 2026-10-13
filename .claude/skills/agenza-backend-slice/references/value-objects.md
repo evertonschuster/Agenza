@@ -16,8 +16,10 @@ Ask in order and stop at the first no:
 3. **Does a second service use it?** ARCHITECTURE §1 says anything added to a shared project lands in every
    service and "needs a second real caller, not an anticipated one"; ADR 0055 shares a type because its
    format is the same everywhere. If only one service uses it today, say so in the PR.
-4. **Is it a scalar member of a JSON request body?** That is the only place the kernel binds it. A route or
-   a query does not bind it (ADR 0055), and a list of them is untested.
+4. **Is it a scalar member of a JSON request body, or a text that may travel in a URL?** The kernel binds every
+   string type from a body. A query or a route binds a type only if it declares
+   `[TypeConverter(typeof(StringValueObjectTypeConverter<Self>))]` (ADR 0065): a search text does; personal data
+   (CPF, e-mail, name, phone, notes) never does, because a URL ends up in logs. A list of them is untested.
 
 ## 2. Order of work
 
@@ -31,6 +33,7 @@ Ask in order and stop at the first no:
    - `BlankIsAbsent` stays `true` (blank binds to `null`, so the member is nullable). Declare `false` only
      for a required member that should answer with its own message (`FullName`).
    - A date takes `today` as a parameter (`Create(date, today)`); the type never reads the clock.
+   - Declare the type converter only when rule 4 allows the type in a URL; the contract tests pin which types do.
    - Implement `Create` and `Restore` as public static members. An explicit interface implementation
      compiles, but the EF converter looks them up by name and fails when the model is built.
 2. **Its tests**, in `backend/shared/Admin.SharedKernel.Tests/<Type>Tests.cs`: every rule with its message,
@@ -54,8 +57,8 @@ Ask in order and stop at the first no:
 
 - Binding stops at the first invalid value, one field at a time. A missing or `null` member gets the
   framework's English "required" message before the type runs.
-- A failed `Create` reaches the client as the message of a `JsonException` under the field, with code
-  `Validation.Failed` (`docs/API.md` §4.3). The type has no `DomainError`, and the validator does not
+- A failed `Create` reaches the client as the message of a `JsonException` (a body) or a model error (a query or
+  a route) under the field, with code `Validation.Failed` (`docs/API.md` §4.3). The type has no `DomainError`, and the validator does not
   repeat its rules.
 - The EF convention covers only the types of `Admin.SharedKernel.ValueObjects`; JSON and OpenAPI
   recognize any type that implements the contract. Keep the type in that project.
