@@ -44,14 +44,16 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
             .ThenBy(client => client.Id);
     }
 
-    private static IQueryable<Client> Search(IQueryable<Client> query, string text, string? cpfDigits)
+    private static IQueryable<Client> Search(IQueryable<Client> query, string text, CpfDigits? cpfDigits)
     {
         if (cpfDigits is not null)
         {
+            var digits = cpfDigits.Value;
+
             return query.Where(client =>
                 EF.Property<string>(client, "NameNormalized").Contains(text)
                 || EF.Property<string>(client, "EmailNormalized").Contains(text)
-                || EF.Property<string>(client, "CpfNormalized").Contains(cpfDigits));
+                || EF.Property<string>(client, "CpfNormalized").Contains(digits));
         }
 
         return query.Where(client =>

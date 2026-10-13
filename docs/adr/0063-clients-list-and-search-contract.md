@@ -67,7 +67,10 @@ it as "contains":
 
 The three matches are joined by "or" and combined with the situation by "and". A person with no e-mail and no CPF is
 found by name. The search is part of the list's filter, `ClientListFilter` ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)): the
-query's `ToFilter()` derives the two plain values (`Text`, from the `SearchText` of `query.Search`, and `CpfDigits`), and the
+query's `ToFilter()` derives two values: `Text`, from the `SearchText` of `query.Search`, and `CpfDigits`, a small value
+object of the Application (`Clients/CpfDigits`) that holds the digits of the term without the CPF mask, from one to eleven
+ASCII digits, and is absent for anything else. A digit string longer than a CPF cannot be part of one, so it simply does not
+search the CPF (the name and the e-mail are still searched). The
 repository port takes the filter.
 
 **Order.** The normalized name, then the id, so that a page never repeats or skips a record while the data does not
@@ -161,6 +164,11 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
 - **An accent-insensitive normalization**, by `lower(translate(...))` (the character list would live in the migration
   and again in .NET, and the two could drift) or by the `unaccent` extension (a `CREATE EXTENSION` in the infra init,
   an `IMMUTABLE` wrapper to fit a generated column, a new mechanism). Nobody asked for it yet.
+- **`CpfNumber` as the type of the CPF digits.** It validates the check digits, so it refuses every fragment (`123`,
+  `456.789`, even ten correct digits). Its `Restore` skips the validation, but it exists for EF to read what is stored, and
+  using it for a fragment would break the invariant of the type.
+- **A `CpfDigits` in the shared kernel.** It would share the mask rule with `CpfNumber`, but the kernel needs a second real
+  caller and today there is one.
 - **One combined search column.** A term with a space could match across two fields.
 - **`search` as a plain string normalized in the handler** (the first version of this change). The rule sat in the use case and
   in a validator rule instead of in a type; changed after review (ADR 0065).

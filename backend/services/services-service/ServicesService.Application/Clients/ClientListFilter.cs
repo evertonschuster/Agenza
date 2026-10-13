@@ -6,5 +6,5 @@ public sealed record ClientListFilter(
     int Page,
     int PageSize,
     string? Text,
-    string? CpfDigits,
+    CpfDigits? CpfDigits,
     ClientStatus? Status) : PageRequest(Page, PageSize);

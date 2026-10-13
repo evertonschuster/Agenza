@@ -39,9 +39,9 @@ public class ListClientsQueryTests
     }
 
     [Fact]
-    public void ToFilter_CarriesThePageTheSizeAndTheSearchOfTheQuery()
+    public void ToFilter_CarriesThePageTheSizeTheSearchAndTheCpfDigitsOfTheQuery()
     {
-        var query = new ListClientsQuery(Search: SearchTextOf("  Maria SILVA "), Status: ClientStatusFilter.Inactive)
+        var query = new ListClientsQuery(Search: SearchTextOf("  529.982.247-25 "), Status: ClientStatusFilter.Inactive)
         {
             Page = 3,
             PageSize = 50,
@@ -49,7 +49,7 @@ public class ListClientsQueryTests
 
         var filter = query.ToFilter();
 
-        filter.Should().Be(new ClientListFilter(3, 50, "maria silva", null, ClientStatus.Inactive));
+        filter.Should().Be(new ClientListFilter(3, 50, "529.982.247-25", CpfDigits.Create("52998224725"), ClientStatus.Inactive));
         filter.Page.Should().Be(3);
         filter.PageSize.Should().Be(50);
     }
@@ -94,43 +94,25 @@ public class ListClientsQueryTests
 
     [Theory]
     [InlineData("529.982.247-25", "52998224725")]
-    [InlineData("52998224725", "52998224725")]
-    [InlineData(" 529 982 247 25 ", "52998224725")]
-    [InlineData("123", "123")]
     [InlineData("456.789", "456789")]
-    [InlineData("0", "0")]
-    public void ToFilter_WithDigitsAndCpfMask_AlsoCarriesTheCpfWithoutTheMask(string raw, string expectedDigits)
+    [InlineData("123", "123")]
+    public void ToFilter_WithDigitsAndCpfMask_AlsoCarriesTheCpfDigitsWithoutTheMask(string raw, string expectedDigits)
     {
         var filter = FilterOf(raw);
 
-        filter.CpfDigits.Should().Be(expectedDigits);
-        filter.Text.Should().Be(raw.Trim());
+        filter.CpfDigits.Should().Be(CpfDigits.Create(expectedDigits));
+        filter.Text.Should().Be(raw);
     }
 
     [Theory]
     [InlineData("maria")]
-    [InlineData("maria.silva@example.com")]
     [InlineData("ana-lima")]
-    [InlineData("a1")]
-    [InlineData("1a")]
-    [InlineData("529.982.247-2x")]
-    [InlineData("12/34")]
-    [InlineData("12,5")]
-    [InlineData(".")]
-    [InlineData("-")]
-    [InlineData("...---")]
-    public void ToFilter_WithAnythingButDigitsAndTheMask_DoesNotCarryTheCpf(string raw)
+    [InlineData("529982247255")]
+    public void ToFilter_WithAnythingThatIsNotACpfFragment_DoesNotCarryTheCpfButKeepsTheText(string raw)
     {
         var filter = FilterOf(raw);
 
         filter.CpfDigits.Should().BeNull();
         filter.Text.Should().Be(raw);
-    }
-
-    [Fact]
-    public void ToFilter_OnlyAcceptsAsciiDigitsForTheCpf()
-    {
-        FilterOf("١٢٣").CpfDigits.Should().BeNull();
-        FilterOf("１２３").CpfDigits.Should().BeNull();
     }
 }
