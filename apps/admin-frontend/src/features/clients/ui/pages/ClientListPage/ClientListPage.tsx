@@ -1,17 +1,10 @@
-import { PlusIcon, SearchIcon } from 'lucide-react';
+import { PlusIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { buttonVariants } from '@/shared/ui/button';
-import { ErrorState } from '@/shared/ui/error-state';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from '@/shared/ui/input-group';
 import { ListSection, type ListSectionEmptyCopy } from '@/widgets/list-section';
-import { CLIENT_SEARCH_MAX_LENGTH } from '../../../model/client';
 import { NEW_CLIENT_PATH } from '../../clientsPaths';
 import { clientColumns } from './components/clientColumns';
+import { ClientListSearch } from './components/ClientListSearch';
 import { useClientListPage } from './useClientListPage';
 
 const EMPTY_COPY: ListSectionEmptyCopy = {
@@ -24,8 +17,6 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 export function ClientListPage() {
   const {
     clients,
-    totalCount,
-    isTruncated,
     status,
     failure,
     query,
@@ -45,24 +36,11 @@ export function ClientListPage() {
         </Link>
       </div>
 
-      <form onSubmit={onSearchSubmit} role="search">
-        <InputGroup>
-          <InputGroupAddon>
-            <SearchIcon aria-hidden="true" />
-          </InputGroupAddon>
-          <InputGroupInput
-            ref={searchInputRef}
-            name="q"
-            defaultValue={query}
-            maxLength={CLIENT_SEARCH_MAX_LENGTH}
-            placeholder="Buscar por nome, e-mail ou CPF..."
-            aria-label="Buscar pessoas por nome, e-mail ou CPF"
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton type="submit">Buscar</InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-      </form>
+      <ClientListSearch
+        query={query}
+        searchInputRef={searchInputRef}
+        onSearchSubmit={onSearchSubmit}
+      />
 
       <ListSection
         status={status}
@@ -72,23 +50,9 @@ export function ClientListPage() {
         columns={clientColumns()}
         emptyCopy={EMPTY_COPY}
         search={{ term: query, onClear: onClearSearch }}
-        error={
-          failure && (
-            <ErrorState
-              title="Não foi possível carregar as pessoas."
-              description={failure.message}
-              code={failure.code}
-              onRetry={onRetry}
-            />
-          )
-        }
+        errorTitle="Não foi possível carregar as pessoas."
+        failure={failure && { ...failure, onRetry }}
       />
-
-      {isTruncated && (
-        <p role="status" className="text-sm text-muted-foreground">
-          Exibindo {clients.length} de {totalCount.toLocaleString('pt-BR')} pessoas ativas.
-        </p>
-      )}
     </div>
   );
 }

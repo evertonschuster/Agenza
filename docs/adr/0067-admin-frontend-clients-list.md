@@ -29,16 +29,21 @@ points of the issue text disagree with that contract or with the state of the ap
    says so: "Exibindo 20 de 87 pessoas ativas." (a status line, never silent). `status` and `page` enter the repository,
    the URL and the hook together with their controls, not before.
 4. **Columns:** Nome, Telefone, E-mail, CPF, Situação. A missing phone, e-mail or CPF is a dash with "Não informado" for
-   assistive tech. The situation is a `Badge` ("Ativa", "Inativa"); labels live in `model/clientStatus.ts`.
+   assistive tech. The situation is a `Badge` ("Ativa", "Inativa"); labels live in `model/clientStatus.ts`. Ativa is
+   green (new `success` variant, from the `--success` token) and Inativa neutral gray (new `muted` variant): inactive
+   is a normal, reversible state, so it must not read as an error, and the label carries the meaning, not the color
+   alone. The two variants are tuned per theme for text contrast of at least 4.5:1 (the green text is mixed with
+   `--foreground`, which darkens it on light and lightens it on dark); the light theme has a border and a stronger tint
+   so the chips do not vanish on the white card.
 5. **Each name links to `/pessoas/:id`**, which renders a provisional "Em breve" page (`app/pages/ClientDetails.tsx`)
    until #167 replaces it. The link already points at its final URL.
 6. **Two empty states and a failure, as the copy rules ask**: nobody active yet ("Nenhuma pessoa ativa ainda", no button,
    the header already has **Nova pessoa**) and a search that found nobody ("Nenhuma pessoa encontrada para «ana»" with
    **Limpar busca**). `list-section` renders both itself, from `search` (`{ term, onClear }`) and `emptyCopy`
    (phrases the page writes, all optional, with generic defaults), so every list shares the logic and supplies only
-   the words. It also takes an optional `error` slot, which Pessoas fills with an `ErrorState` showing the
-   problem's message, its code and **Tentar novamente** (ARCHITECTURE §2 and §5). `TagListPage` moves onto the
-   `error` slot and `search` in a following step.
+   the words. The error state works the same way: the page passes `errorTitle` and a `failure` (the problem's message,
+   its code and an `onRetry`), and the widget shows them with **Tentar novamente** (ARCHITECTURE §2 and §5).
+   `TagListPage` moves onto `errorTitle`/`failure` and `search` in a following step.
 7. **The repository maps the total and nothing else.** The wire `totalCount` is `number | string`, so verbatim
    forwarding does not compile; `list` returns `{ items, totalCount }` with the total as a `number`, the items
    untouched, and `page`/`pageSize` dropped (nothing reads them yet).

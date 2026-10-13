@@ -11,8 +11,6 @@ export interface ClientListFailure {
 export interface UseClientListPageResult {
   status: ListSectionStatus;
   clients: ClientListItem[];
-  totalCount: number;
-  isTruncated: boolean;
   failure: ClientListFailure | null;
   query: string;
   searchInputRef: RefObject<HTMLInputElement | null>;

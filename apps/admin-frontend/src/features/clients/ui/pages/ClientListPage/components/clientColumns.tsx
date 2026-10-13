@@ -3,9 +3,14 @@ import { maskCpf } from '@/shared/values/cpf';
 import { Badge } from '@/shared/ui/badge';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import type { ClientListItem } from '../../../../model/clientList';
-import { CLIENT_STATUS_LABELS } from '../../../../model/clientStatus';
+import { CLIENT_STATUS_LABELS, type ClientStatus } from '../../../../model/clientStatus';
 import { clientDetailPath } from '../../../clientsPaths';
 import { OptionalText } from './OptionalText';
+
+const STATUS_BADGE_VARIANT: Record<ClientStatus, 'success' | 'muted'> = {
+  active: 'success',
+  inactive: 'muted',
+};
 
 export function clientColumns(): ListSectionColumn<ClientListItem>[] {
   return [
@@ -40,7 +45,7 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
       key: 'status',
       header: 'Situação',
       cell: (client) => (
-        <Badge variant={client.status === 'active' ? 'secondary' : 'outline'}>
+        <Badge variant={STATUS_BADGE_VARIANT[client.status]}>
           {CLIENT_STATUS_LABELS[client.status]}
         </Badge>
       ),

@@ -61,14 +61,11 @@ export function useClientListPage(): UseClientListPageResult {
 
   const current = result !== null && result.query === query ? result : null;
   const clients = current?.clients ?? [];
-  const totalCount = current?.totalCount ?? 0;
   const problem = current?.problem ?? null;
 
   return {
     status: current?.status ?? ListSectionStatus.Loading,
     clients,
-    totalCount,
-    isTruncated: totalCount > clients.length,
     failure: problem && { message: extractErrorMessage(problem), code: problem.code ?? undefined },
     query,
     searchInputRef,

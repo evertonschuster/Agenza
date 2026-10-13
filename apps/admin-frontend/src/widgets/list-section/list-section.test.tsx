@@ -161,46 +161,83 @@ describe('ListSection', () => {
     });
   });
 
-  it('shows the error slot instead of the generic error state when status is error', () => {
-    render(
-      <ListSection
-        status="error"
-        items={[] as Item[]}
-        getKey={(item) => item.id}
-        renderItem={(item) => item.name}
-        error={<div role="alert">Falha específica</div>}
-        aria-label="Itens"
-      />,
-    );
+  describe('error title and failure', () => {
+    const FAILURE = {
+      message: 'O servidor está instável.',
+      code: 'Server.Unavailable',
+    };
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Falha específica');
-    expect(screen.queryByText('Não foi possível carregar.')).not.toBeInTheDocument();
-  });
+    function renderError(props: {
+      errorTitle?: string;
+      failure?: { message: string; code?: string; onRetry?: () => void } | null;
+      status?: 'error' | 'loading' | 'ready';
+      items?: Item[];
+    }) {
+      const { status = 'error', items = [] } = props;
+      return render(
+        <ListSection
+          status={status}
+          items={items}
+          getKey={(item) => item.id}
+          renderItem={(item) => item.name}
+          errorTitle={props.errorTitle}
+          failure={props.failure}
+          aria-label="Itens"
+        />,
+      );
+    }
 
-  it('does not show the error slot while loading or when ready', () => {
-    const { rerender } = render(
-      <ListSection
-        status="loading"
-        items={[] as Item[]}
-        getKey={(item) => item.id}
-        renderItem={(item) => item.name}
-        error={<div role="alert">Falha específica</div>}
-        aria-label="Itens"
-      />,
-    );
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    it('shows the given title in place of the generic one', () => {
+      renderError({ errorTitle: 'Não foi possível carregar as pessoas.' });
 
-    rerender(
-      <ListSection
-        status="ready"
-        items={ITEMS}
-        getKey={(item) => item.id}
-        renderItem={(item) => item.name}
-        error={<div role="alert">Falha específica</div>}
-        aria-label="Itens"
-      />,
-    );
-    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('Não foi possível carregar as pessoas.');
+      expect(alert).not.toHaveTextContent('Não foi possível carregar.');
+    });
+
+    it('shows the failure message and code under the title', () => {
+      renderError({ errorTitle: 'Não foi possível carregar as pessoas.', failure: FAILURE });
+
+      const alert = screen.getByRole('alert');
+      expect(alert).toHaveTextContent('O servidor está instável.');
+      expect(alert).toHaveTextContent('Código: Server.Unavailable');
+    });
+
+    it('offers "Tentar novamente" only when the failure has a retry, and calls it', async () => {
+      const onRetry = vi.fn();
+      const { unmount } = renderError({ failure: FAILURE });
+      expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
+      unmount();
+
+      renderError({ failure: { ...FAILURE, onRetry } });
+      await userEvent.setup().click(screen.getByRole('button', { name: 'Tentar novamente' }));
+
+      expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it('keeps the generic title with no details when no failure is given', () => {
+      renderError({ failure: null });
+
+      expect(screen.getByRole('alert')).toHaveTextContent('Não foi possível carregar.');
+      expect(screen.queryByText(/Código:/)).not.toBeInTheDocument();
+    });
+
+    it('shows nothing of it while loading or when ready', () => {
+      const { rerender } = renderError({ status: 'loading', failure: FAILURE });
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+
+      rerender(
+        <ListSection
+          status="ready"
+          items={ITEMS}
+          getKey={(item) => item.id}
+          renderItem={(item) => item.name}
+          failure={FAILURE}
+          aria-label="Itens"
+        />,
+      );
+      expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
   });
 
   it('renders one listitem per item via renderItem in list mode', () => {

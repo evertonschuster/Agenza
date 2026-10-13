@@ -31,6 +31,12 @@ interface ListSectionSearch {
   onClear: () => void;
 }
 
+interface ListSectionFailure {
+  message: string;
+  code?: string | undefined;
+  onRetry?: (() => void) | undefined;
+}
+
 type ListSectionProps<T> = ListSectionRenderMode<T> & {
   status: ListSectionStatus;
   items: readonly T[];
@@ -38,7 +44,8 @@ type ListSectionProps<T> = ListSectionRenderMode<T> & {
   skeletonRowCount?: number | undefined;
   emptyCopy?: ListSectionEmptyCopy | undefined;
   search?: ListSectionSearch | undefined;
-  error?: ReactNode | undefined;
+  errorTitle?: string | undefined;
+  failure?: ListSectionFailure | null | undefined;
   'aria-label': string;
   className?: string | undefined;
 };
@@ -64,6 +71,11 @@ interface ListSectionEmptyProps {
   search?: ListSectionSearch | undefined;
 }
 
+interface ListSectionErrorProps {
+  title?: string | undefined;
+  failure?: ListSectionFailure | null | undefined;
+}
+
 interface ListSectionTableProps<T> extends ListSectionItemsProps<T> {
   columns: ListSectionColumn<T>[];
 }
@@ -76,6 +88,8 @@ export type {
   ListSectionColumn,
   ListSectionEmptyCopy,
   ListSectionEmptyProps,
+  ListSectionErrorProps,
+  ListSectionFailure,
   ListSectionSearch,
   ListSectionProps,
   ListSectionRenderMode,

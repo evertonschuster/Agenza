@@ -139,6 +139,16 @@ describe('ClientListPage', () => {
     expect(within(brunoRow).queryByText('Ativa')).not.toBeInTheDocument();
   });
 
+  it('colors the situation by its status: green for active, neutral gray for inactive', async () => {
+    renderPage(CLIENTS);
+
+    const anaRow = await screen.findByRole('row', { name: /Ana Souza/ });
+    const brunoRow = screen.getByRole('row', { name: /Bruno Lima/ });
+
+    expect(within(anaRow).getByText('Ativa')).toHaveAttribute('data-variant', 'success');
+    expect(within(brunoRow).getByText('Inativa')).toHaveAttribute('data-variant', 'muted');
+  });
+
   it('says "Não informado" to assistive tech, and shows a dash, for each missing phone, e-mail and CPF', async () => {
     renderPage([BRUNO]);
 

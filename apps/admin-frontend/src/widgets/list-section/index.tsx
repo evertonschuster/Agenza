@@ -1,8 +1,8 @@
-import { ErrorState } from '@/shared/ui/error-state';
 import { cn } from '@/shared/lib/utils';
 import { ListSectionStatus, type ListSectionProps } from './list-section.types';
 
 import { ListSectionSkeleton } from './components/list-section-skeleton';
+import { ListSectionError } from './components/list-section-error';
 import { ListSectionReady } from './components/list-section-ready';
 
 function ListSection<T>(props: ListSectionProps<T>) {
@@ -13,7 +13,8 @@ function ListSection<T>(props: ListSectionProps<T>) {
     skeletonRowCount = 10,
     emptyCopy,
     search,
-    error,
+    errorTitle,
+    failure,
     'aria-label': ariaLabel,
     className,
   } = props;
@@ -21,8 +22,7 @@ function ListSection<T>(props: ListSectionProps<T>) {
   return (
     <div className={cn(className)}>
       {status === ListSectionStatus.Loading && <ListSectionSkeleton rowCount={skeletonRowCount} />}
-      {status === ListSectionStatus.Error &&
-        (error ?? <ErrorState title="Não foi possível carregar." />)}
+      {status === ListSectionStatus.Error && (<ListSectionError title={errorTitle} failure={failure} />)}
       {status === ListSectionStatus.Ready && (
         <ListSectionReady
           items={items}
@@ -42,5 +42,6 @@ export { ListSectionStatus } from './list-section.types';
 export type {
   ListSectionColumn,
   ListSectionEmptyCopy,
+  ListSectionFailure,
   ListSectionProps,
 } from './list-section.types';
