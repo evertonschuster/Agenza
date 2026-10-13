@@ -64,7 +64,7 @@ public class ListClientsQueryHandlerTests
         return filter.Page == page
             && filter.PageSize == pageSize
             && filter.Text == text
-            && filter.CpfDigits?.Value == cpfDigits
+            && filter.CpfDigits == cpfDigits
             && filter.Status == status;
     }
 

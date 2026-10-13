@@ -9,7 +9,7 @@ public sealed record ListClientsQuery(
     public ClientListFilter ToFilter()
     {
         var text = TextOf(Search);
-        var cpfDigits = CpfDigits.Create(text);
+        var cpfDigits = CpfDigitsOf(text);
         var status = ToClientStatus(Status);
 
         return new ClientListFilter(Page, PageSize, text, cpfDigits, status);
@@ -23,6 +23,22 @@ public sealed record ListClientsQuery(
         }
 
         return search.Value;
+    }
+
+    private static string? CpfDigitsOf(string? text)
+    {
+        if (text is null)
+        {
+            return null;
+        }
+
+        var digits = new string(text.Where(character => character is not ('.' or '-') && !char.IsWhiteSpace(character)).ToArray());
+        if (digits.Length == 0 || digits.Length > CpfNumber.Length || !digits.All(char.IsAsciiDigit))
+        {
+            return null;
+        }
+
+        return digits;
     }
 
     private static ClientStatus? ToClientStatus(ClientStatusFilter? status)

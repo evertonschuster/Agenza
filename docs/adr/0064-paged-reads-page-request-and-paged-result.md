@@ -38,7 +38,7 @@ Ending the order in a unique key (`ThenBy(e => e.Id)`) stays the repository's to
 **The filter of a list extends it.** A paged list has one record, `ClientListFilter : PageRequest`, that carries the
 page and the plain filters of that list (`Text`, `CpfDigits`, `Status`): one object from the handler to the
 repository, where a new criterion is one more property and not one more parameter. It is a plain positional record, a
-DTO with no rule of its own (the CPF digits are a `CpfDigits` value object, not a string): the query's `ToFilter()` normalizes what comes from the wire (the search text, the digits
+DTO with no rule of its own: the query's `ToFilter()` normalizes what comes from the wire (the search text, the digits
 of the CPF, the status) and the base constructor keeps the guard. The port is
 `ListAsync(ClientListFilter filter, ct)` returning `PagedResult<Client>`, and the adapter hands the filter to
 `ListPagedAsync(filter, filterAndOrder, ct)`, which reads only the page from it. The filter holds plain values: no

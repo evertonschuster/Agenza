@@ -61,7 +61,7 @@ purpose.
 
 **`ListClientsQuery.Search` and `ListServicesQuery.Search` are `SearchText?`.** The validator has no length rule and nothing
 normalizes the term again: the query's `ToFilter()` reads its `Value` ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)).
-The digits of a CPF mask stay in the clients query (`CpfDigits`), because they are a rule of the clients search and not of
+The digits of a CPF mask stay in the clients query (`ToFilter()`), because they are a rule of the clients search and not of
 a text.
 
 ## Consequences

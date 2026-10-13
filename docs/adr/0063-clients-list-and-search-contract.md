@@ -68,10 +68,10 @@ it as "contains":
 
 The three matches are joined by "or" and combined with the situation by "and". A person with no e-mail and no CPF is
 found by name. The search is part of the list's filter, `ClientListFilter` ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)): the
-query's `ToFilter()` derives two values: `Text`, from the `SearchText` of `query.Search`, and `CpfDigits`, a small value
-object of the Application (`Clients/CpfDigits`) that holds the digits of the term without the CPF mask, from one to eleven
-ASCII digits, and is absent for anything else. A digit string longer than a CPF cannot be part of one, so it simply does not
-search the CPF (the name and the e-mail are still searched). The
+query's `ToFilter()` derives two values: `Text`, from the `SearchText` of `query.Search`, and `CpfDigits`, a `string?`
+with the digits of the term without the CPF mask, from one to eleven ASCII digits, and absent for anything else. A digit
+string longer than a CPF cannot be part of one, so it simply does not search the CPF (the name and the e-mail are still
+searched). The
 repository port takes the filter.
 
 **Order.** The normalized name, then the id, so that a page never repeats or skips a record while the data does not
@@ -171,8 +171,12 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
 - **`CpfNumber` as the type of the CPF digits.** It validates the check digits, so it refuses every fragment (`123`,
   `456.789`, even ten correct digits). Its `Restore` skips the validation, but it exists for EF to read what is stored, and
   using it for a fragment would break the invariant of the type.
-- **A `CpfDigits` in the shared kernel.** It would share the mask rule with `CpfNumber`, but the kernel needs a second real
-  caller and today there is one.
+- **A `CpfDigits` value object in the Application** (tried after review): a record whose `Create` held the extraction.
+  It had one producer (`ToFilter()`) and one reader (the repository, through `.Value`), and no invariant beyond the
+  extraction itself, so it added a type without adding a guarantee. Removed after review; the extraction is a private
+  method of the query.
+- **The extraction in the shared kernel.** It would share the mask rule with `CpfNumber`, but the kernel needs a second
+  real caller and today there is one.
 - **Client roots without their contacts in the page** (the first version of this change). Two joins fewer, but the port
   returned a `Client` that looked whole and was not: a client from the page, inactivated and staged with `UpdateAsync`,
   lost every guardian and reference contact on save (a persistence test now pins the opposite). Changed after review.
