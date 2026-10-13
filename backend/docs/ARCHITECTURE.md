@@ -109,7 +109,8 @@ Vertical slices organise the Application layer; they do not replace the layers
       <Operation>Command.cs | Query.cs     a record; nested input records live in the same file
       <Operation>CommandHandler.cs | QueryHandler.cs
       <Operation>CommandValidator.cs | QueryValidator.cs      whenever the request carries input
-      <Operation>CommandExtensions.cs      extension methods ToModel(…) / ApplyTo(entity) / To<Entity>Data(): command → domain input
+      <Operation>CommandExtensions.cs      extension methods ToModel(…) / ApplyTo(entity) / To<Entity>Data(): command → domain input;
+                                           <Operation>QueryExtensions.cs: ToFilter(), the list query → its <Entity>ListFilter
 <Service>.Infrastructure/
   Persistence/Configurations/<Entity>Configuration.cs
   Persistence/Migrations/
@@ -394,9 +395,8 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
 - The query of a paged list extends `PagedQuery` (`Page` and `PageSize`, with the `PageRequest` defaults, unguarded) and
   its validator writes the three rules
   (page at least 1, size from 1 to `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared
-  `Paging.*` codes; the handler builds the list's filter (`ClientListFilter`, a `PageRequest` with the plain filters), the
-  port takes it and returns `PagedResult<T>`, and the
-  handler `Map`s it to the response. An unpaged list returns `IReadOnlyList<T>`. A page past the last answers `200`
+  `Paging.*` codes; the query's `ToFilter()` extension builds the list's filter (`ClientListFilter`, a `PageRequest` with the
+  plain filters), the port takes it and returns `PagedResult<T>`, and the handler `Map`s it to the response. An unpaged list returns `IReadOnlyList<T>`. A page past the last answers `200`
   with no items ([0064](../../docs/adr/0064-paged-reads-page-request-and-paged-result.md)).
 
 A change to an endpoint's contract regenerates the frontend's types in the same change — skill

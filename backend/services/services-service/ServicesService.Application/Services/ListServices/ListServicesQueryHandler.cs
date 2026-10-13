@@ -18,9 +18,7 @@ public sealed class ListServicesQueryHandler : IQueryHandler<ListServicesQuery, 
         ListServicesQuery query,
         CancellationToken cancellationToken)
     {
-        var filter = ServiceListFilter.Create(query.Page, query.PageSize, query.Search, query.CategoryId, query.TagId);
-
-        var services = await _serviceRepository.ListAsync(filter, cancellationToken);
+        var services = await _serviceRepository.ListAsync(query.ToFilter(), cancellationToken);
 
         var categoryNamesById = await CategoryNamesAsync(services.Items, cancellationToken);
 

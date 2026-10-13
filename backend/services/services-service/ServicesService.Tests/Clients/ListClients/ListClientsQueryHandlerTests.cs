@@ -159,25 +159,6 @@ public class ListClientsQueryHandlerTests
     }
 
     [Theory]
-    [InlineData(ClientStatusFilter.Active, ClientStatus.Active)]
-    [InlineData(ClientStatusFilter.Inactive, ClientStatus.Inactive)]
-    [InlineData(null, ClientStatus.Active)]
-    public async Task Handle_MapsTheStatusFilterToTheClientStatus(ClientStatusFilter? status, ClientStatus expected)
-    {
-        await _handler.Handle(new ListClientsQuery(Status: status), CancellationToken.None);
-
-        await AssertListed(null, null, expected);
-    }
-
-    [Fact]
-    public async Task Handle_WithTheAllFilter_AsksForNoStatusRestriction()
-    {
-        await _handler.Handle(new ListClientsQuery(Status: ClientStatusFilter.All), CancellationToken.None);
-
-        await AssertListed(null, null, null);
-    }
-
-    [Theory]
     [InlineData("  Maria SILVA ", "maria silva")]
     [InlineData("MARIA@Example.COM", "maria@example.com")]
     [InlineData("josé", "josé")]

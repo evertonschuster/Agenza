@@ -32,8 +32,7 @@ real total, and the page and size it was asked for. The filter-and-order functio
 explicit order is a bug.
 
 **`PagedResult<T>.Map(...)`** converts the items and keeps the total, the page and the size, so a handler is
-`repository.ListAsync(<Entity>ListFilter.Create(query.Page, query.PageSize, <filters>), ct)` followed by
-`.Map(<Entity>ListItemResponse.From<Entity>)`.
+`repository.ListAsync(query.ToFilter(), ct)` followed by `.Map(<Entity>ListItemResponse.From<Entity>)`.
 
 **The filter of a list extends it.** A paged list has one record, `ClientListFilter : PageRequest`, that carries the
 page and the plain filters of that list (`Text`, `CpfDigits`, `Status`): one object from the handler to the
@@ -60,8 +59,10 @@ holds, and the error says so.
 `PageSize` as `init` properties that default to the `PageRequest` constants, and no guard: it holds the raw input, and
 the validator is the gate. `ListClientsQuery` extends it and declares only its own members (`Search`, `Status`), so the
 wire stays flat (`?page=&pageSize=&search=&status=`), a new list does not redeclare the two members or their defaults,
-and a paging value is set with an initializer (`new ListClientsQuery { Page = 2 }`). The handler builds the filter after
-the validator ran. `PagedQuery` and `PageRequest` are two types on purpose: one is input that may be wrong, the other
+and a paging value is set with an initializer (`new ListClientsQuery { Page = 2 }`). The query turns itself into its filter
+with a `ToFilter()` extension method, the mapping pattern of [ARCHITECTURE](../../backend/docs/ARCHITECTURE.md) §2
+(`ToModel`, `To<Entity>Data()`), so the handler stays orchestration and the mapping of the wire enum `ClientStatusFilter`
+to the domain's `ClientStatus?` lives with the query. `PagedQuery` and `PageRequest` are two types on purpose: one is input that may be wrong, the other
 is a page a repository can serve. The query is never the filter, and the filter is never bound from the wire.
 
 **Services follows.** The services list was converted after review, in the same pull request, the way clients was:
@@ -113,6 +114,8 @@ generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.Shared
   and `Status`. The filter, built after the validator, can extend it.
 - **The filter holding a `PageRequest`** instead of extending it. Equally simple; one flat object was preferred, and
   `ListPagedAsync(PageRequest, …)` accepts the filter as it is.
+- **The handler building the filter** (the version before the extension): `ClientListFilter.Create(query.Page,
+  query.PageSize, query.Search, status)` and a private status mapping in every list handler. Changed after review.
 - **The first version of this change**: `ListAsync(PageRequest page, string? text, string? cpfDigits, ClientStatus?
   status, ct)`. It grows by one parameter per criterion, and the text and the digits were one concept in two arguments.
   Changed after review.

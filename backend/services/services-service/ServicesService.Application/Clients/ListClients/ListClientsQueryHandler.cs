@@ -10,27 +10,8 @@ public sealed class ListClientsQueryHandler(IClientRepository clientRepository)
         ListClientsQuery query,
         CancellationToken cancellationToken)
     {
-        var status = ToStatusFilter(query.Status);
-
-        var filter = ClientListFilter.Create(query.Page, query.PageSize, query.Search, status);
-
-        var clients = await clientRepository.ListAsync(filter, cancellationToken);
+        var clients = await clientRepository.ListAsync(query.ToFilter(), cancellationToken);
 
         return Result.Success(clients.Map(ClientListItemResponse.FromClient));
-    }
-
-    private static ClientStatus? ToStatusFilter(ClientStatusFilter? status)
-    {
-        if (status == ClientStatusFilter.All)
-        {
-            return null;
-        }
-
-        if (status == ClientStatusFilter.Inactive)
-        {
-            return ClientStatus.Inactive;
-        }
-
-        return ClientStatus.Active;
     }
 }
