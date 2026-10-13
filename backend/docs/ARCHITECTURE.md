@@ -71,7 +71,7 @@ Shared projects in `backend/shared/` hold infrastructure, never business rules:
 
 | Project | Holds | Referenced by |
 | --- | --- | --- |
-| `Admin.SharedKernel` | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PageRequest` and `PagedResult`, the JSON converters of the wire (value objects, enum names) | Application |
+| `Admin.SharedKernel` | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PagedQuery`, `PageRequest` and `PagedResult`, the JSON converters of the wire (value objects, enum names) | Application |
 | `Admin.SharedKernel.AspNetCore` | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler`, `AddWireJson()` | Api |
 | `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>` (with the paged read over `PageRequest`), `ApplyAuditableConventions` (soft-delete and tenant filters), the column conversion of the shared value objects | Infrastructure |
 | `Admin.SharedKernel.ValueObjects` | `IStringValueObject<T>` and the string value objects every service shares (`CpfNumber`); no reference at all | Domain |
@@ -391,7 +391,8 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
   translation class. Each item of a list of enums has an `IsInEnum` rule with the domain's code
   ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
 - The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`); instants are UTC.
-- A paged list takes `Page`/`PageSize` with the `PageRequest` defaults and a validator that writes its three rules
+- The query of a paged list extends `PagedQuery` (`Page` and `PageSize`, with the `PageRequest` defaults, unguarded) and
+  its validator writes the three rules
   (page at least 1, size from 1 to `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared
   `Paging.*` codes; the handler builds the list's filter (`ClientListFilter`, a `PageRequest` with the plain filters), the
   port takes it and returns `PagedResult<T>`, and the

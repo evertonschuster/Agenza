@@ -16,9 +16,9 @@ messages", plus the earlier slices for reads, edits and paging. This file is how
   nothing to register and no `<Concept>Names` class. A list of enums gets an `IsInEnum` rule per item with
   the domain's code (ADR 0058).
 - A route id is a member (`<Entity>Id`) that the controller fills with `with { … }`.
-- A list query carries its filters as optional members and `Page`/`PageSize` with the `PageRequest` defaults; the
-  handler builds the `<Entity>ListFilter` (a `PageRequest` with the list's filters) and the validator writes the three
-  `Paging.*` rules (ADR 0064).
+- A list query extends `PagedQuery` (`Page`/`PageSize`, defaults from `PageRequest`) and carries its filters as
+  optional members; the handler builds the `<Entity>ListFilter` (a `PageRequest` with the list's filters) and the
+  validator writes the three `Paging.*` rules (ADR 0064).
 
 ## 2. The validator — simple and clean
 

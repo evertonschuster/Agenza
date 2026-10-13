@@ -56,8 +56,13 @@ the constants of `PageRequest`, and the three rules carry codes that every list 
 A page whose offset does not fit an `int` is a `400`, not an empty page: the client asked for something no table
 holds, and the error says so.
 
-**The query stays flat.** `ListClientsQuery` keeps `Page` and `PageSize` as members, with `PageRequest` constants as
-defaults, because the wire is `?page=&pageSize=`. The handler builds the filter after the validator ran.
+**A paged query extends `PagedQuery`.** `PagedQuery`, in `Admin.SharedKernel`, is an abstract record with `Page` and
+`PageSize` as `init` properties that default to the `PageRequest` constants, and no guard: it holds the raw input, and
+the validator is the gate. `ListClientsQuery` extends it and declares only its own members (`Search`, `Status`), so the
+wire stays flat (`?page=&pageSize=&search=&status=`), a new list does not redeclare the two members or their defaults,
+and a paging value is set with an initializer (`new ListClientsQuery { Page = 2 }`). The handler builds the filter after
+the validator ran. `PagedQuery` and `PageRequest` are two types on purpose: one is input that may be wrong, the other
+is a page a repository can serve. The query is never the filter, and the filter is never bound from the wire.
 
 **Only clients adopt it for now.** `ServiceRepository` and `ListServicesQueryHandler` keep the older
 `ListPagedAsync(order, page, pageSize)`, which stays beside the new overload and shares its private slice-reading
@@ -74,7 +79,8 @@ step, so services behave exactly as before, including the two wrong answers abov
 - Two ways to page exist in `RepositoryBase` until services is converted. The older one is the only unguarded one.
 - A repository test cannot live in `Admin.SharedKernel.Tests` (it has no EF). The paged helper is proven through the
   clients persistence tests (items, total, echoed page and size, a page past the last, no repeat or omission).
-- The frontend's generated types do not change: `PagedResult<T>` has the same schema.
+- The frontend's generated types keep the same query parameters; `Page` and `PageSize` come after the list's own
+  members in the generated `query` object, because the properties are inherited.
 - A filter that extends `PageRequest` is never equal to a plain `PageRequest` of the same page: record equality includes
   the type. A test that wants the filter compares the filter.
 
@@ -102,8 +108,13 @@ generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.Shared
 - **The first version of this change**: `ListAsync(PageRequest page, string? text, string? cpfDigits, ClientStatus?
   status, ct)`. It grows by one parameter per criterion, and the text and the digits were one concept in two arguments.
   Changed after review.
-- **A base query record with `Page` and `PageSize`.** Binding positional members inherited through `[FromQuery]`
-  and a base type on every query go against "no base handler, no generic CRUD".
+- **A base query record with `Page` and `PageSize`** (rejected in the first version, adopted after review). The fears
+  were that MVC would not bind inherited members and that a base type goes against "no base handler, no generic CRUD".
+  A test of the MVC binder (`PagedQueryTests`) and the live service show that the inherited `init` properties are
+  bound from the query string in any case, and that the OpenAPI document keeps the same four parameters (only their
+  order changes). The rule is about handlers and CRUD, and a record with two properties is neither.
+- **A positional base (`PagedQuery(int Page, int PageSize)`).** A derived positional record has to repeat both
+  parameters to bind through its constructor, which is the duplication this removes.
 - **Clamping to an empty page in the helper, and dropping `Paging.PageTooLarge`.** Safe by construction for every
   future list; the owner preferred the explicit `400`.
 - **Codes per feature** (`Client.PageInvalid`, `Service.PageInvalid`). The same rule would have a code per list.

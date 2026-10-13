@@ -128,7 +128,7 @@ public class ListClientsQueryHandlerTests
     {
         Returns([MinimalClient("Ana"), MinimalClient("Bia")], 7);
 
-        var result = await _handler.Handle(new ListClientsQuery(Page: 2, PageSize: 2), CancellationToken.None);
+        var result = await _handler.Handle(new ListClientsQuery { Page = 2, PageSize = 2 }, CancellationToken.None);
 
         result.Value.Page.Should().Be(2);
         result.Value.PageSize.Should().Be(2);
@@ -142,7 +142,7 @@ public class ListClientsQueryHandlerTests
     {
         Returns([], 3);
 
-        var result = await _handler.Handle(new ListClientsQuery(Page: 9, PageSize: 20), CancellationToken.None);
+        var result = await _handler.Handle(new ListClientsQuery { Page = 9, PageSize = 20 }, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Items.Should().BeEmpty();
@@ -220,7 +220,7 @@ public class ListClientsQueryHandlerTests
     [Fact]
     public async Task Handle_CombinesTheSearchWithTheStatusFilter()
     {
-        await _handler.Handle(new ListClientsQuery(Page: 3, PageSize: 50, Search: SearchTextOf("Silva"), Status: ClientStatusFilter.Inactive), CancellationToken.None);
+        await _handler.Handle(new ListClientsQuery(Search: SearchTextOf("Silva"), Status: ClientStatusFilter.Inactive) { Page = 3, PageSize = 50 }, CancellationToken.None);
 
         await AssertListed("silva", null, ClientStatus.Inactive, page: 3, pageSize: 50);
     }

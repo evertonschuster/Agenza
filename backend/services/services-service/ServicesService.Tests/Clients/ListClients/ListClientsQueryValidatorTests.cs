@@ -10,12 +10,12 @@ public class ListClientsQueryValidatorTests
     {
         return new TheoryData<string, ListClientsQuery, string, string>
         {
-            { "page below one", new ListClientsQuery(Page: 0), "Page", "Paging.PageInvalid" },
-            { "negative page", new ListClientsQuery(Page: -3), "Page", "Paging.PageInvalid" },
-            { "page whose offset overflows", new ListClientsQuery(Page: int.MaxValue), "Page", "Paging.PageTooLarge" },
-            { "page just past the offset limit", new ListClientsQuery(Page: 21_474_838, PageSize: 100), "Page", "Paging.PageTooLarge" },
-            { "page size below one", new ListClientsQuery(PageSize: 0), "PageSize", "Paging.PageSizeInvalid" },
-            { "page size above the maximum", new ListClientsQuery(PageSize: 101), "PageSize", "Paging.PageSizeInvalid" },
+            { "page below one", new ListClientsQuery { Page = 0 }, "Page", "Paging.PageInvalid" },
+            { "negative page", new ListClientsQuery { Page = -3 }, "Page", "Paging.PageInvalid" },
+            { "page whose offset overflows", new ListClientsQuery { Page = int.MaxValue }, "Page", "Paging.PageTooLarge" },
+            { "page just past the offset limit", new ListClientsQuery { Page = 21_474_838, PageSize = 100 }, "Page", "Paging.PageTooLarge" },
+            { "page size below one", new ListClientsQuery { PageSize = 0 }, "PageSize", "Paging.PageSizeInvalid" },
+            { "page size above the maximum", new ListClientsQuery { PageSize = 101 }, "PageSize", "Paging.PageSizeInvalid" },
             { "a status past the last member", new ListClientsQuery(Status: (ClientStatusFilter)7), "Status", "Client.StatusFilterInvalid" },
             { "a negative status", new ListClientsQuery(Status: (ClientStatusFilter)(-1)), "Status", "Client.StatusFilterInvalid" },
             { "zero, which is no member", new ListClientsQuery(Status: default(ClientStatusFilter)), "Status", "Client.StatusFilterInvalid" },
@@ -50,9 +50,9 @@ public class ListClientsQueryValidatorTests
     [Fact]
     public void Validate_WithEveryLimitAtItsBoundary_Passes()
     {
-        _validator.Validate(new ListClientsQuery(Page: 1, PageSize: 1)).IsValid.Should().BeTrue();
-        _validator.Validate(new ListClientsQuery(Page: 21_474_837, PageSize: 100)).IsValid.Should().BeTrue();
-        _validator.Validate(new ListClientsQuery(PageSize: 100)).IsValid.Should().BeTrue();
+        _validator.Validate(new ListClientsQuery { Page = 1, PageSize = 1 }).IsValid.Should().BeTrue();
+        _validator.Validate(new ListClientsQuery { Page = 21_474_837, PageSize = 100 }).IsValid.Should().BeTrue();
+        _validator.Validate(new ListClientsQuery { PageSize = 100 }).IsValid.Should().BeTrue();
     }
 
     [Theory]
@@ -70,7 +70,7 @@ public class ListClientsQueryValidatorTests
     [Fact]
     public void Validate_WithAPageBelowOne_ReportsOnlyThePageRule()
     {
-        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 100));
+        var result = _validator.Validate(new ListClientsQuery { Page = 0, PageSize = 100 });
 
         result.Errors.Select(error => error.ErrorCode).Should().Equal("Paging.PageInvalid");
     }
@@ -78,7 +78,7 @@ public class ListClientsQueryValidatorTests
     [Fact]
     public void Validate_WithSeveralInvalidMembers_ReportsEachOnItsOwnProperty()
     {
-        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 0, Status: (ClientStatusFilter)9));
+        var result = _validator.Validate(new ListClientsQuery(Status: (ClientStatusFilter)9) { Page = 0, PageSize = 0 });
 
         result.Errors.Select(error => (error.PropertyName, error.ErrorCode)).Should().BeEquivalentTo(
         [
@@ -91,7 +91,7 @@ public class ListClientsQueryValidatorTests
     [Fact]
     public void Validate_MessagesAreWrittenInPortugueseAndNameTheField()
     {
-        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 0, Status: (ClientStatusFilter)9));
+        var result = _validator.Validate(new ListClientsQuery(Status: (ClientStatusFilter)9) { Page = 0, PageSize = 0 });
 
         result.Errors.Select(error => error.ErrorMessage).Should().BeEquivalentTo(
         [

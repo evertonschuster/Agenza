@@ -462,10 +462,10 @@ export interface paths {
     get: {
       parameters: {
         query?: {
-          Page?: number | string;
-          PageSize?: number | string;
           Search?: string;
           Status?: components['schemas']['ClientStatusFilter'];
+          Page?: number | string;
+          PageSize?: number | string;
         };
         header?: never;
         path: {
