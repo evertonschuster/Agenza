@@ -96,7 +96,7 @@ public class ListClientsQueryHandlerTests
         client.Inactivate();
         Returns([client], 1);
 
-        var result = await _handler.Handle(new ListClientsQuery(Status: "all"), CancellationToken.None);
+        var result = await _handler.Handle(new ListClientsQuery(Status: ClientStatusFilter.All), CancellationToken.None);
 
         result.Value.Items.Should().ContainSingle().Which.Status.Should().Be("inactive");
     }
@@ -147,26 +147,20 @@ public class ListClientsQueryHandlerTests
     }
 
     [Theory]
-    [InlineData("active", ClientStatus.Active)]
-    [InlineData("ACTIVE", ClientStatus.Active)]
-    [InlineData("inactive", ClientStatus.Inactive)]
-    [InlineData("Inactive", ClientStatus.Inactive)]
+    [InlineData(ClientStatusFilter.Active, ClientStatus.Active)]
+    [InlineData(ClientStatusFilter.Inactive, ClientStatus.Inactive)]
     [InlineData(null, ClientStatus.Active)]
-    [InlineData("", ClientStatus.Active)]
-    [InlineData("  ", ClientStatus.Active)]
-    public async Task Handle_MapsTheStatusFilterToTheClientStatus(string? status, ClientStatus expected)
+    public async Task Handle_MapsTheStatusFilterToTheClientStatus(ClientStatusFilter? status, ClientStatus expected)
     {
         await _handler.Handle(new ListClientsQuery(Status: status), CancellationToken.None);
 
         await AssertListed(null, null, expected);
     }
 
-    [Theory]
-    [InlineData("all")]
-    [InlineData("ALL")]
-    public async Task Handle_WithTheAllFilter_AsksForNoStatusRestriction(string status)
+    [Fact]
+    public async Task Handle_WithTheAllFilter_AsksForNoStatusRestriction()
     {
-        await _handler.Handle(new ListClientsQuery(Status: status), CancellationToken.None);
+        await _handler.Handle(new ListClientsQuery(Status: ClientStatusFilter.All), CancellationToken.None);
 
         await AssertListed(null, null, null);
     }
@@ -225,7 +219,7 @@ public class ListClientsQueryHandlerTests
     [Fact]
     public async Task Handle_CombinesTheSearchWithTheStatusFilter()
     {
-        await _handler.Handle(new ListClientsQuery(Page: 3, PageSize: 50, Q: "Silva", Status: "inactive"), CancellationToken.None);
+        await _handler.Handle(new ListClientsQuery(Page: 3, PageSize: 50, Q: "Silva", Status: ClientStatusFilter.Inactive), CancellationToken.None);
 
         await AssertListed("silva", null, ClientStatus.Inactive, page: 3, pageSize: 50);
     }

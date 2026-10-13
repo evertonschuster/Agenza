@@ -47,14 +47,14 @@ public sealed class ListClientsQueryHandler(IClientRepository clientRepository)
         return digits;
     }
 
-    private static ClientStatus? ToStatusFilter(string? status)
+    private static ClientStatus? ToStatusFilter(ClientStatusFilter? status)
     {
-        if (string.Equals(status, ListClientsQuery.AllStatus, StringComparison.OrdinalIgnoreCase))
+        if (status == ClientStatusFilter.All)
         {
             return null;
         }
 
-        if (string.Equals(status, ListClientsQuery.InactiveStatus, StringComparison.OrdinalIgnoreCase))
+        if (status == ClientStatusFilter.Inactive)
         {
             return ClientStatus.Inactive;
         }

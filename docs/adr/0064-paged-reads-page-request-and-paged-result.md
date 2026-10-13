@@ -71,7 +71,7 @@ step, so services behave exactly as before, including the two wrong answers abov
 - The frontend's generated types do not change: `PagedResult<T>` has the same schema.
 
 Verified on the same disposable PostgreSQL 18.3 as [ADR 0063](0063-clients-list-and-search-contract.md), on the final
-code: the 89 checks of the clients list with the `Paging.*` codes and a page echoed from the repository's answer;
+code: the 90 checks of the clients list with the `Paging.*` codes and a page echoed from the repository's answer;
 eleven checks that the services list did not change (five services created, paging with no repeat or omission, search,
 a page past the last, `page=0` still `400`, and the `500` of `page=2147483647` still there); the volume run again with
 50,000 people (30 to 45 ms at the median, 133 ms at page 2000); and the generated frontend types equal to a fresh

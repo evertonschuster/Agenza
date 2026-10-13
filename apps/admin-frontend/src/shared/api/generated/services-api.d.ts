@@ -465,7 +465,7 @@ export interface paths {
           Page?: number | string;
           PageSize?: number | string;
           Q?: string;
-          Status?: string;
+          Status?: components['schemas']['ClientStatusFilter'];
         };
         header?: never;
         path: {
@@ -1959,6 +1959,8 @@ export interface components {
       guardians: components['schemas']['GuardianResponse'][];
       referenceContacts: components['schemas']['ReferenceContactResponse'][];
     };
+    /** @enum {unknown} */
+    ClientStatusFilter: 'active' | 'inactive' | 'all' | null;
     /** @enum {unknown} */
     ContactPurpose: 'emergency' | 'operationalSupport' | 'dailyCommunication';
     CreateCategoryCommand: {

@@ -5,13 +5,6 @@ namespace ServicesService.Application.Clients.ListClients;
 
 public sealed class ListClientsQueryValidator : AbstractValidator<ListClientsQuery>
 {
-    private static readonly string[] KnownStatuses =
-    [
-        ListClientsQuery.ActiveStatus,
-        ListClientsQuery.InactiveStatus,
-        ListClientsQuery.AllStatus,
-    ];
-
     public ListClientsQueryValidator()
     {
         RuleFor(query => query.Page)
@@ -34,9 +27,8 @@ public sealed class ListClientsQueryValidator : AbstractValidator<ListClientsQue
             .WithMessage($"A busca deve ter no máximo {EmailAddress.MaxLength} caracteres.");
 
         RuleFor(query => query.Status)
-            .Must(status => string.IsNullOrWhiteSpace(status) || KnownStatuses.Contains(status, StringComparer.OrdinalIgnoreCase))
+            .IsInEnum()
             .WithErrorCode("Client.StatusFilterInvalid")
-            .WithMessage(
-                $"A situação deve ser {ListClientsQuery.ActiveStatus}, {ListClientsQuery.InactiveStatus} ou {ListClientsQuery.AllStatus}.");
+            .WithMessage("A situação deve ser active, inactive ou all.");
     }
 }

@@ -17,9 +17,11 @@ public class ListClientsQueryValidatorTests
             { "page size below one", new ListClientsQuery(PageSize: 0), "PageSize", "Paging.PageSizeInvalid" },
             { "page size above the maximum", new ListClientsQuery(PageSize: 101), "PageSize", "Paging.PageSizeInvalid" },
             { "search above the longest searchable value", new ListClientsQuery(Q: new string('a', 255)), "Q", "Client.SearchTooLong" },
-            { "unknown status", new ListClientsQuery(Status: "deleted"), "Status", "Client.StatusFilterInvalid" },
-            { "numeric status", new ListClientsQuery(Status: "1"), "Status", "Client.StatusFilterInvalid" },
-            { "status with surrounding text", new ListClientsQuery(Status: "active,inactive"), "Status", "Client.StatusFilterInvalid" },
+            { "a status past the last member", new ListClientsQuery(Status: (ClientStatusFilter)7), "Status", "Client.StatusFilterInvalid" },
+            { "a negative status", new ListClientsQuery(Status: (ClientStatusFilter)(-1)), "Status", "Client.StatusFilterInvalid" },
+            { "zero, which is no member", new ListClientsQuery(Status: default(ClientStatusFilter)), "Status", "Client.StatusFilterInvalid" },
+            { "two names joined by the parser", new ListClientsQuery(Status: ClientStatusFilter.Active | ClientStatusFilter.Inactive), "Status", "Client.StatusFilterInvalid" },
+            { "every name joined by the parser", new ListClientsQuery(Status: ClientStatusFilter.Active | ClientStatusFilter.Inactive | ClientStatusFilter.All), "Status", "Client.StatusFilterInvalid" },
         };
     }
 
@@ -56,15 +58,11 @@ public class ListClientsQueryValidatorTests
     }
 
     [Theory]
-    [InlineData("active")]
-    [InlineData("inactive")]
-    [InlineData("all")]
-    [InlineData("ACTIVE")]
-    [InlineData("All")]
-    [InlineData("")]
-    [InlineData("   ")]
+    [InlineData(ClientStatusFilter.Active)]
+    [InlineData(ClientStatusFilter.Inactive)]
+    [InlineData(ClientStatusFilter.All)]
     [InlineData(null)]
-    public void Validate_WithAKnownOrBlankStatus_Passes(string? status)
+    public void Validate_WithAMemberOfTheEnumOrNoStatus_Passes(ClientStatusFilter? status)
     {
         var result = _validator.Validate(new ListClientsQuery(Status: status));
 
@@ -95,7 +93,7 @@ public class ListClientsQueryValidatorTests
     [Fact]
     public void Validate_WithSeveralInvalidMembers_ReportsEachOnItsOwnProperty()
     {
-        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 0, Status: "x"));
+        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 0, Status: (ClientStatusFilter)9));
 
         result.Errors.Select(error => (error.PropertyName, error.ErrorCode)).Should().BeEquivalentTo(
         [
@@ -108,7 +106,7 @@ public class ListClientsQueryValidatorTests
     [Fact]
     public void Validate_MessagesAreWrittenInPortugueseAndNameTheField()
     {
-        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 0, Q: new string('a', 255), Status: "x"));
+        var result = _validator.Validate(new ListClientsQuery(Page: 0, PageSize: 0, Q: new string('a', 255), Status: (ClientStatusFilter)9));
 
         result.Errors.Select(error => error.ErrorMessage).Should().BeEquivalentTo(
         [

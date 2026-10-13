@@ -41,10 +41,19 @@ owner on 2026-10-12, taken against the text of #155 ("Mascarar CPF na lista") an
 has no roles, every authenticated user of the tenant sees the whole CPF in the detail, and the list adds no new kind
 of reader. What changes is volume: up to 100 whole CPFs per response.
 
-**Situation.** `status` is a string on the wire: `active` (default), `inactive` or `all`, in any case. Omitted or
-blank is `active`; a number is refused. `all` is "no restriction", and soft-deleted people never appear, whatever the
-value. The validator checks it, not the model binder: an enum bound by the framework answers an English message under
-the generic code, and the issue asks for a stable code.
+**Situation.** `status` is a plain enum, `ClientStatusFilter { Active = 1, Inactive = 2, All = 4 }`, named in
+camelCase on the wire ([ADR 0058](0058-closed-set-members-are-plain-enums.md)): `active` (default), `inactive` or
+`all`, in any case. Omitted or blank is `active`. `all` is "no restriction", and soft-deleted people never appear,
+whatever the value. `ClientStatus` cannot be the type: it has no `All` and it is persisted. The generated contract
+publishes `'active' | 'inactive' | 'all'`. The values are bits on purpose: the framework's parser joins names
+separated by a comma with an OR, so with `0, 1, 2` the text `active,inactive` would become `inactive`; with `1, 2, 4`
+every join is a value no member has, and the binder refuses it.
+
+The binder, not the validator, answers a bad value: an unknown name, `0`, a number past the members or a joined list
+fails at binding (gate 1) with `400 Validation.Failed` under `status` and the framework's English text, like
+`page=abc`. The validator keeps an `IsInEnum` rule with `Client.StatusFilterInvalid` for a value that reaches it
+anyway. A number that is a member is accepted by the binder (`status=4` is `all`): a known limit, left as it is,
+because refusing it needs a binder of its own.
 
 **Search.** `q` is trimmed; blank means no search. The handler lowercases it and matches it as "contains":
 
@@ -85,7 +94,7 @@ client load now reads three more short strings, because EF loads every mapped co
 | `(page - 1) * pageSize` fits an `int` | `Paging.PageTooLarge` |
 | `pageSize` from 1 to 100 | `Paging.PageSizeInvalid` |
 | `q` up to 254 characters, the longest searchable value (an e-mail) | `Client.SearchTooLong` |
-| `status` one of the three words, or blank | `Client.StatusFilterInvalid` |
+| `status` a member of `ClientStatusFilter`, or absent | `Client.StatusFilterInvalid` |
 
 The three page rules are shared by every paged list ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)).
 `Paging.PageTooLarge` exists because `RepositoryBase.ListPagedAsync(order, page, pageSize)` computes the offset in `int`: the older list
@@ -113,12 +122,12 @@ and an ADR of its own.
 - The InMemory persistence tests do not compute generated columns: they fill the three columns the way PostgreSQL
   would, and a model test pins the expressions. What the real columns produce was verified by hand.
 - Accent-insensitive search is a known limit. `jose` does not find `José`; typing the accent does.
-- The frontend (#155 screen) is another change. It sends `status` and `q` as plain strings and branches on the error
-  codes above.
+- The frontend (#155 screen) is another change. It sends `status` (the generated union) and `q` and branches on the error
+  codes above; a bad `status` cannot come from its typed client.
 
 Verified by hand on a disposable PostgreSQL 18.3 (`agenza-scratch-pg`, port 5433, `log_statement=all`), with the real
-identity and services on private ports and a real login, 89 checks on the list: the default list, the exact item keys and values
-(whole CPF, `null` for the absent fields), the three situations and their case, a blank and a numeric `status`;
+identity and services on private ports and a real login, 90 checks on the list: the default list, the exact item keys and values
+(whole CPF, `null` for the absent fields), the three situations and their case, a blank `status`, an unknown name, a joined list, `0` and `7`, and a member given as a number;
 name, e-mail, masked and partial CPF searches; `%`, `_` and `\` as literal characters; a term with quotes; a long
 term; paging with no repeat or omission and a stable total; ties of the same name ordered by id; a page past the
 last; every validation code; `401` without a token and `403` for another tenant's header; people of another tenant,
@@ -132,7 +141,10 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
 
 - **Masking the CPF in the backend** (`***.456.789-**`, the format of the Portal da Transparência, under `cpf` or
   `maskedCpf`, or revealing only three digits). The first recommendation; the owner decided against masking.
-- **`status` as an enum bound by MVC.** English message and the generic code.
+- **`status` as a string checked by the validator** (the first version of this change). A pt-BR message with a code of
+  its own, but three constants, a list of known words and string comparisons in the handler, a contract that said
+  `string`, and a rule that ADR 0058 already settles for every enum. Changed after review.
+- **Enum values `0, 1, 2`.** A comma-joined list collides with a member (`active,inactive` becomes `inactive`).
 - **Ordering or matching by an expression over the value-object column**, and a **string alias property on the
   same column.** Neither translates (see Context).
 - **Exact match only for the CPF or the e-mail, or a prefix match.** Cheaper (fewer or no extra columns) but the
