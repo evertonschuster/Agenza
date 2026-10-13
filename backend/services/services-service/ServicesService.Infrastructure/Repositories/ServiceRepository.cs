@@ -19,7 +19,7 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
         return ListPagedAsync(filter, query => FilterAndOrder(query, filter), cancellationToken);
     }
 
-    private static IQueryable<Service> FilterAndOrder(IQueryable<Service> query, ServiceListFilter filter)
+    private static IOrderedQueryable<Service> FilterAndOrder(IQueryable<Service> query, ServiceListFilter filter)
     {
         query = query.Include(service => service.Tags);
 

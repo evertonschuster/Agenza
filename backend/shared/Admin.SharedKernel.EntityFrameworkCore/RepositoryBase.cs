@@ -50,7 +50,7 @@ public abstract class RepositoryBase<TEntity>
 
     protected async Task<PagedResult<TEntity>> ListPagedAsync(
         PageRequest page,
-        Func<IQueryable<TEntity>, IQueryable<TEntity>> filterAndOrder,
+        Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> filterAndOrder,
         CancellationToken cancellationToken)
     {
         var query = filterAndOrder(Set.AsNoTracking());

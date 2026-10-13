@@ -16,18 +16,22 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
 
     public Task<Client?> GetByIdAsync(Guid clientId, CancellationToken cancellationToken)
     {
-        return Set
-            .Include(client => client.Guardians.OrderBy(guardian => guardian.Name).ThenBy(guardian => guardian.Id))
-            .Include(client => client.ReferenceContacts.OrderBy(contact => contact.Name).ThenBy(contact => contact.Id))
-            .FirstOrDefaultAsync(client => client.Id == clientId, cancellationToken);
+        return WithContacts(Set).FirstOrDefaultAsync(client => client.Id == clientId, cancellationToken);
     }
 
     public Task<PagedResult<Client>> ListAsync(ClientListFilter filter, CancellationToken cancellationToken)
     {
-        return ListPagedAsync(filter, query => FilterAndOrder(query, filter), cancellationToken);
+        return ListPagedAsync(filter, query => FilterAndOrder(WithContacts(query), filter), cancellationToken);
     }
 
-    private static IQueryable<Client> FilterAndOrder(IQueryable<Client> query, ClientListFilter filter)
+    private static IQueryable<Client> WithContacts(IQueryable<Client> query)
+    {
+        return query
+            .Include(client => client.Guardians.OrderBy(guardian => guardian.Name).ThenBy(guardian => guardian.Id))
+            .Include(client => client.ReferenceContacts.OrderBy(contact => contact.Name).ThenBy(contact => contact.Id));
+    }
+
+    private static IOrderedQueryable<Client> FilterAndOrder(IQueryable<Client> query, ClientListFilter filter)
     {
         if (filter.Status is { } wantedStatus)
         {
