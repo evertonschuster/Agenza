@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients;
+using ServicesService.Application.Clients.ListClients;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Repositories;
 
@@ -76,9 +77,27 @@ public class ClientListPersistenceTests
         ClientStatus? status = null)
     {
         await using var context = PersistenceContext.Create(databaseName, tenantId);
-        var searchText = search is null ? null : SearchText.Create(search).Value;
-        var filter = ClientListFilter.Create(page, pageSize, searchText, status);
-        return await new ClientRepository(context).ListAsync(filter, CancellationToken.None);
+        var query = new ListClientsQuery(search is null ? null : SearchText.Create(search).Value, ToStatusFilter(status))
+        {
+            Page = page,
+            PageSize = pageSize,
+        };
+        return await new ClientRepository(context).ListAsync(query.ToFilter(), CancellationToken.None);
+    }
+
+    private static ClientStatusFilter ToStatusFilter(ClientStatus? status)
+    {
+        if (status is null)
+        {
+            return ClientStatusFilter.All;
+        }
+
+        if (status == ClientStatus.Inactive)
+        {
+            return ClientStatusFilter.Inactive;
+        }
+
+        return ClientStatusFilter.Active;
     }
 
     private static string[] Names(PagedResult<Client> page)
@@ -134,7 +153,7 @@ public class ClientListPersistenceTests
         await using var tenantlessContext = new ServicesDataContext(options, tenantProvider);
 
         var page = await new ClientRepository(tenantlessContext)
-            .ListAsync(ClientListFilter.Create(1, 20, null, null), CancellationToken.None);
+            .ListAsync(new ClientListFilter(1, 20, null, null, null), CancellationToken.None);
 
         page.Items.Should().BeEmpty();
         page.TotalCount.Should().Be(0);

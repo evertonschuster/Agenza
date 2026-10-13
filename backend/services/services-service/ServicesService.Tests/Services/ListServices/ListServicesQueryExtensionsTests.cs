@@ -8,7 +8,7 @@ public class ListServicesQueryExtensionsTests
     [Fact]
     public void ToFilter_OfTheDefaultQuery_AsksForTheFirstPageWithNoFilter()
     {
-        new ListServicesQuery().ToFilter().Should().Be(ServiceListFilter.Create(1, 20, null, null, null));
+        new ListServicesQuery().ToFilter().Should().Be(new ServiceListFilter(1, 20, null, null, null));
     }
 
     [Fact]
@@ -20,8 +20,26 @@ public class ListServicesQueryExtensionsTests
 
         var filter = query.ToFilter();
 
-        filter.Should().Be(ServiceListFilter.Create(2, 5, "cut", categoryId, tagId));
+        filter.Should().Be(new ServiceListFilter(2, 5, "cut", categoryId, tagId));
         filter.Search.Should().Be("cut");
+    }
+
+    [Theory]
+    [InlineData("  cut ", "cut")]
+    [InlineData("Hair Cut", "Hair Cut")]
+    [InlineData("100%", "100%")]
+    public void ToFilter_TrimsTheSearchAndKeepsItsCase(string raw, string expected)
+    {
+        new ListServicesQuery(Search: raw).ToFilter().Search.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public void ToFilter_WithABlankSearch_IsNoSearch(string? raw)
+    {
+        new ListServicesQuery(Search: raw).ToFilter().Search.Should().BeNull();
     }
 
     [Fact]

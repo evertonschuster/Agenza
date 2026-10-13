@@ -36,8 +36,9 @@ explicit order is a bug.
 
 **The filter of a list extends it.** A paged list has one record, `ClientListFilter : PageRequest`, that carries the
 page and the plain filters of that list (`Text`, `CpfDigits`, `Status`): one object from the handler to the
-repository, where a new criterion is one more property and not one more parameter. Its `Create` normalizes what comes
-from the query (the search text, the digits of the CPF) and the base constructor keeps the guard. The port is
+repository, where a new criterion is one more property and not one more parameter. It is a plain positional record, a
+DTO with no rule of its own: the query's `ToFilter()` normalizes what comes from the wire (the search text, the digits
+of the CPF, the status) and the base constructor keeps the guard. The port is
 `ListAsync(ClientListFilter filter, ct)` returning `PagedResult<Client>`, and the adapter hands the filter to
 `ListPagedAsync(filter, filterAndOrder, ct)`, which reads only the page from it. The filter holds plain values: no
 expression, no specification, nothing generic (see below). Only the filter of a list extends `PageRequest`; a query or
@@ -114,6 +115,9 @@ generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.Shared
   and `Status`. The filter, built after the validator, can extend it.
 - **The filter holding a `PageRequest`** instead of extending it. Equally simple; one flat object was preferred, and
   `ListPagedAsync(PageRequest, …)` accepts the filter as it is.
+- **A filter that normalizes in its own `Create`** (the version before this one): a private constructor and a static
+  `Create(page, pageSize, SearchText?, ClientStatus?)` holding the trim, the lowercase and the extraction of the CPF
+  digits. The rules belong to the query that knows the wire's shape, and the filter stays data. Changed after review.
 - **The handler building the filter** (the version before the extension): `ClientListFilter.Create(query.Page,
   query.PageSize, query.Search, status)` and a private status mapping in every list handler. Changed after review.
 - **The first version of this change**: `ListAsync(PageRequest page, string? text, string? cpfDigits, ClientStatus?

@@ -1,6 +1,7 @@
 using Admin.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Services;
+using ServicesService.Application.Services.ListServices;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Repositories;
 
@@ -84,8 +85,8 @@ public class ServiceListPersistenceTests
         Guid? tagId = null)
     {
         await using var context = PersistenceContext.Create(databaseName, tenantId);
-        var filter = ServiceListFilter.Create(page, pageSize, null, categoryId, tagId);
-        return await new ServiceRepository(context).ListAsync(filter, CancellationToken.None);
+        var query = new ListServicesQuery(CategoryId: categoryId, TagId: tagId) { Page = page, PageSize = pageSize };
+        return await new ServiceRepository(context).ListAsync(query.ToFilter(), CancellationToken.None);
     }
 
     private static string[] Names(PagedResult<Service> page)
@@ -246,7 +247,7 @@ public class ServiceListPersistenceTests
         await using var tenantlessContext = new ServicesDataContext(options, tenantProvider);
 
         var page = await new ServiceRepository(tenantlessContext)
-            .ListAsync(ServiceListFilter.Create(1, 20, null, null, null), CancellationToken.None);
+            .ListAsync(new ServiceListFilter(1, 20, null, null, null), CancellationToken.None);
 
         page.Items.Should().BeEmpty();
         page.TotalCount.Should().Be(0);
