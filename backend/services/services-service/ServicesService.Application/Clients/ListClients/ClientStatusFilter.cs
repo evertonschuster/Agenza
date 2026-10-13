@@ -4,5 +4,5 @@ public enum ClientStatusFilter
 {
     Active = 1,
     Inactive = 2,
-    All = 4,
+    All = 3,
 }

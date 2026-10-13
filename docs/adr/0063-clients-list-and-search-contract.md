@@ -44,19 +44,16 @@ owner on 2026-10-12, taken against the text of #155 ("Mascarar CPF na lista") an
 has no roles, every authenticated user of the tenant sees the whole CPF in the detail, and the list adds no new kind
 of reader. What changes is volume: up to 100 whole CPFs per response.
 
-**Situation.** `status` is a plain enum, `ClientStatusFilter { Active = 1, Inactive = 2, All = 4 }`, named in
+**Situation.** `status` is a plain enum, `ClientStatusFilter { Active = 1, Inactive = 2, All = 3 }`, named in
 camelCase on the wire ([ADR 0058](0058-closed-set-members-are-plain-enums.md)): `active` (default), `inactive` or
 `all`, in any case. Omitted or blank is `active`. `all` is "no restriction", and soft-deleted people never appear,
 whatever the value. `ClientStatus` cannot be the type: it has no `All` and it is persisted. The generated contract
-publishes `'active' | 'inactive' | 'all'`. The values are bits on purpose: the framework's parser joins names
-separated by a comma with an OR, so with `0, 1, 2` the text `active,inactive` would become `inactive`; with `1, 2, 4`
-every join is a value no member has, and the binder refuses it.
+publishes `'active' | 'inactive' | 'all'`.
 
-The binder, not the validator, answers a bad value: an unknown name, `0`, a number past the members or a joined list
-fails at binding (gate 1) with `400 Validation.Failed` under `status` and the framework's English text, like
-`page=abc`. The validator keeps an `IsInEnum` rule with `Client.StatusFilterInvalid` for a value that reaches it
-anyway. A number that is a member is accepted by the binder (`status=4` is `all`): a known limit, left as it is,
-because refusing it needs a binder of its own.
+The binder, not the validator, answers a bad value. The kernel reads an enum from a query by exactly one name
+([ADR 0066](0066-enums-read-from-a-query-or-a-route-by-one-name.md)), so an unknown name, a number (`status=3`, even
+the number of a member) or a joined list (`active,inactive`) fails at binding (gate 1) with `400 Validation.Failed` under
+`status` and the message "O valor informado deve ser active, inactive ou all.". The validator has no rule for `status`.
 
 **Search.** `search` is a `SearchText` ([ADR 0065](0065-string-value-objects-in-a-query-or-route.md)): the framework reads
 it from the query string trimmed and lowercased, and a blank one is absent, which means no search. The handler matches
@@ -105,9 +102,8 @@ client load now reads three more short strings, because EF loads every mapped co
 | `page` at least 1 | `Paging.PageInvalid` |
 | `(page - 1) * pageSize` fits an `int` | `Paging.PageTooLarge` |
 | `pageSize` from 1 to 100 | `Paging.PageSizeInvalid` |
-| `status` a member of `ClientStatusFilter`, or absent | `Client.StatusFilterInvalid` |
 
-`search` has no validator rule: `SearchText` refuses a term past 254 characters, the longest searchable value (an e-mail), at
+`status` has no validator rule: the binder reads one member or refuses the value (above). `search` has no validator rule: `SearchText` refuses a term past 254 characters, the longest searchable value (an e-mail), at
 binding (gate 1), as `400 Validation.Failed` under `search` with its own pt-BR message.
 
 The three page rules are shared by every paged list ([ADR 0064](0064-paged-reads-page-request-and-paged-result.md)).
@@ -162,7 +158,11 @@ the generated columns present: they follow a rename, a new CPF and a new e-mail,
 - **`status` as a string checked by the validator** (the first version of this change). A pt-BR message with a code of
   its own, but three constants, a list of known words and string comparisons in the handler, a contract that said
   `string`, and a rule that ADR 0058 already settles for every enum. Changed after review.
-- **Enum values `0, 1, 2`.** A comma-joined list collides with a member (`active,inactive` becomes `inactive`).
+- **Enum values chosen as bits (`1, 2, 4`) and an `IsInEnum` rule with `Client.StatusFilterInvalid`** (the version
+  before this one). The framework's parser joins comma-separated names with an OR, so the values had to keep every join
+  off the members (with `1, 2, 3`, `active,inactive` became `all`), a convention each filter would have to remember, and
+  a number that is a member (`status=4`) was still accepted. The kernel's binder replaced it
+  ([ADR 0066](0066-enums-read-from-a-query-or-a-route-by-one-name.md)).
 - **Ordering or matching by an expression over the value-object column**, and a **string alias property on the
   same column.** Neither translates (see Context).
 - **Exact match only for the CPF or the e-mail, or a prefix match.** Cheaper (fewer or no extra columns) but the

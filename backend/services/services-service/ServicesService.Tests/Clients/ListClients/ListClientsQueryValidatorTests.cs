@@ -16,11 +16,6 @@ public class ListClientsQueryValidatorTests
             { "page just past the offset limit", new ListClientsQuery { Page = 21_474_838, PageSize = 100 }, "Page", "Paging.PageTooLarge" },
             { "page size below one", new ListClientsQuery { PageSize = 0 }, "PageSize", "Paging.PageSizeInvalid" },
             { "page size above the maximum", new ListClientsQuery { PageSize = 101 }, "PageSize", "Paging.PageSizeInvalid" },
-            { "a status past the last member", new ListClientsQuery(Status: (ClientStatusFilter)7), "Status", "Client.StatusFilterInvalid" },
-            { "a negative status", new ListClientsQuery(Status: (ClientStatusFilter)(-1)), "Status", "Client.StatusFilterInvalid" },
-            { "zero, which is no member", new ListClientsQuery(Status: default(ClientStatusFilter)), "Status", "Client.StatusFilterInvalid" },
-            { "two names joined by the parser", new ListClientsQuery(Status: ClientStatusFilter.Active | ClientStatusFilter.Inactive), "Status", "Client.StatusFilterInvalid" },
-            { "every name joined by the parser", new ListClientsQuery(Status: ClientStatusFilter.Active | ClientStatusFilter.Inactive | ClientStatusFilter.All), "Status", "Client.StatusFilterInvalid" },
         };
     }
 
@@ -78,26 +73,24 @@ public class ListClientsQueryValidatorTests
     [Fact]
     public void Validate_WithSeveralInvalidMembers_ReportsEachOnItsOwnProperty()
     {
-        var result = _validator.Validate(new ListClientsQuery(Status: (ClientStatusFilter)9) { Page = 0, PageSize = 0 });
+        var result = _validator.Validate(new ListClientsQuery { Page = 0, PageSize = 0 });
 
         result.Errors.Select(error => (error.PropertyName, error.ErrorCode)).Should().BeEquivalentTo(
         [
             ("Page", "Paging.PageInvalid"),
             ("PageSize", "Paging.PageSizeInvalid"),
-            ("Status", "Client.StatusFilterInvalid"),
         ]);
     }
 
     [Fact]
     public void Validate_MessagesAreWrittenInPortugueseAndNameTheField()
     {
-        var result = _validator.Validate(new ListClientsQuery(Status: (ClientStatusFilter)9) { Page = 0, PageSize = 0 });
+        var result = _validator.Validate(new ListClientsQuery { Page = 0, PageSize = 0 });
 
         result.Errors.Select(error => error.ErrorMessage).Should().BeEquivalentTo(
         [
             "A página deve ser maior ou igual a 1.",
             "O tamanho da página deve ser entre 1 e 100.",
-            "A situação deve ser active, inactive ou all.",
         ]);
     }
 }

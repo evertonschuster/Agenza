@@ -12,9 +12,10 @@ messages", plus the earlier slices for reads, edits and paging. This file is how
   `IReadOnlyList<<Thing>Input>?`, with the `<Thing>Input` records in the same file. No domain type —
   except a shared string value object such as `CpfNumber?`, which binds from the JSON string and needs
   no validator rule (ADR 0055) — no tenant. An enum is allowed: the kernel's `AddWireJson()` already names
-  every enum in camelCase and refuses integers, in the MVC and the minimal-API JSON options, so there is
-  nothing to register and no `<Concept>Names` class. A list of enums gets an `IsInEnum` rule per item with
-  the domain's code (ADR 0058).
+  every enum in camelCase and refuses integers, in the MVC and the minimal-API JSON options, and reads one from
+  a query or a route by exactly one name (ADR 0066), so there is nothing to register, no `<Concept>Names` class
+  and no values chosen to dodge the parser. A list of enums in a body gets an `IsInEnum` rule per item with
+  the domain's code (ADR 0058); a query enum needs no rule.
 - A route id is a member (`<Entity>Id`) that the controller fills with `with { … }`.
 - A list query extends `PagedQuery` (`Page`/`PageSize`, defaults from `PageRequest`) and carries its filters as
   optional members, a free-text search as a `SearchText?`; its own `ToFilter()` method builds the

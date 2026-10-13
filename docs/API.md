@@ -198,7 +198,9 @@ que muda é o conteúdo:
 - a `message` é o texto do framework, **em inglês** ("The FullName field is required.", "A non-empty
   request body is required."), exceto a de um value object compartilhado, que vem em pt-BR ("O CPF
   informado é inválido.", "O nome completo é obrigatório.", "Informe um e-mail válido.", "A data de nascimento deve estar no passado.") e nunca ecoa o valor
-  recebido. Um valor de tipo errado traz o texto do
+  recebido, e a de um enum lido da query ou da rota, que aceita um único nome em qualquer caixa e recusa número
+  ou nomes juntos com "O valor informado deve ser active, inactive ou all." (os nomes do enum, [ADR 0066](adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)),
+  também em pt-BR e sem ecoar o valor. Um valor de tipo errado traz o texto do
   `System.Text.Json` — nome interno do tipo e posição do parser, não texto para o usuário;
 - só a **primeira** falha de valor é reportada: o `System.Text.Json` para no primeiro valor inválido,
   então dois CPFs inválidos, ou um nome vazio e um CPF inválido, no mesmo corpo geram uma única entrada, a
@@ -275,7 +277,7 @@ descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dad
 | Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `referenceContacts[0].purposes`: `ClientReferenceContact.PurposesRequired`…) |
 | CPF inválido, em qualquer formatação (§4.3) | `POST /api/v1/clients` (`cpf` ou `guardians[0].cpf`) | 400 | `Validation.Failed` (`cpf`: `Validation.Failed`, "O CPF informado é inválido.") |
 | `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (§4.3: mensagem do framework, em inglês) | `Validation.Failed` (`fullName`: `Validation.Failed`) |
-| Filtro de situação desconhecido (§4.3) | `GET /api/v1/clients?status=deleted` | 400 (mensagem do framework, em inglês) | `Validation.Failed` (`status`: `Validation.Failed`, "The value 'deleted' is not valid.") |
+| Filtro de situação desconhecido, numérico ou com nomes juntos (§4.3, [ADR 0066](adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)) | `GET /api/v1/clients?status=deleted`, `?status=3`, `?status=active,inactive` | 400 (mensagem do binder do kernel, em pt-BR) | `Validation.Failed` (`status`: `Validation.Failed`, "O valor informado deve ser active, inactive ou all.") |
 | Página abaixo de 1, tamanho fora de 1–100 | `GET /api/v1/clients?page=0` | 400 | `Validation.Failed` (`page`: `Paging.PageInvalid`; `pageSize`: `Paging.PageSizeInvalid`) |
 | Página cujo deslocamento não cabe em `int` | `GET /api/v1/clients?page=21474838&pageSize=100` | 400 | `Validation.Failed` (`page`: `Paging.PageTooLarge`) |
 | Parâmetro de query que não é número (§4.3) | `GET /api/v1/clients?page=abc` | 400 (mensagem do framework, em inglês) | `Validation.Failed` (`page`: `Validation.Failed`) |

@@ -282,9 +282,11 @@ and transactional cleanup. A `try/catch` in a handler is a finding.
 **What dies in gate 1** — malformed JSON, a non-nullable member absent from the body, a value of the
 wrong JSON type, an unknown JSON enum — reaches the client in the canonical shape
 (`AddModelStateProblemDetails`), but with the framework's English message and the generic code
-`Validation.Failed`; only a shared value object brings its own pt-BR message. An enum is bound by name
-(§6), so an unknown name dies here too; the converter can also yield a value that is not a member
-(several names in one string), which the validator refuses with `IsInEnum`. A failed body read also
+`Validation.Failed`; only a shared value object and an enum read from a query or a route bring their own pt-BR
+message. An enum is bound by name (§6), so an unknown name dies here too. In a body, the JSON converter can also yield a
+value that is not a member (several names in one string), which the validator refuses with `IsInEnum`; from a query or
+a route the kernel's binder accepts exactly one name, so a number or several names die here
+([0066](../../docs/adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)). A failed body read also
 carries the framework's entry for the body parameter (`command`), which the backend does not remove.
 The shape is described in [`docs/API.md`](../../docs/API.md) §4.3.
 
@@ -386,9 +388,11 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
   `[RequestSizeLimit]`.
 - Enums travel as camelCase strings: a plain enum, named by the kernel for every enum with integers
   refused (`AddEnumNameConverter`, registered by `AddWireJson()` in the MVC options and in the
-  minimal-API options, which the OpenAPI generator reads). Nothing to register per enum and no
-  translation class. Each item of a list of enums has an `IsInEnum` rule with the domain's code
-  ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
+  minimal-API options, which the OpenAPI generator reads). From a query or a route, the same call's binder reads
+  exactly one name in any case and refuses a number or several names, with a pt-BR message that lists the names
+  ([0066](../../docs/adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)). Nothing to register per enum, no
+  translation class and no values chosen to dodge the parser. Each item of a list of enums in a body has an `IsInEnum`
+  rule with the domain's code ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
 - The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`); instants are UTC.
 - The query of a paged list extends `PagedQuery` (`Page` and `PageSize`, with the `PageRequest` defaults, unguarded) and
   its validator writes the three rules

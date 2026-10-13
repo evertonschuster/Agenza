@@ -16,7 +16,11 @@ public static class MvcBuilderExtensions
 
         builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.AddEnumNameConverter());
 
-        builder.AddMvcOptions(options => options.ModelBinderProviders.Insert(0, new StringValueObjectModelBinderProvider()));
+        builder.AddMvcOptions(options =>
+        {
+            options.ModelBinderProviders.Insert(0, new StringValueObjectModelBinderProvider());
+            options.ModelBinderProviders.Insert(1, new EnumNameModelBinderProvider());
+        });
 
         return builder;
     }

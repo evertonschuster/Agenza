@@ -20,10 +20,5 @@ public sealed class ListClientsQueryValidator : AbstractValidator<ListClientsQue
             .InclusiveBetween(1, PageRequest.MaxPageSize)
             .WithErrorCode(PageRequest.PageSizeInvalidCode)
             .WithMessage($"O tamanho da página deve ser entre 1 e {PageRequest.MaxPageSize}.");
-
-        RuleFor(query => query.Status)
-            .IsInEnum()
-            .WithErrorCode("Client.StatusFilterInvalid")
-            .WithMessage("A situação deve ser active, inactive ou all.");
     }
 }
