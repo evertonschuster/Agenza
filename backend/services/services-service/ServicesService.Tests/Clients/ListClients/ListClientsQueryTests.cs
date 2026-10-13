@@ -3,7 +3,7 @@ using ServicesService.Application.Clients.ListClients;
 
 namespace ServicesService.Tests.Clients.ListClients;
 
-public class ListClientsQueryExtensionsTests
+public class ListClientsQueryTests
 {
     private static SearchText SearchTextOf(string raw)
     {

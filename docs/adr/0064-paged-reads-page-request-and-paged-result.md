@@ -61,9 +61,11 @@ holds, and the error says so.
 the validator is the gate. `ListClientsQuery` extends it and declares only its own members (`Search`, `Status`), so the
 wire stays flat (`?page=&pageSize=&search=&status=`), a new list does not redeclare the two members or their defaults,
 and a paging value is set with an initializer (`new ListClientsQuery { Page = 2 }`). The query turns itself into its filter
-with a `ToFilter()` extension method, the mapping pattern of [ARCHITECTURE](../../backend/docs/ARCHITECTURE.md) §2
-(`ToModel`, `To<Entity>Data()`), so the handler stays orchestration and the mapping of the wire enum `ClientStatusFilter`
-to the domain's `ClientStatus?` lives with the query. `PagedQuery` and `PageRequest` are two types on purpose: one is input that may be wrong, the other
+with a `ToFilter()` method of the record, so the handler stays orchestration and the normalization and the mapping of the
+wire enum `ClientStatusFilter` to the domain's `ClientStatus?` live with the query that knows the wire's shape. A command
+maps into the domain through an extension method ([ADR 0007](0007-direct-command-binding-and-mapping-extensions.md)); a
+list query maps into an Application record, with no domain call, so it carries the method itself and there is no
+extension file. `PagedQuery` and `PageRequest` are two types on purpose: one is input that may be wrong, the other
 is a page a repository can serve. The query is never the filter, and the filter is never bound from the wire.
 
 **Services follows.** The services list was converted after review, in the same pull request, the way clients was:
@@ -115,6 +117,9 @@ generation. `PageRequest` and `PagedResult.Map` have unit tests in `Admin.Shared
   and `Status`. The filter, built after the validator, can extend it.
 - **The filter holding a `PageRequest`** instead of extending it. Equally simple; one flat object was preferred, and
   `ListPagedAsync(PageRequest, …)` accepts the filter as it is.
+- **`ToFilter()` as an extension method in a file of its own** (the version before this one), the pattern of ADR 0007 for
+  commands. The conversion has no other user and calls nothing of the domain, so a second file only separates it from the
+  data it reads. Changed after review.
 - **A filter that normalizes in its own `Create`** (the version before this one): a private constructor and a static
   `Create(page, pageSize, SearchText?, ClientStatus?)` holding the trim, the lowercase and the extraction of the CPF
   digits. The rules belong to the query that knows the wire's shape, and the filter stays data. Changed after review.

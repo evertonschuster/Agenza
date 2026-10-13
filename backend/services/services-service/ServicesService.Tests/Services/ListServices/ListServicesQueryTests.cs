@@ -3,7 +3,7 @@ using ServicesService.Application.Services.ListServices;
 
 namespace ServicesService.Tests.Services.ListServices;
 
-public class ListServicesQueryExtensionsTests
+public class ListServicesQueryTests
 {
     [Fact]
     public void ToFilter_OfTheDefaultQuery_AsksForTheFirstPageWithNoFilter()
