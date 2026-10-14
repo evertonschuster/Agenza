@@ -19,8 +19,13 @@ function PaginationPageSize({ pageSize, onPageSizeChange, disabled }: Pagination
       disabled={disabled}
     >
       <div className="flex items-center gap-2">
-        <SelectLabel>Itens por página</SelectLabel>
-        <SelectTrigger>
+        <SelectLabel>
+          <span aria-hidden="true" className="@min-[560px]:hidden">
+            Por página
+          </span>
+          <span className="sr-only @min-[560px]:not-sr-only">Itens por página</span>
+        </SelectLabel>
+        <SelectTrigger className="pointer-coarse:h-11">
           <SelectValue />
         </SelectTrigger>
       </div>

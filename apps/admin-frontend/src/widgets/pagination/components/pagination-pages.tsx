@@ -5,9 +5,13 @@ import type { PaginationPagesProps } from '../pagination.types';
 
 function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationPagesProps) {
   return (
-    <nav aria-label="Paginação" className="flex shrink-0 items-center justify-center gap-1">
+    <nav
+      aria-label="Paginação"
+      className="flex items-center justify-between gap-2 @min-[560px]:justify-center @min-[560px]:gap-1"
+    >
       <Button
         variant="outline"
+        className="pointer-coarse:h-11"
         focusableWhenDisabled
         disabled={disabled || page <= FIRST_PAGE}
         onClick={() => onPageChange(page - 1)}
@@ -26,7 +30,7 @@ function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationP
             <li key={item}>
               <Button
                 variant={item === page ? 'default' : 'ghost'}
-                className="min-w-8"
+                className="min-w-8 pointer-coarse:h-11 pointer-coarse:min-w-11"
                 focusableWhenDisabled
                 disabled={disabled}
                 aria-current={item === page ? 'page' : undefined}
@@ -42,12 +46,13 @@ function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationP
         )}
       </ol>
 
-      <span className="px-3 text-sm text-muted-foreground @min-[560px]:hidden">
+      <span className="min-w-0 flex-1 px-1 text-center text-sm leading-tight text-balance text-muted-foreground @min-[560px]:hidden">
         {`Página ${page} de ${lastPage}`}
       </span>
 
       <Button
         variant="outline"
+        className="pointer-coarse:h-11"
         focusableWhenDisabled
         disabled={disabled || page >= lastPage}
         onClick={() => onPageChange(page + 1)}

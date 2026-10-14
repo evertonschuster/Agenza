@@ -227,6 +227,14 @@ describe('Pagination', () => {
       expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toHaveTextContent('50');
     });
 
+    it('shows the short label to the eye and keeps the full name for assistive tech', () => {
+      renderPagination();
+
+      expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeInTheDocument();
+      expect(screen.getByText('Por página')).toHaveAttribute('aria-hidden', 'true');
+      expect(screen.getByText(PAGE_SIZE_LABEL)).not.toHaveAttribute('aria-hidden');
+    });
+
     it('offers 10, 20, 50 and 100', async () => {
       renderPagination();
 

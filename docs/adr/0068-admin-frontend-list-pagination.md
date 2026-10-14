@@ -38,6 +38,15 @@ the real total (ADR 0063, ADR 0064).
      window's (a container query), because the menu takes a different share of the window in each navigation mode;
    - a select, **Itens por página**, with 10, 20, 50 and 100 (the default stays 20; 100 is the backend's limit).
 
+   **On a phone**, a list area narrower than 560 px, the footer takes a second arrangement, chosen the same way, from a
+   prototype of the footer as it was and four options. The summary and the select share the first line, with the
+   select's label shortened to "Por página" (its accessible name stays "Itens por página"); the pager sits on the line
+   below, with Anterior and Próxima at the two edges and "Página 5 de 22" between them, which wraps onto two lines
+   instead of overflowing when the numbers are long. On a touch screen (`pointer: coarse`) the pager buttons and the
+   select are 44 px tall and the options of a select 40 px. The DOM order stays summary, pager, select, so the keyboard
+   goes through them in the same order at every width; the phone only moves them on screen. The footer before this
+   overflowed a 320 px screen by 33 px with 88 people, because its pager could not wrap.
+
    Choosing another size goes back to page 1. **The pager and the select are always there while the list has an item**:
    with a single page, Anterior and Próxima are disabled and the 1 is marked. The owner ruled this on 2026-10-14, looking
    at the footer in use, after a first version that hid the pager with one page and the select with 10 items or fewer
@@ -101,6 +110,9 @@ the real total (ADR 0063, ADR 0064).
   shape with the total, and the owner asked for the pager to stay.
 - **The other two arrangements of the prototype**: "summary on the left, select and pager on the right" and "summary
   above, select and pager together below".
+- **The other phone arrangements of the prototype**: the pager above the summary and the select, three centred lines
+  with the full "Itens por página" label, and two large buttons of half the width each with "Página 1 de 9" above them.
+  The owner chose the one with the summary and the select above and the pager below.
 - **A fixed-width three-column grid to centre the pager** (how the prototype did it). Between roughly 760 and 900 px,
   with many pages, the side columns get narrower than their text and the summary wraps.
 - **A shared `usePagination` hook.** Kept to the rule that hooks are not shared between pages.
