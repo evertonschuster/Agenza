@@ -44,9 +44,11 @@ points of the issue text disagree with that contract or with the state of the ap
    the words. The error state works the same way: the page passes `errorTitle` and a `failure` (the problem's message,
    its code and an `onRetry`), and the widget shows them with **Tentar novamente** (ARCHITECTURE §2 and §5).
    `TagListPage` moves onto `errorTitle`/`failure` and `search` in a following step.
-7. **The repository unwraps the page and returns its items.** The wire page is `{ items, totalCount, page, pageSize }`
-   and `list` returns just `items`, untouched; the rest is dropped because nothing reads it (not even the total, once
-   the status line was removed). They come back with the paging controls.
+7. **The repository forwards the whole page, like `create`.** `list` returns the facade's result verbatim:
+   `{ items, totalCount, page, pageSize }`, with no mapper. The model declares the three paging fields as
+   `number | string`, the wire's own type (the generator emits `int32` that way), because declaring them `number` would
+   not compile without a mapper. Nothing reads them yet; the paging controls will convert with `Number()` in one place,
+   the page hook.
 8. **Nothing is extracted yet.** The search form and the URL/abort-controller logic of `useClientListPage` are the
    second copy of `TagListPage`'s. They are extracted into a `widgets/search-form` (and a shared pattern for the hook)
    when a third list needs them, the rule ARCHITECTURE §6 already states for `repeatable-list`.

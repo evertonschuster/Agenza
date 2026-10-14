@@ -8,3 +8,10 @@ export interface ClientListItem {
   cpf: string | null;
   status: ClientStatus;
 }
+
+export interface ClientList {
+  items: ClientListItem[];
+  totalCount: number | string;
+  page: number | string;
+  pageSize: number | string;
+}

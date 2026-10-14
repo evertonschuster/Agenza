@@ -3,7 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, MemoryRouter, RouterProvider, useLocation } from 'react-router';
 import { ClientListPage } from './ClientListPage';
-import type { ClientListItem } from '../../../model/clientList';
+import type { ClientList, ClientListItem } from '../../../model/clientList';
 
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
 
@@ -33,8 +33,8 @@ const BRUNO: ClientListItem = {
 
 const CLIENTS = [ANA, BRUNO];
 
-function listOf(items: ClientListItem[]): { ok: true; data: ClientListItem[] } {
-  return { ok: true, data: items };
+function listOf(items: ClientListItem[]): { ok: true; data: ClientList } {
+  return { ok: true, data: { items, totalCount: items.length, page: 1, pageSize: 20 } };
 }
 
 function LocationProbe() {

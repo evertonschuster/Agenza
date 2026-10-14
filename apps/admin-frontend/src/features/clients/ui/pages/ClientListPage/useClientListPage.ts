@@ -33,7 +33,7 @@ export function useClientListPage(): UseClientListPageResult {
       setResult({
         query: forQuery,
         status: ListSectionStatus.Ready,
-        clients: apiResult.data,
+        clients: apiResult.data.items,
         problem: null,
       });
     });

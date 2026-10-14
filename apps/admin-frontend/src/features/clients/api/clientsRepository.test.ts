@@ -52,15 +52,13 @@ describe('clientsRepository.list', () => {
     expect(options.signal).toBe(controller.signal);
   });
 
-  it('returns the items of the page as they came, leaving the paging envelope behind', async () => {
-    mockGet.mockResolvedValue({
-      ok: true,
-      data: { items: [LIST_ITEM], totalCount: '21', page: 1, pageSize: 20 },
-    });
+  it('forwards the whole page verbatim, with the items and the paging data', async () => {
+    const page = { items: [LIST_ITEM], totalCount: '21', page: 1, pageSize: 20 };
+    mockGet.mockResolvedValue({ ok: true, data: page });
 
     const result = await clientsRepository.list();
 
-    expect(result).toEqual({ ok: true, data: [LIST_ITEM] });
+    expect(result).toEqual({ ok: true, data: page });
   });
 
   it('forwards a failed result verbatim, without throwing (e.g. a search past the limit)', async () => {
