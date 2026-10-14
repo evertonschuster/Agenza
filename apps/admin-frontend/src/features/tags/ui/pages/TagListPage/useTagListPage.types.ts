@@ -15,6 +15,7 @@ export interface UseTagListPageResult {
   query: string;
   searchInputRef: RefObject<HTMLInputElement | null>;
   onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
+  onClearSearch: () => void;
   onRetry: () => void;
   newTagTo: { pathname: string; search: string };
 }

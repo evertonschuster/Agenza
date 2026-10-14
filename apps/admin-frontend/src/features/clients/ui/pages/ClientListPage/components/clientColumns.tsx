@@ -1,11 +1,11 @@
 import { Link } from 'react-router';
 import { maskCpf } from '@/shared/values/cpf';
 import { Badge } from '@/shared/ui/badge';
+import { OptionalText } from '@/shared/ui/optional-text';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import type { ClientListItem } from '../../../../model/clientList';
 import { CLIENT_STATUS_LABELS, type ClientStatus } from '../../../../model/clientStatus';
 import { clientDetailPath } from '../../../clientsPaths';
-import { OptionalText } from './OptionalText';
 
 const STATUS_BADGE_VARIANT: Record<ClientStatus, 'success' | 'muted'> = {
   active: 'success',
@@ -29,17 +29,22 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
     {
       key: 'phone',
       header: 'Telefone',
-      cell: (client) => <OptionalText value={client.phone} />,
+      cell: (client) => <OptionalText value={client.phone} className="whitespace-nowrap" />,
     },
     {
       key: 'email',
       header: 'E-mail',
-      cell: (client) => <OptionalText value={client.email} />,
+      cell: (client) => <OptionalText value={client.email} className="whitespace-nowrap" />,
     },
     {
       key: 'cpf',
       header: 'CPF',
-      cell: (client) => <OptionalText value={client.cpf === null ? null : maskCpf(client.cpf)} />,
+      cell: (client) => (
+        <OptionalText
+          value={client.cpf === null ? null : maskCpf(client.cpf)}
+          className="whitespace-nowrap"
+        />
+      ),
     },
     {
       key: 'status',

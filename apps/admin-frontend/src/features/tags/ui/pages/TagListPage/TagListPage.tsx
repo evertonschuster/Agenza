@@ -1,6 +1,5 @@
 import { PlusIcon, SearchIcon } from 'lucide-react';
 import { Link, Outlet } from 'react-router';
-import { ErrorState } from '@/shared/ui/error-state';
 import {
   InputGroup,
   InputGroupAddon,
@@ -8,13 +7,29 @@ import {
   InputGroupInput,
 } from '@/shared/ui/input-group';
 import { buttonVariants } from '@/shared/ui/button';
-import { ListSection } from '@/widgets/list-section';
+import { ListSection, type ListSectionEmptyCopy } from '@/widgets/list-section';
 import { tagColumns } from './components/tagColumns';
 import { useTagListPage } from './useTagListPage';
 
+const EMPTY_COPY: ListSectionEmptyCopy = {
+  title: 'Nenhuma etiqueta ainda',
+  description: 'Use o botão Nova etiqueta para cadastrar a primeira.',
+  searchTitle: (term) => `Nenhuma etiqueta encontrada para «${term}»`,
+  searchDescription: 'Confira a grafia do nome.',
+};
+
 export function TagListPage() {
-  const { tags, status, failure, query, searchInputRef, onSearchSubmit, onRetry, newTagTo } =
-    useTagListPage();
+  const {
+    tags,
+    status,
+    failure,
+    query,
+    searchInputRef,
+    onSearchSubmit,
+    onClearSearch,
+    onRetry,
+    newTagTo,
+  } = useTagListPage();
 
   return (
     <div className="space-y-4">
@@ -44,22 +59,17 @@ export function TagListPage() {
         </InputGroup>
       </form>
 
-      {failure ? (
-        <ErrorState
-          title="Não foi possível carregar as etiquetas."
-          description={failure.message}
-          code={failure.code}
-          onRetry={onRetry}
-        />
-      ) : (
-        <ListSection
-          status={status}
-          items={tags}
-          getKey={(tag) => tag.id}
-          aria-label="Etiquetas"
-          columns={tagColumns()}
-        />
-      )}
+      <ListSection
+        status={status}
+        items={tags}
+        getKey={(tag) => tag.id}
+        aria-label="Etiquetas"
+        columns={tagColumns()}
+        emptyCopy={EMPTY_COPY}
+        search={{ term: query, onClear: onClearSearch }}
+        errorTitle="Não foi possível carregar as etiquetas."
+        failure={failure && { ...failure, onRetry }}
+      />
 
       <Outlet />
     </div>

@@ -1,4 +1,5 @@
 import type { CSSProperties } from 'react';
+import { OptionalText } from '@/shared/ui/optional-text';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import { TagDeleteLink } from './TagDeleteLink';
 import { TagEditLink } from './TagEditLink';
@@ -19,15 +20,11 @@ export function tagColumns(): ListSectionColumn<Tag>[] {
       key: 'description',
       header: 'Descrição',
       cell: (tag) => (
-        <span
-          className={
-            tag.description
-              ? 'text-sm text-muted-foreground'
-              : 'text-sm text-muted-foreground italic opacity-70'
-          }
-        >
-          {tag.description ?? 'Sem descrição'}
-        </span>
+        <OptionalText
+          value={tag.description}
+          fallback="Sem descrição"
+          className="text-sm text-muted-foreground"
+        />
       ),
     },
     {

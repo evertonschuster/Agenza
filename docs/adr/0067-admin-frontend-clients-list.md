@@ -28,8 +28,8 @@ points of the issue text disagree with that contract or with the state of the ap
    will define. Until then the screen lists the first page (20 people) and nothing on it says there are more. A status line,
    "Exibindo 20 de 87 pessoas", was built and then removed by the owner. `status` and `page` enter the repository,
    the URL and the hook together with their controls, not before.
-4. **Columns:** Nome, Telefone, E-mail, CPF, Situação. A missing phone, e-mail or CPF is a dash with "Não informado" for
-   assistive tech. The situation is a `Badge` ("Ativa", "Inativa"); labels live in `model/clientStatus.ts`. Ativa is
+4. **Columns:** Nome, Telefone, E-mail, CPF, Situação. A missing phone, e-mail or CPF goes through `shared/ui/optional-text` (a dash, with "Não
+   informado" for assistive tech). The situation is a `Badge` ("Ativa", "Inativa"); labels live in `model/clientStatus.ts`. Ativa is
    green (new `success` variant, from the `--success` token) and Inativa neutral gray (new `muted` variant): inactive
    is a normal, reversible state, so it must not read as an error, and the label carries the meaning, not the color
    alone. The two variants are tuned per theme for text contrast of at least 4.5:1 (the green text is mixed with
@@ -43,7 +43,7 @@ points of the issue text disagree with that contract or with the state of the ap
    (phrases the page writes, all optional, with generic defaults), so every list shares the logic and supplies only
    the words. The error state works the same way: the page passes `errorTitle` and a `failure` (the problem's message,
    its code and an `onRetry`), and the widget shows them with **Tentar novamente** (ARCHITECTURE §2 and §5).
-   `TagListPage` moves onto `errorTitle`/`failure` and `search` in a following step.
+   `TagListPage` was moved onto the same props right after.
 7. **The repository forwards the whole page, like `create`.** `list` returns the facade's result verbatim:
    `{ items, totalCount, page, pageSize }`, with no mapper. The model declares the three paging fields as
    `number | string`, the wire's own type (the generator emits `int32` that way), because declaring them `number` would
