@@ -95,10 +95,39 @@ function requestDateAsDate(requestOnly) {
   };
 }
 
+// ASP.NET publishes every number as `integer | string` (or `number | string`) because it also reads
+// numbers from text, but it only ever writes a JSON number, so the TypeScript type is `number`.
+function numberAcceptedAsText(schemaObject) {
+  const types = schemaObject.type;
+  if (!Array.isArray(types) || !types.includes('string')) return undefined;
+  if (!types.includes('integer') && !types.includes('number')) return undefined;
+
+  const number = ts.factory.createKeywordTypeNode(ts.SyntaxKind.NumberKeyword);
+  if (!types.includes('null')) return number;
+
+  return ts.factory.createUnionTypeNode([
+    ts.factory.createLiteralTypeNode(ts.factory.createNull()),
+    number,
+  ]);
+}
+
+function firstTransformThatApplies(...transforms) {
+  return (schemaObject, options) => {
+    for (const transform of transforms) {
+      const node = transform(schemaObject, options);
+      if (node !== undefined) return node;
+    }
+    return undefined;
+  };
+}
+
 export async function typesFromDocument(openApiDocument) {
   const document = stripTenantHeaderParam(openApiDocument);
   const ast = await openapiTS(document, {
-    transform: requestDateAsDate(requestBodyOnlySchemas(document)),
+    transform: firstTransformThatApplies(
+      requestDateAsDate(requestBodyOnlySchemas(document)),
+      numberAcceptedAsText,
+    ),
   });
   return astToString(ast);
 }

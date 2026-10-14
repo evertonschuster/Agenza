@@ -26,6 +26,7 @@ function openApiDocument() {
         get: {
           parameters: [
             { name: 'filter', in: 'query', schema: { $ref: '#/components/schemas/AgendaFilter' } },
+            { name: 'Page', in: 'query', schema: { type: ['integer', 'string'], format: 'int32' } },
           ],
           responses: ok('PersonResponse'),
         },
@@ -51,8 +52,15 @@ function openApiDocument() {
         },
         PersonResponse: {
           type: 'object',
-          required: ['birthDate'],
-          properties: { birthDate: { type: ['null', 'string'], format: 'date' } },
+          required: ['birthDate', 'visits', 'balance', 'rank', 'age', 'nickname'],
+          properties: {
+            birthDate: { type: ['null', 'string'], format: 'date' },
+            visits: { type: ['integer', 'string'], format: 'int32', pattern: '^-?(?:0|[1-9]\d*)$' },
+            balance: { type: ['number', 'string'], format: 'double' },
+            rank: { type: ['null', 'integer', 'string'], format: 'int32' },
+            age: { type: 'integer', format: 'int32' },
+            nickname: { type: ['null', 'string'] },
+          },
         },
         EventBody: {
           type: 'object',
@@ -107,5 +115,33 @@ describe('typesFromDocument', () => {
     const types = await typesFromDocument(openApiDocument());
 
     expect(typeOf(types, 'CreatePersonRequest', 'createdAt')).toBe('string');
+  });
+
+  it.each([
+    ['an integer', 'visits', 'number'],
+    ['a decimal', 'balance', 'number'],
+    ['a nullable integer', 'rank', 'null | number'],
+  ])(
+    'types %s that ASP.NET also reads from text as a plain number',
+    async (_, property, expected) => {
+      const types = await typesFromDocument(openApiDocument());
+
+      expect(typeOf(types, 'PersonResponse', property)).toBe(expected);
+    },
+  );
+
+  it('types a numeric query parameter as a plain number', async () => {
+    const types = await typesFromDocument(openApiDocument());
+
+    expect(types).toMatch(/Page?: number;/);
+  });
+
+  it.each([
+    ['a plain integer', 'age', 'number'],
+    ['a nullable string', 'nickname', 'null | string'],
+  ])('leaves %s as it was', async (_, property, expected) => {
+    const types = await typesFromDocument(openApiDocument());
+
+    expect(typeOf(types, 'PersonResponse', property)).toBe(expected);
   });
 });
