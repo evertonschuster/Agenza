@@ -133,7 +133,7 @@ describe('typesFromDocument', () => {
   it('types a numeric query parameter as a plain number', async () => {
     const types = await typesFromDocument(openApiDocument());
 
-    expect(types).toMatch(/Page?: number;/);
+    expect(types).toMatch(/\bPage\?: number;/);
   });
 
   it.each([
