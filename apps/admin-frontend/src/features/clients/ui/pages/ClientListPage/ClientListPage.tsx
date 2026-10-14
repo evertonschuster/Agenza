@@ -2,6 +2,7 @@ import { PlusIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { buttonVariants } from '@/shared/ui/button';
 import { ListSection, type ListSectionEmptyCopy } from '@/widgets/list-section';
+import type { PaginationItemLabel } from '@/widgets/pagination';
 import { NEW_CLIENT_PATH } from '../../clientsPaths';
 import { clientColumns } from './components/clientColumns';
 import { ClientListSearch } from './components/ClientListSearch';
@@ -14,16 +15,21 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
   searchDescription: 'Confira a grafia ou busque pelo e-mail ou pelo CPF.',
 };
 
+const ITEM_LABEL: PaginationItemLabel = { singular: 'pessoa', plural: 'pessoas' };
+
 export function ClientListPage() {
   const {
     clients,
     status,
     failure,
     query,
+    paging,
     searchInputRef,
     onSearchSubmit,
     onClearSearch,
     onRetry,
+    onPageChange,
+    onPageSizeChange,
   } = useClientListPage();
 
   return (
@@ -52,6 +58,7 @@ export function ClientListPage() {
         search={{ term: query, onClear: onClearSearch }}
         errorTitle="Não foi possível carregar as pessoas."
         failure={failure && { ...failure, onRetry }}
+        pagination={paging && { ...paging, itemLabel: ITEM_LABEL, onPageChange, onPageSizeChange }}
       />
     </div>
   );

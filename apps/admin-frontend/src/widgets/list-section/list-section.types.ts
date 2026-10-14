@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { PaginationProps } from '@/widgets/pagination';
 
 export const ListSectionStatus = {
   Loading: 'loading',
@@ -37,6 +38,8 @@ interface ListSectionFailure {
   onRetry?: (() => void) | undefined;
 }
 
+type ListSectionPagination = Omit<PaginationProps, 'disabled'>;
+
 type ListSectionProps<T> = ListSectionRenderMode<T> & {
   status: ListSectionStatus;
   items: readonly T[];
@@ -46,6 +49,7 @@ type ListSectionProps<T> = ListSectionRenderMode<T> & {
   search?: ListSectionSearch | undefined;
   errorTitle?: string | undefined;
   failure?: ListSectionFailure | null | undefined;
+  pagination?: ListSectionPagination | null | undefined;
   'aria-label': string;
   className?: string | undefined;
 };
@@ -90,6 +94,7 @@ export type {
   ListSectionEmptyProps,
   ListSectionErrorProps,
   ListSectionFailure,
+  ListSectionPagination,
   ListSectionSearch,
   ListSectionProps,
   ListSectionRenderMode,

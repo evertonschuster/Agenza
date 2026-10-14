@@ -56,8 +56,8 @@ enforces it together with the layer direction. It only inspects files inside `ap
 `widgets/` and `shared/` — `src/main.tsx`, `src/test/`, `e2e/` and config files are on review.
 
 Direction is `app → features → widgets → shared`, and inside a slice `ui → model | api`,
-`api → model`. A domain type never lives in `api/`. `widgets/` imports only `shared/`; `shared/`
-imports none of the others.
+`api → model`. A domain type never lives in `api/`. `widgets/` imports `shared/` and, to compose one, another widget (never a cycle);
+`shared/` imports none of the others.
 
 ## 3. Route wiring
 

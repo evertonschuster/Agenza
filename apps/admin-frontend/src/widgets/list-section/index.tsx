@@ -1,4 +1,5 @@
 import { cn } from '@/shared/lib/utils';
+import { Pagination } from '@/widgets/pagination';
 import { ListSectionStatus, type ListSectionProps } from './list-section.types';
 
 import { ListSectionSkeleton } from './components/list-section-skeleton';
@@ -15,12 +16,13 @@ function ListSection<T>(props: ListSectionProps<T>) {
     search,
     errorTitle,
     failure,
+    pagination,
     'aria-label': ariaLabel,
     className,
   } = props;
 
   return (
-    <div className={cn(className)}>
+    <div className={cn('space-y-4', className)}>
       {status === ListSectionStatus.Loading && <ListSectionSkeleton rowCount={skeletonRowCount} />}
       {status === ListSectionStatus.Error && (
         <ListSectionError title={errorTitle} failure={failure} />
@@ -35,6 +37,9 @@ function ListSection<T>(props: ListSectionProps<T>) {
           search={search}
         />
       )}
+      {pagination && status !== ListSectionStatus.Error && (
+        <Pagination {...pagination} disabled={status === ListSectionStatus.Loading} />
+      )}
     </div>
   );
 }
@@ -45,5 +50,6 @@ export type {
   ListSectionColumn,
   ListSectionEmptyCopy,
   ListSectionFailure,
+  ListSectionPagination,
   ListSectionProps,
 } from './list-section.types';

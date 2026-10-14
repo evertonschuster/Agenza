@@ -20,33 +20,53 @@ const LIST_ITEM = {
 };
 
 describe('clientsRepository.list', () => {
-  it('sends the search term as Search and nothing else, leaving the backend defaults (everyone, first page) in charge', async () => {
+  const FIRST_PAGE_OF_EVERYONE = { search: '', page: 1, pageSize: 20 };
+
+  it('always asks for a page and a size, so the screen never depends on the backend defaults', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
-    await clientsRepository.list('maria');
+    await clientsRepository.list(FIRST_PAGE_OF_EVERYONE);
 
     expect(mockGet).toHaveBeenCalledWith('/api/v{version}/clients', {
-      query: { Search: 'maria' },
+      query: { Page: 1, PageSize: 20 },
       signal: undefined,
     });
   });
 
-  it('sends no query at all without a search term', async () => {
+  it('sends the page, the size and the search term under the names the API reads', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
-    await clientsRepository.list();
+    await clientsRepository.list({ search: 'maria', page: 3, pageSize: 50 });
 
     expect(mockGet).toHaveBeenCalledWith('/api/v{version}/clients', {
-      query: undefined,
+      query: { Page: 3, PageSize: 50, Search: 'maria' },
       signal: undefined,
     });
+  });
+
+  it('leaves Search out, instead of sending it empty, without a search term', async () => {
+    mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
+
+    await clientsRepository.list(FIRST_PAGE_OF_EVERYONE);
+
+    const [, options] = mockGet.mock.calls.at(-1) as [string, { query: object }];
+    expect(options.query).not.toHaveProperty('Search');
+  });
+
+  it('never sends a status, which lists every situation', async () => {
+    mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
+
+    await clientsRepository.list({ search: 'maria', page: 2, pageSize: 10 });
+
+    const [, options] = mockGet.mock.calls.at(-1) as [string, { query: object }];
+    expect(options.query).not.toHaveProperty('Status');
   });
 
   it('hands the abort signal over to the request', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
     const controller = new AbortController();
 
-    await clientsRepository.list('maria', controller.signal);
+    await clientsRepository.list({ search: 'maria', page: 1, pageSize: 20 }, controller.signal);
 
     const [, options] = mockGet.mock.calls.at(-1) as [string, { signal: AbortSignal }];
     expect(options.signal).toBe(controller.signal);
@@ -56,7 +76,7 @@ describe('clientsRepository.list', () => {
     const page = { items: [LIST_ITEM], totalCount: 21, page: 1, pageSize: 20 };
     mockGet.mockResolvedValue({ ok: true, data: page });
 
-    const result = await clientsRepository.list();
+    const result = await clientsRepository.list(FIRST_PAGE_OF_EVERYONE);
 
     expect(result).toEqual({ ok: true, data: page });
   });
@@ -69,7 +89,7 @@ describe('clientsRepository.list', () => {
     };
     mockGet.mockResolvedValue({ ok: false, error });
 
-    const result = await clientsRepository.list('x');
+    const result = await clientsRepository.list({ search: 'x', page: 1, pageSize: 20 });
 
     expect(result).toEqual({ ok: false, error });
   });
