@@ -11,7 +11,7 @@ export interface ClientListItem {
 
 export interface ClientList {
   items: ClientListItem[];
-  totalCount: number | string;
-  page: number | string;
-  pageSize: number | string;
+  totalCount: number;
+  page: number;
+  pageSize: number;
 }

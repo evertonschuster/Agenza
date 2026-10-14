@@ -47,10 +47,10 @@ points of the issue text disagree with that contract or with the state of the ap
    its code and an `onRetry`), and the widget shows them with **Tentar novamente** (ARCHITECTURE §2 and §5).
    `TagListPage` was moved onto the same props right after.
 7. **The repository forwards the whole page, like `create`.** `list` returns the facade's result verbatim:
-   `{ items, totalCount, page, pageSize }`, with no mapper. The model declares the three paging fields as
-   `number | string`, the wire's own type (the generator emits `int32` that way), because declaring them `number` would
-   not compile without a mapper. Nothing reads them yet; the paging controls will convert with `Number()` in one place,
-   the page hook.
+   `{ items, totalCount, page, pageSize }`, with no mapper, and the model types the three paging fields as `number`.
+   That compiles because the type generator now emits `number` for a numeric field that ASP.NET also reads from text
+   (ARCHITECTURE §5); before that rule the wire type was `number | string` and forwarding verbatim would not compile.
+   Nothing reads the paging data yet.
 8. **Nothing is extracted yet.** The search form and the URL/abort-controller logic of `useClientListPage` are the
    second copy of `TagListPage`'s. They are extracted into a `widgets/search-form` (and a shared pattern for the hook)
    when a third list needs them, the rule ARCHITECTURE §6 already states for `repeatable-list`.

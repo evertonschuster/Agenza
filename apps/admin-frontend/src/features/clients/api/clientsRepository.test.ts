@@ -53,7 +53,7 @@ describe('clientsRepository.list', () => {
   });
 
   it('forwards the whole page verbatim, with the items and the paging data', async () => {
-    const page = { items: [LIST_ITEM], totalCount: '21', page: 1, pageSize: 20 };
+    const page = { items: [LIST_ITEM], totalCount: 21, page: 1, pageSize: 20 };
     mockGet.mockResolvedValue({ ok: true, data: page });
 
     const result = await clientsRepository.list();
