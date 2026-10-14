@@ -65,6 +65,7 @@ export function useTagListPage(): UseTagListPageResult {
     query,
     searchInputRef,
     onSearchSubmit,
+    onClearSearch: () => setSearchParams({}),
     onRetry: () => {
       setResult(null);
       fetchTags(query);

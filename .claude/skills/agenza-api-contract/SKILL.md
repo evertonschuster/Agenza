@@ -87,9 +87,11 @@ removed the harness) — the next one sets the precedent. The illustrative shape
 - Add a `toDomain(dto)` mapper only when wire and domain genuinely diverge; then transform the `ok`
   branch and forward the failure object unchanged.
 
-> Numeric fields generate as `number | string` (the backend accepts numbers from strings). If your
-> entity declares `price: number`, verbatim forwarding **will not compile** and you need a
-> `toDomain`. That is the mapper's most common real trigger, not a style choice.
+> A numeric field generates as `number`, although the OpenAPI document says `integer | string`: ASP.NET
+> also reads numbers from text but only ever writes a number, and `numberAcceptedAsText` in
+> `scripts/generateApiTypes.mjs` narrows it. An entity that declares `price: number` therefore forwards
+> verbatim. A `toDomain` is needed only when wire and domain genuinely diverge (a renamed field, a
+> different structure), not for a number.
 
 ## Where a `Result` becomes a rejection
 

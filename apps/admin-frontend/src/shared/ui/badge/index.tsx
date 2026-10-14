@@ -12,6 +12,10 @@ const badgeVariants = cva(
         secondary: 'bg-secondary text-secondary-foreground [a]:hover:bg-secondary/80',
         destructive:
           'bg-destructive/10 text-destructive focus-visible:ring-destructive/20 dark:bg-destructive/20 dark:focus-visible:ring-destructive/40 [a]:hover:bg-destructive/20',
+        muted:
+          'border-muted-foreground/25 bg-muted-foreground/15 text-[color-mix(in_oklab,var(--muted-foreground)_70%,var(--foreground))] dark:border-transparent dark:bg-muted dark:text-muted-foreground [a]:hover:bg-muted-foreground/25 dark:[a]:hover:bg-muted/80',
+        success:
+          'border-success/30 bg-success/20 text-[color-mix(in_oklab,var(--success)_70%,var(--foreground))] focus-visible:ring-success/20 dark:border-transparent dark:bg-success/15 dark:text-[color-mix(in_oklab,var(--success)_80%,var(--foreground))] dark:focus-visible:ring-success/40 [a]:hover:bg-success/30 dark:[a]:hover:bg-success/20',
         outline: 'border-border text-foreground [a]:hover:bg-muted [a]:hover:text-muted-foreground',
         ghost: 'hover:bg-muted hover:text-muted-foreground dark:hover:bg-muted/50',
         link: 'text-primary underline-offset-4 hover:underline',

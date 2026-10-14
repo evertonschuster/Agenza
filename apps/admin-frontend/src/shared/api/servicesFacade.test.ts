@@ -141,9 +141,14 @@ describe('isTransientProblem', () => {
   it.each([
     ['a backend 500 carrying its own problem body', { status: 500, code: 'Unexpected.Error' }],
     ['a 503 with no code', { status: 503 }],
-    ['a status sent as a string', { status: '502' }],
   ])('treats %s as transient, so it can be retried', (_name, fields) => {
     const problem: ApiProblem = { ...fields, title: '…' };
+
+    expect(isTransientProblem(problem)).toBe(true);
+  });
+
+  it('treats a status that arrives as text, which the generated type no longer allows, as transient', () => {
+    const problem = { status: '502', title: '…' } as unknown as ApiProblem;
 
     expect(isTransientProblem(problem)).toBe(true);
   });

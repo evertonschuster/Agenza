@@ -99,3 +99,102 @@ test.describe('Register a person', () => {
     await expect(page).toHaveURL(/\/pessoas\/nova$/);
   });
 });
+
+function formatCpf(digits: string): string {
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+async function registerPerson(
+  page: Page,
+  person: { name: string; email: string; cpf: string },
+): Promise<void> {
+  await openNewPersonForm(page);
+  const section = page.getByRole('region', { name: 'Dados da pessoa' });
+  await section.getByLabel('Nome completo').fill(person.name);
+  await section.getByLabel('E-mail').fill(person.email);
+  await section.getByLabel('CPF').fill(person.cpf);
+  await page.getByRole('button', { name: 'Salvar' }).click();
+  await expect(page).toHaveURL(/\/pessoas$/);
+}
+
+async function searchFor(page: Page, term: string): Promise<void> {
+  const search = page.getByLabel('Buscar pessoas por nome, e-mail ou CPF');
+  await search.fill(term);
+  await search.press('Enter');
+}
+
+test.describe('People list', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsDemoUser(page);
+  });
+
+  test('finds a registered person by name, e-mail and masked CPF, showing the whole CPF and the situation', async ({
+    page,
+  }) => {
+    const person = {
+      name: uniqueName('Lista E2E'),
+      email: `lista.${Date.now()}@example.com`,
+      cpf: validCpf(),
+    };
+    await registerPerson(page, person);
+
+    for (const term of [person.name, person.email, formatCpf(person.cpf)]) {
+      await searchFor(page, term);
+      const row = page.getByRole('row', { name: new RegExp(person.name) });
+      await expect(row).toBeVisible();
+      await expect(row).toContainText(person.email);
+      await expect(row).toContainText(formatCpf(person.cpf));
+      await expect(row).toContainText('Ativa');
+    }
+  });
+
+  test('keeps the search in the URL, so it survives a reload', async ({ page }) => {
+    const person = {
+      name: uniqueName('Recarga E2E'),
+      email: `recarga.${Date.now()}@example.com`,
+      cpf: validCpf(),
+    };
+    await registerPerson(page, person);
+
+    await searchFor(page, person.name);
+    await expect(page).toHaveURL(/\/pessoas\?q=/);
+    await page.reload();
+
+    await expect(page.getByLabel('Buscar pessoas por nome, e-mail ou CPF')).toHaveValue(
+      person.name,
+    );
+    await expect(page.getByRole('row', { name: new RegExp(person.name) })).toBeVisible();
+  });
+
+  test('names a search that finds nobody and clears it', async ({ page }) => {
+    await page.getByRole('link', { name: 'Pessoas' }).click();
+    await expect(page).toHaveURL(/\/pessoas$/);
+    const term = `inexistente-${Date.now()}`;
+
+    await searchFor(page, term);
+
+    await expect(page.getByText(`Nenhuma pessoa encontrada para «${term}»`)).toBeVisible();
+    await page.getByRole('button', { name: 'Limpar busca' }).click();
+    await expect(page).toHaveURL(/\/pessoas$/);
+    await expect(page.getByLabel('Buscar pessoas por nome, e-mail ou CPF')).toHaveValue('');
+    await expect(page.getByText(/Nenhuma pessoa encontrada para/)).toHaveCount(0);
+  });
+
+  test('opens the person details from the name, which still says it is coming', async ({
+    page,
+  }) => {
+    const person = {
+      name: uniqueName('Detalhe E2E'),
+      email: `detalhe.${Date.now()}@example.com`,
+      cpf: validCpf(),
+    };
+    await registerPerson(page, person);
+    await searchFor(page, person.name);
+
+    await page.getByRole('link', { name: person.name }).click();
+
+    await expect(page).toHaveURL(/\/pessoas\/[0-9a-f-]{36}$/);
+    await expect(page.getByRole('heading', { name: 'Detalhes da pessoa' })).toBeVisible();
+    await expect(page.getByText('Em breve', { exact: true })).toBeVisible();
+  });
+});

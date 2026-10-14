@@ -4,7 +4,7 @@ namespace ServicesService.Application.Clients.ListClients;
 
 public sealed record ListClientsQuery(
     SearchText? Search = null,
-    ClientStatusFilter? Status = ClientStatusFilter.Active) : PagedQuery, IQuery<PagedResult<ClientListItemResponse>>
+    ClientStatusFilter? Status = null) : PagedQuery, IQuery<PagedResult<ClientListItemResponse>>
 {
     public ClientListFilter ToFilter()
     {
@@ -33,7 +33,7 @@ public sealed record ListClientsQuery(
 
     private static ClientStatus? ToClientStatus(ClientStatusFilter? status)
     {
-        if (status == ClientStatusFilter.All)
+        if (status is null or ClientStatusFilter.All)
         {
             return null;
         }

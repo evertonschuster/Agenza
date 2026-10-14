@@ -71,8 +71,9 @@ o único campo que muda por endpoint.
 {"data":{"items":[{"id":"...","code":1,"name":"Teste","description":null,"durationMinutes":2,"minDurationMinutes":1,"maxDurationMinutes":3,"price":10.00,"maxDiscountPercentage":10.00,"categoryId":null,"categoryName":null,"tags":[]}],"totalCount":1,"page":1,"pageSize":20},"success":true, "...":"..."}
 ```
 
-**Lista paginada com busca e filtro** — o mesmo `PagedResult<T>`, com `search` (texto) e `status` (string) além de
-`page`/`pageSize`. Exemplo, `GET /api/v1/clients` (padrão: `page=1`, `pageSize=20`, `status=active`, sem `search`),
+**Lista paginada com busca e filtro** — o mesmo `PagedResult<T>`, com `search` (texto) e `status` (`active`, `inactive`
+ou `all`) além de `page`/`pageSize`. Exemplo, `GET /api/v1/clients` (padrão: `page=1`, `pageSize=20`, sem `search`, e sem
+`status`, que lista todas as situações, [ADR 0067](adr/0067-admin-frontend-clients-list.md)),
 verificado em 2026-10-12 num PostgreSQL descartável com a stack real em portas privadas
 ([ADR 0063](adr/0063-clients-list-and-search-contract.md)):
 

@@ -1,12 +1,19 @@
-import { EmptyState } from '@/shared/ui/empty-state';
 import type { ListSectionReadyProps } from '../list-section.types';
 
+import { ListSectionEmpty } from './list-section-empty';
 import { ListSectionTable } from './list-section-table';
 import { ListSectionList } from './list-section-list';
 
-function ListSectionReady<T>({ items, getKey, renderMode, ariaLabel }: ListSectionReadyProps<T>) {
+function ListSectionReady<T>({
+  items,
+  getKey,
+  renderMode,
+  ariaLabel,
+  emptyCopy,
+  search,
+}: ListSectionReadyProps<T>) {
   if (items.length === 0) {
-    return <EmptyState title="Nenhum item encontrado." />;
+    return <ListSectionEmpty copy={emptyCopy} search={search} />;
   }
 
   if (renderMode.columns) {

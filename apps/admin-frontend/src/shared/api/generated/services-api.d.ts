@@ -464,8 +464,8 @@ export interface paths {
         query?: {
           Search?: string;
           Status?: components['schemas']['ClientStatusFilter'];
-          Page?: number | string;
-          PageSize?: number | string;
+          Page?: number;
+          PageSize?: number;
         };
         header?: never;
         path: {
@@ -1040,8 +1040,8 @@ export interface paths {
           Search?: string;
           CategoryId?: string;
           TagId?: string;
-          Page?: number | string;
-          PageSize?: number | string;
+          Page?: number;
+          PageSize?: number;
         };
         header?: never;
         path: {
@@ -1855,7 +1855,7 @@ export interface components {
       type?: null | string;
       title?: null | string;
       /** Format: int32 */
-      status?: null | number | string;
+      status?: null | number;
       detail?: null | string;
       instance?: null | string;
       code?: null | string;
@@ -1983,15 +1983,15 @@ export interface components {
       name: string;
       description: null | string;
       /** Format: int32 */
-      durationMinutes: number | string;
+      durationMinutes: number;
       /** Format: int32 */
-      minDurationMinutes: number | string;
+      minDurationMinutes: number;
       /** Format: int32 */
-      maxDurationMinutes: number | string;
+      maxDurationMinutes: number;
       /** Format: double */
-      price: number | string;
+      price: number;
       /** Format: double */
-      maxDiscountPercentage: number | string;
+      maxDiscountPercentage: number;
       /** Format: uuid */
       categoryId: null | string;
       tagIds: null | string[];
@@ -2025,20 +2025,20 @@ export interface components {
     PagedResultOfClientListItemResponse: {
       items: components['schemas']['ClientListItemResponse'][];
       /** Format: int32 */
-      totalCount: number | string;
+      totalCount: number;
       /** Format: int32 */
-      page: number | string;
+      page: number;
       /** Format: int32 */
-      pageSize: number | string;
+      pageSize: number;
     };
     PagedResultOfServiceResponse: {
       items: components['schemas']['ServiceResponse'][];
       /** Format: int32 */
-      totalCount: number | string;
+      totalCount: number;
       /** Format: int32 */
-      page: number | string;
+      page: number;
       /** Format: int32 */
-      pageSize: number | string;
+      pageSize: number;
     };
     ReferenceContactInput: {
       name: string;
@@ -2058,19 +2058,19 @@ export interface components {
       /** Format: uuid */
       id: string;
       /** Format: int32 */
-      code: number | string;
+      code: number;
       name: string;
       description: null | string;
       /** Format: int32 */
-      durationMinutes: number | string;
+      durationMinutes: number;
       /** Format: int32 */
-      minDurationMinutes: number | string;
+      minDurationMinutes: number;
       /** Format: int32 */
-      maxDurationMinutes: number | string;
+      maxDurationMinutes: number;
       /** Format: double */
-      price: number | string;
+      price: number;
       /** Format: double */
-      maxDiscountPercentage: number | string;
+      maxDiscountPercentage: number;
       /** Format: uuid */
       categoryId: null | string;
       categoryName: null | string;
@@ -2125,15 +2125,15 @@ export interface components {
       name: string;
       description: null | string;
       /** Format: int32 */
-      durationMinutes: number | string;
+      durationMinutes: number;
       /** Format: int32 */
-      minDurationMinutes: number | string;
+      minDurationMinutes: number;
       /** Format: int32 */
-      maxDurationMinutes: number | string;
+      maxDurationMinutes: number;
       /** Format: double */
-      price: number | string;
+      price: number;
       /** Format: double */
-      maxDiscountPercentage: number | string;
+      maxDiscountPercentage: number;
       /** Format: uuid */
       categoryId: null | string;
       tagIds: null | string[];

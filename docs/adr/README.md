@@ -20,6 +20,7 @@ superseded is historical evidence, not current implementation guidance.
 | Logging and telemetry | 0054 |
 | admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
+| admin-frontend screens | 0067 |
 | AI agent instruction files | 0041 |
 
 ## Superseded decisions
@@ -89,4 +90,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0063 clients list and search: generated string columns, whole CPF, status as a plain enum ·
 0064 paged reads: one page request in, one paged result out ·
 0065 string value objects read from a query or a route, by opt-in ·
-0066 enums read from a query or a route by one name.
+0066 enums read from a query or a route by one name ·
+0067 admin-frontend Pessoas list: whole CPF, filter and paging deferred, provisional detail route.

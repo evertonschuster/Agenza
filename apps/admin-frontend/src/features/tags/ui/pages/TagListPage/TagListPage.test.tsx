@@ -410,19 +410,34 @@ describe('TagListPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
-  it('shows a generic empty message when the catalog is empty (spec US1)', async () => {
+  it('says there are no tags yet, without a search action, when the catalog is empty (spec US1)', async () => {
     renderPage([]);
 
-    expect(await screen.findByText('Nenhum item encontrado.')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhuma etiqueta ainda')).toBeInTheDocument();
+    expect(screen.getByText('Use o botão Nova etiqueta para cadastrar a primeira.')).toBeVisible();
+    expect(screen.queryByText('Nenhum item encontrado.')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
   });
 
-  it('shows the same generic empty message when a submitted search finds nothing (spec US1)', async () => {
+  it('names the searched term, and offers to clear it, when a submitted search finds nothing (spec US1)', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
 
     await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'zzz{Enter}');
 
-    await waitFor(() => expect(screen.getByText('Nenhum item encontrado.')).toBeInTheDocument());
+    expect(await screen.findByText('Nenhuma etiqueta encontrada para «zzz»')).toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma etiqueta ainda')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Limpar busca' })).toBeInTheDocument();
+  });
+
+  it('clears the search, the URL and the field, and lists every tag again, from "Limpar busca"', async () => {
+    const user = userEvent.setup();
+    renderPage(TAGS, ['/tags?q=zzz']);
+    await user.click(await screen.findByRole('button', { name: 'Limpar busca' }));
+
+    expect(await screen.findByText('Promoção')).toBeInTheDocument();
+    expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+    expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('');
   });
 });

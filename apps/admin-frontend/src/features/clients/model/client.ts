@@ -6,6 +6,7 @@ import type { ClientReferenceContact } from './clientReferenceContact';
 export const CLIENT_FULL_NAME_MIN_LENGTH = 2;
 export const CLIENT_FULL_NAME_MAX_LENGTH = 150;
 export const CLIENT_NOTES_MAX_LENGTH = 500;
+export const CLIENT_SEARCH_MAX_LENGTH = 254;
 export const MAX_GUARDIANS = 10;
 export const MAX_REFERENCE_CONTACTS = 10;
 

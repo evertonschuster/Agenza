@@ -2,7 +2,8 @@
 
 Status: accepted (2026-10); extends [ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md) (the
 situation) and [ADR 0060](0060-clients-read-by-id-contract.md) (the CPF on the wire); corrects the guidance of
-[`ARCHITECTURE`](../../backend/docs/ARCHITECTURE.md) §5 on `EF.Property<string>` over a value-object column
+[`ARCHITECTURE`](../../backend/docs/ARCHITECTURE.md) §5 on `EF.Property<string>` over a value-object column; amended by
+[ADR 0067](0067-admin-frontend-clients-list.md) (an omitted `status` lists everyone)
 
 ## Context
 
@@ -45,8 +46,10 @@ has no roles, every authenticated user of the tenant sees the whole CPF in the d
 of reader. What changes is volume: up to 100 whole CPFs per response.
 
 **Situation.** `status` is a plain enum, `ClientStatusFilter { Active = 1, Inactive = 2, All = 3 }`, named in
-camelCase on the wire ([ADR 0058](0058-closed-set-members-are-plain-enums.md)): `active` (default), `inactive` or
-`all`, in any case. Omitted or blank is `active`. `all` is "no restriction", and soft-deleted people never appear,
+camelCase on the wire ([ADR 0058](0058-closed-set-members-are-plain-enums.md)): `active`, `inactive` or `all`
+(default), in any case. Omitted or blank is `all`: the default was `active` until
+[ADR 0067](0067-admin-frontend-clients-list.md), so that a screen without the situation filter still reaches an inactive
+person. `all` is "no restriction", and soft-deleted people never appear,
 whatever the value. `ClientStatus` cannot be the type: it has no `All` and it is persisted. The generated contract
 publishes `'active' | 'inactive' | 'all'`.
 
@@ -135,8 +138,9 @@ and an ADR of its own.
 - The InMemory persistence tests do not compute generated columns: they fill the three columns the way PostgreSQL
   would, and a model test pins the expressions. What the real columns produce was verified by hand.
 - Accent-insensitive search is a known limit. `jose` does not find `José`; typing the accent does.
-- The frontend (#155 screen) is another change. It sends `status` (the generated union) and `search` and branches on the error
-  codes above; a bad `status` cannot come from its typed client.
+- The frontend (#155 screen) is another change. It sends `search` only, with no `status`, so by
+  [ADR 0067](0067-admin-frontend-clients-list.md) it lists active and inactive people; it branches on the error codes
+  above, and a bad `status` cannot come from its typed client.
 
 Verified by hand on a disposable PostgreSQL 18.3 (`agenza-scratch-pg`, port 5433, `log_statement=all`), with the real
 identity and services on private ports and a real login, 97 checks on the list: the default list, the exact item keys and values
@@ -144,8 +148,10 @@ identity and services on private ports and a real login, 97 checks on the list: 
 name, e-mail, masked and partial CPF searches; `%`, `_` and `\` as literal characters; a term with quotes; a term past
 the limit (refused at binding, with the message of the value object and without echoing it), a padded one of exactly
 254 characters, `search` given twice, `?Search=` in another case and the old `?q=` ignored; paging with no repeat or omission and a stable total; ties of the same name ordered by id; a page past the
-last; every validation code; `401` without a token and `403` for another tenant's header; people of another tenant,
-inactive and soft-deleted people never leaking into a list, a total or a search; and a list writing nothing. The
+last; every validation code; `401` without a token and `403` for another tenant's header; people of another tenant
+and soft-deleted people never leaking into a list, a total or a search, and inactive people appearing only for
+`status=inactive` and `status=all` (the default was `active` when this was verified, and is `all` since
+[ADR 0067](0067-admin-frontend-clients-list.md)); and a list writing nothing. The
 migration was applied over five legacy rows (mixed-case name and e-mail, no e-mail, no CPF, inactive, deleted,
 another tenant), reverted and applied again, with the rows intact in between, and all three migrations were applied
 from an empty database when the service started. Ten more checks cover the edit, deactivate and reactivate path with
