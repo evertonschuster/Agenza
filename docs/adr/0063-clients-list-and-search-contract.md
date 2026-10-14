@@ -2,7 +2,8 @@
 
 Status: accepted (2026-10); extends [ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md) (the
 situation) and [ADR 0060](0060-clients-read-by-id-contract.md) (the CPF on the wire); corrects the guidance of
-[`ARCHITECTURE`](../../backend/docs/ARCHITECTURE.md) §5 on `EF.Property<string>` over a value-object column
+[`ARCHITECTURE`](../../backend/docs/ARCHITECTURE.md) §5 on `EF.Property<string>` over a value-object column; amended by
+[ADR 0067](0067-admin-frontend-clients-list.md) (an omitted `status` lists everyone)
 
 ## Context
 
@@ -45,8 +46,10 @@ has no roles, every authenticated user of the tenant sees the whole CPF in the d
 of reader. What changes is volume: up to 100 whole CPFs per response.
 
 **Situation.** `status` is a plain enum, `ClientStatusFilter { Active = 1, Inactive = 2, All = 3 }`, named in
-camelCase on the wire ([ADR 0058](0058-closed-set-members-are-plain-enums.md)): `active` (default), `inactive` or
-`all`, in any case. Omitted or blank is `active`. `all` is "no restriction", and soft-deleted people never appear,
+camelCase on the wire ([ADR 0058](0058-closed-set-members-are-plain-enums.md)): `active`, `inactive` or `all`
+(default), in any case. Omitted or blank is `all`: the default was `active` until
+[ADR 0067](0067-admin-frontend-clients-list.md), so that a screen without the situation filter still reaches an inactive
+person. `all` is "no restriction", and soft-deleted people never appear,
 whatever the value. `ClientStatus` cannot be the type: it has no `All` and it is persisted. The generated contract
 publishes `'active' | 'inactive' | 'all'`.
 

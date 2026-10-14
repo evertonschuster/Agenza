@@ -8,7 +8,7 @@ import { ClientListSearch } from './components/ClientListSearch';
 import { useClientListPage } from './useClientListPage';
 
 const EMPTY_COPY: ListSectionEmptyCopy = {
-  title: 'Nenhuma pessoa ativa ainda',
+  title: 'Nenhuma pessoa ainda',
   description: 'Use o botão Nova pessoa para cadastrar a primeira.',
   searchTitle: (term) => `Nenhuma pessoa encontrada para «${term}»`,
   searchDescription: 'Confira a grafia ou busque pelo e-mail ou pelo CPF.',

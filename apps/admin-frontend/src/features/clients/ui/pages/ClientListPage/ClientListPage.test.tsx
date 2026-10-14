@@ -79,7 +79,7 @@ describe('ClientListPage', () => {
     const { container } = renderClientListPage();
 
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(screen.queryByText('Nenhuma pessoa ativa ainda')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma pessoa ainda')).not.toBeInTheDocument();
 
     resolveInitial(listOf(CLIENTS));
 
@@ -188,7 +188,7 @@ describe('ClientListPage', () => {
     expect(alert).toHaveTextContent('Não foi possível carregar as pessoas.');
     expect(alert).toHaveTextContent('O servidor está instável. Tente novamente em instantes.');
     expect(alert).toHaveTextContent('Código: Server.Unavailable');
-    expect(screen.queryByText('Nenhuma pessoa ativa ainda')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma pessoa ainda')).not.toBeInTheDocument();
   });
 
   it('retries the same search from the failure, showing the skeleton while it reloads', async () => {
@@ -220,7 +220,7 @@ describe('ClientListPage', () => {
   it('says there is nobody yet, without a search action, when the list is empty and nothing was searched', async () => {
     renderPage([]);
 
-    expect(await screen.findByText('Nenhuma pessoa ativa ainda')).toBeInTheDocument();
+    expect(await screen.findByText('Nenhuma pessoa ainda')).toBeInTheDocument();
     expect(screen.getByText('Use o botão Nova pessoa para cadastrar a primeira.')).toBeVisible();
     expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
   });
@@ -233,7 +233,7 @@ describe('ClientListPage', () => {
     await user.type(screen.getByLabelText(SEARCH_LABEL), 'zzz{Enter}');
 
     expect(await screen.findByText('Nenhuma pessoa encontrada para «zzz»')).toBeInTheDocument();
-    expect(screen.queryByText('Nenhuma pessoa ativa ainda')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma pessoa ainda')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Limpar busca' })).toBeInTheDocument();
   });
 

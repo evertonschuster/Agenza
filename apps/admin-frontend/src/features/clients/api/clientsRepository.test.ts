@@ -20,7 +20,7 @@ const LIST_ITEM = {
 };
 
 describe('clientsRepository.list', () => {
-  it('sends the search term as Search and nothing else, leaving the backend defaults (active, first page) in charge', async () => {
+  it('sends the search term as Search and nothing else, leaving the backend defaults (everyone, first page) in charge', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
     await clientsRepository.list('maria');

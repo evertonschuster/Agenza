@@ -134,7 +134,7 @@ public class ListClientsQueryHandlerTests
         result.Value.PageSize.Should().Be(2);
         result.Value.TotalCount.Should().Be(7);
         result.Value.Items.Should().HaveCount(2);
-        await AssertListed(null, null, ClientStatus.Active, page: 2, pageSize: 2);
+        await AssertListed(null, null, null, page: 2, pageSize: 2);
     }
 
     [Fact]
@@ -151,11 +151,11 @@ public class ListClientsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithoutFilters_AsksForTheActiveOnesWithoutSearch()
+    public async Task Handle_WithoutFilters_AsksForEveryoneWithoutSearch()
     {
         await _handler.Handle(new ListClientsQuery(), CancellationToken.None);
 
-        await AssertListed(null, null, ClientStatus.Active);
+        await AssertListed(null, null, null);
     }
 
     [Theory]
@@ -167,7 +167,7 @@ public class ListClientsQueryHandlerTests
     {
         await _handler.Handle(new ListClientsQuery(Search: SearchTextOf(search)), CancellationToken.None);
 
-        await AssertListed(expectedText, null, ClientStatus.Active);
+        await AssertListed(expectedText, null, null);
     }
 
     [Theory]
@@ -177,7 +177,7 @@ public class ListClientsQueryHandlerTests
     {
         await _handler.Handle(new ListClientsQuery(Search: SearchTextOf(search)), CancellationToken.None);
 
-        await AssertListed(expectedText, expectedDigits, ClientStatus.Active);
+        await AssertListed(expectedText, expectedDigits, null);
     }
 
     [Theory]
@@ -187,7 +187,7 @@ public class ListClientsQueryHandlerTests
     {
         await _handler.Handle(new ListClientsQuery(Search: SearchTextOf(search)), CancellationToken.None);
 
-        await AssertListed(search, null, ClientStatus.Active);
+        await AssertListed(search, null, null);
     }
 
     [Fact]

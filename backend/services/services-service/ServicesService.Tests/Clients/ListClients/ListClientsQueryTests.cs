@@ -18,24 +18,25 @@ public class ListClientsQueryTests
     [Theory]
     [InlineData(ClientStatusFilter.Active, ClientStatus.Active)]
     [InlineData(ClientStatusFilter.Inactive, ClientStatus.Inactive)]
-    [InlineData(null, ClientStatus.Active)]
-    public void ToFilter_MapsTheStatusFilterToTheClientStatus(ClientStatusFilter? status, ClientStatus expected)
+    public void ToFilter_MapsTheStatusFilterToTheClientStatus(ClientStatusFilter status, ClientStatus expected)
     {
         new ListClientsQuery(Status: status).ToFilter().Status.Should().Be(expected);
     }
 
-    [Fact]
-    public void ToFilter_WithTheAllFilter_HasNoStatusRestriction()
+    [Theory]
+    [InlineData(ClientStatusFilter.All)]
+    [InlineData(null)]
+    public void ToFilter_WithTheAllFilterOrNoStatus_HasNoStatusRestriction(ClientStatusFilter? status)
     {
-        new ListClientsQuery(Status: ClientStatusFilter.All).ToFilter().Status.Should().BeNull();
+        new ListClientsQuery(Status: status).ToFilter().Status.Should().BeNull();
     }
 
     [Fact]
-    public void ToFilter_OfTheDefaultQuery_AsksForTheFirstPageOfTheActiveOnesWithoutSearch()
+    public void ToFilter_OfTheDefaultQuery_AsksForTheFirstPageOfEveryoneWithoutSearch()
     {
         var filter = new ListClientsQuery().ToFilter();
 
-        filter.Should().Be(new ClientListFilter(1, 20, null, null, ClientStatus.Active));
+        filter.Should().Be(new ClientListFilter(1, 20, null, null, null));
     }
 
     [Fact]
