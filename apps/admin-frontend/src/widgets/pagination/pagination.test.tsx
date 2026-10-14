@@ -175,12 +175,49 @@ describe('Pagination', () => {
       expect(onPageChange).not.toHaveBeenCalled();
     });
 
-    it('has no pages to go through when everything fits on one', () => {
-      renderPagination({ page: 1, pageSize: 20, totalCount: 15 });
+    it('keeps the pager when everything fits on one page, with that page marked and both arrows off', async () => {
+      const { onPageChange } = renderPagination({ page: 1, pageSize: 20, totalCount: 15 });
+      const nav = screen.getByRole('navigation', { name: 'Paginação' });
+      const buttons = within(nav).getAllByRole('button');
 
-      expect(screen.queryByRole('navigation', { name: 'Paginação' })).not.toBeInTheDocument();
+      expect(
+        buttons.map((button) => button.getAttribute('aria-label') ?? button.textContent),
+      ).toEqual(['Anterior', 'Página 1', 'Próxima']);
+      expect(within(nav).getByRole('button', { name: 'Página 1' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
+      expect(within(nav).getByRole('button', { name: 'Anterior' })).toHaveAttribute(
+        'aria-disabled',
+        'true',
+      );
+      expect(within(nav).getByRole('button', { name: 'Próxima' })).toHaveAttribute(
+        'aria-disabled',
+        'true',
+      );
+      expect(screen.getByText('Página 1 de 1')).toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1–15 de 15 pessoas');
+
+      await userEvent.setup().click(within(nav).getByRole('button', { name: 'Próxima' }));
+      expect(onPageChange).not.toHaveBeenCalled();
     });
+
+    it('keeps the pager for one item too', () => {
+      renderPagination({ page: 1, pageSize: 10, totalCount: 1 });
+
+      expect(screen.getByRole('navigation', { name: 'Paginação' })).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Página 1' })).toBeInTheDocument();
+    });
+  });
+
+  it('lays the parts out as summary, pager and size, which puts the pager between the other two', () => {
+    renderPagination();
+    const summary = screen.getByRole('status');
+    const pager = screen.getByRole('navigation', { name: 'Paginação' });
+    const size = screen.getByRole('combobox', { name: PAGE_SIZE_LABEL });
+
+    expect(summary.compareDocumentPosition(pager)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    expect(pager.compareDocumentPosition(size)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
   });
 
   describe('items per page', () => {
@@ -209,17 +246,14 @@ describe('Pagination', () => {
       expect(onPageSizeChange).toHaveBeenCalledExactlyOnceWith(50);
     });
 
-    it('is not offered when even the smallest size would show everything', () => {
-      renderPagination({ page: 1, pageSize: 20, totalCount: 10 });
+    it.each([1, 10, 11])(
+      'is offered with %i people, even when one page shows everything',
+      (totalCount) => {
+        renderPagination({ page: 1, pageSize: 20, totalCount });
 
-      expect(screen.queryByRole('combobox', { name: PAGE_SIZE_LABEL })).not.toBeInTheDocument();
-    });
-
-    it('is offered as soon as the smallest size would split the list', () => {
-      renderPagination({ page: 1, pageSize: 20, totalCount: 11 });
-
-      expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeInTheDocument();
-    });
+        expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeInTheDocument();
+      },
+    );
   });
 
   describe('disabled', () => {

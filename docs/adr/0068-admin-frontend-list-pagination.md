@@ -24,17 +24,24 @@ the real total (ADR 0063, ADR 0064).
    so an untouched list has an untouched URL. Changing the page or the size is a normal navigation, so Back and Forward
    walk through the pages. Submitting or clearing the search starts over on page 1 and keeps the size (#155: "alterar
    busca/filtro reinicia na página 1; manter os valores ao navegar entre páginas").
-2. **The footer** sits under the table:
+2. **The footer** sits under the table, on one line: the summary on the left, the pager in the middle, the select on the
+   right. The side parts take the room the pager leaves, so the pager stays in the middle whenever the line holds all
+   three; when it does not, they come down one per line, the select at the right edge. The owner chose this
+   arrangement from a prototype of three (this one, "summary on the left, select and pager on the right", and "summary
+   above, select and pager together below").
    - a summary, "Exibindo 21–40 de 87 pessoas" (one item reads "Exibindo 1 de 1 pessoa"; numbers in the Brazilian way,
      "1.234"), in a `role="status"` region. The owner had removed an earlier "Exibindo 20 de 87" line because nothing
      could move the page then; it came back with the controls;
-   - a select, **Itens por página**, with 10, 20, 50 and 100 (the default stays 20; 100 is the backend's limit);
    - the pager, **Anterior**, the page numbers around the current one with gaps ("1 … 4 [5] 6 … 22", never wider
-     than seven slots, `aria-current="page"` on the current one) and **Próxima**. Below the `sm` breakpoint the numbers
-     give way to "Página 5 de 22" between the two buttons.
+     than seven slots, `aria-current="page"` on the current one) and **Próxima**. In a content area narrower than 560 px
+     the numbers give way to "Página 5 de 22" between the two buttons. The width that counts is the list's, not the
+     window's (a container query), because the menu takes a different share of the window in each navigation mode;
+   - a select, **Itens por página**, with 10, 20, 50 and 100 (the default stays 20; 100 is the backend's limit).
 
-   Choosing another size goes back to page 1. Derived from "do not show a control that does nothing": no footer without
-   an item, no select while even 10 a page would show everything (10 items or fewer), no pager with a single page.
+   Choosing another size goes back to page 1. **The pager and the select are always there while the list has an item**:
+   with a single page, Anterior and Próxima are disabled and the 1 is marked. The owner ruled this on 2026-10-14, looking
+   at the footer in use, after a first version that hid the pager with one page and the select with 10 items or fewer
+   (rules the agent had derived, not asked). With no item there is no footer.
 
 3. **A page or size that cannot be shown is corrected, without a notice.** An unreadable `?page=` (not a positive
    integer, or one whose offset `(page - 1) * pageSize` would not fit the `int` the backend counts in) reads as page 1,
@@ -90,6 +97,12 @@ the real total (ADR 0063, ADR 0064).
   pages.
 - **A native `<select>`** (second kind of select in the app once the situation filter arrives) **and segmented
   buttons** (do not fit a phone).
+- **Hiding the pager with a single page and the select with 10 items or fewer** (the first version). The footer changed
+  shape with the total, and the owner asked for the pager to stay.
+- **The other two arrangements of the prototype**: "summary on the left, select and pager on the right" and "summary
+  above, select and pager together below".
+- **A fixed-width three-column grid to centre the pager** (how the prototype did it). Between roughly 760 and 900 px,
+  with many pages, the side columns get narrower than their text and the summary wraps.
 - **A shared `usePagination` hook.** Kept to the rule that hooks are not shared between pages.
 - **A `footer` slot on `list-section`**, and **the footer inside `list-section/components/`.** The first splits the
   visibility rule between page and widget; the second only serves `list-section` and leaves the logic out of coverage.

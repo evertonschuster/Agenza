@@ -1,4 +1,4 @@
-import { PAGE_SIZE_OPTIONS, getLastPage } from '@/shared/pagination/paging';
+import { getLastPage } from '@/shared/pagination/paging';
 import { PaginationPages } from './components/pagination-pages';
 import { PaginationPageSize } from './components/pagination-page-size';
 import { PaginationSummary } from './components/pagination-summary';
@@ -15,33 +15,31 @@ function Pagination({
 }: PaginationProps) {
   if (totalCount <= 0) return null;
 
-  const lastPage = getLastPage(totalCount, pageSize);
-
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <PaginationSummary
+    <div className="@container">
+      <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
+        <div className="min-w-max flex-1 basis-0">
+          <PaginationSummary
+            page={page}
+            pageSize={pageSize}
+            totalCount={totalCount}
+            itemLabel={itemLabel}
+          />
+        </div>
+        <PaginationPages
           page={page}
-          pageSize={pageSize}
-          totalCount={totalCount}
-          itemLabel={itemLabel}
+          lastPage={getLastPage(totalCount, pageSize)}
+          onPageChange={onPageChange}
+          disabled={disabled}
         />
-        {totalCount > PAGE_SIZE_OPTIONS[0] && (
+        <div className="flex min-w-max flex-1 basis-0 justify-end">
           <PaginationPageSize
             pageSize={pageSize}
             onPageSizeChange={onPageSizeChange}
             disabled={disabled}
           />
-        )}
+        </div>
       </div>
-      {lastPage > 1 && (
-        <PaginationPages
-          page={page}
-          lastPage={lastPage}
-          onPageChange={onPageChange}
-          disabled={disabled}
-        />
-      )}
     </div>
   );
 }

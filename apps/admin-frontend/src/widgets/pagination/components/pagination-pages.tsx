@@ -5,7 +5,7 @@ import type { PaginationPagesProps } from '../pagination.types';
 
 function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationPagesProps) {
   return (
-    <nav aria-label="Paginação" className="flex items-center justify-center gap-1">
+    <nav aria-label="Paginação" className="flex shrink-0 items-center justify-center gap-1">
       <Button
         variant="outline"
         focusableWhenDisabled
@@ -16,7 +16,7 @@ function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationP
         Anterior
       </Button>
 
-      <ol className="hidden items-center gap-1 sm:flex">
+      <ol className="hidden items-center gap-1 @min-[560px]:flex">
         {getPageWindow(page, lastPage).map((item, index) =>
           item === 'ellipsis' ? (
             <li key={`ellipsis-${index}`} aria-hidden="true" className="px-1 text-muted-foreground">
@@ -42,7 +42,7 @@ function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationP
         )}
       </ol>
 
-      <span className="px-3 text-sm text-muted-foreground sm:hidden">
+      <span className="px-3 text-sm text-muted-foreground @min-[560px]:hidden">
         {`Página ${page} de ${lastPage}`}
       </span>
 
