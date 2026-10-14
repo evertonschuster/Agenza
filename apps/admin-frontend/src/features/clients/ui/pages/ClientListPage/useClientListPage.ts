@@ -25,7 +25,6 @@ export function useClientListPage(): UseClientListPageResult {
           query: forQuery,
           status: ListSectionStatus.Error,
           clients: [],
-          totalCount: 0,
           problem: apiResult.error,
         });
         return;
@@ -34,8 +33,7 @@ export function useClientListPage(): UseClientListPageResult {
       setResult({
         query: forQuery,
         status: ListSectionStatus.Ready,
-        clients: apiResult.data.items,
-        totalCount: apiResult.data.totalCount,
+        clients: apiResult.data,
         problem: null,
       });
     });

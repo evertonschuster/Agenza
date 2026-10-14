@@ -25,8 +25,8 @@ points of the issue text disagree with that contract or with the state of the ap
 2. **The screen reads `?q=` from the URL, as the tags list does, and sends `Search`** to the API. The repository takes
    only the search term; the backend defaults (`status=active`, `page=1`, `pageSize=20`) apply.
 3. **The situation filter and the paging controls are not part of this change.** They arrive with the controls the owner
-   will define. Until then the screen lists the first page of active people and, when there are more,
-   says so: "Exibindo 20 de 87 pessoas ativas." (a status line, never silent). `status` and `page` enter the repository,
+   will define. Until then the screen lists the first page (20 people) and nothing on it says there are more. A status line,
+   "Exibindo 20 de 87 pessoas", was built and then removed by the owner. `status` and `page` enter the repository,
    the URL and the hook together with their controls, not before.
 4. **Columns:** Nome, Telefone, E-mail, CPF, Situação. A missing phone, e-mail or CPF is a dash with "Não informado" for
    assistive tech. The situation is a `Badge` ("Ativa", "Inativa"); labels live in `model/clientStatus.ts`. Ativa is
@@ -44,9 +44,9 @@ points of the issue text disagree with that contract or with the state of the ap
    the words. The error state works the same way: the page passes `errorTitle` and a `failure` (the problem's message,
    its code and an `onRetry`), and the widget shows them with **Tentar novamente** (ARCHITECTURE §2 and §5).
    `TagListPage` moves onto `errorTitle`/`failure` and `search` in a following step.
-7. **The repository maps the total and nothing else.** The wire `totalCount` is `number | string`, so verbatim
-   forwarding does not compile; `list` returns `{ items, totalCount }` with the total as a `number`, the items
-   untouched, and `page`/`pageSize` dropped (nothing reads them yet).
+7. **The repository unwraps the page and returns its items.** The wire page is `{ items, totalCount, page, pageSize }`
+   and `list` returns just `items`, untouched; the rest is dropped because nothing reads it (not even the total, once
+   the status line was removed). They come back with the paging controls.
 8. **Nothing is extracted yet.** The search form and the URL/abort-controller logic of `useClientListPage` are the
    second copy of `TagListPage`'s. They are extracted into a `widgets/search-form` (and a shared pattern for the hook)
    when a third list needs them, the rule ARCHITECTURE §6 already states for `repeatable-list`.
@@ -56,8 +56,8 @@ points of the issue text disagree with that contract or with the state of the ap
 - Acceptance criteria of #155 **not met by this change**: "cadastro inativo aparece quando o filtro o inclui", "alterar
   busca/filtro reinicia na página 1" for the filter, and "navegação entre páginas não repete nem omite registros". The
   inactive badge is built and tested, but no screen can show an inactive person until the filter exists, and a person
-  past the 20th active one is reachable only through the search. The status line makes that visible.
-- Criteria met: list, total (as the status line), search by name, e-mail or CPF with or without the mask, the loading,
+  past the 20th one is reachable only through the search, with no sign on screen that there are more.
+- Criteria met: list, search by name, e-mail or CPF with or without the mask, the loading,
   empty and failure states, the situation indicator, the CPF, and navigation to the detail URL.
 - The issues #155 and #139 still say "mascarar" and `q`; their text needs the same update ADR 0063 already asks for.
   This change does not edit the issues.

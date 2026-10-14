@@ -52,7 +52,7 @@ describe('clientsRepository.list', () => {
     expect(options.signal).toBe(controller.signal);
   });
 
-  it('keeps the items as they came and turns the wire total, which may be a string, into a number', async () => {
+  it('returns the items of the page as they came, leaving the paging envelope behind', async () => {
     mockGet.mockResolvedValue({
       ok: true,
       data: { items: [LIST_ITEM], totalCount: '21', page: 1, pageSize: 20 },
@@ -60,7 +60,7 @@ describe('clientsRepository.list', () => {
 
     const result = await clientsRepository.list();
 
-    expect(result).toEqual({ ok: true, data: { items: [LIST_ITEM], totalCount: 21 } });
+    expect(result).toEqual({ ok: true, data: [LIST_ITEM] });
   });
 
   it('forwards a failed result verbatim, without throwing (e.g. a search past the limit)', async () => {

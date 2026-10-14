@@ -23,6 +23,5 @@ export interface LoadResult {
   query: string;
   status: Exclude<ListSectionStatus, 'loading'>;
   clients: ClientListItem[];
-  totalCount: number;
   problem: ApiProblem | null;
 }

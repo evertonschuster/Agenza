@@ -3,7 +3,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, MemoryRouter, RouterProvider, useLocation } from 'react-router';
 import { ClientListPage } from './ClientListPage';
-import type { ClientList, ClientListItem } from '../../../model/clientList';
+import type { ClientListItem } from '../../../model/clientList';
 
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
 
@@ -33,11 +33,8 @@ const BRUNO: ClientListItem = {
 
 const CLIENTS = [ANA, BRUNO];
 
-function listOf(
-  items: ClientListItem[],
-  totalCount = items.length,
-): { ok: true; data: ClientList } {
-  return { ok: true, data: { items, totalCount } };
+function listOf(items: ClientListItem[]): { ok: true; data: ClientListItem[] } {
+  return { ok: true, data: items };
 }
 
 function LocationProbe() {
@@ -168,23 +165,6 @@ describe('ClientListPage', () => {
     expect(screen.getByRole('link', { name: 'Bruno Lima' })).toHaveAttribute('href', '/pessoas/c2');
   });
 
-  it('tells how many people are shown out of how many exist when the list was cut off', async () => {
-    mockList.mockResolvedValue(listOf(CLIENTS, 1234));
-
-    renderClientListPage();
-
-    expect(await screen.findByRole('status')).toHaveTextContent(
-      'Exibindo 2 de 1.234 pessoas ativas.',
-    );
-  });
-
-  it('shows no count line when every person fits in the list', async () => {
-    renderPage(CLIENTS);
-    await screen.findByText('Ana Souza');
-
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
-  });
-
   it('limits the search field to what the backend accepts', async () => {
     renderPage(CLIENTS);
 
@@ -209,7 +189,6 @@ describe('ClientListPage', () => {
     expect(alert).toHaveTextContent('O servidor está instável. Tente novamente em instantes.');
     expect(alert).toHaveTextContent('Código: Server.Unavailable');
     expect(screen.queryByText('Nenhuma pessoa ativa ainda')).not.toBeInTheDocument();
-    expect(screen.queryByRole('status')).not.toBeInTheDocument();
   });
 
   it('retries the same search from the failure, showing the skeleton while it reloads', async () => {
