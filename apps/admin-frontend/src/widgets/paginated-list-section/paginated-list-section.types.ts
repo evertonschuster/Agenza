@@ -1,7 +1,7 @@
 import type { ListSectionProps } from '@/widgets/list-section';
 import type { PaginationProps } from '@/widgets/pagination';
 
-type PaginatedListSectionPaging = Omit<PaginationProps, 'totalCount' | 'disabled'> & {
+type PaginatedListSectionPaging = Omit<PaginationProps, 'totalCount'> & {
   totalCount: number | null;
 };
 

@@ -3,7 +3,7 @@ import { FIRST_PAGE, getPageWindow } from '@/shared/pagination/paging';
 import { Button } from '@/shared/ui/button';
 import type { PaginationPagesProps } from '../pagination.types';
 
-function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationPagesProps) {
+function PaginationPages({ page, lastPage, onPageChange }: PaginationPagesProps) {
   return (
     <nav
       aria-label="Paginação"
@@ -13,7 +13,7 @@ function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationP
         variant="outline"
         className="pointer-coarse:h-11"
         focusableWhenDisabled
-        disabled={disabled || page <= FIRST_PAGE}
+        disabled={page <= FIRST_PAGE}
         onClick={() => onPageChange(page - 1)}
       >
         <ChevronLeftIcon aria-hidden="true" data-icon="inline-start" />
@@ -31,8 +31,6 @@ function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationP
               <Button
                 variant={item === page ? 'default' : 'ghost'}
                 className="min-w-8 pointer-coarse:h-11 pointer-coarse:min-w-11"
-                focusableWhenDisabled
-                disabled={disabled}
                 aria-current={item === page ? 'page' : undefined}
                 aria-label={item === page ? `Página ${item}` : `Ir para a página ${item}`}
                 onClick={() => {
@@ -54,7 +52,7 @@ function PaginationPages({ page, lastPage, onPageChange, disabled }: PaginationP
         variant="outline"
         className="pointer-coarse:h-11"
         focusableWhenDisabled
-        disabled={disabled || page >= lastPage}
+        disabled={page >= lastPage}
         onClick={() => onPageChange(page + 1)}
       >
         Próxima

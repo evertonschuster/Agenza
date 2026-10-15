@@ -10,7 +10,6 @@ export interface PaginationProps {
   itemLabel: PaginationItemLabel;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
-  disabled?: boolean | undefined;
 }
 
 export type PaginationSummaryProps = Pick<
@@ -18,14 +17,8 @@ export type PaginationSummaryProps = Pick<
   'page' | 'pageSize' | 'totalCount' | 'itemLabel'
 >;
 
-export type PaginationPageSizeProps = Pick<
-  PaginationProps,
-  'pageSize' | 'onPageSizeChange' | 'disabled'
->;
+export type PaginationPageSizeProps = Pick<PaginationProps, 'pageSize' | 'onPageSizeChange'>;
 
-export interface PaginationPagesProps extends Pick<
-  PaginationProps,
-  'page' | 'onPageChange' | 'disabled'
-> {
+export interface PaginationPagesProps extends Pick<PaginationProps, 'page' | 'onPageChange'> {
   lastPage: number;
 }

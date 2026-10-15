@@ -10,13 +10,7 @@ function PaginatedListSection<T>({ pagination, className, ...list }: PaginatedLi
   return (
     <div className={cn('space-y-4', className)}>
       <ListSection {...list} skeletonRowCount={pagination.pageSize} />
-      {showFooter && (
-        <Pagination
-          {...footer}
-          totalCount={totalCount}
-          disabled={list.status === ListSectionStatus.Loading}
-        />
-      )}
+      {showFooter && <Pagination {...footer} totalCount={totalCount} />}
     </div>
   );
 }

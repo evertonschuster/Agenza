@@ -9,14 +9,13 @@ import {
 } from '@/shared/ui/select';
 import type { PaginationPageSizeProps } from '../pagination.types';
 
-function PaginationPageSize({ pageSize, onPageSizeChange, disabled }: PaginationPageSizeProps) {
+function PaginationPageSize({ pageSize, onPageSizeChange }: PaginationPageSizeProps) {
   return (
     <Select
       value={pageSize}
       onValueChange={(value) => {
         if (value !== null) onPageSizeChange(value);
       }}
-      disabled={disabled}
     >
       <div className="flex items-center gap-2">
         <SelectLabel>

@@ -263,29 +263,4 @@ describe('Pagination', () => {
       },
     );
   });
-
-  describe('disabled', () => {
-    it('ignores every control, keeping the pager focusable', async () => {
-      const user = userEvent.setup();
-      const { onPageChange, onPageSizeChange } = renderPagination({ page: 5, disabled: true });
-
-      await user.click(screen.getByRole('button', { name: 'Anterior' }));
-      await user.click(screen.getByRole('button', { name: 'Próxima' }));
-      await user.click(screen.getByRole('button', { name: 'Ir para a página 6' }));
-
-      expect(onPageChange).not.toHaveBeenCalled();
-      expect(onPageSizeChange).not.toHaveBeenCalled();
-      within(screen.getByRole('navigation', { name: 'Paginação' }))
-        .getAllByRole('button')
-        .forEach((button) => expect(button).toHaveAttribute('aria-disabled', 'true'));
-      expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeDisabled();
-    });
-
-    it('keeps showing where the person is', () => {
-      renderPagination({ page: 5, pageSize: 20, totalCount: 440, disabled: true });
-
-      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 81–100 de 440 pessoas');
-      expect(screen.getByRole('button', { name: 'Página 5' })).toBeInTheDocument();
-    });
-  });
 });

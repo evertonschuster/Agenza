@@ -60,8 +60,9 @@ the real total (ADR 0063, ADR 0064).
    `items` would have rendered as "Nenhuma pessoa ainda". While it moves, the screen shows the skeleton, not an empty
    list.
 4. **While a page loads**, the screen does what a new search already did: the skeleton takes the table's place, and the
-   footer stays, on the last known total, with every control disabled (the buttons by `aria-disabled`, so keyboard focus
-   is not lost; the select by `disabled`). Before the first answer, when the total is unknown, and after a failure there
+   footer stays, on the last known total, with every control still usable: a click while a page loads asks for another
+   page, and the answer still in flight is dropped, as the hook already does for a new search (Anterior on the first
+   page and Próxima on the last are `aria-disabled`, so keyboard focus is not lost). Before the first answer, when the total is unknown, and after a failure there
    is no footer. Changing the page moves neither the scroll nor the focus. The skeleton has as many rows as the page
    size (10, 20, 50 or 100), also before the first answer, when there is no footer yet: the size comes from the URL, so
    it is known from the first render, and the list widget draws the skeleton from it (a list that does not page keeps
@@ -81,7 +82,7 @@ the real total (ADR 0063, ADR 0064).
      Its props are those of a `ListSection` plus `pagination` (`page`, `pageSize`, `totalCount`, `itemLabel` and the two
      callbacks), without `skeletonRowCount`. `totalCount` is `number | null`: `null` until the first answer, and the
      footer waits for the number while the skeleton already has `pageSize` rows. The widget decides when the footer
-     shows, from `status` and the total: never on a failure, disabled while loading. The page passes the numbers, the
+     shows, from `status` and the total: never on a failure or without a total. The page passes the numbers, the
      noun and the two callbacks, as it already passes `failure` with its `onRetry`. `ListSection` knows nothing of
      paging, so a list that does not page (Etiquetas) stays on it, exactly as #177 left it. Decided by the owner on
      2026-10-15, after a first version that gave `ListSection` an optional `pagination`: two distinct widgets, one
@@ -111,6 +112,8 @@ the real total (ADR 0063, ADR 0064).
   and `localStorage` stays with the session and the theme.
 - `shared/ui/select` is in the coverage gate and is exercised through the footer's tests.
 - A page button is a `<button>`, not a link: it cannot be opened in a new tab.
+- A click while a page loads is a normal navigation, so a double click on Próxima goes two pages on, and Back walks
+  through every page that was asked for, loaded or not.
 - On a wide layout the skeleton is as tall as the table: 0 px of difference with 20 and 50 a page from 1,280 px up, and
   858 against 858 px in the owner's browser with the real data. A name that wraps (a narrow layout or a phone) makes a
   real row 61, 81 or 101 px against the skeleton's 41, so the table still grows when the rows arrive there, and by a
@@ -143,6 +146,9 @@ the real total (ADR 0063, ADR 0064).
   size would still be the page's to say.
 - **The paged component inside `widgets/list-section/`.** It would stay under the coverage exclusion of
   `list-section/**` and keep that folder importing `pagination`.
+- **Disabling the controls while a page loads** (the first version). A request in flight can be dropped for the next
+  one, as a new search already does, so the wait protected nothing, and the owner found it a needless block
+  (2026-10-15).
 - **A skeleton that stays a strip every list shares** (rows of 45 px, no header), with only its height tuned. A row is
   41 px in Pessoas and 49 px in Etiquetas, so one strip could not fit both.
 - **A name on one line in Pessoas**, which would make every row 41 px and the skeleton exact at any width, at the cost

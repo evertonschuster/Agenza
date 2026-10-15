@@ -143,23 +143,30 @@ describe('PaginatedListSection', () => {
       expect(onPageSizeChange).toHaveBeenCalledExactlyOnceWith(50);
     });
 
-    it('keeps the controls on screen, disabled, over the skeleton while the next page loads', async () => {
+    it('keeps the controls on screen and usable, over the skeleton, while a page loads', async () => {
       const onPageChange = vi.fn();
+      const onPageSizeChange = vi.fn();
       const { container } = renderPaginated({
         status: 'loading',
         items: [],
-        pagination: { ...PAGINATION, onPageChange },
+        pagination: { ...PAGINATION, onPageChange, onPageSizeChange },
       });
+      const user = userEvent.setup();
 
       expect(busyRegion(container)).not.toBeNull();
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 21–40 de 87 itens');
-      await userEvent.setup().click(screen.getByRole('button', { name: 'Próxima' }));
       expect(screen.getByRole('button', { name: 'Próxima' })).toHaveAttribute(
         'aria-disabled',
-        'true',
+        'false',
       );
-      expect(screen.getByRole('combobox', { name: 'Itens por página' })).toBeDisabled();
-      expect(onPageChange).not.toHaveBeenCalled();
+      expect(screen.getByRole('combobox', { name: 'Itens por página' })).toBeEnabled();
+
+      await user.click(screen.getByRole('button', { name: 'Próxima' }));
+      await user.click(screen.getByRole('combobox', { name: 'Itens por página' }));
+      await user.click(await screen.findByRole('option', { name: '50' }));
+
+      expect(onPageChange).toHaveBeenCalledExactlyOnceWith(3);
+      expect(onPageSizeChange).toHaveBeenCalledExactlyOnceWith(50);
     });
 
     it('enables the controls when the page is ready', () => {

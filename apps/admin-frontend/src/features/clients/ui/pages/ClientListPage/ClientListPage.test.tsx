@@ -567,7 +567,7 @@ describe('ClientListPage', () => {
       expect(location()).toBe('location: /pessoas');
     });
 
-    it('keeps the controls over the skeleton, disabled and on the last known total, while the next page loads', async () => {
+    it('keeps the controls over the skeleton, usable and on the last known total, while the next page loads', async () => {
       const user = userEvent.setup();
       const everyone = people(87);
       mockList.mockResolvedValueOnce(listOf(everyone.slice(0, 20), { totalCount: 87 }));
@@ -582,20 +582,95 @@ describe('ClientListPage', () => {
       expect(skeletonRows(container)).toHaveLength(20);
       expect(screen.queryByText('Pessoa 001')).not.toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 21–40 de 87 pessoas');
-      expect(screen.getByRole('button', { name: 'Próxima' })).toHaveAttribute(
+      expect(screen.getByRole('button', { name: 'Anterior' })).toHaveAttribute(
         'aria-disabled',
-        'true',
+        'false',
       );
-      expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeDisabled();
-
-      next.resolve(listOf(everyone.slice(20, 40), { totalCount: 87, page: 2 }));
-
-      expect(await screen.findByText('Pessoa 021')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Próxima' })).toHaveAttribute(
         'aria-disabled',
         'false',
       );
       expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeEnabled();
+
+      next.resolve(listOf(everyone.slice(20, 40), { totalCount: 87, page: 2 }));
+
+      expect(await screen.findByText('Pessoa 021')).toBeInTheDocument();
+    });
+
+    it('moves on to another page while one is still loading, and drops the answer that was in flight', async () => {
+      const user = userEvent.setup();
+      const everyone = people(87);
+      mockList.mockResolvedValueOnce(listOf(everyone.slice(0, 20), { totalCount: 87 }));
+      renderClientListPage();
+      await screen.findByText('Pessoa 001');
+
+      const second = pending<ReturnType<typeof listOf>>();
+      let secondSignal: AbortSignal | undefined;
+      mockList.mockImplementationOnce((_request: ClientListQuery, signal: AbortSignal) => {
+        secondSignal = signal;
+        return second.promise;
+      });
+      await user.click(screen.getByRole('button', { name: 'Próxima' }));
+      await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+
+      mockList.mockResolvedValueOnce(listOf(everyone.slice(40, 60), { totalCount: 87, page: 3 }));
+      await user.click(screen.getByRole('button', { name: 'Próxima' }));
+
+      expect(await screen.findByText('Pessoa 041')).toBeInTheDocument();
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: '', page: 3, pageSize: 20 },
+        expect.any(AbortSignal),
+      );
+      expect(secondSignal?.aborted).toBe(true);
+      expect(location()).toBe('location: /pessoas?page=3');
+
+      await act(async () => {
+        second.resolve(listOf(everyone.slice(20, 40), { totalCount: 87, page: 2 }));
+        await second.promise;
+      });
+
+      expect(screen.getByText('Pessoa 041')).toBeInTheDocument();
+      expect(screen.queryByText('Pessoa 021')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 41–60 de 87 pessoas');
+    });
+
+    it('changes the size while a page is still loading, and drops that page', async () => {
+      const user = userEvent.setup();
+      const everyone = people(87);
+      mockList.mockResolvedValueOnce(listOf(everyone.slice(0, 20), { totalCount: 87 }));
+      renderClientListPage();
+      await screen.findByText('Pessoa 001');
+
+      const second = pending<ReturnType<typeof listOf>>();
+      let secondSignal: AbortSignal | undefined;
+      mockList.mockImplementationOnce((_request: ClientListQuery, signal: AbortSignal) => {
+        secondSignal = signal;
+        return second.promise;
+      });
+      await user.click(screen.getByRole('button', { name: 'Próxima' }));
+      await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
+
+      mockList.mockResolvedValueOnce(
+        listOf(everyone.slice(0, 50), { totalCount: 87, page: 1, pageSize: 50 }),
+      );
+      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('option', { name: '50' }));
+
+      expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: '', page: 1, pageSize: 50 },
+        expect.any(AbortSignal),
+      );
+      expect(secondSignal?.aborted).toBe(true);
+      expect(location()).toBe('location: /pessoas?pageSize=50');
+
+      await act(async () => {
+        second.resolve(listOf(everyone.slice(20, 40), { totalCount: 87, page: 2 }));
+        await second.promise;
+      });
+
+      expect(screen.getAllByRole('row')).toHaveLength(51);
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1–50 de 87 pessoas');
     });
 
     it('goes back to the first page when the size changes, keeping the search', async () => {
@@ -746,7 +821,7 @@ describe('ClientListPage', () => {
         expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
         expect(screen.queryByText('Nenhuma pessoa ainda')).not.toBeInTheDocument();
         expect(screen.getByRole('status')).toHaveTextContent('Exibindo 81–87 de 87 pessoas');
-        expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeDisabled();
+        expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeEnabled();
 
         lastPage.resolve(listOf(everyone.slice(80), { totalCount: 87, page: 5 }));
 

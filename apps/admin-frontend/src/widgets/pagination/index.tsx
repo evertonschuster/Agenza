@@ -11,7 +11,6 @@ function Pagination({
   itemLabel,
   onPageChange,
   onPageSizeChange,
-  disabled,
 }: PaginationProps) {
   if (totalCount <= 0) return null;
 
@@ -31,15 +30,10 @@ function Pagination({
             page={page}
             lastPage={getLastPage(totalCount, pageSize)}
             onPageChange={onPageChange}
-            disabled={disabled}
           />
         </div>
         <div className="order-2 ml-auto flex shrink-0 justify-end @min-[560px]:order-3 @min-[560px]:ml-0 @min-[560px]:min-w-max @min-[560px]:flex-1 @min-[560px]:basis-0">
-          <PaginationPageSize
-            pageSize={pageSize}
-            onPageSizeChange={onPageSizeChange}
-            disabled={disabled}
-          />
+          <PaginationPageSize pageSize={pageSize} onPageSizeChange={onPageSizeChange} />
         </div>
       </div>
     </div>
