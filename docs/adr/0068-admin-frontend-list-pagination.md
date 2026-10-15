@@ -63,10 +63,9 @@ the real total (ADR 0063, ADR 0064).
    footer stays, on the last known total, with every control disabled (the buttons by `aria-disabled`, so keyboard focus
    is not lost; the select by `disabled`). Before the first answer, when the total is unknown, and after a failure there
    is no footer. Changing the page moves neither the scroll nor the focus. The skeleton has as many rows as the page
-   size (10, 20, 50 or 100), also before the first answer, when there is no footer yet to carry the size: the page passes
-   the size its hook read from the URL as `skeletonRowCount` (`list-section` could not derive it from `pagination`, which
-   is absent until the first answer), and it stays 10 for a list that does not page. Asked for by the owner on
-   2026-10-15.
+   size (10, 20, 50 or 100), also before the first answer, when there is no footer yet: the size comes from the URL, so
+   it is known from the first render, and the list widget draws the skeleton from it (a list that does not page keeps
+   10). Asked for by the owner on 2026-10-15.
 5. **The reusable parts:**
    - `shared/pagination/paging.ts`: the contract of `?page=`/`?pageSize=` as pure functions and constants (`readPaging`,
      `withPaging`, `getLastPage`, `getVisibleRange`, `getPageWindow`, `PAGE_SIZE_OPTIONS`, `DEFAULT_PAGE_SIZE`) and the
@@ -75,15 +74,21 @@ the real total (ADR 0063, ADR 0064).
      trigger, value, content, item). The owner chose it over a native `<select>` and over segmented buttons;
    - `widgets/pagination`: the footer, with the noun passed as `itemLabel: { singular, plural }`, the way a list passes
      its `emptyCopy`;
-   - `ListSection` gains an optional `pagination` (`null` or absent means the list does not page). It decides when the
-     footer shows, from `status`: never on a failure, disabled while loading. The page passes the numbers, the noun and
-     the two callbacks, as it already passes `failure` with its `onRetry`;
+   - `widgets/paginated-list-section`: `PaginatedListSection`, which renders a `ListSection` with the footer under it.
+     Its props are those of a `ListSection` plus `pagination` (`page`, `pageSize`, `totalCount`, `itemLabel` and the two
+     callbacks), without `skeletonRowCount`. `totalCount` is `number | null`: `null` until the first answer, and the
+     footer waits for the number while the skeleton already has `pageSize` rows. The widget decides when the footer
+     shows, from `status` and the total: never on a failure, disabled while loading. The page passes the numbers, the
+     noun and the two callbacks, as it already passes `failure` with its `onRetry`. `ListSection` knows nothing of
+     paging, so a list that does not page (Etiquetas) stays on it, exactly as #177 left it. Decided by the owner on
+     2026-10-15, after a first version that gave `ListSection` an optional `pagination`: two distinct widgets, one
+     component for the page, in a folder of its own;
    - each list's own hook ties `useSearchParams` to those functions (about ten lines), because hooks are not shared
      between pages (AGENTS.md). The owner kept that rule over a generic `usePagination`.
-6. **A widget may import another widget**, never in a cycle: `list-section` renders `pagination`. ADR 0042 and
-   ARCHITECTURE §1 said a widget imports only `shared/`; the lint rule never enforced it (it reports only an import into
-   a higher layer), and the owner chose to change the sentence rather than keep a slot or bury the footer inside
-   `list-section/components/`, which sits outside the coverage gate.
+6. **A widget may import another widget**, never in a cycle: `paginated-list-section` renders `list-section` and
+   `pagination`. ADR 0042 and ARCHITECTURE §1 said a widget imports only `shared/`; the lint rule never enforced it (it
+   reports only an import into a higher layer), and the owner chose to change the sentence rather than keep a slot or
+   bury the footer inside `list-section/components/`, which sits outside the coverage gate.
 7. **The repository always sends `Page` and `PageSize`**: `clientsRepository.list({ search, page, pageSize }, signal)`.
    The screen no longer depends on the backend's defaults, and it still sends no `Status` (ADR 0067, point 9). The
    model is `ClientList = PagedResult<ClientListItem>`; `list` still forwards the answer verbatim.
@@ -98,7 +103,7 @@ the real total (ADR 0063, ADR 0064).
 - The situation filter will need no change in `withPaging`: it keeps every parameter it does not own, so `?status=` is
   carried along; the filter's handler resets the page the way the search does.
 - Etiquetas does not page (its API does not), so `TagListPage` is untouched. The Serviços screen is still "Em breve";
-  its list will pass `pagination`, the noun and its page size as `skeletonRowCount`, and write the ten lines of hook.
+  its list will use `PaginatedListSection` and write the ten lines of hook.
 - The page size is not remembered between visits (nobody asked for it): the URL is the only state, as for the search,
   and `localStorage` stays with the session and the theme.
 - `shared/ui/select` is in the coverage gate and is exercised through the footer's tests.
@@ -126,6 +131,13 @@ the real total (ADR 0063, ADR 0064).
 - **A shared `usePagination` hook.** Kept to the rule that hooks are not shared between pages.
 - **A `footer` slot on `list-section`**, and **the footer inside `list-section/components/`.** The first splits the
   visibility rule between page and widget; the second only serves `list-section` and leaves the logic out of coverage.
+- **An optional `pagination` prop on `ListSection`** (the first version, replaced on 2026-10-15). Every list carried a
+  prop most never use, `list-section` imported the footer, and `pagination` was absent until the first answer, so the
+  widget could not draw the skeleton at the page size on the first load and the page had to pass `skeletonRowCount`.
+- **A paged box that takes the `ListSection` as `children`.** The page would pass `status` to both, and the skeleton's
+  size would still be the page's to say.
+- **The paged component inside `widgets/list-section/`.** It would stay under the coverage exclusion of
+  `list-section/**` and keep that folder importing `pagination`.
 - **Keeping the old rows, dimmed, while the next page loads.** Needs a "ready and refreshing" state.
 - **A toast, or an empty "this page does not exist" state with a button, for a page that cannot be shown.**
 - **Keeping the first item on screen when the size changes** (page 3 of 20 is the 41st item, which is on page 1 of

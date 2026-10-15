@@ -113,8 +113,7 @@ export function useClientListPage(): UseClientListPageResult {
   return {
     ...toListState(pastLastPage ? null : current),
     query,
-    pageSize,
-    paging: totalCount === null || pastLastPage ? null : { page, pageSize, totalCount },
+    paging: { page, pageSize, totalCount: pastLastPage ? null : totalCount },
     searchInputRef,
     onSearchSubmit,
     onClearSearch,

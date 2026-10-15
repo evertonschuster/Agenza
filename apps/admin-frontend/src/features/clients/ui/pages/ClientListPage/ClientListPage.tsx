@@ -1,7 +1,8 @@
 import { PlusIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { buttonVariants } from '@/shared/ui/button';
-import { ListSection, type ListSectionEmptyCopy } from '@/widgets/list-section';
+import type { ListSectionEmptyCopy } from '@/widgets/list-section';
+import { PaginatedListSection } from '@/widgets/paginated-list-section';
 import type { PaginationItemLabel } from '@/widgets/pagination';
 import { NEW_CLIENT_PATH } from '../../clientsPaths';
 import { clientColumns } from './components/clientColumns';
@@ -23,7 +24,6 @@ export function ClientListPage() {
     status,
     failure,
     query,
-    pageSize,
     paging,
     searchInputRef,
     onSearchSubmit,
@@ -49,18 +49,17 @@ export function ClientListPage() {
         onSearchSubmit={onSearchSubmit}
       />
 
-      <ListSection
+      <PaginatedListSection
         status={status}
         items={clients}
         getKey={(client) => client.id}
         aria-label="Pessoas"
         columns={clientColumns()}
-        skeletonRowCount={pageSize}
         emptyCopy={EMPTY_COPY}
         search={{ term: query, onClear: onClearSearch }}
         errorTitle="Não foi possível carregar as pessoas."
         failure={failure && { ...failure, onRetry }}
-        pagination={paging && { ...paging, itemLabel: ITEM_LABEL, onPageChange, onPageSizeChange }}
+        pagination={{ ...paging, itemLabel: ITEM_LABEL, onPageChange, onPageSizeChange }}
       />
     </div>
   );

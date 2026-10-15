@@ -1,6 +1,7 @@
 import type { RefObject, SubmitEvent } from 'react';
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import type { ListSectionPagination, ListSectionStatus } from '@/widgets/list-section';
+import type { ListSectionStatus } from '@/widgets/list-section';
+import type { PaginatedListSectionPaging } from '@/widgets/paginated-list-section';
 import type { ClientListQuery } from '../../../api/clientsRepository';
 import type { ClientList, ClientListItem } from '../../../model/clientList';
 
@@ -15,12 +16,11 @@ export interface ClientListState {
   failure: ClientListFailure | null;
 }
 
-export type ClientListPaging = Pick<ListSectionPagination, 'page' | 'pageSize' | 'totalCount'>;
+export type ClientListPaging = Pick<PaginatedListSectionPaging, 'page' | 'pageSize' | 'totalCount'>;
 
 export interface UseClientListPageResult extends ClientListState {
   query: string;
-  pageSize: number;
-  paging: ClientListPaging | null;
+  paging: ClientListPaging;
   searchInputRef: RefObject<HTMLInputElement | null>;
   onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   onClearSearch: () => void;

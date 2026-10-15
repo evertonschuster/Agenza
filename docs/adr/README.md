@@ -92,4 +92,4 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0065 string value objects read from a query or a route, by opt-in ·
 0066 enums read from a query or a route by one name ·
 0067 admin-frontend Pessoas list: whole CPF, filter and paging deferred, provisional detail route ·
-0068 admin-frontend paged lists: page and size in the URL, one footer shared through ListSection.
+0068 admin-frontend paged lists: page and size in the URL, one footer shared through PaginatedListSection.
