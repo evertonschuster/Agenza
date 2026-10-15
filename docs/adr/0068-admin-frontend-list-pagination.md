@@ -62,7 +62,11 @@ the real total (ADR 0063, ADR 0064).
 4. **While a page loads**, the screen does what a new search already did: the skeleton takes the table's place, and the
    footer stays, on the last known total, with every control disabled (the buttons by `aria-disabled`, so keyboard focus
    is not lost; the select by `disabled`). Before the first answer, when the total is unknown, and after a failure there
-   is no footer. Changing the page moves neither the scroll nor the focus.
+   is no footer. Changing the page moves neither the scroll nor the focus. The skeleton has as many rows as the page
+   size (10, 20, 50 or 100), also before the first answer, when there is no footer yet to carry the size: the page passes
+   the size its hook read from the URL as `skeletonRowCount` (`list-section` could not derive it from `pagination`, which
+   is absent until the first answer), and it stays 10 for a list that does not page. Asked for by the owner on
+   2026-10-15.
 5. **The reusable parts:**
    - `shared/pagination/paging.ts`: the contract of `?page=`/`?pageSize=` as pure functions and constants (`readPaging`,
      `withPaging`, `getLastPage`, `getVisibleRange`, `getPageWindow`, `PAGE_SIZE_OPTIONS`, `DEFAULT_PAGE_SIZE`) and the
@@ -94,11 +98,15 @@ the real total (ADR 0063, ADR 0064).
 - The situation filter will need no change in `withPaging`: it keeps every parameter it does not own, so `?status=` is
   carried along; the filter's handler resets the page the way the search does.
 - Etiquetas does not page (its API does not), so `TagListPage` is untouched. The Serviços screen is still "Em breve";
-  its list will pass `pagination` and the noun and write the ten lines of hook.
+  its list will pass `pagination`, the noun and its page size as `skeletonRowCount`, and write the ten lines of hook.
 - The page size is not remembered between visits (nobody asked for it): the URL is the only state, as for the search,
   and `localStorage` stays with the session and the theme.
 - `shared/ui/select` is in the coverage gate and is exercised through the footer's tests.
 - A page button is a `<button>`, not a link: it cannot be opened in a new tab.
+- Only the number of skeleton rows follows the page size, not their height: a skeleton row is 45 px and a real one is
+  about 42 px on a desktop and about 60 px on a phone, where a name wraps, so the table can still change height when the
+  rows arrive (less than with a fixed 10). A short last page, or a search with few results, ends shorter than the
+  skeleton, and 100 a page is a skeleton of about 4,500 px. A skeleton row shaped like a real one is not built.
 
 ## Considered and rejected
 

@@ -19,6 +19,7 @@ export type ClientListPaging = Pick<ListSectionPagination, 'page' | 'pageSize' |
 
 export interface UseClientListPageResult extends ClientListState {
   query: string;
+  pageSize: number;
   paging: ClientListPaging | null;
   searchInputRef: RefObject<HTMLInputElement | null>;
   onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;

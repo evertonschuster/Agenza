@@ -496,6 +496,34 @@ describe('ClientListPage', () => {
       expect(await screen.findByRole('navigation', { name: 'Paginação' })).toBeInTheDocument();
     });
 
+    it.each([
+      [20, '/pessoas'],
+      [10, '/pessoas?pageSize=10'],
+      [50, '/pessoas?pageSize=50'],
+      [100, '/pessoas?pageSize=100'],
+      [20, '/pessoas?pageSize=33'],
+    ] as const)('shows %i skeleton rows, as many as the page size, while %s loads', (rows, url) => {
+      mockList.mockImplementationOnce(() => pending<ReturnType<typeof listOf>>().promise);
+
+      const { container } = renderClientListPage([url]);
+
+      expect(container.querySelector('[aria-busy="true"]')?.children).toHaveLength(rows);
+    });
+
+    it('shows as many skeleton rows as the size just picked while that size loads', async () => {
+      const user = userEvent.setup();
+      mockList.mockResolvedValueOnce(listOf(people(87).slice(0, 20), { totalCount: 87 }));
+      const { container } = renderClientListPage();
+      await screen.findByText('Pessoa 001');
+
+      mockList.mockImplementationOnce(() => pending<ReturnType<typeof listOf>>().promise);
+      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('option', { name: '50' }));
+
+      await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
+      expect(container.querySelector('[aria-busy="true"]')?.children).toHaveLength(50);
+    });
+
     it('goes to the next page, keeping the search and the size, and puts the page in the URL', async () => {
       const user = userEvent.setup();
       renderPage(people(87), ['/pessoas?q=pessoa&pageSize=10']);
@@ -547,6 +575,7 @@ describe('ClientListPage', () => {
       await user.click(screen.getByRole('button', { name: 'Próxima' }));
 
       await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
+      expect(container.querySelector('[aria-busy="true"]')?.children).toHaveLength(20);
       expect(screen.queryByText('Pessoa 001')).not.toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 21–40 de 87 pessoas');
       expect(screen.getByRole('button', { name: 'Próxima' })).toHaveAttribute(

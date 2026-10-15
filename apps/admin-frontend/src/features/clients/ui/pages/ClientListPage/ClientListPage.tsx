@@ -23,6 +23,7 @@ export function ClientListPage() {
     status,
     failure,
     query,
+    pageSize,
     paging,
     searchInputRef,
     onSearchSubmit,
@@ -54,6 +55,7 @@ export function ClientListPage() {
         getKey={(client) => client.id}
         aria-label="Pessoas"
         columns={clientColumns()}
+        skeletonRowCount={pageSize}
         emptyCopy={EMPTY_COPY}
         search={{ term: query, onClear: onClearSearch }}
         errorTitle="Não foi possível carregar as pessoas."
