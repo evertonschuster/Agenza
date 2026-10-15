@@ -106,6 +106,10 @@ function location() {
   return screen.getByTestId('location').textContent;
 }
 
+function skeletonRows(container: HTMLElement) {
+  return container.querySelector('[aria-busy="true"]')?.querySelectorAll('tbody tr');
+}
+
 describe('ClientListPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -507,7 +511,7 @@ describe('ClientListPage', () => {
 
       const { container } = renderClientListPage([url]);
 
-      expect(container.querySelector('[aria-busy="true"]')?.children).toHaveLength(rows);
+      expect(skeletonRows(container)).toHaveLength(rows);
     });
 
     it('shows as many skeleton rows as the size just picked while that size loads', async () => {
@@ -521,7 +525,7 @@ describe('ClientListPage', () => {
       await user.click(await screen.findByRole('option', { name: '50' }));
 
       await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
-      expect(container.querySelector('[aria-busy="true"]')?.children).toHaveLength(50);
+      expect(skeletonRows(container)).toHaveLength(50);
     });
 
     it('goes to the next page, keeping the search and the size, and puts the page in the URL', async () => {
@@ -575,7 +579,7 @@ describe('ClientListPage', () => {
       await user.click(screen.getByRole('button', { name: 'Próxima' }));
 
       await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
-      expect(container.querySelector('[aria-busy="true"]')?.children).toHaveLength(20);
+      expect(skeletonRows(container)).toHaveLength(20);
       expect(screen.queryByText('Pessoa 001')).not.toBeInTheDocument();
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 21–40 de 87 pessoas');
       expect(screen.getByRole('button', { name: 'Próxima' })).toHaveAttribute(

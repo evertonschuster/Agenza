@@ -65,7 +65,10 @@ the real total (ADR 0063, ADR 0064).
    is no footer. Changing the page moves neither the scroll nor the focus. The skeleton has as many rows as the page
    size (10, 20, 50 or 100), also before the first answer, when there is no footer yet: the size comes from the URL, so
    it is known from the first render, and the list widget draws the skeleton from it (a list that does not page keeps
-   10). Asked for by the owner on 2026-10-15.
+   10). In table mode the skeleton imitates the table: the real headers, and rows of the height the real ones have,
+   each column saying what its placeholder looks like (`ListSectionColumn.skeleton`, a generic bar when it says
+   nothing), so the footer and the scroll do not jump when the rows arrive. Both asked for by the owner on 2026-10-15,
+   the second after seeing the skeleton taller than the rows.
 5. **The reusable parts:**
    - `shared/pagination/paging.ts`: the contract of `?page=`/`?pageSize=` as pure functions and constants (`readPaging`,
      `withPaging`, `getLastPage`, `getVisibleRange`, `getPageWindow`, `PAGE_SIZE_OPTIONS`, `DEFAULT_PAGE_SIZE`) and the
@@ -108,10 +111,12 @@ the real total (ADR 0063, ADR 0064).
   and `localStorage` stays with the session and the theme.
 - `shared/ui/select` is in the coverage gate and is exercised through the footer's tests.
 - A page button is a `<button>`, not a link: it cannot be opened in a new tab.
-- Only the number of skeleton rows follows the page size, not their height: a skeleton row is 45 px and a real one is
-  about 42 px on a desktop and about 60 px on a phone, where a name wraps, so the table can still change height when the
-  rows arrive (less than with a fixed 10). A short last page, or a search with few results, ends shorter than the
-  skeleton, and 100 a page is a skeleton of about 4,500 px. A skeleton row shaped like a real one is not built.
+- On a wide layout the skeleton is as tall as the table: 0 px of difference with 20 and 50 a page from 1,280 px up, and
+  858 against 858 px in the owner's browser with the real data. A name that wraps (a narrow layout or a phone) makes a
+  real row 61, 81 or 101 px against the skeleton's 41, so the table still grows when the rows arrive there, and by a
+  little more than with the old strip (45 px a row), because a wrapped name cannot be known before the data. The owner
+  kept the wrapping on 2026-10-15. A short last page, or a search with few results, ends shorter than the skeleton, and
+  100 a page is a skeleton of about 4,100 px.
 
 ## Considered and rejected
 
@@ -138,6 +143,10 @@ the real total (ADR 0063, ADR 0064).
   size would still be the page's to say.
 - **The paged component inside `widgets/list-section/`.** It would stay under the coverage exclusion of
   `list-section/**` and keep that folder importing `pagination`.
+- **A skeleton that stays a strip every list shares** (rows of 45 px, no header), with only its height tuned. A row is
+  41 px in Pessoas and 49 px in Etiquetas, so one strip could not fit both.
+- **A name on one line in Pessoas**, which would make every row 41 px and the skeleton exact at any width, at the cost
+  of more horizontal scroll on a narrow screen and a wider column for a long name. The owner kept the wrapping.
 - **Keeping the old rows, dimmed, while the next page loads.** Needs a "ready and refreshing" state.
 - **A toast, or an empty "this page does not exist" state with a button, for a page that cannot be shown.**
 - **Keeping the first item on screen when the size changes** (page 3 of 20 is the 41st item, which is on page 1 of

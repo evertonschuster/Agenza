@@ -371,4 +371,85 @@ describe('ListSection', () => {
     const busyRegion = container.querySelector('[aria-busy="true"]');
     expect(busyRegion?.children).toHaveLength(10);
   });
+
+  describe('skeleton in table mode', () => {
+    const COLUMNS = [
+      { key: 'name', header: 'Nome', cell: (item: Item) => item.name },
+      {
+        key: 'weight',
+        header: 'Peso',
+        align: 'end' as const,
+        skeleton: <span data-testid="weight-skeleton" />,
+        cell: (item: Item) => item.id,
+      },
+    ];
+
+    function renderLoadingTable(rowCount: number) {
+      return render(
+        <ListSection
+          status="loading"
+          items={[] as Item[]}
+          getKey={(item) => item.id}
+          columns={COLUMNS}
+          skeletonRowCount={rowCount}
+          aria-label="Itens"
+        />,
+      );
+    }
+
+    it('imitates the table while loading: the real headers and one row per skeleton row', () => {
+      const { container } = renderLoadingTable(3);
+
+      const busyRegion = container.querySelector('[aria-busy="true"]');
+      expect(busyRegion).not.toBeNull();
+      expect(
+        Array.from(busyRegion?.querySelectorAll('thead th') ?? []).map(
+          (header) => header.textContent,
+        ),
+      ).toEqual(['Nome', 'Peso']);
+      expect(busyRegion?.querySelectorAll('tbody tr')).toHaveLength(3);
+    });
+
+    it('shows the skeleton each column gives, and a generic bar where it gives none', () => {
+      const { container } = renderLoadingTable(2);
+
+      expect(screen.getAllByTestId('weight-skeleton')).toHaveLength(2);
+      const nameCells = container.querySelectorAll('tbody tr td:first-child');
+      expect(nameCells).toHaveLength(2);
+      nameCells.forEach((cell) =>
+        expect(cell.querySelector('[data-slot="skeleton"]')).not.toBeNull(),
+      );
+    });
+
+    it('keeps a right-aligned column right-aligned', () => {
+      const { container } = renderLoadingTable(1);
+
+      expect(container.querySelectorAll('thead th')[1]).toHaveClass('text-right');
+      expect(container.querySelector('tbody tr td:last-child > div')).toHaveClass('justify-end');
+    });
+
+    it('hides the placeholder table from assistive tech and from the pointer, keeping the busy region', () => {
+      const { container } = renderLoadingTable(2);
+
+      expect(screen.queryByRole('table')).not.toBeInTheDocument();
+      expect(container.querySelector('[aria-busy="true"][aria-live="polite"]')).not.toBeNull();
+      expect(container.querySelector('[aria-hidden="true"]')).toHaveClass('pointer-events-none');
+    });
+
+    it('is the real table once the list is ready, with no placeholder left', () => {
+      const { container } = render(
+        <ListSection
+          status="ready"
+          items={ITEMS}
+          getKey={(item) => item.id}
+          columns={COLUMNS}
+          aria-label="Itens"
+        />,
+      );
+
+      expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+      expect(screen.getByRole('table', { name: 'Itens' })).toBeInTheDocument();
+      expect(screen.queryByTestId('weight-skeleton')).not.toBeInTheDocument();
+    });
+  });
 });

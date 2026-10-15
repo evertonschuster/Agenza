@@ -212,6 +212,21 @@ describe('PaginatedListSection', () => {
       expect(busyRegion(container)?.children).toHaveLength(pageSize);
     });
 
+    it('has as many rows as the page size in table mode too, as the table it stands for', () => {
+      const { container } = render(
+        <PaginatedListSection
+          status="loading"
+          items={[] as Item[]}
+          getKey={(item) => item.id}
+          columns={[{ key: 'name', header: 'Nome', cell: (item) => item.name }]}
+          pagination={{ ...PAGINATION, page: 1, pageSize: 50 }}
+          aria-label="Itens"
+        />,
+      );
+
+      expect(busyRegion(container)?.querySelectorAll('tbody tr')).toHaveLength(50);
+    });
+
     it('has them before the total is known, when there is no footer yet', () => {
       const { container } = renderPaginated({
         status: 'loading',

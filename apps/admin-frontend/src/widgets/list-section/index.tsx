@@ -21,7 +21,13 @@ function ListSection<T>(props: ListSectionProps<T>) {
 
   return (
     <div className={cn(className)}>
-      {status === ListSectionStatus.Loading && <ListSectionSkeleton rowCount={skeletonRowCount} />}
+      {status === ListSectionStatus.Loading && (
+        <ListSectionSkeleton
+          rowCount={skeletonRowCount}
+          columns={props.columns}
+          ariaLabel={ariaLabel}
+        />
+      )}
       {status === ListSectionStatus.Error && (
         <ListSectionError title={errorTitle} failure={failure} />
       )}

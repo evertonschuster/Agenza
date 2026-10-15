@@ -12,6 +12,7 @@ interface ListSectionColumn<T> {
   key: string;
   header: string;
   align?: 'end' | undefined;
+  skeleton?: ReactNode;
   cell: (item: T) => ReactNode;
 }
 
@@ -50,8 +51,10 @@ type ListSectionProps<T> = ListSectionRenderMode<T> & {
   className?: string | undefined;
 };
 
-interface ListSectionSkeletonProps {
+interface ListSectionSkeletonProps<T> {
   rowCount: number;
+  columns?: ListSectionColumn<T>[] | undefined;
+  ariaLabel: string;
 }
 
 interface ListSectionItemsProps<T> {
