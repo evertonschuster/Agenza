@@ -30,8 +30,11 @@ single-use code) with a terse *why* comment. That guard has to live somewhere it
 without rendering a route tree — the hook. Spread across a component body, it becomes a race you
 rediscover in production.
 
-**Hooks are never shared between pages.** The one exception is a pure Context accessor like
-`useAuth`. If two pages want the same behaviour, extract the *pure* part into `model/` as a plain
+**Hooks are never shared between pages.** The exceptions are a pure Context accessor like
+`useAuth`, and a generic hook with no domain that a widget exports, such as `usePaginatedList` in
+`widgets/paginated-list-section` (ADR 0069): a paged list declares its filters in `model/` as an
+interface and a plain `read<List>Filters(params)`, and its page hook passes that and the repository's
+`list` to `usePaginatedList`. If two pages want the same behaviour, extract the *pure* part into `model/` as a plain
 function and let each hook call it. A `useSharedThing` imported by two pages is the smell that ends
 with one page's lifecycle quietly driving another's.
 

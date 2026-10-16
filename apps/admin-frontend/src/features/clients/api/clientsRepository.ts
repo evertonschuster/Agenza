@@ -3,17 +3,16 @@ import type { ApiResult } from '@/shared/api/servicesFacade';
 import type { Paging } from '@/shared/pagination/paging';
 import type { Client, ClientInput } from '../model/client';
 import type { ClientList } from '../model/clientList';
+import type { ClientListFilters } from '../model/clientListFilters';
 
-export interface ClientListQuery extends Paging {
-  search: string;
-}
+export type ClientListQuery = ClientListFilters & Paging;
 
 function list(
-  { search, page, pageSize }: ClientListQuery,
+  { q, page, pageSize }: ClientListQuery,
   signal?: AbortSignal,
 ): Promise<ApiResult<ClientList>> {
   return servicesApi.get('/api/v{version}/clients', {
-    query: { Page: page, PageSize: pageSize, ...(search ? { Search: search } : {}) },
+    query: { Page: page, PageSize: pageSize, ...(q ? { Search: q } : {}) },
     signal,
   });
 }

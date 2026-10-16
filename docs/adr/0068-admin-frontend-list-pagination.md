@@ -5,7 +5,9 @@ the owner; consumes the paged-list contract of [ADR 0063](0063-clients-list-and-
 [ADR 0064](0064-paged-reads-page-request-and-paged-result.md); amends
 [ADR 0042](0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md) (a widget may compose another widget);
 follows [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) and
-[ADR 0035](0035-admin-frontend-no-server-state-library.md)
+[ADR 0035](0035-admin-frontend-no-server-state-library.md); amended by
+[ADR 0069](0069-admin-frontend-paged-list-hook.md) (points 4 and 5: the footer as a skeleton while the total of the
+current filters is unknown, and one shared hook for paged lists)
 
 ## Context
 
@@ -63,7 +65,9 @@ the real total (ADR 0063, ADR 0064).
    footer stays, on the last known total, with every control still usable: a click while a page loads asks for another
    page, and the answer still in flight is dropped, as the hook already does for a new search (Anterior on the first
    page and Próxima on the last are `aria-disabled`, so keyboard focus is not lost). Before the first answer, when the total is unknown, and after a failure there
-   is no footer. Changing the page moves neither the scroll nor the focus. The skeleton has as many rows as the page
+   is no footer (since [ADR 0069](0069-admin-frontend-paged-list-hook.md), the footer is a skeleton before the first
+   answer and while a new search loads, because the last total belongs to the search it was counted for; a failure
+   still has none). Changing the page moves neither the scroll nor the focus. The skeleton has as many rows as the page
    size (10, 20, 50 or 100), also before the first answer, when there is no footer yet: the size comes from the URL, so
    it is known from the first render, and the list widget draws the skeleton from it (a list that does not page keeps
    10). In table mode the skeleton imitates the table: the real headers, and rows of the height the real ones have,
@@ -88,7 +92,9 @@ the real total (ADR 0063, ADR 0064).
      2026-10-15, after a first version that gave `ListSection` an optional `pagination`: two distinct widgets, one
      component for the page, in a folder of its own;
    - each list's own hook ties `useSearchParams` to those functions (about ten lines), because hooks are not shared
-     between pages (AGENTS.md). The owner kept that rule over a generic `usePagination`.
+     between pages (AGENTS.md). The owner kept that rule over a generic `usePagination` (replaced the next day by
+     `usePaginatedList`, [ADR 0069](0069-admin-frontend-paged-list-hook.md), once the filters made the ten lines many
+     more).
 6. **A widget may import another widget**, never in a cycle: `paginated-list-section` renders `list-section` and
    `pagination`. ADR 0042 and ARCHITECTURE §1 said a widget imports only `shared/`; the lint rule never enforced it (it
    reports only an import into a higher layer), and the owner chose to change the sentence rather than keep a slot or

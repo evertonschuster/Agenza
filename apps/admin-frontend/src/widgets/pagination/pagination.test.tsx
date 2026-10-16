@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Pagination, type PaginationProps } from './index';
+import { Pagination, PaginationSkeleton, type PaginationProps } from './index';
 
 const ITEM_LABEL = { singular: 'pessoa', plural: 'pessoas' };
 const PAGE_SIZE_LABEL = 'Itens por página';
@@ -261,6 +261,36 @@ describe('Pagination', () => {
 
         expect(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL })).toBeInTheDocument();
       },
+    );
+  });
+});
+
+describe('PaginationSkeleton', () => {
+  it('stands for the footer without saying or offering anything to assistive tech', () => {
+    const { container } = render(<PaginationSkeleton />);
+
+    expect(container.firstElementChild).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('navigation')).not.toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('keeps the arrangement of the footer, so nothing moves when the numbers arrive', () => {
+    const footer = render(
+      <Pagination
+        page={1}
+        pageSize={20}
+        totalCount={87}
+        itemLabel={ITEM_LABEL}
+        onPageChange={vi.fn()}
+        onPageSizeChange={vi.fn()}
+      />,
+    ).container.firstElementChild?.firstElementChild;
+    const skeleton = render(<PaginationSkeleton />).container.firstElementChild?.firstElementChild;
+
+    expect(skeleton?.className).toBe(footer?.className);
+    expect(Array.from(skeleton?.children ?? [], (part) => part.className)).toEqual(
+      Array.from(footer?.children ?? [], (part) => part.className),
     );
   });
 });

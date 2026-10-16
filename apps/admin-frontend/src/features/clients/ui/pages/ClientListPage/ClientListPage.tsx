@@ -19,19 +19,8 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 const ITEM_LABEL: PaginationItemLabel = { singular: 'pessoa', plural: 'pessoas' };
 
 export function ClientListPage() {
-  const {
-    clients,
-    status,
-    failure,
-    query,
-    paging,
-    searchInputRef,
-    onSearchSubmit,
-    onClearSearch,
-    onRetry,
-    onPageChange,
-    onPageSizeChange,
-  } = useClientListPage();
+  const { list, pagination, query, searchInputRef, onSearchSubmit, onClearSearch } =
+    useClientListPage();
 
   return (
     <div className="space-y-4">
@@ -50,16 +39,14 @@ export function ClientListPage() {
       />
 
       <PaginatedListSection
-        status={status}
-        items={clients}
+        {...list}
         getKey={(client) => client.id}
         aria-label="Pessoas"
         columns={clientColumns()}
         emptyCopy={EMPTY_COPY}
         search={{ term: query, onClear: onClearSearch }}
         errorTitle="Não foi possível carregar as pessoas."
-        failure={failure && { ...failure, onRetry }}
-        pagination={{ ...paging, itemLabel: ITEM_LABEL, onPageChange, onPageSizeChange }}
+        pagination={{ ...pagination, itemLabel: ITEM_LABEL }}
       />
     </div>
   );

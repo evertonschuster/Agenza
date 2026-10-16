@@ -48,6 +48,10 @@ function renderPaginated({
   );
 }
 
+function footerSkeleton(container: HTMLElement) {
+  return container.querySelector('[data-slot="pagination-skeleton"]');
+}
+
 function busyRegion(container: HTMLElement) {
   return container.querySelector('[aria-busy="true"]');
 }
@@ -180,9 +184,10 @@ describe('PaginatedListSection', () => {
     });
 
     it('hides the controls when the list failed to load', () => {
-      renderPaginated({ status: 'error', items: [] });
+      const { container } = renderPaginated({ status: 'error', items: [] });
 
       expect(screen.getByRole('alert')).toBeInTheDocument();
+      expect(footerSkeleton(container)).toBeNull();
       expect(screen.queryByRole('navigation', { name: 'Paginação' })).not.toBeInTheDocument();
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
@@ -195,8 +200,8 @@ describe('PaginatedListSection', () => {
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
     });
 
-    it('shows no controls while the total is still unknown', () => {
-      renderPaginated({
+    it('draws a skeleton of the footer, with no controls, while the total is still unknown', () => {
+      const { container } = renderPaginated({
         status: 'loading',
         items: [],
         pagination: { ...PAGINATION, page: 1, totalCount: null },
@@ -205,6 +210,21 @@ describe('PaginatedListSection', () => {
       expect(screen.queryByRole('navigation', { name: 'Paginação' })).not.toBeInTheDocument();
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
       expect(screen.queryByRole('combobox', { name: 'Itens por página' })).not.toBeInTheDocument();
+      expect(footerSkeleton(container)).toHaveAttribute('aria-hidden', 'true');
+    });
+
+    it('draws the footer, not its skeleton, over a loading page whose total is known', () => {
+      const { container } = renderPaginated({ status: 'loading', items: [] });
+
+      expect(screen.getByRole('navigation', { name: 'Paginação' })).toBeInTheDocument();
+      expect(footerSkeleton(container)).toBeNull();
+    });
+
+    it('draws nothing under a ready list that has no total', () => {
+      const { container } = renderPaginated({ pagination: { ...PAGINATION, totalCount: null } });
+
+      expect(screen.queryByRole('navigation', { name: 'Paginação' })).not.toBeInTheDocument();
+      expect(footerSkeleton(container)).toBeNull();
     });
   });
 

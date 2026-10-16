@@ -1,3 +1,5 @@
+import type { ComponentProps, ReactNode } from 'react';
+
 export interface PaginationItemLabel {
   singular: string;
   plural: string;
@@ -21,4 +23,10 @@ export type PaginationPageSizeProps = Pick<PaginationProps, 'pageSize' | 'onPage
 
 export interface PaginationPagesProps extends Pick<PaginationProps, 'page' | 'onPageChange'> {
   lastPage: number;
+}
+
+export interface PaginationLayoutProps extends Pick<ComponentProps<'div'>, 'aria-hidden'> {
+  summary: ReactNode;
+  pages: ReactNode;
+  pageSize: ReactNode;
 }

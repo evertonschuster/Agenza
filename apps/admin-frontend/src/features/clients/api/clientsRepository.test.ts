@@ -20,7 +20,7 @@ const LIST_ITEM = {
 };
 
 describe('clientsRepository.list', () => {
-  const FIRST_PAGE_OF_EVERYONE = { search: '', page: 1, pageSize: 20 };
+  const FIRST_PAGE_OF_EVERYONE = { q: '', page: 1, pageSize: 20 };
 
   it('always asks for a page and a size, so the screen never depends on the backend defaults', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
@@ -36,7 +36,7 @@ describe('clientsRepository.list', () => {
   it('sends the page, the size and the search term under the names the API reads', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
-    await clientsRepository.list({ search: 'maria', page: 3, pageSize: 50 });
+    await clientsRepository.list({ q: 'maria', page: 3, pageSize: 50 });
 
     expect(mockGet).toHaveBeenCalledWith('/api/v{version}/clients', {
       query: { Page: 3, PageSize: 50, Search: 'maria' },
@@ -56,7 +56,7 @@ describe('clientsRepository.list', () => {
   it('never sends a status, which lists every situation', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
-    await clientsRepository.list({ search: 'maria', page: 2, pageSize: 10 });
+    await clientsRepository.list({ q: 'maria', page: 2, pageSize: 10 });
 
     const [, options] = mockGet.mock.calls.at(-1) as [string, { query: object }];
     expect(options.query).not.toHaveProperty('Status');
@@ -66,7 +66,7 @@ describe('clientsRepository.list', () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
     const controller = new AbortController();
 
-    await clientsRepository.list({ search: 'maria', page: 1, pageSize: 20 }, controller.signal);
+    await clientsRepository.list({ q: 'maria', page: 1, pageSize: 20 }, controller.signal);
 
     const [, options] = mockGet.mock.calls.at(-1) as [string, { signal: AbortSignal }];
     expect(options.signal).toBe(controller.signal);
@@ -89,7 +89,7 @@ describe('clientsRepository.list', () => {
     };
     mockGet.mockResolvedValue({ ok: false, error });
 
-    const result = await clientsRepository.list({ search: 'x', page: 1, pageSize: 20 });
+    const result = await clientsRepository.list({ q: 'x', page: 1, pageSize: 20 });
 
     expect(result).toEqual({ ok: false, error });
   });

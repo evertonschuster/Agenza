@@ -38,7 +38,10 @@ ainda. Crie-os quando uma segunda feature precisar da mesma entidade, não antes
 
 **Páginas são cascas.** `<Page>.tsx` não tem `useState`, `useEffect` nem `useRef` próprios; toda a
 lógica mora no hook **daquela** página (`use<Page>.ts`). Hooks não são compartilhados entre páginas —
-a única exceção é um acessor puro de contexto como `useAuth`.
+as exceções são um acessor puro de contexto como `useAuth` e um hook genérico, sem domínio, num widget, como o
+`usePaginatedList` de `widgets/paginated-list-section` ([ADR 0069](../../docs/adr/0069-admin-frontend-paged-list-hook.md)).
+Uma lista paginada declara seus filtros em `model/` (interface + função que os lê da URL) e o hook da página só
+liga essa leitura e o repositório ao `usePaginatedList`.
 
 **`loader` e `action` moram em `ui/pages/<Page>/route.ts`** e são reexportados pelo barril, para que
 `app/routes.tsx` os importe via `@/features/<slice>` e a direção continue `app → features`.
