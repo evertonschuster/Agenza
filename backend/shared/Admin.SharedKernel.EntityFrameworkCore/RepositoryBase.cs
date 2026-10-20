@@ -53,7 +53,8 @@ public abstract class RepositoryBase<TEntity>
         Func<IQueryable<TEntity>, IOrderedQueryable<TEntity>> filterAndOrder,
         CancellationToken cancellationToken)
     {
-        var query = filterAndOrder(Set.AsNoTracking());
+        var untrackedQuery = Set.AsNoTracking();
+        var query = filterAndOrder(untrackedQuery);
 
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query.Skip(page.Offset).Take(page.PageSize).ToListAsync(cancellationToken);

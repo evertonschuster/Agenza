@@ -28,7 +28,11 @@ public class ListTagsQueryHandlerTests
 
     private static Tag NewTag(string name, string? description = null)
     {
-        return Tag.Create(Guid.NewGuid(), name, TagColor.Create("#0d9488").Value, description).Value;
+        var tagId = Guid.NewGuid();
+        var color = TagColor.Create("#0d9488").Value;
+        var tagResult = Tag.Create(tagId, name, color, description);
+
+        return tagResult.Value;
     }
 
     [Fact]
@@ -62,8 +66,10 @@ public class ListTagsQueryHandlerTests
     public async Task Handle_WithSearchAndPaging_PassesTheNormalizedFilterAndCancellation()
     {
         using var cancellation = new CancellationTokenSource();
-        Returns([NewTag("VIP")], 7);
-        var query = new ListTagsQuery(SearchText.Create("  VIP  ").Value) { Page = 2, PageSize = 3 };
+        var tag = NewTag("VIP");
+        Returns([tag], 7);
+        var search = SearchText.Create("  VIP  ").Value;
+        var query = new ListTagsQuery(search) { Page = 2, PageSize = 3 };
 
         var result = await _handler.Handle(query, cancellation.Token);
 
@@ -76,8 +82,10 @@ public class ListTagsQueryHandlerTests
     [Fact]
     public async Task Handle_KeepsTheMetadataReturnedByTheRepository()
     {
+        var tag = NewTag("VIP");
+        var page = new PagedResult<Tag>([tag], 12, 3, 4);
         _repository.ListAsync(Arg.Any<TagListFilter>(), Arg.Any<CancellationToken>())
-            .Returns(new PagedResult<Tag>([NewTag("VIP")], 12, 3, 4));
+            .Returns(page);
 
         var result = await _handler.Handle(new ListTagsQuery(), CancellationToken.None);
 

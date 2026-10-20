@@ -11,7 +11,11 @@ public class TagListPersistenceTests
 {
     private static Tag NewTag(string name)
     {
-        return Tag.Create(Guid.NewGuid(), name, TagColor.Create("#0d9488").Value, null).Value;
+        var tagId = Guid.NewGuid();
+        var color = TagColor.Create("#0d9488").Value;
+        var tagResult = Tag.Create(tagId, name, color, null);
+
+        return tagResult.Value;
     }
 
     private static async Task SaveAll(string databaseName, Guid tenantId, params Tag[] tags)
@@ -30,12 +34,20 @@ public class TagListPersistenceTests
         string databaseName, Guid tenantId, int page = 1, int pageSize = 20, string? search = null)
     {
         await using var context = PersistenceContext.Create(databaseName, tenantId);
-        var query = new ListTagsQuery(search is null ? null : SearchText.Create(search).Value)
+        SearchText? searchText = null;
+        if (search is not null)
+        {
+            searchText = SearchText.Create(search).Value;
+        }
+
+        var query = new ListTagsQuery(searchText)
         {
             Page = page,
             PageSize = pageSize,
         };
-        var result = await new TagRepository(context).ListAsync(query.ToFilter(), CancellationToken.None);
+        var repository = new TagRepository(context);
+        var filter = query.ToFilter();
+        var result = await repository.ListAsync(filter, CancellationToken.None);
         context.ChangeTracker.Entries().Should().BeEmpty();
         return result;
     }
