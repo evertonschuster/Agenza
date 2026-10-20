@@ -4,7 +4,8 @@ Status: accepted (2026-10); amends [ADR 0068](0068-admin-frontend-list-paginatio
 `apps/admin-frontend/AGENTS.md` that hooks are not shared between pages; follows
 [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md) (a TanStack Query proof of concept for the lists was turned
-down on 2026-10-15)
+down on 2026-10-15); amended by [ADR 0070](0070-admin-frontend-paged-list-state-in-the-hook.md) (points 1 to 4 and 6:
+the state is in the hook, not in the URL, and a request is told apart by the state object itself)
 
 ## Context
 

@@ -7,7 +7,9 @@ the owner; consumes the paged-list contract of [ADR 0063](0063-clients-list-and-
 follows [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md); amended by
 [ADR 0069](0069-admin-frontend-paged-list-hook.md) (points 4 and 5: the footer as a skeleton while the total of the
-current filters is unknown, and one shared hook for paged lists)
+current filters is unknown, and one shared hook for paged lists) and by
+[ADR 0070](0070-admin-frontend-paged-list-state-in-the-hook.md) (points 1, 3 and 5: the state is in the hook, not in
+the URL, and the URL helpers are gone)
 
 ## Context
 
