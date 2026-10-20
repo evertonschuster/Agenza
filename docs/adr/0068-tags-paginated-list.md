@@ -2,6 +2,8 @@
 
 Status: accepted (2026-10-20); applies [ADR 0064](0064-paged-reads-page-request-and-paged-result.md)
 and [ADR 0065](0065-string-value-objects-in-a-query-or-route.md) to the tags list.
+The frontend-compatibility consequence and collection-adapter rejection below are superseded by
+[ADR 0069](0069-tags-collection-compatibility-adapter.md); they remain as the original decision record.
 
 ## Context
 

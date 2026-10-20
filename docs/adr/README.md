@@ -18,7 +18,7 @@ superseded is historical evidence, not current implementation guidance.
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032, 0050 |
 | Logging and telemetry | 0054 |
-| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
+| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038, 0069 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
 | admin-frontend screens | 0067 |
 | AI agent instruction files | 0041 |
@@ -93,3 +93,4 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0066 enums read from a query or a route by one name ·
 0067 admin-frontend Pessoas list: whole CPF, filter and paging deferred, provisional detail route ·
 0068 tags list: always paged, shared paging contract and literal name search.
+0069 tags frontend: collection compatibility over bounded API pages during the paging rollout.

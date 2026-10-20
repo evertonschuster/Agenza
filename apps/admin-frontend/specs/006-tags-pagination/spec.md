@@ -75,3 +75,9 @@ etiqueta é retornada.
   integração em um PR de frontend separado, conforme AGENTS.md.
 - O formato anterior data: Tag[] é substituído por data: PagedResult<TagResponse>.
 - Não há mudança de esquema, de autenticação ou de escrita de etiquetas.
+
+## CI integration correction — 2026-10-20
+
+The requested pipeline repair adds the necessary consumer compatibility adapter documented in
+ADR 0069. The existing screen continues receiving the complete filtered collection through
+bounded API requests. Page navigation remains a separate frontend feature.

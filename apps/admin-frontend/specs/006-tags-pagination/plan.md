@@ -56,3 +56,11 @@ ou esconder o limite da primeira página. Não afirmar que o frontend passa sem 
 
 Executar build e test de backend/AdminBackend.slnx em Release e o gerador de tipos.
 Registrar os resultados em quickstart.md. A conversão usa somente colunas e filtros existentes.
+
+## CI integration correction
+
+ADR 0069 supersedes the original Integration Boundary above: the contract rollout now includes
+a collection adapter in tagsRepository.list so the existing screen continues to compile and
+display all filtered tags. A separate frontend feature will replace the adapter with explicit
+page navigation. MessagePack is pinned to its corrected patch release for the AppHost so the
+normal audited restore can run in Backend CI, CodeQL and API contract checks.

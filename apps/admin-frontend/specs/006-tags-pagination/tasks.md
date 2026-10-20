@@ -32,3 +32,11 @@ T001–T002 precedem US1; T003–T006 estabelecem o contrato antes dos testes e 
 US2 depende do filtro de US1. T010–T014 concluem a entrega.
 Testes de Application e persistência são independentes após os contratos estarem definidos;
 a implementação desta execução será sequencial.
+
+## CI repair and readability follow-up
+
+- [x] T015 Separate mapping, query setup and test fixture construction into named local variables.
+- [x] T016 Pin corrected MessagePack in backend/Directory.Packages.props and backend/AppHost/AppHost.csproj.
+- [x] T017 Adapt tagsRepository.list to collect bounded pages and test collection completeness and failures.
+- [x] T018 Record ADR 0069 and update the superseded compatibility decision and architecture reference.
+- [x] T019 Complete local gates; publish the fixes and verify the final PR checks in GitHub.

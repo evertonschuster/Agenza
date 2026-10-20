@@ -51,3 +51,18 @@ portões do monorepo estão verdes ou que a entrega está pronta para merge.
 
 Não foi realizado smoke autenticado contra PostgreSQL nem teste visual da tela. Não há índice,
 FK, CHECK ou outra garantia de banco nova nesta alteração.
+
+## CI repair validation — 2026-10-20
+
+- MessagePack 2.5.303 is pinned centrally and referenced only by the AppHost. The normal
+  audited Release build now passes without disabling NuGetAudit or warnings-as-errors.
+- The full backend suite passes again: 1,059 tests and all existing coverage gates.
+- The frontend TypeScript and production build pass with the collection compatibility adapter.
+- The frontend suite passes: 735 tests, 82 files, with its existing coverage gates.
+- ESLint passes with no errors; no rules or coverage thresholds were relaxed.
+- Readability follow-up separates mapped items, query setup, tag fixture construction,
+  search parsing and repository/filter setup into named local variables.
+- ADR 0069 supersedes the earlier decision to leave the collection consumer incompatible.
+  The existing screen still displays the complete catalog; page navigation remains deferred.
+- The earlier blocked results above describe the initial run. The repair is being verified
+  on the PR's new commit by the existing Backend CI, Frontend CI, API contract and CodeQL jobs.
