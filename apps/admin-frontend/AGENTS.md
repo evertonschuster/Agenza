@@ -45,12 +45,10 @@ iniciais e o repositório ao `usePaginatedList`, que guarda filtros, página e t
 ([ADR 0072](../../docs/adr/0072-admin-frontend-paged-list-state-in-the-hook.md)).
 
 **Buscar no backend é uma ação, não uma reação.** O `usePaginatedList` só pede uma página quando uma ação manda
-(`applyFilters`, troca de página ou de tamanho, "Tentar novamente", `reload`), na montagem e para corrigir uma
-página além da última. Nenhum efeito depende do estado dele: não acrescente um `useEffect` com dependências que
-dispare `fetchPage`, e uma ação nova passa pelo `request` do hook, conforme a
-[ADR 0073](../../docs/adr/0073-admin-frontend-paged-list-asks-only-when-told.md). Pessoas e Etiquetas usam o mesmo
-hook; em Etiquetas os tópicos `tagSaved` e `tagDeleted` chamam o `reload`, que pede de novo a página da tela sem
-tirar as linhas dela, conforme a [ADR 0074](../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md).
+(`applyFilters`, troca de página ou de tamanho, "Tentar novamente"), na montagem e para corrigir uma página além da
+última. Nenhum efeito depende do estado dele: não acrescente um `useEffect` com dependências que dispare
+`fetchPage`, e uma ação nova passa pelo `request` do hook, conforme a
+[ADR 0073](../../docs/adr/0073-admin-frontend-paged-list-asks-only-when-told.md).
 
 **`loader` e `action` moram em `ui/pages/<Page>/route.ts`** e são reexportados pelo barril, para que
 `app/routes.tsx` os importe via `@/features/<slice>` e a direção continue `app → features`.

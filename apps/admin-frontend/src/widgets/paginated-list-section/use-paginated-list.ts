@@ -108,16 +108,11 @@ export function usePaginatedList<F extends object, T>({
     request(query);
   }
 
-  function reload() {
-    send(query);
-  }
-
   const totalCount = knownTotal?.filters === filters ? knownTotal.totalCount : null;
 
   return {
     filters,
     applyFilters,
-    reload,
     list: toListState(result, onRetry),
     pagination: { page, pageSize, totalCount, onPageChange, onPageSizeChange },
   };

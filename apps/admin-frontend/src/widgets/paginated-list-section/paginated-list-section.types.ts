@@ -46,7 +46,6 @@ interface PaginatedListState<T> {
 interface UsePaginatedListResult<F, T> {
   filters: F;
   applyFilters: (patch: Partial<F>) => void;
-  reload: () => void;
   list: PaginatedListState<T>;
   pagination: PaginatedListSectionPaging;
 }

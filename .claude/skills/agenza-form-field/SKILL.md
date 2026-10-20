@@ -170,7 +170,7 @@ row happened to be holding (router navigation state, a cached list item). The li
 (paginated, or changed by someone else since); the edit form's job is to show what the backend has
 *now*. The hook returns a flat result whose `status` is **derived**, not stored: the hook keeps the id
 of the record currently in the form (`loadedId`) and reports `'loading'` while `isEdit && loadedId !==
-id` — the in-flight key compared with the last resolved one. React
+id` — the same "compare the in-flight key with the last resolved one" shape as `useTagListPage`. React
 Router keeps the page mounted when only `:id` changes, so a status set once at mount would keep the old
 record on screen, Salvar enabled, while the new one loads; the derived one can't.
 
