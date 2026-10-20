@@ -79,7 +79,8 @@ the real total (ADR 0063, ADR 0064).
 5. **The reusable parts:**
    - `shared/pagination/paging.ts`: the contract of `?page=`/`?pageSize=` as pure functions and constants (`readPaging`,
      `withPaging`, `getLastPage`, `getVisibleRange`, `getPageWindow`, `PAGE_SIZE_OPTIONS`, `DEFAULT_PAGE_SIZE`) and the
-     generic `PagedResult<T>`; tested without mocks;
+     generic `PagedResult<T>`; tested without mocks (historical inventory: what `paging.ts` holds now is in
+     [ADR 0072](0072-admin-frontend-paged-list-state-in-the-hook.md), point 5);
    - `shared/ui/select`: Base UI's Select through the shadcn CLI, trimmed to the five parts the footer uses (label,
      trigger, value, content, item). The owner chose it over a native `<select>` and over segmented buttons;
    - `widgets/pagination`: the footer, with the noun passed as `itemLabel: { singular, plural }`, the way a list passes

@@ -56,6 +56,11 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
    parameter names), with their tests. `paging.ts` keeps the constants, `PagedResult<T>`, `getLastPage`,
    `getVisibleRange` and `getPageWindow`.
 
+   > **2026-10 update:** that inventory is historical. Since then `paging.ts` exports only `FIRST_PAGE`,
+   > `DEFAULT_PAGE_SIZE`, `Paging`, `PagedResult<T>` and `getLastPage`. The pager's own math moved into
+   > `widgets/pagination`: `getPageWindow` is in `page-window.ts` and the offered sizes are a constant of
+   > `pagination-page-size.tsx`. `getVisibleRange` is gone; `PaginationSummary` works out its range itself.
+
 ## Consequences
 
 - **Pessoas no longer keeps its state anywhere but the screen.** A reload starts over on page 1 with no search, a
