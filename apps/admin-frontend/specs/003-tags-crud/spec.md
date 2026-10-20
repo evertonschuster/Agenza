@@ -44,23 +44,6 @@ have, following the backend contract: `string Name, string Color, string? Descri
   fica disponível — Cancelar desabilitado, ✕ oculto, `Esc` e clique fora ignorados — até a
   resposta chegar.
 
-### Session 2026-10-20
-
-- Q: A busca continua na URL (`/tags?q=...`), sobrevivendo a recarregar a página, a um link
-  compartilhado e ao Voltar/Avançar? → A: Não. A lista só busca no backend quando uma ação manda (a
-  busca, "Limpar busca", "Tentar novamente", a troca de página ou de tamanho, uma etiqueta salva ou
-  excluída) e uma vez ao abrir, e o Voltar trocando `?q=` seria uma busca disparada por reação. A
-  busca, a página e o tamanho ficam só na tela: continuam ao abrir e fechar os diálogos de nova
-  etiqueta, edição e exclusão, e recomeçam (busca vazia, página 1, 20 por página) ao recarregar, ao
-  abrir um link ou ao voltar de outra tela, como em Pessoas (ADR 0074).
-- Q: A listagem continua trazendo o catálogo inteiro de uma vez? → A: Não. O backend pagina a
-  listagem de etiquetas (ADR 0068), e a tela passa a paginar como a de Pessoas, com o mesmo rodapé:
-  "Exibindo 21–40 de 87 etiquetas", "Itens por página" (10, 20, 50 ou 100; padrão 20) e o
-  paginador. A paginação deixa de estar fora do escopo e o adaptador que percorria todas as páginas
-  (ADR 0069) sai. Salvar ou excluir uma etiqueta recarrega a página que está na tela, com a mesma
-  busca e o mesmo tamanho; se ela deixar de existir (a última etiqueta da última página foi
-  excluída), a lista vai para a última página que existe (ADR 0074).
-
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — A pessoa vê e localiza as etiquetas existentes (Priority: P1)
@@ -90,9 +73,6 @@ lista passa a mostrar apenas as etiquetas correspondentes, buscadas no backend.
 4. **Given** o painel autenticado em qualquer tela, **When** a pessoa abre a paleta de comandos e
    seleciona "Etiquetas" — ou acessa `/tags` diretamente —, **Then** a tela de gestão de Etiquetas é
    exibida.
-5. **Given** existem mais etiquetas do que cabem numa página, **When** a pessoa abre a tela, **Then**
-   vê as 20 primeiras, quantas existem no total e o paginador; **When** troca de página ou de
-   tamanho, **Then** a lista mostra aquela página, mantendo a busca.
 
 ---
 
@@ -183,8 +163,8 @@ explicação.
 
 ### Functional Requirements
 
-- **FR-001**: O sistema **DEVE** listar as etiquetas do tenant atual, página a página, mostrando
-  nome, cor e descrição de cada uma.
+- **FR-001**: O sistema **DEVE** listar todas as etiquetas do tenant atual, mostrando nome, cor e
+  descrição de cada uma.
 - **FR-002**: O sistema **DEVE** permitir localizar etiquetas por nome através de um campo de busca
   que filtra no backend, disparando a busca apenas quando a pessoa confirma explicitamente (tecla
   Enter ou botão de busca); **NÃO DEVE** filtrar a listagem já carregada no frontend a cada tecla
@@ -224,11 +204,6 @@ explicação.
   diálogo **NÃO DEVE** poder ser fechado: Cancelar **DEVE** ficar desabilitado, o ✕ **DEVE** ficar
   oculto e `Esc` e o clique fora **DEVEM** ser ignorados. Quando a resposta chegar, com sucesso o diálogo fecha sozinho;
   com erro, as saídas voltam a funcionar.
-- **FR-019**: A listagem **DEVE** paginar com o mesmo rodapé da lista de Pessoas: o resumo do que
-  está na tela e do total, o seletor "Itens por página" (10, 20, 50 ou 100; padrão 20) e o
-  paginador. Uma busca volta à página 1 mantendo o tamanho; trocar o tamanho volta à página 1
-  mantendo a busca. Salvar ou excluir uma etiqueta **DEVE** recarregar a página na tela, e uma página
-  que deixou de existir **DEVE** dar lugar à última que existe, nunca a "Nenhuma etiqueta ainda".
 ### Key Entities
 
 - **Etiqueta (Tag)**: representa um rótulo reutilizável aplicável a Serviços, usado para
@@ -254,8 +229,8 @@ explicação.
 
 - Sem modelo de papéis ou permissões: qualquer pessoa autenticada do tenant pode gerenciar etiquetas
   (mesma premissa da Fundação de UI).
-- O catálogo de etiquetas é pequeno (dezenas a poucas centenas). Ainda assim o backend pagina a
-  listagem desde a ADR 0068, e a tela pagina com ele (Clarification de 2026-10-20, FR-019).
+- O catálogo de etiquetas é pequeno (dezenas a poucas centenas) — a listagem não precisa de
+  paginação, alinhado ao endpoint existente do backend.
 - A tela tem rota própria (`/tags`), fora da área de Serviços, alcançável tanto pela paleta de
   comandos quanto por um destino próprio na navegação principal fixa — a navegação passa a ter sete
   destinos.
@@ -271,5 +246,6 @@ explicação.
 
 - CRUD de Serviços e de Categorias.
 - Atribuir ou remover etiquetas de um Serviço específico (pertence à tela de Serviço).
+- Paginação da listagem de etiquetas.
 - Qualquer modelo de papéis/permissões para restringir quem gerencia etiquetas.
 - Cores personalizadas além da paleta fixa.

@@ -1,6 +1,6 @@
 import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   createMemoryRouter,
@@ -12,7 +12,6 @@ import {
 } from 'react-router';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagDeletePage } from './TagDeletePage';
-import type { TagListQuery } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
 
 const { mockList, mockGet, mockDelete } = vi.hoisted(() => ({
@@ -31,10 +30,6 @@ const TAGS: Tag[] = [
 ];
 
 const PROMOCAO_CONFIRMATION = 'Tem certeza que deseja excluir a etiqueta "Promoção"?';
-
-function listOf(items: Tag[]) {
-  return { ok: true, data: { items, totalCount: items.length, page: 1, pageSize: 20 } };
-}
 
 function LocationProbe() {
   const location = useLocation();
@@ -61,7 +56,7 @@ function renderAt(initialEntries: string[]) {
 describe('TagDeletePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockList.mockResolvedValue(listOf(TAGS));
+    mockList.mockResolvedValue({ ok: true, data: TAGS });
     mockGet.mockImplementation((id: string) => {
       const tag = TAGS.find((candidate) => candidate.id === id);
       return Promise.resolve(
@@ -110,14 +105,13 @@ describe('TagDeletePage', () => {
     mockGet.mockReturnValue(new Promise((resolve) => (resolveGet = resolve)));
     renderAt(['/tags/1/delete']);
 
-    const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByRole('status')).toHaveTextContent('Carregando…');
+    expect(await screen.findByRole('status')).toHaveTextContent('Carregando…');
     expect(screen.getByRole('button', { name: 'Excluir' })).toBeDisabled();
 
     resolveGet({ ok: true, data: TAGS[0]! });
 
     expect(await screen.findByText(PROMOCAO_CONFIRMATION)).toBeInTheDocument();
-    expect(within(dialog).queryByRole('status')).not.toBeInTheDocument();
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Excluir' })).toBeEnabled();
   });
 
@@ -129,7 +123,7 @@ describe('TagDeletePage', () => {
 
     await user.click(screen.getByRole('link', { name: 'Excluir Promoção' }));
     await screen.findByText(PROMOCAO_CONFIRMATION);
-    mockList.mockResolvedValue(listOf(TAGS.filter((tag) => tag.id !== '1')));
+    mockList.mockResolvedValue({ ok: true, data: TAGS.filter((tag) => tag.id !== '1') });
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
 
     expect(mockDelete).toHaveBeenCalledWith('1');
@@ -228,27 +222,18 @@ describe('TagDeletePage', () => {
     expect(screen.getByTestId('location').textContent).toBe('location: /tags');
   });
 
-  it('closes without deleting when Cancelar is clicked, with the search the list had still on screen (spec US4 scenario 3, ADR 0074)', async () => {
+  it('closes without deleting when Cancelar is clicked, preserving the active search (spec US4 scenario 3)', async () => {
     const user = userEvent.setup();
-    mockList.mockImplementation(({ search }: TagListQuery) =>
-      Promise.resolve(
-        listOf(search ? TAGS.filter((tag) => tag.name.toLowerCase().includes(search)) : TAGS),
-      ),
-    );
-    renderAt(['/tags']);
-    await screen.findByText('VIP');
-    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'promo{Enter}');
-    await waitFor(() => expect(screen.queryByText('VIP')).not.toBeInTheDocument());
+    renderAt(['/tags?q=promo']);
+    await screen.findByText('Promoção');
 
     await user.click(screen.getByRole('link', { name: 'Excluir Promoção' }));
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(mockDelete).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
-    expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('promo');
-    expect(screen.getByText('Promoção')).toBeInTheDocument();
-    expect(screen.queryByText('VIP')).not.toBeInTheDocument();
-    expect(mockList).toHaveBeenCalledTimes(2);
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo'),
+    );
   });
 
   it('shows the backend message in a toast and returns to the list when the tag does not exist', async () => {

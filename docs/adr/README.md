@@ -93,9 +93,8 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0066 enums read from a query or a route by one name ·
 0067 admin-frontend Pessoas list: whole CPF, filter and paging deferred, provisional detail route ·
 0068 tags list: always paged, shared paging contract and literal name search ·
-0069 tags frontend: collection compatibility over bounded API pages during the paging rollout (retired by 0074) ·
+0069 tags frontend: collection compatibility over bounded API pages during the paging rollout ·
 0070 admin-frontend paged lists: page and size in the URL, one footer shared through PaginatedListSection ·
 0071 admin-frontend paged lists share one hook: filters read by each list, the total kept per filters ·
 0072 admin-frontend paged lists keep their state in the hook, not in the URL ·
-0073 admin-frontend paged lists ask the backend only when an action tells them to ·
-0074 admin-frontend Etiquetas pages on usePaginatedList, asks only when told to, with its state out of the URL.
+0073 admin-frontend paged lists ask the backend only when an action tells them to.

@@ -19,8 +19,8 @@ export function useTagDeletePage(): UseTagDeletePageResult {
       void navigate(-1);
       return;
     }
-    void navigate(TAGS_PATH, { replace: true });
-  }, [navigate, canGoBack]);
+    void navigate({ pathname: TAGS_PATH, search: location.search }, { replace: true });
+  }, [navigate, canGoBack, location.search]);
 
   useEffect(() => {
     let ignore = false;
