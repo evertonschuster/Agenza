@@ -1,13 +1,12 @@
 import { useEffect, useRef, type SubmitEvent } from 'react';
 import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { clientsRepository } from '../../../api/clientsRepository';
-import { readClientListFilters } from '../../../model/clientListFilters';
 import type { UseClientListPageResult } from './useClientListPage.types';
 
 export function useClientListPage(): UseClientListPageResult {
   const { filters, setFilters, list, pagination } = usePaginatedList({
-    readFilters: readClientListFilters,
-    fetchPage: clientsRepository.list,
+    initialFilters: { q: '' },
+    fetchPage: (query, signal) => clientsRepository.list(query, signal),
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
 

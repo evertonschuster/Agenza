@@ -1,5 +1,4 @@
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import type { ListFilters } from '@/shared/pagination/filters';
 import type { PagedResult, Paging } from '@/shared/pagination/paging';
 import type {
   ListSectionFailure,
@@ -17,13 +16,27 @@ type PaginatedListSectionProps<T> = ListSectionProps<T> & {
   skeletonRowCount?: never;
 };
 
+interface PaginatedListAnswer<T> {
+  requestKey: string;
+  result: ApiResult<PagedResult<T>>;
+}
+
+interface PaginatedListKnownTotal {
+  filtersKey: string;
+  totalCount: number;
+}
+
+interface PaginatedListQuery<F> extends Paging {
+  filters: F;
+}
+
 interface PaginatedListSectionFooterProps {
   status: ListSectionStatus;
   pagination: PaginatedListSectionPaging;
 }
 
-interface UsePaginatedListOptions<F extends ListFilters<F>, T> {
-  readFilters: (params: URLSearchParams) => F;
+interface UsePaginatedListOptions<F, T> {
+  initialFilters: F;
   fetchPage: (query: F & Paging, signal: AbortSignal) => Promise<ApiResult<PagedResult<T>>>;
 }
 
@@ -43,7 +56,10 @@ interface UsePaginatedListResult<F, T> {
 }
 
 export type {
+  PaginatedListAnswer,
+  PaginatedListKnownTotal,
   PaginatedListPagination,
+  PaginatedListQuery,
   PaginatedListSectionFooterProps,
   PaginatedListSectionPaging,
   PaginatedListSectionProps,

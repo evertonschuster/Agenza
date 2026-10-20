@@ -1,30 +1,20 @@
 import { useEffect, useEffectEvent, useState } from 'react';
-import { useSearchParams } from 'react-router';
 import { extractErrorMessage, type ApiResult } from '@/shared/api/servicesFacade';
-import { withFilters, type ListFilters } from '@/shared/pagination/filters';
 import {
+  DEFAULT_PAGE_SIZE,
   FIRST_PAGE,
   getLastPage,
-  readPaging,
-  withPaging,
   type PagedResult,
 } from '@/shared/pagination/paging';
 import { ListSectionStatus } from '@/widgets/list-section';
 import type {
+  PaginatedListAnswer,
+  PaginatedListKnownTotal,
+  PaginatedListQuery,
   PaginatedListState,
   UsePaginatedListOptions,
   UsePaginatedListResult,
 } from './paginated-list-section.types';
-
-interface Answer<T> {
-  requestKey: string;
-  result: ApiResult<PagedResult<T>>;
-}
-
-interface KnownTotal {
-  filtersKey: string;
-  totalCount: number;
-}
 
 function toListState<T>(
   result: ApiResult<PagedResult<T>> | null,
@@ -46,20 +36,28 @@ function toListState<T>(
   return { status: ListSectionStatus.Ready, items: result.data.items, failure: null };
 }
 
-export function usePaginatedList<F extends ListFilters<F>, T>({
-  readFilters,
+export function usePaginatedList<F extends object, T>({
+  initialFilters,
   fetchPage,
 }: UsePaginatedListOptions<F, T>): UsePaginatedListResult<F, T> {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const filters = readFilters(searchParams);
-  const { page, pageSize } = readPaging(searchParams);
-  const filtersKey = withFilters(new URLSearchParams(), filters).toString();
-  const requestKey = withPaging(new URLSearchParams(filtersKey), { page, pageSize }).toString();
-  const [answer, setAnswer] = useState<Answer<T> | null>(null);
-  const [knownTotal, setKnownTotal] = useState<KnownTotal | null>(null);
+  const [query, setQuery] = useState<PaginatedListQuery<F>>({
+    filters: initialFilters,
+    page: FIRST_PAGE,
+    pageSize: DEFAULT_PAGE_SIZE,
+  });
+  const { filters, page, pageSize } = query;
+  const filtersKey = JSON.stringify(filters);
+  const requestKey = JSON.stringify([filters, page, pageSize]);
+  const [answer, setAnswer] = useState<PaginatedListAnswer<T> | null>(null);
+  const [knownTotal, setKnownTotal] = useState<PaginatedListKnownTotal | null>(null);
   const [attempt, setAttempt] = useState(0);
 
   if (answer !== null && answer.requestKey !== requestKey) setAnswer(null);
+
+  const current = answer?.requestKey === requestKey ? answer.result : null;
+  const lastPage = current?.ok ? getLastPage(current.data.totalCount, pageSize) : null;
+
+  if (lastPage !== null && page > lastPage) setQuery({ ...query, page: lastPage });
 
   const fetchCurrentPage = useEffectEvent((signal: AbortSignal) =>
     fetchPage({ ...filters, page, pageSize }, signal),
@@ -79,33 +77,18 @@ export function usePaginatedList<F extends ListFilters<F>, T>({
     };
   }, [requestKey, filtersKey, attempt]);
 
-  const current = answer?.requestKey === requestKey ? answer.result : null;
-  const lastPage = current?.ok ? getLastPage(current.data.totalCount, pageSize) : null;
-  const pastLastPage = lastPage !== null && page > lastPage;
-  const canonicalSearch = withPaging(withFilters(searchParams, filters), {
-    page: pastLastPage ? lastPage : page,
-    pageSize,
-  }).toString();
-
-  useEffect(() => {
-    if (canonicalSearch === searchParams.toString()) return;
-    setSearchParams(new URLSearchParams(canonicalSearch), { replace: true });
-  }, [canonicalSearch, searchParams, setSearchParams]);
-
-  const totalCount =
-    !pastLastPage && knownTotal?.filtersKey === filtersKey ? knownTotal.totalCount : null;
+  const totalCount = knownTotal?.filtersKey === filtersKey ? knownTotal.totalCount : null;
 
   function setFilters(patch: Partial<F>) {
-    const next = withFilters(searchParams, { ...filters, ...patch });
-    setSearchParams(withPaging(next, { page: FIRST_PAGE, pageSize }));
+    setQuery({ filters: { ...filters, ...patch }, page: FIRST_PAGE, pageSize });
   }
 
   function onPageChange(nextPage: number) {
-    setSearchParams(withPaging(searchParams, { page: nextPage, pageSize }));
+    setQuery({ ...query, page: nextPage });
   }
 
   function onPageSizeChange(nextPageSize: number) {
-    setSearchParams(withPaging(searchParams, { page: FIRST_PAGE, pageSize: nextPageSize }));
+    setQuery({ ...query, page: FIRST_PAGE, pageSize: nextPageSize });
   }
 
   function onRetry() {
@@ -116,7 +99,7 @@ export function usePaginatedList<F extends ListFilters<F>, T>({
   return {
     filters,
     setFilters,
-    list: toListState(pastLastPage ? null : current, onRetry),
+    list: toListState(current, onRetry),
     pagination: { page, pageSize, totalCount, onPageChange, onPageSizeChange },
   };
 }

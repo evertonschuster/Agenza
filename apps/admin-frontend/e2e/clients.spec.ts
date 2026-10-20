@@ -148,24 +148,6 @@ test.describe('People list', () => {
     }
   });
 
-  test('keeps the search in the URL, so it survives a reload', async ({ page }) => {
-    const person = {
-      name: uniqueName('Recarga E2E'),
-      email: `recarga.${Date.now()}@example.com`,
-      cpf: validCpf(),
-    };
-    await registerPerson(page, person);
-
-    await searchFor(page, person.name);
-    await expect(page).toHaveURL(/\/pessoas\?q=/);
-    await page.reload();
-
-    await expect(page.getByLabel('Buscar pessoas por nome, e-mail ou CPF')).toHaveValue(
-      person.name,
-    );
-    await expect(page.getByRole('row', { name: new RegExp(person.name) })).toBeVisible();
-  });
-
   test('names a search that finds nobody and clears it', async ({ page }) => {
     await page.getByRole('link', { name: 'Pessoas' }).click();
     await expect(page).toHaveURL(/\/pessoas$/);
@@ -175,7 +157,6 @@ test.describe('People list', () => {
 
     await expect(page.getByText(`Nenhuma pessoa encontrada para «${term}»`)).toBeVisible();
     await page.getByRole('button', { name: 'Limpar busca' }).click();
-    await expect(page).toHaveURL(/\/pessoas$/);
     await expect(page.getByLabel('Buscar pessoas por nome, e-mail ou CPF')).toHaveValue('');
     await expect(page.getByText(/Nenhuma pessoa encontrada para/)).toHaveCount(0);
   });
@@ -229,7 +210,8 @@ test.describe('People list paging', () => {
   test.beforeEach(async ({ page }) => {
     await loginAsDemoUser(page);
     prefix = await seedPagedPeople(page);
-    await page.goto(`/pessoas?q=${encodeURIComponent(prefix)}`);
+    await page.goto('/pessoas');
+    await searchFor(page, prefix);
     await expect(pagingSummary(page)).toHaveText(`Exibindo 1–20 de ${PAGED_PEOPLE} pessoas`);
   });
 
@@ -240,7 +222,7 @@ test.describe('People list paging', () => {
 
     await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
     await expect(page.getByRole('row')).toHaveCount(6);
-    await expect(page).toHaveURL(/q=Paginacao\+E2E\+\d+&page=2$/);
+    await expect(page).toHaveURL(/\/pessoas$/);
     await expect(page.getByRole('button', { name: 'Próxima' })).toHaveAttribute(
       'aria-disabled',
       'true',
@@ -249,7 +231,6 @@ test.describe('People list paging', () => {
     await page.getByRole('button', { name: 'Anterior' }).click();
 
     await expect(pagingSummary(page)).toHaveText(`Exibindo 1–20 de ${PAGED_PEOPLE} pessoas`);
-    await expect(page).not.toHaveURL(/page=/);
   });
 
   test('goes straight to a numbered page', async ({ page }) => {
@@ -263,7 +244,7 @@ test.describe('People list paging', () => {
   });
 
   test('changes the items per page and starts again from the first page', async ({ page }) => {
-    await page.goto(`/pessoas?q=${encodeURIComponent(prefix)}&page=2`);
+    await page.getByRole('button', { name: 'Próxima' }).click();
     await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
 
     await pageSizeSelect(page).click();
@@ -271,29 +252,7 @@ test.describe('People list paging', () => {
 
     await expect(pagingSummary(page)).toHaveText(`Exibindo 1–10 de ${PAGED_PEOPLE} pessoas`);
     await expect(page.getByRole('row')).toHaveCount(11);
-    await expect(page).toHaveURL(/pageSize=10$/);
     await expect(page.getByRole('button', { name: 'Ir para a página 3' })).toBeVisible();
-  });
-
-  test('keeps the page in the URL, so it survives a reload, and Back returns to the one before', async ({
-    page,
-  }) => {
-    await page.getByRole('button', { name: 'Próxima' }).click();
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
-
-    await page.reload();
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
-
-    await page.goBack();
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 1–20 de ${PAGED_PEOPLE} pessoas`);
-  });
-
-  test('sends a page that does not exist to the last one that does', async ({ page }) => {
-    await page.goto(`/pessoas?q=${encodeURIComponent(prefix)}&page=99`);
-
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
-    await expect(page).toHaveURL(/page=2$/);
-    await expect(page.getByText('Nenhuma pessoa ainda')).toHaveCount(0);
   });
 
   test('starts over on the first page when the search changes', async ({ page }) => {
@@ -303,7 +262,6 @@ test.describe('People list paging', () => {
     await searchFor(page, `${prefix} 07`);
 
     await expect(pagingSummary(page)).toHaveText('Exibindo 1 de 1 pessoa');
-    await expect(page).not.toHaveURL(/page=/);
     await expect(page.getByRole('row', { name: new RegExp(`${prefix} 07`) })).toBeVisible();
   });
 });
