@@ -7,10 +7,8 @@ import type { TagListFilters } from '../model/tagListFilters';
 
 export type TagListQuery = TagListFilters & Paging;
 
-function list(
-  { search, page, pageSize }: TagListQuery,
-  signal?: AbortSignal,
-): Promise<ApiResult<TagList>> {
+function list(query: TagListQuery, signal?: AbortSignal): Promise<ApiResult<TagList>> {
+  const { search, page, pageSize } = query;
   return servicesApi.get('/api/v{version}/tags', {
     query: { Page: page, PageSize: pageSize, ...(search ? { Search: search } : {}) },
     signal,
