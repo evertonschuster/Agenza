@@ -27,13 +27,16 @@ own page's loading state (the page doesn't exist yet while the loader runs). `do
 ## Data contract
 
 `/tags` has no `route.ts`, no `loader`, and no `action`. `TagListPage`'s own hook
-(`useTagListPage.ts`) calls `tagsRepository.list(query, signal)` only when told to: once on mount,
-from the search, "Limpar busca" and "Tentar novamente", and from the `tagSaved` and `tagDeleted`
-topics, never from an effect keyed on its state (ADR 0074).
+(`useTagListPage.ts`) hands `tagsRepository.list` to `usePaginatedList`, which calls it with
+`{ search, page, pageSize }` and a signal only when told to: once on mount, from the search,
+"Limpar busca", a page, a size and "Tentar novamente", from the `tagSaved` and `tagDeleted` topics
+(its `reload`), and to correct a page past the end, never from an effect keyed on its state
+(ADR 0074). One call is one `GET /tags?Page=&PageSize=[&Search=]`.
 
-- **Input**: the submitted search, kept in the hook's own state and never in the URL. `/tags?q=...`
-  is ignored: the page opens with an empty field and the whole catalog, and the search survives
-  opening and closing a dialog only because the list stays mounted under it.
+- **Input**: the submitted search, the page and the size, kept in the hook's own state and never in
+  the URL. `/tags?q=...` (or `?page=`) is ignored: the page opens with an empty field on the first
+  page of 20, and the search, page and size survive opening and closing a dialog only because the
+  list stays mounted under it.
 - **Behavior**: never `unwrapOrThrow`s — a repository failure resolves as `status: 'error'` in the
   hook's own state, rendered in-page by `shared/ui/list-section` (`docs/ARCHITECTURE.md` §2), **every**
   failure treated alike. This hook deliberately does not special-case `Session.Missing` /
@@ -41,9 +44,10 @@ topics, never from an effect keyed on its state (ADR 0074).
   lifecycle. That is a known, accepted gap, not a claim that something else catches it: nothing else
   in the app reacts to those two codes today (`docs/ARCHITECTURE.md` §5/§6 has the audit trail).
 - **Loading**: `status` is derived from the answer the hook holds, not stored as its own `setState`:
-  loading until the first answer, and again on every search, so `list-section`'s loading skeleton
-  shows both times. A topic's reload keeps the rows on screen until its answer. Every request aborts
-  the one in flight, and an aborted request's answer is dropped.
+  loading until the first answer, and again on every search, page or size, so the loading skeleton
+  (one row per item of the page size) shows each time. A topic's reload keeps the rows and the
+  footer on screen until its answer. Every request aborts the one in flight, and an aborted
+  request's answer is dropped.
 
 ## Contract rules
 
@@ -73,8 +77,8 @@ one was built, found obsolete, and removed — `docs/ARCHITECTURE.md` §5).
   blocked outcome with the backend's message shown verbatim, not an error boundary.
 - **On success**: `onConfirm` calls `tagDeleted.publish({ id: tag.id })` — a generic
   `shared/pubsub` topic owned by `features/tags/model/tagEvents.ts`, not an outlet-context callback.
-  `useTagListPage` self-subscribes via `useTopic(tagDeleted, () => fetchTags(query))`, so the publish
-  synchronously calls the same `fetchTags` function the `query`-change effect calls, before
+  `useTagListPage` self-subscribes via `useTopic(tagDeleted, reload)`, so the publish
+  synchronously asks again for the page on screen (ADR 0074), before
   `ConfirmDialog` calls `onOpenChange(false)` — the list refetch is still guaranteed in flight before
   the navigation back to `/tags` fires, just via a signal `TagDeletePage` doesn't need to know anyone
   is listening to. `docs/ARCHITECTURE.md` §5 has the full reasoning for the switch.

@@ -1,14 +1,11 @@
-import { PlusIcon, SearchIcon } from 'lucide-react';
+import { PlusIcon } from 'lucide-react';
 import { Link, Outlet } from 'react-router';
-import {
-  InputGroup,
-  InputGroupAddon,
-  InputGroupButton,
-  InputGroupInput,
-} from '@/shared/ui/input-group';
+import type { CountNoun } from '@/shared/format/count';
 import { buttonVariants } from '@/shared/ui/button';
-import { ListSection, type ListSectionEmptyCopy } from '@/widgets/list-section';
+import type { ListSectionEmptyCopy } from '@/widgets/list-section';
+import { PaginatedListSection } from '@/widgets/paginated-list-section';
 import { tagColumns } from './components/tagColumns';
+import { TagListSearch } from './components/TagListSearch';
 import { useTagListPage } from './useTagListPage';
 
 const EMPTY_COPY: ListSectionEmptyCopy = {
@@ -18,8 +15,10 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
   searchDescription: 'Confira a grafia do nome.',
 };
 
+const ITEM_LABEL: CountNoun = { singular: 'etiqueta', plural: 'etiquetas' };
+
 export function TagListPage() {
-  const { tags, status, failure, query, searchInputRef, onSearchSubmit, onClearSearch, onRetry } =
+  const { list, pagination, searchTerm, searchInputRef, onSearchSubmit, onClearSearch } =
     useTagListPage();
 
   return (
@@ -32,33 +31,18 @@ export function TagListPage() {
         </Link>
       </div>
 
-      <form onSubmit={onSearchSubmit} role="search">
-        <InputGroup>
-          <InputGroupAddon>
-            <SearchIcon aria-hidden="true" />
-          </InputGroupAddon>
-          <InputGroupInput
-            ref={searchInputRef}
-            name="search"
-            placeholder="Buscar etiquetas por nome..."
-            aria-label="Buscar etiquetas por nome"
-          />
-          <InputGroupAddon align="inline-end">
-            <InputGroupButton type="submit">Buscar</InputGroupButton>
-          </InputGroupAddon>
-        </InputGroup>
-      </form>
+      <TagListSearch searchInputRef={searchInputRef} onSearchSubmit={onSearchSubmit} />
 
-      <ListSection
-        status={status}
-        items={tags}
+      <PaginatedListSection
+        {...list}
         getKey={(tag) => tag.id}
         aria-label="Etiquetas"
         columns={tagColumns()}
         emptyCopy={EMPTY_COPY}
-        search={{ term: query, onClear: onClearSearch }}
+        search={{ term: searchTerm, onClear: onClearSearch }}
         errorTitle="Não foi possível carregar as etiquetas."
-        failure={failure && { ...failure, onRetry }}
+        pagination={pagination}
+        itemLabel={ITEM_LABEL}
       />
 
       <Outlet />

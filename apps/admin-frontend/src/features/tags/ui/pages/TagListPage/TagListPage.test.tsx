@@ -3,10 +3,13 @@ import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import { footerSkeleton } from '@/test/footerSkeleton';
 import { pending } from '@/test/pending';
 import { TagListPage } from './TagListPage';
+import type { TagListQuery } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
 import { tagDeleted, tagSaved } from '../../../model/tagEvents';
+import type { TagList } from '../../../model/tagList';
 
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
 
@@ -15,15 +18,53 @@ vi.mock('../../../api/tagsRepository', () => ({
 }));
 
 const SEARCH_LABEL = 'Buscar etiquetas por nome';
+const PAGE_SIZE_LABEL = 'Itens por página';
 
-const TAGS: Tag[] = [
-  { id: '1', name: 'Promoção', color: '#f59e0b', description: 'Desconto temporário' },
-  { id: '2', name: 'VIP', color: '#8b5cf6', description: null },
-];
+const PROMO: Tag = {
+  id: '1',
+  name: 'Promoção',
+  color: '#f59e0b',
+  description: 'Desconto temporário',
+};
+const VIP: Tag = { id: '2', name: 'VIP', color: '#8b5cf6', description: null };
 
-interface ListAnswer {
-  ok: true;
-  data: Tag[];
+const TAGS = [PROMO, VIP];
+
+const FIRST_PAGE_OF_EVERY_TAG = { search: '', page: 1, pageSize: 20 };
+
+type ListAnswer = { ok: true; data: TagList };
+
+function listOf(items: Tag[], paging: Partial<TagList> = {}): ListAnswer {
+  return {
+    ok: true,
+    data: { items, totalCount: items.length, page: 1, pageSize: 20, ...paging },
+  };
+}
+
+function manyTags(count: number): Tag[] {
+  return Array.from({ length: count }, (_, index) => ({
+    id: `t${index + 1}`,
+    name: `Etiqueta ${String(index + 1).padStart(3, '0')}`,
+    color: '#0d9488',
+    description: null,
+  }));
+}
+
+function serve(catalog: Tag[]) {
+  mockList.mockImplementation(({ search, page, pageSize }: TagListQuery) => {
+    const needle = search.toLowerCase();
+    const matching = needle
+      ? catalog.filter((tag) => tag.name.toLowerCase().includes(needle))
+      : catalog;
+    const start = (page - 1) * pageSize;
+    return Promise.resolve(
+      listOf(matching.slice(start, start + pageSize), {
+        totalCount: matching.length,
+        page,
+        pageSize,
+      }),
+    );
+  });
 }
 
 function LocationProbe() {
@@ -44,20 +85,16 @@ function renderTagListPage(initialEntries?: string[]) {
   return render(tagListPageAt(initialEntries));
 }
 
-function renderPage(tags: Tag[], initialEntries?: string[]) {
-  mockList.mockImplementation((search?: string) => {
-    const needle = search?.toLowerCase();
-    const filtered = needle ? tags.filter((tag) => tag.name.toLowerCase().includes(needle)) : tags;
-    return Promise.resolve({ ok: true, data: filtered });
-  });
+function renderPage(catalog: Tag[], initialEntries?: string[]) {
+  serve(catalog);
   return renderTagListPage(initialEntries);
 }
 
 // Only the row-link tests need a real `tags` Route match — relative link resolution needs it to
 // know `/tags` is the route's own base, which a bare, routeless `<TagListPage />` render can't give
 // it. Every other test above renders the page directly and never inspects an href.
-function renderAtTagsRoute(tags: Tag[]) {
-  mockList.mockResolvedValue({ ok: true, data: tags });
+function renderAtTagsRoute(catalog: Tag[]) {
+  serve(catalog);
   return render(
     <MemoryRouter initialEntries={['/tags']}>
       <Routes>
@@ -68,9 +105,17 @@ function renderAtTagsRoute(tags: Tag[]) {
   );
 }
 
+function location() {
+  return screen.getByTestId('location').textContent;
+}
+
 function signalOf(call: number) {
-  const [, signal] = (mockList.mock.calls[call] ?? []) as [string | undefined, AbortSignal?];
+  const [, signal] = (mockList.mock.calls[call] ?? []) as [TagListQuery, AbortSignal?];
   return signal;
+}
+
+function skeletonRows(container: HTMLElement) {
+  return container.querySelector('[aria-busy="true"]')?.querySelectorAll('tbody tr');
 }
 
 function submitSearch(term: string) {
@@ -84,16 +129,16 @@ describe('TagListPage', () => {
   });
 
   describe('when it asks the backend (ADR 0074)', () => {
-    it('asks once on mount, for every tag', async () => {
+    it('asks once on mount, for the first page of 20 tags with no search', async () => {
       renderPage(TAGS);
 
       expect(await screen.findByText('Promoção')).toBeInTheDocument();
       expect(mockList).toHaveBeenCalledTimes(1);
-      expect(mockList).toHaveBeenCalledWith(undefined, expect.any(AbortSignal));
+      expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
     });
 
     it('asks twice on mount only under StrictMode, aborting the first of the two development runs', async () => {
-      mockList.mockResolvedValue({ ok: true, data: TAGS });
+      serve(TAGS);
 
       render(<StrictMode>{tagListPageAt()}</StrictMode>);
 
@@ -104,7 +149,7 @@ describe('TagListPage', () => {
     });
 
     it('does not ask again when the page renders again', async () => {
-      mockList.mockResolvedValue({ ok: true, data: TAGS });
+      serve(TAGS);
       const { rerender } = renderTagListPage();
       await screen.findByText('Promoção');
 
@@ -121,14 +166,17 @@ describe('TagListPage', () => {
       act(() => {
         submitSearch('zzz');
         expect(mockList).toHaveBeenCalledTimes(2);
-        expect(mockList).toHaveBeenLastCalledWith('zzz', expect.any(AbortSignal));
+        expect(mockList).toHaveBeenLastCalledWith(
+          { search: 'zzz', page: 1, pageSize: 20 },
+          expect.any(AbortSignal),
+        );
       });
 
       const clear = await screen.findByRole('button', { name: 'Limpar busca' });
       act(() => {
         fireEvent.click(clear);
         expect(mockList).toHaveBeenCalledTimes(3);
-        expect(mockList).toHaveBeenLastCalledWith(undefined, expect.any(AbortSignal));
+        expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
       });
 
       expect(await screen.findByText('Promoção')).toBeInTheDocument();
@@ -148,7 +196,10 @@ describe('TagListPage', () => {
       act(() => {
         fireEvent.click(retry);
         expect(mockList).toHaveBeenCalledTimes(3);
-        expect(mockList).toHaveBeenLastCalledWith('vip', expect.any(AbortSignal));
+        expect(mockList).toHaveBeenLastCalledWith(
+          { search: 'vip', page: 1, pageSize: 20 },
+          expect.any(AbortSignal),
+        );
       });
 
       expect(await screen.findByText('VIP')).toBeInTheDocument();
@@ -171,14 +222,18 @@ describe('TagListPage', () => {
         act(() => {
           topic.publish({ id: '2' });
           expect(mockList).toHaveBeenCalledTimes(3);
-          expect(mockList).toHaveBeenLastCalledWith('vip', expect.any(AbortSignal));
+          expect(mockList).toHaveBeenLastCalledWith(
+            { search: 'vip', page: 1, pageSize: 20 },
+            expect.any(AbortSignal),
+          );
         });
 
         expect(screen.getByText('VIP')).toBeInTheDocument();
         expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+        expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1 de 1 etiqueta');
 
         await act(async () => {
-          reload.resolve({ ok: true, data: [{ ...TAGS[1]!, name: 'VIP Ouro' }] });
+          reload.resolve(listOf([{ ...VIP, name: 'VIP Ouro' }]));
           await reload.promise;
         });
 
@@ -213,20 +268,15 @@ describe('TagListPage', () => {
   });
 
   it('shows the table loading skeleton on first render, before the initial fetch resolves', async () => {
-    let resolveInitial!: (value: { ok: true; data: Tag[] }) => void;
-    mockList.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveInitial = resolve;
-        }),
-    );
+    const initial = pending<ListAnswer>();
+    mockList.mockImplementationOnce(() => initial.promise);
 
     const { container } = renderTagListPage();
 
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(screen.queryByText('Não foi possível carregar as etiquetas.')).not.toBeInTheDocument();
 
-    resolveInitial({ ok: true, data: TAGS });
+    initial.resolve(listOf(TAGS));
 
     await waitFor(() => expect(screen.getByText('Promoção')).toBeInTheDocument());
     expect(container.querySelector('[aria-busy="true"]')).toBeNull();
@@ -239,7 +289,7 @@ describe('TagListPage', () => {
     expect(screen.queryByText('/tags')).not.toBeInTheDocument();
   });
 
-  it('lists every tag with its name, color chip and description (spec US1)', async () => {
+  it('lists each tag with its name, color chip and description (spec US1)', async () => {
     renderPage(TAGS);
 
     expect(await screen.findByText('Promoção')).toBeInTheDocument();
@@ -291,9 +341,7 @@ describe('TagListPage', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/tags');
     await user.click(screen.getByRole('link', { name: 'Nova etiqueta' }));
 
-    await waitFor(() =>
-      expect(screen.getByTestId('location').textContent).toBe('location: /tags/new'),
-    );
+    await waitFor(() => expect(location()).toBe('location: /tags/new'));
   });
 
   it('shows the failure with the backend message and its code, not the empty-catalog message, when the initial fetch fails (spec FR-012)', async () => {
@@ -312,12 +360,12 @@ describe('TagListPage', () => {
     expect(alert).toHaveTextContent('Não foi possível carregar as etiquetas.');
     expect(alert).toHaveTextContent('O servidor está instável. Tente novamente em instantes.');
     expect(alert).toHaveTextContent('Código: Server.Unavailable');
-    expect(screen.queryByText('Nenhum item encontrado.')).not.toBeInTheDocument();
+    expect(screen.queryByText('Nenhuma etiqueta ainda')).not.toBeInTheDocument();
   });
 
   it('retries the same search from the failure, showing the skeleton while it reloads', async () => {
     const user = userEvent.setup();
-    mockList.mockResolvedValueOnce({ ok: true, data: TAGS });
+    mockList.mockResolvedValueOnce(listOf(TAGS));
     mockList.mockResolvedValueOnce({
       ok: false,
       error: { title: 'Sem conexão com o servidor. Tente novamente.' },
@@ -331,9 +379,12 @@ describe('TagListPage', () => {
     await user.click(await screen.findByRole('button', { name: 'Tentar novamente' }));
 
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
-    expect(mockList).toHaveBeenLastCalledWith('vip', expect.any(AbortSignal));
+    expect(mockList).toHaveBeenLastCalledWith(
+      { search: 'vip', page: 1, pageSize: 20 },
+      expect.any(AbortSignal),
+    );
 
-    retry.resolve({ ok: true, data: [TAGS[1]!] });
+    retry.resolve(listOf([VIP]));
 
     expect(await screen.findByText('VIP')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
@@ -352,9 +403,16 @@ describe('TagListPage', () => {
       const alert = await screen.findByRole('alert');
       expect(alert).toHaveTextContent('Não foi possível carregar as etiquetas.');
       expect(alert).toHaveTextContent('Sua sessão expirou. Entre novamente.');
-      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+      expect(location()).toBe('location: /tags');
     },
   );
+
+  it('limits the search field to what the backend accepts', async () => {
+    renderPage(TAGS);
+
+    expect(screen.getByLabelText(SEARCH_LABEL)).toHaveAttribute('maxlength', '254');
+    await screen.findByText('Promoção');
+  });
 
   it('does not filter while typing — search only runs once submitted (backend-driven, not frontend)', async () => {
     const user = userEvent.setup();
@@ -368,7 +426,7 @@ describe('TagListPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
-  it('narrows the list to tags whose name contains the search term after pressing Enter (spec US1)', async () => {
+  it('narrows the list to tags whose name contains the search term after pressing Enter, leaving the address alone (spec US1, ADR 0074)', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
@@ -377,27 +435,32 @@ describe('TagListPage', () => {
 
     await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
     expect(screen.getByText('VIP')).toBeInTheDocument();
+    expect(mockList).toHaveBeenLastCalledWith(
+      { search: 'vip', page: 1, pageSize: 20 },
+      expect.any(AbortSignal),
+    );
+    expect(location()).toBe('location: /tags');
   });
 
-  it('leaves the address alone when it searches (ADR 0074)', async () => {
+  it('narrows the list from the Buscar button too (spec US1)', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
 
-    await user.type(screen.getByLabelText(SEARCH_LABEL), 'vip{Enter}');
+    await user.type(screen.getByLabelText(SEARCH_LABEL), 'vip');
+    await user.click(screen.getByRole('button', { name: 'Buscar' }));
 
     await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
-    expect(mockList).toHaveBeenLastCalledWith('vip', expect.any(AbortSignal));
-    expect(screen.getByTestId('location').textContent).toBe('location: /tags');
+    expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
-  it('starts with every tag and an empty field whatever the address carries (ADR 0074)', async () => {
-    renderPage(TAGS, ['/tags?q=vip']);
+  it('starts on the first page of every tag, with an empty field, whatever the address carries (ADR 0074)', async () => {
+    renderPage(TAGS, ['/tags?q=vip&page=3&pageSize=10']);
 
     expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
     expect(await screen.findByText('Promoção')).toBeInTheDocument();
     expect(mockList).toHaveBeenCalledTimes(1);
-    expect(mockList).toHaveBeenCalledWith(undefined, expect.any(AbortSignal));
+    expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
   });
 
   it('lists every tag again when the search is submitted blank', async () => {
@@ -411,22 +474,17 @@ describe('TagListPage', () => {
     await user.keyboard('{Enter}');
 
     expect(await screen.findByText('Promoção')).toBeInTheDocument();
-    expect(mockList).toHaveBeenLastCalledWith(undefined, expect.any(AbortSignal));
+    expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
   });
 
-  it('shows the table loading skeleton while a search re-fetch is in flight, replacing the stale rows', async () => {
+  it('shows the table loading skeleton while a search is in flight, replacing the stale rows', async () => {
     const user = userEvent.setup();
-    mockList.mockResolvedValueOnce({ ok: true, data: TAGS });
+    mockList.mockResolvedValueOnce(listOf(TAGS));
     const { container } = renderTagListPage();
     await screen.findByText('Promoção');
 
-    let resolveSearch!: (value: { ok: true; data: Tag[] }) => void;
-    mockList.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveSearch = resolve;
-        }),
-    );
+    const search = pending<ListAnswer>();
+    mockList.mockImplementationOnce(() => search.promise);
 
     await user.type(screen.getByLabelText(SEARCH_LABEL), 'vip{Enter}');
 
@@ -434,50 +492,38 @@ describe('TagListPage', () => {
     expect(screen.queryByText('Promoção')).not.toBeInTheDocument();
     expect(screen.queryByText('VIP')).not.toBeInTheDocument();
 
-    resolveSearch({ ok: true, data: TAGS.filter((tag) => tag.name === 'VIP') });
+    search.resolve(listOf([VIP]));
 
     await waitFor(() => expect(screen.getByText('VIP')).toBeInTheDocument());
     expect(container.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
-  it('keeps the newer search result even if the older, superseded request resolves later (AbortController guard)', async () => {
+  it('keeps the newer search result even if the older, superseded request resolves later', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
 
-    let resolveFirst!: (value: { ok: true; data: Tag[] }) => void;
-    mockList.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveFirst = resolve;
-        }),
-    );
+    const first = pending<ListAnswer>();
+    mockList.mockImplementationOnce(() => first.promise);
     const searchInput = screen.getByLabelText(SEARCH_LABEL);
     await user.type(searchInput, 'vip{Enter}');
     await waitFor(() => expect(mockList).toHaveBeenCalledTimes(2));
 
-    let resolveSecond!: (value: { ok: true; data: Tag[] }) => void;
-    mockList.mockImplementationOnce(
-      () =>
-        new Promise((resolve) => {
-          resolveSecond = resolve;
-        }),
-    );
+    const second = pending<ListAnswer>();
+    mockList.mockImplementationOnce(() => second.promise);
     await user.clear(searchInput);
     await user.type(searchInput, 'promo{Enter}');
     await waitFor(() => expect(mockList).toHaveBeenCalledTimes(3));
 
-    // Resolve the newer (second) search first.
     await act(async () => {
-      resolveSecond({ ok: true, data: TAGS.filter((tag) => tag.name === 'Promoção') });
+      second.resolve(listOf([PROMO]));
       await Promise.resolve();
     });
     expect(screen.getByText('Promoção')).toBeInTheDocument();
     expect(screen.queryByText('VIP')).not.toBeInTheDocument();
 
-    // The stale (first) request now resolves late — it must not clobber the newer result.
     await act(async () => {
-      resolveFirst({ ok: true, data: TAGS.filter((tag) => tag.name === 'VIP') });
+      first.resolve(listOf([VIP]));
       await Promise.resolve();
     });
     expect(screen.getByText('Promoção')).toBeInTheDocument();
@@ -499,24 +545,11 @@ describe('TagListPage', () => {
     expect(searchInput).toHaveValue('vip!');
   });
 
-  it('narrows the list to tags whose name contains the search term after clicking the search button, case-insensitively (spec US1)', async () => {
-    const user = userEvent.setup();
-    renderPage(TAGS);
-    await screen.findByText('Promoção');
-
-    await user.type(screen.getByLabelText(SEARCH_LABEL), 'vip');
-    await user.click(screen.getByRole('button', { name: 'Buscar' }));
-
-    await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
-    expect(screen.getByText('VIP')).toBeInTheDocument();
-  });
-
   it('says there are no tags yet, without a search action, when the catalog is empty (spec US1)', async () => {
     renderPage([]);
 
     expect(await screen.findByText('Nenhuma etiqueta ainda')).toBeInTheDocument();
     expect(screen.getByText('Use o botão Nova etiqueta para cadastrar a primeira.')).toBeVisible();
-    expect(screen.queryByText('Nenhum item encontrado.')).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
   });
 
@@ -542,6 +575,163 @@ describe('TagListPage', () => {
 
     expect(await screen.findByText('Promoção')).toBeInTheDocument();
     expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
-    expect(mockList).toHaveBeenLastCalledWith(undefined, expect.any(AbortSignal));
+    expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
+  });
+
+  describe('paging', () => {
+    it('says which tags are on screen out of how many, below the table', async () => {
+      renderPage(manyTags(45));
+
+      const status = await screen.findByRole('status');
+      expect(status).toHaveTextContent('Exibindo 1–20 de 45 etiquetas');
+      expect(screen.getByText('Etiqueta 020')).toBeInTheDocument();
+      expect(screen.queryByText('Etiqueta 021')).not.toBeInTheDocument();
+      const table = screen.getByRole('table', { name: 'Etiquetas' });
+      expect(table.compareDocumentPosition(status)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+    });
+
+    it('draws the footer as a skeleton, with no controls, before the first answer', async () => {
+      const initial = pending<ListAnswer>();
+      mockList.mockImplementationOnce(() => initial.promise);
+      const { container } = renderTagListPage();
+
+      expect(footerSkeleton(container)).not.toBeNull();
+      expect(screen.queryByRole('navigation', { name: 'Paginação' })).not.toBeInTheDocument();
+
+      initial.resolve(listOf(manyTags(45).slice(0, 20), { totalCount: 45 }));
+
+      expect(await screen.findByRole('navigation', { name: 'Paginação' })).toBeInTheDocument();
+      expect(footerSkeleton(container)).toBeNull();
+    });
+
+    it('shows 20 skeleton rows, the default page size, on the first load', () => {
+      mockList.mockImplementationOnce(() => pending<ListAnswer>().promise);
+
+      const { container } = renderTagListPage();
+
+      expect(skeletonRows(container)).toHaveLength(20);
+    });
+
+    it('goes to the next page, keeping the search and the size, and leaves the address alone', async () => {
+      const user = userEvent.setup();
+      renderPage(manyTags(45));
+      await screen.findByText('Etiqueta 001');
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'etiqueta{Enter}');
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('option', { name: '10' }));
+      await waitFor(() => expect(screen.getAllByRole('row')).toHaveLength(11));
+
+      await user.click(screen.getByRole('button', { name: 'Próxima' }));
+
+      expect(await screen.findByText('Etiqueta 011')).toBeInTheDocument();
+      expect(screen.queryByText('Etiqueta 001')).not.toBeInTheDocument();
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: 'etiqueta', page: 2, pageSize: 10 },
+        expect.any(AbortSignal),
+      );
+      expect(location()).toBe('location: /tags');
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 11–20 de 45 etiquetas');
+    });
+
+    it('goes back to the first page when the size changes, keeping the search', async () => {
+      const user = userEvent.setup();
+      renderPage(manyTags(45));
+      await screen.findByText('Etiqueta 001');
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'etiqueta{Enter}');
+      await user.click(await screen.findByRole('button', { name: 'Ir para a página 3' }));
+      await screen.findByText('Etiqueta 041');
+
+      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('option', { name: '50' }));
+
+      expect(await screen.findByText('Etiqueta 045')).toBeInTheDocument();
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: 'etiqueta', page: 1, pageSize: 50 },
+        expect.any(AbortSignal),
+      );
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1–45 de 45 etiquetas');
+    });
+
+    it('starts over on the first page when a search is submitted, keeping the size', async () => {
+      const user = userEvent.setup();
+      renderPage(manyTags(45));
+      await screen.findByText('Etiqueta 001');
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('option', { name: '10' }));
+      await user.click(await screen.findByRole('button', { name: 'Ir para a página 3' }));
+      await screen.findByText('Etiqueta 021');
+
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'etiqueta 0{Enter}');
+
+      expect(await screen.findByText('Etiqueta 001')).toBeInTheDocument();
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: 'etiqueta 0', page: 1, pageSize: 10 },
+        expect.any(AbortSignal),
+      );
+    });
+
+    it('reloads the page on screen, with its size, when a tag is saved', async () => {
+      const user = userEvent.setup();
+      const catalog = manyTags(45);
+      renderPage(catalog);
+      await screen.findByText('Etiqueta 001');
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('option', { name: '10' }));
+      await user.click(await screen.findByRole('button', { name: 'Ir para a página 2' }));
+      await screen.findByText('Etiqueta 011');
+
+      catalog[10] = { ...catalog[10]!, name: 'Etiqueta 011 editada' };
+      act(() => tagSaved.publish({ id: 't11' }));
+
+      expect(await screen.findByText('Etiqueta 011 editada')).toBeInTheDocument();
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: '', page: 2, pageSize: 10 },
+        expect.any(AbortSignal),
+      );
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 11–20 de 45 etiquetas');
+    });
+
+    it('moves to the page before when the only tag on the last page is deleted', async () => {
+      const user = userEvent.setup();
+      const catalog = manyTags(21);
+      renderPage(catalog);
+      await screen.findByText('Etiqueta 001');
+      await user.click(await screen.findByRole('button', { name: 'Ir para a página 2' }));
+      await screen.findByText('Etiqueta 021');
+
+      catalog.pop();
+      act(() => tagDeleted.publish({ id: 't21' }));
+
+      expect(await screen.findByText('Etiqueta 001')).toBeInTheDocument();
+      expect(mockList).toHaveBeenNthCalledWith(
+        3,
+        { search: '', page: 2, pageSize: 20 },
+        expect.any(AbortSignal),
+      );
+      expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
+      expect(screen.queryByText('Nenhuma etiqueta ainda')).not.toBeInTheDocument();
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1–20 de 20 etiquetas');
+    });
+
+    it('has no controls when a search finds nothing', async () => {
+      const user = userEvent.setup();
+      renderPage(manyTags(45));
+      await screen.findByText('Etiqueta 001');
+
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'zzz{Enter}');
+
+      await screen.findByText('Nenhuma etiqueta encontrada para «zzz»');
+      expect(screen.queryByRole('navigation', { name: 'Paginação' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+
+    it('has no controls when the list failed to load', async () => {
+      mockList.mockResolvedValue({ ok: false, error: { title: 'Sem conexão.' } });
+      renderTagListPage();
+
+      await screen.findByRole('alert');
+      expect(screen.queryByRole('navigation', { name: 'Paginação' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
   });
 });

@@ -1,22 +1,15 @@
 import type { RefObject, SubmitEvent } from 'react';
-import type { ListSectionStatus } from '@/widgets/list-section';
+import type {
+  PaginatedListSectionPaging,
+  PaginatedListState,
+} from '@/widgets/paginated-list-section';
 import type { Tag } from '../../../model/tag';
 
-export interface TagListFailure {
-  message: string;
-  code: string | undefined;
-}
-
-export interface TagListState {
-  status: ListSectionStatus;
-  tags: Tag[];
-  failure: TagListFailure | null;
-}
-
-export interface UseTagListPageResult extends TagListState {
-  query: string;
+export interface UseTagListPageResult {
+  list: PaginatedListState<Tag>;
+  pagination: PaginatedListSectionPaging;
+  searchTerm: string;
   searchInputRef: RefObject<HTMLInputElement | null>;
   onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   onClearSearch: () => void;
-  onRetry: () => void;
 }
