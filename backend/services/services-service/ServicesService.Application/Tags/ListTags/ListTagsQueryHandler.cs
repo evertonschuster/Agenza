@@ -3,7 +3,7 @@ using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Tags.ListTags;
 
-public sealed class ListTagsQueryHandler : IQueryHandler<ListTagsQuery, IReadOnlyList<TagResponse>>
+public sealed class ListTagsQueryHandler : IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>
 {
     private readonly ITagRepository _tagRepository;
 
@@ -12,13 +12,12 @@ public sealed class ListTagsQueryHandler : IQueryHandler<ListTagsQuery, IReadOnl
         _tagRepository = tagRepository;
     }
 
-    public async Task<Result<IReadOnlyList<TagResponse>>> Handle(
+    public async Task<Result<PagedResult<TagResponse>>> Handle(
         ListTagsQuery query,
         CancellationToken cancellationToken)
     {
-        var tags = await _tagRepository.ListAsync(query.Search?.Value, cancellationToken);
-        IReadOnlyList<TagResponse> response = tags.Select(TagResponse.FromTag).ToList();
+        var tags = await _tagRepository.ListAsync(query.ToFilter(), cancellationToken);
 
-        return Result.Success(response);
+        return Result.Success(tags.Map(TagResponse.FromTag));
     }
 }

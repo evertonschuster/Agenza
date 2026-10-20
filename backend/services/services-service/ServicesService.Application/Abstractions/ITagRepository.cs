@@ -1,8 +1,11 @@
+using Admin.SharedKernel;
+using ServicesService.Application.Tags;
+
 namespace ServicesService.Application.Abstractions;
 
 public interface ITagRepository
 {
-    Task<IReadOnlyList<Tag>> ListAsync(string? search, CancellationToken cancellationToken);
+    Task<PagedResult<Tag>> ListAsync(TagListFilter filter, CancellationToken cancellationToken);
 
     Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken);
 

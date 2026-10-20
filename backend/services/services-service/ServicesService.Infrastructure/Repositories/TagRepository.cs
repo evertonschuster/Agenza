@@ -1,6 +1,8 @@
+using Admin.SharedKernel;
 using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
+using ServicesService.Application.Tags;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.Infrastructure.Repositories;
@@ -12,14 +14,14 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
     {
     }
 
-    public Task<IReadOnlyList<Tag>> ListAsync(string? search, CancellationToken cancellationToken)
+    public Task<PagedResult<Tag>> ListAsync(TagListFilter filter, CancellationToken cancellationToken)
     {
-        return ListAsync(query => FilterAndOrder(query, search), cancellationToken);
+        return ListPagedAsync(filter, query => FilterAndOrder(query, filter), cancellationToken);
     }
 
-    private static IOrderedQueryable<Tag> FilterAndOrder(IQueryable<Tag> query, string? search)
+    private static IOrderedQueryable<Tag> FilterAndOrder(IQueryable<Tag> query, TagListFilter filter)
     {
-        if (search is { } text)
+        if (filter.Text is { } text)
         {
             query = query.Where(tag => EF.Property<string>(tag, "NameNormalized").Contains(text));
         }
