@@ -224,6 +224,9 @@ async function loginAsDemoUser(page: Page) {
 
 Rules that keep these green:
 
+- **Read the demo login from the seed's own config.** `DEMO_EMAIL` and `DEMO_PASSWORD` come from
+  `DemoTenant` in identity-service's `appsettings.Development.json`, the values its seeder creates the
+  user from; never type them again in a spec.
 - **Read seeded ids from the running system.** The demo tenant's id is generated fresh on every
   seed; the live file decodes it out of the issued access token instead of asserting a constant.
 - **Prefer a reload over waiting out a real clock.** Session persistence is proven by reloading and
