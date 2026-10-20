@@ -8,7 +8,12 @@ public class ListTagsQueryTests
     [Fact]
     public void ToFilter_WithTheDefaultQuery_RequestsTheFirstPageWithoutSearch()
     {
-        new ListTagsQuery().ToFilter().Should().Be(new TagListFilter(1, 20, null));
+        var query = new ListTagsQuery();
+        var expectedFilter = new TagListFilter(1, 20, null);
+
+        var filter = query.ToFilter();
+
+        filter.Should().Be(expectedFilter);
     }
 
     [Theory]
@@ -19,7 +24,10 @@ public class ListTagsQueryTests
     {
         var search = SearchText.Create(raw).Value;
         var query = new ListTagsQuery(search) { Page = 3, PageSize = 50 };
+        var expectedFilter = new TagListFilter(3, 50, expected);
 
-        query.ToFilter().Should().Be(new TagListFilter(3, 50, expected));
+        var filter = query.ToFilter();
+
+        filter.Should().Be(expectedFilter);
     }
 }

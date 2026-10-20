@@ -40,26 +40,33 @@ public class ListTagsQueryHandlerTests
     {
         var first = NewTag("Promoção", "Campanha de outubro");
         var second = NewTag("VIP");
+        var query = new ListTagsQuery();
+        var expectedTags = new[]
+        {
+            new TagResponse(first.Id, "Promoção", "#0d9488", "Campanha de outubro"),
+            new TagResponse(second.Id, "VIP", "#0d9488", null),
+        };
         Returns([first, second], 2);
 
-        var result = await _handler.Handle(new ListTagsQuery(), CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Items.Should().Equal(
-            new TagResponse(first.Id, "Promoção", "#0d9488", "Campanha de outubro"),
-            new TagResponse(second.Id, "VIP", "#0d9488", null));
+        result.Value.Items.Should().Equal(expectedTags);
     }
 
     [Fact]
     public async Task Handle_WithoutParameters_RequestsTheDefaultPageOnce()
     {
-        var result = await _handler.Handle(new ListTagsQuery(), CancellationToken.None);
+        var query = new ListTagsQuery();
+        var expectedFilter = new TagListFilter(1, 20, null);
+
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         result.Value.Items.Should().BeEmpty();
         result.Value.TotalCount.Should().Be(0);
         result.Value.Page.Should().Be(1);
         result.Value.PageSize.Should().Be(20);
-        await _repository.Received(1).ListAsync(new TagListFilter(1, 20, null), CancellationToken.None);
+        await _repository.Received(1).ListAsync(expectedFilter, CancellationToken.None);
     }
 
     [Fact]
@@ -70,13 +77,14 @@ public class ListTagsQueryHandlerTests
         Returns([tag], 7);
         var search = SearchText.Create("  VIP  ").Value;
         var query = new ListTagsQuery(search) { Page = 2, PageSize = 3 };
+        var expectedFilter = new TagListFilter(2, 3, "vip");
 
         var result = await _handler.Handle(query, cancellation.Token);
 
         result.Value.TotalCount.Should().Be(7);
         result.Value.Page.Should().Be(2);
         result.Value.PageSize.Should().Be(3);
-        await _repository.Received(1).ListAsync(new TagListFilter(2, 3, "vip"), cancellation.Token);
+        await _repository.Received(1).ListAsync(expectedFilter, cancellation.Token);
     }
 
     [Fact]
@@ -84,10 +92,11 @@ public class ListTagsQueryHandlerTests
     {
         var tag = NewTag("VIP");
         var page = new PagedResult<Tag>([tag], 12, 3, 4);
+        var query = new ListTagsQuery();
         _repository.ListAsync(Arg.Any<TagListFilter>(), Arg.Any<CancellationToken>())
             .Returns(page);
 
-        var result = await _handler.Handle(new ListTagsQuery(), CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         result.Value.TotalCount.Should().Be(12);
         result.Value.Page.Should().Be(3);
@@ -97,9 +106,10 @@ public class ListTagsQueryHandlerTests
     [Fact]
     public async Task Handle_WithAPagePastTheLast_ReturnsAnEmptyPageAndTheRealTotal()
     {
+        var query = new ListTagsQuery { Page = 9 };
         Returns([], 3);
 
-        var result = await _handler.Handle(new ListTagsQuery { Page = 9 }, CancellationToken.None);
+        var result = await _handler.Handle(query, CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Items.Should().BeEmpty();

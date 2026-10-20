@@ -57,7 +57,9 @@ public abstract class RepositoryBase<TEntity>
         var query = filterAndOrder(untrackedQuery);
 
         var totalCount = await query.CountAsync(cancellationToken);
-        var items = await query.Skip(page.Offset).Take(page.PageSize).ToListAsync(cancellationToken);
+        var offsetQuery = query.Skip(page.Offset);
+        var pageQuery = offsetQuery.Take(page.PageSize);
+        var items = await pageQuery.ToListAsync(cancellationToken);
 
         return new PagedResult<TEntity>(items, totalCount, page.Page, page.PageSize);
     }

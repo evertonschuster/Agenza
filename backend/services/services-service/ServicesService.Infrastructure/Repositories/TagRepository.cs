@@ -16,7 +16,9 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
 
     public Task<PagedResult<Tag>> ListAsync(TagListFilter filter, CancellationToken cancellationToken)
     {
-        return ListPagedAsync(filter, query => FilterAndOrder(query, filter), cancellationToken);
+        var filterAndOrder = (IQueryable<Tag> query) => FilterAndOrder(query, filter);
+
+        return ListPagedAsync(filter, filterAndOrder, cancellationToken);
     }
 
     private static IOrderedQueryable<Tag> FilterAndOrder(IQueryable<Tag> query, TagListFilter filter)
@@ -26,7 +28,9 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
             query = query.Where(tag => EF.Property<string>(tag, "NameNormalized").Contains(text));
         }
 
-        return query.OrderBy(tag => tag.Name).ThenBy(tag => tag.Id);
+        var tagsByName = query.OrderBy(tag => tag.Name);
+
+        return tagsByName.ThenBy(tag => tag.Id);
     }
 
     public Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken) =>

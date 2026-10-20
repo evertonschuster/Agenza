@@ -24,7 +24,9 @@ public class TagListPersistenceTests
         foreach (var tag in tags)
         {
             context.Tags.Add(tag);
-            context.Entry(tag).Property<string>("NameNormalized").CurrentValue = tag.Name.ToLowerInvariant();
+            var entry = context.Entry(tag);
+            var normalizedName = tag.Name.ToLowerInvariant();
+            entry.Property<string>("NameNormalized").CurrentValue = normalizedName;
         }
 
         await context.SaveChangesAsync();
@@ -57,7 +59,10 @@ public class TagListPersistenceTests
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
-        await SaveAll(databaseName, tenantId, Enumerable.Range(1, 25).Select(index => NewTag($"Tag {index:D2}")).ToArray());
+        var tags = Enumerable.Range(1, 25)
+            .Select(index => NewTag($"Tag {index:D2}"))
+            .ToArray();
+        await SaveAll(databaseName, tenantId, tags);
 
         var page = await List(databaseName, tenantId);
 
@@ -73,7 +78,14 @@ public class TagListPersistenceTests
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
-        var tags = new[] { NewTag("VIP"), NewTag("Promoção"), NewTag("Novidade"), NewTag("Especial"), NewTag("Aniversário") };
+        var tags = new[]
+        {
+            NewTag("VIP"),
+            NewTag("Promoção"),
+            NewTag("Novidade"),
+            NewTag("Especial"),
+            NewTag("Aniversário"),
+        };
         await SaveAll(databaseName, tenantId, tags);
 
         var first = await List(databaseName, tenantId, page: 1, pageSize: 2);
@@ -112,7 +124,14 @@ public class TagListPersistenceTests
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
-        await SaveAll(databaseName, tenantId, NewTag("VIP Bronze"), NewTag("VIP Ouro"), NewTag("VIP Prata"), NewTag("Promoção"));
+        var tags = new[]
+        {
+            NewTag("VIP Bronze"),
+            NewTag("VIP Ouro"),
+            NewTag("VIP Prata"),
+            NewTag("Promoção"),
+        };
+        await SaveAll(databaseName, tenantId, tags);
 
         var first = await List(databaseName, tenantId, page: 1, pageSize: 2, search: "  vIp  ");
         var second = await List(databaseName, tenantId, page: 2, pageSize: 2, search: "  vIp  ");
@@ -132,7 +151,15 @@ public class TagListPersistenceTests
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
-        await SaveAll(databaseName, tenantId, NewTag("50% off"), NewTag("VIP_gold"), NewTag("e_f especial"), NewTag("Super PROMOÇÃO"), NewTag("VIP"));
+        var tags = new[]
+        {
+            NewTag("50% off"),
+            NewTag("VIP_gold"),
+            NewTag("e_f especial"),
+            NewTag("Super PROMOÇÃO"),
+            NewTag("VIP"),
+        };
+        await SaveAll(databaseName, tenantId, tags);
 
         var page = await List(databaseName, tenantId, search: search);
 
@@ -145,7 +172,8 @@ public class TagListPersistenceTests
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();
-        await SaveAll(databaseName, tenantId, NewTag("VIP"));
+        var tag = NewTag("VIP");
+        await SaveAll(databaseName, tenantId, tag);
 
         var page = await List(databaseName, tenantId, search: "ausente");
 
@@ -161,9 +189,11 @@ public class TagListPersistenceTests
         var databaseName = Guid.NewGuid().ToString();
         var tenantA = Guid.NewGuid();
         var tenantB = Guid.NewGuid();
+        var tagA = NewTag("VIP A");
+        var tagB = NewTag("VIP B");
         var deleted = NewTag("VIP Excluída");
-        await SaveAll(databaseName, tenantA, NewTag("VIP A"), deleted);
-        await SaveAll(databaseName, tenantB, NewTag("VIP B"));
+        await SaveAll(databaseName, tenantA, tagA, deleted);
+        await SaveAll(databaseName, tenantB, tagB);
         await using (var context = PersistenceContext.Create(databaseName, tenantA))
         {
             var tracked = await context.Tags.AsTracking().SingleAsync(tag => tag.Id == deleted.Id, TestContext.Current.CancellationToken);
@@ -184,13 +214,18 @@ public class TagListPersistenceTests
     public async Task List_WithoutATenant_ReturnsAnEmptyPage()
     {
         var databaseName = Guid.NewGuid().ToString();
-        await SaveAll(databaseName, Guid.NewGuid(), NewTag("VIP"));
+        var tenantId = Guid.NewGuid();
+        var tag = NewTag("VIP");
+        await SaveAll(databaseName, tenantId, tag);
         var tenantProvider = Substitute.For<ICurrentTenantProvider>();
         tenantProvider.TryGetTenantId(out Arg.Any<Guid>()).Returns(false);
         var options = new DbContextOptionsBuilder<ServicesDataContext>().UseInMemoryDatabase(databaseName).Options;
         await using var context = new ServicesDataContext(options, tenantProvider);
+        var repository = new TagRepository(context);
+        var query = new ListTagsQuery();
+        var filter = query.ToFilter();
 
-        var page = await new TagRepository(context).ListAsync(new ListTagsQuery().ToFilter(), CancellationToken.None);
+        var page = await repository.ListAsync(filter, CancellationToken.None);
 
         page.Items.Should().BeEmpty();
         page.TotalCount.Should().Be(0);
