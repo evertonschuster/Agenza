@@ -1,85 +1,34 @@
-import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { useSearchParams } from 'react-router';
-import { extractErrorMessage, type ApiResult } from '@/shared/api/servicesFacade';
-import { ListSectionStatus } from '@/widgets/list-section';
+import { useRef, type SubmitEvent } from 'react';
+import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { clientsRepository } from '../../../api/clientsRepository';
-import type { ClientList } from '../../../model/clientList';
-import type {
-  ClientListState,
-  LoadResult,
-  UseClientListPageResult,
-} from './useClientListPage.types';
+import type { ClientListFilters } from '../../../model/clientListFilters';
+import type { UseClientListPageResult } from './useClientListPage.types';
+
+const INITIAL_FILTERS: ClientListFilters = { search: '' };
 
 export function useClientListPage(): UseClientListPageResult {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const query = searchParams.get('q') ?? '';
-  const [loaded, setLoaded] = useState<LoadResult | null>(null);
+  const { filters, applyFilters, list, pagination } = usePaginatedList({
+    initialFilters: INITIAL_FILTERS,
+    fetchPage: clientsRepository.list,
+  });
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-
-  const fetchClients = useCallback((forQuery: string) => {
-    abortControllerRef.current?.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    void clientsRepository.list(forQuery || undefined, controller.signal).then((apiResult) => {
-      if (controller.signal.aborted) return;
-      setLoaded({ query: forQuery, apiResult });
-    });
-  }, []);
-
-  useEffect(() => {
-    fetchClients(query);
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, [query, fetchClients]);
-
-  useEffect(() => {
-    const input = searchInputRef.current;
-    if (input && input.value !== query) input.value = query;
-  }, [query]);
 
   function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextQuery = searchInputRef.current?.value ?? '';
-    setSearchParams(nextQuery ? { q: nextQuery } : {});
+    applyFilters({ search: searchInputRef.current?.value ?? '' });
   }
 
   function onClearSearch() {
-    setSearchParams({});
+    if (searchInputRef.current) searchInputRef.current.value = '';
+    applyFilters({ search: '' });
   }
-
-  function onRetry() {
-    setLoaded(null);
-    fetchClients(query);
-  }
-
-  function toListState(apiResult: ApiResult<ClientList> | null): ClientListState {
-    if (apiResult === null) {
-      return { status: ListSectionStatus.Loading, clients: [], failure: null };
-    }
-
-    if (!apiResult.ok) {
-      const { error } = apiResult;
-      return {
-        status: ListSectionStatus.Error,
-        clients: [],
-        failure: { message: extractErrorMessage(error), code: error.code ?? undefined },
-      };
-    }
-
-    return { status: ListSectionStatus.Ready, clients: apiResult.data.items, failure: null };
-  }
-
-  const current = loaded?.query === query ? loaded.apiResult : null;
 
   return {
-    ...toListState(current),
-    query,
+    list,
+    pagination,
+    searchTerm: filters.search,
     searchInputRef,
     onSearchSubmit,
     onClearSearch,
-    onRetry,
   };
 }

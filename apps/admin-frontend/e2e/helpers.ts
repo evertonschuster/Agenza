@@ -1,7 +1,17 @@
+import { readFileSync } from 'node:fs';
 import type { Page } from '@playwright/test';
 
-const DEMO_EMAIL = 'owner@demo.local';
-const DEMO_PASSWORD = 'Passw0rd!';
+interface IdentityDevelopmentSettings {
+  DemoTenant: { OwnerEmail: string; OwnerPassword: string };
+}
+
+const IDENTITY_DEVELOPMENT_SETTINGS = new URL(
+  '../../../backend/services/identity-service/IdentityService.Api/appsettings.Development.json',
+  import.meta.url,
+);
+const { OwnerEmail: DEMO_EMAIL, OwnerPassword: DEMO_PASSWORD } = (
+  JSON.parse(readFileSync(IDENTITY_DEVELOPMENT_SETTINGS, 'utf8')) as IdentityDevelopmentSettings
+).DemoTenant;
 export const LOGIN_URL_RE = /localhost:5081\/Account\/Login/;
 
 export async function loginAsDemoUser(page: Page): Promise<void> {

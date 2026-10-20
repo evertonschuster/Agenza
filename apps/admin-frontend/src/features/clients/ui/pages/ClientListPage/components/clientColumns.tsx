@@ -2,6 +2,7 @@ import { Link } from 'react-router';
 import { maskCpf } from '@/shared/values/cpf';
 import { Badge } from '@/shared/ui/badge';
 import { OptionalText } from '@/shared/ui/optional-text';
+import { Skeleton } from '@/shared/ui/skeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import type { ClientListItem } from '../../../../model/clientList';
 import { CLIENT_STATUS_LABELS, type ClientStatus } from '../../../../model/clientStatus';
@@ -17,6 +18,7 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
     {
       key: 'fullName',
       header: 'Nome',
+      skeleton: <Skeleton className="h-5 w-40" />,
       cell: (client) => (
         <Link
           to={clientDetailPath(client.id)}
@@ -29,16 +31,19 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
     {
       key: 'phone',
       header: 'Telefone',
+      skeleton: <Skeleton className="h-5 w-28" />,
       cell: (client) => <OptionalText value={client.phone} className="whitespace-nowrap" />,
     },
     {
       key: 'email',
       header: 'E-mail',
+      skeleton: <Skeleton className="h-5 w-72" />,
       cell: (client) => <OptionalText value={client.email} className="whitespace-nowrap" />,
     },
     {
       key: 'cpf',
       header: 'CPF',
+      skeleton: <Skeleton className="h-5 w-24" />,
       cell: (client) => (
         <OptionalText
           value={client.cpf === null ? null : maskCpf(client.cpf)}
@@ -49,8 +54,9 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
     {
       key: 'status',
       header: 'Situação',
+      skeleton: <Skeleton className="h-5 w-14 rounded-full" />,
       cell: (client) => (
-        <Badge variant={STATUS_BADGE_VARIANT[client.status]}>
+        <Badge variant={STATUS_BADGE_VARIANT[client.status]} className="align-top">
           {CLIENT_STATUS_LABELS[client.status]}
         </Badge>
       ),

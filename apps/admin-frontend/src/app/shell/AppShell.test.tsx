@@ -109,4 +109,11 @@ describe('AppShell', () => {
     expect(screen.getByRole('button', { name: 'Mais' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: /Conversas/ })).not.toBeInTheDocument();
   });
+
+  it('holds and clips absolutely positioned content, so a hidden text past the edge cannot widen the page and push the fixed bottom bar off a phone screen', () => {
+    stubViewport('bottom');
+    const { container } = renderShell();
+
+    expect(container.firstElementChild).toHaveClass('relative', 'overflow-clip');
+  });
 });

@@ -33,6 +33,9 @@ and TypeScript keeps the literal types.
 Fixture builders live in [`src/test/oidcUser.ts`](../../../../apps/admin-frontend/src/test/oidcUser.ts)
 (`makePrincipal`, `makeOidcUser`, `makeAccessToken`). Add to that file rather than hand-rolling a
 principal in a test; a token built by hand tends to be missing exactly the claim under test.
+Beside it, `src/test/pending.ts` gives a promise the test resolves by hand (`pending<T>()`, for an
+answer that arrives after another) and `src/test/footerSkeleton.ts` finds the paged list's footer
+skeleton; import them instead of declaring a copy in the test file.
 
 ---
 
@@ -224,6 +227,9 @@ async function loginAsDemoUser(page: Page) {
 
 Rules that keep these green:
 
+- **Read the demo login from the seed's own config.** `DEMO_EMAIL` and `DEMO_PASSWORD` come from
+  `DemoTenant` in identity-service's `appsettings.Development.json`, the values its seeder creates the
+  user from; never type them again in a spec.
 - **Read seeded ids from the running system.** The demo tenant's id is generated fresh on every
   seed; the live file decodes it out of the issued access token instead of asserting a constant.
 - **Prefer a reload over waiting out a real clock.** Session persistence is proven by reloading and

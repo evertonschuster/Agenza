@@ -1,5 +1,6 @@
 import type { CSSProperties } from 'react';
 import { OptionalText } from '@/shared/ui/optional-text';
+import { Skeleton } from '@/shared/ui/skeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import { TagDeleteLink } from './TagDeleteLink';
 import { TagEditLink } from './TagEditLink';
@@ -10,6 +11,7 @@ export function tagColumns(): ListSectionColumn<Tag>[] {
     {
       key: 'name',
       header: 'Nome',
+      skeleton: <Skeleton className="h-6 w-24" />,
       cell: (tag) => (
         <span className="tag" style={{ '--tag': tag.color } as CSSProperties}>
           {tag.name}
@@ -19,6 +21,7 @@ export function tagColumns(): ListSectionColumn<Tag>[] {
     {
       key: 'description',
       header: 'Descrição',
+      skeleton: <Skeleton className="h-5 w-48" />,
       cell: (tag) => (
         <OptionalText
           value={tag.description}
@@ -31,6 +34,12 @@ export function tagColumns(): ListSectionColumn<Tag>[] {
       key: 'actions',
       header: 'Ações',
       align: 'end',
+      skeleton: (
+        <div className="flex items-center gap-1">
+          <Skeleton className="size-7" />
+          <Skeleton className="size-7" />
+        </div>
+      ),
       cell: (tag) => (
         <div className="flex items-center gap-1">
           <TagEditLink tag={tag} />

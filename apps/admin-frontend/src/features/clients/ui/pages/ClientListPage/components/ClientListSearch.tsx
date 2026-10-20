@@ -8,12 +8,9 @@ import {
 import { CLIENT_SEARCH_MAX_LENGTH } from '../../../../model/client';
 import type { UseClientListPageResult } from '../useClientListPage.types';
 
-type ClientListSearchProps = Pick<
-  UseClientListPageResult,
-  'query' | 'searchInputRef' | 'onSearchSubmit'
->;
+type ClientListSearchProps = Pick<UseClientListPageResult, 'searchInputRef' | 'onSearchSubmit'>;
 
-export function ClientListSearch({ query, searchInputRef, onSearchSubmit }: ClientListSearchProps) {
+export function ClientListSearch({ searchInputRef, onSearchSubmit }: ClientListSearchProps) {
   return (
     <form onSubmit={onSearchSubmit} role="search">
       <InputGroup>
@@ -22,8 +19,7 @@ export function ClientListSearch({ query, searchInputRef, onSearchSubmit }: Clie
         </InputGroupAddon>
         <InputGroupInput
           ref={searchInputRef}
-          name="q"
-          defaultValue={query}
+          name="search"
           maxLength={CLIENT_SEARCH_MAX_LENGTH}
           placeholder="Buscar por nome, e-mail ou CPF..."
           aria-label="Buscar pessoas por nome, e-mail ou CPF"

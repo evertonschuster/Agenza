@@ -1,7 +1,9 @@
 import { PlusIcon } from 'lucide-react';
 import { Link } from 'react-router';
+import type { CountNoun } from '@/shared/format/count';
 import { buttonVariants } from '@/shared/ui/button';
-import { ListSection, type ListSectionEmptyCopy } from '@/widgets/list-section';
+import type { ListSectionEmptyCopy } from '@/widgets/list-section';
+import { PaginatedListSection } from '@/widgets/paginated-list-section';
 import { NEW_CLIENT_PATH } from '../../clientsPaths';
 import { clientColumns } from './components/clientColumns';
 import { ClientListSearch } from './components/ClientListSearch';
@@ -14,17 +16,11 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
   searchDescription: 'Confira a grafia ou busque pelo e-mail ou pelo CPF.',
 };
 
+const ITEM_LABEL: CountNoun = { singular: 'pessoa', plural: 'pessoas' };
+
 export function ClientListPage() {
-  const {
-    clients,
-    status,
-    failure,
-    query,
-    searchInputRef,
-    onSearchSubmit,
-    onClearSearch,
-    onRetry,
-  } = useClientListPage();
+  const { list, pagination, searchTerm, searchInputRef, onSearchSubmit, onClearSearch } =
+    useClientListPage();
 
   return (
     <div className="space-y-4">
@@ -36,22 +32,18 @@ export function ClientListPage() {
         </Link>
       </div>
 
-      <ClientListSearch
-        query={query}
-        searchInputRef={searchInputRef}
-        onSearchSubmit={onSearchSubmit}
-      />
+      <ClientListSearch searchInputRef={searchInputRef} onSearchSubmit={onSearchSubmit} />
 
-      <ListSection
-        status={status}
-        items={clients}
+      <PaginatedListSection
+        {...list}
         getKey={(client) => client.id}
         aria-label="Pessoas"
         columns={clientColumns()}
         emptyCopy={EMPTY_COPY}
-        search={{ term: query, onClear: onClearSearch }}
+        search={{ term: searchTerm, onClear: onClearSearch }}
         errorTitle="Não foi possível carregar as pessoas."
-        failure={failure && { ...failure, onRetry }}
+        pagination={pagination}
+        itemLabel={ITEM_LABEL}
       />
     </div>
   );

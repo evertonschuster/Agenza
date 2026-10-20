@@ -148,24 +148,6 @@ test.describe('People list', () => {
     }
   });
 
-  test('keeps the search in the URL, so it survives a reload', async ({ page }) => {
-    const person = {
-      name: uniqueName('Recarga E2E'),
-      email: `recarga.${Date.now()}@example.com`,
-      cpf: validCpf(),
-    };
-    await registerPerson(page, person);
-
-    await searchFor(page, person.name);
-    await expect(page).toHaveURL(/\/pessoas\?q=/);
-    await page.reload();
-
-    await expect(page.getByLabel('Buscar pessoas por nome, e-mail ou CPF')).toHaveValue(
-      person.name,
-    );
-    await expect(page.getByRole('row', { name: new RegExp(person.name) })).toBeVisible();
-  });
-
   test('names a search that finds nobody and clears it', async ({ page }) => {
     await page.getByRole('link', { name: 'Pessoas' }).click();
     await expect(page).toHaveURL(/\/pessoas$/);
@@ -175,7 +157,6 @@ test.describe('People list', () => {
 
     await expect(page.getByText(`Nenhuma pessoa encontrada para «${term}»`)).toBeVisible();
     await page.getByRole('button', { name: 'Limpar busca' }).click();
-    await expect(page).toHaveURL(/\/pessoas$/);
     await expect(page.getByLabel('Buscar pessoas por nome, e-mail ou CPF')).toHaveValue('');
     await expect(page.getByText(/Nenhuma pessoa encontrada para/)).toHaveCount(0);
   });

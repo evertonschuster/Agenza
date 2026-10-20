@@ -1,7 +1,8 @@
 # ADR 0067 — admin-frontend: the Pessoas list
 
 Status: accepted (2026-10); consumes the contract of [ADR 0063](0063-clients-list-and-search-contract.md) and amends it
-(an omitted `status` lists everyone, point 9), follows
+(an omitted `status` lists everyone, point 9); the paging of point 3 arrived with
+[ADR 0070](0070-admin-frontend-list-pagination.md); follows
 [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md)
 
@@ -26,7 +27,8 @@ points of the issue text disagree with that contract or with the state of the ap
 2. **The screen reads `?q=` from the URL, as the tags list does, and sends `Search`** to the API. The repository takes
    only the search term; the backend defaults apply: `page=1`, `pageSize=20` and no `status`, which lists everyone
    (point 9).
-3. **The situation filter and the paging controls are not part of this change.** They arrive with the controls the owner
+3. **The situation filter and the paging controls are not part of this change** (the paging came right after, in
+   ADR 0070; the filter is still open). They arrive with the controls the owner
    will define. Until then the screen lists the first page (20 people) and nothing on it says there are more. A status line,
    "Exibindo 20 de 87 pessoas", was built and then removed by the owner. `status` and `page` enter the repository,
    the URL and the hook together with their controls, not before.
@@ -63,7 +65,7 @@ points of the issue text disagree with that contract or with the state of the ap
 
 ## Consequences
 
-- Acceptance criteria of #155 **not met by this change**: the situation filter itself ("cadastro inativo aparece quando
+- Acceptance criteria of #155 **not met by this change** (all but the filter were met by ADR 0070): the situation filter itself ("cadastro inativo aparece quando
   o filtro o inclui" as a choice on screen), "alterar busca/filtro reinicia na página 1" for the filter, and "navegação
   entre páginas não repete nem omite registros". A person past the 20th one is reachable only through the search, with
   no sign on screen that there are more.

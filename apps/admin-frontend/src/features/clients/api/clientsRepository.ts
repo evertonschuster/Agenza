@@ -1,11 +1,18 @@
 import { servicesApi } from '@/shared/api/servicesApi';
 import type { ApiResult } from '@/shared/api/servicesFacade';
+import type { Paging } from '@/shared/pagination/paging';
 import type { Client, ClientInput } from '../model/client';
 import type { ClientList } from '../model/clientList';
+import type { ClientListFilters } from '../model/clientListFilters';
 
-function list(search?: string, signal?: AbortSignal): Promise<ApiResult<ClientList>> {
+export type ClientListQuery = ClientListFilters & Paging;
+
+function list(
+  { search, page, pageSize }: ClientListQuery,
+  signal?: AbortSignal,
+): Promise<ApiResult<ClientList>> {
   return servicesApi.get('/api/v{version}/clients', {
-    query: search ? { Search: search } : undefined,
+    query: { Page: page, PageSize: pageSize, ...(search ? { Search: search } : {}) },
     signal,
   });
 }

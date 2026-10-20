@@ -1,3 +1,4 @@
+import type { PagedResult } from '@/shared/pagination/paging';
 import type { ClientStatus } from './clientStatus';
 
 export interface ClientListItem {
@@ -9,9 +10,4 @@ export interface ClientListItem {
   status: ClientStatus;
 }
 
-export interface ClientList {
-  items: ClientListItem[];
-  totalCount: number;
-  page: number;
-  pageSize: number;
-}
+export type ClientList = PagedResult<ClientListItem>;

@@ -13,7 +13,7 @@ export function AppShell() {
   const mainRef = useRouteScrollReset<HTMLElement>();
 
   return (
-    <div className="flex h-dvh min-h-0 flex-col md:flex-row">
+    <div className="relative flex h-dvh min-h-0 flex-col overflow-clip md:flex-row">
       {viewportKind !== 'bottom' && <SidebarNav compact={viewportKind === 'rail'} />}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
