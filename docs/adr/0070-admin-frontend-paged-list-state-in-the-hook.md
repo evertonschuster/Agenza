@@ -1,7 +1,7 @@
 # ADR 0070 — admin-frontend: a paged list keeps its state in the hook, not in the URL
 
 Status: accepted (2026-10); amends [ADR 0068](0068-admin-frontend-list-pagination.md) (points 1, 3 and 5) and
-[ADR 0069](0069-admin-frontend-paged-list-hook.md) (points 1 to 3); follows
+[ADR 0069](0069-admin-frontend-paged-list-hook.md) (points 1 to 4 and 6); follows
 [ADR 0035](0035-admin-frontend-no-server-state-library.md)
 
 ## Context
@@ -24,16 +24,24 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
    own**, starting on page 1 at the default size. It imports nothing from `react-router`, and its tests run without a
    Router. What it returns is unchanged: `filters`, `setFilters`, `list` and `pagination`. `setFilters` still merges
    the patch and starts over on page 1 keeping the size, and a new size still goes back to page 1.
-2. **The keys are `JSON.stringify`, not the text of the URL**: of the filters for the total, and of the filters, page
-   and size for the request. A filter's value is therefore any plain data (`F extends object`), no longer only what a
-   URL holds. A `Set` or a `Map` would serialize to `{}`, so filters stay plain data.
+2. **A request is the state object itself.** Every change goes through `setQuery`, which makes a new object, so the
+   hook tells requests apart by reference instead of by value. The answer on screen is the one whose `query` is the
+   current one. The total is the one counted for the current `filters` object: a change of page or size keeps that
+   object, and a change of filters makes a new one. Three things that existed only because the URL was read again on
+   every render are gone: the text keys, the reset of the answer during render (ADR 0069 point 4; going A → B → A, the
+   second A is another object, so A's old answer never matches) and the retry counter (ADR 0069 point 6; a retry asks
+   for a copy of the current query). A filter's value can be any data (`F extends object`), no longer only what a URL
+   holds. Confirming the same filters again is now a new request, with the footer as a skeleton; before, it did nothing.
 3. **A page past the last one moves to the last during render.** With no address to type, it only happens when the
    total shrinks under the page on screen. The hook adjusts its own state during render, the pattern React documents
-   and the one it already used to drop an old answer, so the render with the page past the end is never committed and
-   the guards that hid it are gone. The other corrections of ADR 0068 point 3 (an unreadable page, a size that is not
+   for adjusting state to a change, so the render with the page past the end is never committed and the guards that
+   hid it are gone. The other corrections of ADR 0068 point 3 (an unreadable page, a size that is not
    offered, the `replace`) have nothing left to correct.
 4. **Pessoas passes `initialFilters: { q: '' }`.** `readClientListFilters` is gone; `ClientListFilters` stays as the
-   type the repository reads.
+   type the repository reads. The search field stays uncontrolled, but with nothing outside the page left to change
+   `q`, the effect that copied `q` into the field and the field's `defaultValue` are gone: "Limpar busca" empties the
+   field in its own handler. That also ends a Base UI warning about an uncontrolled field whose default value changed
+   after each search.
 5. **URL code with no caller left is removed**: `shared/pagination/filters.ts` (`withFilters`, `ListFilters`,
    `ListFilterValue`), `readPaging`, `withPaging` and their private validation (the offset limit, the page pattern, the
    parameter names), with their tests. `paging.ts` keeps the constants, `PagedResult<T>`, `getLastPage`,
@@ -47,14 +55,15 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
   unmounts. Accepted by the owner on 2026-10-20. ARCHITECTURE §1's rule that state a person expects to survive a
   reload belongs in the URL now names paged lists as the exception.
 - The criteria of #155 still hold: changing the search starts over on page 1, and the size is kept between pages.
-- `useClientListPage`, `ClientListPage`, `ClientListSearch`, the repository and `PaginatedListSection` are otherwise
-  unchanged.
+- The repository and `PaginatedListSection` are unchanged. `useClientListPage` loses its only effect, and
+  `ClientListSearch` its `query` prop.
 - Tests: the hook's run without a Router, over a filter of each kind plus a number. The page's reach their state by
   clicks; those of behaviour that no longer exists are gone (Back and Forward, reading `?q=`, `?page=` and
   `?pageSize=`, unreadable values, the `replace`), and one pins that an address carrying `?q=`, `?page=` and
   `?pageSize=` is ignored. The page past the end is now a total that shrank. The e2e paging suite searches through the
-  form, and its reload, Back and `?page=99` tests are gone. The e2e suite was not run against the stack, and the
-  change was not checked in a browser.
+  form, and its reload, Back and `?page=99` tests are gone. Checked in the owner's running stack: an address carrying
+  `?q=` and `?page=` opens on page 1 of everyone, a search sends `Search`, Próxima asks for `Page=2` keeping it, and
+  the address stays `/pessoas`. The e2e suite was not run against the stack.
 - Bringing the URL back, for Pessoas or for a list that needs a link, means giving the hook a source for its state;
   the fetch, the answer, the total and the retry would not change. The first option below is where that starts.
 

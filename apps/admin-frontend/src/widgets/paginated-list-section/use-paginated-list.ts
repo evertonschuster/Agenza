@@ -45,16 +45,11 @@ export function usePaginatedList<F extends object, T>({
     page: FIRST_PAGE,
     pageSize: DEFAULT_PAGE_SIZE,
   });
+  const [answer, setAnswer] = useState<PaginatedListAnswer<F, T> | null>(null);
+  const [knownTotal, setKnownTotal] = useState<PaginatedListKnownTotal<F> | null>(null);
   const { filters, page, pageSize } = query;
-  const filtersKey = JSON.stringify(filters);
-  const requestKey = JSON.stringify([filters, page, pageSize]);
-  const [answer, setAnswer] = useState<PaginatedListAnswer<T> | null>(null);
-  const [knownTotal, setKnownTotal] = useState<PaginatedListKnownTotal | null>(null);
-  const [attempt, setAttempt] = useState(0);
 
-  if (answer !== null && answer.requestKey !== requestKey) setAnswer(null);
-
-  const current = answer?.requestKey === requestKey ? answer.result : null;
+  const current = answer?.query === query ? answer.result : null;
   const lastPage = current?.ok ? getLastPage(current.data.totalCount, pageSize) : null;
 
   if (lastPage !== null && page > lastPage) setQuery({ ...query, page: lastPage });
@@ -68,16 +63,16 @@ export function usePaginatedList<F extends object, T>({
 
     void fetchCurrentPage(controller.signal).then((result) => {
       if (controller.signal.aborted) return;
-      setAnswer({ requestKey, result });
-      if (result.ok) setKnownTotal({ filtersKey, totalCount: result.data.totalCount });
+      setAnswer({ query, result });
+      if (result.ok) setKnownTotal({ filters: query.filters, totalCount: result.data.totalCount });
     });
 
     return () => {
       controller.abort();
     };
-  }, [requestKey, filtersKey, attempt]);
+  }, [query]);
 
-  const totalCount = knownTotal?.filtersKey === filtersKey ? knownTotal.totalCount : null;
+  const totalCount = knownTotal?.filters === filters ? knownTotal.totalCount : null;
 
   function setFilters(patch: Partial<F>) {
     setQuery({ filters: { ...filters, ...patch }, page: FIRST_PAGE, pageSize });
@@ -92,8 +87,7 @@ export function usePaginatedList<F extends object, T>({
   }
 
   function onRetry() {
-    setAnswer(null);
-    setAttempt((count) => count + 1);
+    setQuery({ ...query });
   }
 
   return {

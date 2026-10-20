@@ -16,18 +16,18 @@ type PaginatedListSectionProps<T> = ListSectionProps<T> & {
   skeletonRowCount?: never;
 };
 
-interface PaginatedListAnswer<T> {
-  requestKey: string;
+interface PaginatedListQuery<F> extends Paging {
+  filters: F;
+}
+
+interface PaginatedListAnswer<F, T> {
+  query: PaginatedListQuery<F>;
   result: ApiResult<PagedResult<T>>;
 }
 
-interface PaginatedListKnownTotal {
-  filtersKey: string;
-  totalCount: number;
-}
-
-interface PaginatedListQuery<F> extends Paging {
+interface PaginatedListKnownTotal<F> {
   filters: F;
+  totalCount: number;
 }
 
 interface PaginatedListSectionFooterProps {

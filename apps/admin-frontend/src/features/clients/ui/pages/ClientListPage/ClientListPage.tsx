@@ -32,11 +32,7 @@ export function ClientListPage() {
         </Link>
       </div>
 
-      <ClientListSearch
-        query={query}
-        searchInputRef={searchInputRef}
-        onSearchSubmit={onSearchSubmit}
-      />
+      <ClientListSearch searchInputRef={searchInputRef} onSearchSubmit={onSearchSubmit} />
 
       <PaginatedListSection
         {...list}
