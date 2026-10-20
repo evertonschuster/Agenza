@@ -1,5 +1,4 @@
 import type { RefObject, SubmitEvent } from 'react';
-import type { ApiProblem } from '@/shared/api/servicesFacade';
 import type { ListSectionStatus } from '@/widgets/list-section';
 import type { Tag } from '../../../model/tag';
 
@@ -8,21 +7,16 @@ export interface TagListFailure {
   code: string | undefined;
 }
 
-export interface UseTagListPageResult {
+export interface TagListState {
   status: ListSectionStatus;
   tags: Tag[];
   failure: TagListFailure | null;
+}
+
+export interface UseTagListPageResult extends TagListState {
   query: string;
   searchInputRef: RefObject<HTMLInputElement | null>;
   onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   onClearSearch: () => void;
   onRetry: () => void;
-  newTagTo: { pathname: string; search: string };
-}
-
-export interface LoadResult {
-  query: string;
-  status: Exclude<ListSectionStatus, 'loading'>;
-  tags: Tag[];
-  problem: ApiProblem | null;
 }
