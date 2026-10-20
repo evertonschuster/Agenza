@@ -60,10 +60,24 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
 - Tests: the hook's run without a Router, over a filter of each kind plus a number. The page's reach their state by
   clicks; those of behaviour that no longer exists are gone (Back and Forward, reading `?q=`, `?page=` and
   `?pageSize=`, unreadable values, the `replace`), and one pins that an address carrying `?q=`, `?page=` and
-  `?pageSize=` is ignored. The page past the end is now a total that shrank. The e2e paging suite searches through the
-  form, and its reload, Back and `?page=99` tests are gone. Checked in the owner's running stack: an address carrying
-  `?q=` and `?page=` opens on page 1 of everyone, a search sends `Search`, Próxima asks for `Page=2` keeping it, and
-  the address stays `/pessoas`. The e2e suite was not run against the stack.
+  `?pageSize=` is ignored. The page past the end is now a total that shrank. Checked in the owner's running
+  stack: an address carrying `?q=` and `?page=` opens on page 1 of everyone, a search sends `Search`, Próxima asks for
+  `Page=2` keeping it, and the address stays `/pessoas`. The rest of the e2e suite, which registers people, was not run
+  against the stack.
+- **Paging has no e2e suite any more**, and `registerPeopleThroughApi`, which created the 25 people it paged through,
+  is gone with it. The owner asked on 2026-10-20 whether paging needed the backend at that level; it does not, by the
+  rule of the cheapest tier that can fail for the right reason. Every behaviour the suite checked already fails
+  without a backend: the page's own tests drive the same clicks over a mocked repository (21 in its paging block:
+  next, previous and numbered pages, a new size and a new search back on page 1, the size kept, a request dropped
+  when another starts, a total that shrinks); the hook, the footer, `PaginatedListSection` and `paging.ts` have their
+  own. The seam with the API is pinned twice: the repository's tests check `Page`, `PageSize` and `Search` by name,
+  and the types generated from the OpenAPI document, with `generate:api-types:check` failing on drift, break `tsc` if
+  the backend renames one. Paging, order and totals on the backend are services-service's tests (ADR 0063, ADR 0064).
+  What only the suite saw was a real browser: the container query that swaps the numbers for "Página X de Y" and Base
+  UI's select in Chromium. Those were measured by hand when they were built (ADR 0068) and are not checked
+  automatically now. A first step that day kept the suite over the people already in the demo tenant and skipped it
+  below 21, which left it skipped in CI, where the database starts empty; removing it says the same thing without a
+  test that never runs there.
 - Bringing the URL back, for Pessoas or for a list that needs a link, means giving the hook a source for its state;
   the fetch, the answer, the total and the retry would not change. The first option below is where that starts.
 

@@ -1,5 +1,5 @@
 import { test, expect, type Page } from '@playwright/test';
-import { loginAsDemoUser, registerPeopleThroughApi } from './helpers';
+import { loginAsDemoUser } from './helpers';
 
 function validCpf(): string {
   const checkDigit = (digits: number[]) => {
@@ -177,91 +177,5 @@ test.describe('People list', () => {
     await expect(page).toHaveURL(/\/pessoas\/[0-9a-f-]{36}$/);
     await expect(page.getByRole('heading', { name: 'Detalhes da pessoa' })).toBeVisible();
     await expect(page.getByText('Em breve', { exact: true })).toBeVisible();
-  });
-});
-
-const PAGED_PEOPLE = 25;
-let pagedPrefix: string | undefined;
-
-async function seedPagedPeople(page: Page): Promise<string> {
-  if (pagedPrefix) return pagedPrefix;
-
-  const prefix = `Paginacao E2E ${Date.now()}`;
-  const names = Array.from(
-    { length: PAGED_PEOPLE },
-    (_, index) => `${prefix} ${String(index + 1).padStart(2, '0')}`,
-  );
-  await registerPeopleThroughApi(page, names);
-  pagedPrefix = prefix;
-  return prefix;
-}
-
-function pagingSummary(page: Page) {
-  return page.getByRole('status').filter({ hasText: 'Exibindo' });
-}
-
-function pageSizeSelect(page: Page) {
-  return page.getByRole('combobox', { name: 'Itens por página' });
-}
-
-test.describe('People list paging', () => {
-  let prefix: string;
-
-  test.beforeEach(async ({ page }) => {
-    await loginAsDemoUser(page);
-    prefix = await seedPagedPeople(page);
-    await page.goto('/pessoas');
-    await searchFor(page, prefix);
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 1–20 de ${PAGED_PEOPLE} pessoas`);
-  });
-
-  test('moves between pages with Anterior and Próxima, keeping the search', async ({ page }) => {
-    await expect(page.getByRole('row')).toHaveCount(21);
-
-    await page.getByRole('button', { name: 'Próxima' }).click();
-
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
-    await expect(page.getByRole('row')).toHaveCount(6);
-    await expect(page).toHaveURL(/\/pessoas$/);
-    await expect(page.getByRole('button', { name: 'Próxima' })).toHaveAttribute(
-      'aria-disabled',
-      'true',
-    );
-
-    await page.getByRole('button', { name: 'Anterior' }).click();
-
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 1–20 de ${PAGED_PEOPLE} pessoas`);
-  });
-
-  test('goes straight to a numbered page', async ({ page }) => {
-    await page.getByRole('button', { name: 'Ir para a página 2' }).click();
-
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
-    await expect(page.getByRole('button', { name: 'Página 2' })).toHaveAttribute(
-      'aria-current',
-      'page',
-    );
-  });
-
-  test('changes the items per page and starts again from the first page', async ({ page }) => {
-    await page.getByRole('button', { name: 'Próxima' }).click();
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
-
-    await pageSizeSelect(page).click();
-    await page.getByRole('option', { name: '10', exact: true }).click();
-
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 1–10 de ${PAGED_PEOPLE} pessoas`);
-    await expect(page.getByRole('row')).toHaveCount(11);
-    await expect(page.getByRole('button', { name: 'Ir para a página 3' })).toBeVisible();
-  });
-
-  test('starts over on the first page when the search changes', async ({ page }) => {
-    await page.getByRole('button', { name: 'Próxima' }).click();
-    await expect(pagingSummary(page)).toHaveText(`Exibindo 21–25 de ${PAGED_PEOPLE} pessoas`);
-
-    await searchFor(page, `${prefix} 07`);
-
-    await expect(pagingSummary(page)).toHaveText('Exibindo 1 de 1 pessoa');
-    await expect(page.getByRole('row', { name: new RegExp(`${prefix} 07`) })).toBeVisible();
   });
 });
