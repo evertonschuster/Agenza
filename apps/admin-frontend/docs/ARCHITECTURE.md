@@ -247,30 +247,17 @@ what the endpoint returns, the repository forwards the result verbatim — the r
 the one compile-time checkpoint against a breaking wire change. A `toDomain(dto)` mapper is added
 only when wire and domain genuinely diverge.
 
-`features/tags/api/tagsRepository.ts` is the first repository built against this pattern
-(`specs/003-tags-crud/`), replacing the illustrative, since-deleted `categoryRepository`
-([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)) as the reference:
+The implementation in [tagsRepository.ts](../src/features/tags/api/tagsRepository.ts) is the
+reference for the API boundary. Its read-by-id and mutation responses are structurally identical
+to Tag, so those methods forward the facade's result without a mapper. Explicit return
+annotations remain the compile-time checkpoint against a breaking wire change.
 
-```ts
-// features/tags/api/tagsRepository.ts
-import { servicesApi } from '@/shared/api/servicesApi';
-import type { ApiResult } from '@/shared/api/servicesFacade';
-import type { Tag } from '../model/tag';
-
-function list(search?: string): Promise<ApiResult<Tag[]>> {
-  return servicesApi.get('/api/v{version}/tags', {
-    query: search ? { Search: search } : undefined,
-  });
-}
-```
-
-`Tag` and the generated `TagResponse` are structurally identical, so `list` forwards the facade's
-result verbatim — no `toDomain` mapper — and the `Promise<ApiResult<Tag[]>>` return annotation is
-the one compile-time checkpoint against a breaking wire change. The repository calls all five
-`/tags` endpoints — `list`, `get`, `create`, `update` and `delete` (exported as
-`tagsRepository.delete`, backed by a `deleteTag` function since `delete` can't name a function
-declaration). Create/edit/delete were built, pulled back out and reintroduced over time (§5 has the
-sequence).
+The tags list has an explicit compatibility adapter while the screen still consumes a complete
+collection: it reads bounded API pages sequentially, keeps search and cancellation on each request,
+and forwards any failure unchanged instead of returning partial results.
+[ADR 0069](../../../docs/adr/0069-tags-collection-compatibility-adapter.md) records why the adapter
+is part of the backend contract rollout and its retirement trigger: introduce page navigation,
+the repository's page contract, the URL and the list hook in the separate frontend feature.
 
 **Errors are values, never exceptions.** `Result<T, E> = { ok: true; data } | { ok: false; error }`
 with `ok()` / `fail()` in `shared/result.ts` — custom, ~6 lines, no library. No `unwrap()`-that-throws.

@@ -1,12 +1,30 @@
 import { servicesApi } from '@/shared/api/servicesApi';
+import { ok } from '@/shared/result';
 import type { ApiResult } from '@/shared/api/servicesFacade';
 import type { Tag, TagInput } from '../model/tag';
 
-function list(search?: string, signal?: AbortSignal): Promise<ApiResult<Tag[]>> {
-  return servicesApi.get('/api/v{version}/tags', {
-    query: search ? { Search: search } : undefined,
-    signal,
-  });
+async function list(search?: string, signal?: AbortSignal): Promise<ApiResult<Tag[]>> {
+  const tags: Tag[] = [];
+  let page = 1;
+
+  while (true) {
+    const result = await servicesApi.get('/api/v{version}/tags', {
+      query: { Page: page, PageSize: 100, ...(search ? { Search: search } : {}) },
+      signal,
+    });
+
+    if (!result.ok) return result;
+
+    const tagsPage = result.data;
+    tags.push(...tagsPage.items);
+    const lastItem = tagsPage.page * tagsPage.pageSize;
+
+    if (lastItem >= tagsPage.totalCount || tagsPage.items.length === 0) {
+      return ok(tags);
+    }
+
+    page += 1;
+  }
 }
 
 function get(id: string): Promise<ApiResult<Tag>> {
