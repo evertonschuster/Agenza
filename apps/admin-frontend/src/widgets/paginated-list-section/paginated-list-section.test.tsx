@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { footerSkeleton } from '@/test/footerSkeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import { PaginatedListSection, type PaginatedListSectionPaging } from './index';
 
@@ -18,11 +19,12 @@ const NAME_COLUMN: ListSectionColumn<Item>[] = [
   { key: 'name', header: 'Nome', cell: (item) => item.name },
 ];
 
+const ITEM_LABEL = { singular: 'item', plural: 'itens' };
+
 const PAGINATION: PaginatedListSectionPaging = {
   page: 2,
   pageSize: 20,
   totalCount: 87,
-  itemLabel: { singular: 'item', plural: 'itens' },
   onPageChange: vi.fn(),
   onPageSizeChange: vi.fn(),
 };
@@ -47,14 +49,11 @@ function renderPaginated({
       getKey={(item) => item.id}
       columns={NAME_COLUMN}
       pagination={pagination}
+      itemLabel={ITEM_LABEL}
       aria-label="Itens"
       className={className}
     />,
   );
-}
-
-function footerSkeleton(container: HTMLElement) {
-  return container.querySelector('[data-slot="pagination-skeleton"]');
 }
 
 function busyRegion(container: HTMLElement) {
@@ -85,6 +84,7 @@ describe('PaginatedListSection', () => {
           columns={NAME_COLUMN}
           emptyCopy={{ title: 'Nada por aqui' }}
           pagination={{ ...PAGINATION, totalCount: 0 }}
+          itemLabel={ITEM_LABEL}
           aria-label="Itens"
         />,
       );
@@ -98,6 +98,7 @@ describe('PaginatedListSection', () => {
           columns={NAME_COLUMN}
           failure={{ message: 'Fora do ar', onRetry }}
           pagination={PAGINATION}
+          itemLabel={ITEM_LABEL}
           aria-label="Itens"
         />,
       );

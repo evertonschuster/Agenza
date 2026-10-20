@@ -1,4 +1,3 @@
-import { PAGE_SIZE_OPTIONS } from '@/shared/pagination/paging';
 import {
   Select,
   SelectContent,
@@ -8,6 +7,8 @@ import {
   SelectValue,
 } from '@/shared/ui/select';
 import type { PaginationPageSizeProps } from '../pagination.types';
+
+const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
 
 function PaginationPageSize({ pageSize, onPageSizeChange }: PaginationPageSizeProps) {
   return (
@@ -19,10 +20,10 @@ function PaginationPageSize({ pageSize, onPageSizeChange }: PaginationPageSizePr
     >
       <div className="flex items-center gap-2">
         <SelectLabel>
-          <span aria-hidden="true" className="@min-[560px]:hidden">
+          <span aria-hidden="true" className="@pagination:hidden">
             Por página
           </span>
-          <span className="sr-only @min-[560px]:not-sr-only">Itens por página</span>
+          <span className="sr-only @pagination:not-sr-only">Itens por página</span>
         </SelectLabel>
         <SelectTrigger className="pointer-coarse:h-11">
           <SelectValue />

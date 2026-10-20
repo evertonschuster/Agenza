@@ -1,4 +1,5 @@
 import type { ApiResult } from '@/shared/api/servicesFacade';
+import type { CountNoun } from '@/shared/format/count';
 import type { PagedResult, Paging } from '@/shared/pagination/paging';
 import type {
   ListSectionFailure,
@@ -7,13 +8,13 @@ import type {
 } from '@/widgets/list-section';
 import type { PaginationProps } from '@/widgets/pagination';
 
-type PaginatedListSectionPaging = Omit<PaginationProps, 'totalCount'> & {
+type PaginatedListSectionPaging = Omit<PaginationProps, 'totalCount' | 'itemLabel'> & {
   totalCount: number | null;
 };
 
-type PaginatedListSectionProps<T> = ListSectionProps<T> & {
+type PaginatedListSectionProps<T> = Omit<ListSectionProps<T>, 'skeletonRowCount'> & {
   pagination: PaginatedListSectionPaging;
-  skeletonRowCount?: never;
+  itemLabel: CountNoun;
 };
 
 interface PaginatedListQuery<F> extends Paging {
@@ -28,6 +29,7 @@ interface PaginatedListKnownTotal<F> {
 interface PaginatedListSectionFooterProps {
   status: ListSectionStatus;
   pagination: PaginatedListSectionPaging;
+  itemLabel: CountNoun;
 }
 
 interface UsePaginatedListOptions<F, T> {
@@ -41,18 +43,15 @@ interface PaginatedListState<T> {
   failure: ListSectionFailure | null;
 }
 
-type PaginatedListPagination = Omit<PaginatedListSectionPaging, 'itemLabel'>;
-
 interface UsePaginatedListResult<F, T> {
   filters: F;
   applyFilters: (patch: Partial<F>) => void;
   list: PaginatedListState<T>;
-  pagination: PaginatedListPagination;
+  pagination: PaginatedListSectionPaging;
 }
 
 export type {
   PaginatedListKnownTotal,
-  PaginatedListPagination,
   PaginatedListQuery,
   PaginatedListSectionFooterProps,
   PaginatedListSectionPaging,

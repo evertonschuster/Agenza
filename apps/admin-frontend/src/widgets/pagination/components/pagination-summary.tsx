@@ -1,21 +1,15 @@
-import { getVisibleRange } from '@/shared/pagination/paging';
+import { formatCount, formatNumber } from '@/shared/format/count';
 import type { PaginationSummaryProps } from '../pagination.types';
 
-const LOCALE = 'pt-BR';
-const numberFormat = new Intl.NumberFormat(LOCALE);
-const pluralRules = new Intl.PluralRules(LOCALE);
-
 function PaginationSummary({ page, pageSize, totalCount, itemLabel }: PaginationSummaryProps) {
-  const { first, last } = getVisibleRange({ page, pageSize }, totalCount);
+  const first = (page - 1) * pageSize + 1;
+  const last = Math.min(page * pageSize, totalCount);
   const range =
-    first === last
-      ? numberFormat.format(first)
-      : `${numberFormat.format(first)}–${numberFormat.format(last)}`;
-  const noun = pluralRules.select(totalCount) === 'one' ? itemLabel.singular : itemLabel.plural;
+    first === last ? formatNumber(first) : `${formatNumber(first)}–${formatNumber(last)}`;
 
   return (
     <p role="status" className="text-sm text-muted-foreground">
-      {`Exibindo ${range} de ${numberFormat.format(totalCount)} ${noun}`}
+      {`Exibindo ${range} de ${formatCount(totalCount, itemLabel)}`}
     </p>
   );
 }

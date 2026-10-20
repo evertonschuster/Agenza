@@ -1,14 +1,13 @@
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
-import { FIRST_PAGE, getPageWindow } from '@/shared/pagination/paging';
+import { FIRST_PAGE } from '@/shared/pagination/paging';
 import { Button } from '@/shared/ui/button';
+import { getPageWindow } from '../page-window';
 import type { PaginationPagesProps } from '../pagination.types';
+import { PAGES_ROW } from './pagination-layout';
 
 function PaginationPages({ page, lastPage, onPageChange }: PaginationPagesProps) {
   return (
-    <nav
-      aria-label="Paginação"
-      className="flex items-center justify-between gap-2 @min-[560px]:justify-center @min-[560px]:gap-1"
-    >
+    <nav aria-label="Paginação" className={PAGES_ROW}>
       <Button
         variant="outline"
         className="pointer-coarse:h-11"
@@ -20,7 +19,7 @@ function PaginationPages({ page, lastPage, onPageChange }: PaginationPagesProps)
         Anterior
       </Button>
 
-      <ol className="hidden items-center gap-1 @min-[560px]:flex">
+      <ol className="hidden items-center gap-1 @pagination:flex">
         {getPageWindow(page, lastPage).map((item, index) =>
           item === 'ellipsis' ? (
             <li key={`ellipsis-${index}`} aria-hidden="true" className="px-1 text-muted-foreground">
@@ -44,7 +43,7 @@ function PaginationPages({ page, lastPage, onPageChange }: PaginationPagesProps)
         )}
       </ol>
 
-      <span className="min-w-0 flex-1 px-1 text-center text-sm leading-tight text-balance text-muted-foreground @min-[560px]:hidden">
+      <span className="min-w-0 flex-1 px-1 text-center text-sm leading-tight text-balance text-muted-foreground @pagination:hidden">
         {`Página ${page} de ${lastPage}`}
       </span>
 

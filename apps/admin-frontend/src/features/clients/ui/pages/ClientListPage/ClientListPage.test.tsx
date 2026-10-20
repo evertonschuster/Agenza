@@ -2,6 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, useLocation } from 'react-router';
+import { footerSkeleton } from '@/test/footerSkeleton';
+import { pending } from '@/test/pending';
 import { ClientListPage } from './ClientListPage';
 import type { ClientListQuery } from '../../../api/clientsRepository';
 import type { ClientList, ClientListItem } from '../../../model/clientList';
@@ -94,20 +96,8 @@ function renderPage(clients: ClientListItem[]) {
   return renderClientListPage();
 }
 
-function pending<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
-}
-
 function location() {
   return screen.getByTestId('location').textContent;
-}
-
-function footerSkeleton(container: HTMLElement) {
-  return container.querySelector('[data-slot="pagination-skeleton"]');
 }
 
 function skeletonRows(container: HTMLElement) {

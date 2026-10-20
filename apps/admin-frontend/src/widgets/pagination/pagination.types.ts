@@ -1,15 +1,11 @@
 import type { ComponentProps, ReactNode } from 'react';
-
-export interface PaginationItemLabel {
-  singular: string;
-  plural: string;
-}
+import type { CountNoun } from '@/shared/format/count';
 
 export interface PaginationProps {
   page: number;
   pageSize: number;
   totalCount: number;
-  itemLabel: PaginationItemLabel;
+  itemLabel: CountNoun;
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
 }

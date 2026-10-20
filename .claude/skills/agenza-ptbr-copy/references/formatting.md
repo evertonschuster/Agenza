@@ -130,7 +130,8 @@ whether she has to leave now.
 
 Use `Intl.PluralRules(LOCALE)` rather than `n === 1`. CLDR's rule for `pt` is `i = 0..1 → one`, so
 `select(0)` returns `'one'` — the opposite of the English instinct, and worth confirming in a
-one-liner before you depend on it.
+one-liner before you depend on it. In `admin-frontend` that is `formatCount(count, { singular, plural })`
+in `shared/format/count.ts` ("1 pessoa", "1.234 pessoas"), beside `formatNumber`.
 
 Better still: **never render a zero count.** Zero is an empty state, and "Nenhum serviço ainda" says
 more than "0 serviços". → [`states.md`](states.md)

@@ -1,9 +1,9 @@
 import { PlusIcon } from 'lucide-react';
 import { Link } from 'react-router';
+import type { CountNoun } from '@/shared/format/count';
 import { buttonVariants } from '@/shared/ui/button';
 import type { ListSectionEmptyCopy } from '@/widgets/list-section';
 import { PaginatedListSection } from '@/widgets/paginated-list-section';
-import type { PaginationItemLabel } from '@/widgets/pagination';
 import { NEW_CLIENT_PATH } from '../../clientsPaths';
 import { clientColumns } from './components/clientColumns';
 import { ClientListSearch } from './components/ClientListSearch';
@@ -16,10 +16,10 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
   searchDescription: 'Confira a grafia ou busque pelo e-mail ou pelo CPF.',
 };
 
-const ITEM_LABEL: PaginationItemLabel = { singular: 'pessoa', plural: 'pessoas' };
+const ITEM_LABEL: CountNoun = { singular: 'pessoa', plural: 'pessoas' };
 
 export function ClientListPage() {
-  const { list, pagination, query, searchInputRef, onSearchSubmit, onClearSearch } =
+  const { list, pagination, searchTerm, searchInputRef, onSearchSubmit, onClearSearch } =
     useClientListPage();
 
   return (
@@ -40,9 +40,10 @@ export function ClientListPage() {
         aria-label="Pessoas"
         columns={clientColumns()}
         emptyCopy={EMPTY_COPY}
-        search={{ term: query, onClear: onClearSearch }}
+        search={{ term: searchTerm, onClear: onClearSearch }}
         errorTitle="Não foi possível carregar as pessoas."
-        pagination={{ ...pagination, itemLabel: ITEM_LABEL }}
+        pagination={pagination}
+        itemLabel={ITEM_LABEL}
       />
     </div>
   );

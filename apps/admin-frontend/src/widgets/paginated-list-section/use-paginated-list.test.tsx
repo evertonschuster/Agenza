@@ -3,6 +3,7 @@ import { act, render, renderHook, screen, waitFor } from '@testing-library/react
 import { StrictMode } from 'react';
 import { NETWORK_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult, Paging } from '@/shared/pagination/paging';
+import { pending } from '@/test/pending';
 import type { UsePaginatedListOptions } from './paginated-list-section.types';
 import { usePaginatedList } from './use-paginated-list';
 
@@ -26,14 +27,6 @@ const NO_FILTERS: Filters = { search: '', situation: null, pending: false, tag: 
 
 function pageOf(totalCount: number, items: Item[] = [{ id: '1' }]): Page {
   return { ok: true, data: { items, totalCount, page: 1, pageSize: 20 } };
-}
-
-function pending<T>() {
-  let resolve!: (value: T) => void;
-  const promise = new Promise<T>((done) => {
-    resolve = done;
-  });
-  return { promise, resolve };
 }
 
 function signalOf(fetchPage: ReturnType<typeof vi.fn<FetchPage>>, call: number) {

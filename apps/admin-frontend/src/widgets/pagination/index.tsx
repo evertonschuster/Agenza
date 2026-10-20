@@ -39,4 +39,4 @@ function Pagination({
 
 export { Pagination };
 export { PaginationSkeleton } from './components/pagination-skeleton';
-export type { PaginationItemLabel, PaginationProps } from './pagination.types';
+export type { PaginationProps } from './pagination.types';

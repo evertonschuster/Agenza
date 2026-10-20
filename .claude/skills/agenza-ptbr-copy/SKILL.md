@@ -84,7 +84,7 @@ i18n layer to "prepare" for a language nobody asked for.
 The one exception: a **code → message map is data, not markup**. It belongs in the slice's `model/`,
 where it is pure and testable without React, next to the branch that consumes it.
 
-**Formatters live in `src/shared/format/`** (`date.ts`, `age.ts`) — cross-cutting, no business rule,
+**Formatters live in `src/shared/format/`** (`date.ts`, `age.ts`, `count.ts`) — cross-cutting, no business rule,
 so `shared/` by the dependency direction in
 [`docs/ARCHITECTURE.md` §1](../../../apps/admin-frontend/docs/ARCHITECTURE.md). A value with its own
 validation and limits (CPF, phone, e-mail, birth date) is not a formatter: its mask and parse live with
