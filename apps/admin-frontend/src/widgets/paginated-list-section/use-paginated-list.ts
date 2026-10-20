@@ -35,7 +35,10 @@ function toListState<T>(
   return { status: ListSectionStatus.Ready, items: result.data.items, failure: null };
 }
 
-export function usePaginatedList<F extends object, T>({  initialFilters,  fetchPage,}: UsePaginatedListOptions<F, T>): UsePaginatedListResult<F, T> {
+export function usePaginatedList<F extends object, T>({
+  initialFilters,
+  fetchPage,
+}: UsePaginatedListOptions<F, T>): UsePaginatedListResult<F, T> {
   const [query, setQuery] = useState<PaginatedListQuery<F>>({
     filters: initialFilters,
     page: FIRST_PAGE,
