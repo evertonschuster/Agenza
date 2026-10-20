@@ -4,6 +4,9 @@ public sealed record PagedResult<TItem>(IReadOnlyList<TItem> Items, int TotalCou
 {
     public PagedResult<TOutput> Map<TOutput>(Func<TItem, TOutput> map)
     {
-        return new PagedResult<TOutput>(Items.Select(map).ToList(), TotalCount, Page, PageSize);
+        var mappedItems = Items.Select(map);
+        var items = mappedItems.ToList();
+
+        return new PagedResult<TOutput>(items, TotalCount, Page, PageSize);
     }
 }
