@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useState } from 'react';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { extractErrorMessage, type ApiResult } from '@/shared/api/servicesFacade';
 import {
   DEFAULT_PAGE_SIZE,
@@ -8,7 +8,6 @@ import {
 } from '@/shared/pagination/paging';
 import { ListSectionStatus } from '@/widgets/list-section';
 import type {
-  PaginatedListAnswer,
   PaginatedListKnownTotal,
   PaginatedListQuery,
   PaginatedListState,
@@ -45,55 +44,76 @@ export function usePaginatedList<F extends object, T>({
     page: FIRST_PAGE,
     pageSize: DEFAULT_PAGE_SIZE,
   });
-  const [answer, setAnswer] = useState<PaginatedListAnswer<F, T> | null>(null);
+  const [result, setResult] = useState<ApiResult<PagedResult<T>> | null>(null);
   const [knownTotal, setKnownTotal] = useState<PaginatedListKnownTotal<F> | null>(null);
+  const inFlight = useRef<AbortController | null>(null);
   const { filters, page, pageSize } = query;
 
-  const current = answer?.query === query ? answer.result : null;
-  const lastPage = current?.ok ? getLastPage(current.data.totalCount, pageSize) : null;
+  function send(next: PaginatedListQuery<F>) {
+    inFlight.current?.abort();
+    const controller = new AbortController();
+    inFlight.current = controller;
 
-  if (lastPage !== null && page > lastPage) setQuery({ ...query, page: lastPage });
+    void fetchPage(
+      { ...next.filters, page: next.page, pageSize: next.pageSize },
+      controller.signal,
+    ).then((answer) => {
+      if (controller.signal.aborted) return;
+      if (!answer.ok) {
+        setResult(answer);
+        return;
+      }
 
-  const fetchCurrentPage = useEffectEvent((signal: AbortSignal) =>
-    fetchPage({ ...filters, page, pageSize }, signal),
-  );
+      setKnownTotal({ filters: next.filters, totalCount: answer.data.totalCount });
+      const lastPage = getLastPage(answer.data.totalCount, next.pageSize);
+      if (next.page > lastPage) {
+        request({ ...next, page: lastPage });
+        return;
+      }
+
+      setResult(answer);
+    });
+  }
+
+  function request(next: PaginatedListQuery<F>) {
+    setQuery(next);
+    setResult(null);
+    send(next);
+  }
+
+  const sendFirstPage = useEffectEvent(() => {
+    send(query);
+  });
 
   useEffect(() => {
-    const controller = new AbortController();
-
-    void fetchCurrentPage(controller.signal).then((result) => {
-      if (controller.signal.aborted) return;
-      setAnswer({ query, result });
-      if (result.ok) setKnownTotal({ filters: query.filters, totalCount: result.data.totalCount });
-    });
-
+    sendFirstPage();
     return () => {
-      controller.abort();
+      inFlight.current?.abort();
     };
-  }, [query]);
+  }, []);
 
-  const totalCount = knownTotal?.filters === filters ? knownTotal.totalCount : null;
-
-  function setFilters(patch: Partial<F>) {
-    setQuery({ filters: { ...filters, ...patch }, page: FIRST_PAGE, pageSize });
+  function applyFilters(patch: Partial<F>) {
+    request({ filters: { ...filters, ...patch }, page: FIRST_PAGE, pageSize });
   }
 
   function onPageChange(nextPage: number) {
-    setQuery({ ...query, page: nextPage });
+    request({ ...query, page: nextPage });
   }
 
   function onPageSizeChange(nextPageSize: number) {
-    setQuery({ ...query, page: FIRST_PAGE, pageSize: nextPageSize });
+    request({ ...query, page: FIRST_PAGE, pageSize: nextPageSize });
   }
 
   function onRetry() {
-    setQuery({ ...query });
+    request(query);
   }
+
+  const totalCount = knownTotal?.filters === filters ? knownTotal.totalCount : null;
 
   return {
     filters,
-    setFilters,
-    list: toListState(current, onRetry),
+    applyFilters,
+    list: toListState(result, onRetry),
     pagination: { page, pageSize, totalCount, onPageChange, onPageSizeChange },
   };
 }

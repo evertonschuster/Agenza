@@ -20,11 +20,6 @@ interface PaginatedListQuery<F> extends Paging {
   filters: F;
 }
 
-interface PaginatedListAnswer<F, T> {
-  query: PaginatedListQuery<F>;
-  result: ApiResult<PagedResult<T>>;
-}
-
 interface PaginatedListKnownTotal<F> {
   filters: F;
   totalCount: number;
@@ -50,13 +45,12 @@ type PaginatedListPagination = Omit<PaginatedListSectionPaging, 'itemLabel'>;
 
 interface UsePaginatedListResult<F, T> {
   filters: F;
-  setFilters: (patch: Partial<F>) => void;
+  applyFilters: (patch: Partial<F>) => void;
   list: PaginatedListState<T>;
   pagination: PaginatedListPagination;
 }
 
 export type {
-  PaginatedListAnswer,
   PaginatedListKnownTotal,
   PaginatedListPagination,
   PaginatedListQuery,

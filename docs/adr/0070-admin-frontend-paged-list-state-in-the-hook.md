@@ -2,7 +2,9 @@
 
 Status: accepted (2026-10); amends [ADR 0068](0068-admin-frontend-list-pagination.md) (points 1, 3 and 5) and
 [ADR 0069](0069-admin-frontend-paged-list-hook.md) (points 1 to 4 and 6); follows
-[ADR 0035](0035-admin-frontend-no-server-state-library.md)
+[ADR 0035](0035-admin-frontend-no-server-state-library.md); amended by
+[ADR 0071](0071-admin-frontend-paged-list-asks-only-when-told.md) (points 1 to 3: the hook asks the backend only from
+an action, on mount or to correct a page past the end, never from an effect keyed on its state)
 
 ## Context
 
