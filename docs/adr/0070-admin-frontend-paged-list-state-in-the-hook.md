@@ -22,6 +22,12 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
 
 ## Decision
 
+> **2026-10 update:** [ADR 0071](0071-admin-frontend-paged-list-asks-only-when-told.md) renamed `setFilters` to
+> `applyFilters`, dropped the effect keyed on the state, and moved the correction of a page past the end from the
+> render to where the answer arrives. Points 1 to 3 below are kept for historical context only where they say
+> otherwise — do not follow them for new code: the hook's API is `applyFilters`, and point 3's render-time correction
+> is superseded by ADR 0071 point 4.
+
 1. **`usePaginatedList({ initialFilters, fetchPage })` keeps the filters, the page and the size in a `useState` of its
    own**, starting on page 1 at the default size. It imports nothing from `react-router`, and its tests run without a
    Router. What it returns is unchanged: `filters`, `setFilters`, `list` and `pagination`. `setFilters` still merges
@@ -69,8 +75,8 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
   against the stack.
 - **Paging has no e2e suite any more**, and `registerPeopleThroughApi`, which created the 25 people it paged through,
   is gone with it. The owner asked on 2026-10-20 whether paging needed the backend at that level; it does not, by the
-  rule of the cheapest tier that can fail for the right reason. Every behaviour the suite checked already fails
-  without a backend: the page's own tests drive the same clicks over a mocked repository (21 in its paging block:
+  rule of the cheapest tier that can fail for the right reason. Every behaviour the suite checked is already
+  covered by tests that run without a backend: the page's own tests drive the same clicks over a mocked repository (21 in its paging block:
   next, previous and numbered pages, a new size and a new search back on page 1, the size kept, a request dropped
   when another starts, a total that shrinks); the hook, the footer, `PaginatedListSection` and `paging.ts` have their
   own. The seam with the API is pinned twice: the repository's tests check `Page`, `PageSize` and `Search` by name,
