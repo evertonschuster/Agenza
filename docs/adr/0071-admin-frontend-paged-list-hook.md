@@ -1,10 +1,10 @@
-# ADR 0069 — admin-frontend: one hook for paged lists
+# ADR 0071 — admin-frontend: one hook for paged lists
 
-Status: accepted (2026-10); amends [ADR 0068](0068-admin-frontend-list-pagination.md) (points 4 and 5) and the rule of
+Status: accepted (2026-10); amends [ADR 0070](0070-admin-frontend-list-pagination.md) (points 4 and 5) and the rule of
 `apps/admin-frontend/AGENTS.md` that hooks are not shared between pages; follows
 [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md) (a TanStack Query proof of concept for the lists was turned
-down on 2026-10-15); amended by [ADR 0070](0070-admin-frontend-paged-list-state-in-the-hook.md) (points 1 to 4 and 6:
+down on 2026-10-15); amended by [ADR 0072](0072-admin-frontend-paged-list-state-in-the-hook.md) (points 1 to 4 and 6:
 the state is in the hook, not in the URL, and a request is told apart by the state object itself)
 
 ## Context
@@ -44,7 +44,7 @@ round of questions before any code.
 2. **Each list declares its filters as an interface and a plain function that reads them from the URL**, in its
    `model/` (`ClientListFilters`, `readClientListFilters`), using `URLSearchParams` directly, the way `readPaging` reads
    the size. A value the list does not know reads as empty (`''`, `null`, `false`, `[]`), and the hook rewrites the URL
-   with a `replace`, as ADR 0068 point 3 already does for the page. A filter is named in the URL after its property
+   with a `replace`, as ADR 0070 point 3 already does for the page. A filter is named in the URL after its property
    (`q`), and the repository maps it to the name the API reads (`Search`). A filter's value is a `string`, a `string[]`,
    a `boolean` or `null`.
 3. **The writing is shared**: `withFilters(params, filters)` in `shared/pagination/filters.ts`, beside `withPaging`. An
@@ -55,7 +55,7 @@ round of questions before any code.
    dropped (a state reset during render, the pattern React documents for it), so coming back to a request shows the
    skeleton until its new answer arrives.
 5. **The total belongs to the filters it was counted for.** Changing the page or the size keeps the footer, on the last
-   total, while the page loads (ADR 0068 point 4, unchanged). A new search or filter, Back or Forward to other filters,
+   total, while the page loads (ADR 0070 point 4, unchanged). A new search or filter, Back or Forward to other filters,
    and the first load draw the footer as a skeleton: `PaginationSkeleton`, built on the same three-part
    `PaginationLayout` as the footer and hidden from assistive tech. A failure still has no footer. The owner, on
    2026-10-15: on a change of page keep the numbers, and while filtering show it loading too, with a skeleton. Drawing
@@ -92,7 +92,7 @@ round of questions before any code.
   request of a link opened directly) and when Back changes the URL with nobody touching it, and the repository
   (`api/`) needs their type, which a component in `ui/` could only give by inverting the slice.
 - **The filter form inside the hook**, and **React Hook Form for the search field.** The owner kept the field as it was.
-- **Keeping the last total while a new search loads** (ADR 0068 point 4 as it stood). It shows numbers that belong to
+- **Keeping the last total while a new search loads** (ADR 0070 point 4 as it stood). It shows numbers that belong to
   another search.
 - **A server-state library**: the TanStack Query proof of concept, turned down on 2026-10-15. **A route `loader`**:
   tried and reverted for Etiquetas, because it made the list's skeleton unreachable (ARCHITECTURE §5).

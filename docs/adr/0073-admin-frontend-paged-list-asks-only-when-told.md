@@ -1,14 +1,14 @@
-# ADR 0071 — admin-frontend: a paged list asks the backend only when told to
+# ADR 0073 — admin-frontend: a paged list asks the backend only when told to
 
-Status: accepted (2026-10); amends [ADR 0070](0070-admin-frontend-paged-list-state-in-the-hook.md) (points 1 to 3:
+Status: accepted (2026-10); amends [ADR 0072](0072-admin-frontend-paged-list-state-in-the-hook.md) (points 1 to 3:
 no effect keyed on the state, and the correction of a page past the end leaves the render) and
-[ADR 0069](0069-admin-frontend-paged-list-hook.md) (point 1: `setFilters` becomes `applyFilters`); follows
+[ADR 0071](0071-admin-frontend-paged-list-hook.md) (point 1: `setFilters` becomes `applyFilters`); follows
 [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) (cancellation stays with the consumer) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md)
 
 ## Context
 
-After ADR 0070, `usePaginatedList` kept the filters, the page and the size in a `useState` and fetched from a
+After ADR 0072, `usePaginatedList` kept the filters, the page and the size in a `useState` and fetched from a
 `useEffect` keyed on that state. From the page the call was already explicit (the submit called `setFilters`), but
 the request left because the state had changed, in an effect, after the render. On 2026-10-20 the owner asked that
 fetching stop being reactive inside the hook: in a previous job they met the bugs that come with it (an effect
@@ -29,7 +29,7 @@ component is on screen.
    call stack.
 2. **One request in flight at a time.** `send(next)` aborts the request in flight, held in a ref as an
    `AbortController`, before the next one leaves, and an answer whose signal was aborted is dropped, so only the
-   latest answer reaches the screen. The answer is no longer tagged with its query (ADR 0070 point 2): the abort
+   latest answer reaches the screen. The answer is no longer tagged with its query (ADR 0072 point 2): the abort
    already ensures it is the current one. Unmounting aborts what is in flight.
 3. **The first page is asked for by an effect with no dependencies**, through `useEffectEvent`. It reacts to no state
    and no prop, so no render can turn into another request. It sets no state itself (the state starts as loading),

@@ -1,4 +1,4 @@
-# ADR 0068 — admin-frontend: paged lists
+# ADR 0070 — admin-frontend: paged lists
 
 Status: accepted (2026-10); completes the paging that [ADR 0067](0067-admin-frontend-clients-list.md) (point 3) left to
 the owner; consumes the paged-list contract of [ADR 0063](0063-clients-list-and-search-contract.md) and
@@ -6,9 +6,9 @@ the owner; consumes the paged-list contract of [ADR 0063](0063-clients-list-and-
 [ADR 0042](0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md) (a widget may compose another widget);
 follows [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md); amended by
-[ADR 0069](0069-admin-frontend-paged-list-hook.md) (points 4 and 5: the footer as a skeleton while the total of the
+[ADR 0071](0071-admin-frontend-paged-list-hook.md) (points 4 and 5: the footer as a skeleton while the total of the
 current filters is unknown, and one shared hook for paged lists) and by
-[ADR 0070](0070-admin-frontend-paged-list-state-in-the-hook.md) (points 1, 3 and 5: the state is in the hook, not in
+[ADR 0072](0072-admin-frontend-paged-list-state-in-the-hook.md) (points 1, 3 and 5: the state is in the hook, not in
 the URL, and the URL helpers are gone)
 
 ## Context
@@ -67,7 +67,7 @@ the real total (ADR 0063, ADR 0064).
    footer stays, on the last known total, with every control still usable: a click while a page loads asks for another
    page, and the answer still in flight is dropped, as the hook already does for a new search (Anterior on the first
    page and Próxima on the last are `aria-disabled`, so keyboard focus is not lost). Before the first answer, when the total is unknown, and after a failure there
-   is no footer (since [ADR 0069](0069-admin-frontend-paged-list-hook.md), the footer is a skeleton before the first
+   is no footer (since [ADR 0071](0071-admin-frontend-paged-list-hook.md), the footer is a skeleton before the first
    answer and while a new search loads, because the last total belongs to the search it was counted for; a failure
    still has none). Changing the page moves neither the scroll nor the focus. The skeleton has as many rows as the page
    size (10, 20, 50 or 100), also before the first answer, when there is no footer yet: the size comes from the URL, so
@@ -95,7 +95,7 @@ the real total (ADR 0063, ADR 0064).
      component for the page, in a folder of its own;
    - each list's own hook ties `useSearchParams` to those functions (about ten lines), because hooks are not shared
      between pages (AGENTS.md). The owner kept that rule over a generic `usePagination` (replaced the next day by
-     `usePaginatedList`, [ADR 0069](0069-admin-frontend-paged-list-hook.md), once the filters made the ten lines many
+     `usePaginatedList`, [ADR 0071](0071-admin-frontend-paged-list-hook.md), once the filters made the ten lines many
      more).
 6. **A widget may import another widget**, never in a cycle: `paginated-list-section` renders `list-section` and
    `pagination`. ADR 0042 and ARCHITECTURE §1 said a widget imports only `shared/`; the lint rule never enforced it (it
@@ -107,7 +107,7 @@ the real total (ADR 0063, ADR 0064).
 
 ## Consequences
 
-> **2026-10 update:** [ADR 0070](0070-admin-frontend-paged-list-state-in-the-hook.md) moved the state out of the URL
+> **2026-10 update:** [ADR 0072](0072-admin-frontend-paged-list-state-in-the-hook.md) moved the state out of the URL
 > and removed `withPaging`: `usePaginatedList` keeps the filters, the page and the size in its own state. Three
 > bullets below are kept for historical context only — do not follow them for new code: the situation filter carried
 > along as `?status=` by `withPaging`, the URL as the only state, and a click while a page loads as a navigation that

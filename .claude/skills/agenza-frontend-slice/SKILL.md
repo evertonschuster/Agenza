@@ -71,8 +71,8 @@ page-owned state. Nothing implements this yet; you are writing the first one. Sh
 
 `<Page>.tsx` holds no `useState`, `useEffect` or `useRef` of its own. All of it lives in that page's
 **own** hook. Hooks are never shared between pages — the exceptions are a pure Context accessor
-like `useAuth` and a generic hook with no domain in a widget, such as `usePaginatedList` (ADR 0069), which
-a paged list's hook calls with its initial filters and repository `list` (ADR 0070: the hook keeps that state, not the URL). Two pages wanting the same logic means the logic is a pure function for `model/`, not
+like `useAuth` and a generic hook with no domain in a widget, such as `usePaginatedList` (ADR 0071), which
+a paged list's hook calls with its initial filters and repository `list` (ADR 0072: the hook keeps that state, not the URL). Two pages wanting the same logic means the logic is a pure function for `model/`, not
 a shared hook. Details, sub-component placement and the StrictMode guards:
 [references/pages.md](references/pages.md).
 

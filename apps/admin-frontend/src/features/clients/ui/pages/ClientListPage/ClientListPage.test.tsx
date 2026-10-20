@@ -317,7 +317,7 @@ describe('ClientListPage', () => {
     expect(screen.getByText('Ana Souza')).toBeInTheDocument();
   });
 
-  it('narrows the list to the submitted term, leaving the address alone (ADR 0070)', async () => {
+  it('narrows the list to the submitted term, leaving the address alone (ADR 0072)', async () => {
     const user = userEvent.setup();
     renderPage(CLIENTS);
     await screen.findByText('Ana Souza');
@@ -345,7 +345,7 @@ describe('ClientListPage', () => {
     expect(screen.getByText('Bruno Lima')).toBeInTheDocument();
   });
 
-  it('starts on the first page of everyone whatever the address carries (ADR 0070)', async () => {
+  it('starts on the first page of everyone whatever the address carries (ADR 0072)', async () => {
     serve(CLIENTS);
     renderClientListPage(['/pessoas?q=bruno&page=3&pageSize=10']);
 

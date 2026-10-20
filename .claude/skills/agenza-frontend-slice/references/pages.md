@@ -32,9 +32,9 @@ rediscover in production.
 
 **Hooks are never shared between pages.** The exceptions are a pure Context accessor like
 `useAuth`, and a generic hook with no domain that a widget exports, such as `usePaginatedList` in
-`widgets/paginated-list-section` (ADR 0069): a paged list declares its filters in `model/` as an
+`widgets/paginated-list-section` (ADR 0071): a paged list declares its filters in `model/` as an
 interface, and its page hook passes the initial filters and the repository's `list` to
-`usePaginatedList`, which keeps the filters, the page and the size in its own state (ADR 0070). If two pages want the same behaviour, extract the *pure* part into `model/` as a plain
+`usePaginatedList`, which keeps the filters, the page and the size in its own state (ADR 0072). If two pages want the same behaviour, extract the *pure* part into `model/` as a plain
 function and let each hook call it. A `useSharedThing` imported by two pages is the smell that ends
 with one page's lifecycle quietly driving another's.
 

@@ -29,7 +29,7 @@ places. Adding a fourth layer meant another block restating everything.
 
 1. **A `src/widgets/` layer** holds generic UI compositions that carry behaviour but no domain
    knowledge. Direction: `app → features → widgets → shared`. A widget imports `shared/` and, to compose one,
-   another widget, never in a cycle (amended by [ADR 0068](0068-admin-frontend-list-pagination.md):
+   another widget, never in a cycle (amended by [ADR 0070](0070-admin-frontend-list-pagination.md):
    `paginated-list-section` renders `list-section` and `pagination`); a feature may import widgets; nothing imports
    upward.
 2. **One custom ESLint rule, `agenza/layer-boundaries`**
@@ -49,7 +49,7 @@ places. Adding a fourth layer meant another block restating everything.
 - Imports inside a slice are exempt in any form, including `@/features/<same slice>/…`, which the
   old base block banned.
 - A widget importing a widget was never what the rule reported (it reports only an import into a higher layer, and a
-  sibling is the same layer); ADR 0068 writes the convention down instead of the sentence it replaced.
+  sibling is the same layer); ADR 0070 writes the convention down instead of the sentence it replaced.
 - `widgets/` is not sliced: a consumer can import a widget's `components/` directly. The
   `index.tsx`-only convention for sub-parts stays a review rule, as it is for `shared/ui/`.
 - Widgets carry behaviour, so by this ADR's own premise they belong under the coverage gate.

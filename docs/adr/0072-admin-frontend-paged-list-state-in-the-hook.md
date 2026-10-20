@@ -1,9 +1,9 @@
-# ADR 0070 — admin-frontend: a paged list keeps its state in the hook, not in the URL
+# ADR 0072 — admin-frontend: a paged list keeps its state in the hook, not in the URL
 
-Status: accepted (2026-10); amends [ADR 0068](0068-admin-frontend-list-pagination.md) (points 1, 3 and 5) and
-[ADR 0069](0069-admin-frontend-paged-list-hook.md) (points 1 to 4 and 6); follows
+Status: accepted (2026-10); amends [ADR 0070](0070-admin-frontend-list-pagination.md) (points 1, 3 and 5) and
+[ADR 0071](0071-admin-frontend-paged-list-hook.md) (points 1 to 4 and 6); follows
 [ADR 0035](0035-admin-frontend-no-server-state-library.md); amended by
-[ADR 0071](0071-admin-frontend-paged-list-asks-only-when-told.md) (points 1 to 3: the hook asks the backend only from
+[ADR 0073](0073-admin-frontend-paged-list-asks-only-when-told.md) (points 1 to 3: the hook asks the backend only from
 an action, on mount or to correct a page past the end, never from an effect keyed on its state)
 
 ## Context
@@ -22,11 +22,11 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
 
 ## Decision
 
-> **2026-10 update:** [ADR 0071](0071-admin-frontend-paged-list-asks-only-when-told.md) renamed `setFilters` to
+> **2026-10 update:** [ADR 0073](0073-admin-frontend-paged-list-asks-only-when-told.md) renamed `setFilters` to
 > `applyFilters`, dropped the effect keyed on the state, and moved the correction of a page past the end from the
 > render to where the answer arrives. Points 1 to 3 below are kept for historical context only where they say
 > otherwise — do not follow them for new code: the hook's API is `applyFilters`, and point 3's render-time correction
-> is superseded by ADR 0071 point 4.
+> is superseded by ADR 0073 point 4.
 
 1. **`usePaginatedList({ initialFilters, fetchPage })` keeps the filters, the page and the size in a `useState` of its
    own**, starting on page 1 at the default size. It imports nothing from `react-router`, and its tests run without a
@@ -36,17 +36,17 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
    hook tells requests apart by reference instead of by value. The answer on screen is the one whose `query` is the
    current one. The total is the one counted for the current `filters` object: a change of page or size keeps that
    object, and a change of filters makes a new one. Three things that existed only because the URL was read again on
-   every render are gone: the text keys, the reset of the answer during render (ADR 0069 point 4; going A → B → A, the
-   second A is another object, so A's old answer never matches) and the retry counter (ADR 0069 point 6; a retry asks
+   every render are gone: the text keys, the reset of the answer during render (ADR 0071 point 4; going A → B → A, the
+   second A is another object, so A's old answer never matches) and the retry counter (ADR 0071 point 6; a retry asks
    for a copy of the current query). A filter's value can be any data (`F extends object`), no longer only what a URL
    holds. Confirming the same filters again is now a new request, with the footer as a skeleton; before, it did nothing.
 3. **A page past the last one moves to the last during render.** With no address to type, it only happens when the
    total shrinks under the page on screen. The hook adjusts its own state during render, the pattern React documents
    for adjusting state to a change, so the render with the page past the end is never committed and the guards that
-   hid it are gone. The other corrections of ADR 0068 point 3 (an unreadable page, a size that is not
+   hid it are gone. The other corrections of ADR 0070 point 3 (an unreadable page, a size that is not
    offered, the `replace`) have nothing left to correct.
 4. **Pessoas passes `initialFilters: { search: '' }`.** `readClientListFilters` is gone; `ClientListFilters` stays as
-   the type the repository reads, and its field is `search` again, as before ADR 0069: it was named `q` after the URL
+   the type the repository reads, and its field is `search` again, as before ADR 0071: it was named `q` after the URL
    parameter, which is gone, and `search` is what the API reads (`Search`). The search field stays uncontrolled, but
    with nothing outside the page left to change `search`, the effect that copied it into the field and the field's
    `defaultValue` are gone: "Limpar busca" empties the field in its own handler. That also ends a Base UI warning about an uncontrolled field whose default value changed
@@ -83,7 +83,7 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
   and the types generated from the OpenAPI document, with `generate:api-types:check` failing on drift, break `tsc` if
   the backend renames one. Paging, order and totals on the backend are services-service's tests (ADR 0063, ADR 0064).
   What only the suite saw was a real browser: the container query that swaps the numbers for "Página X de Y" and Base
-  UI's select in Chromium. Those were measured by hand when they were built (ADR 0068) and are not checked
+  UI's select in Chromium. Those were measured by hand when they were built (ADR 0070) and are not checked
   automatically now. A first step that day kept the suite over the people already in the demo tenant and skipped it
   below 21, which left it skipped in CI, where the database starts empty; removing it says the same thing without a
   test that never runs there.

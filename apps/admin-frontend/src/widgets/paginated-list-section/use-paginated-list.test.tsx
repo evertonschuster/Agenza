@@ -42,7 +42,7 @@ function renderList(
 }
 
 describe('usePaginatedList', () => {
-  describe('when it asks the backend (ADR 0071)', () => {
+  describe('when it asks the backend (ADR 0073)', () => {
     it('asks once on mount, for the initial filters on the first page at the default size, with no router around it', async () => {
       const initialFilters: Filters = {
         search: 'ana',
