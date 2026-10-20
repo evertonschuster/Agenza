@@ -42,7 +42,7 @@ public class ListTagsQueryHandlerTests
             .Returns(new[] { Tag.Create(Guid.NewGuid(), "VIP", Teal, null).Value });
         var handler = new ListTagsQueryHandler(repository);
 
-        var result = await handler.Handle(new ListTagsQuery(Search: "VIP"), CancellationToken.None);
+        var result = await handler.Handle(new ListTagsQuery(Search: SearchText.Create("VIP").Value), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Should().ContainSingle().Which.Name.Should().Be("VIP");

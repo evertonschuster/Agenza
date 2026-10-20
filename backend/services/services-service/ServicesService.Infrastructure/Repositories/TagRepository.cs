@@ -12,13 +12,20 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
     {
     }
 
-    public Task<IReadOnlyList<Tag>> ListAsync(string? search, CancellationToken cancellationToken) =>
-        ListAsync(
-            query => (string.IsNullOrWhiteSpace(search)
-                ? query
-                : query.Where(t => EF.Functions.ILike(t.Name, $"%{search.Trim()}%")))
-                .OrderBy(t => t.Name),
-            cancellationToken);
+    public Task<IReadOnlyList<Tag>> ListAsync(string? search, CancellationToken cancellationToken)
+    {
+        return ListAsync(query => FilterAndOrder(query, search), cancellationToken);
+    }
+
+    private static IOrderedQueryable<Tag> FilterAndOrder(IQueryable<Tag> query, string? search)
+    {
+        if (search is { } text)
+        {
+            query = query.Where(tag => EF.Property<string>(tag, "NameNormalized").Contains(text));
+        }
+
+        return query.OrderBy(tag => tag.Name).ThenBy(tag => tag.Id);
+    }
 
     public Task<Tag?> GetByIdAsync(Guid tagId, CancellationToken cancellationToken) =>
         FindAsync(t => t.Id == tagId, cancellationToken);
