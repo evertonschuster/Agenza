@@ -12,6 +12,7 @@ import {
 } from 'react-router';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagFormPage } from './TagFormPage';
+import type { TagListQuery } from '../../../api/tagsRepository';
 import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH, type Tag } from '../../../model/tag';
 
 const { mockList, mockGet, mockCreate, mockUpdate } = vi.hoisted(() => ({
@@ -29,6 +30,10 @@ const TAGS: Tag[] = [
   { id: '1', name: 'Promoção', color: '#f59e0b', description: 'Desconto temporário' },
   { id: '2', name: 'VIP', color: '#8b5cf6', description: null },
 ];
+
+function listOf(items: Tag[]) {
+  return { ok: true, data: { items, totalCount: items.length, page: 1, pageSize: 20 } };
+}
 
 function LocationProbe() {
   const location = useLocation();
@@ -75,7 +80,7 @@ function renderRouterAt(initialEntries: string[]) {
 describe('TagFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ ok: true, data: TAGS });
+    mockList.mockResolvedValue(listOf(TAGS));
     mockGet.mockImplementation((id: string) => {
       const tag = TAGS.find((candidate) => candidate.id === id);
       return Promise.resolve(
@@ -125,10 +130,9 @@ describe('TagFormPage', () => {
 
       await user.type(screen.getByLabelText('Nome'), 'Sazonal');
       await user.click(screen.getByRole('radio', { name: 'Azul' }));
-      mockList.mockResolvedValue({
-        ok: true,
-        data: [...TAGS, { id: '3', name: 'Sazonal', color: '#0ea5e9', description: null }],
-      });
+      mockList.mockResolvedValue(
+        listOf([...TAGS, { id: '3', name: 'Sazonal', color: '#0ea5e9', description: null }]),
+      );
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(mockCreate).toHaveBeenCalledWith({
@@ -310,11 +314,10 @@ describe('TagFormPage', () => {
 
     it('closes without creating when Cancelar is clicked, with the search the list had still on screen (ADR 0074)', async () => {
       const user = userEvent.setup();
-      mockList.mockImplementation((search?: string) =>
-        Promise.resolve({
-          ok: true,
-          data: search ? TAGS.filter((tag) => tag.name.toLowerCase().includes(search)) : TAGS,
-        }),
+      mockList.mockImplementation(({ search }: TagListQuery) =>
+        Promise.resolve(
+          listOf(search ? TAGS.filter((tag) => tag.name.toLowerCase().includes(search)) : TAGS),
+        ),
       );
       renderAt(['/tags']);
       await screen.findByText('VIP');
@@ -460,18 +463,17 @@ describe('TagFormPage', () => {
       const nameInput = await screen.findByLabelText('Nome');
       await user.clear(nameInput);
       await user.type(nameInput, 'Promo relâmpago');
-      mockList.mockResolvedValue({
-        ok: true,
-        data: [
+      mockList.mockResolvedValue(
+        listOf([
           {
             id: '1',
             name: 'Promo relâmpago',
             color: '#f59e0b',
             description: 'Desconto temporário',
           },
-          TAGS[1],
-        ],
-      });
+          TAGS[1]!,
+        ]),
+      );
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(mockUpdate).toHaveBeenCalledWith('1', {

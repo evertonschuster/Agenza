@@ -2,7 +2,9 @@
 
 Status: accepted (2026-10-20); supersedes the frontend-compatibility consequence and the
 collection-adapter rejection in [ADR 0068](0068-tags-paginated-list.md). The backend paging
-contract in that ADR is unchanged.
+contract in that ADR is unchanged. The adapter was retired by
+[ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md), which pages the screen; this
+record stays as the decision that held until then.
 
 ## Context
 
