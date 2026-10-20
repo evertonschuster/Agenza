@@ -16,8 +16,10 @@ public sealed class ListTagsQueryHandler : IQueryHandler<ListTagsQuery, PagedRes
         ListTagsQuery query,
         CancellationToken cancellationToken)
     {
-        var tags = await _tagRepository.ListAsync(query.ToFilter(), cancellationToken);
+        var tagFilter = query.ToFilter();
+        var tags = await _tagRepository.ListAsync(tagFilter, cancellationToken);
+        var responseTags = tags.Map(TagResponse.FromTag);
 
-        return Result.Success(tags.Map(TagResponse.FromTag));
+        return Result.Success(responseTags);
     }
 }
