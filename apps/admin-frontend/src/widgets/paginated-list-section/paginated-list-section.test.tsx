@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ListSectionColumn } from '@/widgets/list-section';
 import { PaginatedListSection, type PaginatedListSectionPaging } from './index';
 
 interface Item {
@@ -11,6 +12,10 @@ interface Item {
 const ITEMS: Item[] = [
   { id: '1', name: 'Primeiro' },
   { id: '2', name: 'Segundo' },
+];
+
+const NAME_COLUMN: ListSectionColumn<Item>[] = [
+  { key: 'name', header: 'Nome', cell: (item) => item.name },
 ];
 
 const PAGINATION: PaginatedListSectionPaging = {
@@ -40,7 +45,7 @@ function renderPaginated({
       status={status}
       items={items}
       getKey={(item) => item.id}
-      renderItem={(item) => item.name}
+      columns={NAME_COLUMN}
       pagination={pagination}
       aria-label="Itens"
       className={className}
@@ -58,37 +63,26 @@ function busyRegion(container: HTMLElement) {
 
 describe('PaginatedListSection', () => {
   describe('the list', () => {
-    it('renders the items it is given, the way a ListSection does', () => {
+    it('renders the items it is given as the table of a ListSection', () => {
       renderPaginated();
 
-      const list = screen.getByRole('list', { name: 'Itens' });
+      const table = screen.getByRole('table', { name: 'Itens' });
       expect(
-        within(list)
-          .getAllByRole('listitem')
-          .map((item) => item.textContent),
+        within(table)
+          .getAllByRole('row')
+          .slice(1)
+          .map((row) => row.textContent),
       ).toEqual(['Primeiro', 'Segundo']);
     });
 
-    it('hands the table mode, the empty copy and the failure to the list', async () => {
+    it('hands the empty copy and the failure to the list', async () => {
       const onRetry = vi.fn();
       const { rerender } = render(
         <PaginatedListSection
           status="ready"
-          items={ITEMS}
+          items={[] as Item[]}
           getKey={(item) => item.id}
-          columns={[{ key: 'name', header: 'Nome', cell: (item) => item.name }]}
-          pagination={PAGINATION}
-          aria-label="Itens"
-        />,
-      );
-      expect(screen.getByRole('table', { name: 'Itens' })).toBeInTheDocument();
-
-      rerender(
-        <PaginatedListSection
-          status="ready"
-          items={[]}
-          getKey={(item: Item) => item.id}
-          renderItem={(item: Item) => item.name}
+          columns={NAME_COLUMN}
           emptyCopy={{ title: 'Nada por aqui' }}
           pagination={{ ...PAGINATION, totalCount: 0 }}
           aria-label="Itens"
@@ -99,9 +93,9 @@ describe('PaginatedListSection', () => {
       rerender(
         <PaginatedListSection
           status="error"
-          items={[]}
-          getKey={(item: Item) => item.id}
-          renderItem={(item: Item) => item.name}
+          items={[] as Item[]}
+          getKey={(item) => item.id}
+          columns={NAME_COLUMN}
           failure={{ message: 'Fora do ar', onRetry }}
           pagination={PAGINATION}
           aria-label="Itens"
@@ -115,7 +109,7 @@ describe('PaginatedListSection', () => {
       const { container } = renderPaginated({ className: 'custom-box' });
 
       expect(container.firstChild).toHaveClass('custom-box');
-      expect(container.firstChild).toContainElement(screen.getByRole('list', { name: 'Itens' }));
+      expect(container.firstChild).toContainElement(screen.getByRole('table', { name: 'Itens' }));
       expect(container.firstChild).toContainElement(
         screen.getByRole('navigation', { name: 'Paginação' }),
       );
@@ -126,10 +120,10 @@ describe('PaginatedListSection', () => {
     it('shows where the person is, below the items, once the page is ready', () => {
       renderPaginated();
 
-      const list = screen.getByRole('list', { name: 'Itens' });
+      const table = screen.getByRole('table', { name: 'Itens' });
       const summary = screen.getByRole('status');
       expect(summary).toHaveTextContent('Exibindo 21–40 de 87 itens');
-      expect(list.compareDocumentPosition(summary)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
+      expect(table.compareDocumentPosition(summary)).toBe(Node.DOCUMENT_POSITION_FOLLOWING);
       expect(screen.getByRole('navigation', { name: 'Paginação' })).toBeInTheDocument();
     });
 
@@ -236,22 +230,7 @@ describe('PaginatedListSection', () => {
         pagination: { ...PAGINATION, page: 1, pageSize },
       });
 
-      expect(busyRegion(container)?.children).toHaveLength(pageSize);
-    });
-
-    it('has as many rows as the page size in table mode too, as the table it stands for', () => {
-      const { container } = render(
-        <PaginatedListSection
-          status="loading"
-          items={[] as Item[]}
-          getKey={(item) => item.id}
-          columns={[{ key: 'name', header: 'Nome', cell: (item) => item.name }]}
-          pagination={{ ...PAGINATION, page: 1, pageSize: 50 }}
-          aria-label="Itens"
-        />,
-      );
-
-      expect(busyRegion(container)?.querySelectorAll('tbody tr')).toHaveLength(50);
+      expect(busyRegion(container)?.querySelectorAll('tbody tr')).toHaveLength(pageSize);
     });
 
     it('has them before the total is known, when there is no footer yet', () => {
@@ -261,7 +240,7 @@ describe('PaginatedListSection', () => {
         pagination: { ...PAGINATION, page: 1, pageSize: 50, totalCount: null },
       });
 
-      expect(busyRegion(container)?.children).toHaveLength(50);
+      expect(busyRegion(container)?.querySelectorAll('tbody tr')).toHaveLength(50);
     });
   });
 });

@@ -16,10 +16,6 @@ interface ListSectionColumn<T> {
   cell: (item: T) => ReactNode;
 }
 
-type ListSectionRenderMode<T> =
-  | { renderItem: (item: T) => ReactNode; columns?: never }
-  | { columns: ListSectionColumn<T>[]; renderItem?: never };
-
 interface ListSectionEmptyCopy {
   title?: string | undefined;
   description?: string | undefined;
@@ -38,7 +34,8 @@ interface ListSectionFailure {
   onRetry?: (() => void) | undefined;
 }
 
-type ListSectionProps<T> = ListSectionRenderMode<T> & {
+interface ListSectionProps<T> {
+  columns: ListSectionColumn<T>[];
   status: ListSectionStatus;
   items: readonly T[];
   getKey: (item: T) => string;
@@ -49,22 +46,22 @@ type ListSectionProps<T> = ListSectionRenderMode<T> & {
   failure?: ListSectionFailure | null | undefined;
   'aria-label': string;
   className?: string | undefined;
-};
+}
 
 interface ListSectionSkeletonProps<T> {
   rowCount: number;
-  columns?: ListSectionColumn<T>[] | undefined;
+  columns: ListSectionColumn<T>[];
   ariaLabel: string;
 }
 
-interface ListSectionItemsProps<T> {
+interface ListSectionTableProps<T> {
   items: readonly T[];
+  columns: ListSectionColumn<T>[];
   getKey: (item: T) => string;
   ariaLabel: string;
 }
 
-interface ListSectionReadyProps<T> extends ListSectionItemsProps<T> {
-  renderMode: ListSectionRenderMode<T>;
+interface ListSectionReadyProps<T> extends ListSectionTableProps<T> {
   emptyCopy?: ListSectionEmptyCopy | undefined;
   search?: ListSectionSearch | undefined;
 }
@@ -79,14 +76,6 @@ interface ListSectionErrorProps {
   failure?: ListSectionFailure | null | undefined;
 }
 
-interface ListSectionTableProps<T> extends ListSectionItemsProps<T> {
-  columns: ListSectionColumn<T>[];
-}
-
-interface ListSectionListProps<T> extends ListSectionItemsProps<T> {
-  renderItem: (item: T) => ReactNode;
-}
-
 export type {
   ListSectionColumn,
   ListSectionEmptyCopy,
@@ -95,10 +84,7 @@ export type {
   ListSectionFailure,
   ListSectionSearch,
   ListSectionProps,
-  ListSectionRenderMode,
   ListSectionSkeletonProps,
-  ListSectionItemsProps,
   ListSectionReadyProps,
   ListSectionTableProps,
-  ListSectionListProps,
 };
