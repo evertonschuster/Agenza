@@ -10,7 +10,7 @@ superseded is historical evidence, not current implementation guidance.
 | Service and data topology | 0001, 0002, 0003, 0024, 0029 |
 | Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049 as narrowed by 0061, 0051, 0057 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
-| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059, 0060, 0062, 0063, 0064, 0065, 0066 |
+| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059, 0060, 0062, 0063, 0064, 0065, 0066, 0068 |
 | Dates, times and time zones | 0045 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
 | Authentication UX and AI delegation | 0020, 0022 |
@@ -18,7 +18,7 @@ superseded is historical evidence, not current implementation guidance.
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032, 0050 |
 | Logging and telemetry | 0054 |
-| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
+| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038, 0069 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
 | admin-frontend screens | 0067 |
 | AI agent instruction files | 0041 |
@@ -91,4 +91,6 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0064 paged reads: one page request in, one paged result out ·
 0065 string value objects read from a query or a route, by opt-in ·
 0066 enums read from a query or a route by one name ·
-0067 admin-frontend Pessoas list: whole CPF, filter and paging deferred, provisional detail route.
+0067 admin-frontend Pessoas list: whole CPF, filter and paging deferred, provisional detail route ·
+0068 tags list: always paged, shared paging contract and literal name search.
+0069 tags frontend: collection compatibility over bounded API pages during the paging rollout.

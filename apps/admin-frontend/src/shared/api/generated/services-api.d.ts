@@ -1410,6 +1410,8 @@ export interface paths {
       parameters: {
         query?: {
           Search?: string;
+          Page?: number;
+          PageSize?: number;
         };
         header?: never;
         path: {
@@ -1425,9 +1427,9 @@ export interface paths {
             [name: string]: unknown;
           };
           content: {
-            'text/plain': components['schemas']['ApiResponseOfIReadOnlyListOfTagResponse'];
-            'application/json': components['schemas']['ApiResponseOfIReadOnlyListOfTagResponse'];
-            'text/json': components['schemas']['ApiResponseOfIReadOnlyListOfTagResponse'];
+            'text/plain': components['schemas']['ApiResponseOfPagedResultOfTagResponse'];
+            'application/json': components['schemas']['ApiResponseOfPagedResultOfTagResponse'];
+            'text/json': components['schemas']['ApiResponseOfPagedResultOfTagResponse'];
           };
         };
         /** @description Bad Request */
@@ -1889,14 +1891,6 @@ export interface components {
       traceId?: null | string;
       correlationId?: null | string;
     };
-    ApiResponseOfIReadOnlyListOfTagResponse: {
-      data: null | components['schemas']['TagResponse'][];
-      success?: boolean;
-      /** Format: date-time */
-      timestamp?: string;
-      traceId?: null | string;
-      correlationId?: null | string;
-    };
     ApiResponseOfPagedResultOfClientListItemResponse: {
       data: null | components['schemas']['PagedResultOfClientListItemResponse'];
       success?: boolean;
@@ -1907,6 +1901,14 @@ export interface components {
     };
     ApiResponseOfPagedResultOfServiceResponse: {
       data: null | components['schemas']['PagedResultOfServiceResponse'];
+      success?: boolean;
+      /** Format: date-time */
+      timestamp?: string;
+      traceId?: null | string;
+      correlationId?: null | string;
+    };
+    ApiResponseOfPagedResultOfTagResponse: {
+      data: null | components['schemas']['PagedResultOfTagResponse'];
       success?: boolean;
       /** Format: date-time */
       timestamp?: string;
@@ -2033,6 +2035,15 @@ export interface components {
     };
     PagedResultOfServiceResponse: {
       items: components['schemas']['ServiceResponse'][];
+      /** Format: int32 */
+      totalCount: number;
+      /** Format: int32 */
+      page: number;
+      /** Format: int32 */
+      pageSize: number;
+    };
+    PagedResultOfTagResponse: {
+      items: components['schemas']['TagResponse'][];
       /** Format: int32 */
       totalCount: number;
       /** Format: int32 */

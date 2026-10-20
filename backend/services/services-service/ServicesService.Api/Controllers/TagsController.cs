@@ -24,7 +24,7 @@ public class TagsController : AgenzaControllerBase
     }
 
     [HttpGet]
-    [ProducesResponseType<ApiResponse<IReadOnlyList<TagResponse>>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiResponse<PagedResult<TagResponse>>>(StatusCodes.Status200OK)]
     [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
     public async Task<IActionResult> List([FromQuery] ListTagsQuery query, CancellationToken cancellationToken)
     {
