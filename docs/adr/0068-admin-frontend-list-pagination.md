@@ -107,6 +107,12 @@ the real total (ADR 0063, ADR 0064).
 
 ## Consequences
 
+> **2026-10 update:** [ADR 0070](0070-admin-frontend-paged-list-state-in-the-hook.md) moved the state out of the URL
+> and removed `withPaging`: `usePaginatedList` keeps the filters, the page and the size in its own state. Three
+> bullets below are kept for historical context only — do not follow them for new code: the situation filter carried
+> along as `?status=` by `withPaging`, the URL as the only state, and a click while a page loads as a navigation that
+> Back walks through.
+
 - Acceptance criteria of #155 now met: the paging, "alterar busca reinicia na página 1", and values kept between pages.
   "Navegação entre páginas não repete nem omite registros" is the backend's order (name, then id) and holds while the
   data does not change; the count and the page are two statements without a transaction (ADR 0063), so with a
