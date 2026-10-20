@@ -5,25 +5,25 @@ import type { UseClientListPageResult } from './useClientListPage.types';
 
 export function useClientListPage(): UseClientListPageResult {
   const { filters, setFilters, list, pagination } = usePaginatedList({
-    initialFilters: { q: '' },
+    initialFilters: { search: '' },
     fetchPage: (query, signal) => clientsRepository.list(query, signal),
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    setFilters({ q: searchInputRef.current?.value ?? '' });
+    setFilters({ search: searchInputRef.current?.value ?? '' });
   }
 
   function onClearSearch() {
     if (searchInputRef.current) searchInputRef.current.value = '';
-    setFilters({ q: '' });
+    setFilters({ search: '' });
   }
 
   return {
     list,
     pagination,
-    query: filters.q,
+    query: filters.search,
     searchInputRef,
     onSearchSubmit,
     onClearSearch,

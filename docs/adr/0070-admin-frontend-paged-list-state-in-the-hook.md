@@ -37,10 +37,11 @@ now ("seja bem focado literalmente na listagem paginada") and asked for the hook
    for adjusting state to a change, so the render with the page past the end is never committed and the guards that
    hid it are gone. The other corrections of ADR 0068 point 3 (an unreadable page, a size that is not
    offered, the `replace`) have nothing left to correct.
-4. **Pessoas passes `initialFilters: { q: '' }`.** `readClientListFilters` is gone; `ClientListFilters` stays as the
-   type the repository reads. The search field stays uncontrolled, but with nothing outside the page left to change
-   `q`, the effect that copied `q` into the field and the field's `defaultValue` are gone: "Limpar busca" empties the
-   field in its own handler. That also ends a Base UI warning about an uncontrolled field whose default value changed
+4. **Pessoas passes `initialFilters: { search: '' }`.** `readClientListFilters` is gone; `ClientListFilters` stays as
+   the type the repository reads, and its field is `search` again, as before ADR 0069: it was named `q` after the URL
+   parameter, which is gone, and `search` is what the API reads (`Search`). The search field stays uncontrolled, but
+   with nothing outside the page left to change `search`, the effect that copied it into the field and the field's
+   `defaultValue` are gone: "Limpar busca" empties the field in its own handler. That also ends a Base UI warning about an uncontrolled field whose default value changed
    after each search.
 5. **URL code with no caller left is removed**: `shared/pagination/filters.ts` (`withFilters`, `ListFilters`,
    `ListFilterValue`), `readPaging`, `withPaging` and their private validation (the offset limit, the page pattern, the

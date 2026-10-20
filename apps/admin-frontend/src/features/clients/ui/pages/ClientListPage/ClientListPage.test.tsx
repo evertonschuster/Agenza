@@ -35,7 +35,7 @@ const BRUNO: ClientListItem = {
 
 const CLIENTS = [ANA, BRUNO];
 
-const FIRST_PAGE_OF_EVERYONE = { q: '', page: 1, pageSize: 20 };
+const FIRST_PAGE_OF_EVERYONE = { search: '', page: 1, pageSize: 20 };
 
 function listOf(
   items: ClientListItem[],
@@ -59,8 +59,8 @@ function people(count: number): ClientListItem[] {
 }
 
 function serve(everyone: ClientListItem[]) {
-  mockList.mockImplementation(({ q, page, pageSize }: ClientListQuery) => {
-    const needle = q.toLowerCase();
+  mockList.mockImplementation(({ search, page, pageSize }: ClientListQuery) => {
+    const needle = search.toLowerCase();
     const matching = needle
       ? everyone.filter((client) => client.fullName.toLowerCase().includes(needle))
       : everyone;
@@ -255,7 +255,7 @@ describe('ClientListPage', () => {
 
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(mockList).toHaveBeenLastCalledWith(
-      { q: 'ana', page: 1, pageSize: 20 },
+      { search: 'ana', page: 1, pageSize: 20 },
       expect.any(AbortSignal),
     );
 
@@ -279,7 +279,7 @@ describe('ClientListPage', () => {
 
     expect(await screen.findByText('Pessoa 021')).toBeInTheDocument();
     expect(mockList).toHaveBeenLastCalledWith(
-      { q: '', page: 3, pageSize: 10 },
+      { search: '', page: 3, pageSize: 10 },
       expect.any(AbortSignal),
     );
   });
@@ -337,7 +337,7 @@ describe('ClientListPage', () => {
     await waitFor(() => expect(screen.queryByText('Ana Souza')).not.toBeInTheDocument());
     expect(screen.getByText('Bruno Lima')).toBeInTheDocument();
     expect(mockList).toHaveBeenLastCalledWith(
-      { q: 'bruno', page: 1, pageSize: 20 },
+      { search: 'bruno', page: 1, pageSize: 20 },
       expect.any(AbortSignal),
     );
     expect(location()).toBe('location: /pessoas');
@@ -527,7 +527,7 @@ describe('ClientListPage', () => {
       expect(await screen.findByText('Pessoa 011')).toBeInTheDocument();
       expect(screen.queryByText('Pessoa 001')).not.toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { q: 'pessoa', page: 2, pageSize: 10 },
+        { search: 'pessoa', page: 2, pageSize: 10 },
         expect.any(AbortSignal),
       );
       expect(location()).toBe('location: /pessoas');
@@ -608,7 +608,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 041')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { q: '', page: 3, pageSize: 20 },
+        { search: '', page: 3, pageSize: 20 },
         expect.any(AbortSignal),
       );
       expect(secondSignal?.aborted).toBe(true);
@@ -647,7 +647,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { q: '', page: 1, pageSize: 50 },
+        { search: '', page: 1, pageSize: 50 },
         expect.any(AbortSignal),
       );
       expect(secondSignal?.aborted).toBe(true);
@@ -722,7 +722,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { q: 'pessoa', page: 1, pageSize: 50 },
+        { search: 'pessoa', page: 1, pageSize: 50 },
         expect.any(AbortSignal),
       );
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1–50 de 87 pessoas');
@@ -741,7 +741,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 001')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { q: 'pessoa 0', page: 1, pageSize: 10 },
+        { search: 'pessoa 0', page: 1, pageSize: 10 },
         expect.any(AbortSignal),
       );
     });
@@ -759,7 +759,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { q: '', page: 1, pageSize: 50 },
+        { search: '', page: 1, pageSize: 50 },
         expect.any(AbortSignal),
       );
     });
@@ -800,12 +800,12 @@ describe('ClientListPage', () => {
         expect(await screen.findByText('Pessoa 021')).toBeInTheDocument();
         expect(mockList).toHaveBeenNthCalledWith(
           2,
-          { q: '', page: 5, pageSize: 20 },
+          { search: '', page: 5, pageSize: 20 },
           expect.any(AbortSignal),
         );
         expect(mockList).toHaveBeenNthCalledWith(
           3,
-          { q: '', page: 2, pageSize: 20 },
+          { search: '', page: 2, pageSize: 20 },
           expect.any(AbortSignal),
         );
         expect(screen.getByRole('status')).toHaveTextContent('Exibindo 21–25 de 25 pessoas');

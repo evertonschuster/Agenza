@@ -19,7 +19,7 @@ export function ClientListSearch({ searchInputRef, onSearchSubmit }: ClientListS
         </InputGroupAddon>
         <InputGroupInput
           ref={searchInputRef}
-          name="q"
+          name="search"
           maxLength={CLIENT_SEARCH_MAX_LENGTH}
           placeholder="Buscar por nome, e-mail ou CPF..."
           aria-label="Buscar pessoas por nome, e-mail ou CPF"
