@@ -1,75 +1,82 @@
-import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { useLocation, useSearchParams } from 'react-router';
-import { extractErrorMessage } from '@/shared/api/servicesFacade';
+import { useEffect, useEffectEvent, useRef, useState, type SubmitEvent } from 'react';
+import { extractErrorMessage, type ApiResult } from '@/shared/api/servicesFacade';
 import { useTopic } from '@/shared/pubsub/useTopic';
 import { ListSectionStatus } from '@/widgets/list-section';
 import { tagsRepository } from '../../../api/tagsRepository';
+import type { Tag } from '../../../model/tag';
 import { tagDeleted, tagSaved } from '../../../model/tagEvents';
-import type { LoadResult, UseTagListPageResult } from './useTagListPage.types';
+import type { TagListState, UseTagListPageResult } from './useTagListPage.types';
+
+function toListState(result: ApiResult<Tag[]> | null): TagListState {
+  if (result === null) {
+    return { status: ListSectionStatus.Loading, tags: [], failure: null };
+  }
+
+  if (!result.ok) {
+    const { error } = result;
+    return {
+      status: ListSectionStatus.Error,
+      tags: [],
+      failure: { message: extractErrorMessage(error), code: error.code ?? undefined },
+    };
+  }
+
+  return { status: ListSectionStatus.Ready, tags: result.data, failure: null };
+}
 
 export function useTagListPage(): UseTagListPageResult {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const query = searchParams.get('q') ?? '';
-  const [result, setResult] = useState<LoadResult | null>(null);
+  const [query, setQuery] = useState('');
+  const [result, setResult] = useState<ApiResult<Tag[]> | null>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const location = useLocation();
+  const inFlight = useRef<AbortController | null>(null);
 
-  const fetchTags = useCallback((forQuery: string) => {
-    abortControllerRef.current?.abort();
+  function send(forQuery: string) {
+    inFlight.current?.abort();
     const controller = new AbortController();
-    abortControllerRef.current = controller;
+    inFlight.current = controller;
 
-    void tagsRepository.list(forQuery || undefined, controller.signal).then((apiResult) => {
+    void tagsRepository.list(forQuery || undefined, controller.signal).then((answer) => {
       if (controller.signal.aborted) return;
-
-      setResult({
-        query: forQuery,
-        status: apiResult.ok ? ListSectionStatus.Ready : ListSectionStatus.Error,
-        tags: apiResult.ok ? apiResult.data : [],
-        problem: apiResult.ok ? null : apiResult.error,
-      });
+      setResult(answer);
     });
+  }
+
+  function request(nextQuery: string) {
+    setQuery(nextQuery);
+    setResult(null);
+    send(nextQuery);
+  }
+
+  const sendFirstSearch = useEffectEvent(() => {
+    send(query);
+  });
+
+  useEffect(() => {
+    sendFirstSearch();
+    return () => {
+      inFlight.current?.abort();
+    };
   }, []);
 
-  useEffect(() => {
-    fetchTags(query);
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, [query, fetchTags]);
-
-  useEffect(() => {
-    const input = searchInputRef.current;
-    if (input && input.value !== query) input.value = query;
-  }, [query]);
-
-  useTopic(tagDeleted, () => fetchTags(query));
-  useTopic(tagSaved, () => fetchTags(query));
-
-  const newTagTo = { pathname: 'new', search: location.search };
+  useTopic(tagDeleted, () => send(query));
+  useTopic(tagSaved, () => send(query));
 
   function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextQuery = searchInputRef.current?.value ?? '';
-    setSearchParams(nextQuery ? { q: nextQuery } : {});
+    request(searchInputRef.current?.value ?? '');
   }
 
-  const isCurrent = result !== null && result.query === query;
-  const problem = isCurrent ? result.problem : null;
+  function onClearSearch() {
+    if (searchInputRef.current) searchInputRef.current.value = '';
+    request('');
+  }
 
   return {
-    status: isCurrent ? result.status : ListSectionStatus.Loading,
-    tags: isCurrent ? result.tags : [],
-    failure: problem && { message: extractErrorMessage(problem), code: problem.code ?? undefined },
+    ...toListState(result),
     query,
     searchInputRef,
     onSearchSubmit,
-    onClearSearch: () => setSearchParams({}),
-    onRetry: () => {
-      setResult(null);
-      fetchTags(query);
-    },
-    newTagTo,
+    onClearSearch,
+    onRetry: () => request(query),
   };
 }

@@ -44,6 +44,15 @@ have, following the backend contract: `string Name, string Color, string? Descri
   fica disponível — Cancelar desabilitado, ✕ oculto, `Esc` e clique fora ignorados — até a
   resposta chegar.
 
+### Session 2026-10-20
+
+- Q: A busca continua na URL (`/tags?q=...`), sobrevivendo a recarregar a página, a um link
+  compartilhado e ao Voltar/Avançar? → A: Não. A lista só busca no backend quando uma ação manda (a
+  busca, "Limpar busca", "Tentar novamente", uma etiqueta salva ou excluída) e uma vez ao abrir, e o
+  Voltar trocando `?q=` seria uma busca disparada por reação. A busca fica só na tela: continua ao
+  abrir e fechar os diálogos de nova etiqueta, edição e exclusão, e recomeça vazia ao recarregar, ao
+  abrir um link ou ao voltar de outra tela, como em Pessoas (ADR 0074).
+
 ## User Scenarios & Testing *(mandatory)*
 
 ### User Story 1 — A pessoa vê e localiza as etiquetas existentes (Priority: P1)

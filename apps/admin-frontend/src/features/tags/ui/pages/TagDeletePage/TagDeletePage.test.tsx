@@ -222,18 +222,28 @@ describe('TagDeletePage', () => {
     expect(screen.getByTestId('location').textContent).toBe('location: /tags');
   });
 
-  it('closes without deleting when Cancelar is clicked, preserving the active search (spec US4 scenario 3)', async () => {
+  it('closes without deleting when Cancelar is clicked, with the search the list had still on screen (spec US4 scenario 3, ADR 0074)', async () => {
     const user = userEvent.setup();
-    renderAt(['/tags?q=promo']);
-    await screen.findByText('Promoção');
+    mockList.mockImplementation((search?: string) =>
+      Promise.resolve({
+        ok: true,
+        data: search ? TAGS.filter((tag) => tag.name.toLowerCase().includes(search)) : TAGS,
+      }),
+    );
+    renderAt(['/tags']);
+    await screen.findByText('VIP');
+    await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'promo{Enter}');
+    await waitFor(() => expect(screen.queryByText('VIP')).not.toBeInTheDocument());
 
     await user.click(screen.getByRole('link', { name: 'Excluir Promoção' }));
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(mockDelete).not.toHaveBeenCalled();
-    await waitFor(() =>
-      expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo'),
-    );
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
+    expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('promo');
+    expect(screen.getByText('Promoção')).toBeInTheDocument();
+    expect(screen.queryByText('VIP')).not.toBeInTheDocument();
+    expect(mockList).toHaveBeenCalledTimes(2);
   });
 
   it('shows the backend message in a toast and returns to the list when the tag does not exist', async () => {

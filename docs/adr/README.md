@@ -97,4 +97,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0070 admin-frontend paged lists: page and size in the URL, one footer shared through PaginatedListSection ·
 0071 admin-frontend paged lists share one hook: filters read by each list, the total kept per filters ·
 0072 admin-frontend paged lists keep their state in the hook, not in the URL ·
-0073 admin-frontend paged lists ask the backend only when an action tells them to.
+0073 admin-frontend paged lists ask the backend only when an action tells them to ·
+0074 admin-frontend Etiquetas asks the backend only when told to, with its search out of the URL.

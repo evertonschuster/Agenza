@@ -19,23 +19,14 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 };
 
 export function TagListPage() {
-  const {
-    tags,
-    status,
-    failure,
-    query,
-    searchInputRef,
-    onSearchSubmit,
-    onClearSearch,
-    onRetry,
-    newTagTo,
-  } = useTagListPage();
+  const { tags, status, failure, query, searchInputRef, onSearchSubmit, onClearSearch, onRetry } =
+    useTagListPage();
 
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Etiquetas</h1>
-        <Link to={newTagTo} className={buttonVariants()}>
+        <Link to="new" className={buttonVariants()}>
           <PlusIcon aria-hidden="true" />
           Nova etiqueta
         </Link>
@@ -48,8 +39,7 @@ export function TagListPage() {
           </InputGroupAddon>
           <InputGroupInput
             ref={searchInputRef}
-            name="q"
-            defaultValue={query}
+            name="search"
             placeholder="Buscar etiquetas por nome..."
             aria-label="Buscar etiquetas por nome"
           />
