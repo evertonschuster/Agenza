@@ -48,15 +48,6 @@ export function extractErrorMessage(problem: ApiProblem): string {
   return problem.errors?.['']?.[0]?.message ?? problem.title ?? 'Algo deu errado. Tente novamente.';
 }
 
-export interface ProblemView {
-  message: string;
-  code?: string | undefined;
-}
-
-export function toProblemView(problem: ApiProblem): ProblemView {
-  return { message: extractErrorMessage(problem), code: problem.code ?? undefined };
-}
-
 const isProblem = (value: unknown): value is ApiProblem =>
   typeof value === 'object' &&
   value !== null &&

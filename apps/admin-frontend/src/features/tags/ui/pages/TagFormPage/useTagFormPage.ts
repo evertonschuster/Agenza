@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { toast } from '@/shared/ui/toast';
-import { showProblemToast } from '@/shared/ui/toast/show-problem-toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { createTag, updateTag } from '../../../application/tagUseCases';
@@ -61,7 +60,7 @@ export function useTagFormPage(): UseTagFormPageResult {
         return;
       }
 
-      showProblemToast('Não foi possível abrir a etiqueta', result.error);
+      toast.serverError('Não foi possível abrir a etiqueta', result.error);
       close();
     });
 

@@ -22,7 +22,7 @@ function ToastList() {
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <ToastTitle />
           <ToastDescription />
-          <ProblemCode code={toastItem.data?.code} />
+          <ProblemCode code={toastItem.data?.problem?.code} />
         </div>
         <ToastAction />
         <ToastClose />

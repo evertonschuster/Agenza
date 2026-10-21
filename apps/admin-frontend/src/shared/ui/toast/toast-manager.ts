@@ -1,4 +1,16 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
+import { extractErrorMessage, type ApiProblem } from '@/shared/api/servicesFacade';
 import type { ToastData } from './toast.types';
 
-export const toast = ToastPrimitive.createToastManager<ToastData>();
+const manager = ToastPrimitive.createToastManager<ToastData>();
+
+export const toast = Object.assign(manager, {
+  serverError(title: string, problem: ApiProblem) {
+    return manager.add({
+      title,
+      description: extractErrorMessage(problem),
+      data: { problem },
+      type: 'error',
+    });
+  },
+});

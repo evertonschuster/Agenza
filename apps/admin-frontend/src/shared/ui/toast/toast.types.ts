@@ -1,7 +1,9 @@
+import type { ApiProblem } from '@/shared/api/servicesFacade';
+
 export type ToastType = 'success' | 'info' | 'warning' | 'error' | 'loading';
 
 export type ToastData = {
-  code?: string | undefined;
+  problem?: ApiProblem | undefined;
 };
 
 export type ToastIconProps = {

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
-import { showProblemToast } from '@/shared/ui/toast/show-problem-toast';
+import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { deleteTag } from '../../../application/tagUseCases';
 import type { Tag } from '../../../model/tag';
@@ -33,7 +33,7 @@ export function useTagDeletePage(): UseTagDeletePageResult {
         return;
       }
 
-      showProblemToast('Não foi possível abrir a etiqueta', result.error);
+      toast.serverError('Não foi possível abrir a etiqueta', result.error);
       close();
     });
 

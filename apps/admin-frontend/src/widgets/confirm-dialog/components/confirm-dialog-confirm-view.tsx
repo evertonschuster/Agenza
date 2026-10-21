@@ -6,6 +6,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog';
+import { extractErrorMessage } from '@/shared/api/servicesFacade';
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import { ProblemCode } from '@/shared/ui/problem-code';
@@ -38,14 +39,14 @@ function ConfirmDialogConfirmView({
           <DialogDescription>{description}</DialogDescription>
         )}
       </DialogHeader>
-      {failure?.transient && (
+      {failure && (
         <div
           role="alert"
           className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
           <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <div>
-            <p>{failure.message}</p>
+            <p>{extractErrorMessage(failure)}</p>
             <ProblemCode code={failure.code} className="mt-1" />
           </div>
         </div>
@@ -61,7 +62,7 @@ function ConfirmDialogConfirmView({
           pending={isSubmitting}
           onClick={onConfirm}
         >
-          {failure?.transient ? retryLabel : confirmLabel}
+          {failure ? retryLabel : confirmLabel}
         </ActionButton>
       </DialogFooter>
     </>

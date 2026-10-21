@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import type { ProblemView } from '@/shared/api/servicesFacade';
+import type { ApiProblem } from '@/shared/api/servicesFacade';
 
 export const ListSectionStatus = {
   Loading: 'loading',
@@ -29,7 +29,8 @@ interface ListSectionSearch {
   onClear: () => void;
 }
 
-interface ListSectionFailure extends ProblemView {
+interface ListSectionFailure {
+  problem: ApiProblem;
   onRetry?: (() => void) | undefined;
 }
 

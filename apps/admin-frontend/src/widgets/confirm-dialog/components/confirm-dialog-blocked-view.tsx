@@ -6,14 +6,14 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog';
+import { extractErrorMessage } from '@/shared/api/servicesFacade';
 import { Button } from '@/shared/ui/button';
 import { ProblemCode } from '@/shared/ui/problem-code';
 import type { ConfirmDialogBlockedViewProps } from '../confirm-dialog.types';
 
 function ConfirmDialogBlockedView({
   blockedTitle,
-  message,
-  code,
+  problem,
   dismissLabel,
 }: ConfirmDialogBlockedViewProps) {
   return (
@@ -23,8 +23,8 @@ function ConfirmDialogBlockedView({
           <AlertCircleIcon aria-hidden="true" className="size-5" />
         </div>
         <DialogTitle>{blockedTitle}</DialogTitle>
-        <DialogDescription>{message}</DialogDescription>
-        <ProblemCode code={code} />
+        <DialogDescription>{extractErrorMessage(problem)}</DialogDescription>
+        <ProblemCode code={problem.code} />
       </DialogHeader>
       <DialogFooter>
         <DialogClose render={<Button variant="outline" />}>{dismissLabel}</DialogClose>

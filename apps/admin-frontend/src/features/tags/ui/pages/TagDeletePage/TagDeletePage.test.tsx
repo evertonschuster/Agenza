@@ -261,7 +261,13 @@ describe('TagDeletePage', () => {
         expect.objectContaining({
           title: 'Não foi possível abrir a etiqueta',
           description: "Etiqueta 'missing-id' não foi encontrada.",
-          data: { code: 'Tag.NotFound' },
+          data: {
+            problem: {
+              status: 404,
+              code: 'Tag.NotFound',
+              title: "Etiqueta 'missing-id' não foi encontrada.",
+            },
+          },
           type: 'error',
         }),
       ),

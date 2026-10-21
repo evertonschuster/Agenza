@@ -96,7 +96,7 @@ describe('PaginatedListSection', () => {
           items={[] as Item[]}
           getKey={(item) => item.id}
           columns={NAME_COLUMN}
-          failure={{ message: 'Fora do ar', onRetry }}
+          failure={{ problem: { status: 0, title: 'Fora do ar' }, onRetry }}
           pagination={PAGINATION}
           itemLabel={ITEM_LABEL}
           aria-label="Itens"

@@ -1,14 +1,13 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
-import { showProblemToast } from './show-problem-toast';
 import { toast } from './toast-manager';
 
-describe('showProblemToast', () => {
+describe('toast.serverError', () => {
   afterEach(() => {
     vi.restoreAllMocks();
   });
 
-  it('shows the curated message and the code as an error toast under the given title', () => {
+  it('shows the curated message under the given title as an error toast, carrying the problem', () => {
     const add = vi.spyOn(toast, 'add').mockReturnValue('id');
     const problem: ApiProblem = {
       status: 404,
@@ -16,12 +15,12 @@ describe('showProblemToast', () => {
       title: 'Etiqueta não achada.',
     };
 
-    showProblemToast('Não foi possível abrir a etiqueta', problem);
+    toast.serverError('Não foi possível abrir a etiqueta', problem);
 
     expect(add).toHaveBeenCalledExactlyOnceWith({
       title: 'Não foi possível abrir a etiqueta',
       description: 'Etiqueta não achada.',
-      data: { code: 'Tag.NotFound' },
+      data: { problem },
       type: 'error',
     });
   });
@@ -35,18 +34,10 @@ describe('showProblemToast', () => {
       errors: { '': [{ message: 'Já existe uma etiqueta com esse nome.' }] },
     };
 
-    showProblemToast('Não foi possível salvar', problem);
+    toast.serverError('Não foi possível salvar', problem);
 
     expect(add).toHaveBeenCalledWith(
       expect.objectContaining({ description: 'Já existe uma etiqueta com esse nome.' }),
     );
-  });
-
-  it('sends no code when the problem has none', () => {
-    const add = vi.spyOn(toast, 'add').mockReturnValue('id');
-
-    showProblemToast('Não foi possível abrir a etiqueta', { status: 400, title: 'Inválido.' });
-
-    expect(add).toHaveBeenCalledWith(expect.objectContaining({ data: { code: undefined } }));
   });
 });

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { isTransientProblem, toProblemView } from '@/shared/api/servicesFacade';
+import { isTransientProblem, type ApiProblem } from '@/shared/api/servicesFacade';
 import { toast } from '@/shared/ui/toast';
-import type { ConfirmDialogProps, ConfirmDialogFailure } from './confirm-dialog.types';
+import type { ConfirmDialogProps } from './confirm-dialog.types';
 
 import { ConfirmDialogBlockedView } from './components/confirm-dialog-blocked-view';
 import { ConfirmDialogConfirmView } from './components/confirm-dialog-confirm-view';
@@ -31,9 +31,9 @@ function ConfirmDialog<T>({
   } = {},
 }: ConfirmDialogProps<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [failure, setFailure] = useState<ConfirmDialogFailure>();
+  const [problem, setProblem] = useState<ApiProblem>();
   const isMountedRef = useRef(true);
-  const isBlocked = failure !== undefined && !failure.transient;
+  const isBlocked = problem !== undefined && !isTransientProblem(problem);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -43,7 +43,7 @@ function ConfirmDialog<T>({
   }, []);
 
   async function handleConfirm() {
-    setFailure(undefined);
+    setProblem(undefined);
     setIsSubmitting(true);
     const result = await onConfirm();
     setIsSubmitting(false);
@@ -55,7 +55,7 @@ function ConfirmDialog<T>({
       return;
     }
 
-    setFailure({ ...toProblemView(result.error), transient: isTransientProblem(result.error) });
+    setProblem(result.error);
   }
 
   return (
@@ -69,8 +69,7 @@ function ConfirmDialog<T>({
         {isBlocked ? (
           <ConfirmDialogBlockedView
             blockedTitle={blockedTitle}
-            message={failure.message}
-            code={failure.code}
+            problem={problem}
             dismissLabel={dismissLabel}
           />
         ) : (
@@ -81,7 +80,7 @@ function ConfirmDialog<T>({
             confirmLabel={confirmLabel}
             cancelLabel={cancelLabel}
             retryLabel={retryLabel}
-            failure={failure}
+            failure={problem}
             loading={loading}
             isSubmitting={isSubmitting}
             onConfirm={() => void handleConfirm()}
@@ -93,4 +92,4 @@ function ConfirmDialog<T>({
 }
 
 export { ConfirmDialog };
-export type { ConfirmDialogProps, ConfirmDialogFailure };
+export type { ConfirmDialogProps };

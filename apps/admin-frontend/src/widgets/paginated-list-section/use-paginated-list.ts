@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { toProblemView, type ApiResult } from '@/shared/api/servicesFacade';
+import type { ApiResult } from '@/shared/api/servicesFacade';
 import {
   DEFAULT_PAGE_SIZE,
   FIRST_PAGE,
@@ -24,11 +24,10 @@ function toListState<T>(
   }
 
   if (!result.ok) {
-    const { error } = result;
     return {
       status: ListSectionStatus.Error,
       items: [],
-      failure: { ...toProblemView(error), onRetry },
+      failure: { problem: result.error, onRetry },
     };
   }
 
