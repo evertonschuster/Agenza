@@ -18,9 +18,9 @@ superseded is historical evidence, not current implementation guidance.
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032, 0050 |
 | Logging and telemetry | 0054 |
-| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038, 0069 |
+| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
-| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073 |
+| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 |
 | AI agent instruction files | 0041 |
 
 ## Superseded decisions
@@ -36,6 +36,7 @@ superseded is historical evidence, not current implementation guidance.
 | 0044 contact-purposes portion | 0058 | The `ContactPurposes` value object, `ContactPurposeNames` and purposes as strings translated in Application |
 | 0049 shared-input-rule portion | 0061 | `<Feature>RuleBuilderExtensions` as the home of a rule two validators share |
 | 0053 | 0056 | Synchronizing client contacts by id |
+| 0069 | 0074 | The tags collection adapter that walks every page of the API |
 
 ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, 0030, and 0044
 contain explicitly marked historical passages. Their status header and the
@@ -93,8 +94,9 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0066 enums read from a query or a route by one name ·
 0067 admin-frontend Pessoas list: whole CPF, filter and paging deferred, provisional detail route ·
 0068 tags list: always paged, shared paging contract and literal name search ·
-0069 tags frontend: collection compatibility over bounded API pages during the paging rollout ·
+0069 tags frontend: collection compatibility over bounded API pages during the paging rollout (retired by 0074) ·
 0070 admin-frontend paged lists: page and size in the URL, one footer shared through PaginatedListSection ·
 0071 admin-frontend paged lists share one hook: filters read by each list, the total kept per filters ·
 0072 admin-frontend paged lists keep their state in the hook, not in the URL ·
-0073 admin-frontend paged lists ask the backend only when an action tells them to.
+0073 admin-frontend paged lists ask the backend only when an action tells them to ·
+0074 admin-frontend Etiquetas pages on usePaginatedList, asks only when told to, with its state out of the URL.

@@ -222,6 +222,82 @@ describe('usePaginatedList', () => {
       expect(result.current.pagination.totalCount).toBe(25);
     });
 
+    it('asks again for the same filters, page and size on a refetch, keeping the rows and the total until the answer', async () => {
+      const { result, fetchPage } = renderList({ ...NO_FILTERS, search: 'ana' });
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      act(() => result.current.pagination.onPageSizeChange(10));
+      act(() => result.current.pagination.onPageChange(3));
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      const refetched = pending<Page>();
+      fetchPage.mockImplementationOnce(() => refetched.promise);
+
+      act(() => {
+        result.current.refetch();
+        expect(fetchPage).toHaveBeenCalledTimes(4);
+      });
+
+      expect(fetchPage).toHaveBeenLastCalledWith(
+        { ...NO_FILTERS, search: 'ana', page: 3, pageSize: 10 },
+        expect.any(AbortSignal),
+      );
+      expect(result.current.list).toMatchObject({ status: 'ready', items: [{ id: '1' }] });
+      expect(result.current.pagination.totalCount).toBe(87);
+
+      await act(async () => {
+        refetched.resolve(pageOf(88, [{ id: 'refetched' }]));
+        await refetched.promise;
+      });
+
+      expect(result.current.list.items).toEqual([{ id: 'refetched' }]);
+      expect(result.current.pagination.totalCount).toBe(88);
+    });
+
+    it('aborts the request in flight when it refetches', async () => {
+      const { result, fetchPage } = renderList();
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      fetchPage.mockImplementation(() => new Promise<Page>(() => {}));
+      act(() => result.current.pagination.onPageChange(2));
+
+      act(() => result.current.refetch());
+
+      expect(signalOf(fetchPage, 1)?.aborted).toBe(true);
+      expect(signalOf(fetchPage, 2)?.aborted).toBe(false);
+      expect(fetchPage.mock.calls[2]?.[0]).toEqual(fetchPage.mock.calls[1]?.[0]);
+    });
+
+    it('asks for the page an action just requested when it refetches before React renders that action', async () => {
+      const { result, fetchPage } = renderList();
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      fetchPage.mockImplementation(({ page }) =>
+        Promise.resolve(pageOf(87, [{ id: `page-${page}` }])),
+      );
+      const { refetch } = result.current;
+
+      act(() => {
+        result.current.pagination.onPageChange(2);
+        refetch();
+      });
+
+      expect(fetchPage.mock.calls.map(([query]) => query.page)).toEqual([1, 2, 2]);
+      await waitFor(() => expect(result.current.list.items).toEqual([{ id: 'page-2' }]));
+      expect(result.current.pagination.page).toBe(2);
+    });
+
+    it('moves to the last page that exists when a refetch finds fewer items than the page on screen', async () => {
+      const { result, fetchPage } = renderList();
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      act(() => result.current.pagination.onPageChange(5));
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      fetchPage.mockResolvedValueOnce(pageOf(80, [])).mockResolvedValueOnce(pageOf(80));
+
+      act(() => result.current.refetch());
+
+      await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(4));
+      expect(fetchPage.mock.calls.map(([query]) => query.page)).toEqual([1, 5, 5, 4]);
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      expect(result.current.pagination).toMatchObject({ page: 4, totalCount: 80 });
+    });
+
     it('asks again for the same page from a failure', async () => {
       const fetchPage = vi.fn<FetchPage>(() =>
         Promise.resolve({ ok: false, error: NETWORK_PROBLEM }),

@@ -12,6 +12,7 @@ import {
 } from 'react-router';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagFormPage } from './TagFormPage';
+import type { TagListQuery } from '../../../api/tagsRepository';
 import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH, type Tag } from '../../../model/tag';
 
 const { mockList, mockGet, mockCreate, mockUpdate } = vi.hoisted(() => ({
@@ -29,6 +30,10 @@ const TAGS: Tag[] = [
   { id: '1', name: 'Promoção', color: '#f59e0b', description: 'Desconto temporário' },
   { id: '2', name: 'VIP', color: '#8b5cf6', description: null },
 ];
+
+function listOf(items: Tag[]) {
+  return { ok: true, data: { items, totalCount: items.length, page: 1, pageSize: 20 } };
+}
 
 function LocationProbe() {
   const location = useLocation();
@@ -75,7 +80,7 @@ function renderRouterAt(initialEntries: string[]) {
 describe('TagFormPage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockList.mockResolvedValue({ ok: true, data: TAGS });
+    mockList.mockResolvedValue(listOf(TAGS));
     mockGet.mockImplementation((id: string) => {
       const tag = TAGS.find((candidate) => candidate.id === id);
       return Promise.resolve(
@@ -125,10 +130,9 @@ describe('TagFormPage', () => {
 
       await user.type(screen.getByLabelText('Nome'), 'Sazonal');
       await user.click(screen.getByRole('radio', { name: 'Azul' }));
-      mockList.mockResolvedValue({
-        ok: true,
-        data: [...TAGS, { id: '3', name: 'Sazonal', color: '#0ea5e9', description: null }],
-      });
+      mockList.mockResolvedValue(
+        listOf([...TAGS, { id: '3', name: 'Sazonal', color: '#0ea5e9', description: null }]),
+      );
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(mockCreate).toHaveBeenCalledWith({
@@ -171,7 +175,7 @@ describe('TagFormPage', () => {
       const user = userEvent.setup();
       let resolveCreate!: (result: { ok: true; data: Tag }) => void;
       mockCreate.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)));
-      renderAt(['/tags/new?q=promo']);
+      renderAt(['/tags/new']);
       await screen.findByRole('heading', { name: 'Nova etiqueta' });
 
       await user.type(screen.getByLabelText('Nome'), 'Sazonal');
@@ -182,14 +186,14 @@ describe('TagFormPage', () => {
       expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
       expect(screen.queryByRole('button', { name: 'Fechar' })).not.toBeInTheDocument();
       await user.keyboard('{Escape}');
-      expect(screen.getByTestId('location')).toHaveTextContent('location: /tags/new?q=promo');
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags/new');
 
       resolveCreate({
         ok: true,
         data: { id: '3', name: 'Sazonal', color: '#0ea5e9', description: null },
       });
       await waitFor(() =>
-        expect(screen.getByTestId('location')).toHaveTextContent('location: /tags?q=promo'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
     });
 
@@ -308,17 +312,30 @@ describe('TagFormPage', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
-    it('closes without creating when Cancelar is clicked, preserving the active search', async () => {
+    it('closes without creating when Cancelar is clicked, with the search the list had still on screen (ADR 0074)', async () => {
       const user = userEvent.setup();
-      renderAt(['/tags/new?q=promo']);
-      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+      mockList.mockImplementation(({ search }: TagListQuery) =>
+        Promise.resolve(
+          listOf(search ? TAGS.filter((tag) => tag.name.toLowerCase().includes(search)) : TAGS),
+        ),
+      );
+      renderAt(['/tags']);
+      await screen.findByText('VIP');
+      await user.type(screen.getByLabelText('Buscar etiquetas por nome'), 'promo{Enter}');
+      await waitFor(() => expect(screen.queryByText('VIP')).not.toBeInTheDocument());
 
+      await user.click(screen.getByRole('link', { name: 'Nova etiqueta' }));
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
       expect(mockCreate).not.toHaveBeenCalled();
       await waitFor(() =>
-        expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
+      expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('promo');
+      expect(screen.getByText('Promoção')).toBeInTheDocument();
+      expect(screen.queryByText('VIP')).not.toBeInTheDocument();
+      expect(mockList).toHaveBeenCalledTimes(2);
     });
   });
 
@@ -446,18 +463,17 @@ describe('TagFormPage', () => {
       const nameInput = await screen.findByLabelText('Nome');
       await user.clear(nameInput);
       await user.type(nameInput, 'Promo relâmpago');
-      mockList.mockResolvedValue({
-        ok: true,
-        data: [
+      mockList.mockResolvedValue(
+        listOf([
           {
             id: '1',
             name: 'Promo relâmpago',
             color: '#f59e0b',
             description: 'Desconto temporário',
           },
-          TAGS[1],
-        ],
-      });
+          TAGS[1]!,
+        ]),
+      );
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(mockUpdate).toHaveBeenCalledWith('1', {
@@ -564,17 +580,17 @@ describe('TagFormPage', () => {
 
     it('replaces a deep-linked dialog with the list on close, so Back does not reopen it either', async () => {
       const user = userEvent.setup();
-      const router = renderRouterAt(['/tags/new?q=promo']);
+      const router = renderRouterAt(['/tags/new']);
       await screen.findByRole('heading', { name: 'Nova etiqueta' });
 
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
       await waitFor(() =>
-        expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
 
       await act(() => router.navigate(-1));
 
-      expect(screen.getByTestId('location').textContent).toBe('location: /tags?q=promo');
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags');
       expect(screen.queryByRole('heading', { name: 'Nova etiqueta' })).not.toBeInTheDocument();
     });
   });

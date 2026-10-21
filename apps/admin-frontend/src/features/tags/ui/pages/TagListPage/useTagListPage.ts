@@ -1,75 +1,39 @@
-import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { useLocation, useSearchParams } from 'react-router';
-import { extractErrorMessage } from '@/shared/api/servicesFacade';
+import { useRef, type SubmitEvent } from 'react';
 import { useTopic } from '@/shared/pubsub/useTopic';
-import { ListSectionStatus } from '@/widgets/list-section';
+import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { tagDeleted, tagSaved } from '../../../model/tagEvents';
-import type { LoadResult, UseTagListPageResult } from './useTagListPage.types';
+import type { TagListFilters } from '../../../model/tagListFilters';
+import type { UseTagListPageResult } from './useTagListPage.types';
+
+const INITIAL_FILTERS: TagListFilters = { search: '' };
 
 export function useTagListPage(): UseTagListPageResult {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const query = searchParams.get('q') ?? '';
-  const [result, setResult] = useState<LoadResult | null>(null);
+  const { filters, applyFilters, refetch, list, pagination } = usePaginatedList({
+    initialFilters: INITIAL_FILTERS,
+    fetchPage: tagsRepository.list,
+  });
   const searchInputRef = useRef<HTMLInputElement>(null);
-  const abortControllerRef = useRef<AbortController | null>(null);
-  const location = useLocation();
 
-  const fetchTags = useCallback((forQuery: string) => {
-    abortControllerRef.current?.abort();
-    const controller = new AbortController();
-    abortControllerRef.current = controller;
-
-    void tagsRepository.list(forQuery || undefined, controller.signal).then((apiResult) => {
-      if (controller.signal.aborted) return;
-
-      setResult({
-        query: forQuery,
-        status: apiResult.ok ? ListSectionStatus.Ready : ListSectionStatus.Error,
-        tags: apiResult.ok ? apiResult.data : [],
-        problem: apiResult.ok ? null : apiResult.error,
-      });
-    });
-  }, []);
-
-  useEffect(() => {
-    fetchTags(query);
-    return () => {
-      abortControllerRef.current?.abort();
-    };
-  }, [query, fetchTags]);
-
-  useEffect(() => {
-    const input = searchInputRef.current;
-    if (input && input.value !== query) input.value = query;
-  }, [query]);
-
-  useTopic(tagDeleted, () => fetchTags(query));
-  useTopic(tagSaved, () => fetchTags(query));
-
-  const newTagTo = { pathname: 'new', search: location.search };
+  useTopic(tagDeleted, refetch);
+  useTopic(tagSaved, refetch);
 
   function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    const nextQuery = searchInputRef.current?.value ?? '';
-    setSearchParams(nextQuery ? { q: nextQuery } : {});
+    applyFilters({ search: searchInputRef.current?.value ?? '' });
   }
 
-  const isCurrent = result !== null && result.query === query;
-  const problem = isCurrent ? result.problem : null;
+  function onClearSearch() {
+    if (searchInputRef.current) searchInputRef.current.value = '';
+    applyFilters({ search: '' });
+  }
 
   return {
-    status: isCurrent ? result.status : ListSectionStatus.Loading,
-    tags: isCurrent ? result.tags : [],
-    failure: problem && { message: extractErrorMessage(problem), code: problem.code ?? undefined },
-    query,
+    list,
+    pagination,
+    searchTerm: filters.search,
     searchInputRef,
     onSearchSubmit,
-    onClearSearch: () => setSearchParams({}),
-    onRetry: () => {
-      setResult(null);
-      fetchTags(query);
-    },
-    newTagTo,
+    onClearSearch,
   };
 }

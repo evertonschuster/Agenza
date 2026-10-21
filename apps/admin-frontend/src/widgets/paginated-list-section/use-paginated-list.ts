@@ -47,6 +47,7 @@ export function usePaginatedList<F extends object, T>({
   const [result, setResult] = useState<ApiResult<PagedResult<T>> | null>(null);
   const [knownTotal, setKnownTotal] = useState<PaginatedListKnownTotal<F> | null>(null);
   const inFlight = useRef<AbortController | null>(null);
+  const requested = useRef(query);
   const { filters, page, pageSize } = query;
 
   function send(next: PaginatedListQuery<F>) {
@@ -76,6 +77,7 @@ export function usePaginatedList<F extends object, T>({
   }
 
   function request(next: PaginatedListQuery<F>) {
+    requested.current = next;
     setQuery(next);
     setResult(null);
     send(next);
@@ -108,11 +110,16 @@ export function usePaginatedList<F extends object, T>({
     request(query);
   }
 
+  function refetch() {
+    send(requested.current);
+  }
+
   const totalCount = knownTotal?.filters === filters ? knownTotal.totalCount : null;
 
   return {
     filters,
     applyFilters,
+    refetch,
     list: toListState(result, onRetry),
     pagination: { page, pageSize, totalCount, onPageChange, onPageSizeChange },
   };
