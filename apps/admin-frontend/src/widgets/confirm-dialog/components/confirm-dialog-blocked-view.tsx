@@ -12,6 +12,7 @@ import type { ConfirmDialogBlockedViewProps } from '../confirm-dialog.types';
 function ConfirmDialogBlockedView({
   blockedTitle,
   message,
+  code,
   dismissLabel,
 }: ConfirmDialogBlockedViewProps) {
   return (
@@ -22,6 +23,7 @@ function ConfirmDialogBlockedView({
         </div>
         <DialogTitle>{blockedTitle}</DialogTitle>
         <DialogDescription>{message}</DialogDescription>
+        {code && <p className="text-xs text-muted-foreground">Código: {code}</p>}
       </DialogHeader>
       <DialogFooter>
         <DialogClose render={<Button variant="outline" />}>{dismissLabel}</DialogClose>

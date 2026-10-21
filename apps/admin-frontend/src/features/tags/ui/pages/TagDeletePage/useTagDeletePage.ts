@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
+import { describeProblem } from '@/shared/api/servicesFacade';
 import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { deleteTag } from '../../../application/tagUseCases';
@@ -35,7 +36,7 @@ export function useTagDeletePage(): UseTagDeletePageResult {
 
       toast.add({
         title: 'Não foi possível abrir a etiqueta',
-        description: result.error.title ?? undefined,
+        description: describeProblem(result.error),
         type: 'info',
       });
       close();

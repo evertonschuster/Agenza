@@ -526,7 +526,7 @@ describe('TagFormPage', () => {
         expect(toastAddSpy).toHaveBeenCalledWith(
           expect.objectContaining({
             title: 'Não foi possível abrir a etiqueta',
-            description: "Etiqueta 'missing-id' não foi encontrada.",
+            description: "Etiqueta 'missing-id' não foi encontrada.\nCódigo: Tag.NotFound",
           }),
         ),
       );

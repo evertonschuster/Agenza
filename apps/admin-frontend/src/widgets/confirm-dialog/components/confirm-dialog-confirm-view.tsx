@@ -43,7 +43,12 @@ function ConfirmDialogConfirmView({
           className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
           <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <span>{failure.message}</span>
+          <div>
+            <p>{failure.message}</p>
+            {failure.code && (
+              <p className="mt-1 text-xs text-muted-foreground">Código: {failure.code}</p>
+            )}
+          </div>
         </div>
       )}
       <DialogFooter>

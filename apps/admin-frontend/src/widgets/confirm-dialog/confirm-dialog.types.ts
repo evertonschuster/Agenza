@@ -4,6 +4,7 @@ import type { ApiResult } from '@/shared/api/servicesFacade';
 
 interface ConfirmDialogFailure {
   message: string;
+  code?: string | undefined;
   transient: boolean;
 }
 
@@ -39,6 +40,7 @@ interface ConfirmDialogProps<T> {
 interface ConfirmDialogBlockedViewProps {
   blockedTitle: string;
   message: string;
+  code?: string | undefined;
   dismissLabel: string;
 }
 

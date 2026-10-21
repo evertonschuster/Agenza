@@ -175,9 +175,9 @@ describe('ConfirmDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Desativar' }));
 
     expect(screen.getByRole('heading', { name: 'Desativar promoção?' })).toBeInTheDocument();
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Sem conexão com o servidor. Tente novamente.',
-    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Sem conexão com o servidor. Tente novamente.');
+    expect(alert).toHaveTextContent('Código: Network.Unreachable');
     expect(screen.queryByRole('button', { name: 'Desativar' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
@@ -191,7 +191,9 @@ describe('ConfirmDialog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Desativar' }));
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(RATE_LIMIT_PROBLEM.title ?? '');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(RATE_LIMIT_PROBLEM.title ?? '');
+    expect(alert).toHaveTextContent('Código: RateLimit.Exceeded');
     expect(
       screen.queryByRole('heading', { name: 'Não é possível desativar' }),
     ).not.toBeInTheDocument();
@@ -255,6 +257,7 @@ describe('ConfirmDialog', () => {
     expect(
       screen.getByText('Esta promoção está em uso e não pode ser desativada.'),
     ).toBeInTheDocument();
+    expect(screen.getByText('Código: Promotion.InUse')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Desativar promoção?' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
 

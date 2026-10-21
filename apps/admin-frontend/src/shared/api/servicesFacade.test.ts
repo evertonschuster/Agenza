@@ -8,6 +8,7 @@ import {
   SERVER_PROBLEM,
   SESSION_PROBLEM,
   createServicesFacade,
+  describeProblem,
   isTransientProblem,
 } from './servicesFacade';
 import type { ApiProblem } from './servicesFacade';
@@ -133,6 +134,37 @@ describe('createServicesFacade', () => {
     expect(await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } })).toEqual(
       { ok: true, data: undefined },
     );
+  });
+});
+
+describe('describeProblem', () => {
+  it('puts the code on its own line under the message', () => {
+    const problem: ApiProblem = {
+      status: 404,
+      code: 'Tag.NotFound',
+      title: 'Etiqueta não achada.',
+    };
+
+    expect(describeProblem(problem)).toBe('Etiqueta não achada.\nCódigo: Tag.NotFound');
+  });
+
+  it('prefers the curated message under the empty key, as extractErrorMessage does', () => {
+    const problem: ApiProblem = {
+      status: 409,
+      code: 'Tag.DuplicateName',
+      title: 'Conflito.',
+      errors: { '': [{ message: 'Já existe uma etiqueta com esse nome.' }] },
+    };
+
+    expect(describeProblem(problem)).toBe(
+      'Já existe uma etiqueta com esse nome.\nCódigo: Tag.DuplicateName',
+    );
+  });
+
+  it('is only the message when the problem has no code', () => {
+    const problem: ApiProblem = { status: 400, title: 'Requisição inválida.' };
+
+    expect(describeProblem(problem)).toBe('Requisição inválida.');
   });
 });
 

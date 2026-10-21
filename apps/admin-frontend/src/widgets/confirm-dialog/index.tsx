@@ -57,6 +57,7 @@ function ConfirmDialog<T>({
 
     setFailure({
       message: extractErrorMessage(result.error),
+      code: result.error.code ?? undefined,
       transient: isTransientProblem(result.error),
     });
   }
@@ -73,6 +74,7 @@ function ConfirmDialog<T>({
           <ConfirmDialogBlockedView
             blockedTitle={blockedTitle}
             message={failure.message}
+            code={failure.code}
             dismissLabel={dismissLabel}
           />
         ) : (

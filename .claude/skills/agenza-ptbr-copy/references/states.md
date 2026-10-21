@@ -15,6 +15,11 @@ it holds everywhere. A failure message is three things, and it is incomplete wit
 2. **A curated pt-BR explanation** of what did not happen, written by us for this screen.
 3. **A recovery action** — as a control if one exists, as an instruction if not.
 
+The code is already shown by `ErrorState` (lists), `FormErrorBanner` (forms), `ConfirmDialog` (retry alert
+and blocked view) and, for a toast built from a problem, by `describeProblem` in
+`src/shared/api/servicesFacade.ts` (message, then "Código: …" on its own line). A new surface that shows a
+problem shows the code the same way.
+
 ADR 0020 says it plainly: a generic *"contacte o administrador"* is **not sufficient**. Neither is
 "Tente novamente" with nothing to try again with. When the only path really is support, say what to
 include (the code and the time of the attempt) — and, on any credential-adjacent screen, that she

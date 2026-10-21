@@ -48,6 +48,11 @@ export function extractErrorMessage(problem: ApiProblem): string {
   return problem.errors?.['']?.[0]?.message ?? problem.title ?? 'Algo deu errado. Tente novamente.';
 }
 
+export function describeProblem(problem: ApiProblem): string {
+  const message = extractErrorMessage(problem);
+  return problem.code ? `${message}\nCódigo: ${problem.code}` : message;
+}
+
 const isProblem = (value: unknown): value is ApiProblem =>
   typeof value === 'object' &&
   value !== null &&
