@@ -8,6 +8,7 @@ import {
 } from '@/shared/ui/dialog';
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
+import { ProblemCode } from '@/shared/ui/problem-code';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ConfirmDialogConfirmViewProps } from '../confirm-dialog.types';
 
@@ -45,9 +46,7 @@ function ConfirmDialogConfirmView({
           <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <div>
             <p>{failure.message}</p>
-            {failure.code && (
-              <p className="mt-1 text-xs text-muted-foreground">Código: {failure.code}</p>
-            )}
+            <ProblemCode code={failure.code} className="mt-1" />
           </div>
         </div>
       )}

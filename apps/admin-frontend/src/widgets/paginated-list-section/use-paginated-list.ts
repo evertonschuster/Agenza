@@ -1,5 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
-import { extractErrorMessage, type ApiResult } from '@/shared/api/servicesFacade';
+import { toProblemView, type ApiResult } from '@/shared/api/servicesFacade';
 import {
   DEFAULT_PAGE_SIZE,
   FIRST_PAGE,
@@ -28,7 +28,7 @@ function toListState<T>(
     return {
       status: ListSectionStatus.Error,
       items: [],
-      failure: { message: extractErrorMessage(error), code: error.code ?? undefined, onRetry },
+      failure: { ...toProblemView(error), onRetry },
     };
   }
 

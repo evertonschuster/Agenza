@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { extractErrorMessage, isTransientProblem } from '@/shared/api/servicesFacade';
+import { isTransientProblem, toProblemView } from '@/shared/api/servicesFacade';
 import { toast } from '@/shared/ui/toast';
 import type { ConfirmDialogProps, ConfirmDialogFailure } from './confirm-dialog.types';
 
@@ -55,11 +55,7 @@ function ConfirmDialog<T>({
       return;
     }
 
-    setFailure({
-      message: extractErrorMessage(result.error),
-      code: result.error.code ?? undefined,
-      transient: isTransientProblem(result.error),
-    });
+    setFailure({ ...toProblemView(result.error), transient: isTransientProblem(result.error) });
   }
 
   return (

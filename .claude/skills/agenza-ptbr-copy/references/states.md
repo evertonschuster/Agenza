@@ -15,10 +15,10 @@ it holds everywhere. A failure message is three things, and it is incomplete wit
 2. **A curated pt-BR explanation** of what did not happen, written by us for this screen.
 3. **A recovery action** — as a control if one exists, as an instruction if not.
 
-The code is already shown by `ErrorState` (lists), `FormErrorBanner` (forms), `ConfirmDialog` (retry alert
-and blocked view) and, for a toast built from a problem, by `ToastList`, which draws `data.code` under the description in a
-smaller size (`toast.add({ title, description: extractErrorMessage(problem), data: { code: problem.code ?? undefined } })`).
-A new surface that shows a problem shows the code the same way.
+Every surface that shows a problem shows its code the same way: `ProblemCode` (`shared/ui/problem-code`),
+small and muted, fed by a `ProblemView` — `toProblemView(problem)` in `shared/api/servicesFacade.ts` gives the
+curated message and the code. You rarely call either by hand: the table under "Where a failure renders" says
+what you call for each surface.
 
 ADR 0020 says it plainly: a generic *"contacte o administrador"* is **not sufficient**. Neither is
 "Tente novamente" with nothing to try again with. When the only path really is support, say what to
@@ -39,12 +39,12 @@ note the shape: what happened, then what to do, in one line. Match it.
 
 ## Where a failure renders
 
-| Shape | Use when | Example |
-| --- | --- | --- |
-| Full screen | The session or the whole route is unusable | `FullScreenMessage` — session expired, route loader rejected |
-| Inline, in the region | One region failed and the rest of the screen is intact | A list that could not load, with **Tentar novamente** above the empty space |
-| Field error | A 400 with `errors` — expected flow, not an error screen | The message sits with the field, tied by `aria-describedby` |
-| Toast | A mutation failed and the screen is still hers | "Não foi possível excluir o serviço." |
+| Shape | Use when | Example | What you call |
+| --- | --- | --- | --- |
+| Full screen | The session or the whole route is unusable | `FullScreenMessage` — session expired, route loader rejected | No route loader exists yet; when one does, render `toProblemView(problem)` with `ProblemCode` |
+| Inline, in the region | One region failed and the rest of the screen is intact | A list that could not load, with **Tentar novamente** above the empty space; a confirm dialog whose action failed | Nothing: `usePaginatedList` with `ListSection`, and `ConfirmDialog`, already show message, code and retry |
+| Field error | A 400 with `errors` — expected flow, not an error screen | The message sits with the field, tied by `aria-describedby` | `applyApiProblem(error, methods)`; `FormErrorBanner` shows the form-level message and its code |
+| Toast | A mutation failed and the screen is still hers | "Não foi possível excluir o serviço." | `showProblemToast(title, error)` from `@/shared/ui/toast/show-problem-toast` |
 
 The middle two are the ones that get skipped. Routing a validation error to a full-screen error is
 the exact mistake [`docs/ARCHITECTURE.md` §2](../../../../apps/admin-frontend/docs/ARCHITECTURE.md)

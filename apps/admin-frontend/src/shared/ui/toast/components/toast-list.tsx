@@ -1,6 +1,7 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 
 import { Toast } from '..';
+import { ProblemCode } from '@/shared/ui/problem-code';
 import type { ToastData } from '../toast.types';
 import { ToastIcon } from './toast-icon';
 import {
@@ -21,9 +22,7 @@ function ToastList() {
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <ToastTitle />
           <ToastDescription />
-          {toastItem.data?.code && (
-            <p className="text-xs text-muted-foreground">Código: {toastItem.data.code}</p>
-          )}
+          <ProblemCode code={toastItem.data?.code} />
         </div>
         <ToastAction />
         <ToastClose />

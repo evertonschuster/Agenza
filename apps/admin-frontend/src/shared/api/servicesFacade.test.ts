@@ -9,6 +9,7 @@ import {
   SESSION_PROBLEM,
   createServicesFacade,
   isTransientProblem,
+  toProblemView,
 } from './servicesFacade';
 import type { ApiProblem } from './servicesFacade';
 
@@ -133,6 +134,34 @@ describe('createServicesFacade', () => {
     expect(await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } })).toEqual(
       { ok: true, data: undefined },
     );
+  });
+});
+
+describe('toProblemView', () => {
+  it('pairs the message with the stable code', () => {
+    const problem: ApiProblem = { status: 404, code: 'Tag.NotFound', title: 'Não achada.' };
+
+    expect(toProblemView(problem)).toEqual({ message: 'Não achada.', code: 'Tag.NotFound' });
+  });
+
+  it('prefers the curated message under the empty key, as extractErrorMessage does', () => {
+    const problem: ApiProblem = {
+      status: 409,
+      code: 'Tag.DuplicateName',
+      title: 'Conflito.',
+      errors: { '': [{ message: 'Já existe uma etiqueta com esse nome.' }] },
+    };
+
+    expect(toProblemView(problem).message).toBe('Já existe uma etiqueta com esse nome.');
+  });
+
+  it.each([
+    ['a null code', { code: null }],
+    ['no code', {}],
+  ])('has no code when the problem carries %s', (_name, fields) => {
+    const problem: ApiProblem = { status: 400, title: 'Inválido.', ...fields };
+
+    expect(toProblemView(problem)).toEqual({ message: 'Inválido.', code: undefined });
   });
 });
 

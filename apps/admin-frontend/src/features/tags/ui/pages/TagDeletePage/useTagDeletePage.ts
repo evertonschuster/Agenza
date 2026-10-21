@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { useLocation, useNavigate, useParams } from 'react-router';
-import { extractErrorMessage } from '@/shared/api/servicesFacade';
-import { toast } from '@/shared/ui/toast';
+import { showProblemToast } from '@/shared/ui/toast/show-problem-toast';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { deleteTag } from '../../../application/tagUseCases';
 import type { Tag } from '../../../model/tag';
@@ -34,12 +33,7 @@ export function useTagDeletePage(): UseTagDeletePageResult {
         return;
       }
 
-      toast.add({
-        title: 'Não foi possível abrir a etiqueta',
-        description: extractErrorMessage(result.error),
-        data: { code: result.error.code ?? undefined },
-        type: 'info',
-      });
+      showProblemToast('Não foi possível abrir a etiqueta', result.error);
       close();
     });
 

@@ -1,10 +1,8 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { ApiResult } from '@/shared/api/servicesFacade';
+import type { ApiResult, ProblemView } from '@/shared/api/servicesFacade';
 
-interface ConfirmDialogFailure {
-  message: string;
-  code?: string | undefined;
+interface ConfirmDialogFailure extends ProblemView {
   transient: boolean;
 }
 

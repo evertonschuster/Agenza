@@ -7,6 +7,7 @@ import {
   DialogTitle,
 } from '@/shared/ui/dialog';
 import { Button } from '@/shared/ui/button';
+import { ProblemCode } from '@/shared/ui/problem-code';
 import type { ConfirmDialogBlockedViewProps } from '../confirm-dialog.types';
 
 function ConfirmDialogBlockedView({
@@ -23,7 +24,7 @@ function ConfirmDialogBlockedView({
         </div>
         <DialogTitle>{blockedTitle}</DialogTitle>
         <DialogDescription>{message}</DialogDescription>
-        {code && <p className="text-xs text-muted-foreground">Código: {code}</p>}
+        <ProblemCode code={code} />
       </DialogHeader>
       <DialogFooter>
         <DialogClose render={<Button variant="outline" />}>{dismissLabel}</DialogClose>

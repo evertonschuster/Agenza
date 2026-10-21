@@ -1,5 +1,6 @@
 import { AlertCircleIcon } from 'lucide-react';
 import { useFormContext } from 'react-hook-form';
+import { ProblemCode } from '@/shared/ui/problem-code';
 
 export function FormErrorBanner() {
   const {
@@ -7,7 +8,7 @@ export function FormErrorBanner() {
   } = useFormContext();
   const serverError = errors.root?.serverError;
   if (!serverError?.message) return null;
-  const code = serverError.type === 'server' ? undefined : serverError.type;
+  const code = serverError.type === 'server' ? undefined : String(serverError.type);
 
   return (
     <div
@@ -17,7 +18,7 @@ export function FormErrorBanner() {
       <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
       <div>
         <p>{serverError.message}</p>
-        {code && <p className="mt-1 text-xs text-muted-foreground">Código: {code}</p>}
+        <ProblemCode code={code} className="mt-1" />
       </div>
     </div>
   );

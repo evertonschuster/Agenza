@@ -262,6 +262,7 @@ describe('TagDeletePage', () => {
           title: 'Não foi possível abrir a etiqueta',
           description: "Etiqueta 'missing-id' não foi encontrada.",
           data: { code: 'Tag.NotFound' },
+          type: 'error',
         }),
       ),
     );
