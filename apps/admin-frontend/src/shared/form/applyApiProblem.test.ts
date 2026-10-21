@@ -56,6 +56,22 @@ describe('applyApiProblem', () => {
     expect(methods.setFocus).not.toHaveBeenCalled();
   });
 
+  it('keeps the problem code as the type of root.serverError, so the banner can show it', () => {
+    const methods = formMethods();
+    const problem: ApiProblem = {
+      status: 429,
+      code: 'RateLimit.Exceeded',
+      title: 'Muitas solicitações em pouco tempo.',
+    };
+
+    applyApiProblem<DummyValues>(problem, methods);
+
+    expect(methods.setError).toHaveBeenCalledExactlyOnceWith('root.serverError', {
+      type: 'RateLimit.Exceeded',
+      message: 'Muitas solicitações em pouco tempo.',
+    });
+  });
+
   it('does nothing when there is no field error and no form-level message', () => {
     const methods = formMethods();
     const problem: ApiProblem = { status: 400, title: '', errors: {} };

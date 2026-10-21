@@ -28,7 +28,9 @@ export function applyApiProblem<T extends FieldValues>(
     const message = fieldErrors[field];
     if (message) methods.setError(field, { type: 'server', message });
   }
-  if (formError) methods.setError('root.serverError', { type: 'server', message: formError });
+  if (formError) {
+    methods.setError('root.serverError', { type: problem.code ?? 'server', message: formError });
+  }
 
   const firstInvalid = fields.find((field) => fieldErrors[field]);
   if (firstInvalid) methods.setFocus(firstInvalid);

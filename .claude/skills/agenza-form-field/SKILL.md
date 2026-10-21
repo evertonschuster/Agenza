@@ -118,7 +118,9 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
 3. **The page shell** wraps its `<form>` in `<FormProvider {...methods}>` — every field component reads
    `register`/`control`/`errors` via `useFormContext()`, not as props. A form-level error is
    `<FormErrorBanner />` — no props, it reads `root.serverError` from context itself and renders
-   nothing when there isn't one.
+   nothing when there isn't one. It shows the problem's code under the message ("Código: …"), as the
+   failure standard asks: `applyApiProblem` keeps the code as the error's `type`, and `'server'`
+   when the problem has none.
 
 4. **Fields are configuration**, not markup. Import the generic components straight from
    `shared/form/fields` — there's no per-entity instantiation step — and give each one the form's

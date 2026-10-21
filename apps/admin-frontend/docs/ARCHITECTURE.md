@@ -284,7 +284,9 @@ registered focusable ref, `setFocus` cannot move focus to a collection root.
 `role="alert"` message only when an error exists, preferring `root.message` for field-array validation
 over `message`. Backend and resolver errors share this rendering; it has no domain rules.
 `FormErrorBanner` remains responsible for the form-wide `root.serverError`, and field controls keep
-their existing `FormField` error rendering to avoid duplicate messages.
+their existing `FormField` error rendering to avoid duplicate messages. The banner also shows the
+problem's code ("Código: RateLimit.Exceeded"), as `ErrorState` does on a list: `applyApiProblem`
+stores it as the `type` of `root.serverError` (`'server'` when the problem has no code).
 
 **`Result` is the internal currency; the framework boundary is the cashier.** `servicesApi` never
 rejects, but React Router and TanStack Query signal failure _only_ by a rejected promise — a
