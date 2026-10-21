@@ -265,6 +265,24 @@ describe('usePaginatedList', () => {
       expect(fetchPage.mock.calls[2]?.[0]).toEqual(fetchPage.mock.calls[1]?.[0]);
     });
 
+    it('asks for the page an action just requested when it refetches before React renders that action', async () => {
+      const { result, fetchPage } = renderList();
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      fetchPage.mockImplementation(({ page }) =>
+        Promise.resolve(pageOf(87, [{ id: `page-${page}` }])),
+      );
+      const { refetch } = result.current;
+
+      act(() => {
+        result.current.pagination.onPageChange(2);
+        refetch();
+      });
+
+      expect(fetchPage.mock.calls.map(([query]) => query.page)).toEqual([1, 2, 2]);
+      await waitFor(() => expect(result.current.list.items).toEqual([{ id: 'page-2' }]));
+      expect(result.current.pagination.page).toBe(2);
+    });
+
     it('moves to the last page that exists when a refetch finds fewer items than the page on screen', async () => {
       const { result, fetchPage } = renderList();
       await waitFor(() => expect(result.current.list.status).toBe('ready'));

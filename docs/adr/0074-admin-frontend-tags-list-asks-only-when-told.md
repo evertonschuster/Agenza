@@ -39,9 +39,11 @@ Considered and rejected, and chose on 2026-10-20 to drop it.
    always and `Search` only when it is not empty, and returns the API's page as it is, like `clientsRepository.list`.
    A search of only spaces goes out as typed and the API binds it as no search (`BlankIsAbsent`, ADR 0065), so the
    repository does not trim. ADR 0069's adapter, which walked every page, is gone.
-3. **`usePaginatedList` gains `refetch()`**, the action the tag topics call: it sends the current filters, page and
-   size again through the same `send` (so it aborts what is in flight), without the `request` step that clears the
-   answer. The rows and the footer stay on screen until the fresh answer replaces them, as the topics' refetch did
+3. **`usePaginatedList` gains `refetch()`**, the action the tag topics call: it sends the last requested filters, page
+   and size again through the same `send` (so it aborts what is in flight), without the `request` step that clears the
+   answer. `request` keeps that query in a ref as it sends it, because `useTopic` only swaps in the latest listener
+   after React commits: a topic that lands between an action and that commit would otherwise send the query of the
+   render before, abort the action's request and show the old page under the new one's state. The rows and the footer stay on screen until the fresh answer replaces them, as the topics' refetch did
    before, and an answer that finds the page past the end (the last tag of the last page was deleted) is corrected
    to the last page like any other. `useTagListPage` subscribes it with `useTopic(tagSaved, refetch)` and
    `useTopic(tagDeleted, refetch)`. It is still an action, called from a topic's handler at the moment of the
