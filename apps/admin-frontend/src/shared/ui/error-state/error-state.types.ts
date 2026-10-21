@@ -7,7 +7,6 @@ interface ErrorStateProps {
   icon?: LucideIcon | undefined;
   retryLabel?: string | undefined;
   onRetry?: (() => void) | undefined;
-  retryInSeconds?: number | undefined;
   className?: string | undefined;
 }
 

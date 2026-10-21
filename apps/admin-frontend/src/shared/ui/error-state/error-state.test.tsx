@@ -42,20 +42,6 @@ describe('ErrorState', () => {
     expect(screen.getByRole('button', { name: 'Recarregar' })).toBeInTheDocument();
   });
 
-  it('holds the retry button and shows the seconds left while retryInSeconds is positive', () => {
-    const { rerender } = render(
-      <ErrorState title="Não foi possível carregar" onRetry={() => {}} retryInSeconds={5} />,
-    );
-
-    expect(screen.getByRole('button', { name: 'Tentar novamente em 5 s' })).toBeDisabled();
-
-    rerender(
-      <ErrorState title="Não foi possível carregar" onRetry={() => {}} retryInSeconds={0} />,
-    );
-
-    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
-  });
-
   it('renders no retry button when onRetry is omitted', () => {
     render(<ErrorState title="Não foi possível carregar" />);
 

@@ -10,11 +10,8 @@ function ErrorState({
   icon: Icon = AlertCircleIcon,
   retryLabel = 'Tentar novamente',
   onRetry,
-  retryInSeconds = 0,
   className,
 }: ErrorStateProps) {
-  const waiting = retryInSeconds > 0;
-
   return (
     <div
       role="alert"
@@ -30,8 +27,8 @@ function ErrorState({
       {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
       {code && <p className="mt-1 text-xs text-muted-foreground">Código: {code}</p>}
       {onRetry && (
-        <Button variant="outline" size="sm" className="mt-4" disabled={waiting} onClick={onRetry}>
-          {waiting ? `${retryLabel} em ${retryInSeconds} s` : retryLabel}
+        <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
+          {retryLabel}
         </Button>
       )}
     </div>

@@ -46,7 +46,7 @@ Exported from `servicesFacade.ts`, all `status: 0` except `RATE_LIMIT_PROBLEM`:
 | `SESSION_PROBLEM` | `MissingSessionError` — no token or tenant at request time | send to login; same destination as a real `Authorization.Unauthorized` |
 | `NETWORK_PROBLEM` | the fetch itself threw (offline, DNS, connection refused) | retry affordance |
 | `SERVER_PROBLEM` | non-2xx with no Problem body | retry affordance, and log it |
-| `RATE_LIMIT_PROBLEM` | any `429`, whatever the body (`status: 429`) | retry affordance; transient, so `ConfirmDialog` offers **Tentar novamente**, held for `retryAfterSeconds` (`Retry-After`, else 5) |
+| `RATE_LIMIT_PROBLEM` | any `429`, whatever the body (`status: 429`) | retry affordance; transient, so `ConfirmDialog` offers **Tentar novamente**; no automatic retry |
 
 `SESSION_PROBLEM` exists separately from `NETWORK_PROBLEM` for one reason: an expired session must
 not read as "sem conexão", because the user's actual next step is entirely different.

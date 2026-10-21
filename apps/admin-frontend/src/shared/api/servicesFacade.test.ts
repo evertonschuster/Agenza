@@ -25,15 +25,10 @@ const DELETE = vi.fn<(path: string, init: unknown) => Promise<RawShape>>();
 const fakeClient = { GET, DELETE, POST: vi.fn(), PUT: vi.fn() } as unknown as Client<paths>;
 const api = createServicesFacade(fakeClient);
 
-const raw = (over: {
-  data?: unknown;
-  error?: unknown;
-  status?: number;
-  headers?: Record<string, string>;
-}): RawShape => ({
+const raw = (over: { data?: unknown; error?: unknown; status?: number }): RawShape => ({
   data: over.data,
   error: over.error,
-  response: new Response(null, { status: over.status ?? 200, headers: over.headers ?? {} }),
+  response: new Response(null, { status: over.status ?? 200 }),
 });
 
 describe('createServicesFacade', () => {
@@ -130,30 +125,6 @@ describe('createServicesFacade', () => {
     expect(await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } })).toEqual(
       { ok: false, error: RATE_LIMIT_PROBLEM },
     );
-  });
-
-  it.each([
-    ['12', 12],
-    ['120', 60],
-    ['0', 5],
-    ['soon', 5],
-    ['Wed, 21 Oct 2026 07:28:00 GMT', 5],
-  ])('reads Retry-After %j as %i seconds of wait on a 429', async (header, seconds) => {
-    GET.mockResolvedValue(raw({ status: 429, headers: { 'Retry-After': header } }));
-
-    expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
-      ok: false,
-      error: { ...RATE_LIMIT_PROBLEM, retryAfterSeconds: seconds },
-    });
-  });
-
-  it('waits the default 5 seconds on a 429 that carries no readable Retry-After', async () => {
-    GET.mockResolvedValue(raw({ status: 429 }));
-
-    const result = await api.get('/api/v{version}/categories', { query: {} });
-
-    expect(result).toEqual({ ok: false, error: RATE_LIMIT_PROBLEM });
-    expect(RATE_LIMIT_PROBLEM.retryAfterSeconds).toBe(5);
   });
 
   it('treats 204 No Content as success with no payload', async () => {

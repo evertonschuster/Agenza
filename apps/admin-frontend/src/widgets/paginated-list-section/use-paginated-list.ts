@@ -1,6 +1,5 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import { extractErrorMessage, type ApiResult } from '@/shared/api/servicesFacade';
-import { useCooldown } from '@/shared/hooks/useCooldown';
 import {
   DEFAULT_PAGE_SIZE,
   FIRST_PAGE,
@@ -19,7 +18,6 @@ import type {
 function toListState<T>(
   result: ApiResult<PagedResult<T>> | null,
   onRetry: () => void,
-  retryInSeconds: number,
 ): PaginatedListState<T> {
   if (result === null) {
     return { status: ListSectionStatus.Loading, items: [], failure: null };
@@ -30,12 +28,7 @@ function toListState<T>(
     return {
       status: ListSectionStatus.Error,
       items: [],
-      failure: {
-        message: extractErrorMessage(error),
-        code: error.code ?? undefined,
-        onRetry,
-        retryInSeconds,
-      },
+      failure: { message: extractErrorMessage(error), code: error.code ?? undefined, onRetry },
     };
   }
 
@@ -53,7 +46,6 @@ export function usePaginatedList<F extends object, T>({
   });
   const [result, setResult] = useState<ApiResult<PagedResult<T>> | null>(null);
   const [knownTotal, setKnownTotal] = useState<PaginatedListKnownTotal<F> | null>(null);
-  const [retryInSeconds, startCooldown] = useCooldown();
   const inFlight = useRef<AbortController | null>(null);
   const requested = useRef(query);
   const { filters, page, pageSize } = query;
@@ -69,7 +61,6 @@ export function usePaginatedList<F extends object, T>({
     ).then((answer) => {
       if (controller.signal.aborted) return;
       if (!answer.ok) {
-        startCooldown(answer.error.retryAfterSeconds ?? 0);
         setResult(answer);
         return;
       }
@@ -129,7 +120,7 @@ export function usePaginatedList<F extends object, T>({
     filters,
     applyFilters,
     refetch,
-    list: toListState(result, onRetry, retryInSeconds),
+    list: toListState(result, onRetry),
     pagination: { page, pageSize, totalCount, onPageChange, onPageSizeChange },
   };
 }

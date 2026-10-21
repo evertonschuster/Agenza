@@ -1,9 +1,8 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
 import { StrictMode } from 'react';
-import { NETWORK_PROBLEM, RATE_LIMIT_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
+import { NETWORK_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult, Paging } from '@/shared/pagination/paging';
-import { advanceSeconds } from '@/test/advanceSeconds';
 import { pending } from '@/test/pending';
 import type { UsePaginatedListOptions } from './paginated-list-section.types';
 import { usePaginatedList } from './use-paginated-list';
@@ -313,62 +312,6 @@ describe('usePaginatedList', () => {
       await waitFor(() => expect(result.current.list.status).toBe('ready'));
       expect(fetchPage).toHaveBeenCalledTimes(2);
       expect(fetchPage.mock.calls[1]?.[0]).toEqual(fetchPage.mock.calls[0]?.[0]);
-    });
-  });
-
-  describe('when the backend limits the rate', () => {
-    beforeEach(() => {
-      vi.useFakeTimers({ shouldAdvanceTime: true });
-    });
-
-    afterEach(() => {
-      vi.useRealTimers();
-    });
-
-    function limited(retryAfterSeconds: number) {
-      const error = { ...RATE_LIMIT_PROBLEM, retryAfterSeconds };
-      return vi.fn<FetchPage>(() => Promise.resolve({ ok: false, error }));
-    }
-
-    it('counts the wait down on the failure and then asks again from it', async () => {
-      const fetchPage = limited(5);
-      const { result } = renderList(NO_FILTERS, fetchPage);
-      await waitFor(() => expect(result.current.list.status).toBe('error'));
-      expect(result.current.list.failure?.retryInSeconds).toBe(5);
-
-      await advanceSeconds(2);
-      expect(result.current.list.failure?.retryInSeconds).toBe(3);
-
-      await advanceSeconds(3);
-      expect(result.current.list.failure?.retryInSeconds).toBe(0);
-
-      fetchPage.mockResolvedValue(pageOf(87));
-      act(() => result.current.list.failure?.onRetry?.());
-      await waitFor(() => expect(result.current.list.status).toBe('ready'));
-      expect(fetchPage).toHaveBeenCalledTimes(2);
-    });
-
-    it('starts the wait again when a refetch is limited too, with the failure already on screen', async () => {
-      const fetchPage = limited(5);
-      const { result } = renderList(NO_FILTERS, fetchPage);
-      await waitFor(() => expect(result.current.list.status).toBe('error'));
-      await advanceSeconds(3);
-      expect(result.current.list.failure?.retryInSeconds).toBe(2);
-
-      act(() => result.current.refetch());
-
-      await waitFor(() => expect(result.current.list.failure?.retryInSeconds).toBe(5));
-    });
-
-    it('does not wait on a failure that is not a rate limit', async () => {
-      const fetchPage = vi.fn<FetchPage>(() =>
-        Promise.resolve({ ok: false, error: NETWORK_PROBLEM }),
-      );
-      const { result } = renderList(NO_FILTERS, fetchPage);
-
-      await waitFor(() => expect(result.current.list.status).toBe('error'));
-
-      expect(result.current.list.failure?.retryInSeconds).toBe(0);
     });
   });
 });

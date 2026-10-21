@@ -2,7 +2,6 @@ import { useEffect, useRef, useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
 import { extractErrorMessage, isTransientProblem } from '@/shared/api/servicesFacade';
-import { useCooldown } from '@/shared/hooks/useCooldown';
 import { toast } from '@/shared/ui/toast';
 import type { ConfirmDialogProps, ConfirmDialogFailure } from './confirm-dialog.types';
 
@@ -33,7 +32,6 @@ function ConfirmDialog<T>({
 }: ConfirmDialogProps<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [failure, setFailure] = useState<ConfirmDialogFailure>();
-  const [retryInSeconds, startCooldown] = useCooldown();
   const isMountedRef = useRef(true);
   const isBlocked = failure !== undefined && !failure.transient;
 
@@ -57,7 +55,6 @@ function ConfirmDialog<T>({
       return;
     }
 
-    startCooldown(result.error.retryAfterSeconds ?? 0);
     setFailure({
       message: extractErrorMessage(result.error),
       transient: isTransientProblem(result.error),
@@ -87,7 +84,6 @@ function ConfirmDialog<T>({
             cancelLabel={cancelLabel}
             retryLabel={retryLabel}
             failure={failure}
-            retryInSeconds={retryInSeconds}
             loading={loading}
             isSubmitting={isSubmitting}
             onConfirm={() => void handleConfirm()}

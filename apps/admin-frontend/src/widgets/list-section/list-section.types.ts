@@ -32,7 +32,6 @@ interface ListSectionFailure {
   message: string;
   code?: string | undefined;
   onRetry?: (() => void) | undefined;
-  retryInSeconds?: number | undefined;
 }
 
 interface ListSectionProps<T> {

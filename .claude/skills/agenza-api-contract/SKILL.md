@@ -115,9 +115,9 @@ single most common misread of this layer.
 synthetic `ApiProblem`s (`status: 0`, except `RATE_LIMIT_PROBLEM`, which keeps `429`), so the UI
 branches on them identically to a backend Problem. `SESSION_PROBLEM` is split out of the transport
 bucket so an expired session never reads as "sem conexão". Any `429` becomes `RATE_LIMIT_PROBLEM`,
-whatever its body, and is transient: the user can try again. It carries `retryAfterSeconds` (the
-`Retry-After` header, else 5) and the retry controls wait that long
-([ADR 0075](../../../docs/adr/0075-admin-frontend-rate-limit-is-a-transient-problem-with-a-short-wait.md)).
+whatever its body, and is transient: the user can try again, when they choose to
+([ADR 0075](../../../docs/adr/0075-admin-frontend-rate-limit-is-a-transient-problem.md)). The app never retries
+a `429` by itself and never holds the retry buttons.
 
 Branch on `result.error.code`. **Never parse `title` or `detail`** — they are free pt-BR text, they
 change without notice, and they are not a contract. Per-field messages live in `result.error.errors`.
