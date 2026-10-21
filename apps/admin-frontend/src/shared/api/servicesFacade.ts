@@ -44,10 +44,6 @@ export function isTransientProblem(problem: ApiProblem): boolean {
   return Number(problem.status) >= 500;
 }
 
-export function extractErrorMessage(problem: ApiProblem): string {
-  return problem.errors?.['']?.[0]?.message ?? problem.title ?? 'Algo deu errado. Tente novamente.';
-}
-
 const isProblem = (value: unknown): value is ApiProblem =>
   typeof value === 'object' &&
   value !== null &&

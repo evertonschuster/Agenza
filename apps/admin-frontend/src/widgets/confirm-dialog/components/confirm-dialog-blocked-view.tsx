@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog';
-import { extractErrorMessage } from '@/shared/api/servicesFacade';
 import { Button } from '@/shared/ui/button';
 import { ProblemCode } from '@/shared/ui/problem-code';
 import type { ConfirmDialogBlockedViewProps } from '../confirm-dialog.types';
@@ -23,7 +22,7 @@ function ConfirmDialogBlockedView({
           <AlertCircleIcon aria-hidden="true" className="size-5" />
         </div>
         <DialogTitle>{blockedTitle}</DialogTitle>
-        <DialogDescription>{extractErrorMessage(problem)}</DialogDescription>
+        <DialogDescription>{problem.title}</DialogDescription>
         <ProblemCode code={problem.code} />
       </DialogHeader>
       <DialogFooter>

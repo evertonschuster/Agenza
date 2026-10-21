@@ -25,13 +25,15 @@ describe('toast.serverError', () => {
     });
   });
 
-  it('prefers the message under the empty key, as the other failure surfaces do', () => {
+  it('uses the problem title as the description, which is the message for an application error', () => {
     const add = vi.spyOn(toast, 'add').mockReturnValue('id');
     const problem: ApiProblem = {
       status: 409,
       code: 'Tag.DuplicateName',
-      title: 'Conflito.',
-      errors: { '': [{ message: 'Já existe uma etiqueta com esse nome.' }] },
+      title: 'Já existe uma etiqueta com esse nome.',
+      errors: {
+        '': [{ code: 'Tag.DuplicateName', message: 'Já existe uma etiqueta com esse nome.' }],
+      },
     };
 
     toast.serverError('Não foi possível salvar', problem);

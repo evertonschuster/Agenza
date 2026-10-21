@@ -16,9 +16,9 @@ it holds everywhere. A failure message is three things, and it is incomplete wit
 3. **A recovery action** — as a control if one exists, as an instruction if not.
 
 Every surface that shows a problem takes the `ApiProblem` itself and shows its code the same way:
-`extractErrorMessage(problem)` for the curated message and `ProblemCode` (`shared/ui/problem-code`) for
-`problem.code`, small and muted. You rarely write either by hand: the table under "Where a failure renders"
-says what you call for each surface.
+`problem.title` for the curated message (the backend sends it ready: for an application error it is the
+error's message) and `ProblemCode` (`shared/ui/problem-code`) for `problem.code`, small and muted. You rarely
+write either by hand: the table under "Where a failure renders" says what you call for each surface.
 
 ADR 0020 says it plainly: a generic *"contacte o administrador"* is **not sufficient**. Neither is
 "Tente novamente" with nothing to try again with. When the only path really is support, say what to
@@ -41,7 +41,7 @@ note the shape: what happened, then what to do, in one line. Match it.
 
 | Shape | Use when | Example | What you call |
 | --- | --- | --- | --- |
-| Full screen | The session or the whole route is unusable | `FullScreenMessage` — session expired, route loader rejected | No route loader exists yet; when one does, show `extractErrorMessage(problem)` and `ProblemCode` |
+| Full screen | The session or the whole route is unusable | `FullScreenMessage` — session expired, route loader rejected | No route loader exists yet; when one does, show `problem.title` and `ProblemCode` |
 | Inline, in the region | One region failed and the rest of the screen is intact | A list that could not load, with **Tentar novamente** above the empty space; a confirm dialog whose action failed | Nothing: `usePaginatedList` with `ListSection`, and `ConfirmDialog`, already show message, code and retry |
 | Field error | A 400 with `errors` — expected flow, not an error screen | The message sits with the field, tied by `aria-describedby` | `applyApiProblem(error, methods)`; `FormErrorBanner` shows the form-level message and its code |
 | Toast | A mutation failed and the screen is still hers | "Não foi possível excluir o serviço." | `toast.serverError(title, error)` from `@/shared/ui/toast` |

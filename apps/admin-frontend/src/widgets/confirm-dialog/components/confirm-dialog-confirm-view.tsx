@@ -6,7 +6,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/shared/ui/dialog';
-import { extractErrorMessage } from '@/shared/api/servicesFacade';
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import { ProblemCode } from '@/shared/ui/problem-code';
@@ -46,7 +45,7 @@ function ConfirmDialogConfirmView({
         >
           <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
           <div>
-            <p>{extractErrorMessage(failure)}</p>
+            <p>{failure.title}</p>
             <ProblemCode code={failure.code} className="mt-1" />
           </div>
         </div>
