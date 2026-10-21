@@ -19,10 +19,17 @@ function ConfirmDialogConfirmView({
   cancelLabel,
   retryLabel,
   failure,
+  retryInSeconds,
   loading,
   isSubmitting,
   onConfirm,
 }: ConfirmDialogConfirmViewProps) {
+  const waiting = retryInSeconds > 0;
+  let actionLabel = confirmLabel;
+  if (failure?.transient) {
+    actionLabel = waiting ? `${retryLabel} em ${retryInSeconds} s` : retryLabel;
+  }
+
   return (
     <>
       <DialogHeader>
@@ -53,11 +60,11 @@ function ConfirmDialogConfirmView({
         <ActionButton
           variant="destructive"
           icon={ConfirmIcon}
-          disabled={loading}
+          disabled={loading || waiting}
           pending={isSubmitting}
           onClick={onConfirm}
         >
-          {failure?.transient ? retryLabel : confirmLabel}
+          {actionLabel}
         </ActionButton>
       </DialogFooter>
     </>

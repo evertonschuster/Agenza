@@ -110,10 +110,14 @@ single most common misread of this layer.
 
 ## Handle a failure
 
-`run()` has exactly five outcomes: `ok(payload)` · the backend's RFC 7807 Problem **verbatim** ·
-`SESSION_PROBLEM` · `NETWORK_PROBLEM` · `SERVER_PROBLEM`. The last three are synthetic `ApiProblem`s
-with `status: 0`, so the UI branches on them identically to a backend Problem. `SESSION_PROBLEM` is
-split out of the transport bucket so an expired session never reads as "sem conexão".
+`run()` has exactly six outcomes: `ok(payload)` · the backend's RFC 7807 Problem **verbatim** ·
+`SESSION_PROBLEM` · `NETWORK_PROBLEM` · `SERVER_PROBLEM` · `RATE_LIMIT_PROBLEM`. The last four are
+synthetic `ApiProblem`s (`status: 0`, except `RATE_LIMIT_PROBLEM`, which keeps `429`), so the UI
+branches on them identically to a backend Problem. `SESSION_PROBLEM` is split out of the transport
+bucket so an expired session never reads as "sem conexão". Any `429` becomes `RATE_LIMIT_PROBLEM`,
+whatever its body, and is transient: the user can try again. It carries `retryAfterSeconds` (the
+`Retry-After` header, else 5) and the retry controls wait that long
+([ADR 0075](../../../docs/adr/0075-admin-frontend-rate-limit-is-a-transient-problem-with-a-short-wait.md)).
 
 Branch on `result.error.code`. **Never parse `title` or `detail`** — they are free pt-BR text, they
 change without notice, and they are not a contract. Per-field messages live in `result.error.errors`.

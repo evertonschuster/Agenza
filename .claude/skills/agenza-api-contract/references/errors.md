@@ -37,15 +37,16 @@ A real 500 still arrives as a Problem body, so it becomes `fail(problem)` with `
 **not** `SERVER_PROBLEM`. `SERVER_PROBLEM` means a non-2xx whose body was not a Problem at all
 (a proxy or gateway page, an empty error), i.e. something answered that was not the service.
 
-## The three synthetic problems
+## The four synthetic problems
 
-Exported from `servicesFacade.ts`, all `status: 0`:
+Exported from `servicesFacade.ts`, all `status: 0` except `RATE_LIMIT_PROBLEM`:
 
 | Constant | Raised when | UI |
 | --- | --- | --- |
 | `SESSION_PROBLEM` | `MissingSessionError` — no token or tenant at request time | send to login; same destination as a real `Authorization.Unauthorized` |
 | `NETWORK_PROBLEM` | the fetch itself threw (offline, DNS, connection refused) | retry affordance |
 | `SERVER_PROBLEM` | non-2xx with no Problem body | retry affordance, and log it |
+| `RATE_LIMIT_PROBLEM` | any `429`, whatever the body (`status: 429`) | retry affordance; transient, so `ConfirmDialog` offers **Tentar novamente**, held for `retryAfterSeconds` (`Retry-After`, else 5) |
 
 `SESSION_PROBLEM` exists separately from `NETWORK_PROBLEM` for one reason: an expired session must
 not read as "sem conexão", because the user's actual next step is entirely different.

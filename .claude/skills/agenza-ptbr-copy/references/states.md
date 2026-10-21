@@ -1,7 +1,7 @@
 # Failure, empty, loading and "Em breve"
 
 Read [`SKILL.md`](../SKILL.md) first. The error *taxonomy* — which `code` a backend produces, the
-`ApiProblem` shape, the three synthetic problems, how `errors` maps onto a form — belongs to
+`ApiProblem` shape, the four synthetic problems, how `errors` maps onto a form — belongs to
 `agenza-api-contract` and its
 [`references/errors.md`](../../agenza-api-contract/references/errors.md). This file is only the
 prose that reaches the owner.
@@ -29,7 +29,7 @@ never into body copy.
 stable and it does not know what screen it is on, so for every code your screen actually branches on,
 write the string yourself.
 
-The three synthetic problems already carry curated titles in `src/shared/api/servicesFacade.ts` —
+The four synthetic problems already carry curated titles in `src/shared/api/servicesFacade.ts` —
 note the shape: what happened, then what to do, in one line. Match it.
 
 ## Where a failure renders

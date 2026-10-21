@@ -4,6 +4,7 @@ import type { paths } from './generated/services-api.d.ts';
 import { MissingSessionError } from './apiClient';
 import {
   NETWORK_PROBLEM,
+  RATE_LIMIT_PROBLEM,
   SERVER_PROBLEM,
   SESSION_PROBLEM,
   createServicesFacade,
@@ -24,10 +25,15 @@ const DELETE = vi.fn<(path: string, init: unknown) => Promise<RawShape>>();
 const fakeClient = { GET, DELETE, POST: vi.fn(), PUT: vi.fn() } as unknown as Client<paths>;
 const api = createServicesFacade(fakeClient);
 
-const raw = (over: { data?: unknown; error?: unknown; status?: number }): RawShape => ({
+const raw = (over: {
+  data?: unknown;
+  error?: unknown;
+  status?: number;
+  headers?: Record<string, string>;
+}): RawShape => ({
   data: over.data,
   error: over.error,
-  response: new Response(null, { status: over.status ?? 200 }),
+  response: new Response(null, { status: over.status ?? 200, headers: over.headers ?? {} }),
 });
 
 describe('createServicesFacade', () => {
@@ -108,6 +114,48 @@ describe('createServicesFacade', () => {
     });
   });
 
+  it('maps a 429 with an empty body to RATE_LIMIT_PROBLEM, not to a failing server', async () => {
+    GET.mockResolvedValue(raw({ error: undefined, status: 429 }));
+
+    expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
+      ok: false,
+      error: RATE_LIMIT_PROBLEM,
+    });
+  });
+
+  it('maps a 429 to RATE_LIMIT_PROBLEM even when the body is a Problem, so the copy stays ours', async () => {
+    const problem = { title: 'Limite excedido.', status: 429, code: 'Throttle.Hit' };
+    DELETE.mockResolvedValue(raw({ error: problem, status: 429 }));
+
+    expect(await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } })).toEqual(
+      { ok: false, error: RATE_LIMIT_PROBLEM },
+    );
+  });
+
+  it.each([
+    ['12', 12],
+    ['120', 60],
+    ['0', 5],
+    ['soon', 5],
+    ['Wed, 21 Oct 2026 07:28:00 GMT', 5],
+  ])('reads Retry-After %j as %i seconds of wait on a 429', async (header, seconds) => {
+    GET.mockResolvedValue(raw({ status: 429, headers: { 'Retry-After': header } }));
+
+    expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
+      ok: false,
+      error: { ...RATE_LIMIT_PROBLEM, retryAfterSeconds: seconds },
+    });
+  });
+
+  it('waits the default 5 seconds on a 429 that carries no readable Retry-After', async () => {
+    GET.mockResolvedValue(raw({ status: 429 }));
+
+    const result = await api.get('/api/v{version}/categories', { query: {} });
+
+    expect(result).toEqual({ ok: false, error: RATE_LIMIT_PROBLEM });
+    expect(RATE_LIMIT_PROBLEM.retryAfterSeconds).toBe(5);
+  });
+
   it('treats 204 No Content as success with no payload', async () => {
     DELETE.mockResolvedValue(raw({ data: undefined, status: 204 }));
 
@@ -122,6 +170,7 @@ describe('isTransientProblem', () => {
     ['NETWORK_PROBLEM', NETWORK_PROBLEM],
     ['SESSION_PROBLEM', SESSION_PROBLEM],
     ['SERVER_PROBLEM', SERVER_PROBLEM],
+    ['RATE_LIMIT_PROBLEM', RATE_LIMIT_PROBLEM],
   ])('treats %s as transient', (_name, problem) => {
     expect(isTransientProblem(problem)).toBe(true);
   });

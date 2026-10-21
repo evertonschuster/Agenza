@@ -18,7 +18,7 @@ superseded is historical evidence, not current implementation guidance.
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032, 0050 |
 | Logging and telemetry | 0054 |
-| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
+| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038, 0075 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
 | admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 |
 | AI agent instruction files | 0041 |
@@ -99,4 +99,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0071 admin-frontend paged lists share one hook: filters read by each list, the total kept per filters ·
 0072 admin-frontend paged lists keep their state in the hook, not in the URL ·
 0073 admin-frontend paged lists ask the backend only when an action tells them to ·
-0074 admin-frontend Etiquetas pages on usePaginatedList, asks only when told to, with its state out of the URL.
+0074 admin-frontend Etiquetas pages on usePaginatedList, asks only when told to, with its state out of the URL ·
+0075 admin-frontend a 429 is a transient problem of its own, and the retry control waits before it re-enables.

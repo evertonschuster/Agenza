@@ -50,6 +50,7 @@ interface ConfirmDialogConfirmViewProps {
   cancelLabel: string;
   retryLabel: string;
   failure: ConfirmDialogFailure | undefined;
+  retryInSeconds: number;
   loading: boolean;
   isSubmitting: boolean;
   onConfirm: () => void;

@@ -6,7 +6,9 @@ import type { components, paths } from './generated/services-api.d.ts';
 
 const API_VERSION = '1.0';
 
-export type ApiProblem = components['schemas']['ApiProblemDetails'];
+export type ApiProblem = components['schemas']['ApiProblemDetails'] & {
+  retryAfterSeconds?: number | undefined;
+};
 export type ApiResult<T> = Result<T, ApiProblem>;
 
 export const NETWORK_PROBLEM: ApiProblem = {
@@ -27,8 +29,26 @@ export const SESSION_PROBLEM: ApiProblem = {
   title: 'Sua sessão expirou. Entre novamente.',
 };
 
+const RATE_LIMIT_MAX_RETRY_SECONDS = 60;
+
+export const RATE_LIMIT_PROBLEM: ApiProblem = {
+  status: 429,
+  code: 'RateLimit.Exceeded',
+  title: 'Muitas solicitações em pouco tempo. Aguarde alguns segundos e tente novamente.',
+  retryAfterSeconds: 5,
+};
+
+function rateLimitProblem(retryAfter: string | null): ApiProblem {
+  const seconds = Number(retryAfter);
+  if (!Number.isInteger(seconds) || seconds < 1) return RATE_LIMIT_PROBLEM;
+  return {
+    ...RATE_LIMIT_PROBLEM,
+    retryAfterSeconds: Math.min(seconds, RATE_LIMIT_MAX_RETRY_SECONDS),
+  };
+}
+
 const TRANSIENT_PROBLEM_CODES = new Set(
-  [NETWORK_PROBLEM.code, SESSION_PROBLEM.code, SERVER_PROBLEM.code].filter(
+  [NETWORK_PROBLEM.code, SESSION_PROBLEM.code, SERVER_PROBLEM.code, RATE_LIMIT_PROBLEM.code].filter(
     (code): code is string => code != null,
   ),
 );
@@ -114,6 +134,9 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
   async function run(dispatch: () => Promise<RawResult>): Promise<ApiResult<unknown>> {
     try {
       const { data, error, response } = await dispatch();
+      if (response.status === 429) {
+        return fail(rateLimitProblem(response.headers.get('Retry-After')));
+      }
       if (!response.ok) return fail(isProblem(error) ? error : SERVER_PROBLEM);
       return ok((data as { data?: unknown } | undefined)?.data);
     } catch (cause) {

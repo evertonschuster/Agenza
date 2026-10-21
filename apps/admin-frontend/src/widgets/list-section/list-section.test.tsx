@@ -141,7 +141,12 @@ describe('ListSection', () => {
 
     function renderError(props: {
       errorTitle?: string;
-      failure?: { message: string; code?: string; onRetry?: () => void } | null;
+      failure?: {
+        message: string;
+        code?: string;
+        onRetry?: () => void;
+        retryInSeconds?: number;
+      } | null;
       status?: 'error' | 'loading' | 'ready';
       items?: Item[];
     }) {
@@ -185,6 +190,12 @@ describe('ListSection', () => {
       await userEvent.setup().click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
       expect(onRetry).toHaveBeenCalledTimes(1);
+    });
+
+    it('holds the retry and shows the seconds left while the failure asks to wait', () => {
+      renderError({ failure: { ...FAILURE, onRetry: vi.fn(), retryInSeconds: 5 } });
+
+      expect(screen.getByRole('button', { name: 'Tentar novamente em 5 s' })).toBeDisabled();
     });
 
     it('keeps the generic title with no details when no failure is given', () => {

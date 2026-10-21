@@ -8,6 +8,7 @@ function ListSectionError({ title, failure }: ListSectionErrorProps) {
       description={failure?.message}
       code={failure?.code}
       onRetry={failure?.onRetry}
+      retryInSeconds={failure?.retryInSeconds}
     />
   );
 }

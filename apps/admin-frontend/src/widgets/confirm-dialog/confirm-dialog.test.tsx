@@ -1,9 +1,10 @@
-import { describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ArchiveIcon } from 'lucide-react';
 import { ConfirmDialog } from '.';
-import type { ApiResult } from '@/shared/api/servicesFacade';
+import { RATE_LIMIT_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
+import { advanceSeconds } from '@/test/advanceSeconds';
 
 const BASE_PROPS = {
   confirmation: {
@@ -182,6 +183,69 @@ describe('ConfirmDialog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  describe('when the failure is a rate limit', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true });
+    });
+
+    afterEach(() => {
+      vi.useRealTimers();
+    });
+
+    it('offers a retry, not a permanent block, once the wait is over', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onConfirm = vi.fn().mockResolvedValue({ ok: false, error: RATE_LIMIT_PROBLEM });
+      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+      await user.click(screen.getByRole('button', { name: 'Desativar' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(RATE_LIMIT_PROBLEM.title ?? '');
+      expect(
+        screen.queryByRole('heading', { name: 'Não é possível desativar' }),
+      ).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Entendi' })).not.toBeInTheDocument();
+
+      await advanceSeconds(5);
+      await user.click(await screen.findByRole('button', { name: 'Tentar novamente' }));
+
+      expect(onConfirm).toHaveBeenCalledTimes(2);
+    });
+
+    it('holds the retry button and counts the seconds left, using the wait the server asked for', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onConfirm = vi.fn().mockResolvedValue({
+        ok: false,
+        error: { ...RATE_LIMIT_PROBLEM, retryAfterSeconds: 12 },
+      });
+      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+      await user.click(screen.getByRole('button', { name: 'Desativar' }));
+
+      expect(
+        await screen.findByRole('button', { name: 'Tentar novamente em 12 s' }),
+      ).toBeDisabled();
+
+      await advanceSeconds(4);
+
+      expect(await screen.findByRole('button', { name: 'Tentar novamente em 8 s' })).toBeDisabled();
+      expect(onConfirm).toHaveBeenCalledTimes(1);
+    });
+
+    it('starts the wait again when the retry is limited too', async () => {
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
+      const onConfirm = vi.fn().mockResolvedValue({ ok: false, error: RATE_LIMIT_PROBLEM });
+      render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+      await user.click(screen.getByRole('button', { name: 'Desativar' }));
+      await screen.findByRole('button', { name: 'Tentar novamente em 5 s' });
+      await advanceSeconds(5);
+
+      await user.click(await screen.findByRole('button', { name: 'Tentar novamente' }));
+
+      expect(await screen.findByRole('button', { name: 'Tentar novamente em 5 s' })).toBeDisabled();
+      expect(onConfirm).toHaveBeenCalledTimes(2);
+    });
   });
 
   it('clears the previous failure while retrying, so a repeated failure is announced again', async () => {
