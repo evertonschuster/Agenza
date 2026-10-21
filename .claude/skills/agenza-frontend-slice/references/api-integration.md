@@ -100,9 +100,11 @@ it is pt-BR, and it changes without a contract bump.
 - **A server-state library.** Route `loader` + `action` + router revalidation cover one screen. When
   a query lib lands it *replaces* the repository ([ADR 0035](../../../../docs/adr/0035-admin-frontend-no-server-state-library.md)).
   Do not hand-roll caching inside a repository in the meantime.
-- **Request cancellation / `AbortController` plumbing.** Built and reverted twice; the effect
-  `ignore` flag fixes the real bug ([ADR 0033](../../../../docs/adr/0033-admin-frontend-no-request-cancellation-layer.md)).
-  Revisit only for search-as-you-type or a large export.
+- **A shared request-cancellation layer.** Built and reverted twice ([ADR 0033](../../../../docs/adr/0033-admin-frontend-no-request-cancellation-layer.md)).
+  Cancellation stays with the consumer: the hook that fetches owns an `AbortController`, aborts it in
+  the effect cleanup and drops an answer whose signal is aborted (the list hook and the tag edit and
+  delete dialogs do this), and the repository method only takes an optional `signal` and forwards it.
+  A fetch effect with no abort doubles its request under `StrictMode` in development.
 - **A call-site `settle(call)` wrapper.** Tried and removed — error normalization belongs inside
   `run()`, not in something every caller must remember.
 

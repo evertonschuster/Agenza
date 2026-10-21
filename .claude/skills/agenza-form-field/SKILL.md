@@ -177,8 +177,10 @@ Router keeps the page mounted when only `:id` changes, so a status set once at m
 record on screen, Salvar enabled, while the new one loads; the derived one can't.
 
 `useForm`'s own `defaultValues` are captured once, synchronously, at mount — they can't wait for an
-async fetch. Fetch in a `useEffect` keyed on the id (the same `ignore`-flag-in-cleanup shape every
-other one-shot fetch in this app uses), and call `methods.reset(values)` once it resolves; don't reach
+async fetch. Fetch in a `useEffect` keyed on the id, with an `AbortController` aborted in the cleanup
+and the answer dropped when its signal is aborted (the shape `usePaginatedList` uses; `StrictMode` runs
+the effect twice in development, and an un-aborted first request still completes), and call
+`methods.reset(values)` once it resolves; don't reach
 for RHF's async-`defaultValues`-promise feature — it doesn't compose with this app's `ApiResult`
 never-throws model, and every other fetch here is a plain effect + explicit status, not a
 framework-owned loading flag. A failed fetch (not-found, or any other `ApiProblem`) is not an inline

@@ -15,8 +15,8 @@ function list(query: TagListQuery, signal?: AbortSignal): Promise<ApiResult<TagL
   });
 }
 
-function get(id: string): Promise<ApiResult<Tag>> {
-  return servicesApi.get('/api/v{version}/tags/{id}', { path: { id } });
+function get(id: string, signal?: AbortSignal): Promise<ApiResult<Tag>> {
+  return servicesApi.get('/api/v{version}/tags/{id}', { path: { id }, signal });
 }
 
 function create(input: TagInput): Promise<ApiResult<Tag>> {

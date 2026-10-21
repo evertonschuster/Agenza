@@ -88,7 +88,7 @@ describe('TagDeletePage', () => {
 
     expect(screen.getByRole('heading', { name: 'Excluir etiqueta?' })).toBeInTheDocument();
     expect(await screen.findByText(PROMOCAO_CONFIRMATION)).toBeInTheDocument();
-    expect(mockGet).toHaveBeenCalledWith('1');
+    expect(mockGet).toHaveBeenCalledWith('1', expect.any(AbortSignal));
   });
 
   it('opens from a deep link (refresh, bookmark or shared URL) by fetching the tag', async () => {
@@ -96,6 +96,32 @@ describe('TagDeletePage', () => {
 
     expect(await screen.findByText(PROMOCAO_CONFIRMATION)).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Excluir' })).toBeEnabled();
+  });
+
+  it('aborts the request in flight when the dialog goes away', async () => {
+    mockGet.mockReturnValue(new Promise(() => {}));
+    const { unmount } = renderAt(['/tags/1/delete']);
+    await screen.findByRole('dialog');
+    const signal = (mockGet.mock.calls as [string, AbortSignal][])[0]?.[1];
+    expect(signal?.aborted).toBe(false);
+
+    unmount();
+
+    expect(signal?.aborted).toBe(true);
+  });
+
+  it('under StrictMode aborts the first of the two development requests and keeps the second', async () => {
+    render(
+      <StrictMode>
+        <MemoryRouter initialEntries={['/tags/1/delete']}>{routes()}</MemoryRouter>
+      </StrictMode>,
+    );
+
+    expect(await screen.findByText(PROMOCAO_CONFIRMATION)).toBeInTheDocument();
+    const signals = (mockGet.mock.calls as [string, AbortSignal][]).map(([, signal]) => signal);
+    expect(signals).toHaveLength(2);
+    expect(signals[0]?.aborted).toBe(true);
+    expect(signals[1]?.aborted).toBe(false);
   });
 
   it('shows the question and the warning on separate lines', async () => {
