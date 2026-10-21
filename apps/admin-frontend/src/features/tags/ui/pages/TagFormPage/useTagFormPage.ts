@@ -2,7 +2,7 @@ import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'reac
 import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { describeProblem } from '@/shared/api/servicesFacade';
+import { extractErrorMessage } from '@/shared/api/servicesFacade';
 import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
@@ -63,7 +63,8 @@ export function useTagFormPage(): UseTagFormPageResult {
 
       toast.add({
         title: 'Não foi possível abrir a etiqueta',
-        description: describeProblem(result.error),
+        description: extractErrorMessage(result.error),
+        data: { code: result.error.code ?? undefined },
         type: 'info',
       });
       close();

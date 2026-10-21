@@ -16,9 +16,9 @@ it holds everywhere. A failure message is three things, and it is incomplete wit
 3. **A recovery action** — as a control if one exists, as an instruction if not.
 
 The code is already shown by `ErrorState` (lists), `FormErrorBanner` (forms), `ConfirmDialog` (retry alert
-and blocked view) and, for a toast built from a problem, by `describeProblem` in
-`src/shared/api/servicesFacade.ts` (message, then "Código: …" on its own line). A new surface that shows a
-problem shows the code the same way.
+and blocked view) and, for a toast built from a problem, by `ToastList`, which draws `data.code` under the description in a
+smaller size (`toast.add({ title, description: extractErrorMessage(problem), data: { code: problem.code ?? undefined } })`).
+A new surface that shows a problem shows the code the same way.
 
 ADR 0020 says it plainly: a generic *"contacte o administrador"* is **not sufficient**. Neither is
 "Tente novamente" with nothing to try again with. When the only path really is support, say what to
