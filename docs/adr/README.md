@@ -18,9 +18,9 @@ superseded is historical evidence, not current implementation guidance.
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032, 0050 |
 | Logging and telemetry | 0054 |
-| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038, 0069 |
+| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
-| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073 |
+| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 |
 | AI agent instruction files | 0041 |
 
 ## Superseded decisions
@@ -36,6 +36,7 @@ superseded is historical evidence, not current implementation guidance.
 | 0044 contact-purposes portion | 0058 | The `ContactPurposes` value object, `ContactPurposeNames` and purposes as strings translated in Application |
 | 0049 shared-input-rule portion | 0061 | `<Feature>RuleBuilderExtensions` as the home of a rule two validators share |
 | 0053 | 0056 | Synchronizing client contacts by id |
+| 0069 | 0074 | The tags collection adapter that walks every page of the API |
 
 ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, 0030, and 0044
 contain explicitly marked historical passages. Their status header and the

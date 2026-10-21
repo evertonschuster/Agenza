@@ -30,7 +30,7 @@ own page's loading state (the page doesn't exist yet while the loader runs). `do
 (`useTagListPage.ts`) hands `tagsRepository.list` to `usePaginatedList`, which calls it with
 `{ search, page, pageSize }` and a signal only when told to: once on mount, from the search,
 "Limpar busca", a page, a size and "Tentar novamente", from the `tagSaved` and `tagDeleted` topics
-(its `reload`), and to correct a page past the end, never from an effect keyed on its state
+(its `refetch`), and to correct a page past the end, never from an effect keyed on its state
 (ADR 0074). One call is one `GET /tags?Page=&PageSize=[&Search=]`.
 
 - **Input**: the submitted search, the page and the size, kept in the hook's own state and never in
@@ -45,7 +45,7 @@ own page's loading state (the page doesn't exist yet while the loader runs). `do
   in the app reacts to those two codes today (`docs/ARCHITECTURE.md` §5/§6 has the audit trail).
 - **Loading**: `status` is derived from the answer the hook holds, not stored as its own `setState`:
   loading until the first answer, and again on every search, page or size, so the loading skeleton
-  (one row per item of the page size) shows each time. A topic's reload keeps the rows and the
+  (one row per item of the page size) shows each time. A topic's refetch keeps the rows and the
   footer on screen until its answer. Every request aborts the one in flight, and an aborted
   request's answer is dropped.
 
@@ -77,7 +77,7 @@ one was built, found obsolete, and removed — `docs/ARCHITECTURE.md` §5).
   blocked outcome with the backend's message shown verbatim, not an error boundary.
 - **On success**: `onConfirm` calls `tagDeleted.publish({ id: tag.id })` — a generic
   `shared/pubsub` topic owned by `features/tags/model/tagEvents.ts`, not an outlet-context callback.
-  `useTagListPage` self-subscribes via `useTopic(tagDeleted, reload)`, so the publish
+  `useTagListPage` self-subscribes via `useTopic(tagDeleted, refetch)`, so the publish
   synchronously asks again for the page on screen (ADR 0074), before
   `ConfirmDialog` calls `onOpenChange(false)` — the list refetch is still guaranteed in flight before
   the navigation back to `/tags` fires, just via a signal `TagDeletePage` doesn't need to know anyone

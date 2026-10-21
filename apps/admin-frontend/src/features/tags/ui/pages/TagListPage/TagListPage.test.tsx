@@ -216,8 +216,8 @@ describe('TagListPage', () => {
         await screen.findByText('Promoção');
         act(() => submitSearch('vip'));
         await waitFor(() => expect(screen.queryByText('Promoção')).not.toBeInTheDocument());
-        const reload = pending<ListAnswer>();
-        mockList.mockImplementationOnce(() => reload.promise);
+        const refetched = pending<ListAnswer>();
+        mockList.mockImplementationOnce(() => refetched.promise);
 
         act(() => {
           topic.publish({ id: '2' });
@@ -233,8 +233,8 @@ describe('TagListPage', () => {
         expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1 de 1 etiqueta');
 
         await act(async () => {
-          reload.resolve(listOf([{ ...VIP, name: 'VIP Ouro' }]));
-          await reload.promise;
+          refetched.resolve(listOf([{ ...VIP, name: 'VIP Ouro' }]));
+          await refetched.promise;
         });
 
         expect(screen.getByText('VIP Ouro')).toBeInTheDocument();
@@ -670,7 +670,7 @@ describe('TagListPage', () => {
       );
     });
 
-    it('reloads the page on screen, with its size, when a tag is saved', async () => {
+    it('refetches the page on screen, with its size, when a tag is saved', async () => {
       const user = userEvent.setup();
       const catalog = manyTags(45);
       renderPage(catalog);

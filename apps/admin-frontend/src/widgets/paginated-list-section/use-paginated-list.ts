@@ -108,7 +108,7 @@ export function usePaginatedList<F extends object, T>({
     request(query);
   }
 
-  function reload() {
+  function refetch() {
     send(query);
   }
 
@@ -117,7 +117,7 @@ export function usePaginatedList<F extends object, T>({
   return {
     filters,
     applyFilters,
-    reload,
+    refetch,
     list: toListState(result, onRetry),
     pagination: { page, pageSize, totalCount, onPageChange, onPageSizeChange },
   };

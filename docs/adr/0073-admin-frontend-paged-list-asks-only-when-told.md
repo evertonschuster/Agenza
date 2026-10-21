@@ -5,7 +5,7 @@ no effect keyed on the state, and the correction of a page past the end leaves t
 [ADR 0071](0071-admin-frontend-paged-list-hook.md) (point 1: `setFilters` becomes `applyFilters`); follows
 [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) (cancellation stays with the consumer) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md); extended by
-[ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md) (Etiquetas pages on the same hook, which gains `reload`
+[ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md) (Etiquetas pages on the same hook, which gains `refetch`
 for the tag topics, with its state out of the URL)
 
 ## Context

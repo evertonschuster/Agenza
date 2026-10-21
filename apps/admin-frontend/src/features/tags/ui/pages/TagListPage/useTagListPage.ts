@@ -9,14 +9,14 @@ import type { UseTagListPageResult } from './useTagListPage.types';
 const INITIAL_FILTERS: TagListFilters = { search: '' };
 
 export function useTagListPage(): UseTagListPageResult {
-  const { filters, applyFilters, reload, list, pagination } = usePaginatedList({
+  const { filters, applyFilters, refetch, list, pagination } = usePaginatedList({
     initialFilters: INITIAL_FILTERS,
     fetchPage: tagsRepository.list,
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  useTopic(tagDeleted, reload);
-  useTopic(tagSaved, reload);
+  useTopic(tagDeleted, refetch);
+  useTopic(tagSaved, refetch);
 
   function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
