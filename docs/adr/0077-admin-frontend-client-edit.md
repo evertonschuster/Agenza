@@ -46,9 +46,9 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    and a new person has neither the badge nor the button. Inactive people can be edited, as the backend allows.
 5. **`ConfirmDialog` takes `confirmation.confirmVariant`** (`'destructive'`, the default, or `'default'`), because
    reactivating is not destructive and its button must not be red. Every existing caller keeps the red button.
-6. **`GET`/`PUT` answer `status` as a plain string**, unlike the list item, which uses the `ClientStatus` enum. The
-   slice reads it with `toClientStatus(value)` in `model/clientStatus.ts` instead of casting. Typing the response's
-   `status` as the enum is a backend change, left for its own PR.
+6. **`Client.status` is a `ClientStatus`**, read as the backend sends it. A first version found `status` typed as a
+   plain string in `GET`/`PUT` and narrowed it with a `toClientStatus` helper; PR #189 typed the response's `status`
+   as the `ClientStatus` enum, as the list item already was, and the helper went away.
 
 ## Consequences
 

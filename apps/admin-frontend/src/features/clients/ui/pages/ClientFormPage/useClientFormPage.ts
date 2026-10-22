@@ -6,7 +6,6 @@ import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
 import type { Client } from '../../../model/client';
-import { toClientStatus } from '../../../model/clientStatus';
 import { CLIENTS_PATH } from '../../clientsPaths';
 import {
   clientFormSchema,
@@ -92,18 +91,16 @@ export function useClientFormPage(): UseClientFormPageResult {
   }
 
   function statusChangeOf(loaded: Client): ClientStatusChange {
-    const status = toClientStatus(loaded.status);
-
     return {
       fullName: loaded.fullName,
-      status,
+      status: loaded.status,
       isConfirming: isConfirmingStatus,
       onOpen: () => {
         if (!isSaving) setIsConfirmingStatus(true);
       },
       onOpenChange: setIsConfirmingStatus,
       onConfirm: () =>
-        status === 'active'
+        loaded.status === 'active'
           ? clientsRepository.deactivate(loaded.id)
           : clientsRepository.reactivate(loaded.id),
       onChanged: setClient,
