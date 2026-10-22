@@ -1,14 +1,8 @@
 import { useEffect, useEffectEvent, useRef, useState } from 'react';
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import {
-  DEFAULT_PAGE_SIZE,
-  FIRST_PAGE,
-  getLastPage,
-  type PagedResult,
-} from '@/shared/pagination/paging';
+import { FIRST_PAGE, getLastPage, type PagedResult } from '@/shared/pagination/paging';
 import { ListSectionStatus } from '@/widgets/list-section';
 import type {
-  PaginatedListKnownTotal,
   PaginatedListQuery,
   PaginatedListState,
   UsePaginatedListOptions,
@@ -35,36 +29,29 @@ function toListState<T>(
 }
 
 export function usePaginatedList<F extends object, T>({
-  initialFilters,
+  state,
   fetchPage,
 }: UsePaginatedListOptions<F, T>): UsePaginatedListResult<F, T> {
-  const [query, setQuery] = useState<PaginatedListQuery<F>>({
-    filters: initialFilters,
-    page: FIRST_PAGE,
-    pageSize: DEFAULT_PAGE_SIZE,
-  });
+  const [query, setQuery] = state;
   const [result, setResult] = useState<ApiResult<PagedResult<T>> | null>(null);
-  const [knownTotal, setKnownTotal] = useState<PaginatedListKnownTotal<F> | null>(null);
+  const [totalCount, setTotalCount] = useState<number | null>(null);
   const inFlight = useRef<AbortController | null>(null);
   const requested = useRef(query);
-  const { filters, page, pageSize } = query;
+  const { page, pageSize, ...filters } = query;
 
   function send(next: PaginatedListQuery<F>) {
     inFlight.current?.abort();
     const controller = new AbortController();
     inFlight.current = controller;
 
-    void fetchPage(
-      { ...next.filters, page: next.page, pageSize: next.pageSize },
-      controller.signal,
-    ).then((answer) => {
+    void fetchPage(next, controller.signal).then((answer) => {
       if (controller.signal.aborted) return;
       if (!answer.ok) {
         setResult(answer);
         return;
       }
 
-      setKnownTotal({ filters: next.filters, totalCount: answer.data.totalCount });
+      setTotalCount(answer.data.totalCount);
       const lastPage = getLastPage(answer.data.totalCount, next.pageSize);
       if (next.page > lastPage) {
         request({ ...next, page: lastPage });
@@ -94,7 +81,8 @@ export function usePaginatedList<F extends object, T>({
   }, []);
 
   function applyFilters(patch: Partial<F>) {
-    request({ filters: { ...filters, ...patch }, page: FIRST_PAGE, pageSize });
+    setTotalCount(null);
+    request({ ...query, ...patch, page: FIRST_PAGE });
   }
 
   function onPageChange(nextPage: number) {
@@ -112,8 +100,6 @@ export function usePaginatedList<F extends object, T>({
   function refetch() {
     send(requested.current);
   }
-
-  const totalCount = knownTotal?.filters === filters ? knownTotal.totalCount : null;
 
   return {
     filters,

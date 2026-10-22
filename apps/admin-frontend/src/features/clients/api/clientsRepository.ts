@@ -1,11 +1,8 @@
 import { servicesApi } from '@/shared/api/servicesApi';
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import type { Paging } from '@/shared/pagination/paging';
 import type { Client, ClientInput } from '../model/client';
 import type { ClientList } from '../model/clientList';
-import type { ClientListFilters } from '../model/clientListFilters';
-
-export type ClientListQuery = ClientListFilters & Paging;
+import type { ClientListQuery } from '../model/clientListFilters';
 
 function list(
   { search, status, page, pageSize }: ClientListQuery,

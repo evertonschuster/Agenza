@@ -17,14 +17,12 @@ type PaginatedListSectionProps<T> = Omit<ListSectionProps<T>, 'skeletonRowCount'
   itemLabel: CountNoun;
 };
 
-interface PaginatedListQuery<F> extends Paging {
-  filters: F;
-}
+type PaginatedListQuery<F> = F & Paging;
 
-interface PaginatedListKnownTotal<F> {
-  filters: F;
-  totalCount: number;
-}
+type PaginatedListQueryState<F> = readonly [
+  PaginatedListQuery<F>,
+  (next: PaginatedListQuery<F>) => void,
+];
 
 interface PaginatedListSectionFooterProps {
   status: ListSectionStatus;
@@ -33,7 +31,7 @@ interface PaginatedListSectionFooterProps {
 }
 
 interface UsePaginatedListOptions<F, T> {
-  initialFilters: F;
+  state: PaginatedListQueryState<F>;
   fetchPage: (query: F & Paging, signal: AbortSignal) => Promise<ApiResult<PagedResult<T>>>;
 }
 
@@ -44,7 +42,7 @@ interface PaginatedListState<T> {
 }
 
 interface UsePaginatedListResult<F, T> {
-  filters: F;
+  filters: Omit<PaginatedListQuery<F>, keyof Paging>;
   applyFilters: (patch: Partial<F>) => void;
   refetch: () => void;
   list: PaginatedListState<T>;
@@ -52,8 +50,8 @@ interface UsePaginatedListResult<F, T> {
 }
 
 export type {
-  PaginatedListKnownTotal,
   PaginatedListQuery,
+  PaginatedListQueryState,
   PaginatedListSectionFooterProps,
   PaginatedListSectionPaging,
   PaginatedListSectionProps,

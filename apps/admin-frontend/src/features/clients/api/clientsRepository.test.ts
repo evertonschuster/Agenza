@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
 import { utcDate } from '@/shared/format/date';
 import type { ClientInput } from '../model/client';
-import { clientsRepository, type ClientListQuery } from './clientsRepository';
+import { clientsRepository } from './clientsRepository';
+import type { ClientListQuery } from '../model/clientListFilters';
 
 const { mockGet, mockPost } = vi.hoisted(() => ({ mockGet: vi.fn(), mockPost: vi.fn() }));
 

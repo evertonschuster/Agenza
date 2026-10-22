@@ -5,7 +5,7 @@ import { MemoryRouter, useLocation } from 'react-router';
 import { footerSkeleton } from '@/test/footerSkeleton';
 import { pending } from '@/test/pending';
 import { ClientListPage } from './ClientListPage';
-import type { ClientListQuery } from '../../../api/clientsRepository';
+import type { ClientListQuery } from '../../../model/clientListFilters';
 import type { ClientList, ClientListItem } from '../../../model/clientList';
 
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
@@ -323,7 +323,7 @@ describe('ClientListPage', () => {
     expect(screen.getByText('Ana Souza')).toBeInTheDocument();
   });
 
-  it('narrows the list to the submitted term, leaving the address alone (ADR 0072)', async () => {
+  it('narrows the list to the submitted term, writing it into the address', async () => {
     const user = userEvent.setup();
     renderPage(CLIENTS);
     await screen.findByText('Ana Souza');
@@ -336,7 +336,7 @@ describe('ClientListPage', () => {
       { search: 'bruno', status: 'active', page: 1, pageSize: 20 },
       expect.any(AbortSignal),
     );
-    expect(location()).toBe('location: /pessoas');
+    expect(location()).toBe('location: /pessoas?search=bruno');
   });
 
   it('searches from the Buscar button too', async () => {
@@ -351,14 +351,62 @@ describe('ClientListPage', () => {
     expect(screen.getByText('Bruno Lima')).toBeInTheDocument();
   });
 
-  it('starts on the first page of everyone whatever the address carries (ADR 0072)', async () => {
-    serve(CLIENTS);
-    renderClientListPage(['/pessoas?q=bruno&page=3&pageSize=10']);
+  describe('the address', () => {
+    it('opens on the search, the situation, the page and the size it carries, with the filters filled in', async () => {
+      serve(people(87));
+      renderClientListPage(['/pessoas?search=pessoa&status=all&page=2&pageSize=10']);
 
-    expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
-    expect(await screen.findByText('Ana Souza')).toBeInTheDocument();
-    expect(mockList).toHaveBeenCalledTimes(1);
-    expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_ACTIVE, expect.any(AbortSignal));
+      expect(await screen.findByText('Pessoa 011')).toBeInTheDocument();
+      expect(mockList).toHaveBeenCalledTimes(1);
+      expect(mockList).toHaveBeenCalledWith(
+        { search: 'pessoa', status: 'all', page: 2, pageSize: 10 },
+        expect.any(AbortSignal),
+      );
+      expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('pessoa');
+      expect(screen.getByRole('combobox', { name: STATUS_LABEL })).toHaveTextContent(
+        'Situação:Todas',
+      );
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 11–20 de 87 pessoas');
+    });
+
+    it('uses the opening value of each filter the address does not carry', async () => {
+      serve(people(87));
+      renderClientListPage(['/pessoas?page=2']);
+
+      expect(await screen.findByText('Pessoa 021')).toBeInTheDocument();
+      expect(mockList).toHaveBeenCalledWith(
+        { ...FIRST_PAGE_OF_ACTIVE, page: 2 },
+        expect.any(AbortSignal),
+      );
+      expect(location()).toBe('location: /pessoas?page=2');
+    });
+
+    it('stays /pessoas while the list is on its opening filters, page and size', async () => {
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+
+      expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_ACTIVE, expect.any(AbortSignal));
+      expect(location()).toBe('location: /pessoas');
+    });
+
+    it('writes the last page that exists when the address asks for one past the end', async () => {
+      serve(people(25));
+      renderClientListPage(['/pessoas?page=9']);
+
+      expect(await screen.findByText('Pessoa 021')).toBeInTheDocument();
+      await waitFor(() => expect(location()).toBe('location: /pessoas?page=2'));
+    });
+
+    it('takes the filters back out of the address from "Limpar filtros", keeping the size', async () => {
+      const user = userEvent.setup();
+      serve(CLIENTS);
+      renderClientListPage(['/pessoas?search=ana&status=all&pageSize=50']);
+      await screen.findByText('Ana Souza');
+
+      await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+
+      expect(location()).toBe('location: /pessoas?pageSize=50');
+    });
   });
 
   it('lists everyone again when the search is submitted blank', async () => {
@@ -679,7 +727,7 @@ describe('ClientListPage', () => {
       expect(skeletonRows(container)).toHaveLength(50);
     });
 
-    it('goes to the next page, keeping the search and the size, and leaves the address alone', async () => {
+    it('goes to the next page, keeping the search and the size, and writes all three into the address', async () => {
       const user = userEvent.setup();
       renderPage(people(87));
       await screen.findByText('Pessoa 001');
@@ -696,7 +744,7 @@ describe('ClientListPage', () => {
         { search: 'pessoa', status: 'active', page: 2, pageSize: 10 },
         expect.any(AbortSignal),
       );
-      expect(location()).toBe('location: /pessoas');
+      expect(location()).toBe('location: /pessoas?search=pessoa&pageSize=10&page=2');
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 11–20 de 87 pessoas');
     });
 

@@ -1,19 +1,22 @@
 import type { SubmitEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
+import { useSearchParamsState } from '@/shared/hooks/useSearchParamsState';
 import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { clientsRepository } from '../../../api/clientsRepository';
 import {
   INITIAL_CLIENT_LIST_FILTERS,
+  INITIAL_CLIENT_LIST_QUERY,
   type ClientListFilters,
 } from '../../../model/clientListFilters';
 import type { UseClientListPageResult } from './useClientListPage.types';
 
 export function useClientListPage(): UseClientListPageResult {
+  const state = useSearchParamsState(INITIAL_CLIENT_LIST_QUERY);
   const { filters, applyFilters, list, pagination } = usePaginatedList({
-    initialFilters: INITIAL_CLIENT_LIST_FILTERS,
+    state,
     fetchPage: clientsRepository.list,
   });
-  const filterForm = useForm<ClientListFilters>({ defaultValues: INITIAL_CLIENT_LIST_FILTERS });
+  const filterForm = useForm<ClientListFilters>({ defaultValues: filters });
   const chosenStatus = useWatch({ control: filterForm.control, name: 'status' });
 
   function onFiltersSubmit(event: SubmitEvent<HTMLFormElement>) {
