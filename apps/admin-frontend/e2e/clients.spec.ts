@@ -161,12 +161,10 @@ test.describe('People list', () => {
     await expect(page.getByText(/Nenhuma pessoa encontrada para/)).toHaveCount(0);
   });
 
-  test('opens the person details from the name, which still says it is coming', async ({
-    page,
-  }) => {
+  test('opens the edit page of the person from the name', async ({ page }) => {
     const person = {
-      name: uniqueName('Detalhe E2E'),
-      email: `detalhe.${Date.now()}@example.com`,
+      name: uniqueName('Nome E2E'),
+      email: `nome.${Date.now()}@example.com`,
       cpf: validCpf(),
     };
     await registerPerson(page, person);
@@ -174,9 +172,11 @@ test.describe('People list', () => {
 
     await page.getByRole('link', { name: person.name, exact: true }).click();
 
-    await expect(page).toHaveURL(/\/pessoas\/[0-9a-f-]{36}$/);
-    await expect(page.getByRole('heading', { name: 'Detalhes da pessoa' })).toBeVisible();
-    await expect(page.getByText('Em breve', { exact: true })).toBeVisible();
+    await expect(page).toHaveURL(/\/pessoas\/[0-9a-f-]{36}\/editar$/);
+    await expect(page.getByRole('heading', { name: 'Editar pessoa' })).toBeVisible();
+    await expect(
+      page.getByRole('region', { name: 'Dados da pessoa' }).getByLabel('Nome completo'),
+    ).toHaveValue(person.name);
   });
 });
 

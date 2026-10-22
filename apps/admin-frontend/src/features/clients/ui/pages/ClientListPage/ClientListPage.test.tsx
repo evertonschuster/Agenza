@@ -198,14 +198,17 @@ describe('ClientListPage', () => {
     expect(within(brunoRow).getAllByText('—')).toHaveLength(3);
   });
 
-  it('links each name to that person under /pessoas/:id', async () => {
+  it('links each name to the edit page of that person under /pessoas/:id/editar', async () => {
     renderPage(CLIENTS);
 
     expect(await screen.findByRole('link', { name: 'Ana Souza' })).toHaveAttribute(
       'href',
-      '/pessoas/c1',
+      '/pessoas/c1/editar',
     );
-    expect(screen.getByRole('link', { name: 'Bruno Lima' })).toHaveAttribute('href', '/pessoas/c2');
+    expect(screen.getByRole('link', { name: 'Bruno Lima' })).toHaveAttribute(
+      'href',
+      '/pessoas/c2/editar',
+    );
   });
 
   it('offers to edit each person, active or inactive, under /pessoas/:id/editar', async () => {

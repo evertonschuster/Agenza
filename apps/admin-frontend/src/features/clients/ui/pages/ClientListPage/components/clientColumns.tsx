@@ -4,7 +4,7 @@ import { OptionalText } from '@/shared/ui/optional-text';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import type { ClientListItem } from '../../../../model/clientList';
-import { clientDetailPath } from '../../../clientsPaths';
+import { editClientPath } from '../../../clientsPaths';
 import { ClientStatusBadge } from '../../../components/ClientStatusBadge';
 import { ClientEditLink } from './ClientEditLink';
 
@@ -16,7 +16,7 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
       skeleton: <Skeleton className="h-5 w-40" />,
       cell: (client) => (
         <Link
-          to={clientDetailPath(client.id)}
+          to={editClientPath(client.id)}
           className="rounded-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {client.fullName}
