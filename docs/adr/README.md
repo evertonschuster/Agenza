@@ -101,4 +101,4 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0073 admin-frontend paged lists ask the backend only when an action tells them to ·
 0074 admin-frontend Etiquetas pages on usePaginatedList, asks only when told to, with its state out of the URL ·
 0075 admin-frontend a 429 is a transient problem of its own, shown with its own message ·
-0076 admin-frontend Pessoas filter bar: situation select opening on Ativas, one Buscar applying every filter.
+0076 admin-frontend Pessoas filter bar on React Hook Form: situation SelectField opening on Ativas, one Buscar applying every filter.

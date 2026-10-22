@@ -1,30 +1,28 @@
 import { SearchIcon, XIcon } from 'lucide-react';
+import { useFormContext } from 'react-hook-form';
+import { SelectField } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/shared/ui/input-group';
 import { CLIENT_SEARCH_MAX_LENGTH } from '../../../../model/client';
+import {
+  CLIENT_STATUS_FILTER_OPTIONS,
+  type ClientListFilters,
+} from '../../../../model/clientListFilters';
 import type { UseClientListPageResult } from '../useClientListPage.types';
-import { ClientStatusFilterSelect } from './ClientStatusFilterSelect';
 
 type ClientListFilterBarProps = Pick<
   UseClientListPageResult,
-  | 'searchInputRef'
-  | 'statusChoice'
-  | 'hasPendingFilters'
-  | 'canClearFilters'
-  | 'onStatusChoiceChange'
-  | 'onFiltersSubmit'
-  | 'onClearFilters'
+  'hasPendingFilters' | 'canClearFilters' | 'onFiltersSubmit' | 'onClearFilters'
 >;
 
 export function ClientListFilterBar({
-  searchInputRef,
-  statusChoice,
   hasPendingFilters,
   canClearFilters,
-  onStatusChoiceChange,
   onFiltersSubmit,
   onClearFilters,
 }: ClientListFilterBarProps) {
+  const { register } = useFormContext<ClientListFilters>();
+
   return (
     <form onSubmit={onFiltersSubmit} role="search" className="@container">
       <div className="flex flex-col gap-2 @pagination:flex-row @pagination:flex-wrap @pagination:items-center">
@@ -33,16 +31,18 @@ export function ClientListFilterBar({
             <SearchIcon aria-hidden="true" />
           </InputGroupAddon>
           <InputGroupInput
-            ref={searchInputRef}
-            name="search"
+            {...register('search')}
             maxLength={CLIENT_SEARCH_MAX_LENGTH}
             placeholder="Buscar por nome, e-mail ou CPF..."
             aria-label="Buscar pessoas por nome, e-mail ou CPF"
           />
         </InputGroup>
-        <ClientStatusFilterSelect
-          statusChoice={statusChoice}
-          onStatusChoiceChange={onStatusChoiceChange}
+        <SelectField<ClientListFilters, 'status'>
+          name="status"
+          label="Situação"
+          options={CLIENT_STATUS_FILTER_OPTIONS}
+          labelPlacement="inline"
+          className="w-full @pagination:w-fit"
         />
         <Button
           type="submit"

@@ -28,7 +28,7 @@ and has no input to attach to: render it in the section.
 | --- | --- | --- |
 | Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
 | RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem(problem, methods)` — builds the current field paths from `methods.getValues()`, calls the above, then `setError` per field, `setError('root.serverError', …)` for the form-level message and `setFocus` on the first invalid field. Knows both shapes; the only file that does. |
-| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
+| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `SelectField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed
 keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s
@@ -209,6 +209,24 @@ itself became `ControlledField`'s first consumer, so `ControlledField` didn't sh
 already applies to `entities/` and to not rebuilding `color-swatch-picker` before something used it
 (ARCHITECTURE §1, §5) — a one-off specialization for a control only `ControlledField` has ever wrapped
 is guessing at an API shape with a sample size of one.
+
+**A select is `SelectField`, never the six `shared/ui/select` parts composed by hand**
+([ADR 0076](../../../docs/adr/0076-admin-frontend-clients-list-filter-bar.md)). It is the second
+specialization, built on the owner's ask: the Pessoas filter bar's first version hand-composed
+`Select`/`SelectLabel`/`SelectTrigger`/`SelectValue`/`SelectContent`/`SelectItem` in a one-off component.
+Options are `{ value, label }` (`SelectFieldOption<V>`); pass the path as the second type argument so
+`value` is typed by the field:
+```tsx
+<SelectField<XFormFieldValues, 'size'> name="size" label="Tamanho" options={SIZE_OPTIONS} />
+<SelectField<XFilters, 'status'> name="status" label="Situação" options={STATUS_OPTIONS}
+  labelPlacement="inline" className="w-full @pagination:w-fit" />
+```
+The default renders through `FormField` (label above, hint, error) and fills the width, like the
+other fields. `labelPlacement="inline"` is for a toolbar: the label goes inside the trigger
+("Situação: Ativas", a hidden `SelectLabel` names it) and there is no hint or error line, so the type
+refuses a `hint`. A filter bar is a form too: `useForm` in the page's hook, `FormProvider` in the shell,
+`register` for its text and `SelectField` for its choices (Pessoas is the reference). The paging
+footer's "Itens por página" is not a form and still composes the parts itself.
 
 The value presets (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`) are a different thing:
 they are not custom controls but fixed configurations of `MaskedField`/`TextField`/`DateField`, kept in

@@ -1,4 +1,5 @@
 import { PlusIcon } from 'lucide-react';
+import { FormProvider } from 'react-hook-form';
 import { Link } from 'react-router';
 import type { CountNoun } from '@/shared/format/count';
 import { buttonVariants } from '@/shared/ui/button';
@@ -19,7 +20,8 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 const ITEM_LABEL: CountNoun = { singular: 'pessoa', plural: 'pessoas' };
 
 export function ClientListPage() {
-  const { list, pagination, searchTerm, onClearSearch, ...filterBar } = useClientListPage();
+  const { list, pagination, searchTerm, onClearSearch, filterForm, ...filterBar } =
+    useClientListPage();
 
   return (
     <div className="space-y-4">
@@ -31,7 +33,9 @@ export function ClientListPage() {
         </Link>
       </div>
 
-      <ClientListFilterBar {...filterBar} />
+      <FormProvider {...filterForm}>
+        <ClientListFilterBar {...filterBar} />
+      </FormProvider>
 
       <PaginatedListSection
         {...list}

@@ -1,20 +1,19 @@
-import type { RefObject, SubmitEvent } from 'react';
+import type { SubmitEvent } from 'react';
+import type { UseFormReturn } from 'react-hook-form';
 import type {
   PaginatedListSectionPaging,
   PaginatedListState,
 } from '@/widgets/paginated-list-section';
 import type { ClientListItem } from '../../../model/clientList';
-import type { ClientStatusFilter } from '../../../model/clientListFilters';
+import type { ClientListFilters } from '../../../model/clientListFilters';
 
 export interface UseClientListPageResult {
   list: PaginatedListState<ClientListItem>;
   pagination: PaginatedListSectionPaging;
   searchTerm: string;
-  searchInputRef: RefObject<HTMLInputElement | null>;
-  statusChoice: ClientStatusFilter;
+  filterForm: UseFormReturn<ClientListFilters>;
   hasPendingFilters: boolean;
   canClearFilters: boolean;
-  onStatusChoiceChange: (status: ClientStatusFilter) => void;
   onFiltersSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   onClearSearch: () => void;
   onClearFilters: () => void;

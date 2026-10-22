@@ -1,8 +1,10 @@
-# ADR 0076 — admin-frontend: the Pessoas filter bar and its situation filter
+# ADR 0076 — admin-frontend: the Pessoas filter bar, its situation filter and a reusable SelectField
 
 Status: accepted (2026-10); closes point 3 of [ADR 0067](0067-admin-frontend-clients-list.md) (the situation filter
 was deferred until the owner defined its control) and amends its point 9 (the screen no longer relies on an omitted
-`status`); consumes the contract of [ADR 0063](0063-clients-list-and-search-contract.md); follows
+`status`); amends [ADR 0071](0071-admin-frontend-paged-list-hook.md) for Pessoas (the filter bar is a React Hook
+Form form, which that ADR had turned down for the search field); consumes the contract of
+[ADR 0063](0063-clients-list-and-search-contract.md); follows
 [ADR 0072](0072-admin-frontend-paged-list-state-in-the-hook.md) and
 [ADR 0073](0073-admin-frontend-paged-list-asks-only-when-told.md)
 
@@ -18,10 +20,11 @@ The bar was designed for several filters, although the backend has only the situ
 
 ## Decision
 
-1. **A situation select beside the search**, on the `shared/ui/select` that the paging footer brought. The trigger
+1. **A situation select beside the search**, through a new reusable `SelectField` in `shared/form/fields`. The trigger
    carries its own label, "Situação: Ativas"; the label is a visually hidden `SelectLabel` for assistive tech, and the
    visible "Situação:" prefix is `aria-hidden` so the name is not read twice. The options are **Ativas**, **Inativas**
-   and **Todas**, in that order, in the feminine because they qualify "pessoas".
+   and **Todas**, in that order, in the feminine because they qualify "pessoas"; they are one
+   `CLIENT_STATUS_FILTER_OPTIONS` list (`{ value, label }`) in `model/clientListFilters.ts`.
 2. **The screen opens on Ativas.** `INITIAL_CLIENT_LIST_FILTERS` is `{ search: '', status: 'active' }`, and the
    repository always sends `Status`, `all` included, so the screen does not depend on the backend default. The backend
    keeps ADR 0067's default (`all` when omitted); nothing in the contract changes.
@@ -37,9 +40,24 @@ The bar was designed for several filters, although the backend has only the situ
 6. **On a list area narrower than 560 px** (the `@pagination` container width of the footer), each control takes a
    whole line: field, select, Buscar, Limpar filtros. Wider, they share one line and wrap. On a touch screen the
    controls are 44 px tall, as in the footer.
-7. **Only the filter section changed.** `ClientListSearch` became `ClientListFilterBar`, with the select in
-   `ClientStatusFilterSelect`; the hook keeps the uncontrolled field and holds the chosen situation in its own state.
-   `usePaginatedList`, `list-section` and the paging footer are untouched.
+7. **The bar is a React Hook Form form, like the other forms.** The page's hook owns
+   `useForm<ClientListFilters>({ defaultValues: INITIAL_CLIENT_LIST_FILTERS })`, and the shell wraps the bar in
+   `FormProvider`. The search field is `register('search')` on the `InputGroupInput`; the situation is
+   `<SelectField<ClientListFilters, 'status'> name="status" label="Situação" options={…} labelPlacement="inline" />`.
+   Buscar reads `getValues()` and calls `applyFilters` in the same call stack (ADR 0073), not through
+   `handleSubmit`, which would defer it; the pending state compares `useWatch('status')` with the applied status;
+   "Limpar filtros" is `reset(INITIAL_CLIENT_LIST_FILTERS)` and "Limpar busca" is `setValue('search', '')`. The search
+   ref of ADR 0071 and the hook's own situation state are gone. Asked for by the owner on 2026-10-22, after the first
+   version composed the six select parts by hand in a one-off `ClientStatusFilterSelect`.
+8. **`SelectField` is configuration, not markup**, as `TextField` and `ColorField` are: `name`, `label`, `options`
+   (`SelectFieldOption<V>[]`, typed by the field's value when the path is the second type argument), an optional
+   `hint` and `className`. By default it renders through `FormField` (label above, hint, error, the `aria-*` wiring)
+   for a form; `labelPlacement="inline"` puts the label in the trigger for a toolbar and has no hint or error line
+   (the type refuses a `hint` there). It forwards `field.ref` and `field.onBlur` to the trigger, so focus-on-error
+   reaches it. The paging footer's "Itens por página" still composes the select by hand: it is not a form, and the
+   owner kept it out of this change.
+9. **Only the filter section changed.** `ClientListSearch` became `ClientListFilterBar`. `usePaginatedList`,
+   `list-section` and the paging footer are untouched.
 
 ## Consequences
 
@@ -67,3 +85,11 @@ The bar was designed for several filters, although the backend has only the situ
   several filters, a button that applies only one of them is ambiguous, and Enter alone gives no visible cue.
 - **An empty-state copy per situation and a "Limpar filtros" action in it.** Turned down for now; the bar's own
   "Limpar filtros" covers going back to the opening filters.
+- **A one-off `ClientStatusFilterSelect` composing `Select`, `SelectLabel`, `SelectTrigger`, `SelectValue`,
+  `SelectContent` and `SelectItem` by hand, beside an uncontrolled search ref and a `useState` for the choice** (the
+  first version of this change). It worked, but every next select would repeat the six parts, and the bar did not
+  follow the form pattern of the rest of the app. Replaced by `SelectField` and React Hook Form after review.
+- **The label above the select in the bar too**, a single layout for `SelectField`. It changed the approved bar; the
+  owner chose the `labelPlacement` prop.
+- **Moving the paging footer onto the new select now.** It would prove the reuse with two consumers, but it touches
+  the paging widget in a filter change.

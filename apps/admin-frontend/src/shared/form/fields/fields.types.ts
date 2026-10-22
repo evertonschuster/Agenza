@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from 'react';
-import type { ControllerRenderProps, FieldValues, Path } from 'react-hook-form';
+import type { ControllerRenderProps, FieldValues, Path, PathValue } from 'react-hook-form';
 import type { ColorSwatchPickerOption } from '@/shared/ui/color-swatch-picker';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
 import type { Input } from '@/shared/ui/input';
@@ -71,3 +71,24 @@ export interface ColorFieldProps<T extends FieldValues> {
   options: readonly ColorSwatchPickerOption[];
   hint?: string | undefined;
 }
+
+export interface SelectFieldOption<V> {
+  value: V;
+  label: string;
+}
+
+interface SelectFieldBaseProps<T extends FieldValues, N extends Path<T>> {
+  name: N;
+  label: string;
+  options: readonly SelectFieldOption<PathValue<T, N>>[];
+  className?: string | undefined;
+}
+
+export type SelectFieldProps<
+  T extends FieldValues,
+  N extends Path<T> = Path<T>,
+> = SelectFieldBaseProps<T, N> &
+  (
+    | { labelPlacement?: 'top' | undefined; hint?: string | undefined }
+    | { labelPlacement: 'inline'; hint?: never }
+  );

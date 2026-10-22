@@ -1,9 +1,10 @@
-import { useRef, useState, type SubmitEvent } from 'react';
+import type { SubmitEvent } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { clientsRepository } from '../../../api/clientsRepository';
 import {
   INITIAL_CLIENT_LIST_FILTERS,
-  type ClientStatusFilter,
+  type ClientListFilters,
 } from '../../../model/clientListFilters';
 import type { UseClientListPageResult } from './useClientListPage.types';
 
@@ -12,24 +13,21 @@ export function useClientListPage(): UseClientListPageResult {
     initialFilters: INITIAL_CLIENT_LIST_FILTERS,
     fetchPage: clientsRepository.list,
   });
-  const searchInputRef = useRef<HTMLInputElement>(null);
-  const [statusChoice, setStatusChoice] = useState<ClientStatusFilter>(
-    INITIAL_CLIENT_LIST_FILTERS.status,
-  );
+  const filterForm = useForm<ClientListFilters>({ defaultValues: INITIAL_CLIENT_LIST_FILTERS });
+  const chosenStatus = useWatch({ control: filterForm.control, name: 'status' });
 
   function onFiltersSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    applyFilters({ search: searchInputRef.current?.value ?? '', status: statusChoice });
+    applyFilters(filterForm.getValues());
   }
 
   function onClearSearch() {
-    if (searchInputRef.current) searchInputRef.current.value = '';
+    filterForm.setValue('search', '');
     applyFilters({ search: '' });
   }
 
   function onClearFilters() {
-    if (searchInputRef.current) searchInputRef.current.value = '';
-    setStatusChoice(INITIAL_CLIENT_LIST_FILTERS.status);
+    filterForm.reset(INITIAL_CLIENT_LIST_FILTERS);
     applyFilters(INITIAL_CLIENT_LIST_FILTERS);
   }
 
@@ -37,13 +35,11 @@ export function useClientListPage(): UseClientListPageResult {
     list,
     pagination,
     searchTerm: filters.search,
-    searchInputRef,
-    statusChoice,
-    hasPendingFilters: statusChoice !== filters.status,
+    filterForm,
+    hasPendingFilters: chosenStatus !== filters.status,
     canClearFilters:
       filters.search !== INITIAL_CLIENT_LIST_FILTERS.search ||
       filters.status !== INITIAL_CLIENT_LIST_FILTERS.status,
-    onStatusChoiceChange: setStatusChoice,
     onFiltersSubmit,
     onClearSearch,
     onClearFilters,

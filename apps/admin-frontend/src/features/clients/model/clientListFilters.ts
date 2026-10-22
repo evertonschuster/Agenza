@@ -2,13 +2,12 @@ import type { ClientStatus } from './clientStatus';
 
 export type ClientStatusFilter = ClientStatus | 'all';
 
-export const CLIENT_STATUS_FILTERS: readonly ClientStatusFilter[] = ['active', 'inactive', 'all'];
-
-export const CLIENT_STATUS_FILTER_LABELS: Record<ClientStatusFilter, string> = {
-  active: 'Ativas',
-  inactive: 'Inativas',
-  all: 'Todas',
-};
+export const CLIENT_STATUS_FILTER_OPTIONS: readonly { value: ClientStatusFilter; label: string }[] =
+  [
+    { value: 'active', label: 'Ativas' },
+    { value: 'inactive', label: 'Inativas' },
+    { value: 'all', label: 'Todas' },
+  ];
 
 export interface ClientListFilters {
   search: string;

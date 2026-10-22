@@ -7,6 +7,7 @@ export { EmailField } from './components/email-field';
 export { BirthDateField } from './components/birth-date-field';
 export { ControlledField } from './components/controlled-field';
 export { ColorField } from './components/color-field';
+export { SelectField } from './components/select-field';
 export { FormErrorBanner } from './components/form-error-banner';
 export { FieldError } from './components/field-error';
 export type {
@@ -21,4 +22,6 @@ export type {
   BirthDateFieldProps,
   ControlledFieldProps,
   ColorFieldProps,
+  SelectFieldOption,
+  SelectFieldProps,
 } from './fields.types';
