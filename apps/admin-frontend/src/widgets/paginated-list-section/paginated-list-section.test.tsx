@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { MAX_PAGE_SIZE } from '@/shared/pagination/paging';
 import { footerSkeleton } from '@/test/footerSkeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import { PaginatedListSection, type PaginatedListSectionPaging } from './index';
@@ -242,6 +243,16 @@ describe('PaginatedListSection', () => {
       });
 
       expect(busyRegion(container)?.querySelectorAll('tbody tr')).toHaveLength(50);
+    });
+
+    it('stops at the largest page size when it is given a bigger one, as an address can carry', () => {
+      const { container } = renderPaginated({
+        status: 'loading',
+        items: [],
+        pagination: { ...PAGINATION, page: 1, pageSize: 100_000_000, totalCount: null },
+      });
+
+      expect(busyRegion(container)?.querySelectorAll('tbody tr')).toHaveLength(MAX_PAGE_SIZE);
     });
   });
 });
