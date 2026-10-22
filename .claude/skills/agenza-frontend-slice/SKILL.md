@@ -92,7 +92,7 @@ branch on `result.error.code`. Full shape, boundary table and testing:
   ([ADR 0039](../../../docs/adr/0039-admin-frontend-base-ui-primitives.md)). Use
   `agenza-ui-primitive` before adding anything to `shared/ui/`.
 - A page with a form uses `shared/form/fields/` (`TextField`/`TextareaField`/`ControlledField`/
-  `ColorField`/`SelectField`) + React Hook Form + Zod, not a hand-rolled `useState` per field — see
+  `ColorField`/`SelectField`/`SearchField`) + React Hook Form + Zod, not a hand-rolled `useState` per field — see
   `agenza-form-field`.
 - Semantic tokens only (`bg-background`, `text-muted-foreground`).
 - Tests are colocated, Vitest + RTL, module mocks via `vi.mock` / `vi.hoisted` — no network mocking.

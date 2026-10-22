@@ -1,4 +1,4 @@
-# ADR 0076 — admin-frontend: the Pessoas filter bar, its situation filter and a reusable SelectField
+# ADR 0076 — admin-frontend: the Pessoas filter bar, its situation filter and reusable Select/Search fields
 
 Status: accepted (2026-10); closes point 3 of [ADR 0067](0067-admin-frontend-clients-list.md) (the situation filter
 was deferred until the owner defined its control) and amends its point 9 (the screen no longer relies on an omitted
@@ -42,7 +42,8 @@ The bar was designed for several filters, although the backend has only the situ
    controls are 44 px tall, as in the footer.
 7. **The bar is a React Hook Form form, like the other forms.** The page's hook owns
    `useForm<ClientListFilters>({ defaultValues: INITIAL_CLIENT_LIST_FILTERS })`, and the shell wraps the bar in
-   `FormProvider`. The search field is `register('search')` on the `InputGroupInput`; the situation is
+   `FormProvider`. The search is `<SearchField<ClientListFilters> name="search" label="Buscar pessoas por nome,
+e-mail ou CPF" placeholder="…" maxLength={…} labelPlacement="inline" />` and the situation is
    `<SelectField<ClientListFilters, 'status'> name="status" label="Situação" options={…} labelPlacement="inline" />`.
    Buscar reads `getValues()` and calls `applyFilters` in the same call stack (ADR 0073), not through
    `handleSubmit`, which would defer it; the pending state compares `useWatch('status')` with the applied status;
@@ -56,6 +57,12 @@ The bar was designed for several filters, although the backend has only the situ
    (the type refuses a `hint` there). It forwards `field.ref` and `field.onBlur` to the trigger, so focus-on-error
    reaches it. The paging footer's "Itens por página" still composes the select by hand: it is not a form, and the
    owner kept it out of this change.
+   **`SearchField` does the same for a search text**, asked for right after: `name`, `label`, the input's own props
+   (`placeholder`, `maxLength`, `autoFocus`…) and `className` for the group; the `InputGroup` with the search icon is
+   inside. By default it goes through `FormField`; with `labelPlacement="inline"` the label is the field's accessible
+   name only (`aria-label`), the placeholder is what shows, and there is no hint or error line. Both fields share the
+   `labelPlacement`/`hint` union, so the rule is typed once. Etiquetas' `TagListSearch` still composes its own box;
+   moving it is the step the `widgets/search-form` entry of ARCHITECTURE §6 now points to.
 9. **Only the filter section changed.** `ClientListSearch` became `ClientListFilterBar`. `usePaginatedList`,
    `list-section` and the paging footer are untouched.
 

@@ -28,7 +28,7 @@ and has no input to attach to: render it in the section.
 | --- | --- | --- |
 | Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
 | RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem(problem, methods)` — builds the current field paths from `methods.getValues()`, calls the above, then `setError` per field, `setError('root.serverError', …)` for the form-level message and `setFocus` on the first invalid field. Knows both shapes; the only file that does. |
-| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `SelectField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
+| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `SelectField`, `SearchField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed
 keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s
@@ -224,8 +224,17 @@ Options are `{ value, label }` (`SelectFieldOption<V>`); pass the path as the se
 The default renders through `FormField` (label above, hint, error) and fills the width, like the
 other fields. `labelPlacement="inline"` is for a toolbar: the label goes inside the trigger
 ("Situação: Ativas", a hidden `SelectLabel` names it) and there is no hint or error line, so the type
-refuses a `hint`. A filter bar is a form too: `useForm` in the page's hook, `FormProvider` in the shell,
-`register` for its text and `SelectField` for its choices (Pessoas is the reference). The paging
+refuses a `hint`.
+
+**A search box is `SearchField`**, the same idea for text: the `InputGroup` with the search icon is
+inside, the input's own props (`placeholder`, `maxLength`) pass through, and `labelPlacement="inline"`
+keeps the label as the accessible name only, with the placeholder on screen:
+```tsx
+<SearchField<XFilters> name="search" label="Buscar pessoas por nome, e-mail ou CPF"
+  placeholder="Buscar por nome, e-mail ou CPF..." maxLength={X_SEARCH_MAX_LENGTH} labelPlacement="inline" />
+```
+A filter bar is a form too: `useForm` in the page's hook, `FormProvider` in the shell, `SearchField`
+for its text and `SelectField` for its choices (Pessoas is the reference; Etiquetas has not moved yet). The paging
 footer's "Itens por página" is not a form and still composes the parts itself.
 
 The value presets (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`) are a different thing:

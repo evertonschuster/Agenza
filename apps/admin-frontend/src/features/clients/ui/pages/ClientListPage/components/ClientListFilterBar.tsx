@@ -1,8 +1,6 @@
 import { SearchIcon, XIcon } from 'lucide-react';
-import { useFormContext } from 'react-hook-form';
-import { SelectField } from '@/shared/form/fields';
+import { SearchField, SelectField } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
-import { InputGroup, InputGroupAddon, InputGroupInput } from '@/shared/ui/input-group';
 import { CLIENT_SEARCH_MAX_LENGTH } from '../../../../model/client';
 import {
   CLIENT_STATUS_FILTER_OPTIONS,
@@ -21,22 +19,17 @@ export function ClientListFilterBar({
   onFiltersSubmit,
   onClearFilters,
 }: ClientListFilterBarProps) {
-  const { register } = useFormContext<ClientListFilters>();
-
   return (
     <form onSubmit={onFiltersSubmit} role="search" className="@container">
       <div className="flex flex-col gap-2 @pagination:flex-row @pagination:flex-wrap @pagination:items-center">
-        <InputGroup className="pointer-coarse:h-11 @pagination:min-w-64 @pagination:flex-1">
-          <InputGroupAddon>
-            <SearchIcon aria-hidden="true" />
-          </InputGroupAddon>
-          <InputGroupInput
-            {...register('search')}
-            maxLength={CLIENT_SEARCH_MAX_LENGTH}
-            placeholder="Buscar por nome, e-mail ou CPF..."
-            aria-label="Buscar pessoas por nome, e-mail ou CPF"
-          />
-        </InputGroup>
+        <SearchField<ClientListFilters>
+          name="search"
+          label="Buscar pessoas por nome, e-mail ou CPF"
+          placeholder="Buscar por nome, e-mail ou CPF..."
+          maxLength={CLIENT_SEARCH_MAX_LENGTH}
+          labelPlacement="inline"
+          className="@pagination:min-w-64 @pagination:flex-1"
+        />
         <SelectField<ClientListFilters, 'status'>
           name="status"
           label="Situação"
