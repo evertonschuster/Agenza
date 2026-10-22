@@ -15,6 +15,5 @@ export interface UseClientListPageResult {
   hasPendingFilters: boolean;
   canClearFilters: boolean;
   onFiltersSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
-  onClearSearch: () => void;
   onClearFilters: () => void;
 }

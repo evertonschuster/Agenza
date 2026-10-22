@@ -20,8 +20,7 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 const ITEM_LABEL: CountNoun = { singular: 'pessoa', plural: 'pessoas' };
 
 export function ClientListPage() {
-  const { list, pagination, searchTerm, onClearSearch, filterForm, ...filterBar } =
-    useClientListPage();
+  const { list, pagination, searchTerm, filterForm, ...filterBar } = useClientListPage();
 
   return (
     <div className="space-y-4">
@@ -43,7 +42,7 @@ export function ClientListPage() {
         aria-label="Pessoas"
         columns={clientColumns()}
         emptyCopy={EMPTY_COPY}
-        search={{ term: searchTerm, onClear: onClearSearch }}
+        search={{ term: searchTerm, onClear: filterBar.onClearFilters }}
         errorTitle="Não foi possível carregar as pessoas."
         pagination={pagination}
         itemLabel={ITEM_LABEL}

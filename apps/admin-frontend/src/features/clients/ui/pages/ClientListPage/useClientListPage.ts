@@ -21,11 +21,6 @@ export function useClientListPage(): UseClientListPageResult {
     applyFilters(filterForm.getValues());
   }
 
-  function onClearSearch() {
-    filterForm.setValue('search', '');
-    applyFilters({ search: '' });
-  }
-
   function onClearFilters() {
     filterForm.reset(INITIAL_CLIENT_LIST_FILTERS);
     applyFilters(INITIAL_CLIENT_LIST_FILTERS);
@@ -41,7 +36,6 @@ export function useClientListPage(): UseClientListPageResult {
       filters.search !== INITIAL_CLIENT_LIST_FILTERS.search ||
       filters.status !== INITIAL_CLIENT_LIST_FILTERS.status,
     onFiltersSubmit,
-    onClearSearch,
     onClearFilters,
   };
 }

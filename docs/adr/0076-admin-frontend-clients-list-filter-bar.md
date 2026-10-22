@@ -35,19 +35,24 @@ The bar was designed for several filters, although the backend has only the situ
 4. **"Limpar filtros" appears when the applied filters differ from the opening ones** (a term or a situation other
    than Ativas). It empties the field, puts the select back on Ativas and applies the opening filters, keeping the page
    size. A choice that was not applied yet does not show it.
-5. **"Limpar busca" in the empty state keeps working as before**: it empties only the term and keeps the applied
-   situation. The empty-state copy does not change with the filter.
+5. **"Limpar busca" in the empty state does what "Limpar filtros" does**: it goes back to the opening filters, term
+   and situation, field and select included. The owner asked for one behaviour after review: a first version emptied
+   only the term and kept the applied situation, which left two "clear" actions that differed in a way the screen did
+   not show. The hook has a single `onClearFilters`, passed to the bar and to `PaginatedListSection` as
+   `search.onClear`. The button keeps the widget's fixed "Limpar busca" text, shared with Etiquetas, and the
+   empty-state copy does not change with the filter.
 6. **On a list area narrower than 560 px** (the `@pagination` container width of the footer), each control takes a
    whole line: field, select, Buscar, Limpar filtros. Wider, they share one line and wrap. On a touch screen the
    controls are 44 px tall, as in the footer.
 7. **The bar is a React Hook Form form, like the other forms.** The page's hook owns
    `useForm<ClientListFilters>({ defaultValues: INITIAL_CLIENT_LIST_FILTERS })`, and the shell wraps the bar in
-   `FormProvider`. The search is `<SearchField<ClientListFilters> name="search" label="Buscar pessoas por nome,
-e-mail ou CPF" placeholder="…" maxLength={…} labelPlacement="inline" />` and the situation is
+   `FormProvider`. The search is
+   `<SearchField<ClientListFilters> name="search" label="…" placeholder="…" maxLength={…} labelPlacement="inline" />`
+   and the situation is
    `<SelectField<ClientListFilters, 'status'> name="status" label="Situação" options={…} labelPlacement="inline" />`.
    Buscar reads `getValues()` and calls `applyFilters` in the same call stack (ADR 0073), not through
    `handleSubmit`, which would defer it; the pending state compares `useWatch('status')` with the applied status;
-   "Limpar filtros" is `reset(INITIAL_CLIENT_LIST_FILTERS)` and "Limpar busca" is `setValue('search', '')`. The search
+   both "Limpar filtros" and "Limpar busca" are `reset(INITIAL_CLIENT_LIST_FILTERS)` plus `applyFilters`. The search
    ref of ADR 0071 and the hook's own situation state are gone. Asked for by the owner on 2026-10-22, after the first
    version composed the six select parts by hand in a one-off `ClientStatusFilterSelect`.
 8. **`SelectField` is configuration, not markup**, as `TextField` and `ColorField` are: `name`, `label`, `options`

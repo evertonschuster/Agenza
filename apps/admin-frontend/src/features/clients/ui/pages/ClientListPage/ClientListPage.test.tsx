@@ -573,7 +573,7 @@ describe('ClientListPage', () => {
       expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
     });
 
-    it('keeps the applied situation when "Limpar busca" empties the search', async () => {
+    it('goes back to the opening filters from "Limpar busca", as "Limpar filtros" does', async () => {
       const user = userEvent.setup();
       renderPage(CLIENTS);
       await screen.findByText('Ana Souza');
@@ -583,8 +583,12 @@ describe('ClientListPage', () => {
       await user.click(await screen.findByRole('button', { name: 'Limpar busca' }));
 
       expect(mockList).toHaveBeenLastCalledWith(
-        { search: '', status: 'inactive', page: 1, pageSize: 20 },
+        { search: '', status: 'active', page: 1, pageSize: 20 },
         expect.any(AbortSignal),
+      );
+      expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
+      expect(screen.getByRole('combobox', { name: STATUS_LABEL })).toHaveTextContent(
+        'Situação:Ativas',
       );
     });
 
