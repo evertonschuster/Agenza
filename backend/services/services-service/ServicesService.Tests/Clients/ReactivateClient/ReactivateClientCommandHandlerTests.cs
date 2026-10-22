@@ -51,7 +51,7 @@ public class ReactivateClientCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Id.Should().Be(_client.Id);
-        result.Value.Status.Should().Be("active");
+        result.Value.Status.Should().Be(ClientStatus.Active);
         _client.Status.Should().Be(ClientStatus.Active);
         await _repository.Received(1).UpdateAsync(_client, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -87,7 +87,7 @@ public class ReactivateClientCommandHandlerTests
         var result = await Handler().Handle(new ReactivateClientCommand(client.Id), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Status.Should().Be("active");
+        result.Value.Status.Should().Be(ClientStatus.Active);
         await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
@@ -198,7 +198,7 @@ public class ReactivateClientCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Id.Should().Be(_client.Id);
-        result.Value.Status.Should().Be("active");
+        result.Value.Status.Should().Be(ClientStatus.Active);
         result.Value.Guardians.Should().HaveCount(2);
         await _repository.DidNotReceive().FindByCpfAsync(Arg.Any<CpfNumber>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());

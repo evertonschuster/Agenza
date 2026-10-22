@@ -47,7 +47,7 @@ public class DeactivateClientCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Id.Should().Be(_client.Id);
-        result.Value.Status.Should().Be("inactive");
+        result.Value.Status.Should().Be(ClientStatus.Inactive);
         _client.Status.Should().Be(ClientStatus.Inactive);
         await _repository.Received(1).UpdateAsync(_client, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
@@ -119,7 +119,7 @@ public class DeactivateClientCommandHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Id.Should().Be(_client.Id);
-        result.Value.Status.Should().Be("inactive");
+        result.Value.Status.Should().Be(ClientStatus.Inactive);
         result.Value.Guardians.Should().HaveCount(2);
         await _appointments.DidNotReceive().HasUpcomingAppointmentsAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await AssertNothingWasPersisted();
