@@ -100,7 +100,7 @@ public class UpdateClientCommandHandlerTests
         response.Email.Should().Be("paula.souza@example.com");
         response.Cpf.Should().Be("12345678909");
         response.AdministrativeNotes.Should().Be("Prefere a tarde.");
-        response.Status.Should().Be("active");
+        response.Status.Should().Be(ClientStatus.Active);
         await _repository.Received(1).UpdateAsync(_client, Arg.Any<CancellationToken>());
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
@@ -326,7 +326,7 @@ public class UpdateClientCommandHandlerTests
         var result = await Handler().Handle(Command(email: "maria@example.com"), CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.Status.Should().Be("inactive");
+        result.Value.Status.Should().Be(ClientStatus.Inactive);
         result.Value.Email.Should().Be("maria@example.com");
         await _repository.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
