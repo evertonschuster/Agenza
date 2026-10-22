@@ -2,6 +2,7 @@ import { todayUtc } from '@/shared/format/date';
 import { isMinorOn } from '@/shared/values/birthDate';
 import type { ClientGuardian } from './clientGuardian';
 import type { ClientReferenceContact } from './clientReferenceContact';
+import type { ClientStatus } from './clientStatus';
 
 export const CLIENT_FULL_NAME_MIN_LENGTH = 2;
 export const CLIENT_FULL_NAME_MAX_LENGTH = 150;
@@ -18,7 +19,7 @@ export interface Client {
   email: string | null;
   cpf: string | null;
   administrativeNotes: string | null;
-  status: string;
+  status: ClientStatus;
   guardians: ClientGuardian[];
   referenceContacts: ClientReferenceContact[];
 }
