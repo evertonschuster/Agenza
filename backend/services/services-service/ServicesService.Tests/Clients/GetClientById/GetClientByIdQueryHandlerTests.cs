@@ -63,7 +63,7 @@ public class GetClientByIdQueryHandlerTests
         response.Email.Should().Be("paula@example.com");
         response.Cpf.Should().Be("52998224725");
         response.AdministrativeNotes.Should().Be("Prefere atendimento à tarde.");
-        response.Status.Should().Be("active");
+        response.Status.Should().Be(ClientStatus.Active);
     }
 
     [Fact]
@@ -127,7 +127,7 @@ public class GetClientByIdQueryHandlerTests
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Id.Should().Be(client.Id);
-        result.Value.Status.Should().Be("inactive");
+        result.Value.Status.Should().Be(ClientStatus.Inactive);
         result.Value.Guardians.Should().HaveCount(2);
         result.Value.ReferenceContacts.Should().ContainSingle();
     }

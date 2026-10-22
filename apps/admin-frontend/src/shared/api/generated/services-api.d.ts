@@ -1957,7 +1957,7 @@ export interface components {
       email: null | string;
       cpf: null | string;
       administrativeNotes: null | string;
-      status: string;
+      status: components['schemas']['ClientStatus'];
       guardians: components['schemas']['GuardianResponse'][];
       referenceContacts: components['schemas']['ReferenceContactResponse'][];
     };

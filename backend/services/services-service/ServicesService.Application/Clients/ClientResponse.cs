@@ -8,7 +8,7 @@ public sealed record ClientResponse(
     string? Email,
     string? Cpf,
     string? AdministrativeNotes,
-    string Status,
+    ClientStatus Status,
     IReadOnlyList<GuardianResponse> Guardians,
     IReadOnlyList<ReferenceContactResponse> ReferenceContacts)
 {
@@ -21,7 +21,7 @@ public sealed record ClientResponse(
             client.Email?.Value,
             client.Cpf?.Value,
             client.AdministrativeNotes?.Value,
-            client.Status.ToString().ToLowerInvariant(),
+            client.Status,
             client.Guardians.Select(GuardianResponse.FromGuardian).ToList(),
             client.ReferenceContacts.Select(ReferenceContactResponse.FromReferenceContact).ToList());
 }

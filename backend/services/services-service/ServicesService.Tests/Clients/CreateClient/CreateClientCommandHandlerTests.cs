@@ -56,7 +56,7 @@ public class CreateClientCommandHandlerTests
         var response = result.Value;
         response.Id.Should().NotBe(Guid.Empty);
         response.FullName.Should().Be("Maria Souza");
-        response.Status.Should().Be("active");
+        response.Status.Should().Be(ClientStatus.Active);
         response.BirthDate.Should().BeNull();
         response.Guardians.Should().BeEmpty();
         response.ReferenceContacts.Should().BeEmpty();
