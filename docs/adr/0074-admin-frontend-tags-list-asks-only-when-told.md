@@ -5,7 +5,8 @@ pages on the same hook, which gains `refetch`) and follows [ADR 0071](0071-admin
 for the paged lists), [ADR 0072](0072-admin-frontend-paged-list-state-in-the-hook.md) (the state leaves the URL, as
 Pessoas' did) and [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) (cancellation stays with the
 consumer); retires the collection adapter of [ADR 0069](0069-tags-collection-compatibility-adapter.md), as that ADR's
-retirement trigger said
+retirement trigger said; amended by [ADR 0076](0076-admin-frontend-clients-list-filter-bar.md) (point 10: the search is
+a React Hook Form filter bar with `SearchField`, Buscar outside the field and Limpar filtros)
 
 ## Context
 

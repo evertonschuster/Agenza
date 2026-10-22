@@ -8,11 +8,16 @@ import type { ClientListFilters } from '../model/clientListFilters';
 export type ClientListQuery = ClientListFilters & Paging;
 
 function list(
-  { search, page, pageSize }: ClientListQuery,
+  { search, status, page, pageSize }: ClientListQuery,
   signal?: AbortSignal,
 ): Promise<ApiResult<ClientList>> {
   return servicesApi.get('/api/v{version}/clients', {
-    query: { Page: page, PageSize: pageSize, ...(search ? { Search: search } : {}) },
+    query: {
+      Page: page,
+      PageSize: pageSize,
+      Status: status,
+      ...(search ? { Search: search } : {}),
+    },
     signal,
   });
 }

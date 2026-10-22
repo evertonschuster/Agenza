@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { utcDate } from '@/shared/format/date';
 import type { ClientInput } from '../model/client';
-import { clientsRepository } from './clientsRepository';
+import { clientsRepository, type ClientListQuery } from './clientsRepository';
 
 const { mockGet, mockPost } = vi.hoisted(() => ({ mockGet: vi.fn(), mockPost: vi.fn() }));
 
@@ -20,26 +20,31 @@ const LIST_ITEM = {
 };
 
 describe('clientsRepository.list', () => {
-  const FIRST_PAGE_OF_EVERYONE = { search: '', page: 1, pageSize: 20 };
+  const FIRST_PAGE_OF_ACTIVE: ClientListQuery = {
+    search: '',
+    status: 'active',
+    page: 1,
+    pageSize: 20,
+  };
 
-  it('always asks for a page and a size, so the screen never depends on the backend defaults', async () => {
+  it('always asks for a page, a size and a situation, so the screen never depends on the backend defaults', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
-    await clientsRepository.list(FIRST_PAGE_OF_EVERYONE);
+    await clientsRepository.list(FIRST_PAGE_OF_ACTIVE);
 
     expect(mockGet).toHaveBeenCalledWith('/api/v{version}/clients', {
-      query: { Page: 1, PageSize: 20 },
+      query: { Page: 1, PageSize: 20, Status: 'active' },
       signal: undefined,
     });
   });
 
-  it('sends the page, the size and the search term under the names the API reads', async () => {
+  it('sends the page, the size, the situation and the search term under the names the API reads', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
-    await clientsRepository.list({ search: 'maria', page: 3, pageSize: 50 });
+    await clientsRepository.list({ search: 'maria', status: 'inactive', page: 3, pageSize: 50 });
 
     expect(mockGet).toHaveBeenCalledWith('/api/v{version}/clients', {
-      query: { Page: 3, PageSize: 50, Search: 'maria' },
+      query: { Page: 3, PageSize: 50, Status: 'inactive', Search: 'maria' },
       signal: undefined,
     });
   });
@@ -47,26 +52,29 @@ describe('clientsRepository.list', () => {
   it('leaves Search out, instead of sending it empty, without a search term', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
-    await clientsRepository.list(FIRST_PAGE_OF_EVERYONE);
+    await clientsRepository.list(FIRST_PAGE_OF_ACTIVE);
 
     const [, options] = mockGet.mock.calls.at(-1) as [string, { query: object }];
     expect(options.query).not.toHaveProperty('Search');
   });
 
-  it('never sends a status, which lists every situation', async () => {
+  it('sends "all" as it is, instead of leaving Status out, to list every situation', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
 
-    await clientsRepository.list({ search: 'maria', page: 2, pageSize: 10 });
+    await clientsRepository.list({ search: '', status: 'all', page: 2, pageSize: 10 });
 
     const [, options] = mockGet.mock.calls.at(-1) as [string, { query: object }];
-    expect(options.query).not.toHaveProperty('Status');
+    expect(options.query).toHaveProperty('Status', 'all');
   });
 
   it('hands the abort signal over to the request', async () => {
     mockGet.mockResolvedValue({ ok: true, data: { items: [], totalCount: 0 } });
     const controller = new AbortController();
 
-    await clientsRepository.list({ search: 'maria', page: 1, pageSize: 20 }, controller.signal);
+    await clientsRepository.list(
+      { search: 'maria', status: 'active', page: 1, pageSize: 20 },
+      controller.signal,
+    );
 
     const [, options] = mockGet.mock.calls.at(-1) as [string, { signal: AbortSignal }];
     expect(options.signal).toBe(controller.signal);
@@ -76,7 +84,7 @@ describe('clientsRepository.list', () => {
     const page = { items: [LIST_ITEM], totalCount: 21, page: 1, pageSize: 20 };
     mockGet.mockResolvedValue({ ok: true, data: page });
 
-    const result = await clientsRepository.list(FIRST_PAGE_OF_EVERYONE);
+    const result = await clientsRepository.list(FIRST_PAGE_OF_ACTIVE);
 
     expect(result).toEqual({ ok: true, data: page });
   });
@@ -89,7 +97,12 @@ describe('clientsRepository.list', () => {
     };
     mockGet.mockResolvedValue({ ok: false, error });
 
-    const result = await clientsRepository.list({ search: 'x', page: 1, pageSize: 20 });
+    const result = await clientsRepository.list({
+      search: 'x',
+      status: 'active',
+      page: 1,
+      pageSize: 20,
+    });
 
     expect(result).toEqual({ ok: false, error });
   });

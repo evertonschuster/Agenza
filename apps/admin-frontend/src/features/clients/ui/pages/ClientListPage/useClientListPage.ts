@@ -1,34 +1,41 @@
-import { useRef, type SubmitEvent } from 'react';
+import type { SubmitEvent } from 'react';
+import { useForm, useWatch } from 'react-hook-form';
 import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { clientsRepository } from '../../../api/clientsRepository';
-import type { ClientListFilters } from '../../../model/clientListFilters';
+import {
+  INITIAL_CLIENT_LIST_FILTERS,
+  type ClientListFilters,
+} from '../../../model/clientListFilters';
 import type { UseClientListPageResult } from './useClientListPage.types';
-
-const INITIAL_FILTERS: ClientListFilters = { search: '' };
 
 export function useClientListPage(): UseClientListPageResult {
   const { filters, applyFilters, list, pagination } = usePaginatedList({
-    initialFilters: INITIAL_FILTERS,
+    initialFilters: INITIAL_CLIENT_LIST_FILTERS,
     fetchPage: clientsRepository.list,
   });
-  const searchInputRef = useRef<HTMLInputElement>(null);
+  const filterForm = useForm<ClientListFilters>({ defaultValues: INITIAL_CLIENT_LIST_FILTERS });
+  const chosenStatus = useWatch({ control: filterForm.control, name: 'status' });
 
-  function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
+  function onFiltersSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    applyFilters({ search: searchInputRef.current?.value ?? '' });
+    applyFilters(filterForm.getValues());
   }
 
-  function onClearSearch() {
-    if (searchInputRef.current) searchInputRef.current.value = '';
-    applyFilters({ search: '' });
+  function onClearFilters() {
+    filterForm.reset(INITIAL_CLIENT_LIST_FILTERS);
+    applyFilters(INITIAL_CLIENT_LIST_FILTERS);
   }
 
   return {
     list,
     pagination,
     searchTerm: filters.search,
-    searchInputRef,
-    onSearchSubmit,
-    onClearSearch,
+    filterForm,
+    hasPendingFilters: chosenStatus !== filters.status,
+    canClearFilters:
+      filters.search !== INITIAL_CLIENT_LIST_FILTERS.search ||
+      filters.status !== INITIAL_CLIENT_LIST_FILTERS.status,
+    onFiltersSubmit,
+    onClearFilters,
   };
 }

@@ -1,4 +1,5 @@
 import { PlusIcon } from 'lucide-react';
+import { FormProvider } from 'react-hook-form';
 import { Link } from 'react-router';
 import type { CountNoun } from '@/shared/format/count';
 import { buttonVariants } from '@/shared/ui/button';
@@ -6,7 +7,7 @@ import type { ListSectionEmptyCopy } from '@/widgets/list-section';
 import { PaginatedListSection } from '@/widgets/paginated-list-section';
 import { NEW_CLIENT_PATH } from '../../clientsPaths';
 import { clientColumns } from './components/clientColumns';
-import { ClientListSearch } from './components/ClientListSearch';
+import { ClientListFilterBar } from './components/ClientListFilterBar';
 import { useClientListPage } from './useClientListPage';
 
 const EMPTY_COPY: ListSectionEmptyCopy = {
@@ -19,8 +20,7 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 const ITEM_LABEL: CountNoun = { singular: 'pessoa', plural: 'pessoas' };
 
 export function ClientListPage() {
-  const { list, pagination, searchTerm, searchInputRef, onSearchSubmit, onClearSearch } =
-    useClientListPage();
+  const { list, pagination, searchTerm, filterForm, ...filterBar } = useClientListPage();
 
   return (
     <div className="space-y-4">
@@ -32,7 +32,9 @@ export function ClientListPage() {
         </Link>
       </div>
 
-      <ClientListSearch searchInputRef={searchInputRef} onSearchSubmit={onSearchSubmit} />
+      <FormProvider {...filterForm}>
+        <ClientListFilterBar {...filterBar} />
+      </FormProvider>
 
       <PaginatedListSection
         {...list}
@@ -40,7 +42,7 @@ export function ClientListPage() {
         aria-label="Pessoas"
         columns={clientColumns()}
         emptyCopy={EMPTY_COPY}
-        search={{ term: searchTerm, onClear: onClearSearch }}
+        search={{ term: searchTerm, onClear: filterBar.onClearFilters }}
         errorTitle="Não foi possível carregar as pessoas."
         pagination={pagination}
         itemLabel={ITEM_LABEL}

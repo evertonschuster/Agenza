@@ -578,6 +578,41 @@ describe('TagListPage', () => {
     expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
   });
 
+  describe('"Limpar filtros"', () => {
+    it('is offered only once a search is applied, not while the term is only typed', async () => {
+      const user = userEvent.setup();
+      renderPage(TAGS);
+      await screen.findByText('Promoção');
+      expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
+
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'vip');
+      expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
+
+      await user.keyboard('{Enter}');
+      expect(await screen.findByRole('button', { name: 'Limpar filtros' })).toBeInTheDocument();
+    });
+
+    it('empties the field and lists every tag again, keeping the size, as "Limpar busca" does', async () => {
+      const user = userEvent.setup();
+      renderPage(manyTags(45));
+      await screen.findByText('Etiqueta 001');
+      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('option', { name: '50' }));
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'etiqueta 00{Enter}');
+      await waitFor(() => expect(screen.queryByText('Etiqueta 010')).not.toBeInTheDocument());
+
+      await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: '', page: 1, pageSize: 50 },
+        expect.any(AbortSignal),
+      );
+      expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
+      expect(await screen.findByText('Etiqueta 045')).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
+    });
+  });
+
   describe('paging', () => {
     it('says which tags are on screen out of how many, below the table', async () => {
       renderPage(manyTags(45));

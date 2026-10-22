@@ -1,11 +1,12 @@
 import { PlusIcon } from 'lucide-react';
+import { FormProvider } from 'react-hook-form';
 import { Link, Outlet } from 'react-router';
 import type { CountNoun } from '@/shared/format/count';
 import { buttonVariants } from '@/shared/ui/button';
 import type { ListSectionEmptyCopy } from '@/widgets/list-section';
 import { PaginatedListSection } from '@/widgets/paginated-list-section';
 import { tagColumns } from './components/tagColumns';
-import { TagListSearch } from './components/TagListSearch';
+import { TagListFilterBar } from './components/TagListFilterBar';
 import { useTagListPage } from './useTagListPage';
 
 const EMPTY_COPY: ListSectionEmptyCopy = {
@@ -18,8 +19,7 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 const ITEM_LABEL: CountNoun = { singular: 'etiqueta', plural: 'etiquetas' };
 
 export function TagListPage() {
-  const { list, pagination, searchTerm, searchInputRef, onSearchSubmit, onClearSearch } =
-    useTagListPage();
+  const { list, pagination, searchTerm, filterForm, ...filterBar } = useTagListPage();
 
   return (
     <div className="space-y-4">
@@ -31,7 +31,9 @@ export function TagListPage() {
         </Link>
       </div>
 
-      <TagListSearch searchInputRef={searchInputRef} onSearchSubmit={onSearchSubmit} />
+      <FormProvider {...filterForm}>
+        <TagListFilterBar {...filterBar} />
+      </FormProvider>
 
       <PaginatedListSection
         {...list}
@@ -39,7 +41,7 @@ export function TagListPage() {
         aria-label="Etiquetas"
         columns={tagColumns()}
         emptyCopy={EMPTY_COPY}
-        search={{ term: searchTerm, onClear: onClearSearch }}
+        search={{ term: searchTerm, onClear: filterBar.onClearFilters }}
         errorTitle="Não foi possível carregar as etiquetas."
         pagination={pagination}
         itemLabel={ITEM_LABEL}

@@ -16,6 +16,7 @@ vi.mock('../../../api/clientsRepository', () => ({
 
 const SEARCH_LABEL = 'Buscar pessoas por nome, e-mail ou CPF';
 const PAGE_SIZE_LABEL = 'Itens por página';
+const STATUS_LABEL = 'Situação';
 
 const ANA: ClientListItem = {
   id: 'c1',
@@ -37,7 +38,12 @@ const BRUNO: ClientListItem = {
 
 const CLIENTS = [ANA, BRUNO];
 
-const FIRST_PAGE_OF_EVERYONE = { search: '', page: 1, pageSize: 20 };
+const FIRST_PAGE_OF_ACTIVE: ClientListQuery = {
+  search: '',
+  status: 'active',
+  page: 1,
+  pageSize: 20,
+};
 
 function listOf(
   items: ClientListItem[],
@@ -124,12 +130,12 @@ describe('ClientListPage', () => {
     expect(container.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
-  it('asks for the first page of 20 people, with no search, on the first load', async () => {
+  it('asks for the first page of 20 active people, with no search, on the first load', async () => {
     renderPage(CLIENTS);
     await screen.findByText('Ana Souza');
 
     expect(mockList).toHaveBeenCalledTimes(1);
-    expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_EVERYONE, expect.any(AbortSignal));
+    expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_ACTIVE, expect.any(AbortSignal));
   });
 
   it('renders the Pessoas title and a "Nova pessoa" link pointing at the registration form', async () => {
@@ -245,7 +251,7 @@ describe('ClientListPage', () => {
 
     expect(container.querySelector('[aria-busy="true"]')).not.toBeNull();
     expect(mockList).toHaveBeenLastCalledWith(
-      { search: 'ana', page: 1, pageSize: 20 },
+      { search: 'ana', status: 'active', page: 1, pageSize: 20 },
       expect.any(AbortSignal),
     );
 
@@ -269,7 +275,7 @@ describe('ClientListPage', () => {
 
     expect(await screen.findByText('Pessoa 021')).toBeInTheDocument();
     expect(mockList).toHaveBeenLastCalledWith(
-      { search: '', page: 3, pageSize: 10 },
+      { search: '', status: 'active', page: 3, pageSize: 10 },
       expect.any(AbortSignal),
     );
   });
@@ -327,7 +333,7 @@ describe('ClientListPage', () => {
     await waitFor(() => expect(screen.queryByText('Ana Souza')).not.toBeInTheDocument());
     expect(screen.getByText('Bruno Lima')).toBeInTheDocument();
     expect(mockList).toHaveBeenLastCalledWith(
-      { search: 'bruno', page: 1, pageSize: 20 },
+      { search: 'bruno', status: 'active', page: 1, pageSize: 20 },
       expect.any(AbortSignal),
     );
     expect(location()).toBe('location: /pessoas');
@@ -352,7 +358,7 @@ describe('ClientListPage', () => {
     expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
     expect(await screen.findByText('Ana Souza')).toBeInTheDocument();
     expect(mockList).toHaveBeenCalledTimes(1);
-    expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_EVERYONE, expect.any(AbortSignal));
+    expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_ACTIVE, expect.any(AbortSignal));
   });
 
   it('lists everyone again when the search is submitted blank', async () => {
@@ -366,7 +372,7 @@ describe('ClientListPage', () => {
     await user.keyboard('{Enter}');
 
     expect(await screen.findByText('Ana Souza')).toBeInTheDocument();
-    expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_EVERYONE, expect.any(AbortSignal));
+    expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_ACTIVE, expect.any(AbortSignal));
   });
 
   it('shows the loading skeleton while a new search is in flight, replacing the stale rows', async () => {
@@ -431,6 +437,176 @@ describe('ClientListPage', () => {
 
     await waitFor(() => expect(screen.queryByText('Ana Souza')).not.toBeInTheDocument());
     expect(searchInput).toHaveFocus();
+  });
+
+  describe('filters', () => {
+    async function chooseSituation(user: ReturnType<typeof userEvent.setup>, label: string) {
+      await user.click(screen.getByRole('combobox', { name: STATUS_LABEL }));
+      await user.click(await screen.findByRole('option', { name: label }));
+    }
+
+    it('opens on the active people, saying so in the situation select', async () => {
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+
+      expect(screen.getByRole('combobox', { name: STATUS_LABEL })).toHaveTextContent(
+        'Situação:Ativas',
+      );
+    });
+
+    it('offers the active, the inactive and every person, in that order', async () => {
+      const user = userEvent.setup();
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+
+      await user.click(screen.getByRole('combobox', { name: STATUS_LABEL }));
+
+      const options = await screen.findAllByRole('option');
+      expect(options.map((option) => option.textContent)).toEqual(['Ativas', 'Inativas', 'Todas']);
+    });
+
+    it('does not ask for anything when a situation is picked, only once Buscar is clicked', async () => {
+      const user = userEvent.setup();
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+
+      await chooseSituation(user, 'Inativas');
+
+      expect(mockList).toHaveBeenCalledTimes(1);
+      expect(screen.getByRole('combobox', { name: STATUS_LABEL })).toHaveTextContent(
+        'Situação:Inativas',
+      );
+    });
+
+    it('applies the term and the situation together from Buscar, on the first page', async () => {
+      const user = userEvent.setup();
+      renderPage(people(45));
+      await screen.findByText('Pessoa 001');
+      await user.click(screen.getByRole('button', { name: 'Ir para a página 2' }));
+      await screen.findByText('Pessoa 021');
+
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'pessoa');
+      await chooseSituation(user, 'Todas');
+      await user.click(screen.getByRole('button', { name: 'Buscar' }));
+
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: 'pessoa', status: 'all', page: 1, pageSize: 20 },
+        expect.any(AbortSignal),
+      );
+    });
+
+    it('applies the chosen situation too when Enter is pressed in the search field', async () => {
+      const user = userEvent.setup();
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+
+      await chooseSituation(user, 'Inativas');
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'bruno{Enter}');
+
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: 'bruno', status: 'inactive', page: 1, pageSize: 20 },
+        expect.any(AbortSignal),
+      );
+    });
+
+    it('highlights Buscar while a situation is picked but not applied yet', async () => {
+      const user = userEvent.setup();
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+      const search = screen.getByRole('button', { name: 'Buscar' });
+      expect(search).toHaveAttribute('data-variant', 'outline');
+
+      await chooseSituation(user, 'Inativas');
+      expect(search).toHaveAttribute('data-variant', 'default');
+
+      await user.click(search);
+      await waitFor(() => expect(search).toHaveAttribute('data-variant', 'outline'));
+
+      await chooseSituation(user, 'Ativas');
+      await chooseSituation(user, 'Inativas');
+      expect(search).toHaveAttribute('data-variant', 'outline');
+    });
+
+    it('offers "Limpar filtros" only once the applied filters differ from the opening ones', async () => {
+      const user = userEvent.setup();
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+      expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
+
+      await chooseSituation(user, 'Todas');
+      expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Buscar' }));
+      expect(await screen.findByRole('button', { name: 'Limpar filtros' })).toBeInTheDocument();
+    });
+
+    it('offers "Limpar filtros" after a search with the opening situation', async () => {
+      const user = userEvent.setup();
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'ana{Enter}');
+
+      expect(await screen.findByRole('button', { name: 'Limpar filtros' })).toBeInTheDocument();
+    });
+
+    it('goes back to the opening filters, field and select included, from "Limpar filtros", keeping the size', async () => {
+      const user = userEvent.setup();
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('option', { name: '50' }));
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'ana');
+      await chooseSituation(user, 'Todas');
+      await user.click(screen.getByRole('button', { name: 'Buscar' }));
+
+      await user.click(await screen.findByRole('button', { name: 'Limpar filtros' }));
+
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: '', status: 'active', page: 1, pageSize: 50 },
+        expect.any(AbortSignal),
+      );
+      expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
+      expect(screen.getByRole('combobox', { name: STATUS_LABEL })).toHaveTextContent(
+        'Situação:Ativas',
+      );
+      expect(screen.queryByRole('button', { name: 'Limpar filtros' })).not.toBeInTheDocument();
+    });
+
+    it('goes back to the opening filters from "Limpar busca", as "Limpar filtros" does', async () => {
+      const user = userEvent.setup();
+      renderPage(CLIENTS);
+      await screen.findByText('Ana Souza');
+      await chooseSituation(user, 'Inativas');
+      await user.type(screen.getByLabelText(SEARCH_LABEL), 'zzz{Enter}');
+
+      await user.click(await screen.findByRole('button', { name: 'Limpar busca' }));
+
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: '', status: 'active', page: 1, pageSize: 20 },
+        expect.any(AbortSignal),
+      );
+      expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
+      expect(screen.getByRole('combobox', { name: STATUS_LABEL })).toHaveTextContent(
+        'Situação:Ativas',
+      );
+    });
+
+    it('keeps the applied situation when moving between pages', async () => {
+      const user = userEvent.setup();
+      renderPage(people(45));
+      await screen.findByText('Pessoa 001');
+      await chooseSituation(user, 'Todas');
+      await user.click(screen.getByRole('button', { name: 'Buscar' }));
+      await screen.findByText('Pessoa 001');
+
+      await user.click(screen.getByRole('button', { name: 'Ir para a página 2' }));
+
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: '', status: 'all', page: 2, pageSize: 20 },
+        expect.any(AbortSignal),
+      );
+    });
   });
 
   describe('paging', () => {
@@ -517,7 +693,7 @@ describe('ClientListPage', () => {
       expect(await screen.findByText('Pessoa 011')).toBeInTheDocument();
       expect(screen.queryByText('Pessoa 001')).not.toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { search: 'pessoa', page: 2, pageSize: 10 },
+        { search: 'pessoa', status: 'active', page: 2, pageSize: 10 },
         expect.any(AbortSignal),
       );
       expect(location()).toBe('location: /pessoas');
@@ -544,7 +720,7 @@ describe('ClientListPage', () => {
       await user.click(screen.getByRole('button', { name: 'Anterior' }));
 
       expect(await screen.findByText('Pessoa 001')).toBeInTheDocument();
-      expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_EVERYONE, expect.any(AbortSignal));
+      expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_ACTIVE, expect.any(AbortSignal));
     });
 
     it('keeps the controls over the skeleton, usable and on the last known total, while the next page loads', async () => {
@@ -598,7 +774,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 041')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { search: '', page: 3, pageSize: 20 },
+        { search: '', status: 'active', page: 3, pageSize: 20 },
         expect.any(AbortSignal),
       );
       expect(secondSignal?.aborted).toBe(true);
@@ -637,7 +813,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { search: '', page: 1, pageSize: 50 },
+        { search: '', status: 'active', page: 1, pageSize: 50 },
         expect.any(AbortSignal),
       );
       expect(secondSignal?.aborted).toBe(true);
@@ -712,7 +888,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { search: 'pessoa', page: 1, pageSize: 50 },
+        { search: 'pessoa', status: 'active', page: 1, pageSize: 50 },
         expect.any(AbortSignal),
       );
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 1–50 de 87 pessoas');
@@ -731,7 +907,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 001')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { search: 'pessoa 0', page: 1, pageSize: 10 },
+        { search: 'pessoa 0', status: 'active', page: 1, pageSize: 10 },
         expect.any(AbortSignal),
       );
     });
@@ -749,7 +925,7 @@ describe('ClientListPage', () => {
 
       expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();
       expect(mockList).toHaveBeenLastCalledWith(
-        { search: '', page: 1, pageSize: 50 },
+        { search: '', status: 'active', page: 1, pageSize: 50 },
         expect.any(AbortSignal),
       );
     });
@@ -790,12 +966,12 @@ describe('ClientListPage', () => {
         expect(await screen.findByText('Pessoa 021')).toBeInTheDocument();
         expect(mockList).toHaveBeenNthCalledWith(
           2,
-          { search: '', page: 5, pageSize: 20 },
+          { search: '', status: 'active', page: 5, pageSize: 20 },
           expect.any(AbortSignal),
         );
         expect(mockList).toHaveBeenNthCalledWith(
           3,
-          { search: '', page: 2, pageSize: 20 },
+          { search: '', status: 'active', page: 2, pageSize: 20 },
           expect.any(AbortSignal),
         );
         expect(screen.getByRole('status')).toHaveTextContent('Exibindo 21–25 de 25 pessoas');
@@ -834,7 +1010,7 @@ describe('ClientListPage', () => {
         await user.click(screen.getByRole('button', { name: 'Ir para a página 3' }));
 
         expect(await screen.findByText('Nenhuma pessoa ainda')).toBeInTheDocument();
-        expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_EVERYONE, expect.any(AbortSignal));
+        expect(mockList).toHaveBeenLastCalledWith(FIRST_PAGE_OF_ACTIVE, expect.any(AbortSignal));
       });
     });
   });
