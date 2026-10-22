@@ -10,18 +10,20 @@ and reactivate); consumes the contracts of `PUT /api/v1/clients/{id}`, `GET /api
 
 The Pessoas slice could register a person (`/pessoas/nova`) and list them (`/pessoas`). The backend already answers a
 person by id, replaces a person and their contacts in one `PUT`, and moves a person between active and inactive. The
-name in the list links to `/pessoas/:id`, which is still the "Em breve" Detalhes screen.
+name in the list linked to `/pessoas/:id`, which is still the "Em breve" Detalhes screen.
 
 The owner asked for editing on the same form as registration, loaded from the backend the way Etiquetas loads a tag
 into its form. Three forks were put to the owner on 2026-10-22 before writing code; the answers are points 1, 3 and 4.
 
 ## Decision
 
-1. **Editing lives at `/pessoas/:id/editar` and is reached from a pencil in the list.** The list gains an **Ações**
-   column with one icon link per row, named "Editar <nome>" for assistive tech (`editClientPath(id)` in
-   `ui/clientsPaths.ts`). The name keeps pointing at `/pessoas/:id`, so Detalhes can arrive later without moving the
-   edit route. The path is pt-BR like `/pessoas/nova`, not `:id/edit` as in Etiquetas, whose paths predate the pt-BR
-   convention.
+1. **Editing lives at `/pessoas/:id/editar` and is reached from the name and from a pencil in the list.** Both links
+   use `editClientPath(id)` in `ui/clientsPaths.ts`; the list gains an **Ações** column with one icon link per row,
+   named "Editar <nome>" for assistive tech. The path is pt-BR like `/pessoas/nova`, not `:id/edit` as in Etiquetas,
+   whose paths predate the pt-BR convention. A first version kept the name on `/pessoas/:id`, the "Em breve" Detalhes
+   screen; the owner asked on the same day, after trying it, for the name to open the edit page. The `/pessoas/:id`
+   route and its placeholder stay, with no link to them, until Detalhes is built; `clientDetailPath` went away with
+   its last caller.
 2. **One page, one hook, two modes.** `ClientFormPage` and `useClientFormPage` serve both routes: with no `:id` the
    form starts empty and saves through `clientsRepository.create`; with one it loads `clientsRepository.get(id)`,
    fills the form with `toClientFormFieldValues(client)` (birth date as `dd/mm/aaaa`, CPFs masked, a missing value
@@ -54,12 +56,16 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
   extended.
 - Returning to `/pessoas` after a save opens the list on its opening filters (Ativas, page 1), since the list keeps its
   state in its hook ([ADR 0072](0072-admin-frontend-paged-list-state-in-the-hook.md)), as after a registration.
-- The e2e that opens Detalhes from the name now matches the name exactly, since "Editar <nome>" also contains it.
+- The e2e that opened Detalhes from the name now opens the edit page from it, matching the name exactly, since
+  "Editar <nome>" also contains it.
+- When Detalhes is built, the name's target is decided again; the edit route does not move.
 
 ## Alternatives considered
 
-- **The name opens the edit form until Detalhes exists**, or **`/pessoas/:id` becomes the edit form**: less UI today,
-  but the name's target or Detalhes' address would change later. Turned down by the owner.
+- **The name keeps pointing at Detalhes**: the first version. Turned down by the owner, since the name led to a
+  screen that does nothing yet.
+- **`/pessoas/:id` becomes the edit form**: no new route, but Detalhes would lose its address. Turned down by the
+  owner.
 - **An error state with "Tentar novamente" on a failed load**: a pattern Etiquetas does not have. Turned down.
 - **Leaving the situation for another delivery, or blocking edits of inactive people**: the owner chose to ship the
   change of situation with editing; blocking inactive people would be a rule the backend does not have.
