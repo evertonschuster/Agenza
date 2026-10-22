@@ -39,7 +39,7 @@ The bar was designed for several filters, although the backend has only the situ
    and situation, field and select included. The owner asked for one behaviour after review: a first version emptied
    only the term and kept the applied situation, which left two "clear" actions that differed in a way the screen did
    not show. The hook has a single `onClearFilters`, passed to the bar and to `PaginatedListSection` as
-   `search.onClear`. The button keeps the widget's fixed "Limpar busca" text, shared with Etiquetas, and the
+   `search.onClear`. The button keeps the widget's fixed "Limpar busca" text, which Etiquetas also shows, and the
    empty-state copy does not change with the filter.
 6. **On a list area narrower than 560 px** (the `@pagination` container width of the footer), each control takes a
    whole line: field, select, Buscar, Limpar filtros. Wider, they share one line and wrap. On a touch screen the
@@ -66,10 +66,18 @@ The bar was designed for several filters, although the backend has only the situ
    (`placeholder`, `maxLength`, `autoFocus`…) and `className` for the group; the `InputGroup` with the search icon is
    inside. By default it goes through `FormField`; with `labelPlacement="inline"` the label is the field's accessible
    name only (`aria-label`), the placeholder is what shows, and there is no hint or error line. Both fields share the
-   `labelPlacement`/`hint` union, so the rule is typed once. Etiquetas' `TagListSearch` still composes its own box;
-   moving it is the step the `widgets/search-form` entry of ARCHITECTURE §6 now points to.
-9. **Only the filter section changed.** `ClientListSearch` became `ClientListFilterBar`. `usePaginatedList`,
+   `labelPlacement`/`hint` union, so the rule is typed once.
+9. **Only the filter sections changed.** `ClientListSearch` became `ClientListFilterBar`. `usePaginatedList`,
    `list-section` and the paging footer are untouched.
+10. **Etiquetas moves onto the same bar**, asked for by the owner in the same review, as a commit of its own in this
+    change. Its only filter is the name (the `/tags` endpoint reads `search` alone), and the owner chose the same shape
+    as Pessoas over keeping Buscar inside the field for a single filter: `TagListSearch` became `TagListFilterBar`, a
+    React Hook Form form with `SearchField` inline, an outline **Buscar** at the end of the row and **Limpar filtros**
+    once a term is applied. `useTagListPage` owns `useForm<TagListFilters>` (`INITIAL_TAG_LIST_FILTERS` in
+    `model/tagListFilters.ts`) and one `onClearFilters`, which the empty state's "Limpar busca" calls too; the search
+    ref and `onClearSearch` are gone. With no select there is nothing pending to highlight, so Buscar stays outline.
+    The 42 tests of the page passed unchanged; two more pin "Limpar filtros". The two bars repeat the same frame
+    (form, container query, Buscar, Limpar filtros); it is extracted when a third list needs it.
 
 ## Consequences
 

@@ -234,7 +234,7 @@ keeps the label as the accessible name only, with the placeholder on screen:
   placeholder="Buscar por nome, e-mail ou CPF..." maxLength={X_SEARCH_MAX_LENGTH} labelPlacement="inline" />
 ```
 A filter bar is a form too: `useForm` in the page's hook, `FormProvider` in the shell, `SearchField`
-for its text and `SelectField` for its choices (Pessoas is the reference; Etiquetas has not moved yet). The paging
+for its text and `SelectField` for its choices (Pessoas is the reference; Etiquetas has the same bar with a search alone). The paging
 footer's "Itens por página" is not a form and still composes the parts itself.
 
 The value presets (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`) are a different thing:
