@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { utcDate } from '@/shared/format/date';
@@ -688,6 +688,40 @@ describe('ClientFormPage', () => {
 
       resolveCreate({ ok: true, data: CREATED });
       await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent('/pessoas'));
+    });
+
+    it('stays where the person went when they leave while the save is still in flight', async () => {
+      const user = userEvent.setup();
+      const toastAdd = vi.spyOn(toast, 'add');
+      let resolveCreate!: (value: unknown) => void;
+      mockCreate.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)));
+      render(
+        <MemoryRouter initialEntries={['/pessoas/nova']}>
+          <Link to="/agenda">Agenda</Link>
+          <Routes>
+            <Route path="/pessoas/nova" element={<ClientFormPage />} />
+            <Route path="/pessoas" element={<h1>Lista de pessoas</h1>} />
+            <Route path="/agenda" element={<h1>Agenda</h1>} />
+          </Routes>
+          <LocationProbe />
+        </MemoryRouter>,
+      );
+      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+      await screen.findByRole('button', { name: 'Salvando…' });
+
+      await user.click(screen.getByRole('link', { name: 'Agenda' }));
+      expect(screen.getByTestId('location')).toHaveTextContent('/agenda');
+
+      resolveCreate({ ok: true, data: CREATED });
+      await waitFor(() =>
+        expect(toastAdd).toHaveBeenCalledWith(
+          expect.objectContaining({ title: 'Pessoa cadastrada' }),
+        ),
+      );
+
+      expect(screen.getByTestId('location')).toHaveTextContent('/agenda');
+      expect(screen.queryByRole('heading', { name: 'Lista de pessoas' })).not.toBeInTheDocument();
     });
   });
 });
