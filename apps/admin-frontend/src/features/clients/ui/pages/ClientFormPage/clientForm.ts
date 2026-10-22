@@ -1,6 +1,7 @@
 import { z } from 'zod';
+import { formatMaskedDate } from '@/shared/format/date';
 import { ADULT_AGE_IN_YEARS, birthDateSchema } from '@/shared/values/birthDate';
-import { cpfSchema } from '@/shared/values/cpf';
+import { cpfSchema, maskCpf } from '@/shared/values/cpf';
 import { emailSchema } from '@/shared/values/email';
 import { phoneSchema } from '@/shared/values/phone';
 import {
@@ -10,6 +11,7 @@ import {
   MAX_GUARDIANS,
   MAX_REFERENCE_CONTACTS,
   needsGuardian,
+  type Client,
 } from '../../../model/client';
 import {
   CONTACT_NAME_MAX_LENGTH,
@@ -106,6 +108,29 @@ export function emptyClientFormFieldValues(): ClientFormFieldValues {
     administrativeNotes: '',
     guardians: [],
     referenceContacts: [],
+  };
+}
+
+export function toClientFormFieldValues(client: Client): ClientFormFieldValues {
+  return {
+    fullName: client.fullName,
+    birthDate: client.birthDate === null ? '' : formatMaskedDate(new Date(client.birthDate)),
+    phone: client.phone ?? '',
+    email: client.email ?? '',
+    cpf: client.cpf === null ? '' : maskCpf(client.cpf),
+    administrativeNotes: client.administrativeNotes ?? '',
+    guardians: client.guardians.map((guardian) => ({
+      name: guardian.name,
+      relationship: guardian.relationship,
+      phone: guardian.phone ?? '',
+      cpf: guardian.cpf === null ? '' : maskCpf(guardian.cpf),
+    })),
+    referenceContacts: client.referenceContacts.map((contact) => ({
+      name: contact.name,
+      relationship: contact.relationship,
+      phone: contact.phone ?? '',
+      purposes: contact.purposes,
+    })),
   };
 }
 

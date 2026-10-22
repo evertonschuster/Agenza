@@ -3,10 +3,14 @@ import { utcDate } from '@/shared/format/date';
 import type { ClientInput } from '../model/client';
 import { clientsRepository, type ClientListQuery } from './clientsRepository';
 
-const { mockGet, mockPost } = vi.hoisted(() => ({ mockGet: vi.fn(), mockPost: vi.fn() }));
+const { mockGet, mockPost, mockPut } = vi.hoisted(() => ({
+  mockGet: vi.fn(),
+  mockPost: vi.fn(),
+  mockPut: vi.fn(),
+}));
 
 vi.mock('@/shared/api/servicesApi', () => ({
-  servicesApi: { get: mockGet, post: mockPost },
+  servicesApi: { get: mockGet, post: mockPost, put: mockPut },
 }));
 
 const LIST_ITEM = {
@@ -165,5 +169,74 @@ describe('clientsRepository.create', () => {
     const result = await clientsRepository.create(INPUT);
 
     expect(result).toEqual({ ok: false, error });
+  });
+});
+
+const NOT_FOUND = { status: 404, code: 'Client.NotFound', title: 'A pessoa não foi encontrada.' };
+
+describe('clientsRepository.get', () => {
+  it('reads one person by id from GET /clients/{id}, handing the abort signal over', async () => {
+    const client = { id: 'abc', ...INPUT, birthDate: '2015-03-10', status: 'active' };
+    mockGet.mockResolvedValue({ ok: true, data: client });
+    const controller = new AbortController();
+
+    const result = await clientsRepository.get('abc', controller.signal);
+
+    expect(mockGet).toHaveBeenCalledWith('/api/v{version}/clients/{id}', {
+      path: { id: 'abc' },
+      signal: controller.signal,
+    });
+    expect(result).toEqual({ ok: true, data: client });
+  });
+
+  it('forwards a failed result verbatim, without throwing (e.g. a person that no longer exists)', async () => {
+    mockGet.mockResolvedValue({ ok: false, error: NOT_FOUND });
+
+    expect(await clientsRepository.get('abc')).toEqual({ ok: false, error: NOT_FOUND });
+  });
+});
+
+describe('clientsRepository.update', () => {
+  it('puts the whole person with its contacts to PUT /clients/{id}, naming the client in the body too', async () => {
+    const client = { id: 'abc', ...INPUT, status: 'inactive' };
+    mockPut.mockResolvedValue({ ok: true, data: client });
+
+    const result = await clientsRepository.update('abc', INPUT);
+
+    expect(mockPut).toHaveBeenCalledWith('/api/v{version}/clients/{id}', {
+      path: { id: 'abc' },
+      body: { clientId: 'abc', ...INPUT },
+    });
+    expect(result).toEqual({ ok: true, data: client });
+  });
+
+  it('forwards a failed result verbatim, without throwing (e.g. duplicate e-mail)', async () => {
+    const error = { status: 409, code: 'Client.DuplicateEmail', title: 'E-mail em uso.' };
+    mockPut.mockResolvedValue({ ok: false, error });
+
+    expect(await clientsRepository.update('abc', INPUT)).toEqual({ ok: false, error });
+  });
+});
+
+describe('clientsRepository.deactivate and reactivate', () => {
+  it('posts to the deactivate and reactivate routes of that person, with no body', async () => {
+    mockPost.mockResolvedValue({ ok: true, data: { id: 'abc' } });
+
+    await clientsRepository.deactivate('abc');
+    await clientsRepository.reactivate('abc');
+
+    expect(mockPost).toHaveBeenCalledWith('/api/v{version}/clients/{id}/deactivate', {
+      path: { id: 'abc' },
+    });
+    expect(mockPost).toHaveBeenCalledWith('/api/v{version}/clients/{id}/reactivate', {
+      path: { id: 'abc' },
+    });
+  });
+
+  it('forwards a failed result verbatim, without throwing (e.g. a CPF taken while inactive)', async () => {
+    const error = { status: 409, code: 'Client.DuplicateCpf', title: 'CPF em uso.' };
+    mockPost.mockResolvedValue({ ok: false, error });
+
+    expect(await clientsRepository.reactivate('abc')).toEqual({ ok: false, error });
   });
 });

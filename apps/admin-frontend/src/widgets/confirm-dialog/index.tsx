@@ -18,6 +18,7 @@ function ConfirmDialog<T>({
     description = 'Essa ação não pode ser desfeita.',
     icon: ConfirmIcon = Trash2Icon,
     confirmLabel = 'Excluir',
+    confirmVariant = 'destructive',
     cancelLabel = 'Cancelar',
   },
   error: {
@@ -78,6 +79,7 @@ function ConfirmDialog<T>({
             description={description}
             ConfirmIcon={ConfirmIcon}
             confirmLabel={confirmLabel}
+            confirmVariant={confirmVariant}
             cancelLabel={cancelLabel}
             retryLabel={retryLabel}
             failure={problem}

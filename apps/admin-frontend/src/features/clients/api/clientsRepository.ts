@@ -22,8 +22,27 @@ function list(
   });
 }
 
+function get(id: string, signal?: AbortSignal): Promise<ApiResult<Client>> {
+  return servicesApi.get('/api/v{version}/clients/{id}', { path: { id }, signal });
+}
+
 function create(input: ClientInput): Promise<ApiResult<Client>> {
   return servicesApi.post('/api/v{version}/clients', { body: input });
 }
 
-export const clientsRepository = { list, create };
+function update(id: string, input: ClientInput): Promise<ApiResult<Client>> {
+  return servicesApi.put('/api/v{version}/clients/{id}', {
+    path: { id },
+    body: { clientId: id, ...input },
+  });
+}
+
+function deactivate(id: string): Promise<ApiResult<Client>> {
+  return servicesApi.post('/api/v{version}/clients/{id}/deactivate', { path: { id } });
+}
+
+function reactivate(id: string): Promise<ApiResult<Client>> {
+  return servicesApi.post('/api/v{version}/clients/{id}/reactivate', { path: { id } });
+}
+
+export const clientsRepository = { list, get, create, update, deactivate, reactivate };
