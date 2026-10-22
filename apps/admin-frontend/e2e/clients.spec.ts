@@ -172,10 +172,75 @@ test.describe('People list', () => {
     await registerPerson(page, person);
     await searchFor(page, person.name);
 
-    await page.getByRole('link', { name: person.name }).click();
+    await page.getByRole('link', { name: person.name, exact: true }).click();
 
     await expect(page).toHaveURL(/\/pessoas\/[0-9a-f-]{36}$/);
     await expect(page.getByRole('heading', { name: 'Detalhes da pessoa' })).toBeVisible();
     await expect(page.getByText('Em breve', { exact: true })).toBeVisible();
+  });
+});
+
+async function openEditForm(page: Page, name: string): Promise<void> {
+  await searchFor(page, name);
+  await page.getByRole('link', { name: `Editar ${name}` }).click();
+  await expect(page).toHaveURL(/\/pessoas\/[0-9a-f-]{36}\/editar$/);
+  await expect(page.getByRole('heading', { name: 'Editar pessoa' })).toBeVisible();
+}
+
+test.describe('Edit a person', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsDemoUser(page);
+  });
+
+  test('opens the registration form filled with the person and saves the changes', async ({
+    page,
+  }) => {
+    const person = {
+      name: uniqueName('Edicao E2E'),
+      email: `edicao.${Date.now()}@example.com`,
+      cpf: validCpf(),
+    };
+    await registerPerson(page, person);
+    await openEditForm(page, person.name);
+    const section = page.getByRole('region', { name: 'Dados da pessoa' });
+    await expect(section.getByLabel('Nome completo')).toHaveValue(person.name);
+    await expect(section.getByLabel('E-mail')).toHaveValue(person.email);
+    await expect(section.getByLabel('CPF')).toHaveValue(formatCpf(person.cpf));
+
+    const renamed = uniqueName('Editada E2E');
+    await section.getByLabel('Nome completo').fill(renamed);
+    await section.getByLabel('Telefone').fill('(11) 98888-7777');
+    await page.getByRole('button', { name: 'Salvar' }).click();
+
+    await expect(page).toHaveURL(/\/pessoas$/);
+    await expect(page.getByText('Pessoa atualizada')).toBeVisible();
+    await searchFor(page, renamed);
+    const row = page.getByRole('row', { name: new RegExp(renamed) });
+    await expect(row).toContainText('(11) 98888-7777');
+    await expect(row).toContainText(person.email);
+  });
+
+  test('deactivates and reactivates the person from the edit page', async ({ page }) => {
+    const person = {
+      name: uniqueName('Situacao E2E'),
+      email: `situacao.${Date.now()}@example.com`,
+      cpf: validCpf(),
+    };
+    await registerPerson(page, person);
+    await openEditForm(page, person.name);
+    await expect(page.getByText('Ativa', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Desativar pessoa' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Desativar' }).click();
+
+    await expect(page.getByText('Pessoa desativada')).toBeVisible();
+    await expect(page.getByText('Inativa', { exact: true })).toBeVisible();
+
+    await page.getByRole('button', { name: 'Reativar pessoa' }).click();
+    await page.getByRole('dialog').getByRole('button', { name: 'Reativar' }).click();
+
+    await expect(page.getByText('Pessoa reativada')).toBeVisible();
+    await expect(page.getByText('Ativa', { exact: true })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Desativar pessoa' })).toBeVisible();
   });
 });

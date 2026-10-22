@@ -147,14 +147,14 @@ describe('ClientListPage', () => {
     expect(newClient.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('lists name, phone, e-mail, CPF and situation under their own column headers', async () => {
+  it('lists name, phone, e-mail, CPF, situation and actions under their own column headers', async () => {
     renderPage(CLIENTS);
 
     const table = await screen.findByRole('table', { name: 'Pessoas' });
     const headers = within(table)
       .getAllByRole('columnheader')
       .map((header) => header.textContent);
-    expect(headers).toEqual(['Nome', 'Telefone', 'E-mail', 'CPF', 'Situação']);
+    expect(headers).toEqual(['Nome', 'Telefone', 'E-mail', 'CPF', 'Situação', 'Ações']);
 
     const anaRow = screen.getByRole('row', { name: /Ana Souza/ });
     expect(within(anaRow).getByText('(11) 91234-5678')).toBeInTheDocument();
@@ -206,6 +206,18 @@ describe('ClientListPage', () => {
       '/pessoas/c1',
     );
     expect(screen.getByRole('link', { name: 'Bruno Lima' })).toHaveAttribute('href', '/pessoas/c2');
+  });
+
+  it('offers to edit each person, active or inactive, under /pessoas/:id/editar', async () => {
+    renderPage(CLIENTS);
+
+    const edit = await screen.findByRole('link', { name: 'Editar Ana Souza' });
+    expect(edit).toHaveAttribute('href', '/pessoas/c1/editar');
+    expect(edit.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('link', { name: 'Editar Bruno Lima' })).toHaveAttribute(
+      'href',
+      '/pessoas/c2/editar',
+    );
   });
 
   it('limits the search field to what the backend accepts', async () => {

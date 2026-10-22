@@ -5,6 +5,7 @@ import {
   emptyGuardian,
   emptyReferenceContact,
   emptyClientFormFieldValues,
+  toClientFormFieldValues,
   type ClientFormFieldValues,
 } from './clientForm';
 
@@ -326,5 +327,95 @@ describe('emptyClientFormFieldValues', () => {
       guardians: [],
       referenceContacts: [],
     });
+  });
+});
+
+describe('toClientFormFieldValues', () => {
+  it('fills the form with the person as typed: birth date and CPFs masked, missing values empty', () => {
+    expect(
+      toClientFormFieldValues({
+        id: 'c1',
+        fullName: 'Maria Souza',
+        birthDate: '2015-03-10',
+        phone: '(11) 91234-5678',
+        email: null,
+        cpf: '52998224725',
+        administrativeNotes: null,
+        status: 'active',
+        guardians: [
+          { id: 'g1', name: 'Ana Souza', relationship: 'Mãe', phone: null, cpf: '11144477735' },
+        ],
+        referenceContacts: [
+          {
+            id: 'r1',
+            name: 'Carlos Lima',
+            relationship: 'Tio',
+            phone: '11 3333-4444',
+            purposes: ['emergency', 'dailyCommunication'],
+          },
+        ],
+      }),
+    ).toEqual({
+      fullName: 'Maria Souza',
+      birthDate: '10/03/2015',
+      phone: '(11) 91234-5678',
+      email: '',
+      cpf: '529.982.247-25',
+      administrativeNotes: '',
+      guardians: [{ name: 'Ana Souza', relationship: 'Mãe', phone: '', cpf: '111.444.777-35' }],
+      referenceContacts: [
+        {
+          name: 'Carlos Lima',
+          relationship: 'Tio',
+          phone: '11 3333-4444',
+          purposes: ['emergency', 'dailyCommunication'],
+        },
+      ],
+    });
+  });
+
+  it('leaves the birth date and the CPFs empty when the person has none', () => {
+    const values = toClientFormFieldValues({
+      id: 'c1',
+      fullName: 'Maria Souza',
+      birthDate: null,
+      phone: null,
+      email: 'maria@example.com',
+      cpf: null,
+      administrativeNotes: 'Prefere WhatsApp.',
+      status: 'inactive',
+      guardians: [{ id: 'g1', name: 'Ana Souza', relationship: 'Mãe', phone: null, cpf: null }],
+      referenceContacts: [],
+    });
+
+    expect(values).toMatchObject({
+      birthDate: '',
+      cpf: '',
+      email: 'maria@example.com',
+      administrativeNotes: 'Prefere WhatsApp.',
+    });
+    expect(values.guardians[0]?.cpf).toBe('');
+  });
+
+  it('round-trips through the schema to the same person, so saving unchanged sends what was loaded', () => {
+    vi.useFakeTimers({ now: NOON_UTC, toFake: ['Date'] });
+    const parsed = clientFormSchema.parse(
+      toClientFormFieldValues({
+        id: 'c1',
+        fullName: 'Maria Souza',
+        birthDate: '1990-12-31',
+        phone: null,
+        email: null,
+        cpf: '52998224725',
+        administrativeNotes: null,
+        status: 'active',
+        guardians: [],
+        referenceContacts: [],
+      }),
+    );
+    vi.useRealTimers();
+
+    expect(parsed.birthDate).toEqual(utcDate(1990, 12, 31));
+    expect(parsed.cpf).toBe('52998224725');
   });
 });
