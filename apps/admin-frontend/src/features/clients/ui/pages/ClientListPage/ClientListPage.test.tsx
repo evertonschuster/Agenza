@@ -602,7 +602,7 @@ describe('ClientListPage', () => {
       const user = userEvent.setup();
       renderPage(CLIENTS);
       await screen.findByText('Ana Souza');
-      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
       await user.click(await screen.findByRole('option', { name: '50' }));
       await user.type(screen.getByLabelText(SEARCH_LABEL), 'ana');
       await chooseSituation(user, 'Todas');
@@ -720,7 +720,7 @@ describe('ClientListPage', () => {
       await screen.findByText('Pessoa 001');
 
       mockList.mockImplementationOnce(() => pending<ReturnType<typeof listOf>>().promise);
-      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
       await user.click(await screen.findByRole('option', { name: '50' }));
 
       await waitFor(() => expect(container.querySelector('[aria-busy="true"]')).not.toBeNull());
@@ -856,7 +856,7 @@ describe('ClientListPage', () => {
       mockList.mockResolvedValueOnce(
         listOf(everyone.slice(0, 50), { totalCount: 87, page: 1, pageSize: 50 }),
       );
-      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
       await user.click(await screen.findByRole('option', { name: '50' }));
 
       expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();
@@ -931,7 +931,7 @@ describe('ClientListPage', () => {
       await user.click(await screen.findByRole('button', { name: 'Ir para a página 3' }));
       await screen.findByText('Pessoa 041');
 
-      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
       await user.click(await screen.findByRole('option', { name: '50' }));
 
       expect(await screen.findByText('Pessoa 050')).toBeInTheDocument();

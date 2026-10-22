@@ -596,7 +596,7 @@ describe('TagListPage', () => {
       const user = userEvent.setup();
       renderPage(manyTags(45));
       await screen.findByText('Etiqueta 001');
-      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
       await user.click(await screen.findByRole('option', { name: '50' }));
       await user.type(screen.getByLabelText(SEARCH_LABEL), 'etiqueta 00{Enter}');
       await waitFor(() => expect(screen.queryByText('Etiqueta 010')).not.toBeInTheDocument());
@@ -676,7 +676,7 @@ describe('TagListPage', () => {
       await user.click(await screen.findByRole('button', { name: 'Ir para a página 3' }));
       await screen.findByText('Etiqueta 041');
 
-      await user.click(screen.getByRole('combobox', { name: PAGE_SIZE_LABEL }));
+      await user.click(await screen.findByRole('combobox', { name: PAGE_SIZE_LABEL }));
       await user.click(await screen.findByRole('option', { name: '50' }));
 
       expect(await screen.findByText('Etiqueta 045')).toBeInTheDocument();
