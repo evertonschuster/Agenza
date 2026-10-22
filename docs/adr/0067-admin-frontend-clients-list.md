@@ -2,7 +2,8 @@
 
 Status: accepted (2026-10); consumes the contract of [ADR 0063](0063-clients-list-and-search-contract.md) and amends it
 (an omitted `status` lists everyone, point 9); the paging of point 3 arrived with
-[ADR 0070](0070-admin-frontend-list-pagination.md); follows
+[ADR 0070](0070-admin-frontend-list-pagination.md) and its situation filter with
+[ADR 0076](0076-admin-frontend-clients-list-filter-bar.md), which also opens the screen on Ativas; follows
 [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md)
 

@@ -4,12 +4,18 @@ import type {
   PaginatedListState,
 } from '@/widgets/paginated-list-section';
 import type { ClientListItem } from '../../../model/clientList';
+import type { ClientStatusFilter } from '../../../model/clientListFilters';
 
 export interface UseClientListPageResult {
   list: PaginatedListState<ClientListItem>;
   pagination: PaginatedListSectionPaging;
   searchTerm: string;
   searchInputRef: RefObject<HTMLInputElement | null>;
-  onSearchSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
+  statusChoice: ClientStatusFilter;
+  hasPendingFilters: boolean;
+  canClearFilters: boolean;
+  onStatusChoiceChange: (status: ClientStatusFilter) => void;
+  onFiltersSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
   onClearSearch: () => void;
+  onClearFilters: () => void;
 }

@@ -1,21 +1,25 @@
-import { useRef, type SubmitEvent } from 'react';
+import { useRef, useState, type SubmitEvent } from 'react';
 import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { clientsRepository } from '../../../api/clientsRepository';
-import type { ClientListFilters } from '../../../model/clientListFilters';
+import {
+  INITIAL_CLIENT_LIST_FILTERS,
+  type ClientStatusFilter,
+} from '../../../model/clientListFilters';
 import type { UseClientListPageResult } from './useClientListPage.types';
-
-const INITIAL_FILTERS: ClientListFilters = { search: '' };
 
 export function useClientListPage(): UseClientListPageResult {
   const { filters, applyFilters, list, pagination } = usePaginatedList({
-    initialFilters: INITIAL_FILTERS,
+    initialFilters: INITIAL_CLIENT_LIST_FILTERS,
     fetchPage: clientsRepository.list,
   });
   const searchInputRef = useRef<HTMLInputElement>(null);
+  const [statusChoice, setStatusChoice] = useState<ClientStatusFilter>(
+    INITIAL_CLIENT_LIST_FILTERS.status,
+  );
 
-  function onSearchSubmit(event: SubmitEvent<HTMLFormElement>) {
+  function onFiltersSubmit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    applyFilters({ search: searchInputRef.current?.value ?? '' });
+    applyFilters({ search: searchInputRef.current?.value ?? '', status: statusChoice });
   }
 
   function onClearSearch() {
@@ -23,12 +27,25 @@ export function useClientListPage(): UseClientListPageResult {
     applyFilters({ search: '' });
   }
 
+  function onClearFilters() {
+    if (searchInputRef.current) searchInputRef.current.value = '';
+    setStatusChoice(INITIAL_CLIENT_LIST_FILTERS.status);
+    applyFilters(INITIAL_CLIENT_LIST_FILTERS);
+  }
+
   return {
     list,
     pagination,
     searchTerm: filters.search,
     searchInputRef,
-    onSearchSubmit,
+    statusChoice,
+    hasPendingFilters: statusChoice !== filters.status,
+    canClearFilters:
+      filters.search !== INITIAL_CLIENT_LIST_FILTERS.search ||
+      filters.status !== INITIAL_CLIENT_LIST_FILTERS.status,
+    onStatusChoiceChange: setStatusChoice,
+    onFiltersSubmit,
     onClearSearch,
+    onClearFilters,
   };
 }
