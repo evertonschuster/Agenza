@@ -27,8 +27,14 @@ export const SESSION_PROBLEM: ApiProblem = {
   title: 'Sua sessão expirou. Entre novamente.',
 };
 
+export const RATE_LIMIT_PROBLEM: ApiProblem = {
+  status: 429,
+  code: 'RateLimit.Exceeded',
+  title: 'Muitas solicitações em pouco tempo. Aguarde alguns segundos e tente novamente.',
+};
+
 const TRANSIENT_PROBLEM_CODES = new Set(
-  [NETWORK_PROBLEM.code, SESSION_PROBLEM.code, SERVER_PROBLEM.code].filter(
+  [NETWORK_PROBLEM.code, SESSION_PROBLEM.code, SERVER_PROBLEM.code, RATE_LIMIT_PROBLEM.code].filter(
     (code): code is string => code != null,
   ),
 );
@@ -36,10 +42,6 @@ const TRANSIENT_PROBLEM_CODES = new Set(
 export function isTransientProblem(problem: ApiProblem): boolean {
   if (problem.code && TRANSIENT_PROBLEM_CODES.has(problem.code)) return true;
   return Number(problem.status) >= 500;
-}
-
-export function extractErrorMessage(problem: ApiProblem): string {
-  return problem.errors?.['']?.[0]?.message ?? problem.title ?? 'Algo deu errado. Tente novamente.';
 }
 
 const isProblem = (value: unknown): value is ApiProblem =>
@@ -114,6 +116,7 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
   async function run(dispatch: () => Promise<RawResult>): Promise<ApiResult<unknown>> {
     try {
       const { data, error, response } = await dispatch();
+      if (response.status === 429) return fail(RATE_LIMIT_PROBLEM);
       if (!response.ok) return fail(isProblem(error) ? error : SERVER_PROBLEM);
       return ok((data as { data?: unknown } | undefined)?.data);
     } catch (cause) {

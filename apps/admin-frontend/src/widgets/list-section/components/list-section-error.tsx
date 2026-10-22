@@ -5,8 +5,8 @@ function ListSectionError({ title, failure }: ListSectionErrorProps) {
   return (
     <ErrorState
       title={title ?? 'Não foi possível carregar.'}
-      description={failure?.message}
-      code={failure?.code}
+      description={failure?.problem.title ?? undefined}
+      code={failure?.problem.code ?? undefined}
       onRetry={failure?.onRetry}
     />
   );

@@ -23,26 +23,22 @@ export function useTagDeletePage(): UseTagDeletePageResult {
   }, [navigate, canGoBack]);
 
   useEffect(() => {
-    let ignore = false;
+    const controller = new AbortController();
 
-    void tagsRepository.get(id).then((result) => {
-      if (ignore) return;
+    void tagsRepository.get(id, controller.signal).then((result) => {
+      if (controller.signal.aborted) return;
 
       if (result.ok) {
         setTag(result.data);
         return;
       }
 
-      toast.add({
-        title: 'Não foi possível abrir a etiqueta',
-        description: result.error.title ?? undefined,
-        type: 'info',
-      });
+      toast.serverError('Não foi possível abrir a etiqueta', result.error);
       close();
     });
 
     return () => {
-      ignore = true;
+      controller.abort();
     };
   }, [id, close]);
 

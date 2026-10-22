@@ -1,5 +1,6 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 import { cn } from '@/shared/lib/utils';
+import { toast } from './toast-manager';
 
 import {
   ToastProvider,
@@ -12,8 +13,6 @@ import {
   ToastClose,
 } from './components/toast-primitives';
 import { ToastList } from './components/toast-list';
-
-const toast = ToastPrimitive.createToastManager();
 
 function Toast({ className, ...props }: ToastPrimitive.Root.Props) {
   return (

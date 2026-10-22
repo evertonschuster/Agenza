@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { ListSection, type ListSectionColumn } from './index';
 
 interface Item {
@@ -135,13 +136,12 @@ describe('ListSection', () => {
 
   describe('error title and failure', () => {
     const FAILURE = {
-      message: 'O servidor está instável.',
-      code: 'Server.Unavailable',
+      problem: { status: 0, code: 'Server.Unavailable', title: 'O servidor está instável.' },
     };
 
     function renderError(props: {
       errorTitle?: string;
-      failure?: { message: string; code?: string; onRetry?: () => void } | null;
+      failure?: { problem: ApiProblem; onRetry?: () => void } | null;
       status?: 'error' | 'loading' | 'ready';
       items?: Item[];
     }) {

@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import type { ApiProblem } from '@/shared/api/servicesFacade';
 
 export const ListSectionStatus = {
   Loading: 'loading',
@@ -29,8 +30,7 @@ interface ListSectionSearch {
 }
 
 interface ListSectionFailure {
-  message: string;
-  code?: string | undefined;
+  problem: ApiProblem;
   onRetry?: (() => void) | undefined;
 }
 

@@ -92,8 +92,21 @@ describe('tagsRepository.get', () => {
 
     const result = await tagsRepository.get('1');
 
-    expect(mockGet).toHaveBeenCalledWith('/api/v{version}/tags/{id}', { path: { id: '1' } });
+    expect(mockGet).toHaveBeenCalledWith('/api/v{version}/tags/{id}', {
+      path: { id: '1' },
+      signal: undefined,
+    });
     expect(result).toEqual({ ok: true, data: tag });
+  });
+
+  it('hands the abort signal over to the request', async () => {
+    mockGet.mockResolvedValue({ ok: true, data: undefined });
+    const controller = new AbortController();
+
+    await tagsRepository.get('1', controller.signal);
+
+    const [, options] = mockGet.mock.calls.at(-1) as [string, { signal: AbortSignal }];
+    expect(options.signal).toBe(controller.signal);
   });
 
   it('forwards a failed result verbatim (e.g. not found)', async () => {

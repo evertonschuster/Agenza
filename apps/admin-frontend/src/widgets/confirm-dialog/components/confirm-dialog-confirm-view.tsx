@@ -8,6 +8,7 @@ import {
 } from '@/shared/ui/dialog';
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
+import { ProblemCode } from '@/shared/ui/problem-code';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ConfirmDialogConfirmViewProps } from '../confirm-dialog.types';
 
@@ -37,13 +38,16 @@ function ConfirmDialogConfirmView({
           <DialogDescription>{description}</DialogDescription>
         )}
       </DialogHeader>
-      {failure?.transient && (
+      {failure && (
         <div
           role="alert"
           className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
           <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
-          <span>{failure.message}</span>
+          <div>
+            <p>{failure.title}</p>
+            <ProblemCode code={failure.code} className="mt-1" />
+          </div>
         </div>
       )}
       <DialogFooter>
@@ -57,7 +61,7 @@ function ConfirmDialogConfirmView({
           pending={isSubmitting}
           onClick={onConfirm}
         >
-          {failure?.transient ? retryLabel : confirmLabel}
+          {failure ? retryLabel : confirmLabel}
         </ActionButton>
       </DialogFooter>
     </>

@@ -49,10 +49,10 @@ export function useTagFormPage(): UseTagFormPageResult {
 
   useEffect(() => {
     if (!id) return;
-    let ignore = false;
+    const controller = new AbortController();
 
-    void tagsRepository.get(id).then((result) => {
-      if (ignore) return;
+    void tagsRepository.get(id, controller.signal).then((result) => {
+      if (controller.signal.aborted) return;
 
       if (result.ok) {
         methods.reset(toTagFormFieldValues(result.data));
@@ -60,16 +60,12 @@ export function useTagFormPage(): UseTagFormPageResult {
         return;
       }
 
-      toast.add({
-        title: 'Não foi possível abrir a etiqueta',
-        description: result.error.title ?? undefined,
-        type: 'info',
-      });
+      toast.serverError('Não foi possível abrir a etiqueta', result.error);
       close();
     });
 
     return () => {
-      ignore = true;
+      controller.abort();
     };
   }, [id, methods, close]);
 

@@ -1,6 +1,8 @@
 import { Toast as ToastPrimitive } from '@base-ui/react/toast';
 
 import { Toast } from '..';
+import { ProblemCode } from '@/shared/ui/problem-code';
+import type { ToastData } from '../toast.types';
 import { ToastIcon } from './toast-icon';
 import {
   ToastContent,
@@ -11,7 +13,7 @@ import {
 } from './toast-primitives';
 
 function ToastList() {
-  const { toasts } = ToastPrimitive.useToastManager();
+  const { toasts } = ToastPrimitive.useToastManager<ToastData>();
 
   return toasts.map((toastItem) => (
     <Toast key={toastItem.id} toast={toastItem}>
@@ -20,6 +22,7 @@ function ToastList() {
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <ToastTitle />
           <ToastDescription />
+          <ProblemCode code={toastItem.data?.problem?.code} />
         </div>
         <ToastAction />
         <ToastClose />

@@ -4,6 +4,7 @@ import type { paths } from './generated/services-api.d.ts';
 import { MissingSessionError } from './apiClient';
 import {
   NETWORK_PROBLEM,
+  RATE_LIMIT_PROBLEM,
   SERVER_PROBLEM,
   SESSION_PROBLEM,
   createServicesFacade,
@@ -108,6 +109,24 @@ describe('createServicesFacade', () => {
     });
   });
 
+  it('maps a 429 with an empty body to RATE_LIMIT_PROBLEM, not to a failing server', async () => {
+    GET.mockResolvedValue(raw({ error: undefined, status: 429 }));
+
+    expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
+      ok: false,
+      error: RATE_LIMIT_PROBLEM,
+    });
+  });
+
+  it('maps a 429 to RATE_LIMIT_PROBLEM even when the body is a Problem, so the copy stays ours', async () => {
+    const problem = { title: 'Limite excedido.', status: 429, code: 'Throttle.Hit' };
+    DELETE.mockResolvedValue(raw({ error: problem, status: 429 }));
+
+    expect(await api.del('/api/v{version}/categories/{id}', { path: { id: CATEGORY.id } })).toEqual(
+      { ok: false, error: RATE_LIMIT_PROBLEM },
+    );
+  });
+
   it('treats 204 No Content as success with no payload', async () => {
     DELETE.mockResolvedValue(raw({ data: undefined, status: 204 }));
 
@@ -122,6 +141,7 @@ describe('isTransientProblem', () => {
     ['NETWORK_PROBLEM', NETWORK_PROBLEM],
     ['SESSION_PROBLEM', SESSION_PROBLEM],
     ['SERVER_PROBLEM', SERVER_PROBLEM],
+    ['RATE_LIMIT_PROBLEM', RATE_LIMIT_PROBLEM],
   ])('treats %s as transient', (_name, problem) => {
     expect(isTransientProblem(problem)).toBe(true);
   });

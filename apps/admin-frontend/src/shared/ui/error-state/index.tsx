@@ -1,5 +1,6 @@
 import { AlertCircleIcon } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
+import { ProblemCode } from '@/shared/ui/problem-code';
 import { cn } from '@/shared/lib/utils';
 import type { ErrorStateProps } from './error-state.types';
 
@@ -25,7 +26,7 @@ function ErrorState({
       </div>
       <p className="text-sm font-medium">{title}</p>
       {description && <p className="mt-1 text-sm text-muted-foreground">{description}</p>}
-      {code && <p className="mt-1 text-xs text-muted-foreground">Código: {code}</p>}
+      <ProblemCode code={code} className="mt-1" />
       {onRetry && (
         <Button variant="outline" size="sm" className="mt-4" onClick={onRetry}>
           {retryLabel}

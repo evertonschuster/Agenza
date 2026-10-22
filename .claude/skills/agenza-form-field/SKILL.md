@@ -118,7 +118,9 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
 3. **The page shell** wraps its `<form>` in `<FormProvider {...methods}>` — every field component reads
    `register`/`control`/`errors` via `useFormContext()`, not as props. A form-level error is
    `<FormErrorBanner />` — no props, it reads `root.serverError` from context itself and renders
-   nothing when there isn't one.
+   nothing when there isn't one. It shows the problem's code under the message ("Código: …"), as the
+   failure standard asks: `applyApiProblem` keeps the code as the error's `type`, and `'server'`
+   when the problem has none.
 
 4. **Fields are configuration**, not markup. Import the generic components straight from
    `shared/form/fields` — there's no per-entity instantiation step — and give each one the form's
@@ -175,8 +177,10 @@ Router keeps the page mounted when only `:id` changes, so a status set once at m
 record on screen, Salvar enabled, while the new one loads; the derived one can't.
 
 `useForm`'s own `defaultValues` are captured once, synchronously, at mount — they can't wait for an
-async fetch. Fetch in a `useEffect` keyed on the id (the same `ignore`-flag-in-cleanup shape every
-other one-shot fetch in this app uses), and call `methods.reset(values)` once it resolves; don't reach
+async fetch. Fetch in a `useEffect` keyed on the id, with an `AbortController` aborted in the cleanup
+and the answer dropped when its signal is aborted (the shape `usePaginatedList` uses; `StrictMode` runs
+the effect twice in development, and an un-aborted first request still completes), and call
+`methods.reset(values)` once it resolves; don't reach
 for RHF's async-`defaultValues`-promise feature — it doesn't compose with this app's `ApiResult`
 never-throws model, and every other fetch here is a plain effect + explicit status, not a
 framework-owned loading flag. A failed fetch (not-found, or any other `ApiProblem`) is not an inline

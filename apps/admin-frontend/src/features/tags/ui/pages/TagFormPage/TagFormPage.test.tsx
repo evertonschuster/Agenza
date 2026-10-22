@@ -1,3 +1,4 @@
+import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -364,7 +365,39 @@ describe('TagFormPage', () => {
       renderAt(['/tags/1/edit']);
 
       expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
-      expect(mockGet).toHaveBeenCalledWith('1');
+      expect(mockGet).toHaveBeenCalledWith('1', expect.any(AbortSignal));
+    });
+
+    it('aborts the request in flight when the dialog goes away', async () => {
+      mockGet.mockReturnValue(new Promise(() => {}));
+      const { unmount } = renderAt(['/tags/1/edit']);
+      await screen.findByRole('heading', { name: 'Editar etiqueta' });
+      const signal = (mockGet.mock.calls as [string, AbortSignal][])[0]?.[1];
+      expect(signal?.aborted).toBe(false);
+
+      unmount();
+
+      expect(signal?.aborted).toBe(true);
+    });
+
+    it('under StrictMode aborts the first of the two development requests and keeps the second', async () => {
+      render(
+        <StrictMode>
+          <MemoryRouter initialEntries={['/tags/1/edit']}>
+            <Routes>
+              <Route path="tags" element={<TagListPage />}>
+                <Route path=":id/edit" element={<TagFormPage />} />
+              </Route>
+            </Routes>
+          </MemoryRouter>
+        </StrictMode>,
+      );
+
+      expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
+      const signals = (mockGet.mock.calls as [string, AbortSignal][]).map(([, signal]) => signal);
+      expect(signals).toHaveLength(2);
+      expect(signals[0]?.aborted).toBe(true);
+      expect(signals[1]?.aborted).toBe(false);
     });
 
     it('still opens on a deep link when the list fails to load', async () => {
@@ -407,7 +440,7 @@ describe('TagFormPage', () => {
       expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
       expect(screen.getByLabelText('Descrição')).toHaveValue('Desconto temporário');
       expect(screen.getByRole('radio', { name: 'Âmbar' })).toHaveAttribute('aria-checked', 'true');
-      expect(mockGet).toHaveBeenCalledWith('1');
+      expect(mockGet).toHaveBeenCalledWith('1', expect.any(AbortSignal));
     });
 
     it('goes back to loading and saves to the new tag when the route switches ids without remounting the page', async () => {
@@ -527,6 +560,14 @@ describe('TagFormPage', () => {
           expect.objectContaining({
             title: 'Não foi possível abrir a etiqueta',
             description: "Etiqueta 'missing-id' não foi encontrada.",
+            data: {
+              problem: {
+                status: 404,
+                code: 'Tag.NotFound',
+                title: "Etiqueta 'missing-id' não foi encontrada.",
+              },
+            },
+            type: 'error',
           }),
         ),
       );

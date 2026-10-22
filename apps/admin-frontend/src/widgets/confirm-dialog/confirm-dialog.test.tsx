@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ArchiveIcon } from 'lucide-react';
 import { ConfirmDialog } from '.';
-import type { ApiResult } from '@/shared/api/servicesFacade';
+import { RATE_LIMIT_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
 
 const BASE_PROPS = {
   confirmation: {
@@ -175,10 +175,29 @@ describe('ConfirmDialog', () => {
     await user.click(screen.getByRole('button', { name: 'Desativar' }));
 
     expect(screen.getByRole('heading', { name: 'Desativar promoção?' })).toBeInTheDocument();
-    expect(await screen.findByRole('alert')).toHaveTextContent(
-      'Sem conexão com o servidor. Tente novamente.',
-    );
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Sem conexão com o servidor. Tente novamente.');
+    expect(alert).toHaveTextContent('Código: Network.Unreachable');
     expect(screen.queryByRole('button', { name: 'Desativar' })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('offers a retry, not a permanent block, when the failure is a rate limit', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({ ok: false, error: RATE_LIMIT_PROBLEM });
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(RATE_LIMIT_PROBLEM.title ?? '');
+    expect(alert).toHaveTextContent('Código: RateLimit.Exceeded');
+    expect(
+      screen.queryByRole('heading', { name: 'Não é possível desativar' }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Entendi' })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
     expect(onConfirm).toHaveBeenCalledTimes(2);
@@ -238,6 +257,7 @@ describe('ConfirmDialog', () => {
     expect(
       screen.getByText('Esta promoção está em uso e não pode ser desativada.'),
     ).toBeInTheDocument();
+    expect(screen.getByText('Código: Promotion.InUse')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Desativar promoção?' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
 

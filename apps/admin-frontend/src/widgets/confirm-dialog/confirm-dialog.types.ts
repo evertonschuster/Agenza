@@ -1,11 +1,6 @@
 import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
-import type { ApiResult } from '@/shared/api/servicesFacade';
-
-interface ConfirmDialogFailure {
-  message: string;
-  transient: boolean;
-}
+import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
 
 interface ConfirmDialogConfirmation {
   title?: string;
@@ -38,7 +33,7 @@ interface ConfirmDialogProps<T> {
 
 interface ConfirmDialogBlockedViewProps {
   blockedTitle: string;
-  message: string;
+  problem: ApiProblem;
   dismissLabel: string;
 }
 
@@ -49,15 +44,10 @@ interface ConfirmDialogConfirmViewProps {
   confirmLabel: string;
   cancelLabel: string;
   retryLabel: string;
-  failure: ConfirmDialogFailure | undefined;
+  failure: ApiProblem | undefined;
   loading: boolean;
   isSubmitting: boolean;
   onConfirm: () => void;
 }
 
-export type {
-  ConfirmDialogProps,
-  ConfirmDialogFailure,
-  ConfirmDialogBlockedViewProps,
-  ConfirmDialogConfirmViewProps,
-};
+export type { ConfirmDialogProps, ConfirmDialogBlockedViewProps, ConfirmDialogConfirmViewProps };
