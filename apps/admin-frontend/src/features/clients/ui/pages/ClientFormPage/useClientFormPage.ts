@@ -103,7 +103,9 @@ export function useClientFormPage(): UseClientFormPageResult {
         loaded.status === 'active'
           ? clientsRepository.deactivate(loaded.id)
           : clientsRepository.reactivate(loaded.id),
-      onChanged: setClient,
+      onChanged: (changed) => {
+        setClient((current) => (current?.id === changed.id ? changed : current));
+      },
     };
   }
 
