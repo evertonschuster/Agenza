@@ -4,8 +4,8 @@ import type { PageCrumbHandle } from '@/widgets/page-header';
 import { AppRouteError } from './AppRouteError';
 import { RouteHydrateFallback } from './RouteHydrateFallback';
 
-function crumb(label: string): PageCrumbHandle {
-  return { crumb: label };
+function crumb(label: string, options: Omit<PageCrumbHandle, 'crumb'> = {}): PageCrumbHandle {
+  return { crumb: label, ...options };
 }
 
 export const router = createBrowserRouter([
@@ -16,7 +16,7 @@ export const router = createBrowserRouter([
       { path: '/login', element: <LoginPage /> },
       { path: '/callback', element: <AuthCallbackPage /> },
       {
-        handle: crumb('Início'),
+        handle: crumb('Início', { hideInTrail: true }),
         lazy: () =>
           import('./shell/ProtectedAppShell').then((m) => ({ Component: m.ProtectedAppShell })),
         children: [

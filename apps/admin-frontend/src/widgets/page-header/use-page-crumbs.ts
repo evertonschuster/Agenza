@@ -12,6 +12,14 @@ function hasCrumb(handle: unknown): handle is PageCrumbHandle {
 
 export function usePageCrumbs(): PageCrumb[] {
   return useMatches().flatMap((match) =>
-    hasCrumb(match.handle) ? [{ label: match.handle.crumb, to: match.pathname }] : [],
+    hasCrumb(match.handle)
+      ? [
+          {
+            label: match.handle.crumb,
+            to: match.pathname,
+            hideInTrail: match.handle.hideInTrail === true,
+          },
+        ]
+      : [],
   );
 }

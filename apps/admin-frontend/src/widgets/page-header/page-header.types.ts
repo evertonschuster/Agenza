@@ -2,11 +2,13 @@ import type { ReactNode } from 'react';
 
 export interface PageCrumbHandle {
   crumb: string;
+  hideInTrail?: boolean;
 }
 
 export interface PageCrumb {
   label: string;
   to: string;
+  hideInTrail: boolean;
 }
 
 export interface PageHeaderProps {

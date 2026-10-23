@@ -29,9 +29,11 @@ way back. Three forks were asked before coding; the answers are points 1, 2 and 
 3. **A back arrow goes to the level above**, not through the browser history: "Voltar para Pessoas" on
    `/pessoas/nova`, the same target when the page is opened from a link or a bookmark. **Início is the first level of
    every trail**: its crumb sits on the shell route (the pathless layout around every signed-in page, matched at `/`),
-   not on the Home index route, so a list reads "Início › Pessoas" and its arrow goes back to `/`; only Início itself
-   has no arrow. A first version put the crumb on the Home route and left the lists without an arrow; the owner asked
-   the same day for the lists to go back home too. Under the `md` breakpoint the parents are hidden and only the arrow and the title stay; the arrow's accessible name
+   not on the Home index route, so a list's arrow goes back to `/` ("Voltar para Início"); only Início itself has no
+   arrow. The crumb is marked `hideInTrail`: it names the arrow's target and the Home page's own title, but is not
+   shown as a link in the other trails, which read "Pessoas" and "Pessoas › Nova pessoa", since the name of the start
+   page added nothing there. A first version put the crumb on the Home route and left the lists without an arrow; the
+   owner asked the same day for the lists to go back home too, and then for "Início" to leave the trail. Under the `md` breakpoint the parents are hidden and only the arrow and the title stay; the arrow's accessible name
    says where it goes.
 4. **Tests render pages on a data router.** `useMatches` only works under `createMemoryRouter`/`RouterProvider`, so
    page tests declare their routes with the crumbs they need, through `routerAt(routes, initialEntries)` or

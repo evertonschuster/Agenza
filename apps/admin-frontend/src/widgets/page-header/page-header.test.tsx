@@ -109,6 +109,47 @@ describe('PageHeader', () => {
     expect(screen.queryByRole('link', { name: /Voltar/ })).not.toBeInTheDocument();
   });
 
+  it('leaves a crumb marked hideInTrail out of the trail, while the arrow and its own page still use it', async () => {
+    const user = userEvent.setup();
+    renderRoutes(
+      [
+        {
+          handle: { crumb: 'Início', hideInTrail: true },
+          children: [
+            { index: true, element: <PageHeader /> },
+            {
+              path: 'pessoas',
+              handle: { crumb: 'Pessoas' },
+              children: [
+                { index: true, element: <PageHeader /> },
+                { path: 'nova', handle: { crumb: 'Nova pessoa' }, element: <PageHeader /> },
+              ],
+            },
+          ],
+        },
+      ],
+      '/pessoas/nova',
+    );
+
+    expect(
+      trail()
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Pessoas', 'Nova pessoa']);
+
+    await user.click(screen.getByRole('link', { name: 'Voltar para Pessoas' }));
+    expect(
+      trail()
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Pessoas']);
+    expect(trail().queryByRole('link')).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole('link', { name: 'Voltar para Início' }));
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
+    expect(screen.getByRole('heading', { name: 'Início', level: 1 })).toBeInTheDocument();
+  });
+
   it('keeps the trail of the page under a child route that has no crumb, such as a dialog', () => {
     renderRoutes(routes(), '/etiquetas/nova');
 
