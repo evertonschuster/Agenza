@@ -86,6 +86,29 @@ describe('PageHeader', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
+  it('takes a crumb on a layout route with no path as the first level, so a list goes back home', async () => {
+    const user = userEvent.setup();
+    renderRoutes(
+      [
+        {
+          handle: { crumb: 'Início' },
+          children: [
+            { index: true, element: <PageHeader /> },
+            { path: 'pessoas', handle: { crumb: 'Pessoas' }, element: <PageHeader /> },
+          ],
+        },
+      ],
+      '/pessoas',
+    );
+
+    expect(trail().getByRole('link', { name: 'Início' })).toHaveAttribute('href', '/');
+    await user.click(screen.getByRole('link', { name: 'Voltar para Início' }));
+
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/$/);
+    expect(screen.getByRole('heading', { name: 'Início', level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Voltar/ })).not.toBeInTheDocument();
+  });
+
   it('keeps the trail of the page under a child route that has no crumb, such as a dialog', () => {
     renderRoutes(routes(), '/etiquetas/nova');
 

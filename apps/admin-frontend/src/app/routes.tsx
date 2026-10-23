@@ -16,12 +16,12 @@ export const router = createBrowserRouter([
       { path: '/login', element: <LoginPage /> },
       { path: '/callback', element: <AuthCallbackPage /> },
       {
+        handle: crumb('Início'),
         lazy: () =>
           import('./shell/ProtectedAppShell').then((m) => ({ Component: m.ProtectedAppShell })),
         children: [
           {
             index: true,
-            handle: crumb('Início'),
             lazy: () => import('./pages/Home').then((m) => ({ Component: m.Home })),
           },
           {
