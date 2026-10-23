@@ -312,19 +312,30 @@ describe('ClientFormPage', () => {
       await user.type(screen.getByLabelText('Telefone'), 'telefone');
       await user.type(screen.getByLabelText('E-mail'), 'maria@example');
       await user.type(screen.getByLabelText('CPF'), '52998224724');
-      await user.type(screen.getByLabelText('Data de nascimento'), '31022020');
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument();
       expect(screen.getByText('Informe um CPF válido.')).toBeInTheDocument();
       expect(screen.getByText(/Informe um telefone válido/)).toBeInTheDocument();
-      expect(
-        screen.getByText('Informe uma data válida no formato dd/mm/aaaa.'),
-      ).toBeInTheDocument();
       expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
       expect(screen.getByLabelText('E-mail')).toHaveValue('maria@example');
       expect(mockCreate).not.toHaveBeenCalled();
     });
+
+    it.each([['1003'], ['31022020']])(
+      'sends no birth date when %s is not a whole date',
+      async (digits) => {
+        const user = userEvent.setup();
+        renderPage();
+
+        await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+        await user.type(screen.getByLabelText('Data de nascimento'), digits);
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+        await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+        expect(lastPayload()).toMatchObject({ birthDate: null });
+      },
+    );
 
     it.each([
       ['02102026', 'A data de nascimento deve estar no passado.'],
@@ -757,7 +768,7 @@ describe('ClientFormPage', () => {
 const EXISTING: Client = {
   id: 'c1',
   fullName: 'Lia Souza',
-  birthDate: '2016-06-15',
+  birthDate: utcDate(2016, 6, 15),
   phone: '(11) 91234-5678',
   email: 'lia@example.com',
   cpf: '52998224725',
@@ -813,7 +824,7 @@ describe('ClientFormPage, editing a person', () => {
       expect(mockGet).toHaveBeenCalledWith('c1', expect.any(AbortSignal));
     });
 
-    it('fills the same form with what is saved: masked CPF and birth date, contacts included', async () => {
+    it('fills the same form with what is saved: birth date and CPF as dd/mm/aaaa and masked, contacts included', async () => {
       renderEditPage();
 
       expect(await screen.findByLabelText('Nome completo')).toHaveValue('Lia Souza');
@@ -903,7 +914,10 @@ describe('ClientFormPage, editing a person', () => {
 
     it('sends the contacts as they are left in the form, so a removed guardian is gone', async () => {
       const user = userEvent.setup();
-      mockGet.mockResolvedValue({ ok: true, data: { ...EXISTING, birthDate: '1990-01-01' } });
+      mockGet.mockResolvedValue({
+        ok: true,
+        data: { ...EXISTING, birthDate: utcDate(1990, 1, 1) },
+      });
       renderEditPage();
       const guardian = await screen.findByRole('group', { name: 'Responsável 1' });
 

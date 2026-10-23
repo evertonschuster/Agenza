@@ -125,19 +125,21 @@ const INPUT: ClientInput = {
   ],
 };
 
+const RESPONSE = { id: 'abc', ...INPUT, birthDate: '2015-03-10', status: 'active' };
+const CLIENT = { ...RESPONSE, birthDate: utcDate(2015, 3, 10) };
+
 describe('clientsRepository.create', () => {
-  it('posts the whole person with its contacts to POST /clients and forwards the result verbatim', async () => {
-    const client = { id: 'abc', ...INPUT, status: 'active' };
-    mockPost.mockResolvedValue({ ok: true, data: client });
+  it('posts the whole person with its contacts to POST /clients and answers the saved person', async () => {
+    mockPost.mockResolvedValue({ ok: true, data: RESPONSE });
 
     const result = await clientsRepository.create(INPUT);
 
     expect(mockPost).toHaveBeenCalledWith('/api/v{version}/clients', { body: INPUT });
-    expect(result).toEqual({ ok: true, data: client });
+    expect(result).toEqual({ ok: true, data: CLIENT });
   });
 
   it('hands the birth date over as the Date itself, which JSON writes as an instant at midnight UTC', async () => {
-    mockPost.mockResolvedValue({ ok: true, data: {} });
+    mockPost.mockResolvedValue({ ok: true, data: RESPONSE });
 
     await clientsRepository.create(INPUT);
 
@@ -148,7 +150,7 @@ describe('clientsRepository.create', () => {
   });
 
   it('never sends a tenant, only what the person typed', async () => {
-    mockPost.mockResolvedValue({ ok: true, data: {} });
+    mockPost.mockResolvedValue({ ok: true, data: RESPONSE });
 
     await clientsRepository.create(INPUT);
 
@@ -176,8 +178,7 @@ const NOT_FOUND = { status: 404, code: 'Client.NotFound', title: 'A pessoa não 
 
 describe('clientsRepository.get', () => {
   it('reads one person by id from GET /clients/{id}, handing the abort signal over', async () => {
-    const client = { id: 'abc', ...INPUT, birthDate: '2015-03-10', status: 'active' };
-    mockGet.mockResolvedValue({ ok: true, data: client });
+    mockGet.mockResolvedValue({ ok: true, data: RESPONSE });
     const controller = new AbortController();
 
     const result = await clientsRepository.get('abc', controller.signal);
@@ -186,7 +187,18 @@ describe('clientsRepository.get', () => {
       path: { id: 'abc' },
       signal: controller.signal,
     });
-    expect(result).toEqual({ ok: true, data: client });
+    expect(result).toEqual({ ok: true, data: CLIENT });
+  });
+
+  it('reads the yyyy-MM-dd birth date as a Date at midnight UTC, and no birth date as null', async () => {
+    mockGet.mockResolvedValueOnce({ ok: true, data: { ...RESPONSE, birthDate: '1990-12-31' } });
+    mockGet.mockResolvedValueOnce({ ok: true, data: { ...RESPONSE, birthDate: null } });
+
+    const withDate = await clientsRepository.get('abc');
+    const withoutDate = await clientsRepository.get('abc');
+
+    expect(withDate.ok && withDate.data.birthDate).toEqual(utcDate(1990, 12, 31));
+    expect(withoutDate.ok && withoutDate.data.birthDate).toBeNull();
   });
 
   it('forwards a failed result verbatim, without throwing (e.g. a person that no longer exists)', async () => {
@@ -198,8 +210,7 @@ describe('clientsRepository.get', () => {
 
 describe('clientsRepository.update', () => {
   it('puts the whole person with its contacts to PUT /clients/{id}, naming the client in the body too', async () => {
-    const client = { id: 'abc', ...INPUT, status: 'inactive' };
-    mockPut.mockResolvedValue({ ok: true, data: client });
+    mockPut.mockResolvedValue({ ok: true, data: RESPONSE });
 
     const result = await clientsRepository.update('abc', INPUT);
 
@@ -207,7 +218,7 @@ describe('clientsRepository.update', () => {
       path: { id: 'abc' },
       body: { clientId: 'abc', ...INPUT },
     });
-    expect(result).toEqual({ ok: true, data: client });
+    expect(result).toEqual({ ok: true, data: CLIENT });
   });
 
   it('forwards a failed result verbatim, without throwing (e.g. duplicate e-mail)', async () => {
@@ -219,11 +230,11 @@ describe('clientsRepository.update', () => {
 });
 
 describe('clientsRepository.deactivate and reactivate', () => {
-  it('posts to the deactivate and reactivate routes of that person, with no body', async () => {
-    mockPost.mockResolvedValue({ ok: true, data: { id: 'abc' } });
+  it('posts to the deactivate and reactivate routes of that person, with no body, and answers the person', async () => {
+    mockPost.mockResolvedValue({ ok: true, data: RESPONSE });
 
-    await clientsRepository.deactivate('abc');
-    await clientsRepository.reactivate('abc');
+    expect(await clientsRepository.deactivate('abc')).toEqual({ ok: true, data: CLIENT });
+    expect(await clientsRepository.reactivate('abc')).toEqual({ ok: true, data: CLIENT });
 
     expect(mockPost).toHaveBeenCalledWith('/api/v{version}/clients/{id}/deactivate', {
       path: { id: 'abc' },

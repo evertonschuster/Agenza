@@ -14,7 +14,7 @@ export const MAX_REFERENCE_CONTACTS = 10;
 export interface Client {
   id: string;
   fullName: string;
-  birthDate: string | null;
+  birthDate: Date | null;
   phone: string | null;
   email: string | null;
   cpf: string | null;

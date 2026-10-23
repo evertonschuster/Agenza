@@ -1,5 +1,4 @@
 import { z } from 'zod';
-import { formatMaskedDate } from '@/shared/format/date';
 import { ADULT_AGE_IN_YEARS, birthDateSchema } from '@/shared/values/birthDate';
 import { cpfSchema, maskCpf } from '@/shared/values/cpf';
 import { emailSchema } from '@/shared/values/email';
@@ -101,7 +100,7 @@ export type ReferenceContactFormFieldValues = ClientFormFieldValues['referenceCo
 export function emptyClientFormFieldValues(): ClientFormFieldValues {
   return {
     fullName: '',
-    birthDate: '',
+    birthDate: null,
     phone: '',
     email: '',
     cpf: '',
@@ -114,7 +113,7 @@ export function emptyClientFormFieldValues(): ClientFormFieldValues {
 export function toClientFormFieldValues(client: Client): ClientFormFieldValues {
   return {
     fullName: client.fullName,
-    birthDate: client.birthDate === null ? '' : formatMaskedDate(new Date(client.birthDate)),
+    birthDate: client.birthDate,
     phone: client.phone ?? '',
     email: client.email ?? '',
     cpf: client.cpf === null ? '' : maskCpf(client.cpf),

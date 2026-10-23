@@ -26,7 +26,7 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    its last caller.
 2. **One page, one hook, two modes.** `ClientFormPage` and `useClientFormPage` serve both routes: with no `:id` the
    form starts empty and saves through `clientsRepository.create`; with one it loads `clientsRepository.get(id)`,
-   fills the form with `toClientFormFieldValues(client)` (birth date as `dd/mm/aaaa`, CPFs masked, a missing value
+   fills the form with `toClientFormFieldValues(client)` (birth date as it comes, CPFs masked, a missing value
    as `''`) and saves through `clientsRepository.update(id, values)`, which sends `{ clientId: id, ...input }`. The
    schema, the sections and the backend error mapping (`applyApiProblem`) are the same in both modes; the title is
    **Nova pessoa** or **Editar pessoa**, and after a save the page goes back to `/pessoas` with "Pessoa cadastrada" or
@@ -49,6 +49,16 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
 6. **`Client.status` is a `ClientStatus`**, read as the backend sends it. A first version found `status` typed as a
    plain string in `GET`/`PUT` and narrowed it with a `toClientStatus` helper; PR #189 typed the response's `status`
    as the `ClientStatus` enum, as the list item already was, and the helper went away.
+7. **A date is a `Date` in the form too.** A first version filled the birth date with
+   `formatMaskedDate(new Date(client.birthDate))`, because `DateField` kept the masked text `dd/mm/aaaa` in the form
+   and the schema turned it into a `Date` only on submit. The owner asked for the form to hold the `Date` itself:
+   `DateField` keeps the typed text as its own state and gives the form a `Date` once the text is a whole, real day,
+   or `null` otherwise; `clientsRepository` reads the backend's `yyyy-MM-dd` with `parseIsoDate`, so `Client.birthDate`
+   is a `Date | null` and the form takes it as it comes. Every date stays midnight UTC, as before. At the owner's
+   choice the field does not tell the form that the text is half typed: an incomplete or impossible date is saved as
+   no birth date, and the message "Informe uma data válida no formato dd/mm/aaaa." went away.
+   The `dd/mm/aaaa` mask, parse and format, now used only by `DateField`, moved beside it
+   (`shared/form/fields/components/masked-date.ts`).
 
 ## Consequences
 
