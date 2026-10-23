@@ -1,7 +1,15 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import {
+  createMemoryRouter,
+  Link,
+  MemoryRouter,
+  Route,
+  RouterProvider,
+  Routes,
+  useLocation,
+} from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { utcDate } from '@/shared/format/date';
@@ -1061,6 +1069,38 @@ describe('ClientFormPage, editing a person', () => {
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(mockDeactivate).not.toHaveBeenCalled();
       expect(screen.getByText('Ativa')).toBeInTheDocument();
+    });
+
+    it('keeps the person on screen when the situation change of the previous one answers late', async () => {
+      const user = userEvent.setup();
+      const other: Client = { ...EXISTING, id: 'c2', fullName: 'Rui Lima' };
+      mockGet.mockImplementation((id: string) =>
+        Promise.resolve({ ok: true, data: id === 'c2' ? other : EXISTING }),
+      );
+      const pending = deferred<unknown>();
+      mockDeactivate.mockReturnValue(pending.promise);
+      const router = createMemoryRouter(
+        [{ path: '/pessoas/:id/editar', element: <ClientFormPage /> }],
+        { initialEntries: ['/pessoas/c1/editar'] },
+      );
+      render(<RouterProvider router={router} />);
+      await screen.findByDisplayValue('Lia Souza');
+
+      await user.click(screen.getByRole('button', { name: 'Desativar pessoa' }));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desativar' }),
+      );
+      await act(() => router.navigate('/pessoas/c2/editar'));
+      expect(await screen.findByDisplayValue('Rui Lima')).toBeInTheDocument();
+
+      await act(async () => {
+        pending.resolve({ ok: true, data: { ...EXISTING, status: 'inactive' } });
+        await pending.promise;
+      });
+
+      expect(screen.getByLabelText('Nome completo')).toHaveValue('Rui Lima');
+      expect(screen.getByText('Ativa')).toBeInTheDocument();
+      expect(screen.queryByText('Inativa')).not.toBeInTheDocument();
     });
   });
 });
