@@ -24,7 +24,7 @@ export function useClientFormPage(): UseClientFormPageResult {
   const { id } = useParams();
   const navigate = useNavigate();
   const [client, setClient] = useState<Client>();
-  const [isConfirmingStatus, setIsConfirmingStatus] = useState(false);
+  const [confirmingId, setConfirmingId] = useState<string>();
   const isMountedRef = useRef(true);
   const isEdit = id !== undefined;
   const isLoading = isEdit && client?.id !== id;
@@ -94,11 +94,13 @@ export function useClientFormPage(): UseClientFormPageResult {
     return {
       fullName: loaded.fullName,
       status: loaded.status,
-      isConfirming: isConfirmingStatus,
+      isConfirming: confirmingId === loaded.id,
       onOpen: () => {
-        if (!isSaving) setIsConfirmingStatus(true);
+        if (!isSaving) setConfirmingId(loaded.id);
       },
-      onOpenChange: setIsConfirmingStatus,
+      onOpenChange: (open) => {
+        setConfirmingId(open ? loaded.id : undefined);
+      },
       onConfirm: () =>
         loaded.status === 'active'
           ? clientsRepository.deactivate(loaded.id)

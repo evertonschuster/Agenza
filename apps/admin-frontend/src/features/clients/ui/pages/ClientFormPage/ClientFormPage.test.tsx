@@ -1071,7 +1071,7 @@ describe('ClientFormPage, editing a person', () => {
       expect(screen.getByText('Ativa')).toBeInTheDocument();
     });
 
-    it('keeps the person on screen when the situation change of the previous one answers late', async () => {
+    it('keeps the person on screen, with no confirmation of its own, when the situation change of the previous one answers late', async () => {
       const user = userEvent.setup();
       const other: Client = { ...EXISTING, id: 'c2', fullName: 'Rui Lima' };
       mockGet.mockImplementation((id: string) =>
@@ -1092,6 +1092,7 @@ describe('ClientFormPage, editing a person', () => {
       );
       await act(() => router.navigate('/pessoas/c2/editar'));
       expect(await screen.findByDisplayValue('Rui Lima')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'Desativar pessoa?' })).not.toBeInTheDocument();
 
       await act(async () => {
         pending.resolve({ ok: true, data: { ...EXISTING, status: 'inactive' } });
