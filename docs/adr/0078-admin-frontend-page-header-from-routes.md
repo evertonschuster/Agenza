@@ -27,8 +27,11 @@ way back. Three forks were asked before coding; the answers are points 1, 2 and 
    início"). The title is the same size everywhere (`text-lg`, `md:text-xl`), so the lists' `h1` is smaller than
    their former `text-2xl`.
 3. **A back arrow goes to the level above**, not through the browser history: "Voltar para Pessoas" on
-   `/pessoas/nova`, the same target when the page is opened from a link or a bookmark. A first-level page has no arrow.
-   Under the `md` breakpoint the parents are hidden and only the arrow and the title stay; the arrow's accessible name
+   `/pessoas/nova`, the same target when the page is opened from a link or a bookmark. **Início is the first level of
+   every trail**: its crumb sits on the shell route (the pathless layout around every signed-in page, matched at `/`),
+   not on the Home index route, so a list reads "Início › Pessoas" and its arrow goes back to `/`; only Início itself
+   has no arrow. A first version put the crumb on the Home route and left the lists without an arrow; the owner asked
+   the same day for the lists to go back home too. Under the `md` breakpoint the parents are hidden and only the arrow and the title stay; the arrow's accessible name
    says where it goes.
 4. **Tests render pages on a data router.** `useMatches` only works under `createMemoryRouter`/`RouterProvider`, so
    page tests declare their routes with the crumbs they need, through `routerAt(routes, initialEntries)` or
