@@ -1,7 +1,12 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { LoginPage, AuthCallbackPage } from '@/features/auth';
+import type { PageCrumbHandle } from '@/widgets/page-header';
 import { AppRouteError } from './AppRouteError';
 import { RouteHydrateFallback } from './RouteHydrateFallback';
+
+function crumb(label: string): PageCrumbHandle {
+  return { crumb: label };
+}
 
 export const router = createBrowserRouter([
   {
@@ -16,14 +21,17 @@ export const router = createBrowserRouter([
         children: [
           {
             index: true,
+            handle: crumb('Início'),
             lazy: () => import('./pages/Home').then((m) => ({ Component: m.Home })),
           },
           {
             path: 'agenda',
+            handle: crumb('Agenda'),
             lazy: () => import('./pages/Schedule').then((m) => ({ Component: m.Schedule })),
           },
           {
             path: 'pessoas',
+            handle: crumb('Pessoas'),
             children: [
               {
                 index: true,
@@ -32,16 +40,19 @@ export const router = createBrowserRouter([
               },
               {
                 path: 'nova',
+                handle: crumb('Nova pessoa'),
                 lazy: () =>
                   import('@/features/clients').then((m) => ({ Component: m.ClientFormPage })),
               },
               {
                 path: ':id/editar',
+                handle: crumb('Editar pessoa'),
                 lazy: () =>
                   import('@/features/clients').then((m) => ({ Component: m.ClientFormPage })),
               },
               {
                 path: ':id',
+                handle: crumb('Detalhes da pessoa'),
                 lazy: () =>
                   import('./pages/ClientDetails').then((m) => ({ Component: m.ClientDetails })),
               },
@@ -49,15 +60,18 @@ export const router = createBrowserRouter([
           },
           {
             path: 'conversas',
+            handle: crumb('Conversas'),
             lazy: () =>
               import('./pages/Conversations').then((m) => ({ Component: m.Conversations })),
           },
           {
             path: 'servicos',
+            handle: crumb('Serviços'),
             lazy: () => import('./pages/Services').then((m) => ({ Component: m.Services })),
           },
           {
             path: 'tags',
+            handle: crumb('Etiquetas'),
             lazy: () => import('@/features/tags').then((m) => ({ Component: m.TagListPage })),
             children: [
               {
@@ -76,6 +90,7 @@ export const router = createBrowserRouter([
           },
           {
             path: 'ajustes',
+            handle: crumb('Ajustes'),
             lazy: () => import('./pages/Settings').then((m) => ({ Component: m.Settings })),
           },
           { path: '*', element: <Navigate to="/" replace /> },

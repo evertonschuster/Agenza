@@ -1,56 +1,131 @@
-import { describe, expect, it } from 'vitest';
-import { render, screen, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router';
-import { PageHeader, type PageHeaderParent } from './index';
+import { describe, expect, it, vi } from 'vitest';
+import { screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { RouteObject } from 'react-router';
+import { renderRoutes } from '@/test/renderRoutes';
+import { PageHeader, type PageHeaderProps } from './index';
 
-function renderHeader(parents: readonly PageHeaderParent[], title = 'Nova pessoa') {
-  render(
-    <MemoryRouter>
-      <PageHeader parents={parents} title={title} />
-    </MemoryRouter>,
-  );
+function routes(props: PageHeaderProps = {}): RouteObject[] {
+  return [
+    {
+      path: 'pessoas',
+      handle: { crumb: 'Pessoas' },
+      children: [
+        { index: true, element: <PageHeader {...props} /> },
+        { path: 'nova', handle: { crumb: 'Nova pessoa' }, element: <PageHeader {...props} /> },
+        {
+          path: ':id',
+          handle: { crumb: 'Detalhes da pessoa' },
+          children: [
+            { index: true, element: <PageHeader {...props} /> },
+            {
+              path: 'responsaveis',
+              handle: { crumb: 'Responsáveis' },
+              element: <PageHeader {...props} />,
+            },
+          ],
+        },
+      ],
+    },
+    { path: 'sem-rotulo', element: <PageHeader {...props} /> },
+    {
+      path: 'etiquetas',
+      handle: { crumb: 'Etiquetas' },
+      element: <PageHeader {...props} />,
+      children: [{ path: 'nova', element: <p>Diálogo</p> }],
+    },
+  ];
+}
+
+function trail() {
   return within(screen.getByRole('navigation', { name: 'Caminho de navegação' }));
 }
 
 describe('PageHeader', () => {
-  it('links each parent to its place and marks the title as the current page', () => {
-    const trail = renderHeader([{ label: 'Pessoas', to: '/pessoas' }]);
+  it('takes the title from the route it is on and marks it as the current page', () => {
+    renderRoutes(routes(), '/pessoas/nova');
 
-    expect(trail.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('href', '/pessoas');
-    expect(trail.getByRole('heading', { name: 'Nova pessoa', level: 1 })).toHaveAttribute(
+    expect(trail().getByRole('heading', { name: 'Nova pessoa', level: 1 })).toHaveAttribute(
       'aria-current',
       'page',
     );
-    expect(trail.queryByRole('link', { name: 'Nova pessoa' })).not.toBeInTheDocument();
+    expect(trail().queryByRole('link', { name: 'Nova pessoa' })).not.toBeInTheDocument();
   });
 
-  it('keeps every level of a deeper trail reachable, in order', () => {
-    const trail = renderHeader(
-      [
-        { label: 'Pessoas', to: '/pessoas' },
-        { label: 'Maria Souza', to: '/pessoas/42' },
-        { label: 'Responsáveis', to: '/pessoas/42/responsaveis' },
-      ],
-      'Novo responsável',
+  it('builds the trail from every matched route that has a crumb, each one linking to its place', () => {
+    renderRoutes(routes(), '/pessoas/42/responsaveis');
+
+    expect(
+      trail()
+        .getAllByRole('link')
+        .map((link) => link.getAttribute('href')),
+    ).toEqual(['/pessoas', '/pessoas/42']);
+    expect(
+      trail()
+        .getAllByRole('listitem')
+        .map((item) => item.textContent),
+    ).toEqual(['Pessoas', 'Detalhes da pessoa', 'Responsáveis']);
+  });
+
+  it('goes back to the level above, not through the history, from the arrow', async () => {
+    const user = userEvent.setup();
+    renderRoutes(routes(), '/pessoas/42/responsaveis');
+
+    const back = screen.getByRole('link', { name: 'Voltar para Detalhes da pessoa' });
+    expect(back.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    await user.click(back);
+
+    expect(screen.getByTestId('location')).toHaveTextContent(/^\/pessoas\/42$/);
+    expect(screen.getByRole('heading', { name: 'Detalhes da pessoa', level: 1 })).toBeVisible();
+  });
+
+  it('shows only the title, with no arrow, on a first-level page', () => {
+    renderRoutes(routes(), '/pessoas');
+
+    expect(screen.getByRole('heading', { name: 'Pessoas', level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+  });
+
+  it('keeps the trail of the page under a child route that has no crumb, such as a dialog', () => {
+    renderRoutes(routes(), '/etiquetas/nova');
+
+    expect(screen.getByRole('heading', { name: 'Etiquetas', level: 1 })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Voltar/ })).not.toBeInTheDocument();
+  });
+
+  it('hides the parents on narrow screens, where the arrow already says where it goes', () => {
+    renderRoutes(routes(), '/pessoas/nova');
+
+    const parent = trail().getByRole('link', { name: 'Pessoas' }).closest('li');
+    expect(parent).toHaveClass('hidden', 'md:inline-flex');
+    expect(trail().getByRole('heading', { name: 'Nova pessoa' }).closest('li')).not.toHaveClass(
+      'hidden',
+    );
+  });
+
+  it('places the description under the title, the addon beside it and the actions at the end', () => {
+    renderRoutes(
+      routes({
+        description: 'Quem você atende.',
+        titleAddon: <span>Ativa</span>,
+        actions: <button type="button">Nova pessoa</button>,
+      }),
+      '/pessoas',
     );
 
-    expect(trail.getAllByRole('link').map((link) => link.getAttribute('href'))).toEqual([
-      '/pessoas',
-      '/pessoas/42',
-      '/pessoas/42/responsaveis',
-    ]);
-    expect(trail.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
-      'Pessoas',
-      'Maria Souza',
-      'Responsáveis',
-      'Novo responsável',
-    ]);
+    expect(screen.getByText('Quem você atende.')).toBeInTheDocument();
+    expect(screen.getByText('Ativa')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Nova pessoa' })).toBeInTheDocument();
   });
 
-  it('shows only the title when there is no parent', () => {
-    const trail = renderHeader([], 'Início');
+  it('refuses to render on a route with no crumb, instead of showing a page without a title', () => {
+    vi.spyOn(console, 'error').mockImplementation(() => undefined);
 
-    expect(trail.queryByRole('link')).not.toBeInTheDocument();
-    expect(trail.getByRole('heading', { name: 'Início', level: 1 })).toBeInTheDocument();
+    renderRoutes(routes(), '/sem-rotulo');
+
+    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+    expect(screen.getAllByText(/needs a matched route with handle.crumb/).length).toBeGreaterThan(
+      0,
+    );
   });
 });

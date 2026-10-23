@@ -4,6 +4,7 @@ import { Link, Outlet } from 'react-router';
 import type { CountNoun } from '@/shared/format/count';
 import { buttonVariants } from '@/shared/ui/button';
 import type { ListSectionEmptyCopy } from '@/widgets/list-section';
+import { PageHeader } from '@/widgets/page-header';
 import { PaginatedListSection } from '@/widgets/paginated-list-section';
 import { tagColumns } from './components/tagColumns';
 import { TagListFilterBar } from './components/TagListFilterBar';
@@ -23,13 +24,14 @@ export function TagListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Etiquetas</h1>
-        <Link to="new" className={buttonVariants()}>
-          <PlusIcon aria-hidden="true" />
-          Nova etiqueta
-        </Link>
-      </div>
+      <PageHeader
+        actions={
+          <Link to="new" className={buttonVariants()}>
+            <PlusIcon aria-hidden="true" />
+            Nova etiqueta
+          </Link>
+        }
+      />
 
       <FormProvider {...filterForm}>
         <TagListFilterBar {...filterBar} />

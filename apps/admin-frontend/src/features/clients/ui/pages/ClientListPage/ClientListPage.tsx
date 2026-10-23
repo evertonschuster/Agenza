@@ -4,6 +4,7 @@ import { Link } from 'react-router';
 import type { CountNoun } from '@/shared/format/count';
 import { buttonVariants } from '@/shared/ui/button';
 import type { ListSectionEmptyCopy } from '@/widgets/list-section';
+import { PageHeader } from '@/widgets/page-header';
 import { PaginatedListSection } from '@/widgets/paginated-list-section';
 import { NEW_CLIENT_PATH } from '../../clientsPaths';
 import { clientColumns } from './components/clientColumns';
@@ -24,13 +25,14 @@ export function ClientListPage() {
 
   return (
     <div className="space-y-4">
-      <div className="flex items-start justify-between gap-4">
-        <h1 className="text-2xl font-semibold tracking-tight">Pessoas</h1>
-        <Link to={NEW_CLIENT_PATH} className={buttonVariants()}>
-          <PlusIcon aria-hidden="true" />
-          Nova pessoa
-        </Link>
-      </div>
+      <PageHeader
+        actions={
+          <Link to={NEW_CLIENT_PATH} className={buttonVariants()}>
+            <PlusIcon aria-hidden="true" />
+            Nova pessoa
+          </Link>
+        }
+      />
 
       <FormProvider {...filterForm}>
         <ClientListFilterBar {...filterBar} />

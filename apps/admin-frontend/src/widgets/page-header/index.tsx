@@ -1,45 +1,30 @@
-import { Fragment } from 'react';
-import { Link } from 'react-router';
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator,
-} from '@/shared/ui/breadcrumb';
+import { PageHeaderBackLink } from './components/page-header-back-link';
+import { PageHeaderTrail } from './components/page-header-trail';
+import type { PageHeaderProps } from './page-header.types';
+import { usePageCrumbs } from './use-page-crumbs';
 
-interface PageHeaderParent {
-  label: string;
-  to: string;
-}
+function PageHeader({ description, titleAddon, actions }: PageHeaderProps) {
+  const crumbs = usePageCrumbs();
+  const current = crumbs.at(-1);
+  if (!current) throw new Error('PageHeader needs a matched route with handle.crumb.');
 
-interface PageHeaderProps {
-  parents: readonly PageHeaderParent[];
-  title: string;
-}
+  const parents = crumbs.slice(0, -1);
+  const parent = parents.at(-1);
 
-function PageHeader({ parents, title }: PageHeaderProps) {
   return (
-    <Breadcrumb aria-label="Caminho de navegação">
-      <BreadcrumbList className="text-base md:text-lg">
-        {parents.map((parent) => (
-          <Fragment key={parent.to}>
-            <BreadcrumbItem>
-              <BreadcrumbLink render={<Link to={parent.to} />}>{parent.label}</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-          </Fragment>
-        ))}
-        <BreadcrumbItem>
-          <BreadcrumbPage render={<h1 />} className="text-base font-semibold md:text-lg">
-            {title}
-          </BreadcrumbPage>
-        </BreadcrumbItem>
-      </BreadcrumbList>
-    </Breadcrumb>
+    <div className="flex flex-wrap items-start justify-between gap-3">
+      <div className="min-w-0 space-y-1.5">
+        <div className="flex items-center gap-2">
+          {parent && <PageHeaderBackLink parent={parent} />}
+          <PageHeaderTrail parents={parents} title={current.label} />
+          {titleAddon}
+        </div>
+        {description && <p className="text-sm text-muted-foreground">{description}</p>}
+      </div>
+      {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+    </div>
   );
 }
 
 export { PageHeader };
-export type { PageHeaderParent, PageHeaderProps };
+export type { PageCrumbHandle, PageHeaderProps } from './page-header.types';

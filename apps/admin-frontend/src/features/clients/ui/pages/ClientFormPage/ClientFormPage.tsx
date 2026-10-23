@@ -12,12 +12,11 @@ import { useClientFormPage } from './useClientFormPage';
 import { ClientFormStatus } from './useClientFormPage.types';
 
 export function ClientFormPage() {
-  const { status, isEdit, methods, isSaving, canSubmit, statusChange, onSubmit } =
-    useClientFormPage();
+  const { status, methods, isSaving, canSubmit, statusChange, onSubmit } = useClientFormPage();
 
   return (
     <div className="mx-auto w-full max-w-3xl space-y-6">
-      <ClientFormHeader isEdit={isEdit} isSaving={isSaving} statusChange={statusChange} />
+      <ClientFormHeader isSaving={isSaving} statusChange={statusChange} />
       <FormProvider {...methods}>
         <form onSubmit={onSubmit} noValidate className="space-y-6">
           {status === ClientFormStatus.Loading ? (
