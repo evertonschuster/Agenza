@@ -1,15 +1,11 @@
 import { Badge } from '@/shared/ui/badge';
 import { CLIENT_STATUS_LABELS, type ClientStatus } from '../../model/clientStatus';
+import type { ClientStatusBadgeProps } from './ClientStatusBadge.types';
 
 const STATUS_BADGE_VARIANT: Record<ClientStatus, 'success' | 'muted'> = {
   active: 'success',
   inactive: 'muted',
 };
-
-interface ClientStatusBadgeProps {
-  status: ClientStatus;
-  className?: string | undefined;
-}
 
 function ClientStatusBadge({ status, className }: ClientStatusBadgeProps) {
   return (

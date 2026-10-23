@@ -1,12 +1,8 @@
 import { PencilIcon } from 'lucide-react';
 import { Link } from 'react-router';
 import { buttonVariants } from '@/shared/ui/button';
-import type { ClientListItem } from '../../../../model/clientList';
 import { editClientPath } from '../../../clientsPaths';
-
-interface ClientEditLinkProps {
-  client: ClientListItem;
-}
+import type { ClientEditLinkProps } from './ClientEditLink.types';
 
 function ClientEditLink({ client }: ClientEditLinkProps) {
   return (

@@ -3,15 +3,9 @@ import { Button } from '@/shared/ui/button';
 import { PageHeader } from '@/widgets/page-header';
 import { CLIENTS_PATH } from '../../../clientsPaths';
 import { ClientStatusBadge } from '../../../components/ClientStatusBadge';
-import type { ClientStatusChange } from '../useClientFormPage.types';
+import type { ClientFormHeaderProps } from './ClientFormHeader.types';
 
 const PAGE_PARENTS = [{ label: 'Pessoas', to: CLIENTS_PATH }];
-
-interface ClientFormHeaderProps {
-  isEdit: boolean;
-  isSaving: boolean;
-  statusChange: ClientStatusChange | undefined;
-}
 
 function ClientFormHeader({ isEdit, isSaving, statusChange }: ClientFormHeaderProps) {
   return (

@@ -1,10 +1,6 @@
 import { UserCheckIcon, UserXIcon } from 'lucide-react';
 import { ConfirmDialog } from '@/widgets/confirm-dialog';
-import type { ClientStatusChange } from '../useClientFormPage.types';
-
-interface ClientStatusDialogProps {
-  statusChange: ClientStatusChange;
-}
+import type { ClientStatusDialogProps } from './ClientStatusDialog.types';
 
 function ClientStatusDialog({ statusChange }: ClientStatusDialogProps) {
   const { fullName, status, onOpenChange, onConfirm, onChanged } = statusChange;
