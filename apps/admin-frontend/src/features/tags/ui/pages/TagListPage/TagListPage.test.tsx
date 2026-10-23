@@ -2,7 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { StrictMode } from 'react';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import { useLocation } from 'react-router';
+import { routerAt } from '@/test/renderRoutes';
 import { footerSkeleton } from '@/test/footerSkeleton';
 import { pending } from '@/test/pending';
 import { TagListPage } from './TagListPage';
@@ -73,11 +74,21 @@ function LocationProbe() {
 }
 
 function tagListPageAt(initialEntries: string[] = ['/tags']) {
-  return (
-    <MemoryRouter initialEntries={initialEntries}>
-      <TagListPage />
-      <LocationProbe />
-    </MemoryRouter>
+  return routerAt(
+    [
+      {
+        path: 'tags',
+        handle: { crumb: 'Etiquetas' },
+        element: (
+          <>
+            <TagListPage />
+            <LocationProbe />
+          </>
+        ),
+        children: [{ path: 'new' }],
+      },
+    ],
+    initialEntries,
   );
 }
 
@@ -90,19 +101,8 @@ function renderPage(catalog: Tag[], initialEntries?: string[]) {
   return renderTagListPage(initialEntries);
 }
 
-// Only the row-link tests need a real `tags` Route match — relative link resolution needs it to
-// know `/tags` is the route's own base, which a bare, routeless `<TagListPage />` render can't give
-// it. Every other test above renders the page directly and never inspects an href.
 function renderAtTagsRoute(catalog: Tag[]) {
-  serve(catalog);
-  return render(
-    <MemoryRouter initialEntries={['/tags']}>
-      <Routes>
-        <Route path="tags" element={<TagListPage />} />
-      </Routes>
-      <LocationProbe />
-    </MemoryRouter>,
-  );
+  return renderPage(catalog);
 }
 
 function location() {

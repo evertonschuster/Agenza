@@ -24,7 +24,6 @@ export interface ClientStatusChange {
 
 export interface UseClientFormPageResult {
   status: ClientFormStatus;
-  isEdit: boolean;
   methods: UseFormReturn<ClientFormFieldValues, unknown, ClientFormValues>;
   isSaving: boolean;
   canSubmit: boolean;

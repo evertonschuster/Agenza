@@ -4,13 +4,12 @@ import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import {
   createMemoryRouter,
-  MemoryRouter,
   Outlet,
-  Route,
   RouterProvider,
-  Routes,
   useLocation,
+  type RouteObject,
 } from 'react-router';
+import { routerAt } from '@/test/renderRoutes';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagFormPage } from './TagFormPage';
 import type { TagListQuery } from '../../../api/tagsRepository';
@@ -41,39 +40,31 @@ function LocationProbe() {
   return <div data-testid="location">{`location: ${location.pathname}${location.search}`}</div>;
 }
 
+function tagRoutes(): RouteObject[] {
+  return [
+    {
+      path: '/tags',
+      handle: { crumb: 'Etiquetas' },
+      element: (
+        <>
+          <TagListPage />
+          <LocationProbe />
+        </>
+      ),
+      children: [
+        { path: 'new', element: <TagFormPage /> },
+        { path: ':id/edit', element: <TagFormPage /> },
+      ],
+    },
+  ];
+}
+
 function renderAt(initialEntries: string[]) {
-  return render(
-    <MemoryRouter initialEntries={initialEntries}>
-      <Routes>
-        <Route path="tags" element={<TagListPage />}>
-          <Route path="new" element={<TagFormPage />} />
-          <Route path=":id/edit" element={<TagFormPage />} />
-        </Route>
-      </Routes>
-      <LocationProbe />
-    </MemoryRouter>,
-  );
+  return render(routerAt(tagRoutes(), initialEntries));
 }
 
 function renderRouterAt(initialEntries: string[]) {
-  const router = createMemoryRouter(
-    [
-      {
-        path: '/tags',
-        element: (
-          <>
-            <TagListPage />
-            <LocationProbe />
-          </>
-        ),
-        children: [
-          { path: 'new', element: <TagFormPage /> },
-          { path: ':id/edit', element: <TagFormPage /> },
-        ],
-      },
-    ],
-    { initialEntries },
-  );
+  const router = createMemoryRouter(tagRoutes(), { initialEntries });
   render(<RouterProvider router={router} />);
   return router;
 }
@@ -381,17 +372,7 @@ describe('TagFormPage', () => {
     });
 
     it('under StrictMode aborts the first of the two development requests and keeps the second', async () => {
-      render(
-        <StrictMode>
-          <MemoryRouter initialEntries={['/tags/1/edit']}>
-            <Routes>
-              <Route path="tags" element={<TagListPage />}>
-                <Route path=":id/edit" element={<TagFormPage />} />
-              </Route>
-            </Routes>
-          </MemoryRouter>
-        </StrictMode>,
-      );
+      render(<StrictMode>{routerAt(tagRoutes(), ['/tags/1/edit'])}</StrictMode>);
 
       expect(await screen.findByLabelText('Nome')).toHaveValue('Promoção');
       const signals = (mockGet.mock.calls as [string, AbortSignal][]).map(([, signal]) => signal);

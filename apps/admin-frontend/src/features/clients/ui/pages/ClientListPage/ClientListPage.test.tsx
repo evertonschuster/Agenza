@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter, useLocation } from 'react-router';
+import { useLocation } from 'react-router';
+import { routerAt } from '@/test/renderRoutes';
 import { footerSkeleton } from '@/test/footerSkeleton';
 import { pending } from '@/test/pending';
 import { ClientListPage } from './ClientListPage';
@@ -90,10 +91,21 @@ function LocationProbe() {
 
 function renderClientListPage(initialEntries: string[] = ['/pessoas']) {
   return render(
-    <MemoryRouter initialEntries={initialEntries}>
-      <ClientListPage />
-      <LocationProbe />
-    </MemoryRouter>,
+    routerAt(
+      [
+        {
+          path: 'pessoas',
+          handle: { crumb: 'Pessoas' },
+          element: (
+            <>
+              <ClientListPage />
+              <LocationProbe />
+            </>
+          ),
+        },
+      ],
+      initialEntries,
+    ),
   );
 }
 
