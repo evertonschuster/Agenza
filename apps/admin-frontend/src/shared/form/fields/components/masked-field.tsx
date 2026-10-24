@@ -8,6 +8,7 @@ export function MaskedField<T extends FieldValues>({
   label,
   hint,
   mask,
+  unmask,
   ...inputProps
 }: MaskedFieldProps<T>) {
   return (
@@ -18,9 +19,9 @@ export function MaskedField<T extends FieldValues>({
           {...inputProps}
           ref={field.ref}
           name={field.name}
-          value={typeof field.value === 'string' ? field.value : ''}
+          value={mask(typeof field.value === 'string' ? field.value : '')}
           onBlur={field.onBlur}
-          onChange={(event) => field.onChange(mask(event.target.value))}
+          onChange={(event) => field.onChange(unmask(event.target.value))}
         />
       )}
     </ControlledField>

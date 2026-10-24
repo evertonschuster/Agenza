@@ -67,10 +67,11 @@ function operationsOf(document) {
 // keeps its dates as string. Bodies and responses get a Date: JSON.stringify writes it, reviveDates
 // reads it.
 function schemasReachedByParameters(document) {
-  return reachableSchemas(
-    document,
-    operationsOf(document).map((operation) => operation.parameters),
-  );
+  return reachableSchemas(document, [
+    document.components?.parameters,
+    ...Object.values(document.paths ?? {}).map((pathItem) => pathItem.parameters),
+    ...operationsOf(document).map((operation) => operation.parameters),
+  ]);
 }
 
 function resolveRef(schema, document) {
@@ -81,7 +82,13 @@ function resolveRef(schema, document) {
 function holdsDate(schema, document) {
   const target = resolveRef(schema, document);
   if (target?.format === 'date') return true;
-  return target?.items !== undefined && holdsDate(target.items, document);
+
+  return [
+    target?.items,
+    ...(target?.allOf ?? []),
+    ...(target?.anyOf ?? []),
+    ...(target?.oneOf ?? []),
+  ].some((part) => part !== undefined && holdsDate(part, document));
 }
 
 function visitProperties(schema, document, visit) {

@@ -28,6 +28,7 @@ export type TextareaFieldProps<T extends FieldValues> = BaseFieldProps<T> &
 export type MaskedFieldProps<T extends FieldValues> = BaseFieldProps<T> &
   Omit<ComponentProps<typeof Input>, RegisterOwnedProps | FormFieldOwnedProps | 'value'> & {
     mask: (value: string) => string;
+    unmask: (typed: string) => string;
   };
 
 export type DateFieldProps<T extends FieldValues> = BaseFieldProps<T> &
@@ -42,7 +43,7 @@ export type DateFieldProps<T extends FieldValues> = BaseFieldProps<T> &
 type WithOptionalLabel<P> = Omit<P, 'label'> & { label?: string | undefined };
 
 export type CpfFieldProps<T extends FieldValues> = WithOptionalLabel<
-  Omit<MaskedFieldProps<T>, 'mask'>
+  Omit<MaskedFieldProps<T>, 'mask' | 'unmask'>
 >;
 
 export type PhoneFieldProps<T extends FieldValues> = WithOptionalLabel<

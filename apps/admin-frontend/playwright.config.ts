@@ -8,6 +8,7 @@ export default defineConfig({
   reporter: 'list',
   use: {
     baseURL: 'http://localhost:5173',
+    locale: 'pt-BR',
     trace: 'on-first-retry',
   },
   // reuseExistingServer: true so this reuses the Vite dev server Aspire's AppHost already

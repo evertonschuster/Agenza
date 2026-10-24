@@ -62,8 +62,8 @@ Three rules that only hold together:
   responses. Only a schema a parameter reaches (following `$ref`s) stays `string`, since a query
   string cannot carry a `Date`. The DTO's name (`*Command`, `*Input`, `*Request`) does not matter.
   `format: date-time` is never mapped. The generator also writes `generated/dateFields.ts`, the
-  names of every property it typed as `Date`, including a list of dates and a date inside an inline
-  object or a list item, and fails when one of those names is something else in another schema or
+  names of every property it typed as `Date`, including a list of dates, a date inside an inline
+  object or a list item, and a date offered by one member of `allOf`/`anyOf`/`oneOf`, and fails when one of those names is something else in another schema or
   when a date sits in a dictionary (`additionalProperties`), which has no name to match. `scripts/generateApiTypes.test.mjs` pins each case against a fixture document
   (`typesFromDocument`, no backend needed); change the rule there first.
 - **Wire, out.** `createApiClient` sets no `bodySerializer`, so a `Date` in a request body goes out as

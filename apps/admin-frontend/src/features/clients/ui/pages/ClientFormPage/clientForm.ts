@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ADULT_AGE_IN_YEARS, birthDateSchema } from '@/shared/values/birthDate';
-import { cpfSchema, maskCpf } from '@/shared/values/cpf';
+import { cpfSchema } from '@/shared/values/cpf';
 import { emailSchema } from '@/shared/values/email';
 import { phoneSchema } from '@/shared/values/phone';
 import {
@@ -17,6 +17,7 @@ import {
   CONTACT_NAME_MIN_LENGTH,
   CONTACT_RELATIONSHIP_MAX_LENGTH,
 } from '../../../model/clientContact';
+import type { ClientStatus } from '../../../model/clientStatus';
 import { CONTACT_PURPOSES } from '../../../model/contactPurpose';
 
 const nameField = (subject: string, minLength: number, maxLength: number) =>
@@ -92,7 +93,7 @@ export const clientFormSchema = clientFormObject.refine(
   },
 );
 
-export type ClientFormFieldValues = z.input<typeof clientFormSchema>;
+export type ClientFormFieldValues = z.input<typeof clientFormSchema> & { status?: ClientStatus };
 export type ClientFormValues = z.output<typeof clientFormSchema>;
 export type GuardianFormFieldValues = ClientFormFieldValues['guardians'][number];
 export type ReferenceContactFormFieldValues = ClientFormFieldValues['referenceContacts'][number];
@@ -116,13 +117,14 @@ export function toClientFormFieldValues(client: Client): ClientFormFieldValues {
     birthDate: client.birthDate,
     phone: client.phone ?? '',
     email: client.email ?? '',
-    cpf: client.cpf === null ? '' : maskCpf(client.cpf),
+    cpf: client.cpf ?? '',
     administrativeNotes: client.administrativeNotes ?? '',
+    status: client.status,
     guardians: client.guardians.map((guardian) => ({
       name: guardian.name,
       relationship: guardian.relationship,
       phone: guardian.phone ?? '',
-      cpf: guardian.cpf === null ? '' : maskCpf(guardian.cpf),
+      cpf: guardian.cpf ?? '',
     })),
     referenceContacts: client.referenceContacts.map((contact) => ({
       name: contact.name,

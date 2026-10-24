@@ -26,7 +26,7 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    its last caller.
 2. **One page, one hook, two modes.** `ClientFormPage` and `useClientFormPage` serve both routes: with no `:id` the
    form starts empty and saves through `clientsRepository.create`; with one it loads `clientsRepository.get(id)`,
-   fills the form with `toClientFormFieldValues(client)` (birth date as it comes, CPFs masked, a missing value
+   fills the form with `toClientFormFieldValues(client)` (birth date and CPFs as they come, a missing value
    as `''`) and saves through `clientsRepository.update(id, values)`, which sends `{ clientId: id, ...input }`. The
    schema, the sections and the backend error mapping (`applyApiProblem`) are the same in both modes; the title is
    **Nova pessoa** or **Editar pessoa**, and after a save the page goes back to `/pessoas` with "Pessoa cadastrada" or
@@ -55,10 +55,20 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    `DateField` keeps the typed text as its own state and gives the form a `Date` once the text is a whole, real day,
    or `null` otherwise; the API client hands the backend's `yyyy-MM-dd` over as a `Date` (point 8), so
    `Client.birthDate` is a `Date | null` and the form takes it as it comes. Every date stays midnight UTC, as before. At the owner's
-   choice the field does not tell the form that the text is half typed: an incomplete or impossible date is saved as
-   no birth date, and the message "Informe uma data válida no formato dd/mm/aaaa." went away.
+   choice the field first did not tell the form that the text was half typed, saving an incomplete or impossible date
+   as no birth date. Exploratory testing showed what that costs on the edit page: erasing one digit of a saved date
+   and saving deleted the birth date without a word. The owner then asked for the warning back: for text that is not a
+   whole, real day the field gives the form an invalid `Date` (`new Date(NaN)`), `birthDateSchema` refuses it with
+   "Informe uma data válida.", and an empty field is still no birth date.
    The `dd/mm/aaaa` mask, parse and format, now used only by `DateField`, moved beside it
-   (`shared/form/fields/components/masked-date.ts`).
+   (`shared/form/fields/components/masked-date.ts`). Since then the field follows the date format of the person's
+   browser, as the owner asked: `dateLayoutOf(navigator.language)` reads the order of day, month and year and the
+   separator from `Intl`, so pt-BR types `dd/mm/aaaa` and en-US `mm/dd/aaaa`, with the placeholder to match. The
+   labels stay pt-BR, and the e2e and the unit tests pin `pt-BR`.
+   The CPF followed the same rule: a first version filled it with `maskCpf(client.cpf)`, because `MaskedField` kept the
+   masked text in the form. `MaskedField` now takes `mask` (the stored value to the text shown) and `unmask` (the
+   typed text to the stored value), so `CpfField` keeps the 11 digits in the form and shows `529.982.247-25`; the
+   form takes the CPF as it comes. Unlike the date it needs no state of its own, as half a CPF is still digits.
 8. **A date in a response arrives as `Date`.** A first version of point 7 converted the birth date in
    `clientsRepository` with `parseIsoDate`; the owner asked for the deserialization to do it. JSON has no date type and
    openapi-fetch has no hook to parse a body differently, so `scripts/generateApiTypes.mjs` now types `format: date` as

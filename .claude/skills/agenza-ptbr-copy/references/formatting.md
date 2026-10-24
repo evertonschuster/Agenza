@@ -89,6 +89,14 @@ In `admin-frontend` that is `utcDate` in `shared/format/date.ts`; the app holds 
 `Date` from the API response to the form, and only turns it into text where it is shown
 (`formatMaskedDate`, beside `DateField` in `shared/form/fields/components/masked-date.ts`).
 
+**A date's numeric format follows the person's browser, not a pinned `pt-BR`.** The owner's rule: if the
+browser is set to another language, its order is respected. `DateField` builds its layout once with
+`dateLayoutOf(navigator.language)`, reading the order of day, month and year and the separator from
+`Intl.DateTimeFormat(...).formatToParts`, with `numberingSystem: 'latn'` so the digits are the ones a person
+types; pt-BR gets `dd/mm/aaaa`, en-US `mm/dd/aaaa`, sv-SE `aaaa-mm-dd`. Copy (labels, month names in the
+calendar) stays pt-BR. Tests pin the language: `src/vitest-setup.ts` sets `navigator.language` to `pt-BR` and
+`playwright.config.ts` sets `locale: 'pt-BR'`, since jsdom and Desktop Chrome default to en-US.
+
 **"Today" for a form rule is the UTC day, like the backend's, not São Paulo's.** `todayUtc()`
 (`shared/format/date.ts`) is the same calendar date the API uses, so a date the form accepts is one the
 API accepts. The pinned zone above is for *rendering instants*; it is not the answer to "what is

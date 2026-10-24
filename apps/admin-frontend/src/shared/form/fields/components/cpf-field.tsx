@@ -1,5 +1,5 @@
 import type { FieldValues } from 'react-hook-form';
-import { maskCpf } from '@/shared/values/cpf';
+import { cpfDigits, maskCpf } from '@/shared/values/cpf';
 import type { CpfFieldProps } from '../fields.types';
 import { MaskedField } from './masked-field';
 
@@ -13,6 +13,7 @@ export function CpfField<T extends FieldValues>({
       label={label}
       hint={hint}
       mask={maskCpf}
+      unmask={cpfDigits}
       inputMode="numeric"
       placeholder="000.000.000-00"
       autoComplete="off"

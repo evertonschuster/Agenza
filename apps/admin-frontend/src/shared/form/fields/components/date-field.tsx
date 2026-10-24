@@ -13,7 +13,13 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import type { DateFieldProps } from '../fields.types';
 import { ControlledField } from './controlled-field';
-import { formatMaskedDate, maskDate, parseMaskedDate } from './masked-date';
+import {
+  dateLayoutOf,
+  datePlaceholder,
+  formatMaskedDate,
+  maskDate,
+  parseMaskedDate,
+} from './masked-date';
 
 type DateFieldControlProps = Omit<DateFieldProps<FieldValues>, 'hint' | 'label'> &
   FormFieldControlProps & {
@@ -22,6 +28,8 @@ type DateFieldControlProps = Omit<DateFieldProps<FieldValues>, 'hint' | 'label'>
     onChange: (value: Date | null) => void;
     onBlur: () => void;
   };
+
+const LAYOUT = dateLayoutOf(navigator.language);
 
 export function DateField<T extends FieldValues>({
   name,
@@ -52,7 +60,7 @@ function DateFieldControl({
   onChange,
   minDate,
   maxDate,
-  placeholder = 'dd/mm/aaaa',
+  placeholder = datePlaceholder(LAYOUT),
   ...inputProps
 }: DateFieldControlProps) {
   const { setFocus } = useFormContext();
@@ -75,13 +83,13 @@ function DateFieldControl({
   }
 
   function selectDate(picked: Date) {
-    change(formatMaskedDate(picked), picked);
+    change(formatMaskedDate(picked, LAYOUT), picked);
     setOpen(false);
   }
 
   function type(typed: string) {
-    const masked = maskDate(typed);
-    change(masked, parseMaskedDate(masked));
+    const masked = maskDate(typed, LAYOUT);
+    change(masked, dateOf(masked));
   }
 
   function clearFromField() {
@@ -156,8 +164,13 @@ function DateFieldControl({
   );
 }
 
+function dateOf(masked: string): Date | null {
+  if (masked === '') return null;
+  return parseMaskedDate(masked, LAYOUT) ?? new Date(Number.NaN);
+}
+
 function textOf(date: Date | null): string {
-  return date === null ? '' : formatMaskedDate(date);
+  return date === null ? '' : formatMaskedDate(date, LAYOUT);
 }
 
 function isSameDay(a: Date | null, b: Date | null): boolean {

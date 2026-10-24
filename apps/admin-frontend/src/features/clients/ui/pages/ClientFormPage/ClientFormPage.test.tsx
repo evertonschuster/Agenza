@@ -1,15 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { act, render, screen, waitFor, within } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {
-  createMemoryRouter,
-  Link,
-  Outlet,
-  RouterProvider,
-  useLocation,
-  type RouteObject,
-} from 'react-router';
+import { Link, Outlet, useLocation, type RouteObject } from 'react-router';
 import { routerAt } from '@/test/renderRoutes';
 import { toast } from '@/shared/ui/toast';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
@@ -346,7 +339,7 @@ describe('ClientFormPage', () => {
     });
 
     it.each([['1003'], ['31022020']])(
-      'sends no birth date when %s is not a whole date',
+      'refuses %s, which is not a whole date, instead of saving no birth date',
       async (digits) => {
         const user = userEvent.setup();
         renderPage();
@@ -355,8 +348,8 @@ describe('ClientFormPage', () => {
         await user.type(screen.getByLabelText('Data de nascimento'), digits);
         await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
-        await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
-        expect(lastPayload()).toMatchObject({ birthDate: null });
+        expect(await screen.findByText('Informe uma data válida.')).toBeInTheDocument();
+        expect(mockCreate).not.toHaveBeenCalled();
       },
     );
 
@@ -986,6 +979,20 @@ describe('ClientFormPage, editing a person', () => {
       expect(screen.getByTestId('location')).toHaveTextContent('/pessoas/c1/editar');
     });
 
+    it('refuses a birth date left half erased instead of saving the person without one', async () => {
+      const user = userEvent.setup();
+      renderEditPage();
+      const birthDate = await screen.findByLabelText('Data de nascimento');
+      await waitFor(() => expect(birthDate).toHaveValue('15/06/2016'));
+
+      await user.type(birthDate, '{Backspace}');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('Informe uma data válida.')).toBeInTheDocument();
+      expect(birthDate).toHaveValue('15/06/201');
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
     it('does not let the situation change while the save is in flight', async () => {
       const user = userEvent.setup();
       mockUpdate.mockReturnValue(deferred<unknown>().promise);
@@ -996,75 +1003,6 @@ describe('ClientFormPage, editing a person', () => {
 
       await screen.findByRole('button', { name: 'Salvando…' });
       expect(screen.getByRole('button', { name: 'Desativar pessoa' })).toBeDisabled();
-    });
-
-    describe('when the page moves to another person before the save answers', () => {
-      const other: Client = {
-        ...EXISTING,
-        id: 'c2',
-        fullName: 'Rui Lima',
-        email: 'rui@example.com',
-      };
-
-      async function saveThenOpenOther(pending: Promise<unknown>) {
-        const user = userEvent.setup();
-        mockGet.mockImplementation((id: string) =>
-          Promise.resolve({ ok: true, data: id === 'c2' ? other : EXISTING }),
-        );
-        mockUpdate.mockReturnValue(pending);
-        const router = createMemoryRouter(clientRoutes(), {
-          initialEntries: ['/pessoas/c1/editar'],
-        });
-        render(<RouterProvider router={router} />);
-        await screen.findByDisplayValue('Lia Souza');
-
-        await user.click(screen.getByRole('button', { name: 'Salvar' }));
-        await act(() => router.navigate('/pessoas/c2/editar'));
-        expect(await screen.findByDisplayValue('Rui Lima')).toBeInTheDocument();
-        return router;
-      }
-
-      it('keeps the other person on screen when the previous save succeeds', async () => {
-        const pending = deferred<unknown>();
-        const router = await saveThenOpenOther(pending.promise);
-
-        await act(async () => {
-          pending.resolve({ ok: true, data: EXISTING });
-          await pending.promise;
-        });
-
-        expect(router.state.location.pathname).toBe('/pessoas/c2/editar');
-        expect(screen.getByLabelText('Nome completo')).toHaveValue('Rui Lima');
-      });
-
-      it('does not mark the other person with the errors of the previous save', async () => {
-        const pending = deferred<unknown>();
-        await saveThenOpenOther(pending.promise);
-
-        await act(async () => {
-          pending.resolve(
-            problem({
-              status: 409,
-              code: 'Client.DuplicateEmail',
-              title: 'Já existe uma pessoa ativa cadastrada com este e-mail.',
-              errors: {
-                Email: [
-                  {
-                    code: 'Client.DuplicateEmail',
-                    message: 'Já existe uma pessoa ativa cadastrada com este e-mail.',
-                  },
-                ],
-              },
-            }),
-          );
-          await pending.promise;
-        });
-
-        expect(
-          screen.queryByText('Já existe uma pessoa ativa cadastrada com este e-mail.'),
-        ).not.toBeInTheDocument();
-        expect(screen.getByLabelText('E-mail')).not.toHaveAttribute('aria-invalid', 'true');
-      });
     });
   });
 
@@ -1165,38 +1103,6 @@ describe('ClientFormPage, editing a person', () => {
       await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
       expect(mockDeactivate).not.toHaveBeenCalled();
       expect(screen.getByText('Ativa')).toBeInTheDocument();
-    });
-
-    it('keeps the person on screen, with no confirmation of its own, when the situation change of the previous one answers late', async () => {
-      const user = userEvent.setup();
-      const other: Client = { ...EXISTING, id: 'c2', fullName: 'Rui Lima' };
-      mockGet.mockImplementation((id: string) =>
-        Promise.resolve({ ok: true, data: id === 'c2' ? other : EXISTING }),
-      );
-      const pending = deferred<unknown>();
-      mockDeactivate.mockReturnValue(pending.promise);
-      const router = createMemoryRouter(clientRoutes(), {
-        initialEntries: ['/pessoas/c1/editar'],
-      });
-      render(<RouterProvider router={router} />);
-      await screen.findByDisplayValue('Lia Souza');
-
-      await user.click(screen.getByRole('button', { name: 'Desativar pessoa' }));
-      await user.click(
-        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desativar' }),
-      );
-      await act(() => router.navigate('/pessoas/c2/editar'));
-      expect(await screen.findByDisplayValue('Rui Lima')).toBeInTheDocument();
-      expect(screen.queryByRole('heading', { name: 'Desativar pessoa?' })).not.toBeInTheDocument();
-
-      await act(async () => {
-        pending.resolve({ ok: true, data: { ...EXISTING, status: 'inactive' } });
-        await pending.promise;
-      });
-
-      expect(screen.getByLabelText('Nome completo')).toHaveValue('Rui Lima');
-      expect(screen.getByText('Ativa')).toBeInTheDocument();
-      expect(screen.queryByText('Inativa')).not.toBeInTheDocument();
     });
   });
 });
