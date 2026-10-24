@@ -1,8 +1,8 @@
 import { PlusIcon } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
-import { Link, Outlet } from 'react-router';
+import { Outlet } from 'react-router';
 import type { CountNoun } from '@/shared/format/count';
-import { buttonVariants } from '@/shared/ui/button';
+import { ActionLink } from '@/shared/ui/action-link';
 import type { ListSectionEmptyCopy } from '@/widgets/list-section';
 import { PageHeader } from '@/widgets/page-header';
 import { PaginatedListSection } from '@/widgets/paginated-list-section';
@@ -26,10 +26,9 @@ export function TagListPage() {
     <div className="space-y-4">
       <PageHeader
         actions={
-          <Link to="new" className={buttonVariants()}>
-            <PlusIcon aria-hidden="true" />
+          <ActionLink to="new" icon={PlusIcon}>
             Nova etiqueta
-          </Link>
+          </ActionLink>
         }
       />
 

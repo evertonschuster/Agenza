@@ -1,7 +1,6 @@
 import type { LucideIcon } from 'lucide-react';
-import { Link } from 'react-router';
 import { Badge } from '@/shared/ui/badge';
-import { buttonVariants } from '@/shared/ui/button';
+import { ActionLink } from '@/shared/ui/action-link';
 import { PageHeader } from '@/widgets/page-header';
 
 export interface ComingSoonProps {
@@ -18,9 +17,9 @@ export function ComingSoon({ icon: Icon, description }: ComingSoonProps) {
           <Icon className="size-7" aria-hidden="true" />
         </div>
         <p className="max-w-md text-sm text-muted-foreground">{description}</p>
-        <Link to="/" className={buttonVariants({ variant: 'outline' })}>
+        <ActionLink to="/" variant="outline">
           Voltar para o início
-        </Link>
+        </ActionLink>
       </div>
     </div>
   );

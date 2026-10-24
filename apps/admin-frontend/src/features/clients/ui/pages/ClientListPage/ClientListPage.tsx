@@ -1,8 +1,7 @@
 import { PlusIcon } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
-import { Link } from 'react-router';
 import type { CountNoun } from '@/shared/format/count';
-import { buttonVariants } from '@/shared/ui/button';
+import { ActionLink } from '@/shared/ui/action-link';
 import type { ListSectionEmptyCopy } from '@/widgets/list-section';
 import { PageHeader } from '@/widgets/page-header';
 import { PaginatedListSection } from '@/widgets/paginated-list-section';
@@ -27,10 +26,9 @@ export function ClientListPage() {
     <div className="space-y-4">
       <PageHeader
         actions={
-          <Link to={NEW_CLIENT_PATH} className={buttonVariants()}>
-            <PlusIcon aria-hidden="true" />
+          <ActionLink to={NEW_CLIENT_PATH} icon={PlusIcon}>
             Nova pessoa
-          </Link>
+          </ActionLink>
         }
       />
 

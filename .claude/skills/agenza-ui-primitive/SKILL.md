@@ -149,17 +149,17 @@ Full token system, focus ring, dark elevation, and the backend-hex technique: al
 
 ## 5. Actions, labels and focus
 
-Use `ActionButton` for button actions needing an icon or pending state. For a navigation
-link styled as a button, use `Link` with `buttonVariants`; a dedicated `LinkButton` wrapper
-was removed when its only consumer could use `Link` directly.
+Use `ActionButton` for an action on click, with an optional icon or pending state, and
+`ActionLink` (`shared/ui/action-link`) for navigation that looks like a button: a react-router
+`Link` with the same `icon`, `variant` and `size` as `ActionButton`, still announced as a
+link. Don't write `Link` + `buttonVariants` by hand. A link that shows only its icon takes an
+`aria-label`.
 
 ```tsx
 <ActionButton icon={Plus} onClick={announceComingSoon}>Novo serviço</ActionButton>
 <ActionButton type="submit" pending={isSaving} disabled={!canSubmit}>Salvar</ActionButton>
-<Link to={newTagTo} className={buttonVariants()}>
-  <PlusIcon aria-hidden="true" />
-  Nova etiqueta
-</Link>
+<ActionLink to="new" icon={PlusIcon}>Nova etiqueta</ActionLink>
+<ActionLink to={editClientPath(client.id)} icon={PencilIcon} variant="ghost" size="icon-sm" aria-label={`Editar ${client.fullName}`} />
 ```
 
 `ActionButton` swaps the icon for a spinner and disables the button while `pending`. Every
