@@ -32,6 +32,7 @@ function openApiDocument() {
         },
         post: { requestBody: json('AgendaFilter'), responses: ok('PersonResponse') },
       },
+      '/calendar': { get: { responses: ok('CalendarResponse') } },
     },
     components: {
       schemas: {
@@ -67,6 +68,17 @@ function openApiDocument() {
           required: ['day'],
           properties: { day: { type: 'string', format: 'date' } },
         },
+        CalendarResponse: {
+          type: 'object',
+          properties: {
+            holidays: { type: ['null', 'array'], items: { type: 'string', format: 'date' } },
+            window: { type: 'object', properties: { opensOn: { type: 'string', format: 'date' } } },
+            visitsLog: {
+              type: 'array',
+              items: { type: 'object', properties: { seenOn: { type: 'string', format: 'date' } } },
+            },
+          },
+        },
         AgendaFilter: {
           type: 'object',
           required: ['from'],
@@ -82,37 +94,44 @@ function typeOf(types, schemaName, property) {
   return block.match(new RegExp(`\\b${property}\\??: ([^;]+);`))?.[1];
 }
 
+async function typesOf(document = openApiDocument()) {
+  return (await typesFromDocument(document)).types;
+}
+
 describe('typesFromDocument', () => {
-  it('types a date sent only in a request body as Date, whatever the schema is called', async () => {
-    const types = await typesFromDocument(openApiDocument());
+  it('types a date in a request body as Date, whatever the schema is called', async () => {
+    const types = await typesOf();
 
     expect(typeOf(types, 'CreatePersonRequest', 'birthDate')).toBe('null | Date');
     expect(typeOf(types, 'CreatePersonRequest', 'firstVisit')).toBe('Date');
   });
 
   it('follows $ref from the request body into nested schemas', async () => {
-    const types = await typesFromDocument(openApiDocument());
+    const types = await typesOf();
 
     expect(typeOf(types, 'GuardianPayload', 'since')).toBe('Date');
   });
 
-  it('keeps a date in a response as string, since JSON cannot return a Date', async () => {
-    const types = await typesFromDocument(openApiDocument());
-
-    expect(typeOf(types, 'PersonResponse', 'birthDate')).toBe('null | string');
-  });
-
   it.each([
-    ['a schema also used by a response', 'EventBody', 'day'],
-    ['a schema also used by a parameter', 'AgendaFilter', 'from'],
-  ])('keeps the date of %s as string', async (_, schemaName, property) => {
-    const types = await typesFromDocument(openApiDocument());
+    ['a response', 'PersonResponse', 'birthDate', 'null | Date'],
+    ['a schema used by a request and a response', 'EventBody', 'day', 'Date'],
+  ])(
+    'types the date of %s as Date, since reviveDates reads it',
+    async (_, schema, property, expected) => {
+      const types = await typesOf();
 
-    expect(typeOf(types, schemaName, property)).toBe('string');
+      expect(typeOf(types, schema, property)).toBe(expected);
+    },
+  );
+
+  it('keeps the date of a schema a query parameter reaches as string, since a query string cannot carry a Date', async () => {
+    const types = await typesOf();
+
+    expect(typeOf(types, 'AgendaFilter', 'from')).toBe('string');
   });
 
   it('never maps an instant, even in a request body', async () => {
-    const types = await typesFromDocument(openApiDocument());
+    const types = await typesOf();
 
     expect(typeOf(types, 'CreatePersonRequest', 'createdAt')).toBe('string');
   });
@@ -124,14 +143,14 @@ describe('typesFromDocument', () => {
   ])(
     'types %s that ASP.NET also reads from text as a plain number',
     async (_, property, expected) => {
-      const types = await typesFromDocument(openApiDocument());
+      const types = await typesOf();
 
       expect(typeOf(types, 'PersonResponse', property)).toBe(expected);
     },
   );
 
   it('types a numeric query parameter as a plain number', async () => {
-    const types = await typesFromDocument(openApiDocument());
+    const types = await typesOf();
 
     expect(types).toMatch(/\bPage\?: number;/);
   });
@@ -140,8 +159,56 @@ describe('typesFromDocument', () => {
     ['a plain integer', 'age', 'number'],
     ['a nullable string', 'nickname', 'null | string'],
   ])('leaves %s as it was', async (_, property, expected) => {
-    const types = await typesFromDocument(openApiDocument());
+    const types = await typesOf();
 
     expect(typeOf(types, 'PersonResponse', property)).toBe(expected);
+  });
+});
+
+describe('the date field names', () => {
+  it('lists every property typed as Date, once and sorted, for reviveDates', async () => {
+    const { dateFields } = await typesFromDocument(openApiDocument());
+
+    expect(dateFields).toEqual([
+      'birthDate',
+      'day',
+      'firstVisit',
+      'holidays',
+      'opensOn',
+      'seenOn',
+      'since',
+    ]);
+  });
+
+  it('types a list of dates and the dates of inline objects as Date, so the names above cover them', async () => {
+    const types = await typesOf();
+
+    expect(types).toMatch(/\bholidays\?: null \| Date\[\];/);
+    expect(types).toMatch(/\bopensOn\?: Date;/);
+    expect(types).toMatch(/\bseenOn\?: Date;/);
+  });
+
+  it('refuses a date inside a dictionary, which has no property name to match', async () => {
+    const document = openApiDocument();
+    document.components.schemas.CalendarResponse.properties.byRoom = {
+      type: 'object',
+      additionalProperties: { type: 'string', format: 'date' },
+    };
+
+    await expect(typesFromDocument(document)).rejects.toThrow(/dictionary/);
+  });
+
+  it('refuses a date name that another schema uses for something else', async () => {
+    const document = openApiDocument();
+    document.components.schemas.PersonResponse.properties.since = { type: ['null', 'string'] };
+
+    await expect(typesFromDocument(document)).rejects.toThrow(/since/);
+  });
+
+  it('refuses a date name that a parameter schema keeps as string', async () => {
+    const document = openApiDocument();
+    document.components.schemas.AgendaFilter.properties.day = { type: 'string', format: 'date' };
+
+    await expect(typesFromDocument(document)).rejects.toThrow(/day/);
   });
 });

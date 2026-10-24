@@ -145,8 +145,9 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
 
 5. **A CPF, phone, e-mail or birth date is not configured by hand: reuse the pair.** The schema half
    comes from that value's file in `@/shared/values/` (`cpfSchema` from `@/shared/values/cpf`, then
-   `phoneSchema`, `emailSchema`, `birthDateSchema`: an empty field becomes `null`, anything else is
-   parsed and fails with the pt-BR message), the
+   `phoneSchema`, `emailSchema`: an empty field becomes `null`, anything else is parsed and fails
+   with the pt-BR message; `birthDateSchema` takes the `Date | null` that `DateField` keeps in the
+   form and checks it), the
    field half from `@/shared/form/fields` (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`:
    mask, input type, limit, placeholder, default label and `opcional` hint already set, each one
    overridable by prop):

@@ -1,7 +1,7 @@
 import type { Client } from 'openapi-fetch';
 import type { MediaType, PathsWithMethod, SuccessResponse } from 'openapi-typescript-helpers';
 import { ok, fail, type Result } from '@/shared/result';
-import { MissingSessionError } from './apiClient';
+import { MissingSessionError, reviveDates } from './apiClient';
 import type { components, paths } from './generated/services-api.d.ts';
 
 const API_VERSION = '1.0';
@@ -118,7 +118,7 @@ export function createServicesFacade(client: Client<paths>): ServicesApi {
       const { data, error, response } = await dispatch();
       if (response.status === 429) return fail(RATE_LIMIT_PROBLEM);
       if (!response.ok) return fail(isProblem(error) ? error : SERVER_PROBLEM);
-      return ok((data as { data?: unknown } | undefined)?.data);
+      return ok(reviveDates((data as { data?: unknown } | undefined)?.data));
     } catch (cause) {
       return fail(cause instanceof MissingSessionError ? SESSION_PROBLEM : NETWORK_PROBLEM);
     }
