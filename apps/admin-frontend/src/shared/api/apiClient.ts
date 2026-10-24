@@ -1,7 +1,6 @@
 import createClient, { type Client } from 'openapi-fetch';
 import type { paths } from './generated/services-api.d.ts';
 import { loadEnv } from '@/shared/env';
-import { formatIsoDate } from '@/shared/format/date';
 
 export interface ApiClientCredentials {
   accessToken: string | null;
@@ -15,16 +14,6 @@ export class MissingSessionError extends Error {
   }
 }
 
-export function serializeBody(body: unknown): string {
-  return JSON.stringify(
-    body,
-    function (this: Record<string, unknown>, key: string, value: unknown) {
-      const original = this[key];
-      return original instanceof Date ? formatIsoDate(original) : value;
-    },
-  );
-}
-
 /** Single entry point for services-service (contracts/api-client-contract.md). Narrow
  * `{ accessToken, tenantId }` shape, not auth's types — `shared/` can't depend on `features/*`.
  * Takes a getter, not a value: the client is meant to be built once and reused, and reading
@@ -32,7 +21,7 @@ export function serializeBody(body: unknown): string {
  * across token renewal and tenant changes. */
 export function createApiClient(getCredentials: () => ApiClientCredentials): Client<paths> {
   const env = loadEnv();
-  const client = createClient<paths>({ baseUrl: env.apiBaseUrl, bodySerializer: serializeBody });
+  const client = createClient<paths>({ baseUrl: env.apiBaseUrl });
 
   client.use({
     onRequest({ request }) {
