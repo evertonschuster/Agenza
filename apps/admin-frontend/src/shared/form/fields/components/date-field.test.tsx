@@ -43,7 +43,10 @@ function Harness({ initial = null, reloadTo, disabled = false, readOnly = false 
 function CurrentValue() {
   const { control } = useFormContext<DummyValues>();
   const birthDate = useWatch({ control, name: 'birthDate' });
-  return <output aria-label="valor do formulário">{birthDate?.toISOString().slice(0, 10)}</output>;
+  const shown =
+    birthDate &&
+    (Number.isNaN(birthDate.getTime()) ? 'inválida' : birthDate.toISOString().slice(0, 10));
+  return <output aria-label="valor do formulário">{shown}</output>;
 }
 
 function input() {
@@ -67,7 +70,7 @@ describe('DateField', () => {
     await user.type(input(), '200519');
 
     expect(input()).toHaveValue('20/05/19');
-    expect(screen.getByLabelText('valor do formulário')).toBeEmptyDOMElement();
+    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('inválida');
 
     await user.type(input(), '90');
 
@@ -75,13 +78,22 @@ describe('DateField', () => {
     expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('1990-05-20');
   });
 
-  it('keeps no Date in the form for a day that does not exist, while showing what was typed', async () => {
+  it('holds an invalid Date for a day that does not exist, so the schema can refuse it, while showing what was typed', async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     await user.type(input(), '31022020');
 
     expect(input()).toHaveValue('31/02/2020');
+    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('inválida');
+  });
+
+  it('holds no date once what was typed is erased', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={utcDate(1995, 8, 7)} />);
+
+    await user.clear(input());
+
     expect(screen.getByLabelText('valor do formulário')).toBeEmptyDOMElement();
   });
 

@@ -315,7 +315,7 @@ describe('ClientFormPage', () => {
     });
 
     it.each([['1003'], ['31022020']])(
-      'sends no birth date when %s is not a whole date',
+      'refuses %s, which is not a whole date, instead of saving no birth date',
       async (digits) => {
         const user = userEvent.setup();
         renderPage();
@@ -324,8 +324,8 @@ describe('ClientFormPage', () => {
         await user.type(screen.getByLabelText('Data de nascimento'), digits);
         await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
-        await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
-        expect(lastPayload()).toMatchObject({ birthDate: null });
+        expect(await screen.findByText('Informe uma data válida.')).toBeInTheDocument();
+        expect(mockCreate).not.toHaveBeenCalled();
       },
     );
 
@@ -963,6 +963,20 @@ describe('ClientFormPage, editing a person', () => {
       ).toBeInTheDocument();
       expect(screen.getByLabelText('E-mail')).toHaveValue('outra@example.com');
       expect(screen.getByTestId('location')).toHaveTextContent('/pessoas/c1/editar');
+    });
+
+    it('refuses a birth date left half erased instead of saving the person without one', async () => {
+      const user = userEvent.setup();
+      renderEditPage();
+      const birthDate = await screen.findByLabelText('Data de nascimento');
+      await waitFor(() => expect(birthDate).toHaveValue('15/06/2016'));
+
+      await user.type(birthDate, '{Backspace}');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('Informe uma data válida.')).toBeInTheDocument();
+      expect(birthDate).toHaveValue('15/06/201');
+      expect(mockUpdate).not.toHaveBeenCalled();
     });
 
     it('does not let the situation change while the save is in flight', async () => {

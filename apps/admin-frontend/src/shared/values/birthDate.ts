@@ -32,7 +32,7 @@ export function birthDatePickerBounds(today: Date = todayUtc()): { min: Date; ma
 }
 
 export const birthDateSchema = z
-  .date()
+  .date({ error: 'Informe uma data válida.' })
   .nullable()
   .refine(
     (birthDate) => birthDate === null || isInThePast(birthDate, todayUtc()),

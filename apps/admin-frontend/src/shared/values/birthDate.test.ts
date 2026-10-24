@@ -82,12 +82,15 @@ describe('ageFromBirthDate', () => {
     expect(ageFromBirthDate(birthDate, TODAY)).toBe(expected);
   });
 
-  it.each([null, utcDate(2026, 10, 2), utcDate(2030, 1, 1), utcDate(1905, 10, 2)])(
-    'has no age for %s',
-    (birthDate) => {
-      expect(ageFromBirthDate(birthDate, TODAY)).toBeNull();
-    },
-  );
+  it.each([
+    null,
+    utcDate(2026, 10, 2),
+    utcDate(2030, 1, 1),
+    utcDate(1905, 10, 2),
+    new Date(Number.NaN),
+  ])('has no age for %s', (birthDate) => {
+    expect(ageFromBirthDate(birthDate, TODAY)).toBeNull();
+  });
 
   it('reads today from the clock when none is given', () => {
     vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
@@ -117,6 +120,10 @@ describe('birthDateSchema', () => {
 
   it('accepts no birth date', () => {
     expect(birthDateSchema.parse(null)).toBeNull();
+  });
+
+  it('refuses a date the field could not read, as a half-typed one', () => {
+    expect(messagesOf(new Date(Number.NaN))).toEqual(['Informe uma data válida.']);
   });
 
   it.each([

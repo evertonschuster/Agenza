@@ -89,7 +89,7 @@ function DateFieldControl({
 
   function type(typed: string) {
     const masked = maskDate(typed, LAYOUT);
-    change(masked, parseMaskedDate(masked, LAYOUT));
+    change(masked, dateOf(masked));
   }
 
   function clearFromField() {
@@ -162,6 +162,11 @@ function DateFieldControl({
       </Popover>
     </InputGroup>
   );
+}
+
+function dateOf(masked: string): Date | null {
+  if (masked === '') return null;
+  return parseMaskedDate(masked, LAYOUT) ?? new Date(Number.NaN);
 }
 
 function textOf(date: Date | null): string {

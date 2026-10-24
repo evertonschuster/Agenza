@@ -55,8 +55,11 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    `DateField` keeps the typed text as its own state and gives the form a `Date` once the text is a whole, real day,
    or `null` otherwise; the API client hands the backend's `yyyy-MM-dd` over as a `Date` (point 8), so
    `Client.birthDate` is a `Date | null` and the form takes it as it comes. Every date stays midnight UTC, as before. At the owner's
-   choice the field does not tell the form that the text is half typed: an incomplete or impossible date is saved as
-   no birth date, and the message "Informe uma data válida no formato dd/mm/aaaa." went away.
+   choice the field first did not tell the form that the text was half typed, saving an incomplete or impossible date
+   as no birth date. Exploratory testing showed what that costs on the edit page: erasing one digit of a saved date
+   and saving deleted the birth date without a word. The owner then asked for the warning back: for text that is not a
+   whole, real day the field gives the form an invalid `Date` (`new Date(NaN)`), `birthDateSchema` refuses it with
+   "Informe uma data válida.", and an empty field is still no birth date.
    The `dd/mm/aaaa` mask, parse and format, now used only by `DateField`, moved beside it
    (`shared/form/fields/components/masked-date.ts`). Since then the field follows the date format of the person's
    browser, as the owner asked: `dateLayoutOf(navigator.language)` reads the order of day, month and year and the
