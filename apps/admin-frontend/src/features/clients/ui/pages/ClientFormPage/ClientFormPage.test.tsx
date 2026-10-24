@@ -335,19 +335,30 @@ describe('ClientFormPage', () => {
       await user.type(screen.getByLabelText('Telefone'), 'telefone');
       await user.type(screen.getByLabelText('E-mail'), 'maria@example');
       await user.type(screen.getByLabelText('CPF'), '52998224724');
-      await user.type(screen.getByLabelText('Data de nascimento'), '31022020');
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument();
       expect(screen.getByText('Informe um CPF válido.')).toBeInTheDocument();
       expect(screen.getByText(/Informe um telefone válido/)).toBeInTheDocument();
-      expect(
-        screen.getByText('Informe uma data válida no formato dd/mm/aaaa.'),
-      ).toBeInTheDocument();
       expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
       expect(screen.getByLabelText('E-mail')).toHaveValue('maria@example');
       expect(mockCreate).not.toHaveBeenCalled();
     });
+
+    it.each([['1003'], ['31022020']])(
+      'sends no birth date when %s is not a whole date',
+      async (digits) => {
+        const user = userEvent.setup();
+        renderPage();
+
+        await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+        await user.type(screen.getByLabelText('Data de nascimento'), digits);
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+        await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+        expect(lastPayload()).toMatchObject({ birthDate: null });
+      },
+    );
 
     it.each([
       ['02102026', 'A data de nascimento deve estar no passado.'],
@@ -778,7 +789,7 @@ describe('ClientFormPage', () => {
 const EXISTING: Client = {
   id: 'c1',
   fullName: 'Lia Souza',
-  birthDate: '2016-06-15',
+  birthDate: utcDate(2016, 6, 15),
   phone: '(11) 91234-5678',
   email: 'lia@example.com',
   cpf: '52998224725',
@@ -826,7 +837,7 @@ describe('ClientFormPage, editing a person', () => {
       expect(mockGet).toHaveBeenCalledWith('c1', expect.any(AbortSignal));
     });
 
-    it('fills the same form with what is saved: masked CPF and birth date, contacts included', async () => {
+    it('fills the same form with what is saved: birth date and CPF as dd/mm/aaaa and masked, contacts included', async () => {
       renderEditPage();
 
       expect(await screen.findByLabelText('Nome completo')).toHaveValue('Lia Souza');
@@ -916,7 +927,10 @@ describe('ClientFormPage, editing a person', () => {
 
     it('sends the contacts as they are left in the form, so a removed guardian is gone', async () => {
       const user = userEvent.setup();
-      mockGet.mockResolvedValue({ ok: true, data: { ...EXISTING, birthDate: '1990-01-01' } });
+      mockGet.mockResolvedValue({
+        ok: true,
+        data: { ...EXISTING, birthDate: utcDate(1990, 1, 1) },
+      });
       renderEditPage();
       const guardian = await screen.findByRole('group', { name: 'Responsável 1' });
 
@@ -982,6 +996,75 @@ describe('ClientFormPage, editing a person', () => {
 
       await screen.findByRole('button', { name: 'Salvando…' });
       expect(screen.getByRole('button', { name: 'Desativar pessoa' })).toBeDisabled();
+    });
+
+    describe('when the page moves to another person before the save answers', () => {
+      const other: Client = {
+        ...EXISTING,
+        id: 'c2',
+        fullName: 'Rui Lima',
+        email: 'rui@example.com',
+      };
+
+      async function saveThenOpenOther(pending: Promise<unknown>) {
+        const user = userEvent.setup();
+        mockGet.mockImplementation((id: string) =>
+          Promise.resolve({ ok: true, data: id === 'c2' ? other : EXISTING }),
+        );
+        mockUpdate.mockReturnValue(pending);
+        const router = createMemoryRouter(clientRoutes(), {
+          initialEntries: ['/pessoas/c1/editar'],
+        });
+        render(<RouterProvider router={router} />);
+        await screen.findByDisplayValue('Lia Souza');
+
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
+        await act(() => router.navigate('/pessoas/c2/editar'));
+        expect(await screen.findByDisplayValue('Rui Lima')).toBeInTheDocument();
+        return router;
+      }
+
+      it('keeps the other person on screen when the previous save succeeds', async () => {
+        const pending = deferred<unknown>();
+        const router = await saveThenOpenOther(pending.promise);
+
+        await act(async () => {
+          pending.resolve({ ok: true, data: EXISTING });
+          await pending.promise;
+        });
+
+        expect(router.state.location.pathname).toBe('/pessoas/c2/editar');
+        expect(screen.getByLabelText('Nome completo')).toHaveValue('Rui Lima');
+      });
+
+      it('does not mark the other person with the errors of the previous save', async () => {
+        const pending = deferred<unknown>();
+        await saveThenOpenOther(pending.promise);
+
+        await act(async () => {
+          pending.resolve(
+            problem({
+              status: 409,
+              code: 'Client.DuplicateEmail',
+              title: 'Já existe uma pessoa ativa cadastrada com este e-mail.',
+              errors: {
+                Email: [
+                  {
+                    code: 'Client.DuplicateEmail',
+                    message: 'Já existe uma pessoa ativa cadastrada com este e-mail.',
+                  },
+                ],
+              },
+            }),
+          );
+          await pending.promise;
+        });
+
+        expect(
+          screen.queryByText('Já existe uma pessoa ativa cadastrada com este e-mail.'),
+        ).not.toBeInTheDocument();
+        expect(screen.getByLabelText('E-mail')).not.toHaveAttribute('aria-invalid', 'true');
+      });
     });
   });
 

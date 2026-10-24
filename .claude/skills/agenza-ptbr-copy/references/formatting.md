@@ -86,7 +86,8 @@ is already that midnight; the bug is reading it back with the device's zone (`ge
 appointment renders one day early.
 
 In `admin-frontend` that is `utcDate` in `shared/format/date.ts`; the app holds a calendar day as a
-`Date` and only turns it into text where it is shown (`formatMaskedDate`).
+`Date` from the API response to the form, and only turns it into text where it is shown
+(`formatMaskedDate`, beside `DateField` in `shared/form/fields/components/masked-date.ts`).
 
 **"Today" for a form rule is the UTC day, like the backend's, not São Paulo's.** `todayUtc()`
 (`shared/format/date.ts`) is the same calendar date the API uses, so a date the form accepts is one the

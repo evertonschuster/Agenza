@@ -1,5 +1,6 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
-import { MissingSessionError, createApiClient } from './apiClient';
+import { utcDate } from '@/shared/format/date';
+import { MissingSessionError, createApiClient, reviveDates } from './apiClient';
 
 const CATEGORIES_PATH = '/api/v{version}/categories' as const;
 const REQUEST_PARAMS = { params: { path: { version: '1.0' } } };
@@ -49,4 +50,46 @@ describe('createApiClient', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     },
   );
+});
+
+describe('reviveDates', () => {
+  it('turns every day of a list of dates into a Date', () => {
+    expect(reviveDates({ birthDate: ['1990-05-20', null] })).toEqual({
+      birthDate: [utcDate(1990, 5, 20), null],
+    });
+  });
+
+  it('finds a contract date inside an object nested in a list', () => {
+    expect(reviveDates({ guardians: [{ person: { birthDate: '2000-02-29' } }] })).toEqual({
+      guardians: [{ person: { birthDate: utcDate(2000, 2, 29) } }],
+    });
+  });
+
+  it('turns a contract date, however deep, into a Date at midnight UTC', () => {
+    expect(
+      reviveDates({
+        birthDate: '1990-05-20',
+        items: [{ birthDate: '2000-02-29' }, { birthDate: null }],
+      }),
+    ).toEqual({
+      birthDate: utcDate(1990, 5, 20),
+      items: [{ birthDate: utcDate(2000, 2, 29) }, { birthDate: null }],
+    });
+  });
+
+  it('leaves a value alone when the contract does not call its field a date', () => {
+    const body = { administrativeNotes: '2020-01-01', timestamp: '2026-10-23T14:00:00Z' };
+
+    expect(reviveDates(body)).toEqual(body);
+  });
+
+  it('leaves a date field alone when its value is not a yyyy-MM-dd day', () => {
+    expect(reviveDates({ birthDate: '2015-03-10T00:00:00Z' })).toEqual({
+      birthDate: '2015-03-10T00:00:00Z',
+    });
+  });
+
+  it.each([null, undefined, 'texto', 3, true])('returns %j as it came', (value) => {
+    expect(reviveDates(value)).toBe(value);
+  });
 });

@@ -26,7 +26,7 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    its last caller.
 2. **One page, one hook, two modes.** `ClientFormPage` and `useClientFormPage` serve both routes: with no `:id` the
    form starts empty and saves through `clientsRepository.create`; with one it loads `clientsRepository.get(id)`,
-   fills the form with `toClientFormFieldValues(client)` (birth date as `dd/mm/aaaa`, CPFs masked, a missing value
+   fills the form with `toClientFormFieldValues(client)` (birth date as it comes, CPFs masked, a missing value
    as `''`) and saves through `clientsRepository.update(id, values)`, which sends `{ clientId: id, ...input }`. The
    schema, the sections and the backend error mapping (`applyApiProblem`) are the same in both modes; the title is
    **Nova pessoa** or **Editar pessoa**, and after a save the page goes back to `/pessoas` with "Pessoa cadastrada" or
@@ -49,6 +49,29 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
 6. **`Client.status` is a `ClientStatus`**, read as the backend sends it. A first version found `status` typed as a
    plain string in `GET`/`PUT` and narrowed it with a `toClientStatus` helper; PR #189 typed the response's `status`
    as the `ClientStatus` enum, as the list item already was, and the helper went away.
+7. **A date is a `Date` in the form too.** A first version filled the birth date with
+   `formatMaskedDate(new Date(client.birthDate))`, because `DateField` kept the masked text `dd/mm/aaaa` in the form
+   and the schema turned it into a `Date` only on submit. The owner asked for the form to hold the `Date` itself:
+   `DateField` keeps the typed text as its own state and gives the form a `Date` once the text is a whole, real day,
+   or `null` otherwise; the API client hands the backend's `yyyy-MM-dd` over as a `Date` (point 8), so
+   `Client.birthDate` is a `Date | null` and the form takes it as it comes. Every date stays midnight UTC, as before. At the owner's
+   choice the field does not tell the form that the text is half typed: an incomplete or impossible date is saved as
+   no birth date, and the message "Informe uma data válida no formato dd/mm/aaaa." went away.
+   The `dd/mm/aaaa` mask, parse and format, now used only by `DateField`, moved beside it
+   (`shared/form/fields/components/masked-date.ts`).
+8. **A date in a response arrives as `Date`.** A first version of point 7 converted the birth date in
+   `clientsRepository` with `parseIsoDate`; the owner asked for the deserialization to do it. JSON has no date type and
+   openapi-fetch has no hook to parse a body differently, so `scripts/generateApiTypes.mjs` now types `format: date` as
+   `Date` in responses as well as request bodies, and writes the names of those properties to
+   `src/shared/api/generated/dateFields.ts`; the facade's `run()` passes every successful payload through `reviveDates`
+   (`shared/api/apiClient.ts`), which turns a listed property holding `yyyy-MM-dd` into
+   `utcDate` midnight. Converting every `yyyy-MM-dd` string, whatever its field, was turned down: a free-text note
+   reading `2020-01-01` would become a `Date`. Generating a transformer per response with `@hey-api/openapi-ts`, or a
+   Zod schema per response, was turned down as a new generator and client, or a schema per endpoint, for one field.
+   The names cover a list of dates and a date inside an inline object or a list item, and `reviveDates` carries a
+   list's name to its items. Since the conversion goes by name, the generator fails when a date property's name is used
+   for something else in another schema, or when a date sits in a dictionary, which has no name to match. A schema a query parameter reaches keeps its dates as `string`, as a query string cannot carry a
+   `Date`. The repository forwards results as they come again.
 
 ## Consequences
 

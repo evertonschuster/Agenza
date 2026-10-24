@@ -72,18 +72,18 @@ describe('birthDatePickerBounds', () => {
 
 describe('ageFromBirthDate', () => {
   it.each([
-    ['10/03/2015', 11],
-    ['03/10/2008', 17],
-    ['02/10/2008', 18],
-    ['20/05/1990', 36],
-    ['01/10/2026', 0],
-    ['02/10/1906', 120],
-  ] as const)('reads %j as %i years old today', (birthDate, expected) => {
+    [utcDate(2015, 3, 10), 11],
+    [utcDate(2008, 10, 3), 17],
+    [utcDate(2008, 10, 2), 18],
+    [utcDate(1990, 5, 20), 36],
+    [utcDate(2026, 10, 1), 0],
+    [utcDate(1906, 10, 2), 120],
+  ] as const)('reads %s as %i years old today', (birthDate, expected) => {
     expect(ageFromBirthDate(birthDate, TODAY)).toBe(expected);
   });
 
-  it.each(['', '10/03', '31/02/2020', '02/10/2026', '01/01/2030', '02/10/1905'])(
-    'has no age for %j',
+  it.each([null, utcDate(2026, 10, 2), utcDate(2030, 1, 1), utcDate(1905, 10, 2)])(
+    'has no age for %s',
     (birthDate) => {
       expect(ageFromBirthDate(birthDate, TODAY)).toBeNull();
     },
@@ -92,7 +92,7 @@ describe('ageFromBirthDate', () => {
   it('reads today from the clock when none is given', () => {
     vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
 
-    expect(ageFromBirthDate('03/10/2008')).toBe(17);
+    expect(ageFromBirthDate(utcDate(2008, 10, 3))).toBe(17);
 
     vi.useRealTimers();
   });
@@ -107,25 +107,23 @@ describe('birthDateSchema', () => {
     vi.useRealTimers();
   });
 
-  function messagesOf(raw: string): string[] | undefined {
-    return birthDateSchema.safeParse(raw).error?.issues.map((issue) => issue.message);
+  function messagesOf(birthDate: Date): string[] | undefined {
+    return birthDateSchema.safeParse(birthDate).error?.issues.map((issue) => issue.message);
   }
 
-  it('reads dd/mm/aaaa as a Date at midnight UTC', () => {
-    expect(birthDateSchema.parse('20/05/1990')).toEqual(utcDate(1990, 5, 20));
+  it('accepts a date in the past within the maximum age as it is', () => {
+    expect(birthDateSchema.parse(utcDate(1990, 5, 20))).toEqual(utcDate(1990, 5, 20));
   });
 
-  it.each(['', '  '])('treats %j as no birth date', (raw) => {
-    expect(birthDateSchema.parse(raw)).toBeNull();
+  it('accepts no birth date', () => {
+    expect(birthDateSchema.parse(null)).toBeNull();
   });
 
   it.each([
-    ['10/03', 'Informe uma data válida no formato dd/mm/aaaa.'],
-    ['31/02/2020', 'Informe uma data válida no formato dd/mm/aaaa.'],
-    ['02/10/2026', 'A data de nascimento deve estar no passado.'],
-    ['01/01/2030', 'A data de nascimento deve estar no passado.'],
-    ['02/10/1905', 'A data de nascimento não pode indicar idade superior a 120 anos.'],
-  ] as const)('explains %j in pt-BR', (raw, message) => {
-    expect(messagesOf(raw)).toEqual([message]);
+    [utcDate(2026, 10, 2), 'A data de nascimento deve estar no passado.'],
+    [utcDate(2030, 1, 1), 'A data de nascimento deve estar no passado.'],
+    [utcDate(1905, 10, 2), 'A data de nascimento não pode indicar idade superior a 120 anos.'],
+  ] as const)('explains %s in pt-BR', (birthDate, message) => {
+    expect(messagesOf(birthDate)).toEqual([message]);
   });
 });

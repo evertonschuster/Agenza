@@ -11,6 +11,7 @@ import {
   isTransientProblem,
 } from './servicesFacade';
 import type { ApiProblem } from './servicesFacade';
+import { utcDate } from '@/shared/format/date';
 
 const CATEGORY = { id: '11111111-1111-1111-1111-111111111111', name: 'Cabelo' };
 
@@ -65,6 +66,18 @@ describe('createServicesFacade', () => {
     expect(await api.get('/api/v{version}/categories', { query: {} })).toEqual({
       ok: true,
       data: [CATEGORY],
+    });
+  });
+
+  it('hands the dates of the contract over as Date, and nothing else that looks like one', async () => {
+    const person = { id: 'c1', birthDate: '2015-03-10', administrativeNotes: '2020-01-01' };
+    GET.mockResolvedValue(raw({ data: { data: person, success: true } }));
+
+    const result = await api.get('/api/v{version}/clients/{id}', { path: { id: 'c1' } });
+
+    expect(result).toEqual({
+      ok: true,
+      data: { id: 'c1', birthDate: utcDate(2015, 3, 10), administrativeNotes: '2020-01-01' },
     });
   });
 
