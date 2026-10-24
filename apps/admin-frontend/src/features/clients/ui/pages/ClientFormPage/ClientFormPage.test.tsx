@@ -1,7 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Link, MemoryRouter, Route, Routes, useLocation } from 'react-router';
+import { Link, Outlet, useLocation, type RouteObject } from 'react-router';
+import { routerAt } from '@/test/renderRoutes';
 import { toast } from '@/shared/ui/toast';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { utcDate } from '@/shared/format/date';
@@ -44,16 +46,38 @@ function LocationProbe() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
+function clientRoutes(extra: RouteObject[] = [], chrome?: ReactNode): RouteObject[] {
+  return [
+    {
+      element: (
+        <>
+          {chrome}
+          <Outlet />
+          <LocationProbe />
+        </>
+      ),
+      children: [
+        {
+          path: 'pessoas',
+          handle: { crumb: 'Pessoas' },
+          children: [
+            { index: true, element: <h1>Lista de pessoas</h1> },
+            { path: 'nova', handle: { crumb: 'Nova pessoa' }, element: <ClientFormPage /> },
+            {
+              path: ':id/editar',
+              handle: { crumb: 'Editar pessoa' },
+              element: <ClientFormPage />,
+            },
+          ],
+        },
+        ...extra,
+      ],
+    },
+  ];
+}
+
 function renderPage() {
-  return render(
-    <MemoryRouter initialEntries={['/pessoas/nova']}>
-      <Routes>
-        <Route path="/pessoas/nova" element={<ClientFormPage />} />
-        <Route path="/pessoas" element={<h1>Lista de pessoas</h1>} />
-      </Routes>
-      <LocationProbe />
-    </MemoryRouter>,
-  );
+  return render(routerAt(clientRoutes(), ['/pessoas/nova']));
 }
 
 function problem(overrides: Partial<ApiProblem>): { ok: false; error: ApiProblem } {
@@ -719,15 +743,13 @@ describe('ClientFormPage', () => {
       let resolveCreate!: (value: unknown) => void;
       mockCreate.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)));
       render(
-        <MemoryRouter initialEntries={['/pessoas/nova']}>
-          <Link to="/agenda">Agenda</Link>
-          <Routes>
-            <Route path="/pessoas/nova" element={<ClientFormPage />} />
-            <Route path="/pessoas" element={<h1>Lista de pessoas</h1>} />
-            <Route path="/agenda" element={<h1>Agenda</h1>} />
-          </Routes>
-          <LocationProbe />
-        </MemoryRouter>,
+        routerAt(
+          clientRoutes(
+            [{ path: 'agenda', element: <h1>Agenda</h1> }],
+            <Link to="/agenda">Agenda</Link>,
+          ),
+          ['/pessoas/nova'],
+        ),
       );
       await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
@@ -773,15 +795,7 @@ const EXISTING: Client = {
 };
 
 function renderEditPage() {
-  return render(
-    <MemoryRouter initialEntries={['/pessoas/c1/editar']}>
-      <Routes>
-        <Route path="/pessoas/:id/editar" element={<ClientFormPage />} />
-        <Route path="/pessoas" element={<h1>Lista de pessoas</h1>} />
-      </Routes>
-      <LocationProbe />
-    </MemoryRouter>,
-  );
+  return render(routerAt(clientRoutes(), ['/pessoas/c1/editar']));
 }
 
 function deferred<T>() {

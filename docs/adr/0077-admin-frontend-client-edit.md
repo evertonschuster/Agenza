@@ -1,6 +1,6 @@
 # ADR 0077 — admin-frontend: editing a person on the registration form, with the situation change beside it
 
-Status: accepted (2026-10); frontend of issue #156 (edit a person and their contacts) and of #157/#158 (deactivate
+Status: accepted (2026-10), amended by [ADR 0079](0079-admin-frontend-page-header-from-routes.md) (the page title and trail come from the routes); frontend of issue #156 (edit a person and their contacts) and of #157/#158 (deactivate
 and reactivate); consumes the contracts of `PUT /api/v1/clients/{id}`, `GET /api/v1/clients/{id}` and
 `POST /api/v1/clients/{id}/{deactivate,reactivate}` as they are; follows the form of
 [ADR 0044](0044-clients-aggregate-uniqueness-and-conflict-contract.md) and the list of

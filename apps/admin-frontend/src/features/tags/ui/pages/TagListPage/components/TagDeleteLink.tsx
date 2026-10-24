@@ -1,6 +1,5 @@
 import { Trash2Icon } from 'lucide-react';
-import { Link } from 'react-router';
-import { buttonVariants } from '@/shared/ui/button';
+import { ActionLink } from '@/shared/ui/action-link';
 import type { Tag } from '../../../../model/tag';
 
 interface TagDeleteLinkProps {
@@ -9,13 +8,13 @@ interface TagDeleteLinkProps {
 
 function TagDeleteLink({ tag }: TagDeleteLinkProps) {
   return (
-    <Link
+    <ActionLink
       to={`${tag.id}/delete`}
-      className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
+      icon={Trash2Icon}
+      variant="ghost"
+      size="icon-sm"
       aria-label={`Excluir ${tag.name}`}
-    >
-      <Trash2Icon aria-hidden="true" />
-    </Link>
+    />
   );
 }
 

@@ -2,14 +2,8 @@ import { StrictMode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import {
-  createMemoryRouter,
-  MemoryRouter,
-  Route,
-  RouterProvider,
-  Routes,
-  useLocation,
-} from 'react-router';
+import { createMemoryRouter, RouterProvider, useLocation, type RouteObject } from 'react-router';
+import { routerAt } from '@/test/renderRoutes';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagDeletePage } from './TagDeletePage';
 import type { TagListQuery } from '../../../api/tagsRepository';
@@ -41,21 +35,24 @@ function LocationProbe() {
   return <div data-testid="location">{`location: ${location.pathname}${location.search}`}</div>;
 }
 
-function routes() {
-  return (
-    <>
-      <Routes>
-        <Route path="tags" element={<TagListPage />}>
-          <Route path=":id/delete" element={<TagDeletePage />} />
-        </Route>
-      </Routes>
-      <LocationProbe />
-    </>
-  );
+function routes(): RouteObject[] {
+  return [
+    {
+      path: '/tags',
+      handle: { crumb: 'Etiquetas' },
+      element: (
+        <>
+          <TagListPage />
+          <LocationProbe />
+        </>
+      ),
+      children: [{ path: ':id/delete', element: <TagDeletePage /> }],
+    },
+  ];
 }
 
 function renderAt(initialEntries: string[]) {
-  return render(<MemoryRouter initialEntries={initialEntries}>{routes()}</MemoryRouter>);
+  return render(routerAt(routes(), initialEntries));
 }
 
 describe('TagDeletePage', () => {
@@ -111,11 +108,7 @@ describe('TagDeletePage', () => {
   });
 
   it('under StrictMode aborts the first of the two development requests and keeps the second', async () => {
-    render(
-      <StrictMode>
-        <MemoryRouter initialEntries={['/tags/1/delete']}>{routes()}</MemoryRouter>
-      </StrictMode>,
-    );
+    render(<StrictMode>{routerAt(routes(), ['/tags/1/delete'])}</StrictMode>);
 
     expect(await screen.findByText(PROMOCAO_CONFIRMATION)).toBeInTheDocument();
     const signals = (mockGet.mock.calls as [string, AbortSignal][]).map(([, signal]) => signal);
@@ -192,6 +185,7 @@ describe('TagDeletePage', () => {
       [
         {
           path: '/tags',
+          handle: { crumb: 'Etiquetas' },
           element: (
             <>
               <TagListPage />
@@ -225,6 +219,7 @@ describe('TagDeletePage', () => {
       [
         {
           path: '/tags',
+          handle: { crumb: 'Etiquetas' },
           element: (
             <>
               <TagListPage />
@@ -305,11 +300,7 @@ describe('TagDeletePage', () => {
   it('shows that toast only once under StrictMode, whose double-run effect would otherwise repeat it', async () => {
     const toastModule = await import('@/shared/ui/toast');
     const toastAddSpy = vi.spyOn(toastModule.toast, 'add');
-    render(
-      <StrictMode>
-        <MemoryRouter initialEntries={['/tags/missing-id/delete']}>{routes()}</MemoryRouter>
-      </StrictMode>,
-    );
+    render(<StrictMode>{routerAt(routes(), ['/tags/missing-id/delete'])}</StrictMode>);
 
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
     const notFoundToasts = toastAddSpy.mock.calls.filter(

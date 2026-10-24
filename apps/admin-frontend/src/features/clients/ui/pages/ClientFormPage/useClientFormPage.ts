@@ -106,7 +106,6 @@ export function useClientFormPage(): UseClientFormPageResult {
 
   return {
     status: isLoading ? ClientFormStatus.Loading : ClientFormStatus.Ready,
-    isEdit,
     methods,
     isSaving,
     canSubmit,
