@@ -5,12 +5,13 @@ import type { Tag } from '../../../../model/tag';
 
 interface TagEditLinkProps {
   tag: Tag;
+  queryString: string;
 }
 
-function TagEditLink({ tag }: TagEditLinkProps) {
+function TagEditLink({ tag, queryString }: TagEditLinkProps) {
   return (
     <Link
-      to={`${tag.id}/edit`}
+      to={{ pathname: `${tag.id}/edit`, search: queryString }}
       className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
       aria-label={`Editar ${tag.name}`}
     >

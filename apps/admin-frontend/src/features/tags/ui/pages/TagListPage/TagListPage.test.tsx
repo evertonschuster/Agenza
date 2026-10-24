@@ -93,10 +93,10 @@ function renderPage(catalog: Tag[], initialEntries?: string[]) {
 // Only the row-link tests need a real `tags` Route match — relative link resolution needs it to
 // know `/tags` is the route's own base, which a bare, routeless `<TagListPage />` render can't give
 // it. Every other test above renders the page directly and never inspects an href.
-function renderAtTagsRoute(catalog: Tag[]) {
+function renderAtTagsRoute(catalog: Tag[], initialEntries: string[] = ['/tags']) {
   serve(catalog);
   return render(
-    <MemoryRouter initialEntries={['/tags']}>
+    <MemoryRouter initialEntries={initialEntries}>
       <Routes>
         <Route path="tags" element={<TagListPage />} />
       </Routes>
@@ -332,6 +332,24 @@ describe('TagListPage', () => {
     expect(newTag.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
+  it('carries the address of the list into the edit, delete and "Nova etiqueta" links', async () => {
+    renderAtTagsRoute(TAGS, ['/tags?search=pro']);
+    await screen.findByText('Promoção');
+
+    expect(screen.getByRole('link', { name: 'Editar Promoção' })).toHaveAttribute(
+      'href',
+      '/tags/1/edit?search=pro',
+    );
+    expect(screen.getByRole('link', { name: 'Excluir Promoção' })).toHaveAttribute(
+      'href',
+      '/tags/1/delete?search=pro',
+    );
+    expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
+      'href',
+      '/tags/new?search=pro',
+    );
+  });
+
   it('clicking Nova etiqueta navigates to /tags/new (spec US2)', async () => {
     const user = userEvent.setup();
     renderAtTagsRoute(TAGS);
@@ -426,7 +444,7 @@ describe('TagListPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
-  it('narrows the list to tags whose name contains the search term after pressing Enter, leaving the address alone (spec US1, ADR 0074)', async () => {
+  it('narrows the list to tags whose name contains the search term after pressing Enter, writing it into the address (spec US1)', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
@@ -439,7 +457,7 @@ describe('TagListPage', () => {
       { search: 'vip', page: 1, pageSize: 20 },
       expect.any(AbortSignal),
     );
-    expect(location()).toBe('location: /tags');
+    expect(location()).toBe('location: /tags?search=vip');
   });
 
   it('narrows the list from the Buscar button too (spec US1)', async () => {
@@ -454,13 +472,55 @@ describe('TagListPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
-  it('starts on the first page of every tag, with an empty field, whatever the address carries (ADR 0074)', async () => {
-    renderPage(TAGS, ['/tags?q=vip&page=3&pageSize=10']);
+  describe('the address', () => {
+    it('opens on the search, the page and the size it carries, with the field filled in', async () => {
+      renderPage(manyTags(45), ['/tags?search=etiqueta&page=2&pageSize=10']);
 
-    expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('');
-    expect(await screen.findByText('Promoção')).toBeInTheDocument();
-    expect(mockList).toHaveBeenCalledTimes(1);
-    expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
+      expect(await screen.findByText('Etiqueta 011')).toBeInTheDocument();
+      expect(mockList).toHaveBeenCalledTimes(1);
+      expect(mockList).toHaveBeenCalledWith(
+        { search: 'etiqueta', page: 2, pageSize: 10 },
+        expect.any(AbortSignal),
+      );
+      expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('etiqueta');
+      expect(screen.getByRole('status')).toHaveTextContent('Exibindo 11–20 de 45 etiquetas');
+    });
+
+    it('uses the opening value of each part the address does not carry', async () => {
+      renderPage(manyTags(45), ['/tags?page=2']);
+
+      expect(await screen.findByText('Etiqueta 021')).toBeInTheDocument();
+      expect(mockList).toHaveBeenCalledWith(
+        { ...FIRST_PAGE_OF_EVERY_TAG, page: 2 },
+        expect.any(AbortSignal),
+      );
+      expect(location()).toBe('location: /tags?page=2');
+    });
+
+    it('stays /tags while the list is on its opening search, page and size', async () => {
+      renderPage(TAGS);
+      await screen.findByText('Promoção');
+
+      expect(mockList).toHaveBeenCalledWith(FIRST_PAGE_OF_EVERY_TAG, expect.any(AbortSignal));
+      expect(location()).toBe('location: /tags');
+    });
+
+    it('writes the last page that exists when the address asks for one past the end', async () => {
+      renderPage(manyTags(25), ['/tags?page=9']);
+
+      expect(await screen.findByText('Etiqueta 021')).toBeInTheDocument();
+      await waitFor(() => expect(location()).toBe('location: /tags?page=2'));
+    });
+
+    it('takes the search back out of the address from "Limpar filtros", keeping the size', async () => {
+      const user = userEvent.setup();
+      renderPage(manyTags(45), ['/tags?search=etiqueta&pageSize=50']);
+      await screen.findByText('Etiqueta 045');
+
+      await user.click(screen.getByRole('button', { name: 'Limpar filtros' }));
+
+      expect(location()).toBe('location: /tags?pageSize=50');
+    });
   });
 
   it('lists every tag again when the search is submitted blank', async () => {
@@ -647,7 +707,7 @@ describe('TagListPage', () => {
       expect(skeletonRows(container)).toHaveLength(20);
     });
 
-    it('goes to the next page, keeping the search and the size, and leaves the address alone', async () => {
+    it('goes to the next page, keeping the search and the size, and writes all three into the address', async () => {
       const user = userEvent.setup();
       renderPage(manyTags(45));
       await screen.findByText('Etiqueta 001');
@@ -664,7 +724,7 @@ describe('TagListPage', () => {
         { search: 'etiqueta', page: 2, pageSize: 10 },
         expect.any(AbortSignal),
       );
-      expect(location()).toBe('location: /tags');
+      expect(location()).toBe('location: /tags?search=etiqueta&pageSize=10&page=2');
       expect(screen.getByRole('status')).toHaveTextContent('Exibindo 11–20 de 45 etiquetas');
     });
 

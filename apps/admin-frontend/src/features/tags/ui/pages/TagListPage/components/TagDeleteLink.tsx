@@ -5,12 +5,13 @@ import type { Tag } from '../../../../model/tag';
 
 interface TagDeleteLinkProps {
   tag: Tag;
+  queryString: string;
 }
 
-function TagDeleteLink({ tag }: TagDeleteLinkProps) {
+function TagDeleteLink({ tag, queryString }: TagDeleteLinkProps) {
   return (
     <Link
-      to={`${tag.id}/delete`}
+      to={{ pathname: `${tag.id}/delete`, search: queryString }}
       className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
       aria-label={`Excluir ${tag.name}`}
     >
