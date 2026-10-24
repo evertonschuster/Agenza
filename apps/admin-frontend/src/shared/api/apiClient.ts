@@ -1,7 +1,8 @@
 import createClient, { type Client } from 'openapi-fetch';
 import type { paths } from './generated/services-api.d.ts';
 import { loadEnv } from '@/shared/env';
-import { formatIsoDate } from '@/shared/format/date';
+import { parseIsoDate } from '@/shared/format/date';
+import { DATE_FIELDS } from './generated/dateFields';
 
 export interface ApiClientCredentials {
   accessToken: string | null;
@@ -15,14 +16,19 @@ export class MissingSessionError extends Error {
   }
 }
 
-export function serializeBody(body: unknown): string {
-  return JSON.stringify(
-    body,
-    function (this: Record<string, unknown>, key: string, value: unknown) {
-      const original = this[key];
-      return original instanceof Date ? formatIsoDate(original) : value;
-    },
-  );
+const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
+
+export function reviveDates(value: unknown, key = ''): unknown {
+  if (Array.isArray(value)) return value.map((item) => reviveDates(item, key));
+  if (value !== null && typeof value === 'object') {
+    return Object.fromEntries(
+      Object.entries(value).map(([name, item]) => [name, reviveDates(item, name)]),
+    );
+  }
+  if (typeof value === 'string' && DATE_FIELDS.has(key) && ISO_DATE.test(value)) {
+    return parseIsoDate(value);
+  }
+  return value;
 }
 
 /** Single entry point for services-service (contracts/api-client-contract.md). Narrow
@@ -32,7 +38,7 @@ export function serializeBody(body: unknown): string {
  * across token renewal and tenant changes. */
 export function createApiClient(getCredentials: () => ApiClientCredentials): Client<paths> {
   const env = loadEnv();
-  const client = createClient<paths>({ baseUrl: env.apiBaseUrl, bodySerializer: serializeBody });
+  const client = createClient<paths>({ baseUrl: env.apiBaseUrl });
 
   client.use({
     onRequest({ request }) {

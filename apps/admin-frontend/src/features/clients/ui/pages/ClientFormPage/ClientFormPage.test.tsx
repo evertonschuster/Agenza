@@ -8,10 +8,22 @@ import { utcDate } from '@/shared/format/date';
 import type { Client } from '../../../model/client';
 import { ClientFormPage } from './ClientFormPage';
 
-const { mockCreate } = vi.hoisted(() => ({ mockCreate: vi.fn() }));
+const { mockCreate, mockGet, mockUpdate, mockDeactivate, mockReactivate } = vi.hoisted(() => ({
+  mockCreate: vi.fn(),
+  mockGet: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockDeactivate: vi.fn(),
+  mockReactivate: vi.fn(),
+}));
 
 vi.mock('../../../api/clientsRepository', () => ({
-  clientsRepository: { create: mockCreate },
+  clientsRepository: {
+    create: mockCreate,
+    get: mockGet,
+    update: mockUpdate,
+    deactivate: mockDeactivate,
+    reactivate: mockReactivate,
+  },
 }));
 
 const CREATED: Client = {
@@ -292,19 +304,30 @@ describe('ClientFormPage', () => {
       await user.type(screen.getByLabelText('Telefone'), 'telefone');
       await user.type(screen.getByLabelText('E-mail'), 'maria@example');
       await user.type(screen.getByLabelText('CPF'), '52998224724');
-      await user.type(screen.getByLabelText('Data de nascimento'), '31022020');
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(await screen.findByText('Informe um e-mail válido.')).toBeInTheDocument();
       expect(screen.getByText('Informe um CPF válido.')).toBeInTheDocument();
       expect(screen.getByText(/Informe um telefone válido/)).toBeInTheDocument();
-      expect(
-        screen.getByText('Informe uma data válida no formato dd/mm/aaaa.'),
-      ).toBeInTheDocument();
       expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
       expect(screen.getByLabelText('E-mail')).toHaveValue('maria@example');
       expect(mockCreate).not.toHaveBeenCalled();
     });
+
+    it.each([['1003'], ['31022020']])(
+      'refuses %s, which is not a whole date, instead of saving no birth date',
+      async (digits) => {
+        const user = userEvent.setup();
+        renderPage();
+
+        await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+        await user.type(screen.getByLabelText('Data de nascimento'), digits);
+        await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+        expect(await screen.findByText('Informe uma data válida.')).toBeInTheDocument();
+        expect(mockCreate).not.toHaveBeenCalled();
+      },
+    );
 
     it.each([
       ['02102026', 'A data de nascimento deve estar no passado.'],
@@ -722,6 +745,350 @@ describe('ClientFormPage', () => {
 
       expect(screen.getByTestId('location')).toHaveTextContent('/agenda');
       expect(screen.queryByRole('heading', { name: 'Lista de pessoas' })).not.toBeInTheDocument();
+    });
+  });
+
+  it('offers no situation change: a person only gets one once saved', () => {
+    renderPage();
+
+    expect(screen.queryByRole('button', { name: /Desativar|Reativar/ })).not.toBeInTheDocument();
+    expect(screen.queryByText('Ativa')).not.toBeInTheDocument();
+    expect(mockGet).not.toHaveBeenCalled();
+  });
+});
+
+const EXISTING: Client = {
+  id: 'c1',
+  fullName: 'Lia Souza',
+  birthDate: utcDate(2016, 6, 15),
+  phone: '(11) 91234-5678',
+  email: 'lia@example.com',
+  cpf: '52998224725',
+  administrativeNotes: 'Prefere contato pela manhã.',
+  status: 'active',
+  guardians: [{ id: 'g1', name: 'Ana Souza', relationship: 'Mãe', phone: null, cpf: null }],
+  referenceContacts: [
+    { id: 'r1', name: 'Carlos Lima', relationship: 'Tio', phone: null, purposes: ['emergency'] },
+  ],
+};
+
+function renderEditPage() {
+  return render(
+    <MemoryRouter initialEntries={['/pessoas/c1/editar']}>
+      <Routes>
+        <Route path="/pessoas/:id/editar" element={<ClientFormPage />} />
+        <Route path="/pessoas" element={<h1>Lista de pessoas</h1>} />
+      </Routes>
+      <LocationProbe />
+    </MemoryRouter>,
+  );
+}
+
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((settle) => (resolve = settle));
+  return { promise, resolve };
+}
+
+describe('ClientFormPage, editing a person', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
+    mockGet.mockResolvedValue({ ok: true, data: EXISTING });
+    mockUpdate.mockImplementation((id: string, input: object) =>
+      Promise.resolve({ ok: true, data: { ...EXISTING, ...input, id } }),
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  describe('loading the person', () => {
+    it('holds the fields and the save back until the person arrives, offering no situation change yet', () => {
+      mockGet.mockReturnValue(deferred<unknown>().promise);
+      renderEditPage();
+
+      expect(screen.getByRole('heading', { name: 'Editar pessoa' })).toBeInTheDocument();
+      expect(screen.queryByLabelText('Nome completo')).not.toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
+      expect(screen.queryByRole('button', { name: 'Desativar pessoa' })).not.toBeInTheDocument();
+      expect(mockGet).toHaveBeenCalledWith('c1', expect.any(AbortSignal));
+    });
+
+    it('fills the same form with what is saved: birth date and CPF as dd/mm/aaaa and masked, contacts included', async () => {
+      renderEditPage();
+
+      expect(await screen.findByLabelText('Nome completo')).toHaveValue('Lia Souza');
+      const person = within(screen.getByRole('region', { name: 'Dados da pessoa' }));
+      expect(person.getByLabelText('Data de nascimento')).toHaveValue('15/06/2016');
+      expect(person.getByLabelText('Telefone')).toHaveValue('(11) 91234-5678');
+      expect(person.getByLabelText('E-mail')).toHaveValue('lia@example.com');
+      expect(person.getByLabelText('CPF')).toHaveValue('529.982.247-25');
+      expect(person.getByLabelText('Observações administrativas')).toHaveValue(
+        'Prefere contato pela manhã.',
+      );
+      const guardian = screen.getByRole('group', { name: 'Responsável 1' });
+      expect(within(guardian).getByLabelText('Nome')).toHaveValue('Ana Souza');
+      const reference = screen.getByRole('group', { name: 'Pessoa de referência 1' });
+      expect(within(reference).getByLabelText('Nome')).toHaveValue('Carlos Lima');
+      expect(within(reference).getByRole('checkbox', { name: 'Emergência' })).toBeChecked();
+      expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
+      expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/pessoas');
+    });
+
+    it('shows the current situation next to the title', async () => {
+      renderEditPage();
+
+      await screen.findByLabelText('Nome completo');
+      expect(screen.getByText('Ativa')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Desativar pessoa' })).toBeEnabled();
+    });
+
+    it('tells why the person could not be opened and goes back to the Pessoas list', async () => {
+      const serverError = vi.spyOn(toast, 'serverError');
+      const error = { status: 404, code: 'Client.NotFound', title: 'A pessoa não foi encontrada.' };
+      mockGet.mockResolvedValue({ ok: false, error });
+      renderEditPage();
+
+      expect(await screen.findByRole('heading', { name: 'Lista de pessoas' })).toBeInTheDocument();
+      expect(serverError).toHaveBeenCalledWith('Não foi possível abrir a pessoa', error);
+    });
+
+    it('ignores an answer that arrives after the person has left the page', async () => {
+      const serverError = vi.spyOn(toast, 'serverError');
+      const pending = deferred<unknown>();
+      mockGet.mockReturnValue(pending.promise);
+      const { unmount } = renderEditPage();
+
+      unmount();
+      pending.resolve({ ok: false, error: { status: 500, title: 'Falhou.' } });
+      await pending.promise;
+
+      expect(serverError).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('saving the changes', () => {
+    it('sends the whole person to the update, never creates one, and returns to the list', async () => {
+      const user = userEvent.setup();
+      const toastAdd = vi.spyOn(toast, 'add');
+      renderEditPage();
+      await screen.findByLabelText('Nome completo');
+      const phone = within(screen.getByRole('region', { name: 'Dados da pessoa' })).getByLabelText(
+        'Telefone',
+      );
+
+      await user.clear(phone);
+      await user.type(phone, '(11) 99999-0000');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(screen.getByTestId('location')).toHaveTextContent(/^\/pessoas$/));
+      expect(mockCreate).not.toHaveBeenCalled();
+      expect(mockUpdate).toHaveBeenCalledExactlyOnceWith('c1', {
+        fullName: 'Lia Souza',
+        birthDate: utcDate(2016, 6, 15),
+        phone: '(11) 99999-0000',
+        email: 'lia@example.com',
+        cpf: '52998224725',
+        administrativeNotes: 'Prefere contato pela manhã.',
+        guardians: [{ name: 'Ana Souza', relationship: 'Mãe', phone: null, cpf: null }],
+        referenceContacts: [
+          { name: 'Carlos Lima', relationship: 'Tio', phone: null, purposes: ['emergency'] },
+        ],
+      });
+      expect(toastAdd).toHaveBeenCalledWith({
+        title: 'Pessoa atualizada',
+        description: 'O cadastro de Lia Souza foi atualizado.',
+        type: 'success',
+      });
+    });
+
+    it('sends the contacts as they are left in the form, so a removed guardian is gone', async () => {
+      const user = userEvent.setup();
+      mockGet.mockResolvedValue({
+        ok: true,
+        data: { ...EXISTING, birthDate: utcDate(1990, 1, 1) },
+      });
+      renderEditPage();
+      const guardian = await screen.findByRole('group', { name: 'Responsável 1' });
+
+      await user.click(within(guardian).getByRole('button', { name: /Remover/ }));
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+      expect(mockUpdate.mock.calls[0]?.[1]).toMatchObject({ guardians: [] });
+    });
+
+    it('still asks for a guardian when the saved person is a minor and it was removed', async () => {
+      const user = userEvent.setup();
+      renderEditPage();
+      const guardian = await screen.findByRole('group', { name: 'Responsável 1' });
+
+      await user.click(within(guardian).getByRole('button', { name: /Remover/ }));
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByRole('alert')).toHaveTextContent(
+        'Informe ao menos um responsável para pessoas menores de 18 anos.',
+      );
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it('shows a backend conflict on its field and stays on the page with what was typed', async () => {
+      const user = userEvent.setup();
+      mockUpdate.mockResolvedValue(
+        problem({
+          status: 409,
+          code: 'Client.DuplicateEmail',
+          title: 'Já existe uma pessoa ativa cadastrada com este e-mail.',
+          errors: {
+            Email: [
+              {
+                code: 'Client.DuplicateEmail',
+                message: 'Já existe uma pessoa ativa cadastrada com este e-mail.',
+              },
+            ],
+          },
+        }),
+      );
+      renderEditPage();
+      const email = await screen.findByLabelText('E-mail');
+
+      await user.clear(email);
+      await user.type(email, 'outra@example.com');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(
+        await screen.findByText('Já existe uma pessoa ativa cadastrada com este e-mail.'),
+      ).toBeInTheDocument();
+      expect(screen.getByLabelText('E-mail')).toHaveValue('outra@example.com');
+      expect(screen.getByTestId('location')).toHaveTextContent('/pessoas/c1/editar');
+    });
+
+    it('refuses a birth date left half erased instead of saving the person without one', async () => {
+      const user = userEvent.setup();
+      renderEditPage();
+      const birthDate = await screen.findByLabelText('Data de nascimento');
+      await waitFor(() => expect(birthDate).toHaveValue('15/06/2016'));
+
+      await user.type(birthDate, '{Backspace}');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      expect(await screen.findByText('Informe uma data válida.')).toBeInTheDocument();
+      expect(birthDate).toHaveValue('15/06/201');
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it('does not let the situation change while the save is in flight', async () => {
+      const user = userEvent.setup();
+      mockUpdate.mockReturnValue(deferred<unknown>().promise);
+      renderEditPage();
+      await screen.findByLabelText('Nome completo');
+
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await screen.findByRole('button', { name: 'Salvando…' });
+      expect(screen.getByRole('button', { name: 'Desativar pessoa' })).toBeDisabled();
+    });
+  });
+
+  describe('changing the situation', () => {
+    it('asks before deactivating, then shows the person as inactive without losing what was typed', async () => {
+      const user = userEvent.setup();
+      const toastAdd = vi.spyOn(toast, 'add');
+      mockDeactivate.mockResolvedValue({ ok: true, data: { ...EXISTING, status: 'inactive' } });
+      renderEditPage();
+      const name = await screen.findByLabelText('Nome completo');
+      await user.clear(name);
+      await user.type(name, 'Lia Souza Lima');
+
+      await user.click(screen.getByRole('button', { name: 'Desativar pessoa' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(
+        within(dialog).getByRole('heading', { name: 'Desativar pessoa?' }),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByText(/Lia Souza deixa de aparecer/)).toBeInTheDocument();
+      const confirm = within(dialog).getByRole('button', { name: 'Desativar' });
+      expect(confirm).toHaveAttribute('data-variant', 'destructive');
+      expect(mockDeactivate).not.toHaveBeenCalled();
+
+      await user.click(confirm);
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(mockDeactivate).toHaveBeenCalledExactlyOnceWith('c1');
+      expect(mockReactivate).not.toHaveBeenCalled();
+      expect(screen.getByText('Inativa')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Reativar pessoa' })).toBeInTheDocument();
+      expect(screen.getByLabelText('Nome completo')).toHaveValue('Lia Souza Lima');
+      expect(toastAdd).toHaveBeenCalledWith({
+        title: 'Pessoa desativada',
+        description: 'O cadastro de Lia Souza foi desativado.',
+        type: 'success',
+      });
+    });
+
+    it('reactivates an inactive person with a plain confirm button', async () => {
+      const user = userEvent.setup();
+      mockGet.mockResolvedValue({ ok: true, data: { ...EXISTING, status: 'inactive' } });
+      mockReactivate.mockResolvedValue({ ok: true, data: EXISTING });
+      renderEditPage();
+      await screen.findByLabelText('Nome completo');
+      expect(screen.getByText('Inativa')).toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: 'Reativar pessoa' }));
+      const dialog = await screen.findByRole('dialog');
+      expect(within(dialog).getByRole('heading', { name: 'Reativar pessoa?' })).toBeInTheDocument();
+      const confirm = within(dialog).getByRole('button', { name: 'Reativar' });
+      expect(confirm).toHaveAttribute('data-variant', 'default');
+      await user.click(confirm);
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(mockReactivate).toHaveBeenCalledExactlyOnceWith('c1');
+      expect(screen.getByText('Ativa')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Desativar pessoa' })).toBeInTheDocument();
+    });
+
+    it('explains a reactivation the backend refuses and keeps the person inactive', async () => {
+      const user = userEvent.setup();
+      mockGet.mockResolvedValue({ ok: true, data: { ...EXISTING, status: 'inactive' } });
+      mockReactivate.mockResolvedValue(
+        problem({
+          status: 409,
+          code: 'Client.DuplicateCpf',
+          title: 'Não é possível reativar esta pessoa porque outra pessoa já usa este CPF.',
+        }),
+      );
+      renderEditPage();
+      await screen.findByLabelText('Nome completo');
+
+      await user.click(screen.getByRole('button', { name: 'Reativar pessoa' }));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Reativar' }),
+      );
+
+      const dialog = await screen.findByRole('dialog');
+      expect(
+        await within(dialog).findByRole('heading', { name: 'Não é possível reativar' }),
+      ).toBeInTheDocument();
+      expect(within(dialog).getByText(/outra pessoa já usa este CPF/)).toBeInTheDocument();
+      await user.click(within(dialog).getByRole('button', { name: 'Entendi' }));
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(screen.getByText('Inativa')).toBeInTheDocument();
+    });
+
+    it('changes nothing when the person cancels the confirmation', async () => {
+      const user = userEvent.setup();
+      renderEditPage();
+      await screen.findByLabelText('Nome completo');
+
+      await user.click(screen.getByRole('button', { name: 'Desativar pessoa' }));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Cancelar' }),
+      );
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(mockDeactivate).not.toHaveBeenCalled();
+      expect(screen.getByText('Ativa')).toBeInTheDocument();
     });
   });
 });

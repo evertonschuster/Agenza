@@ -1,0 +1,7 @@
+{
+  "search.exclude": {
+    "**/.claude/worktrees": true,
+    "**/coverage": true,
+    "**/dist": true
+  }
+}

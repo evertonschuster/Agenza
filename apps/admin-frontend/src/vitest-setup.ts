@@ -72,6 +72,10 @@ if (typeof window.Element.prototype.hasPointerCapture === 'undefined') {
 // real CSS engine and leaves overlays stuck mid-transition.
 globalThis.BASE_UI_ANIMATIONS_DISABLED = true;
 
+// DateField reads the date order from the browser's language; jsdom says en-US, the product's users
+// are pt-BR.
+Object.defineProperty(window.navigator, 'language', { value: 'pt-BR', configurable: true });
+
 // Stub Aspire-injected env vars so tests don't trip shared/env.ts's fail-fast check.
 vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:5080');
 vi.stubEnv('VITE_OIDC_AUTHORITY', 'http://localhost:5081');

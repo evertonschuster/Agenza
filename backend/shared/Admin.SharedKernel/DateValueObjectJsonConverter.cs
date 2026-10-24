@@ -6,10 +6,9 @@ namespace Admin.SharedKernel;
 internal sealed class DateValueObjectJsonConverter<T>(TimeProvider timeProvider) : JsonConverter<T>
     where T : class, IDateValueObject<T>
 {
-    // Reading the date itself is the framework's job, so a malformed date answers as it always did.
     public override T? Read(ref Utf8JsonReader reader, Type typeToConvert, JsonSerializerOptions options)
     {
-        var date = DateConverter(options).Read(ref reader, typeof(DateOnly), options);
+        var date = ReadDate(ref reader, options);
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
         var result = T.Create(date, today);
 
@@ -19,6 +18,18 @@ internal sealed class DateValueObjectJsonConverter<T>(TimeProvider timeProvider)
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
     {
         DateConverter(options).Write(writer, value.Value, options);
+    }
+
+    // An instant keeps the day as written and drops the time and the offset; anything else is the framework's job,
+    // so a malformed date answers as it always did.
+    private static DateOnly ReadDate(ref Utf8JsonReader reader, JsonSerializerOptions options)
+    {
+        if (reader.TokenType == JsonTokenType.String && reader.TryGetDateTimeOffset(out var instant))
+        {
+            return DateOnly.FromDateTime(instant.DateTime);
+        }
+
+        return DateConverter(options).Read(ref reader, typeof(DateOnly), options);
     }
 
     private static JsonConverter<DateOnly> DateConverter(JsonSerializerOptions options) =>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { cpfSchema, maskCpf, parseCpf } from './cpf';
+import { cpfDigits, cpfSchema, maskCpf, parseCpf } from './cpf';
 
 describe('parseCpf', () => {
   it.each([
@@ -28,6 +28,17 @@ describe('parseCpf', () => {
     '529.982.247-2a',
   ])('rejects %j', (cpf) => {
     expect(parseCpf(cpf)).toBeNull();
+  });
+});
+
+describe('cpfDigits', () => {
+  it.each([
+    ['', ''],
+    ['529.982.247-25', '52998224725'],
+    ['abc529x', '529'],
+    ['529982247259999', '52998224725'],
+  ] as const)('keeps %j as the digits %j', (typed, expected) => {
+    expect(cpfDigits(typed)).toBe(expected);
   });
 });
 

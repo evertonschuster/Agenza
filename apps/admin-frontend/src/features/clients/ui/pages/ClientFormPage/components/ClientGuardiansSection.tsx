@@ -3,7 +3,6 @@ import { useFieldArray, useFormContext, useWatch } from 'react-hook-form';
 import { FieldError } from '@/shared/form/fields';
 import { Button } from '@/shared/ui/button';
 import { PageSection } from '@/widgets/page-section';
-import { parseMaskedDate } from '@/shared/format/date';
 import { ADULT_AGE_IN_YEARS } from '@/shared/values/birthDate';
 import { MAX_GUARDIANS, needsGuardian } from '../../../../model/client';
 import { emptyGuardian, type ClientFormFieldValues } from '../clientForm';
@@ -17,7 +16,7 @@ function ClientGuardiansSection() {
   const hasGuardians = fields.length > 0;
   const hasReachedGuardianLimit = fields.length >= MAX_GUARDIANS;
 
-  const showGuardianNotice = needsGuardian(parseMaskedDate(birthDate), fields.length);
+  const showGuardianNotice = needsGuardian(birthDate, fields.length);
 
   return (
     <PageSection

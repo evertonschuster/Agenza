@@ -10,12 +10,14 @@ import {
   MAX_GUARDIANS,
   MAX_REFERENCE_CONTACTS,
   needsGuardian,
+  type Client,
 } from '../../../model/client';
 import {
   CONTACT_NAME_MAX_LENGTH,
   CONTACT_NAME_MIN_LENGTH,
   CONTACT_RELATIONSHIP_MAX_LENGTH,
 } from '../../../model/clientContact';
+import type { ClientStatus } from '../../../model/clientStatus';
 import { CONTACT_PURPOSES } from '../../../model/contactPurpose';
 
 const nameField = (subject: string, minLength: number, maxLength: number) =>
@@ -91,7 +93,7 @@ export const clientFormSchema = clientFormObject.refine(
   },
 );
 
-export type ClientFormFieldValues = z.input<typeof clientFormSchema>;
+export type ClientFormFieldValues = z.input<typeof clientFormSchema> & { status?: ClientStatus };
 export type ClientFormValues = z.output<typeof clientFormSchema>;
 export type GuardianFormFieldValues = ClientFormFieldValues['guardians'][number];
 export type ReferenceContactFormFieldValues = ClientFormFieldValues['referenceContacts'][number];
@@ -99,13 +101,37 @@ export type ReferenceContactFormFieldValues = ClientFormFieldValues['referenceCo
 export function emptyClientFormFieldValues(): ClientFormFieldValues {
   return {
     fullName: '',
-    birthDate: '',
+    birthDate: null,
     phone: '',
     email: '',
     cpf: '',
     administrativeNotes: '',
     guardians: [],
     referenceContacts: [],
+  };
+}
+
+export function toClientFormFieldValues(client: Client): ClientFormFieldValues {
+  return {
+    fullName: client.fullName,
+    birthDate: client.birthDate,
+    phone: client.phone ?? '',
+    email: client.email ?? '',
+    cpf: client.cpf ?? '',
+    administrativeNotes: client.administrativeNotes ?? '',
+    status: client.status,
+    guardians: client.guardians.map((guardian) => ({
+      name: guardian.name,
+      relationship: guardian.relationship,
+      phone: guardian.phone ?? '',
+      cpf: guardian.cpf ?? '',
+    })),
+    referenceContacts: client.referenceContacts.map((contact) => ({
+      name: contact.name,
+      relationship: contact.relationship,
+      phone: contact.phone ?? '',
+      purposes: contact.purposes,
+    })),
   };
 }
 
