@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type SubmitEvent } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { useForm } from 'react-hook-form';
+import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { toast } from '@/shared/ui/toast';
@@ -23,16 +23,16 @@ import {
 export function useClientFormPage(): UseClientFormPageResult {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [status, setStatus] = useState<ClientStatus>();
   const [isConfirming, setIsConfirming] = useState(false);
   const isMountedRef = useRef(true);
   const isEdit = id !== undefined;
-  const isLoading = isEdit && status === undefined;
 
   const methods = useForm<ClientFormFieldValues, unknown, ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
     defaultValues: emptyClientFormFieldValues(),
   });
+  const status = useWatch({ control: methods.control, name: 'status' });
+  const isLoading = isEdit && status === undefined;
   const isSaving = methods.formState.isSubmitting;
   const canSubmit = !isLoading && !isSaving;
 
@@ -52,7 +52,6 @@ export function useClientFormPage(): UseClientFormPageResult {
 
       if (result.ok) {
         methods.reset(toClientFormFieldValues(result.data));
-        setStatus(result.data.status);
         return;
       }
 
@@ -101,7 +100,7 @@ export function useClientFormPage(): UseClientFormPageResult {
         current === 'active'
           ? clientsRepository.deactivate(clientId)
           : clientsRepository.reactivate(clientId),
-      onChanged: (changed) => setStatus(changed.status),
+      onChanged: (changed) => methods.setValue('status', changed.status),
     };
   }
 

@@ -362,6 +362,7 @@ describe('toClientFormFieldValues', () => {
       email: '',
       cpf: '52998224725',
       administrativeNotes: '',
+      status: 'active',
       guardians: [{ name: 'Ana Souza', relationship: 'Mãe', phone: '', cpf: '11144477735' }],
       referenceContacts: [
         {
