@@ -1,13 +1,20 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router';
 
-type SearchParamValue = string | number;
+type SearchParamValue = string | number | boolean;
 
 type SearchParamsRecord<T> = Record<keyof T, SearchParamValue>;
+
+function readBoolean(raw: string, fallback: boolean): boolean {
+  if (raw === 'true') return true;
+  if (raw === 'false') return false;
+  return fallback;
+}
 
 function readValue<V extends SearchParamValue>(raw: string | null, fallback: V): V {
   if (raw === null || raw === '') return fallback;
   if (typeof fallback === 'string') return raw as V;
+  if (typeof fallback === 'boolean') return readBoolean(raw, fallback) as V;
 
   const parsed = Number(raw);
   return Number.isFinite(parsed) ? (parsed as V) : fallback;

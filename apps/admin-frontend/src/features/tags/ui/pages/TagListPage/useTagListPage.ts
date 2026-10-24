@@ -17,7 +17,7 @@ export function useTagListPage(): UseTagListPageResult {
     state,
     fetchPage: tagsRepository.list,
   });
-  const filterForm = useForm<TagListFilters>({ defaultValues: INITIAL_TAG_LIST_FILTERS });
+  const filterForm = useForm<TagListFilters>({ defaultValues: filters });
 
   useTopic(tagDeleted, refetch);
   useTopic(tagSaved, refetch);

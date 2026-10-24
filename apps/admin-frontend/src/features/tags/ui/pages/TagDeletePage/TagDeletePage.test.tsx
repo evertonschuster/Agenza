@@ -12,8 +12,8 @@ import {
 } from 'react-router';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagDeletePage } from './TagDeletePage';
-import type { TagListQuery } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
+import type { TagListQuery } from '../../../model/tagListFilters';
 
 const { mockList, mockGet, mockDelete } = vi.hoisted(() => ({
   mockList: vi.fn(),

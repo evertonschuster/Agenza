@@ -6,10 +6,10 @@ import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { footerSkeleton } from '@/test/footerSkeleton';
 import { pending } from '@/test/pending';
 import { TagListPage } from './TagListPage';
-import type { TagListQuery } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
 import { tagDeleted, tagSaved } from '../../../model/tagEvents';
 import type { TagList } from '../../../model/tagList';
+import type { TagListQuery } from '../../../model/tagListFilters';
 
 const { mockList } = vi.hoisted(() => ({ mockList: vi.fn() }));
 

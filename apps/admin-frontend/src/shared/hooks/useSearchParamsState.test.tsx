@@ -9,9 +9,10 @@ interface Query {
   status: 'active' | 'inactive' | 'all';
   page: number;
   pageSize: number;
+  archived: boolean;
 }
 
-const DEFAULTS: Query = { search: '', status: 'active', page: 1, pageSize: 20 };
+const DEFAULTS: Query = { search: '', status: 'active', page: 1, pageSize: 20, archived: false };
 
 function renderAt(address: string) {
   function wrapper({ children }: { children: ReactNode }) {
@@ -53,6 +54,11 @@ describe('useSearchParamsState', () => {
       expect(result.current.value).toEqual(DEFAULTS);
     });
 
+    it('reads a boolean key from true or false, and the default for anything else', () => {
+      expect(renderAt('/pessoas?archived=true').result.current.value.archived).toBe(true);
+      expect(renderAt('/pessoas?archived=sim').result.current.value.archived).toBe(false);
+    });
+
     it('takes a text key as the address writes it, without checking it against the type', () => {
       const { result } = renderAt('/pessoas?status=xyz');
 
@@ -79,6 +85,14 @@ describe('useSearchParamsState', () => {
 
       expect(result.current.value).toEqual({ ...DEFAULTS, search: 'ana', status: 'all', page: 2 });
       expect(result.current.search).toBe('?search=ana&status=all&page=2');
+    });
+
+    it('writes a boolean key as true or false', () => {
+      const { result } = renderAt('/pessoas');
+
+      act(() => result.current.setValue({ ...DEFAULTS, archived: true }));
+
+      expect(result.current.search).toBe('?archived=true');
     });
 
     it('takes a key back out of the address when it returns to its default', () => {
