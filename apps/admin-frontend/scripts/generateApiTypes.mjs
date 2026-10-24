@@ -68,6 +68,7 @@ function operationsOf(document) {
 // reads it.
 function schemasReachedByParameters(document) {
   return reachableSchemas(document, [
+    document.components?.parameters,
     ...Object.values(document.paths ?? {}).map((pathItem) => pathItem.parameters),
     ...operationsOf(document).map((operation) => operation.parameters),
   ]);

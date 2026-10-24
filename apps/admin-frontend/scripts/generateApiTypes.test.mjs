@@ -39,9 +39,28 @@ function openApiDocument() {
         ],
         post: { requestBody: json('SlotWindow'), responses: ok('PersonResponse') },
       },
+      '/rooms': {
+        get: {
+          parameters: [{ $ref: '#/components/parameters/RoomWindow' }],
+          responses: ok('PersonResponse'),
+        },
+        post: { requestBody: json('RoomWindow'), responses: ok('PersonResponse') },
+      },
     },
     components: {
+      parameters: {
+        RoomWindow: {
+          name: 'window',
+          in: 'query',
+          schema: { $ref: '#/components/schemas/RoomWindow' },
+        },
+      },
       schemas: {
+        RoomWindow: {
+          type: 'object',
+          required: ['bookedOn'],
+          properties: { bookedOn: { type: 'string', format: 'date' } },
+        },
         CreatePersonRequest: {
           type: 'object',
           required: ['birthDate', 'firstVisit', 'guardian', 'createdAt'],
@@ -146,6 +165,12 @@ describe('typesFromDocument', () => {
     const types = await typesOf();
 
     expect(typeOf(types, 'SlotWindow', 'startsOn')).toBe('string');
+  });
+
+  it('keeps the date of a schema a referenced parameter reaches as string too', async () => {
+    const types = await typesOf();
+
+    expect(typeOf(types, 'RoomWindow', 'bookedOn')).toBe('string');
   });
 
   it('never maps an instant, even in a request body', async () => {

@@ -14,6 +14,7 @@ const MIN_YEAR = 1000;
 
 export function dateLayoutOf(locale: string): DateLayout {
   const formatter = new Intl.DateTimeFormat(locale, {
+    calendar: 'gregory',
     day: '2-digit',
     month: '2-digit',
     year: 'numeric',

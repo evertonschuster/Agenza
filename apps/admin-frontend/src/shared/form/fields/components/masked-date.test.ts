@@ -113,6 +113,10 @@ describe('formatMaskedDate', () => {
     expect(formatMaskedDate(utcDate(2015, 3, 10), SV)).toBe('2015-03-10');
   });
 
+  it('writes the Gregorian year even where the language uses another calendar', () => {
+    expect(formatMaskedDate(utcDate(2000, 1, 2), dateLayoutOf('th-TH'))).toBe('02/01/2000');
+  });
+
   it.each([PT_BR, EN_US, DE, SV])('round-trips with parseMaskedDate: %#', (layout) => {
     expect(parseMaskedDate(formatMaskedDate(utcDate(2000, 2, 29), layout), layout)).toEqual(
       utcDate(2000, 2, 29),
