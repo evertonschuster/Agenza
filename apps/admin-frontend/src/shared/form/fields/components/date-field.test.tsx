@@ -6,16 +6,17 @@ import { utcDate } from '@/shared/format/date';
 import { DateField } from './date-field';
 
 interface DummyValues {
-  birthDate: string;
+  birthDate: Date | null;
 }
 
 interface HarnessProps {
-  initial?: string;
+  initial?: Date | null;
+  reloadTo?: Date;
   disabled?: boolean;
   readOnly?: boolean;
 }
 
-function Harness({ initial = '', disabled = false, readOnly = false }: HarnessProps) {
+function Harness({ initial = null, reloadTo, disabled = false, readOnly = false }: HarnessProps) {
   const methods = useForm<DummyValues>({ defaultValues: { birthDate: initial } });
 
   return (
@@ -30,6 +31,11 @@ function Harness({ initial = '', disabled = false, readOnly = false }: HarnessPr
         readOnly={readOnly}
       />
       <CurrentValue />
+      {reloadTo && (
+        <button type="button" onClick={() => methods.reset({ birthDate: reloadTo })}>
+          Recarregar
+        </button>
+      )}
     </FormProvider>
   );
 }
@@ -37,7 +43,10 @@ function Harness({ initial = '', disabled = false, readOnly = false }: HarnessPr
 function CurrentValue() {
   const { control } = useFormContext<DummyValues>();
   const birthDate = useWatch({ control, name: 'birthDate' });
-  return <output aria-label="valor do formulário">{birthDate}</output>;
+  const shown =
+    birthDate &&
+    (Number.isNaN(birthDate.getTime()) ? 'inválida' : birthDate.toISOString().slice(0, 10));
+  return <output aria-label="valor do formulário">{shown}</output>;
 }
 
 function input() {
@@ -54,14 +63,55 @@ async function openCalendar(user: ReturnType<typeof userEvent.setup>) {
 }
 
 describe('DateField', () => {
-  it('masks what is typed as dd/mm/aaaa and stores the masked text in the form', async () => {
+  it('masks what is typed as dd/mm/aaaa and stores the Date in the form once it is whole', async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
-    await user.type(input(), '20051990');
+    await user.type(input(), '200519');
+
+    expect(input()).toHaveValue('20/05/19');
+    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('inválida');
+
+    await user.type(input(), '90');
 
     expect(input()).toHaveValue('20/05/1990');
-    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('20/05/1990');
+    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('1990-05-20');
+  });
+
+  it('holds an invalid Date for a day that does not exist, so the schema can refuse it, while showing what was typed', async () => {
+    const user = userEvent.setup();
+    render(<Harness />);
+
+    await user.type(input(), '31022020');
+
+    expect(input()).toHaveValue('31/02/2020');
+    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('inválida');
+  });
+
+  it('holds no date once what was typed is erased', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={utcDate(1995, 8, 7)} />);
+
+    await user.clear(input());
+
+    expect(screen.getByLabelText('valor do formulário')).toBeEmptyDOMElement();
+  });
+
+  it('shows a Date the form already holds as dd/mm/aaaa', () => {
+    render(<Harness initial={utcDate(1995, 8, 7)} />);
+
+    expect(input()).toHaveValue('07/08/1995');
+  });
+
+  it('rewrites what was typed when the form receives another Date, as when a person is loaded', async () => {
+    const user = userEvent.setup();
+    render(<Harness reloadTo={utcDate(2016, 6, 15)} />);
+
+    await user.type(input(), '1003');
+    await user.click(screen.getByRole('button', { name: 'Recarregar' }));
+
+    expect(input()).toHaveValue('15/06/2016');
+    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('2016-06-15');
   });
 
   it('shows the dd/mm/aaaa placeholder and the numeric keyboard hint', () => {
@@ -114,7 +164,7 @@ describe('DateField', () => {
     });
 
     it('names the clear button without repeating the field label, so the label still finds one control', () => {
-      render(<Harness initial="07/08/1995" />);
+      render(<Harness initial={utcDate(1995, 8, 7)} />);
 
       expect(clearButton()).not.toHaveAccessibleName(/data de nascimento/i);
       expect(screen.getAllByLabelText(/data de nascimento/i)).toHaveLength(1);
@@ -122,7 +172,7 @@ describe('DateField', () => {
 
     it('empties the field and the form from the clear button, and puts the cursor back in the field', async () => {
       const user = userEvent.setup();
-      render(<Harness initial="07/08/1995" />);
+      render(<Harness initial={utcDate(1995, 8, 7)} />);
 
       await user.click(clearButton()!);
 
@@ -135,7 +185,7 @@ describe('DateField', () => {
     it.each([['disabled'], ['readOnly']] as const)(
       'hides the clear button while the field is %s',
       (mode) => {
-        render(<Harness initial="07/08/1995" {...{ [mode]: true }} />);
+        render(<Harness initial={utcDate(1995, 8, 7)} {...{ [mode]: true }} />);
 
         expect(clearButton()).not.toBeInTheDocument();
       },
@@ -152,7 +202,7 @@ describe('DateField', () => {
 
     it('empties the field from Limpar in the calendar and closes it', async () => {
       const user = userEvent.setup();
-      render(<Harness initial="07/08/1995" />);
+      render(<Harness initial={utcDate(1995, 8, 7)} />);
 
       const calendar = await openCalendar(user);
       await user.click(within(calendar).getByRole('button', { name: 'Limpar' }));
@@ -206,7 +256,7 @@ describe('DateField', () => {
     await user.click(within(calendar).getByRole('button', { name: /, 1 de outubro de 2026/ }));
 
     expect(input()).toHaveValue('01/10/2026');
-    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('01/10/2026');
+    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('2026-10-01');
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
@@ -225,7 +275,7 @@ describe('DateField', () => {
 
   it('opens on the month of a date the form already holds', async () => {
     const user = userEvent.setup();
-    render(<Harness initial="07/08/1995" />);
+    render(<Harness initial={utcDate(1995, 8, 7)} />);
 
     const calendar = await openCalendar(user);
 

@@ -1,17 +1,12 @@
 import { Link } from 'react-router';
 import { maskCpf } from '@/shared/values/cpf';
-import { Badge } from '@/shared/ui/badge';
 import { OptionalText } from '@/shared/ui/optional-text';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import type { ClientListItem } from '../../../../model/clientList';
-import { CLIENT_STATUS_LABELS, type ClientStatus } from '../../../../model/clientStatus';
-import { clientDetailPath } from '../../../clientsPaths';
-
-const STATUS_BADGE_VARIANT: Record<ClientStatus, 'success' | 'muted'> = {
-  active: 'success',
-  inactive: 'muted',
-};
+import { editClientPath } from '../../../clientsPaths';
+import { ClientStatusBadge } from '../../../components/ClientStatusBadge';
+import { ClientEditLink } from './ClientEditLink';
 
 export function clientColumns(): ListSectionColumn<ClientListItem>[] {
   return [
@@ -21,7 +16,7 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
       skeleton: <Skeleton className="h-5 w-40" />,
       cell: (client) => (
         <Link
-          to={clientDetailPath(client.id)}
+          to={editClientPath(client.id)}
           className="rounded-sm font-medium underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
         >
           {client.fullName}
@@ -55,11 +50,14 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
       key: 'status',
       header: 'Situação',
       skeleton: <Skeleton className="h-5 w-14 rounded-full" />,
-      cell: (client) => (
-        <Badge variant={STATUS_BADGE_VARIANT[client.status]} className="align-top">
-          {CLIENT_STATUS_LABELS[client.status]}
-        </Badge>
-      ),
+      cell: (client) => <ClientStatusBadge status={client.status} className="align-top" />,
+    },
+    {
+      key: 'actions',
+      header: 'Ações',
+      align: 'end',
+      skeleton: <Skeleton className="size-7" />,
+      cell: (client) => <ClientEditLink client={client} />,
     },
   ];
 }

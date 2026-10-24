@@ -57,6 +57,16 @@ public class CreateClientCommandBindingTests
     }
 
     [Fact]
+    public void Deserialize_WithTheBirthDateAsAnInstant_KeepsItsDay()
+    {
+        const string json = """{ "fullName": "Maria Souza", "birthDate": "2015-03-10T00:00:00.000Z" }""";
+
+        var command = JsonSerializer.Deserialize<CreateClientCommand>(json, WireJson.Options)!;
+
+        command.BirthDate!.Value.Should().Be(new DateOnly(2015, 3, 10));
+    }
+
+    [Fact]
     public void Deserialize_WithoutOptionalFields_LeavesThemNull()
     {
         var command = JsonSerializer.Deserialize<CreateClientCommand>("""{ "fullName": "Maria Souza" }""", WireJson.Options)!;

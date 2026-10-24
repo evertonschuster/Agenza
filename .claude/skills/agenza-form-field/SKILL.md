@@ -8,7 +8,7 @@ description: Use when building or changing a form in admin-frontend — wiring R
 `TagFormPage` (`src/features/tags/ui/pages/TagFormPage/`) is the reference implementation for a
 dialog form. `ClientFormPage` (`src/features/clients/ui/pages/ClientFormPage/`) is the second
 consumer and the reference for a full-page form with **field arrays** (`useFieldArray`, nested paths
-such as `guardians.${number}.name`), masked inputs (`MaskedField`), a typed-or-picked date (`DateField`: mask plus calendar popover, bounded by `minDate`/`maxDate`) and a custom multi-value control
+such as `guardians.${number}.name`), masked inputs (`MaskedField`: `mask` shows the stored value, `unmask` stores what is typed, so `CpfField` keeps the digits), a typed-or-picked date (`DateField`: mask plus calendar popover, bounded by `minDate`/`maxDate`) and a custom multi-value control
 (`CheckboxGroup` through a `ControlledField` render function). Read
 [`docs/ARCHITECTURE.md` §5](../../../apps/admin-frontend/docs/ARCHITECTURE.md) (the "Tag create/edit
 UI reintroduced on React Hook Form + Zod" row and the row right after it) for the decision history
@@ -145,8 +145,9 @@ keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See 
 
 5. **A CPF, phone, e-mail or birth date is not configured by hand: reuse the pair.** The schema half
    comes from that value's file in `@/shared/values/` (`cpfSchema` from `@/shared/values/cpf`, then
-   `phoneSchema`, `emailSchema`, `birthDateSchema`: an empty field becomes `null`, anything else is
-   parsed and fails with the pt-BR message), the
+   `phoneSchema`, `emailSchema`: an empty field becomes `null`, anything else is parsed and fails
+   with the pt-BR message; `birthDateSchema` takes the `Date | null` that `DateField` keeps in the
+   form and checks it), the
    field half from `@/shared/form/fields` (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`:
    mask, input type, limit, placeholder, default label and `opcional` hint already set, each one
    overridable by prop):

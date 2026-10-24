@@ -56,19 +56,26 @@ document. It also fires on a backend-only PR, by design — that is the drift it
 
 ## Calendar dates cross as `Date`, instants as `string`
 
-Two rules, one per direction, that only hold together:
+Three rules that only hold together:
 
-- **Types.** `generateApiTypes.mjs` turns `format: date` into `Date` only in schemas reached solely
-  from request bodies: it follows the `$ref`s from each operation's `requestBody`, so the DTO's name
-  (`*Command`, `*Input`, `*Request`) does not matter. A schema that a response or a parameter also
-  uses stays `string`. A date in a response is therefore always a `string`, and the repository that
-  reads it converts it (`new Date(isoDate)` is midnight UTC). `format: date-time` is never mapped.
-  `scripts/generateApiTypes.test.mjs` pins each case against a fixture document (`typesFromDocument`,
-  no backend needed); change the rule there first.
-- **Wire.** `serializeBody` (`apiClient.ts`, the client's `bodySerializer`) writes **every** `Date`
-  in a request body as `yyyy-MM-dd`, its UTC calendar day; the backend's `DateOnly` binding answers
-  400 to an instant. A `Date` in a body always means a calendar day: never carry an instant in one,
-  send it as the ISO `string` its `date-time` type already asks for.
+- **Types.** `generateApiTypes.mjs` turns `format: date` into `Date` in request bodies and in
+  responses. Only a schema a parameter reaches (following `$ref`s) stays `string`, since a query
+  string cannot carry a `Date`. The DTO's name (`*Command`, `*Input`, `*Request`) does not matter.
+  `format: date-time` is never mapped. The generator also writes `generated/dateFields.ts`, the
+  names of every property it typed as `Date`, including a list of dates, a date inside an inline
+  object or a list item, and a date offered by one member of `allOf`/`anyOf`/`oneOf`, and fails when one of those names is something else in another schema or
+  when a date sits in a dictionary (`additionalProperties`), which has no name to match. `scripts/generateApiTypes.test.mjs` pins each case against a fixture document
+  (`typesFromDocument`, no backend needed); change the rule there first.
+- **Wire, out.** `createApiClient` sets no `bodySerializer`, so a `Date` in a request body goes out as
+  `JSON.stringify` writes it, an instant (`2016-06-15T00:00:00.000Z`). The backend's date value
+  objects keep that instant's day as written and drop the time
+  ([ADR 0078](../../../docs/adr/0078-calendar-date-sent-as-an-instant-keeps-its-written-day.md)). An
+  instant meant as an instant goes as the ISO `string` its `date-time` type asks for.
+- **Wire, in.** JSON has no date type, and openapi-fetch has no hook to parse a body differently, so
+  the facade's `run()` passes every successful payload through `reviveDates` (`apiClient.ts`): a
+  property named in `DATE_FIELDS` whose value is `yyyy-MM-dd` becomes `utcDate` midnight. A
+  repository never converts a date; it forwards the result. Converting by the shape of the value
+  alone was turned down: free text such as a note reading `2020-01-01` would become a `Date`.
 
 Build calendar days with `utcDate`/`todayUtc` (`shared/format/date.ts`), never `new Date(y, m, d)`:
 that is local midnight, which east of UTC serializes as the previous day.

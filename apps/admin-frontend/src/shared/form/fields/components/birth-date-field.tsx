@@ -11,8 +11,8 @@ export function BirthDateField<T extends FieldValues>({
   ...props
 }: BirthDateFieldProps<T>) {
   const { control } = useFormContext<T>();
-  const typed: unknown = useWatch({ control, name });
-  const age = ageFromBirthDate(typeof typed === 'string' ? typed : '');
+  const birthDate: unknown = useWatch({ control, name });
+  const age = ageFromBirthDate(birthDate instanceof Date ? birthDate : null);
   const { min, max } = birthDatePickerBounds();
 
   return (

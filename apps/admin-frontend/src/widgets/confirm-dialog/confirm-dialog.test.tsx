@@ -311,4 +311,29 @@ describe('ConfirmDialog', () => {
     expect(screen.getByRole('button', { name: 'Voltar' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Cancelar' })).not.toBeInTheDocument();
   });
+
+  it('marks the confirm button as destructive unless a routine asks for a plain one', () => {
+    const first = render(
+      <ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={vi.fn()} />,
+    );
+    expect(screen.getByRole('button', { name: 'Desativar' })).toHaveAttribute(
+      'data-variant',
+      'destructive',
+    );
+    first.unmount();
+
+    render(
+      <ConfirmDialog
+        {...BASE_PROPS}
+        onOpenChange={vi.fn()}
+        onConfirm={vi.fn()}
+        confirmation={{ ...BASE_PROPS.confirmation, confirmVariant: 'default' }}
+      />,
+    );
+
+    expect(screen.getByRole('button', { name: 'Desativar' })).toHaveAttribute(
+      'data-variant',
+      'default',
+    );
+  });
 });

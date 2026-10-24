@@ -1,5 +1,5 @@
-import { Link } from 'react-router';
-import { Button, buttonVariants } from '@/shared/ui/button';
+import { ActionLink } from '@/shared/ui/action-link';
+import { Button } from '@/shared/ui/button';
 import type { PageFormFooterProps } from '../form-footer.types';
 import { FormSubmitButton } from './form-submit-button';
 
@@ -11,9 +11,9 @@ function PageFormFooter({ isSaving, canSubmit = true, cancelTo }: PageFormFooter
           Cancelar
         </Button>
       ) : (
-        <Link to={cancelTo} className={buttonVariants({ variant: 'outline' })}>
+        <ActionLink to={cancelTo} variant="outline">
           Cancelar
-        </Link>
+        </ActionLink>
       )}
       <FormSubmitButton isSaving={isSaving} canSubmit={canSubmit} />
     </div>

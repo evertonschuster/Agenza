@@ -5,11 +5,11 @@ import { FormProvider, useForm } from 'react-hook-form';
 import { BirthDateField } from './birth-date-field';
 
 interface DummyValues {
-  birthDate: string;
+  birthDate: Date | null;
 }
 
 function Harness({ children }: { children: React.ReactNode }) {
-  const methods = useForm<DummyValues>({ defaultValues: { birthDate: '' } });
+  const methods = useForm<DummyValues>({ defaultValues: { birthDate: null } });
 
   return <FormProvider {...methods}>{children}</FormProvider>;
 }

@@ -5,6 +5,7 @@ import {
   emptyGuardian,
   emptyReferenceContact,
   emptyClientFormFieldValues,
+  toClientFormFieldValues,
   type ClientFormFieldValues,
 } from './clientForm';
 
@@ -70,14 +71,12 @@ describe('clientFormSchema', () => {
     const result = clientFormSchema.safeParse(
       values({
         fullName: '  Maria Souza  ',
-        birthDate: '20/05/1990',
+        birthDate: utcDate(1990, 5, 20),
         phone: '  (11) 99999-0000 ',
         email: '  Maria.Souza@Example.COM ',
-        cpf: '529.982.247-25',
+        cpf: '52998224725',
         administrativeNotes: '  Prefere contato pela manhã.  ',
-        guardians: [
-          guardian({ name: ' Ana Souza ', phone: ' 11 98888-0000', cpf: '123.456.789-09' }),
-        ],
+        guardians: [guardian({ name: ' Ana Souza ', phone: ' 11 98888-0000', cpf: '12345678909' })],
         referenceContacts: [reference({ purposes: ['emergency', 'dailyCommunication'] })],
       }),
     );
@@ -106,7 +105,7 @@ describe('clientFormSchema', () => {
 
   it('turns blank optional fields into null', () => {
     const result = clientFormSchema.safeParse(
-      values({ birthDate: '  ', phone: '   ', email: '  ', cpf: ' ', administrativeNotes: '   ' }),
+      values({ phone: '   ', email: '  ', cpf: ' ', administrativeNotes: '   ' }),
     );
 
     expect(result.data).toMatchObject({
@@ -141,51 +140,53 @@ describe('clientFormSchema', () => {
 
   describe('birth date', () => {
     it.each([
-      ['10/03', 'Informe uma data válida no formato dd/mm/aaaa.'],
-      ['31/02/2020', 'Informe uma data válida no formato dd/mm/aaaa.'],
-      ['02/10/2026', 'A data de nascimento deve estar no passado.'],
-      ['03/10/2026', 'A data de nascimento deve estar no passado.'],
-      ['01/01/2030', 'A data de nascimento deve estar no passado.'],
-      ['02/10/1905', 'A data de nascimento não pode indicar idade superior a 120 anos.'],
-    ] as const)('rejects %j', (birthDate, message) => {
+      [utcDate(2026, 10, 2), 'A data de nascimento deve estar no passado.'],
+      [utcDate(2026, 10, 3), 'A data de nascimento deve estar no passado.'],
+      [utcDate(2030, 1, 1), 'A data de nascimento deve estar no passado.'],
+      [utcDate(1905, 10, 2), 'A data de nascimento não pode indicar idade superior a 120 anos.'],
+    ] as const)('rejects %s', (birthDate, message) => {
       expect(issuesOf(values({ birthDate, guardians: [guardian()] }))['birthDate']).toBe(message);
     });
 
     it('accepts a date in the past within 120 years', () => {
-      expect(issuesOf(values({ birthDate: '01/10/2026', guardians: [guardian()] }))).toEqual({});
-      expect(issuesOf(values({ birthDate: '02/10/1906' }))).toEqual({});
+      expect(
+        issuesOf(values({ birthDate: utcDate(2026, 10, 1), guardians: [guardian()] })),
+      ).toEqual({});
+      expect(issuesOf(values({ birthDate: utcDate(1906, 10, 2) }))).toEqual({});
     });
   });
 
   describe('guardian required for minors', () => {
     it('does not ask anything when there is no birth date', () => {
-      expect(issuesOf(values({ birthDate: '', guardians: [] }))).toEqual({});
+      expect(issuesOf(values({ birthDate: null, guardians: [] }))).toEqual({});
     });
 
     it('requires a guardian when the birth date indicates a minor', () => {
-      expect(issuesOf(values({ birthDate: '10/03/2015', guardians: [] }))['guardians']).toBe(
-        'Informe ao menos um responsável para pessoas menores de 18 anos.',
-      );
+      expect(
+        issuesOf(values({ birthDate: utcDate(2015, 3, 10), guardians: [] }))['guardians'],
+      ).toBe('Informe ao menos um responsável para pessoas menores de 18 anos.');
     });
 
     it('is satisfied by a guardian', () => {
-      expect(issuesOf(values({ birthDate: '10/03/2015', guardians: [guardian()] }))).toEqual({});
+      expect(
+        issuesOf(values({ birthDate: utcDate(2015, 3, 10), guardians: [guardian()] })),
+      ).toEqual({});
     });
 
     it('is not required for adults, including on the eighteenth birthday', () => {
-      expect(issuesOf(values({ birthDate: '20/05/1990', guardians: [] }))).toEqual({});
-      expect(issuesOf(values({ birthDate: '02/10/2008', guardians: [] }))).toEqual({});
+      expect(issuesOf(values({ birthDate: utcDate(1990, 5, 20), guardians: [] }))).toEqual({});
+      expect(issuesOf(values({ birthDate: utcDate(2008, 10, 2), guardians: [] }))).toEqual({});
     });
 
     it('still requires one the day before the eighteenth birthday', () => {
       expect(
-        issuesOf(values({ birthDate: '03/10/2008', guardians: [] }))['guardians'],
+        issuesOf(values({ birthDate: utcDate(2008, 10, 3), guardians: [] }))['guardians'],
       ).toBeDefined();
     });
 
     it('does not require one when the birth date itself is invalid', () => {
       expect(
-        issuesOf(values({ birthDate: '01/01/2030', guardians: [] }))['guardians'],
+        issuesOf(values({ birthDate: utcDate(2030, 1, 1), guardians: [] }))['guardians'],
       ).toBeUndefined();
     });
 
@@ -194,7 +195,7 @@ describe('clientFormSchema', () => {
         values({
           fullName: '',
           email: 'invalido',
-          birthDate: '10/03/2015',
+          birthDate: utcDate(2015, 3, 10),
           guardians: [],
           referenceContacts: [reference({ purposes: [] })],
         }),
@@ -210,7 +211,7 @@ describe('clientFormSchema', () => {
 
     it('still counts a guardian whose own fields are invalid', () => {
       const issues = issuesOf(
-        values({ birthDate: '10/03/2015', guardians: [guardian({ name: '' })] }),
+        values({ birthDate: utcDate(2015, 3, 10), guardians: [guardian({ name: '' })] }),
       );
 
       expect(issues['guardians.0.name']).toBe('O nome do responsável é obrigatório.');
@@ -221,7 +222,7 @@ describe('clientFormSchema', () => {
       vi.setSystemTime(new Date('2026-10-02T23:59:00Z'));
 
       expect(
-        issuesOf(values({ birthDate: '03/10/2008', guardians: [] }))['guardians'],
+        issuesOf(values({ birthDate: utcDate(2008, 10, 3), guardians: [] }))['guardians'],
       ).toBeDefined();
     });
   });
@@ -249,7 +250,7 @@ describe('clientFormSchema', () => {
     });
 
     it('rejects an invalid CPF', () => {
-      expect(issuesOf(values({ cpf: '529.982.247-24' }))['cpf']).toBe('Informe um CPF válido.');
+      expect(issuesOf(values({ cpf: '52998224724' }))['cpf']).toBe('Informe um CPF válido.');
     });
 
     it('limits the administrative notes to 500 characters', () => {
@@ -318,7 +319,7 @@ describe('emptyClientFormFieldValues', () => {
   it('holds every field, empty, so nothing is asked up front and a backend error on any of them finds its input', () => {
     expect(emptyClientFormFieldValues()).toEqual({
       fullName: '',
-      birthDate: '',
+      birthDate: null,
       phone: '',
       email: '',
       cpf: '',
@@ -326,5 +327,96 @@ describe('emptyClientFormFieldValues', () => {
       guardians: [],
       referenceContacts: [],
     });
+  });
+});
+
+describe('toClientFormFieldValues', () => {
+  it('fills the form with the person as loaded: birth date and CPFs as is, missing values empty', () => {
+    expect(
+      toClientFormFieldValues({
+        id: 'c1',
+        fullName: 'Maria Souza',
+        birthDate: utcDate(2015, 3, 10),
+        phone: '(11) 91234-5678',
+        email: null,
+        cpf: '52998224725',
+        administrativeNotes: null,
+        status: 'active',
+        guardians: [
+          { id: 'g1', name: 'Ana Souza', relationship: 'Mãe', phone: null, cpf: '11144477735' },
+        ],
+        referenceContacts: [
+          {
+            id: 'r1',
+            name: 'Carlos Lima',
+            relationship: 'Tio',
+            phone: '11 3333-4444',
+            purposes: ['emergency', 'dailyCommunication'],
+          },
+        ],
+      }),
+    ).toEqual({
+      fullName: 'Maria Souza',
+      birthDate: utcDate(2015, 3, 10),
+      phone: '(11) 91234-5678',
+      email: '',
+      cpf: '52998224725',
+      administrativeNotes: '',
+      status: 'active',
+      guardians: [{ name: 'Ana Souza', relationship: 'Mãe', phone: '', cpf: '11144477735' }],
+      referenceContacts: [
+        {
+          name: 'Carlos Lima',
+          relationship: 'Tio',
+          phone: '11 3333-4444',
+          purposes: ['emergency', 'dailyCommunication'],
+        },
+      ],
+    });
+  });
+
+  it('leaves the birth date and the CPFs empty when the person has none', () => {
+    const values = toClientFormFieldValues({
+      id: 'c1',
+      fullName: 'Maria Souza',
+      birthDate: null,
+      phone: null,
+      email: 'maria@example.com',
+      cpf: null,
+      administrativeNotes: 'Prefere WhatsApp.',
+      status: 'inactive',
+      guardians: [{ id: 'g1', name: 'Ana Souza', relationship: 'Mãe', phone: null, cpf: null }],
+      referenceContacts: [],
+    });
+
+    expect(values).toMatchObject({
+      birthDate: null,
+      cpf: '',
+      email: 'maria@example.com',
+      administrativeNotes: 'Prefere WhatsApp.',
+    });
+    expect(values.guardians[0]?.cpf).toBe('');
+  });
+
+  it('round-trips through the schema to the same person, so saving unchanged sends what was loaded', () => {
+    vi.useFakeTimers({ now: NOON_UTC, toFake: ['Date'] });
+    const parsed = clientFormSchema.parse(
+      toClientFormFieldValues({
+        id: 'c1',
+        fullName: 'Maria Souza',
+        birthDate: utcDate(1990, 12, 31),
+        phone: null,
+        email: null,
+        cpf: '52998224725',
+        administrativeNotes: null,
+        status: 'active',
+        guardians: [],
+        referenceContacts: [],
+      }),
+    );
+    vi.useRealTimers();
+
+    expect(parsed.birthDate).toEqual(utcDate(1990, 12, 31));
+    expect(parsed.cpf).toBe('52998224725');
   });
 });

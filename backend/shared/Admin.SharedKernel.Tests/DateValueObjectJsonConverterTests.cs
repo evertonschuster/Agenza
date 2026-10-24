@@ -20,6 +20,24 @@ public class DateValueObjectJsonConverterTests
         Bind("\"2015-03-10\"").Born!.Value.Should().Be(new DateOnly(2015, 3, 10));
     }
 
+    [Theory]
+    [InlineData("\"2015-03-10T00:00:00.000Z\"")]
+    [InlineData("\"2015-03-10T23:59:59-03:00\"")]
+    [InlineData("\"2015-03-10T01:30:00+09:00\"")]
+    [InlineData("\"2015-03-10T12:00:00\"")]
+    public void Read_WithAnInstant_BindsTheDayAsWrittenAndDropsTheTime(string bornJson)
+    {
+        Bind(bornJson).Born!.Value.Should().Be(new DateOnly(2015, 3, 10));
+    }
+
+    [Fact]
+    public void Read_WithAnInstantOnToday_ThrowsThePastMessage()
+    {
+        var act = () => Bind("\"2026-10-02T00:00:00.000Z\"");
+
+        act.Should().Throw<JsonException>().Which.Message.Should().Be("A data de nascimento deve estar no passado.");
+    }
+
     [Fact]
     public void Read_WithNull_BindsNull()
     {

@@ -2,11 +2,14 @@ import type { ReactNode } from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
 
+type ConfirmDialogConfirmVariant = 'destructive' | 'default';
+
 interface ConfirmDialogConfirmation {
   title?: string;
   description?: ReactNode;
   icon?: LucideIcon;
   confirmLabel?: string;
+  confirmVariant?: ConfirmDialogConfirmVariant;
   cancelLabel?: string;
 }
 
@@ -42,6 +45,7 @@ interface ConfirmDialogConfirmViewProps {
   description: ReactNode;
   ConfirmIcon: LucideIcon;
   confirmLabel: string;
+  confirmVariant: ConfirmDialogConfirmVariant;
   cancelLabel: string;
   retryLabel: string;
   failure: ApiProblem | undefined;

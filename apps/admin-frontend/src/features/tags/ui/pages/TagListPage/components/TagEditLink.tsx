@@ -1,6 +1,5 @@
 import { PencilIcon } from 'lucide-react';
-import { Link } from 'react-router';
-import { buttonVariants } from '@/shared/ui/button';
+import { ActionLink } from '@/shared/ui/action-link';
 import type { Tag } from '../../../../model/tag';
 
 interface TagEditLinkProps {
@@ -10,13 +9,13 @@ interface TagEditLinkProps {
 
 function TagEditLink({ tag, queryString }: TagEditLinkProps) {
   return (
-    <Link
+    <ActionLink
       to={{ pathname: `${tag.id}/edit`, search: queryString }}
-      className={buttonVariants({ variant: 'ghost', size: 'icon-sm' })}
+      icon={PencilIcon}
+      variant="ghost"
+      size="icon-sm"
       aria-label={`Editar ${tag.name}`}
-    >
-      <PencilIcon aria-hidden="true" />
-    </Link>
+    />
   );
 }
 

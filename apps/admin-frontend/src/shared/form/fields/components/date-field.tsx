@@ -1,7 +1,6 @@
 import { useState, type Ref } from 'react';
 import { useFormContext, type FieldValues } from 'react-hook-form';
 import { CalendarIcon, XIcon } from 'lucide-react';
-import { formatMaskedDate, maskDate, parseMaskedDate } from '@/shared/format/date';
 import { Button } from '@/shared/ui/button';
 import { Calendar } from '@/shared/ui/calendar';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
@@ -14,14 +13,23 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import type { DateFieldProps } from '../fields.types';
 import { ControlledField } from './controlled-field';
+import {
+  dateLayoutOf,
+  datePlaceholder,
+  formatMaskedDate,
+  maskDate,
+  parseMaskedDate,
+} from './masked-date';
 
 type DateFieldControlProps = Omit<DateFieldProps<FieldValues>, 'hint' | 'label'> &
   FormFieldControlProps & {
     value: unknown;
     inputRef: Ref<HTMLInputElement>;
-    onChange: (value: string) => void;
+    onChange: (value: Date | null) => void;
     onBlur: () => void;
   };
+
+const LAYOUT = dateLayoutOf(navigator.language);
 
 export function DateField<T extends FieldValues>({
   name,
@@ -52,32 +60,45 @@ function DateFieldControl({
   onChange,
   minDate,
   maxDate,
-  placeholder = 'dd/mm/aaaa',
+  placeholder = datePlaceholder(LAYOUT),
   ...inputProps
 }: DateFieldControlProps) {
   const { setFocus } = useFormContext();
   const [open, setOpen] = useState(false);
+  const date = fieldValue instanceof Date ? fieldValue : null;
+  const [entry, setEntry] = useState(() => ({ text: textOf(date), date }));
   const { name, disabled, readOnly } = inputProps;
   const isLocked = Boolean(disabled || readOnly);
 
-  const value = typeof fieldValue === 'string' ? fieldValue : '';
-  const hasValue = value !== '';
-  const typedDate = parseMaskedDate(value);
-  const selected =
-    typedDate !== null && typedDate >= minDate && typedDate <= maxDate ? typedDate : undefined;
+  if (!isSameDay(entry.date, date)) {
+    setEntry({ text: textOf(date), date });
+  }
 
-  function selectDate(date: Date) {
-    onChange(formatMaskedDate(date));
+  const hasValue = entry.text !== '';
+  const selected = date !== null && date >= minDate && date <= maxDate ? date : undefined;
+
+  function change(text: string, changed: Date | null) {
+    setEntry({ text, date: changed });
+    onChange(changed);
+  }
+
+  function selectDate(picked: Date) {
+    change(formatMaskedDate(picked, LAYOUT), picked);
     setOpen(false);
   }
 
+  function type(typed: string) {
+    const masked = maskDate(typed, LAYOUT);
+    change(masked, dateOf(masked));
+  }
+
   function clearFromField() {
-    onChange('');
+    change('', null);
     setFocus(name);
   }
 
   function clearFromCalendar() {
-    onChange('');
+    change('', null);
     setOpen(false);
   }
 
@@ -87,10 +108,10 @@ function DateFieldControl({
         <InputGroupInput
           {...inputProps}
           ref={inputRef}
-          value={value}
+          value={entry.text}
           inputMode="numeric"
           placeholder={placeholder}
-          onChange={(event) => onChange(maskDate(event.target.value))}
+          onChange={(event) => type(event.target.value)}
         />
         <InputGroupAddon align="inline-end" className="gap-0.5">
           {hasValue && !isLocked && (
@@ -141,4 +162,17 @@ function DateFieldControl({
       </Popover>
     </InputGroup>
   );
+}
+
+function dateOf(masked: string): Date | null {
+  if (masked === '') return null;
+  return parseMaskedDate(masked, LAYOUT) ?? new Date(Number.NaN);
+}
+
+function textOf(date: Date | null): string {
+  return date === null ? '' : formatMaskedDate(date, LAYOUT);
+}
+
+function isSameDay(a: Date | null, b: Date | null): boolean {
+  return Object.is(a?.getTime(), b?.getTime());
 }
