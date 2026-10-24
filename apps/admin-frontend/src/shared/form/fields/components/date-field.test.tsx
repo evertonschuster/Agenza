@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm, useFormContext, useWatch } from 'react-hook-form';
-import { formatIsoDate, utcDate } from '@/shared/format/date';
+import { utcDate } from '@/shared/format/date';
 import { DateField } from './date-field';
 
 interface DummyValues {
@@ -43,11 +43,7 @@ function Harness({ initial = null, reloadTo, disabled = false, readOnly = false 
 function CurrentValue() {
   const { control } = useFormContext<DummyValues>();
   const birthDate = useWatch({ control, name: 'birthDate' });
-  return (
-    <output aria-label="valor do formulário">
-      {birthDate === null ? '' : formatIsoDate(birthDate)}
-    </output>
-  );
+  return <output aria-label="valor do formulário">{birthDate?.toISOString().slice(0, 10)}</output>;
 }
 
 function input() {

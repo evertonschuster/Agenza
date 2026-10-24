@@ -56,7 +56,7 @@ src/
     │                        math (the window of page numbers, the offered sizes) is in
     │                        widgets/pagination
     ├── format/              Policy-free calendar and display helpers: date.ts (utcDate, todayUtc,
-    │                        yyyy-MM-dd parse/format, fullYearsBetween), age.ts and count.ts
+    │                        parseIsoDate, fullYearsBetween), age.ts and count.ts
     │                        (pt-BR numbers, and "1 pessoa" / "87 pessoas" by Intl.PluralRules)
     ├── values/              One file per shared value, mirroring the backend's
     │                        SharedKernel.ValueObjects (cpf, phone, email, birthDate): its parseX
