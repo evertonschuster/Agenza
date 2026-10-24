@@ -29,12 +29,12 @@ const CREATED: Client = {
 
 function LocationProbe() {
   const location = useLocation();
-  return <div data-testid="location">{location.pathname}</div>;
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
 }
 
-function renderPage() {
+function renderPage(initialEntry = '/pessoas/nova') {
   return render(
-    <MemoryRouter initialEntries={['/pessoas/nova']}>
+    <MemoryRouter initialEntries={[initialEntry]}>
       <Routes>
         <Route path="/pessoas/nova" element={<ClientFormPage />} />
         <Route path="/pessoas" element={<h1>Lista de pessoas</h1>} />
@@ -125,6 +125,37 @@ describe('ClientFormPage', () => {
         screen.queryByRole('group', { name: /^Pessoa de referência \d$/ }),
       ).not.toBeInTheDocument();
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
+    });
+  });
+
+  describe('the address of the list', () => {
+    const FROM_FILTERED_LIST = '/pessoas/nova?search=ana&status=all';
+
+    it('takes the search, situation, page and size of the list back in Cancelar and the breadcrumb', () => {
+      renderPage(FROM_FILTERED_LIST);
+
+      const trail = within(screen.getByRole('navigation', { name: 'Caminho de navegação' }));
+      expect(trail.getByRole('link', { name: 'Pessoas' })).toHaveAttribute(
+        'href',
+        '/pessoas?search=ana&status=all',
+      );
+      expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute(
+        'href',
+        '/pessoas?search=ana&status=all',
+      );
+    });
+
+    it('returns to the list on the same address after saving', async () => {
+      const user = userEvent.setup();
+      renderPage(FROM_FILTERED_LIST);
+
+      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('/pessoas?search=ana&status=all'),
+      );
+      expect(screen.getByRole('heading', { name: 'Lista de pessoas' })).toBeInTheDocument();
     });
   });
 

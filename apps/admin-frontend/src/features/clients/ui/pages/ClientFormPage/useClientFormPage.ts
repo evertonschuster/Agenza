@@ -1,5 +1,5 @@
 import { useEffect, useRef, type SubmitEvent } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
@@ -16,7 +16,9 @@ import type { UseClientFormPageResult } from './useClientFormPage.types';
 
 export function useClientFormPage(): UseClientFormPageResult {
   const navigate = useNavigate();
+  const { search } = useLocation();
   const isMountedRef = useRef(true);
+  const listPath = `${CLIENTS_PATH}${search}`;
 
   const methods = useForm<ClientFormFieldValues, unknown, ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -40,7 +42,7 @@ export function useClientFormPage(): UseClientFormPageResult {
         description: `O cadastro de ${result.data.fullName} foi criado.`,
         type: 'success',
       });
-      if (isMountedRef.current) void navigate(CLIENTS_PATH);
+      if (isMountedRef.current) void navigate(listPath);
       return;
     }
 
@@ -55,6 +57,7 @@ export function useClientFormPage(): UseClientFormPageResult {
   return {
     methods,
     isSaving,
+    listPath,
     onSubmit: submit,
   };
 }

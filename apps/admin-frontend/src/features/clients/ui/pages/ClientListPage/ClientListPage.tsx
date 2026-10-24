@@ -20,13 +20,14 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 const ITEM_LABEL: CountNoun = { singular: 'pessoa', plural: 'pessoas' };
 
 export function ClientListPage() {
-  const { list, pagination, searchTerm, filterForm, ...filterBar } = useClientListPage();
+  const { list, pagination, searchTerm, queryString, filterForm, ...filterBar } =
+    useClientListPage();
 
   return (
     <div className="space-y-4">
       <div className="flex items-start justify-between gap-4">
         <h1 className="text-2xl font-semibold tracking-tight">Pessoas</h1>
-        <Link to={NEW_CLIENT_PATH} className={buttonVariants()}>
+        <Link to={{ pathname: NEW_CLIENT_PATH, search: queryString }} className={buttonVariants()}>
           <PlusIcon aria-hidden="true" />
           Nova pessoa
         </Link>
