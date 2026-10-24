@@ -11,7 +11,7 @@ superseded is historical evidence, not current implementation guidance.
 | Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049 as narrowed by 0061, 0051, 0057 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
 | Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059, 0060, 0062, 0063, 0064, 0065, 0066, 0068 |
-| Dates, times and time zones | 0045 |
+| Dates, times and time zones | 0045 as amended by 0077, 0077 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
 | Authentication UX and AI delegation | 0020, 0022 |
 | Database bootstrap | 0025 as narrowed by 0027, plus 0027/0028 |
@@ -101,4 +101,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0073 admin-frontend paged lists ask the backend only when an action tells them to ·
 0074 admin-frontend Etiquetas pages on usePaginatedList, asks only when told to, with its state out of the URL ·
 0075 admin-frontend a 429 is a transient problem of its own, shown with its own message ·
-0076 admin-frontend Pessoas and Etiquetas filter bars on React Hook Form with reusable SelectField and SearchField: Pessoas opens on Ativas, one Buscar applies every filter.
+0076 admin-frontend Pessoas and Etiquetas filter bars on React Hook Form with reusable SelectField and SearchField: Pessoas opens on Ativas, one Buscar applies every filter ·
+0077 a calendar date sent as an instant keeps its written day; the admin-frontend sends its `Date` as `JSON.stringify` writes it.
