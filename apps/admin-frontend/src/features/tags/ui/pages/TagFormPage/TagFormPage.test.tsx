@@ -12,8 +12,8 @@ import {
 import { routerAt } from '@/test/renderRoutes';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagFormPage } from './TagFormPage';
-import type { TagListQuery } from '../../../api/tagsRepository';
 import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH, type Tag } from '../../../model/tag';
+import type { TagListQuery } from '../../../model/tagListFilters';
 
 const { mockList, mockGet, mockCreate, mockUpdate } = vi.hoisted(() => ({
   mockList: vi.fn(),

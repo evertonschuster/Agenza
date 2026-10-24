@@ -1,10 +1,9 @@
 import { describe, expect, it, vi } from 'vitest';
 import { act, render, renderHook, screen, waitFor } from '@testing-library/react';
-import { StrictMode } from 'react';
+import { StrictMode, useState } from 'react';
 import { NETWORK_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult, Paging } from '@/shared/pagination/paging';
 import { pending } from '@/test/pending';
-import type { UsePaginatedListOptions } from './paginated-list-section.types';
 import { usePaginatedList } from './use-paginated-list';
 
 interface Item {
@@ -21,9 +20,15 @@ interface Filters {
 
 type Page = ApiResult<PagedResult<Item>>;
 
-type FetchPage = (query: Filters & Paging, signal: AbortSignal) => Promise<Page>;
+type Query = Filters & Paging;
+
+type FetchPage = (query: Query, signal: AbortSignal) => Promise<Page>;
 
 const NO_FILTERS: Filters = { search: '', situation: null, pending: false, tag: [], minAge: null };
+
+function firstPageOf(filters: Filters): Query {
+  return { ...filters, page: 1, pageSize: 20 };
+}
 
 function pageOf(totalCount: number, items: Item[] = [{ id: '1' }]): Page {
   return { ok: true, data: { items, totalCount, page: 1, pageSize: 20 } };
@@ -37,13 +42,15 @@ function renderList(
   initialFilters: Filters = NO_FILTERS,
   fetchPage = vi.fn<FetchPage>(() => Promise.resolve(pageOf(87))),
 ) {
-  const view = renderHook(() => usePaginatedList({ initialFilters, fetchPage }));
+  const view = renderHook(() =>
+    usePaginatedList({ state: useState(firstPageOf(initialFilters)), fetchPage }),
+  );
   return { ...view, fetchPage };
 }
 
 describe('usePaginatedList', () => {
   describe('when it asks the backend (ADR 0073)', () => {
-    it('asks once on mount, for the initial filters on the first page at the default size, with no router around it', async () => {
+    it('asks once on mount, for the query its state starts with, with no router around it', async () => {
       const initialFilters: Filters = {
         search: 'ana',
         situation: 'open',
@@ -66,7 +73,7 @@ describe('usePaginatedList', () => {
     it('asks twice on mount only under StrictMode, aborting the first of the two development runs', async () => {
       const fetchPage = vi.fn<FetchPage>(() => Promise.resolve(pageOf(87)));
       function List() {
-        const { list } = usePaginatedList({ initialFilters: NO_FILTERS, fetchPage });
+        const { list } = usePaginatedList({ state: useState(firstPageOf(NO_FILTERS)), fetchPage });
         return <p>{list.status}</p>;
       }
 
@@ -86,13 +93,15 @@ describe('usePaginatedList', () => {
       const fetchPage = vi.fn<FetchPage>(() => Promise.resolve(pageOf(87)));
       const otherFetchPage = vi.fn<FetchPage>(() => Promise.resolve(pageOf(1)));
       const { result, rerender } = renderHook(
-        (options: UsePaginatedListOptions<Filters, Item>) => usePaginatedList(options),
-        { initialProps: { initialFilters: NO_FILTERS, fetchPage } },
+        (props: { initial: Query; fetchPage: FetchPage }) =>
+          usePaginatedList({ state: useState(props.initial), fetchPage: props.fetchPage }),
+        { initialProps: { initial: firstPageOf(NO_FILTERS), fetchPage } },
       );
       await waitFor(() => expect(result.current.list.status).toBe('ready'));
 
-      rerender({ initialFilters: { ...NO_FILTERS, search: 'outro' }, fetchPage: otherFetchPage });
-      rerender({ initialFilters: { ...NO_FILTERS, search: 'outro' }, fetchPage: otherFetchPage });
+      const other = firstPageOf({ ...NO_FILTERS, search: 'outro' });
+      rerender({ initial: other, fetchPage: otherFetchPage });
+      rerender({ initial: other, fetchPage: otherFetchPage });
 
       expect(fetchPage).toHaveBeenCalledTimes(1);
       expect(otherFetchPage).not.toHaveBeenCalled();
@@ -147,6 +156,19 @@ describe('usePaginatedList', () => {
       expect(result.current.pagination.page).toBe(3);
     });
 
+    it('asks for nothing when its state is changed from outside, by anyone but its own actions', async () => {
+      const fetchPage = vi.fn<FetchPage>(() => Promise.resolve(pageOf(87)));
+      const { result } = renderHook(() => {
+        const state = useState(firstPageOf(NO_FILTERS));
+        return { setFromOutside: state[1], ...usePaginatedList({ state, fetchPage }) };
+      });
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+
+      act(() => result.current.setFromOutside({ ...firstPageOf(NO_FILTERS), page: 4 }));
+
+      expect(fetchPage).toHaveBeenCalledTimes(1);
+    });
+
     it('aborts the request in flight when it unmounts', () => {
       const fetchPage = vi.fn<FetchPage>(() => new Promise<Page>(() => {}));
       const { unmount } = renderList(NO_FILTERS, fetchPage);
@@ -158,6 +180,49 @@ describe('usePaginatedList', () => {
   });
 
   describe('what it asks for', () => {
+    it('starts from the page and the size its state starts with, not only from the first page', async () => {
+      const fetchPage = vi.fn<FetchPage>(() => Promise.resolve(pageOf(200)));
+      const initial: Query = { ...NO_FILTERS, search: 'ana', page: 3, pageSize: 50 };
+      const { result } = renderHook(() =>
+        usePaginatedList({ state: useState(initial), fetchPage }),
+      );
+
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      expect(fetchPage).toHaveBeenCalledWith(initial, expect.any(AbortSignal));
+      expect(result.current.filters).toEqual({ ...NO_FILTERS, search: 'ana' });
+      expect(result.current.pagination).toMatchObject({ page: 3, pageSize: 50 });
+    });
+
+    it('writes every query it asks for into its state, the corrected last page included', async () => {
+      const written: Query[] = [];
+      const fetchPage = vi.fn<FetchPage>();
+      fetchPage
+        .mockResolvedValueOnce(pageOf(87))
+        .mockResolvedValueOnce(pageOf(87))
+        .mockResolvedValueOnce(pageOf(25, []))
+        .mockResolvedValueOnce(pageOf(25));
+      const { result } = renderHook(() => {
+        const [query, setQuery] = useState(firstPageOf(NO_FILTERS));
+        function write(next: Query) {
+          written.push(next);
+          setQuery(next);
+        }
+        return usePaginatedList({ state: [query, write], fetchPage });
+      });
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+
+      act(() => result.current.applyFilters({ search: 'ana' }));
+      await waitFor(() => expect(result.current.list.status).toBe('ready'));
+      act(() => result.current.pagination.onPageChange(5));
+      await waitFor(() => expect(fetchPage).toHaveBeenCalledTimes(4));
+
+      expect(written).toEqual([
+        { ...NO_FILTERS, search: 'ana', page: 1, pageSize: 20 },
+        { ...NO_FILTERS, search: 'ana', page: 5, pageSize: 20 },
+        { ...NO_FILTERS, search: 'ana', page: 2, pageSize: 20 },
+      ]);
+    });
+
     it('merges a change of filters into the ones it has and starts over on the first page, keeping the size', async () => {
       const { result, fetchPage } = renderList();
       await waitFor(() => expect(result.current.list.status).toBe('ready'));

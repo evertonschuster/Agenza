@@ -1,11 +1,8 @@
 import { servicesApi } from '@/shared/api/servicesApi';
 import type { ApiResult } from '@/shared/api/servicesFacade';
-import type { Paging } from '@/shared/pagination/paging';
 import type { Tag, TagInput } from '../model/tag';
 import type { TagList } from '../model/tagList';
-import type { TagListFilters } from '../model/tagListFilters';
-
-export type TagListQuery = TagListFilters & Paging;
+import type { TagListQuery } from '../model/tagListFilters';
 
 function list(query: TagListQuery, signal?: AbortSignal): Promise<ApiResult<TagList>> {
   const { search, page, pageSize } = query;
