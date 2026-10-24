@@ -1,4 +1,4 @@
-# ADR 0078 — admin-frontend: every page header comes from the routes, with a back arrow to the level above
+# ADR 0079 — admin-frontend: every page header comes from the routes, with a back arrow to the level above
 
 Status: accepted (2026-10); amends point 1 of [ADR 0077](0077-admin-frontend-client-edit.md) (the edit page's title
 now comes from its route) and the page headers of [ADR 0067](0067-admin-frontend-clients-list.md) and the Etiquetas

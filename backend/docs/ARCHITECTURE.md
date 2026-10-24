@@ -393,7 +393,8 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
   ([0066](../../docs/adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)). Nothing to register per enum, no
   translation class and no values chosen to dodge the parser. Each item of a list of enums in a body has an `IsInEnum`
   rule with the domain's code ([0058](../../docs/adr/0058-closed-set-members-are-plain-enums.md)).
-- The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`); instants are UTC.
+- The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`), and a date value object also reads an instant, keeping its day as
+  written ([0078](../../docs/adr/0078-calendar-date-sent-as-an-instant-keeps-its-written-day.md)); instants are UTC.
 - The query of a paged list extends `PagedQuery` (`Page` and `PageSize`, with the `PageRequest` defaults, unguarded) and
   its validator writes the three rules
   (page at least 1, size from 1 to `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared

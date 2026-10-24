@@ -65,10 +65,11 @@ Two rules, one per direction, that only hold together:
   reads it converts it (`new Date(isoDate)` is midnight UTC). `format: date-time` is never mapped.
   `scripts/generateApiTypes.test.mjs` pins each case against a fixture document (`typesFromDocument`,
   no backend needed); change the rule there first.
-- **Wire.** `serializeBody` (`apiClient.ts`, the client's `bodySerializer`) writes **every** `Date`
-  in a request body as `yyyy-MM-dd`, its UTC calendar day; the backend's `DateOnly` binding answers
-  400 to an instant. A `Date` in a body always means a calendar day: never carry an instant in one,
-  send it as the ISO `string` its `date-time` type already asks for.
+- **Wire.** `createApiClient` sets no `bodySerializer`, so a `Date` in a request body goes out as
+  `JSON.stringify` writes it, an instant (`2016-06-15T00:00:00.000Z`). The backend's date value
+  objects keep that instant's day as written and drop the time
+  ([ADR 0078](../../../docs/adr/0078-calendar-date-sent-as-an-instant-keeps-its-written-day.md)). An
+  instant meant as an instant goes as the ISO `string` its `date-time` type asks for.
 
 Build calendar days with `utcDate`/`todayUtc` (`shared/format/date.ts`), never `new Date(y, m, d)`:
 that is local midnight, which east of UTC serializes as the previous day.
