@@ -26,7 +26,6 @@ export function useClientFormPage(): UseClientFormPageResult {
   const [client, setClient] = useState<Client>();
   const [confirmingId, setConfirmingId] = useState<string>();
   const isMountedRef = useRef(true);
-  const shownIdRef = useRef(id);
   const isEdit = id !== undefined;
   const isLoading = isEdit && client?.id !== id;
 
@@ -43,10 +42,6 @@ export function useClientFormPage(): UseClientFormPageResult {
       isMountedRef.current = false;
     };
   }, []);
-
-  useEffect(() => {
-    shownIdRef.current = id;
-  }, [id]);
 
   useEffect(() => {
     if (!id) return;
@@ -71,11 +66,9 @@ export function useClientFormPage(): UseClientFormPageResult {
   }, [id, methods, navigate]);
 
   async function onValid(values: ClientFormValues) {
-    const savedId = id;
     const result = isEdit
       ? await clientsRepository.update(id, values)
       : await clientsRepository.create(values);
-    const isStillShown = isMountedRef.current && shownIdRef.current === savedId;
 
     if (result.ok) {
       toast.add({
@@ -85,11 +78,11 @@ export function useClientFormPage(): UseClientFormPageResult {
           : `O cadastro de ${result.data.fullName} foi criado.`,
         type: 'success',
       });
-      if (isStillShown) void navigate(CLIENTS_PATH);
+      if (isMountedRef.current) void navigate(CLIENTS_PATH);
       return;
     }
 
-    if (isStillShown) applyApiProblem(result.error, methods);
+    applyApiProblem(result.error, methods);
   }
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
