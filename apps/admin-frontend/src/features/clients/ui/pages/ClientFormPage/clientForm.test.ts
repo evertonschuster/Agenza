@@ -74,11 +74,9 @@ describe('clientFormSchema', () => {
         birthDate: utcDate(1990, 5, 20),
         phone: '  (11) 99999-0000 ',
         email: '  Maria.Souza@Example.COM ',
-        cpf: '529.982.247-25',
+        cpf: '52998224725',
         administrativeNotes: '  Prefere contato pela manhã.  ',
-        guardians: [
-          guardian({ name: ' Ana Souza ', phone: ' 11 98888-0000', cpf: '123.456.789-09' }),
-        ],
+        guardians: [guardian({ name: ' Ana Souza ', phone: ' 11 98888-0000', cpf: '12345678909' })],
         referenceContacts: [reference({ purposes: ['emergency', 'dailyCommunication'] })],
       }),
     );
@@ -252,7 +250,7 @@ describe('clientFormSchema', () => {
     });
 
     it('rejects an invalid CPF', () => {
-      expect(issuesOf(values({ cpf: '529.982.247-24' }))['cpf']).toBe('Informe um CPF válido.');
+      expect(issuesOf(values({ cpf: '52998224724' }))['cpf']).toBe('Informe um CPF válido.');
     });
 
     it('limits the administrative notes to 500 characters', () => {
@@ -333,7 +331,7 @@ describe('emptyClientFormFieldValues', () => {
 });
 
 describe('toClientFormFieldValues', () => {
-  it('fills the form with the person as typed: birth date as is, CPFs masked, missing values empty', () => {
+  it('fills the form with the person as loaded: birth date and CPFs as is, missing values empty', () => {
     expect(
       toClientFormFieldValues({
         id: 'c1',
@@ -362,9 +360,9 @@ describe('toClientFormFieldValues', () => {
       birthDate: utcDate(2015, 3, 10),
       phone: '(11) 91234-5678',
       email: '',
-      cpf: '529.982.247-25',
+      cpf: '52998224725',
       administrativeNotes: '',
-      guardians: [{ name: 'Ana Souza', relationship: 'Mãe', phone: '', cpf: '111.444.777-35' }],
+      guardians: [{ name: 'Ana Souza', relationship: 'Mãe', phone: '', cpf: '11144477735' }],
       referenceContacts: [
         {
           name: 'Carlos Lima',

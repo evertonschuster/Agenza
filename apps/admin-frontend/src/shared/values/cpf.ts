@@ -14,8 +14,12 @@ export function parseCpf(raw: string): string | null {
   return hasValidCheckDigits ? digits : null;
 }
 
+export function cpfDigits(typed: string): string {
+  return typed.replace(/\D/g, '').slice(0, CPF_LENGTH);
+}
+
 export function maskCpf(value: string): string {
-  const digits = value.replace(/\D/g, '').slice(0, CPF_LENGTH);
+  const digits = cpfDigits(value);
 
   if (digits.length <= 3) return digits;
   if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;

@@ -9,13 +9,15 @@ interface DummyValues {
   code: string;
 }
 
+const fourDigits = (typed: string) => typed.replace(/\D/g, '').slice(0, 4);
+
 const dashAfterTwo = (value: string) => {
-  const digits = value.replace(/\D/g, '').slice(0, 4);
+  const digits = fourDigits(value);
   return digits.length > 2 ? `${digits.slice(0, 2)}-${digits.slice(2)}` : digits;
 };
 
-function Harness({ withError = false }: { withError?: boolean }) {
-  const methods = useForm<DummyValues>({ defaultValues: { code: '' } });
+function Harness({ withError = false, code = '' }: { withError?: boolean; code?: string }) {
+  const methods = useForm<DummyValues>({ defaultValues: { code } });
 
   useEffect(() => {
     if (withError) methods.setError('code', { type: 'test', message: 'Erro de teste' });
@@ -23,7 +25,13 @@ function Harness({ withError = false }: { withError?: boolean }) {
 
   return (
     <FormProvider {...methods}>
-      <MaskedField<DummyValues> name="code" label="Código" hint="opcional" mask={dashAfterTwo} />
+      <MaskedField<DummyValues>
+        name="code"
+        label="Código"
+        hint="opcional"
+        mask={dashAfterTwo}
+        unmask={fourDigits}
+      />
       <CurrentValue />
     </FormProvider>
   );
@@ -36,14 +44,20 @@ function CurrentValue() {
 }
 
 describe('MaskedField', () => {
-  it('formats what is typed with the mask and stores the masked text in the form', async () => {
+  it('shows what is typed with the mask and stores it unmasked in the form', async () => {
     const user = userEvent.setup();
     render(<Harness />);
 
     await user.type(screen.getByLabelText('Código'), 'a1b2c3d4e5');
 
     expect(screen.getByLabelText('Código')).toHaveValue('12-34');
-    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent('12-34');
+    expect(screen.getByLabelText('valor do formulário')).toHaveTextContent(/^1234$/);
+  });
+
+  it('shows a value the form already holds with the mask', () => {
+    render(<Harness code="1234" />);
+
+    expect(screen.getByLabelText('Código')).toHaveValue('12-34');
   });
 
   it('shows the hint and the field error tied to the input', () => {

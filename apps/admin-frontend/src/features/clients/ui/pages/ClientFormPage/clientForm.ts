@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { ADULT_AGE_IN_YEARS, birthDateSchema } from '@/shared/values/birthDate';
-import { cpfSchema, maskCpf } from '@/shared/values/cpf';
+import { cpfSchema } from '@/shared/values/cpf';
 import { emailSchema } from '@/shared/values/email';
 import { phoneSchema } from '@/shared/values/phone';
 import {
@@ -116,13 +116,13 @@ export function toClientFormFieldValues(client: Client): ClientFormFieldValues {
     birthDate: client.birthDate,
     phone: client.phone ?? '',
     email: client.email ?? '',
-    cpf: client.cpf === null ? '' : maskCpf(client.cpf),
+    cpf: client.cpf ?? '',
     administrativeNotes: client.administrativeNotes ?? '',
     guardians: client.guardians.map((guardian) => ({
       name: guardian.name,
       relationship: guardian.relationship,
       phone: guardian.phone ?? '',
-      cpf: guardian.cpf === null ? '' : maskCpf(guardian.cpf),
+      cpf: guardian.cpf ?? '',
     })),
     referenceContacts: client.referenceContacts.map((contact) => ({
       name: contact.name,
