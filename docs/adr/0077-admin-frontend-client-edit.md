@@ -58,7 +58,10 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    choice the field does not tell the form that the text is half typed: an incomplete or impossible date is saved as
    no birth date, and the message "Informe uma data válida no formato dd/mm/aaaa." went away.
    The `dd/mm/aaaa` mask, parse and format, now used only by `DateField`, moved beside it
-   (`shared/form/fields/components/masked-date.ts`).
+   (`shared/form/fields/components/masked-date.ts`). Since then the field follows the date format of the person's
+   browser, as the owner asked: `dateLayoutOf(navigator.language)` reads the order of day, month and year and the
+   separator from `Intl`, so pt-BR types `dd/mm/aaaa` and en-US `mm/dd/aaaa`, with the placeholder to match. The
+   labels stay pt-BR, and the e2e and the unit tests pin `pt-BR`.
    The CPF followed the same rule: a first version filled it with `maskCpf(client.cpf)`, because `MaskedField` kept the
    masked text in the form. `MaskedField` now takes `mask` (the stored value to the text shown) and `unmask` (the
    typed text to the stored value), so `CpfField` keeps the 11 digits in the form and shows `529.982.247-25`; the
