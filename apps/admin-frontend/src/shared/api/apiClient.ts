@@ -1,7 +1,7 @@
 import createClient, { type Client } from 'openapi-fetch';
 import type { paths } from './generated/services-api.d.ts';
 import { loadEnv } from '@/shared/env';
-import { formatIsoDate, parseIsoDate } from '@/shared/format/date';
+import { parseIsoDate } from '@/shared/format/date';
 import { DATE_FIELDS } from './generated/dateFields';
 
 export interface ApiClientCredentials {
@@ -14,16 +14,6 @@ export class MissingSessionError extends Error {
     super('API request attempted without an authenticated session.');
     this.name = 'MissingSessionError';
   }
-}
-
-export function serializeBody(body: unknown): string {
-  return JSON.stringify(
-    body,
-    function (this: Record<string, unknown>, key: string, value: unknown) {
-      const original = this[key];
-      return original instanceof Date ? formatIsoDate(original) : value;
-    },
-  );
 }
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;

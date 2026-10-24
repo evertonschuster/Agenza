@@ -64,7 +64,7 @@ function operationsOf(document) {
 }
 
 // A query string carries a Date as text the backend cannot read, so a schema a parameter reaches
-// keeps its dates as string. Bodies and responses get a Date: serializeBody writes it, reviveDates
+// keeps its dates as string. Bodies and responses get a Date: JSON.stringify writes it, reviveDates
 // reads it.
 function schemasReachedByParameters(document) {
   return reachableSchemas(

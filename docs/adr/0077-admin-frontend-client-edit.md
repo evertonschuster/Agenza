@@ -64,7 +64,7 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    openapi-fetch has no hook to parse a body differently, so `scripts/generateApiTypes.mjs` now types `format: date` as
    `Date` in responses as well as request bodies, and writes the names of those properties to
    `src/shared/api/generated/dateFields.ts`; the facade's `run()` passes every successful payload through `reviveDates`
-   (`shared/api/apiClient.ts`, beside `serializeBody`), which turns a listed property holding `yyyy-MM-dd` into
+   (`shared/api/apiClient.ts`), which turns a listed property holding `yyyy-MM-dd` into
    `utcDate` midnight. Converting every `yyyy-MM-dd` string, whatever its field, was turned down: a free-text note
    reading `2020-01-01` would become a `Date`. Generating a transformer per response with `@hey-api/openapi-ts`, or a
    Zod schema per response, was turned down as a new generator and client, or a schema per endpoint, for one field.
