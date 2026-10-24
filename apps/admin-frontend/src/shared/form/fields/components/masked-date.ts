@@ -2,6 +2,12 @@ import { utcDate } from '@/shared/format/date';
 
 const MASKED_DATE = /^(\d{2})\/(\d{2})\/(\d{4})$/;
 const MIN_YEAR = 1000;
+const MASKED_DATE_FORMAT = new Intl.DateTimeFormat('pt-BR', {
+  day: '2-digit',
+  month: '2-digit',
+  year: 'numeric',
+  timeZone: 'UTC',
+});
 
 export function maskDate(value: string): string {
   const digits = value.replace(/\D/g, '').slice(0, 8);
@@ -12,7 +18,7 @@ export function maskDate(value: string): string {
 }
 
 export function parseMaskedDate(masked: string): Date | null {
-  const match = MASKED_DATE.exec(masked.trim());
+  const match = MASKED_DATE.exec(masked);
   if (match === null) return null;
 
   const day = Number(match[1]);
@@ -25,11 +31,5 @@ export function parseMaskedDate(masked: string): Date | null {
 }
 
 export function formatMaskedDate(date: Date): string {
-  const day = pad(date.getUTCDate(), 2);
-  const month = pad(date.getUTCMonth() + 1, 2);
-  return `${day}/${month}/${pad(date.getUTCFullYear(), 4)}`;
-}
-
-function pad(value: number, length: number): string {
-  return String(value).padStart(length, '0');
+  return MASKED_DATE_FORMAT.format(date);
 }

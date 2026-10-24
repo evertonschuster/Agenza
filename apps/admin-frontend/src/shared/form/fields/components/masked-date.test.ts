@@ -24,7 +24,7 @@ describe('parseMaskedDate', () => {
     ['10/03/2015', utcDate(2015, 3, 10)],
     ['01/01/1900', utcDate(1900, 1, 1)],
     ['29/02/2000', utcDate(2000, 2, 29)],
-    [' 05/12/1990 ', utcDate(1990, 12, 5)],
+    ['05/12/1990', utcDate(1990, 12, 5)],
   ] as const)('reads %j as %s', (masked, expected) => {
     expect(parseMaskedDate(masked)).toEqual(expected);
   });
