@@ -11,7 +11,7 @@ superseded is historical evidence, not current implementation guidance.
 | Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049 as narrowed by 0061, 0051, 0057 |
 | Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046 |
 | Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059, 0060, 0062, 0063, 0064, 0065, 0066, 0068 |
-| Dates, times and time zones | 0045 as amended by 0077, 0077 |
+| Dates, times and time zones | 0045 as amended by 0078, 0078 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
 | Authentication UX and AI delegation | 0020, 0022 |
 | Database bootstrap | 0025 as narrowed by 0027, plus 0027/0028 |
@@ -20,7 +20,7 @@ superseded is historical evidence, not current implementation guidance.
 | Logging and telemetry | 0054 |
 | admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038, 0075 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
-| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076 |
+| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076, 0077 |
 | AI agent instruction files | 0041 |
 
 ## Superseded decisions
@@ -102,4 +102,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0074 admin-frontend Etiquetas pages on usePaginatedList, asks only when told to, with its state out of the URL ·
 0075 admin-frontend a 429 is a transient problem of its own, shown with its own message ·
 0076 admin-frontend Pessoas and Etiquetas filter bars on React Hook Form with reusable SelectField and SearchField: Pessoas opens on Ativas, one Buscar applies every filter ·
-0077 a calendar date sent as an instant keeps its written day; the admin-frontend sends its `Date` as `JSON.stringify` writes it.
+0077 admin-frontend editing a person on the registration form at /pessoas/:id/editar, with Desativar/Reativar beside the title ·
+0078 a calendar date sent as an instant keeps its written day; the admin-frontend sends its `Date` as `JSON.stringify` writes it.

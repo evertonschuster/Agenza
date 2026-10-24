@@ -17,6 +17,7 @@ function ConfirmDialogConfirmView({
   description,
   ConfirmIcon,
   confirmLabel,
+  confirmVariant,
   cancelLabel,
   retryLabel,
   failure,
@@ -55,7 +56,7 @@ function ConfirmDialogConfirmView({
           {cancelLabel}
         </DialogClose>
         <ActionButton
-          variant="destructive"
+          variant={confirmVariant}
           icon={ConfirmIcon}
           disabled={loading}
           pending={isSubmitting}

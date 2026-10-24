@@ -68,7 +68,7 @@ Two rules, one per direction, that only hold together:
 - **Wire.** `createApiClient` sets no `bodySerializer`, so a `Date` in a request body goes out as
   `JSON.stringify` writes it, an instant (`2016-06-15T00:00:00.000Z`). The backend's date value
   objects keep that instant's day as written and drop the time
-  ([ADR 0077](../../../docs/adr/0077-calendar-date-sent-as-an-instant-keeps-its-written-day.md)). An
+  ([ADR 0078](../../../docs/adr/0078-calendar-date-sent-as-an-instant-keeps-its-written-day.md)). An
   instant meant as an instant goes as the ISO `string` its `date-time` type asks for.
 
 Build calendar days with `utcDate`/`todayUtc` (`shared/format/date.ts`), never `new Date(y, m, d)`:

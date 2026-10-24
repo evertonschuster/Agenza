@@ -1,4 +1,4 @@
-# ADR 0077 — A calendar date sent as an instant keeps its written day
+# ADR 0078 — A calendar date sent as an instant keeps its written day
 
 Status: accepted (2026-10); amends [ADR 0045](0045-backend-works-in-utc.md) on what the wire accepts for a calendar
 date; consumes [ADR 0055](0055-shared-string-value-objects.md)'s `IDateValueObject<T>`
