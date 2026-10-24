@@ -24,10 +24,10 @@ export function useClientFormPage(): UseClientFormPageResult {
   const { id } = useParams();
   const navigate = useNavigate();
   const [client, setClient] = useState<Client>();
-  const [confirmingId, setConfirmingId] = useState<string>();
+  const [isConfirming, setIsConfirming] = useState(false);
   const isMountedRef = useRef(true);
   const isEdit = id !== undefined;
-  const isLoading = isEdit && client?.id !== id;
+  const isLoading = isEdit && client === undefined;
 
   const methods = useForm<ClientFormFieldValues, unknown, ClientFormValues>({
     resolver: zodResolver(clientFormSchema),
@@ -94,20 +94,14 @@ export function useClientFormPage(): UseClientFormPageResult {
     return {
       fullName: loaded.fullName,
       status: loaded.status,
-      isConfirming: confirmingId === loaded.id,
-      onOpen: () => {
-        if (!isSaving) setConfirmingId(loaded.id);
-      },
-      onOpenChange: (open) => {
-        setConfirmingId(open ? loaded.id : undefined);
-      },
+      isConfirming,
+      onOpen: () => setIsConfirming(true),
+      onOpenChange: setIsConfirming,
       onConfirm: () =>
         loaded.status === 'active'
           ? clientsRepository.deactivate(loaded.id)
           : clientsRepository.reactivate(loaded.id),
-      onChanged: (changed) => {
-        setClient((current) => (current?.id === changed.id ? changed : current));
-      },
+      onChanged: setClient,
     };
   }
 
@@ -117,7 +111,7 @@ export function useClientFormPage(): UseClientFormPageResult {
     methods,
     isSaving,
     canSubmit,
-    statusChange: client && !isLoading ? statusChangeOf(client) : undefined,
+    statusChange: client ? statusChangeOf(client) : undefined,
     onSubmit: submit,
   };
 }
