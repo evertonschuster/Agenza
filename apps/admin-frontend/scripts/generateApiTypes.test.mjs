@@ -33,6 +33,12 @@ function openApiDocument() {
         post: { requestBody: json('AgendaFilter'), responses: ok('PersonResponse') },
       },
       '/calendar': { get: { responses: ok('CalendarResponse') } },
+      '/slots': {
+        parameters: [
+          { name: 'window', in: 'query', schema: { $ref: '#/components/schemas/SlotWindow' } },
+        ],
+        post: { requestBody: json('SlotWindow'), responses: ok('PersonResponse') },
+      },
     },
     components: {
       schemas: {
@@ -73,11 +79,17 @@ function openApiDocument() {
           properties: {
             holidays: { type: ['null', 'array'], items: { type: 'string', format: 'date' } },
             window: { type: 'object', properties: { opensOn: { type: 'string', format: 'date' } } },
+            renewedOn: { anyOf: [{ type: 'null' }, { type: 'string', format: 'date' }] },
             visitsLog: {
               type: 'array',
               items: { type: 'object', properties: { seenOn: { type: 'string', format: 'date' } } },
             },
           },
+        },
+        SlotWindow: {
+          type: 'object',
+          required: ['startsOn'],
+          properties: { startsOn: { type: 'string', format: 'date' } },
         },
         AgendaFilter: {
           type: 'object',
@@ -130,6 +142,12 @@ describe('typesFromDocument', () => {
     expect(typeOf(types, 'AgendaFilter', 'from')).toBe('string');
   });
 
+  it('keeps the date of a schema a path-level parameter reaches as string too', async () => {
+    const types = await typesOf();
+
+    expect(typeOf(types, 'SlotWindow', 'startsOn')).toBe('string');
+  });
+
   it('never maps an instant, even in a request body', async () => {
     const types = await typesOf();
 
@@ -175,6 +193,7 @@ describe('the date field names', () => {
       'firstVisit',
       'holidays',
       'opensOn',
+      'renewedOn',
       'seenOn',
       'since',
     ]);
@@ -186,6 +205,12 @@ describe('the date field names', () => {
     expect(types).toMatch(/\bholidays\?: null \| Date\[\];/);
     expect(types).toMatch(/\bopensOn\?: Date;/);
     expect(types).toMatch(/\bseenOn\?: Date;/);
+  });
+
+  it('names a date offered as one member of anyOf, oneOf or allOf, as the type has it', async () => {
+    const types = await typesOf();
+
+    expect(types).toMatch(/\brenewedOn\?: null \| Date;/);
   });
 
   it('refuses a date inside a dictionary, which has no property name to match', async () => {
