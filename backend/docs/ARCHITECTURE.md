@@ -303,7 +303,9 @@ signature carries a tenant: the save interceptor assigns it to every new `ITenan
 graph and throws when there is none
 ([0006](../../docs/adr/0006-tenant-header-base-entity-generic-repository.md),
 [0008](../../docs/adr/0008-automatic-tenant-assignment-on-save.md),
-[0009](../../docs/adr/0009-tenant-owned-entity-base-class.md)). Review checklist and the
+[0009](../../docs/adr/0009-tenant-owned-entity-base-class.md)). The bearer keeps the claim names the token carries,
+so `tenant_id` is the tenant and `sub` the actor the interceptor stamps on `CreatedBy`, `UpdatedBy` and `DeletedBy`
+([0081](../../docs/adr/0081-bearer-keeps-token-claim-names.md)). Review checklist and the
 model-cache trap of the query filter: skill
 [`agenza-tenant-isolation`](../../.claude/skills/agenza-tenant-isolation/SKILL.md).
 
