@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
 using ServicesService.Application.Abstractions;
+using ServicesService.Application.Clients;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Persistence.Interceptors;
 using ServicesService.Infrastructure.Repositories;
@@ -669,6 +670,121 @@ public class ClientPersistenceTests
             (await repository.FindActiveByEmailAsync(Email("maria@example.com"), null, CancellationToken.None))!.Id
                 .Should().Be(client.Id);
         }
+    }
+
+    private static async Task RemoveThroughTheRepository(string databaseName, Guid tenantId, Guid clientId)
+    {
+        await using var context = CreateContext(databaseName, tenantId);
+        var repository = new ClientRepository(context);
+        var loaded = (await repository.GetByIdAsync(clientId, CancellationToken.None))!;
+
+        repository.Remove(loaded);
+        await context.SaveChangesAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task Remove_SoftDeletesTheClientAndEveryContactItHolds_KeepingEveryRow()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(
+            cpf: CpfDigits,
+            email: "maria@example.com",
+            guardians: [Guardian(), Guardian("Bia Souza")],
+            referenceContacts: [ReferenceContact()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        var guardianIds = client.Guardians.Select(guardian => guardian.Id).ToArray();
+        var referenceContactIds = client.ReferenceContacts.Select(contact => contact.Id).ToArray();
+
+        await RemoveThroughTheRepository(databaseName, tenantId, client.Id);
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var stored = await verification.Clients.IgnoreQueryFilters()
+            .SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
+        stored.DeletedAt.Should().NotBeNull();
+        stored.DeletedBy.Should().NotBeNull();
+        stored.FullName.Should().Be(FullName.Create("Maria Souza").Value);
+        stored.Cpf.Should().Be(Cpf(CpfDigits));
+        stored.Email.Should().Be(Email("maria@example.com"));
+        stored.Status.Should().Be(ClientStatus.Active);
+
+        var guardians = await verification.Set<ClientGuardian>().IgnoreQueryFilters()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        guardians.Select(guardian => guardian.Id).Should().BeEquivalentTo(guardianIds);
+        guardians.Should().OnlyContain(guardian => guardian.DeletedAt == stored.DeletedAt && guardian.DeletedBy == stored.DeletedBy);
+        var referenceContacts = await verification.Set<ClientReferenceContact>().IgnoreQueryFilters()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        referenceContacts.Select(contact => contact.Id).Should().BeEquivalentTo(referenceContactIds);
+        referenceContacts.Should().OnlyContain(contact => contact.DeletedAt == stored.DeletedAt && contact.DeletedBy == stored.DeletedBy);
+    }
+
+    [Fact]
+    public async Task Remove_LeavesTheContactsAnEarlierEditReplacedAsTheyWere()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(guardians: [Guardian()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        var replacedGuardianId = client.Guardians.Single().Id;
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            var repository = new ClientRepository(context);
+            var loaded = (await repository.GetByIdAsync(client.Id, CancellationToken.None))!;
+            var data = new ClientData(loaded.FullName, null, null, null, null, null, [Guardian("Bia Souza")], []);
+            loaded.Update(data, Today).IsSuccess.Should().BeTrue();
+            await repository.UpdateAsync(loaded, CancellationToken.None);
+            await context.SaveChangesAsync(CancellationToken.None);
+        }
+
+        DateTimeOffset? replacedAt;
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            replacedAt = (await context.Set<ClientGuardian>().IgnoreQueryFilters()
+                .SingleAsync(guardian => guardian.Id == replacedGuardianId, TestContext.Current.CancellationToken)).DeletedAt;
+        }
+
+        await RemoveThroughTheRepository(databaseName, tenantId, client.Id);
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var stored = await verification.Clients.IgnoreQueryFilters()
+            .SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
+        var guardians = await verification.Set<ClientGuardian>().IgnoreQueryFilters()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        replacedAt.Should().NotBeNull();
+        guardians.Should().HaveCount(2);
+        guardians.Single(guardian => guardian.Id == replacedGuardianId).DeletedAt.Should().Be(replacedAt);
+        guardians.Single(guardian => guardian.Id != replacedGuardianId).DeletedAt.Should().Be(stored.DeletedAt);
+    }
+
+    [Fact]
+    public async Task Remove_HidesTheClientFromEveryRead_AndFreesItsCpfAndEmail()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(cpf: CpfDigits, email: "maria@example.com", guardians: [Guardian()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        await RemoveThroughTheRepository(databaseName, tenantId, client.Id);
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var repository = new ClientRepository(verification);
+        (await repository.GetByIdAsync(client.Id, CancellationToken.None)).Should().BeNull();
+        var everyStatus = await repository.ListAsync(new ClientListFilter(1, 20, null, null, null), CancellationToken.None);
+        everyStatus.Items.Should().BeEmpty();
+        everyStatus.TotalCount.Should().Be(0);
+        (await repository.FindByCpfAsync(Cpf(CpfDigits), null, CancellationToken.None)).Should().BeNull();
+        (await repository.FindActiveByEmailAsync(Email("maria@example.com"), null, CancellationToken.None)).Should().BeNull();
     }
 
     [Fact]
