@@ -212,7 +212,7 @@ test.describe('Edit a person', () => {
     await section.getByLabel('Telefone').fill('(11) 98888-7777');
     await page.getByRole('button', { name: 'Salvar' }).click();
 
-    await expect(page).toHaveURL(/\/pessoas$/);
+    await expect(page).toHaveURL(/\/pessoas\?search=/);
     await expect(page.getByText('Pessoa atualizada')).toBeVisible();
     await searchFor(page, renamed);
     const row = page.getByRole('row', { name: new RegExp(renamed) });

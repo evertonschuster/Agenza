@@ -1,25 +1,39 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { ReactNode } from 'react';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { act, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { Link, Outlet, useLocation, type RouteObject } from 'react-router';
+import {
+  createMemoryRouter,
+  Link,
+  Outlet,
+  RouterProvider,
+  useLocation,
+  type RouteObject,
+} from 'react-router';
 import { routerAt } from '@/test/renderRoutes';
 import { toast } from '@/shared/ui/toast';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { utcDate } from '@/shared/format/date';
 import type { Client } from '../../../model/client';
+import type { ClientListItem } from '../../../model/clientList';
+import type { ClientListQuery } from '../../../model/clientListFilters';
+import { ClientListPage } from '../ClientListPage/ClientListPage';
 import { ClientFormPage } from './ClientFormPage';
 
-const { mockCreate, mockGet, mockUpdate, mockDeactivate, mockReactivate } = vi.hoisted(() => ({
-  mockCreate: vi.fn(),
-  mockGet: vi.fn(),
-  mockUpdate: vi.fn(),
-  mockDeactivate: vi.fn(),
-  mockReactivate: vi.fn(),
-}));
+const { mockList, mockCreate, mockGet, mockUpdate, mockDeactivate, mockReactivate } = vi.hoisted(
+  () => ({
+    mockList: vi.fn(),
+    mockCreate: vi.fn(),
+    mockGet: vi.fn(),
+    mockUpdate: vi.fn(),
+    mockDeactivate: vi.fn(),
+    mockReactivate: vi.fn(),
+  }),
+);
 
 vi.mock('../../../api/clientsRepository', () => ({
   clientsRepository: {
+    list: mockList,
     create: mockCreate,
     get: mockGet,
     update: mockUpdate,
@@ -76,8 +90,8 @@ function clientRoutes(extra: RouteObject[] = [], chrome?: ReactNode): RouteObjec
   ];
 }
 
-function renderPage(initialEntry = '/pessoas/nova') {
-  return render(routerAt(clientRoutes(), [initialEntry]));
+function renderPage() {
+  return render(routerAt(clientRoutes(), ['/pessoas/nova']));
 }
 
 function problem(overrides: Partial<ApiProblem>): { ok: false; error: ApiProblem } {
@@ -123,7 +137,7 @@ describe('ClientFormPage', () => {
       expect(
         screen.getByRole('button', { name: 'Adicionar pessoa de referência' }),
       ).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/pessoas');
+      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
     });
 
     it('shows where the page sits with a breadcrumb back to Pessoas', () => {
@@ -161,27 +175,6 @@ describe('ClientFormPage', () => {
         screen.queryByRole('group', { name: /^Pessoa de referência \d$/ }),
       ).not.toBeInTheDocument();
       expect(screen.queryByRole('status')).not.toBeInTheDocument();
-    });
-  });
-
-  describe('the address of the list', () => {
-    const FROM_FILTERED_LIST = '/pessoas/nova?search=ana&status=all';
-
-    it('points Cancelar at /pessoas, leaving behind the filters the address carries', () => {
-      renderPage(FROM_FILTERED_LIST);
-
-      expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/pessoas');
-    });
-
-    it('returns to /pessoas after saving, leaving behind the filters the address carries', async () => {
-      const user = userEvent.setup();
-      renderPage(FROM_FILTERED_LIST);
-
-      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
-      await user.click(screen.getByRole('button', { name: 'Salvar' }));
-
-      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/pessoas'));
-      expect(screen.getByRole('heading', { name: 'Lista de pessoas' })).toBeInTheDocument();
     });
   });
 
@@ -750,7 +743,6 @@ describe('ClientFormPage', () => {
       const saving = await screen.findByRole('button', { name: 'Salvando…' });
       expect(saving).toHaveAttribute('aria-disabled', 'true');
       expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
-      expect(screen.queryByRole('link', { name: 'Cancelar' })).not.toBeInTheDocument();
       await user.click(saving);
       expect(mockCreate).toHaveBeenCalledTimes(1);
 
@@ -869,7 +861,7 @@ describe('ClientFormPage, editing a person', () => {
       expect(within(reference).getByLabelText('Nome')).toHaveValue('Carlos Lima');
       expect(within(reference).getByRole('checkbox', { name: 'Emergência' })).toBeChecked();
       expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
-      expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/pessoas');
+      expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
     });
 
     it('shows the current situation next to the title', async () => {
@@ -1125,5 +1117,157 @@ describe('ClientFormPage, editing a person', () => {
       expect(mockDeactivate).not.toHaveBeenCalled();
       expect(screen.getByText('Ativa')).toBeInTheDocument();
     });
+  });
+});
+
+const LISTED: ClientListItem[] = [
+  { id: 'c1', fullName: 'Ana Souza', phone: null, email: null, cpf: null, status: 'active' },
+  { id: 'c2', fullName: 'Bruno Lima', phone: null, email: null, cpf: null, status: 'inactive' },
+];
+
+const FILTERED_LIST = '/pessoas?search=ana&status=all';
+
+const SEARCH_LABEL = 'Buscar pessoas por nome, e-mail ou CPF';
+
+function renderFromList(initialEntry: string) {
+  const router = createMemoryRouter(
+    [
+      {
+        element: (
+          <>
+            <Outlet />
+            <LocationProbe />
+          </>
+        ),
+        children: [
+          {
+            path: 'pessoas',
+            handle: { crumb: 'Pessoas' },
+            children: [
+              { index: true, element: <ClientListPage /> },
+              { path: 'nova', handle: { crumb: 'Nova pessoa' }, element: <ClientFormPage /> },
+              {
+                path: ':id/editar',
+                handle: { crumb: 'Editar pessoa' },
+                element: <ClientFormPage />,
+              },
+            ],
+          },
+        ],
+      },
+    ],
+    { initialEntries: [initialEntry] },
+  );
+  render(<RouterProvider router={router} />);
+  return router;
+}
+
+function address() {
+  return screen.getByTestId('location').textContent;
+}
+
+describe('ClientFormPage, back to the list', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
+    mockList.mockImplementation(({ search }: ClientListQuery) => {
+      const items = LISTED.filter((client) => client.fullName.toLowerCase().includes(search));
+      return Promise.resolve({
+        ok: true,
+        data: { items, totalCount: items.length, page: 1, pageSize: 20 },
+      });
+    });
+    mockCreate.mockResolvedValue({ ok: true, data: CREATED });
+    mockGet.mockResolvedValue({ ok: true, data: { ...EXISTING, fullName: 'Ana Souza' } });
+    mockUpdate.mockImplementation((id: string, input: object) =>
+      Promise.resolve({ ok: true, data: { ...EXISTING, ...input, id } }),
+    );
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('returns from Cancelar to the list it came from, with its filters and the search field', async () => {
+    const user = userEvent.setup();
+    renderFromList(FILTERED_LIST);
+    await user.click(await screen.findByRole('link', { name: 'Nova pessoa' }));
+
+    await user.click(await screen.findByRole('button', { name: 'Cancelar' }));
+
+    await waitFor(() => expect(address()).toBe(FILTERED_LIST));
+    expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('ana');
+    expect(mockCreate).not.toHaveBeenCalled();
+  });
+
+  it('returns to the list it came from, with its filters, after registering a person', async () => {
+    const user = userEvent.setup();
+    renderFromList(FILTERED_LIST);
+    await user.click(await screen.findByRole('link', { name: 'Nova pessoa' }));
+    await user.type(await screen.findByLabelText('Nome completo'), 'Maria Souza');
+
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(address()).toBe(FILTERED_LIST));
+    expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('ana');
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+  });
+
+  it('returns to the list it came from, with its filters, after saving a person opened from its row', async () => {
+    const user = userEvent.setup();
+    renderFromList(FILTERED_LIST);
+    await user.click(await screen.findByRole('link', { name: 'Editar Ana Souza' }));
+    expect(await screen.findByLabelText('Nome completo')).toHaveValue('Ana Souza');
+
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    await waitFor(() => expect(address()).toBe(FILTERED_LIST));
+    expect(screen.getByLabelText(SEARCH_LABEL)).toHaveValue('ana');
+    expect(mockUpdate).toHaveBeenCalledWith(
+      'c1',
+      expect.objectContaining({ fullName: 'Ana Souza' }),
+    );
+  });
+
+  it.each(['Cancelar', 'Salvar'])(
+    'replaces a form opened directly with /pessoas from %s, as there is no list to go back to',
+    async (action) => {
+      const user = userEvent.setup();
+      const router = renderFromList('/pessoas/nova');
+      await user.type(await screen.findByLabelText('Nome completo'), 'Maria Souza');
+
+      await user.click(screen.getByRole('button', { name: action }));
+
+      await waitFor(() => expect(address()).toBe('/pessoas'));
+      expect(router.state.historyAction).toBe('REPLACE');
+    },
+  );
+
+  it('leaves the form out of the history after saving, so the browser Back does not reopen it', async () => {
+    const user = userEvent.setup();
+    const router = renderFromList(FILTERED_LIST);
+    await user.click(await screen.findByRole('link', { name: 'Nova pessoa' }));
+    await user.type(await screen.findByLabelText('Nome completo'), 'Maria Souza');
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(address()).toBe(FILTERED_LIST));
+
+    await act(() => router.navigate(-1));
+
+    expect(address()).toBe(FILTERED_LIST);
+    expect(screen.queryByRole('heading', { name: 'Nova pessoa' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the back arrow and the breadcrumb on /pessoas, without the filters of the list', async () => {
+    const user = userEvent.setup();
+    renderFromList(FILTERED_LIST);
+    await user.click(await screen.findByRole('link', { name: 'Nova pessoa' }));
+    await screen.findByRole('heading', { name: 'Nova pessoa' });
+
+    expect(screen.getByRole('link', { name: 'Voltar para Pessoas' })).toHaveAttribute(
+      'href',
+      '/pessoas',
+    );
+    const trail = within(screen.getByRole('navigation', { name: 'Caminho de navegação' }));
+    expect(trail.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('href', '/pessoas');
   });
 });
