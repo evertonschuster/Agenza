@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/shared/ui/dialog';
 import {
   DialogFormFooter,
@@ -10,16 +9,15 @@ import {
   type PageFormFooterProps,
 } from './index';
 
-function renderOnPage(props: PageFormFooterProps) {
+function renderOnPage(props: Omit<PageFormFooterProps, 'onCancel'>) {
   const onSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
+  const onCancel = vi.fn();
   render(
-    <MemoryRouter>
-      <form onSubmit={onSubmit}>
-        <PageFormFooter {...props} />
-      </form>
-    </MemoryRouter>,
+    <form onSubmit={onSubmit}>
+      <PageFormFooter {...props} onCancel={onCancel} />
+    </form>,
   );
-  return { onSubmit };
+  return { onSubmit, onCancel };
 }
 
 function renderInDialog(props: DialogFormFooterProps, onOpenChange = vi.fn()) {
@@ -40,21 +38,30 @@ function renderInDialog(props: DialogFormFooterProps, onOpenChange = vi.fn()) {
 
 describe('form footers', () => {
   describe('PageFormFooter', () => {
-    it('offers Cancelar as a link to cancelTo and Salvar as the submit button', async () => {
+    it('calls onCancel from Cancelar, without submitting the form', async () => {
       const user = userEvent.setup();
-      const { onSubmit } = renderOnPage({ isSaving: false, cancelTo: '/pessoas' });
+      const { onSubmit, onCancel } = renderOnPage({ isSaving: false });
 
-      expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/pessoas');
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      expect(onCancel).toHaveBeenCalledTimes(1);
+      expect(onSubmit).not.toHaveBeenCalled();
+    });
+
+    it('submits the form from Salvar', async () => {
+      const user = userEvent.setup();
+      const { onSubmit, onCancel } = renderOnPage({ isSaving: false });
+
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
       expect(onSubmit).toHaveBeenCalledTimes(1);
+      expect(onCancel).not.toHaveBeenCalled();
     });
 
-    it('swaps Cancelar for a disabled button and shows Salvando… while saving', () => {
-      renderOnPage({ isSaving: true, cancelTo: '/pessoas' });
+    it('disables Cancelar and shows Salvando… while saving', () => {
+      renderOnPage({ isSaving: true });
 
       expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
-      expect(screen.queryByRole('link', { name: 'Cancelar' })).not.toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Salvando…' })).toHaveAttribute(
         'aria-disabled',
         'true',
@@ -62,13 +69,13 @@ describe('form footers', () => {
     });
 
     it('keeps Salvar enabled unless canSubmit says otherwise', () => {
-      renderOnPage({ isSaving: false, cancelTo: '/pessoas' });
+      renderOnPage({ isSaving: false });
 
       expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
     });
 
     it('disables Salvar when canSubmit is false', () => {
-      renderOnPage({ isSaving: false, canSubmit: false, cancelTo: '/pessoas' });
+      renderOnPage({ isSaving: false, canSubmit: false });
 
       expect(screen.getByRole('button', { name: 'Salvar' })).toBeDisabled();
     });

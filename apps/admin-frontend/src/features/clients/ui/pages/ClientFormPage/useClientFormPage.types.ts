@@ -29,4 +29,5 @@ export interface UseClientFormPageResult {
   canSubmit: boolean;
   statusChange: ClientStatusChange | undefined;
   onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
+  onCancel: () => void;
 }

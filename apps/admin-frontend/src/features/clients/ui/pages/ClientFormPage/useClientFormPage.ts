@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
+import { useLocation, useNavigate, useParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
@@ -22,6 +22,7 @@ import {
 
 export function useClientFormPage(): UseClientFormPageResult {
   const { id } = useParams();
+  const location = useLocation();
   const navigate = useNavigate();
   const [isConfirming, setIsConfirming] = useState(false);
   const isMountedRef = useRef(true);
@@ -35,6 +36,15 @@ export function useClientFormPage(): UseClientFormPageResult {
   const isLoading = isEdit && status === undefined;
   const isSaving = methods.formState.isSubmitting;
   const canSubmit = !isLoading && !isSaving;
+  const canGoBack = location.key !== 'default';
+
+  const backToList = useCallback(() => {
+    if (canGoBack) {
+      void navigate(-1);
+      return;
+    }
+    void navigate(CLIENTS_PATH, { replace: true });
+  }, [navigate, canGoBack]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -56,13 +66,13 @@ export function useClientFormPage(): UseClientFormPageResult {
       }
 
       toast.serverError('Não foi possível abrir a pessoa', result.error);
-      void navigate(CLIENTS_PATH, { replace: true });
+      backToList();
     });
 
     return () => {
       controller.abort();
     };
-  }, [id, methods, navigate]);
+  }, [id, methods, backToList]);
 
   async function onValid(values: ClientFormValues) {
     const result = isEdit
@@ -77,7 +87,7 @@ export function useClientFormPage(): UseClientFormPageResult {
           : `O cadastro de ${result.data.fullName} foi criado.`,
         type: 'success',
       });
-      if (isMountedRef.current) void navigate(CLIENTS_PATH);
+      if (isMountedRef.current) backToList();
       return;
     }
 
@@ -111,5 +121,6 @@ export function useClientFormPage(): UseClientFormPageResult {
     canSubmit,
     statusChange: isEdit && status !== undefined ? statusChangeOf(id, status) : undefined,
     onSubmit: submit,
+    onCancel: backToList,
   };
 }

@@ -6,7 +6,7 @@ interface FormFooterBaseProps {
 export type DialogFormFooterProps = FormFooterBaseProps;
 
 export interface PageFormFooterProps extends FormFooterBaseProps {
-  cancelTo: string;
+  onCancel: () => void;
 }
 
 export type FormSubmitButtonProps = Required<FormFooterBaseProps>;
