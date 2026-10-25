@@ -6,8 +6,8 @@ import { createMemoryRouter, RouterProvider, useLocation, type RouteObject } fro
 import { routerAt } from '@/test/renderRoutes';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagDeletePage } from './TagDeletePage';
-import type { TagListQuery } from '../../../api/tagsRepository';
 import type { Tag } from '../../../model/tag';
+import type { TagListQuery } from '../../../model/tagListFilters';
 
 const { mockList, mockGet, mockDelete } = vi.hoisted(() => ({
   mockList: vi.fn(),
@@ -249,7 +249,7 @@ describe('TagDeletePage', () => {
     expect(screen.getByTestId('location').textContent).toBe('location: /tags');
   });
 
-  it('closes without deleting when Cancelar is clicked, with the search the list had still on screen (spec US4 scenario 3, ADR 0074)', async () => {
+  it('closes without deleting when Cancelar is clicked, with the search the list had still on screen and in the address (spec US4 scenario 3, ADR 0074)', async () => {
     const user = userEvent.setup();
     mockList.mockImplementation(({ search }: TagListQuery) =>
       Promise.resolve(
@@ -265,7 +265,9 @@ describe('TagDeletePage', () => {
     await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
     expect(mockDelete).not.toHaveBeenCalled();
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
+    await waitFor(() =>
+      expect(screen.getByTestId('location').textContent).toBe('location: /tags?search=promo'),
+    );
     expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('promo');
     expect(screen.getByText('Promoção')).toBeInTheDocument();
     expect(screen.queryByText('VIP')).not.toBeInTheDocument();
@@ -295,6 +297,12 @@ describe('TagDeletePage', () => {
     );
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
     toastAddSpy.mockRestore();
+  });
+
+  it('returns to /tags, leaving behind the search its address carried, when a deep-linked tag does not exist', async () => {
+    renderAt(['/tags/missing-id/delete?search=promo']);
+
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
   });
 
   it('shows that toast only once under StrictMode, whose double-run effect would otherwise repeat it', async () => {

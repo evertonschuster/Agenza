@@ -12,8 +12,8 @@ import {
 import { routerAt } from '@/test/renderRoutes';
 import { TagListPage } from '../TagListPage/TagListPage';
 import { TagFormPage } from './TagFormPage';
-import type { TagListQuery } from '../../../api/tagsRepository';
 import { TAG_DESCRIPTION_MAX_LENGTH, TAG_NAME_MAX_LENGTH, type Tag } from '../../../model/tag';
+import type { TagListQuery } from '../../../model/tagListFilters';
 
 const { mockList, mockGet, mockCreate, mockUpdate } = vi.hoisted(() => ({
   mockList: vi.fn(),
@@ -304,7 +304,7 @@ describe('TagFormPage', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
-    it('closes without creating when Cancelar is clicked, with the search the list had still on screen (ADR 0074)', async () => {
+    it('closes without creating when Cancelar is clicked, with the search the list had still on screen and in the address (ADR 0074)', async () => {
       const user = userEvent.setup();
       mockList.mockImplementation(({ search }: TagListQuery) =>
         Promise.resolve(
@@ -322,7 +322,7 @@ describe('TagFormPage', () => {
 
       expect(mockCreate).not.toHaveBeenCalled();
       await waitFor(() =>
-        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags?search=promo'),
       );
       expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('promo');
       expect(screen.getByText('Promoção')).toBeInTheDocument();
@@ -614,6 +614,18 @@ describe('TagFormPage', () => {
 
       expect(screen.getByTestId('location').textContent).toBe('location: /tags');
       expect(screen.queryByRole('heading', { name: 'Nova etiqueta' })).not.toBeInTheDocument();
+    });
+
+    it('closes a deep-linked dialog to /tags, leaving behind the search its address carried', async () => {
+      const user = userEvent.setup();
+      renderRouterAt(['/tags/new?search=promo']);
+      await screen.findByRole('heading', { name: 'Nova etiqueta' });
+
+      await user.click(screen.getByRole('button', { name: 'Cancelar' }));
+
+      await waitFor(() =>
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
+      );
     });
   });
 

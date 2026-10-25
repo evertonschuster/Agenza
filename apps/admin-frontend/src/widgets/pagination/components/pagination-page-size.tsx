@@ -6,9 +6,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select';
+import { MAX_PAGE_SIZE } from '@/shared/pagination/paging';
 import type { PaginationPageSizeProps } from '../pagination.types';
 
-const PAGE_SIZE_OPTIONS = [10, 20, 50, 100] as const;
+const PAGE_SIZE_OPTIONS = [10, 20, 50, MAX_PAGE_SIZE] as const;
 
 function PaginationPageSize({ pageSize, onPageSizeChange }: PaginationPageSizeProps) {
   return (
