@@ -167,36 +167,20 @@ describe('ClientFormPage', () => {
   describe('the address of the list', () => {
     const FROM_FILTERED_LIST = '/pessoas/nova?search=ana&status=all';
 
-    it('takes the search, situation, page and size of the list back in Cancelar', () => {
+    it('points Cancelar at /pessoas, leaving behind the filters the address carries', () => {
       renderPage(FROM_FILTERED_LIST);
 
-      expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute(
-        'href',
-        '/pessoas?search=ana&status=all',
-      );
+      expect(screen.getByRole('link', { name: 'Cancelar' })).toHaveAttribute('href', '/pessoas');
     });
 
-    it('keeps the breadcrumb and the back arrow on the list itself, without its filters', () => {
-      renderPage(FROM_FILTERED_LIST);
-
-      const trail = within(screen.getByRole('navigation', { name: 'Caminho de navegação' }));
-      expect(trail.getByRole('link', { name: 'Pessoas' })).toHaveAttribute('href', '/pessoas');
-      expect(screen.getByRole('link', { name: 'Voltar para Pessoas' })).toHaveAttribute(
-        'href',
-        '/pessoas',
-      );
-    });
-
-    it('returns to the list on the same address after saving', async () => {
+    it('returns to /pessoas after saving, leaving behind the filters the address carries', async () => {
       const user = userEvent.setup();
       renderPage(FROM_FILTERED_LIST);
 
       await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
-      await waitFor(() =>
-        expect(screen.getByTestId('location').textContent).toBe('/pessoas?search=ana&status=all'),
-      );
+      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/pessoas'));
       expect(screen.getByRole('heading', { name: 'Lista de pessoas' })).toBeInTheDocument();
     });
   });

@@ -11,7 +11,6 @@ export interface UseClientListPageResult {
   list: PaginatedListState<ClientListItem>;
   pagination: PaginatedListSectionPaging;
   searchTerm: string;
-  queryString: string;
   filterForm: UseFormReturn<ClientListFilters>;
   hasPendingFilters: boolean;
   canClearFilters: boolean;

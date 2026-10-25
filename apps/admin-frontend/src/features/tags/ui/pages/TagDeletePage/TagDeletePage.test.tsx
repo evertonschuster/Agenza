@@ -299,13 +299,10 @@ describe('TagDeletePage', () => {
     toastAddSpy.mockRestore();
   });
 
-  it('returns to the list with the search its address carried when a deep-linked tag does not exist', async () => {
+  it('returns to /tags, leaving behind the search its address carried, when a deep-linked tag does not exist', async () => {
     renderAt(['/tags/missing-id/delete?search=promo']);
 
-    await waitFor(() =>
-      expect(screen.getByTestId('location').textContent).toBe('location: /tags?search=promo'),
-    );
-    expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('promo');
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('location: /tags'));
   });
 
   it('shows that toast only once under StrictMode, whose double-run effect would otherwise repeat it', async () => {

@@ -20,14 +20,13 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 const ITEM_LABEL: CountNoun = { singular: 'pessoa', plural: 'pessoas' };
 
 export function ClientListPage() {
-  const { list, pagination, searchTerm, queryString, filterForm, ...filterBar } =
-    useClientListPage();
+  const { list, pagination, searchTerm, filterForm, ...filterBar } = useClientListPage();
 
   return (
     <div className="space-y-4">
       <PageHeader
         actions={
-          <ActionLink to={{ pathname: NEW_CLIENT_PATH, search: queryString }} icon={PlusIcon}>
+          <ActionLink to={NEW_CLIENT_PATH} icon={PlusIcon}>
             Nova pessoa
           </ActionLink>
         }

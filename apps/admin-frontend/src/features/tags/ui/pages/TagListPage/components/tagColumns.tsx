@@ -6,7 +6,7 @@ import { TagDeleteLink } from './TagDeleteLink';
 import { TagEditLink } from './TagEditLink';
 import type { Tag } from '../../../../model/tag';
 
-export function tagColumns(queryString: string): ListSectionColumn<Tag>[] {
+export function tagColumns(): ListSectionColumn<Tag>[] {
   return [
     {
       key: 'name',
@@ -42,8 +42,8 @@ export function tagColumns(queryString: string): ListSectionColumn<Tag>[] {
       ),
       cell: (tag) => (
         <div className="flex items-center gap-1">
-          <TagEditLink tag={tag} queryString={queryString} />
-          <TagDeleteLink tag={tag} queryString={queryString} />
+          <TagEditLink tag={tag} />
+          <TagDeleteLink tag={tag} />
         </div>
       ),
     },

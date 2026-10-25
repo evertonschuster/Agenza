@@ -28,6 +28,5 @@ export interface UseClientFormPageResult {
   isSaving: boolean;
   canSubmit: boolean;
   statusChange: ClientStatusChange | undefined;
-  listPath: string;
   onSubmit: (event: SubmitEvent<HTMLFormElement>) => void;
 }

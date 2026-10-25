@@ -4,13 +4,12 @@ import type { Tag } from '../../../../model/tag';
 
 interface TagEditLinkProps {
   tag: Tag;
-  queryString: string;
 }
 
-function TagEditLink({ tag, queryString }: TagEditLinkProps) {
+function TagEditLink({ tag }: TagEditLinkProps) {
   return (
     <ActionLink
-      to={{ pathname: `${tag.id}/edit`, search: queryString }}
+      to={`${tag.id}/edit`}
       icon={PencilIcon}
       variant="ghost"
       size="icon-sm"

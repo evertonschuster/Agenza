@@ -11,7 +11,6 @@ export interface UseTagListPageResult {
   list: PaginatedListState<Tag>;
   pagination: PaginatedListSectionPaging;
   searchTerm: string;
-  queryString: string;
   filterForm: UseFormReturn<TagListFilters>;
   canClearFilters: boolean;
   onFiltersSubmit: (event: SubmitEvent<HTMLFormElement>) => void;

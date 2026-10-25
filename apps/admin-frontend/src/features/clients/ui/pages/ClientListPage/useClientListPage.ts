@@ -1,6 +1,5 @@
 import type { SubmitEvent } from 'react';
 import { useForm, useWatch } from 'react-hook-form';
-import { useLocation } from 'react-router';
 import { useSearchParamsState } from '@/shared/hooks/useSearchParamsState';
 import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { clientsRepository } from '../../../api/clientsRepository';
@@ -12,7 +11,6 @@ import {
 import type { UseClientListPageResult } from './useClientListPage.types';
 
 export function useClientListPage(): UseClientListPageResult {
-  const { search: queryString } = useLocation();
   const state = useSearchParamsState(INITIAL_CLIENT_LIST_QUERY);
   const { filters, applyFilters, list, pagination } = usePaginatedList({
     state,
@@ -35,7 +33,6 @@ export function useClientListPage(): UseClientListPageResult {
     list,
     pagination,
     searchTerm: filters.search,
-    queryString,
     filterForm,
     hasPendingFilters: chosenStatus !== filters.status,
     canClearFilters:

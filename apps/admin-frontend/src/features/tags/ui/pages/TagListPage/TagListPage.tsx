@@ -20,13 +20,13 @@ const EMPTY_COPY: ListSectionEmptyCopy = {
 const ITEM_LABEL: CountNoun = { singular: 'etiqueta', plural: 'etiquetas' };
 
 export function TagListPage() {
-  const { list, pagination, searchTerm, queryString, filterForm, ...filterBar } = useTagListPage();
+  const { list, pagination, searchTerm, filterForm, ...filterBar } = useTagListPage();
 
   return (
     <div className="space-y-4">
       <PageHeader
         actions={
-          <ActionLink to={{ pathname: 'new', search: queryString }} icon={PlusIcon}>
+          <ActionLink to="new" icon={PlusIcon}>
             Nova etiqueta
           </ActionLink>
         }
@@ -40,7 +40,7 @@ export function TagListPage() {
         {...list}
         getKey={(tag) => tag.id}
         aria-label="Etiquetas"
-        columns={tagColumns(queryString)}
+        columns={tagColumns()}
         emptyCopy={EMPTY_COPY}
         search={{ term: searchTerm, onClear: filterBar.onClearFilters }}
         errorTitle="Não foi possível carregar as etiquetas."

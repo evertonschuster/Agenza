@@ -332,21 +332,21 @@ describe('TagListPage', () => {
     expect(newTag.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
   });
 
-  it('carries the address of the list into the edit, delete and "Nova etiqueta" links', async () => {
+  it('keeps the address of the list out of the edit, delete and "Nova etiqueta" links', async () => {
     renderAtTagsRoute(TAGS, ['/tags?search=pro']);
     await screen.findByText('Promoção');
 
     expect(screen.getByRole('link', { name: 'Editar Promoção' })).toHaveAttribute(
       'href',
-      '/tags/1/edit?search=pro',
+      '/tags/1/edit',
     );
     expect(screen.getByRole('link', { name: 'Excluir Promoção' })).toHaveAttribute(
       'href',
-      '/tags/1/delete?search=pro',
+      '/tags/1/delete',
     );
     expect(screen.getByRole('link', { name: 'Nova etiqueta' })).toHaveAttribute(
       'href',
-      '/tags/new?search=pro',
+      '/tags/new',
     );
   });
 

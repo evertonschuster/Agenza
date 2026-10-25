@@ -616,24 +616,16 @@ describe('TagFormPage', () => {
       expect(screen.queryByRole('heading', { name: 'Nova etiqueta' })).not.toBeInTheDocument();
     });
 
-    it('closes a deep-linked dialog to the list with the search its address carried', async () => {
+    it('closes a deep-linked dialog to /tags, leaving behind the search its address carried', async () => {
       const user = userEvent.setup();
-      mockList.mockImplementation(({ search }: TagListQuery) =>
-        Promise.resolve(
-          listOf(search ? TAGS.filter((tag) => tag.name.toLowerCase().includes(search)) : TAGS),
-        ),
-      );
       renderRouterAt(['/tags/new?search=promo']);
       await screen.findByRole('heading', { name: 'Nova etiqueta' });
 
       await user.click(screen.getByRole('button', { name: 'Cancelar' }));
 
       await waitFor(() =>
-        expect(screen.getByTestId('location').textContent).toBe('location: /tags?search=promo'),
+        expect(screen.getByTestId('location').textContent).toBe('location: /tags'),
       );
-      expect(screen.getByLabelText('Buscar etiquetas por nome')).toHaveValue('promo');
-      expect(await screen.findByText('Promoção')).toBeInTheDocument();
-      expect(screen.queryByText('VIP')).not.toBeInTheDocument();
     });
   });
 

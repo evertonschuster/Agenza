@@ -4,13 +4,12 @@ import type { Tag } from '../../../../model/tag';
 
 interface TagDeleteLinkProps {
   tag: Tag;
-  queryString: string;
 }
 
-function TagDeleteLink({ tag, queryString }: TagDeleteLinkProps) {
+function TagDeleteLink({ tag }: TagDeleteLinkProps) {
   return (
     <ActionLink
-      to={{ pathname: `${tag.id}/delete`, search: queryString }}
+      to={`${tag.id}/delete`}
       icon={Trash2Icon}
       variant="ghost"
       size="icon-sm"

@@ -435,14 +435,14 @@ describe('ClientListPage', () => {
       expect(location()).toBe('location: /pessoas?pageSize=50');
     });
 
-    it('carries the address of the list into the "Nova pessoa" link', async () => {
+    it('keeps the address of the list out of the "Nova pessoa" link', async () => {
       serve(CLIENTS);
       renderClientListPage(['/pessoas?search=ana&status=all']);
       await screen.findByText('Ana Souza');
 
       expect(screen.getByRole('link', { name: 'Nova pessoa' })).toHaveAttribute(
         'href',
-        '/pessoas/nova?search=ana&status=all',
+        '/pessoas/nova',
       );
     });
   });
