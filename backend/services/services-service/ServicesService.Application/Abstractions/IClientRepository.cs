@@ -17,4 +17,6 @@ public interface IClientRepository
     Task<Client?> FindActiveByEmailAsync(EmailAddress email, Guid? excludeClientId, CancellationToken cancellationToken);
 
     void Add(Client client);
+
+    void Remove(Client client);
 }

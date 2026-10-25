@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using ServicesService.Application.Clients;
 using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Application.Clients.DeactivateClient;
+using ServicesService.Application.Clients.DeleteClient;
 using ServicesService.Application.Clients.GetClientById;
 using ServicesService.Application.Clients.ListClients;
 using ServicesService.Application.Clients.ReactivateClient;
@@ -88,5 +89,16 @@ public class ClientsController : AgenzaControllerBase
     {
         var result = await _dispatcher.Send(new ReactivateClientCommand(id), cancellationToken);
         return result.ToActionResult(this, client => Ok(client));
+    }
+
+    [HttpDelete("{id:guid}")]
+    [ProducesResponseType(StatusCodes.Status204NoContent)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Delete(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Send(new DeleteClientCommand(id), cancellationToken);
+        return result.ToActionResult(this, NoContent);
     }
 }

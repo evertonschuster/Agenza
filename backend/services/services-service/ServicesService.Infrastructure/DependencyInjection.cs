@@ -38,7 +38,7 @@ public static class DependencyInjection
         services.AddScoped<IServiceRepository, ServiceRepository>();
         services.AddScoped<ICategoryRepository, CategoryRepository>();
         services.AddScoped<IClientRepository, ClientRepository>();
-        // #153 replaces this with the real repository; until then no appointment exists, so none can block a deactivation.
+        // #153 replaces this with the real repository; until then no appointment exists, so none can block a deactivation or a deletion.
         services.AddScoped<IAppointmentRepository, PendingAppointmentRepository>();
         services.AddScoped<IServiceCodeGenerator, ServiceCodeGenerator>();
         services.AddScoped<IUnitOfWork, UnitOfWork>();

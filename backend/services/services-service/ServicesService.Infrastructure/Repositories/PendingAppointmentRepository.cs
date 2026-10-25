@@ -8,4 +8,9 @@ public class PendingAppointmentRepository : IAppointmentRepository
     {
         return Task.FromResult(false);
     }
+
+    public Task<bool> HasAppointmentsAsync(Guid clientId, CancellationToken cancellationToken)
+    {
+        return Task.FromResult(false);
+    }
 }
