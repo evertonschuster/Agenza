@@ -6,7 +6,10 @@ type Listener = () => void;
 
 function logAuthEvent(type: AuthEvent['type'], tenantId: string | null): void {
   const level =
-    type === 'login_failure' || type === 'renewal_failure' || type === 'missing_tenant_claim'
+    type === 'login_failure' ||
+    type === 'renewal_failure' ||
+    type === 'missing_tenant_claim' ||
+    type === 'identity_changed'
       ? 'warn'
       : 'info';
   logger[level](`auth.${type}`, { tenantId, timestamp: Date.now() });
@@ -14,9 +17,11 @@ function logAuthEvent(type: AuthEvent['type'], tenantId: string | null): void {
 
 class SessionStore {
   private snapshot: AuthSnapshot = reduceSession({ type: 'INIT' });
+  private requests = new AbortController();
   private listeners = new Set<Listener>();
 
   getSnapshot = (): AuthSnapshot => this.snapshot;
+  getRequestSignal = (): AbortSignal => this.requests.signal;
 
   subscribe = (listener: Listener): (() => void) => {
     this.listeners.add(listener);
@@ -27,13 +32,25 @@ class SessionStore {
 
   dispatch(event: SessionEvent): void {
     const prev = this.snapshot;
-    const next = reduceSession(event);
+    const next = reduceSession(event, prev);
     this.snapshot = next;
+    if (prev.session.status === 'authenticated' && next.session.status !== 'authenticated') {
+      this.requests.abort();
+    }
+    if (next.session.status === 'authenticated' && this.requests.signal.aborted) {
+      this.requests = new AbortController();
+    }
     this.listeners.forEach((listener) => listener());
     this.runSideEffects(event, prev, next);
   }
 
   private runSideEffects(event: SessionEvent, prev: AuthSnapshot, next: AuthSnapshot): void {
+    if (
+      next.session.failureReason === 'identity_changed' &&
+      prev.session.failureReason !== 'identity_changed'
+    ) {
+      logAuthEvent('identity_changed', prev.tenant?.tenantId ?? null);
+    }
     const wasAuthenticated = prev.session.status === 'authenticated';
     if (
       event.type === 'USER_LOADED' &&
@@ -61,6 +78,8 @@ class SessionStore {
 
   // test-only
   reset(): void {
+    this.requests.abort();
+    this.requests = new AbortController();
     this.snapshot = reduceSession({ type: 'INIT' });
     this.listeners.clear();
   }
@@ -68,7 +87,15 @@ class SessionStore {
 
 export const sessionStore = new SessionStore();
 
-export function getAuthCredentials(): { accessToken: string | null; tenantId: string | null } {
+export function getAuthCredentials(): {
+  accessToken: string | null;
+  tenantId: string | null;
+  signal: AbortSignal;
+} {
   const { session, tenant } = sessionStore.getSnapshot();
-  return { accessToken: session.accessToken, tenantId: tenant?.tenantId ?? null };
+  return {
+    accessToken: session.accessToken,
+    tenantId: tenant?.tenantId ?? null,
+    signal: sessionStore.getRequestSignal(),
+  };
 }

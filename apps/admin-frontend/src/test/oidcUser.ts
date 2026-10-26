@@ -7,15 +7,17 @@ export function makeAccessToken(claims: Record<string, unknown>): string {
   return `${base64url({ alg: 'none' })}.${base64url(claims)}.signature`;
 }
 
-export function makeOidcUser(overrides: Partial<User> & { tenantId?: string } = {}): User {
-  const { tenantId, ...rest } = overrides;
+export function makeOidcUser(
+  overrides: Partial<User> & { tenantId?: string; subject?: string } = {},
+): User {
+  const { tenantId, subject = 'user-1', ...rest } = overrides;
   return {
     access_token: makeAccessToken(
-      tenantId ? { sub: 'user-1', tenant_id: tenantId } : { sub: 'user-1' },
+      tenantId ? { sub: subject, tenant_id: tenantId } : { sub: subject },
     ),
     expires_at: Math.floor(Date.now() / 1000) + 3600,
     expired: false,
-    profile: { name: 'Demo Owner', email: 'owner@demo.local' },
+    profile: { sub: subject, name: 'Demo Owner', email: 'owner@demo.local' },
     ...rest,
   } as User;
 }
@@ -23,10 +25,11 @@ export function makeOidcUser(overrides: Partial<User> & { tenantId?: string } = 
 export function makePrincipal(
   overrides: Partial<SessionPrincipal> & { tenantId?: string } = {},
 ): SessionPrincipal {
-  const { tenantId, ...rest } = overrides;
+  const { tenantId, subject = 'user-1', ...rest } = overrides;
   return {
+    subject,
     accessToken: makeAccessToken(
-      tenantId ? { sub: 'user-1', tenant_id: tenantId } : { sub: 'user-1' },
+      tenantId ? { sub: subject, tenant_id: tenantId } : { sub: subject },
     ),
     expiresAt: Date.now() + 3_600_000,
     displayName: 'Demo Owner',

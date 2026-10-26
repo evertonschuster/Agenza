@@ -13,12 +13,12 @@ superseded is historical evidence, not current implementation guidance.
 | Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059, 0060, 0062, 0063, 0064, 0065, 0066, 0068, 0080 |
 | Dates, times and time zones | 0045 as amended by 0078, 0078 |
 | Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
-| Authentication UX and AI delegation | 0020, 0022 |
+| Authentication UX and AI delegation | 0020, 0022, 0083 |
 | Database bootstrap | 0025 as narrowed by 0027, plus 0027/0028 |
 | Git workflow | 0021 as amended by 0030/0031 |
 | Toolchain compatibility | 0032, 0050 |
 | Logging and telemetry | 0054 |
-| admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038, 0075 |
+| admin-frontend architecture | 0033 as narrowed by 0083, 0034, 0035, 0036, 0037 as amended by 0083, 0038, 0075 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
 | admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076, 0077 as amended by 0078, 0078, 0082 |
 | AI agent instruction files | 0041 |
@@ -108,3 +108,4 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0080 clients delete: the person and its contacts soft-deleted together, any appointment blocks, a repeat is 404 ·
 0081 the bearer keeps the token's claim names, so `sub` reaches the audit columns ·
 0082 admin-frontend deleting a person works like deleting a tag: a trash can in the list, a dialog route over it, useCloseRoute shared.
+0083 admin-frontend rejects identity changes during renewal and cancels outgoing session requests ·

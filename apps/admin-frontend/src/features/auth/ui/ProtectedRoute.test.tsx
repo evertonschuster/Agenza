@@ -1,10 +1,13 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { act, render, screen } from '@testing-library/react';
+import { useSyncExternalStore } from 'react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter, Routes, Route } from 'react-router';
 import { AuthContext, type AuthContextValue } from './AuthContext';
 import { ProtectedRoute } from './ProtectedRoute';
 import { INITIAL_SESSION, type Session } from '@/shared/session/session';
+import { sessionStore } from '@/shared/session/sessionStore';
+import { makePrincipal } from '@/test/oidcUser';
 
 function renderWithSession(session: Partial<Session> & { status: Session['status'] }) {
   const login = vi.fn();
@@ -91,5 +94,52 @@ describe('ProtectedRoute', () => {
     await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
 
     expect(login).toHaveBeenCalledTimes(1);
+  });
+
+  it('offers explicit login after identity changes', async () => {
+    const { login } = renderWithSession({
+      status: 'unauthenticated',
+      failureReason: 'identity_changed',
+    });
+    expect(screen.getByText('Sua sessão mudou.')).toBeInTheDocument();
+    expect(screen.getByText('Entre novamente para continuar.')).toBeInTheDocument();
+    expect(screen.queryByText('Protected Shell')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: 'Entrar novamente' }));
+    expect(login).toHaveBeenCalledOnce();
+  });
+
+  it('preserves an unsaved form on normal renewal and removes it when the tenant changes', async () => {
+    sessionStore.reset();
+    const principal = makePrincipal({ tenantId: 'tenant-a' });
+    sessionStore.dispatch({ type: 'USER_LOADED', principal });
+    function LiveGuard() {
+      const snapshot = useSyncExternalStore(sessionStore.subscribe, sessionStore.getSnapshot);
+      return (
+        <AuthContext.Provider value={{ ...snapshot, login: vi.fn(), logout: vi.fn() }}>
+          <ProtectedRoute>
+            <input aria-label="Nome da pessoa" defaultValue="Maria" />
+          </ProtectedRoute>
+        </AuthContext.Provider>
+      );
+    }
+    render(
+      <MemoryRouter>
+        <LiveGuard />
+      </MemoryRouter>,
+    );
+    await userEvent.type(screen.getByRole('textbox'), ' Souza');
+    act(() =>
+      sessionStore.dispatch({ type: 'USER_LOADED', principal: { ...principal, expiresAt: 123 } }),
+    );
+    expect(screen.getByRole('textbox')).toHaveValue('Maria Souza');
+    act(() =>
+      sessionStore.dispatch({
+        type: 'USER_LOADED',
+        principal: makePrincipal({ tenantId: 'tenant-b' }),
+      }),
+    );
+    expect(screen.queryByRole('textbox')).not.toBeInTheDocument();
+    expect(screen.getByText('Sua sessão mudou.')).toBeInTheDocument();
+    sessionStore.reset();
   });
 });

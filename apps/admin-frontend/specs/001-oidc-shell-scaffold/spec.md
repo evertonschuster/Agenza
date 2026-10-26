@@ -1,5 +1,7 @@
 # Feature Specification: OIDC-Authenticated Admin Shell Scaffold
 
+Renewal identity changes are amended by [ADR 0083](../../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md): a changed subject or tenant requires a fresh login rather than replacing the live identity.
+
 **Feature Branch**: `001-oidc-shell-scaffold`
 
 **Created**: 2026-08-18

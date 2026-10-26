@@ -19,11 +19,17 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
   if (session.failureReason && isBlockingFailure(session.failureReason)) {
     return (
       <FullScreenMessage
-        title="Falha ao entrar."
-        description="Tente entrar novamente."
+        title={
+          session.failureReason === 'identity_changed' ? 'Sua sessão mudou.' : 'Falha ao entrar.'
+        }
+        description={
+          session.failureReason === 'identity_changed'
+            ? 'Entre novamente para continuar.'
+            : 'Tente entrar novamente.'
+        }
         action={
           <Button variant="outline" size="sm" onClick={() => void login()}>
-            Tentar novamente
+            {session.failureReason === 'identity_changed' ? 'Entrar novamente' : 'Tentar novamente'}
           </Button>
         }
       />

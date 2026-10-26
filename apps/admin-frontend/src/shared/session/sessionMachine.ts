@@ -29,6 +29,8 @@ export function isBlockingFailure(reason: SessionFailureReason): boolean {
   switch (reason) {
     case 'identity_unreachable':
     case 'missing_tenant_claim':
+    case 'missing_subject_claim':
+    case 'identity_changed':
       return true;
     case 'renewal_failed':
       return false;
@@ -59,6 +61,12 @@ export type SessionEvent =
   | { type: 'LOGOUT_STARTED' };
 
 function resolveAuthenticated(principal: SessionPrincipal): AuthSnapshot {
+  if (!principal.subject) {
+    return {
+      ...INITIAL_SNAPSHOT,
+      session: { ...INITIAL_SESSION, failureReason: 'missing_subject_claim' },
+    };
+  }
   const tenant = resolveTenantContext(principal.accessToken);
   const user: AuthenticatedUser = {
     displayName: principal.displayName,
@@ -76,6 +84,7 @@ function resolveAuthenticated(principal: SessionPrincipal): AuthSnapshot {
   return {
     session: {
       status: 'authenticated',
+      subject: principal.subject,
       accessToken: principal.accessToken,
       expiresAt: principal.expiresAt,
       failureReason: null,
@@ -85,22 +94,39 @@ function resolveAuthenticated(principal: SessionPrincipal): AuthSnapshot {
   };
 }
 
-export function reduceSession(event: SessionEvent): AuthSnapshot {
+export function reduceSession(
+  event: SessionEvent,
+  previous: AuthSnapshot = INITIAL_SNAPSHOT,
+): AuthSnapshot {
+  if (previous.session.failureReason === 'identity_changed' && event.type !== 'LOGIN_STARTED') {
+    return previous;
+  }
+
+  if (event.type === 'USER_LOADED' || event.type === 'INITIAL_USER') {
+    if (!event.principal) return INITIAL_SNAPSHOT;
+    const next = resolveAuthenticated(event.principal);
+    if (
+      previous.session.status === 'authenticated' &&
+      next.session.status === 'authenticated' &&
+      (previous.session.subject !== next.session.subject ||
+        previous.tenant?.tenantId !== next.tenant?.tenantId)
+    ) {
+      return {
+        ...INITIAL_SNAPSHOT,
+        session: { ...INITIAL_SESSION, failureReason: 'identity_changed' },
+      };
+    }
+    return next;
+  }
+
   switch (event.type) {
     case 'INIT':
       return CHECKING_SNAPSHOT;
-    case 'INITIAL_USER':
-      if (!event.principal) {
-        return INITIAL_SNAPSHOT;
-      }
-      return resolveAuthenticated(event.principal);
     case 'INITIAL_ERROR':
       return {
         ...INITIAL_SNAPSHOT,
         session: { ...INITIAL_SESSION, failureReason: 'identity_unreachable' },
       };
-    case 'USER_LOADED':
-      return resolveAuthenticated(event.principal);
     case 'SILENT_RENEW_ERROR':
       return {
         ...INITIAL_SNAPSHOT,

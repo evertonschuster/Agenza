@@ -44,22 +44,13 @@ Two rules follow, and both are grep-checkable:
 
 ## Silent renewal and identity change
 
-The gap named in `SKILL.md` §4, concretely. `sessionDriver` maps every `UserLoaded` — initial load
-*and* silent renewal — through `toPrincipal` and dispatches `USER_LOADED`. `reduceSession` is a pure
-function of the event alone, so the new snapshot simply replaces the old one. Nothing compares the
-incoming `sub` / `tenant_id` against what was live a moment ago.
-
-While no screen loads tenant data, nothing leaks. The moment one does, the failure is real: the
-renewed token goes out on the next request under the new identity, while mounted components, loader
-data and any cache still hold the previous tenant's rows.
-
-What the fixing slice has to do:
-
-- Carry `subject` on `SessionPrincipal` (it is dropped by `toPrincipal` today).
-- On `USER_LOADED`, compare incoming `subject` + `tenantId` with the live snapshot; on a difference,
-  clear the session and force a full login rather than swapping the credentials underneath the tree.
-- That comparison needs the previous snapshot, which `reduceSession(event)` does not receive — so it
-  is a genuine signature change to the reducer, not a two-line patch. Expect it to be its own PR.
+[ADR 0083](../../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md) closes the original gap.
+The adapter carries the OIDC subject; the reducer compares the previous subject and token-derived tenant before
+replacing credentials. A changed identity clears the session and latches `identity_changed` until explicit login.
+The store aborts the outgoing request scope, the API middleware joins it with caller cancellation and ProtectedRoute
+unmounts feature state. The OIDC adapter stops renewal, removes the stored user and ignores late initial reads/events.
+Review both subject and tenant changes, normal renewal, cleanup failures and late replies. Any external cache added
+later must be cleared on this same boundary; a header alone cannot protect already rendered state.
 
 ## Caching and keys
 

@@ -69,3 +69,5 @@ The decision above — no blanket cancellation layer, scope any exception to the
 asks for it — stands as the default; this is that scoped exception, not a reversal. Full reasoning:
 `apps/admin-frontend/docs/ARCHITECTURE.md` §5 (search "AbortController") and §6 (the accepted,
 narrow gap in how `run()` classifies an aborted request's own `AbortError`).
+
+The session cancellation scope is amended by [ADR 0083](0083-admin-frontend-reject-session-identity-changes.md); the endpoint-specific cancellation rule remains.

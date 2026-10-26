@@ -1,5 +1,7 @@
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { utcDate } from '@/shared/format/date';
+import { getAuthCredentials, sessionStore } from '@/shared/session/sessionStore';
+import { makePrincipal } from '@/test/oidcUser';
 import { MissingSessionError, createApiClient, reviveDates } from './apiClient';
 
 const CATEGORIES_PATH = '/api/v{version}/categories' as const;
@@ -50,6 +52,60 @@ describe('createApiClient', () => {
       expect(fetchMock).not.toHaveBeenCalled();
     },
   );
+
+  it('aborts an outstanding request when the session changes and refuses another request until login', async () => {
+    sessionStore.reset();
+    sessionStore.dispatch({
+      type: 'USER_LOADED',
+      principal: makePrincipal({ tenantId: 'tenant-a' }),
+    });
+    const client = createApiClient(getAuthCredentials);
+    fetchMock.mockImplementation(
+      (request: Request) =>
+        new Promise<Response>((_resolve, reject) => {
+          request.signal.addEventListener(
+            'abort',
+            () => reject(new DOMException('Aborted', 'AbortError')),
+            { once: true },
+          );
+        }),
+    );
+    const pending = client.GET(CATEGORIES_PATH, REQUEST_PARAMS);
+    const rejected = expect(pending).rejects.toMatchObject({ name: 'AbortError' });
+    await vi.waitFor(() => expect(fetchMock).toHaveBeenCalledOnce());
+    sessionStore.dispatch({
+      type: 'USER_LOADED',
+      principal: makePrincipal({ tenantId: 'tenant-b' }),
+    });
+    await rejected;
+    await expect(client.GET(CATEGORIES_PATH, REQUEST_PARAMS)).rejects.toThrow(MissingSessionError);
+    expect(fetchMock).toHaveBeenCalledOnce();
+
+    sessionStore.dispatch({ type: 'LOGIN_STARTED' });
+    sessionStore.dispatch({
+      type: 'USER_LOADED',
+      principal: makePrincipal({ tenantId: 'tenant-b' }),
+    });
+    fetchMock.mockResolvedValue(new Response('[]'));
+    await client.GET(CATEGORIES_PATH, REQUEST_PARAMS);
+    const request = fetchMock.mock.lastCall?.[0] as Request;
+    expect(request.signal.aborted).toBe(false);
+  });
+
+  it('preserves cancellation by the caller when a session signal is present', async () => {
+    const session = new AbortController();
+    const caller = new AbortController();
+    const client = createApiClient(() => ({
+      accessToken: 'token',
+      tenantId: 'tenant',
+      signal: session.signal,
+    }));
+    await client.GET(CATEGORIES_PATH, { ...REQUEST_PARAMS, signal: caller.signal });
+    const request = fetchMock.mock.lastCall?.[0] as Request;
+    caller.abort();
+    expect(request.signal.aborted).toBe(true);
+    expect(session.signal.aborted).toBe(false);
+  });
 });
 
 describe('reviveDates', () => {
