@@ -78,3 +78,5 @@ import `@/features/*` or `@/app/*`; `src/features/**` may not import `@/app/*`
   left the reducer) is tested against a mocked `authClient`.
 - The "categories repo imports `@/app/servicesApi` — known debt" line in
   ARCHITECTURE.md §5 is resolved by this ADR.
+
+The renewal identity guard, previous-snapshot reducer input and session request lifetime are added by [ADR 0083](0083-admin-frontend-reject-session-identity-changes.md).

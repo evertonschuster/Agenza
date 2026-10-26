@@ -92,40 +92,12 @@ A form that iterates `errors` and matches keys to inputs will therefore **silent
 for — see `docs/ARCHITECTURE.md` §5 ("Tag create/edit UI reintroduced on React Hook Form + Zod") for
 the promotion itself, and the `agenza-form-field` skill for how a new form actually wires it in.
 
-Case-insensitive lookup against the form's own field names, unmatched keys promoted to form level —
-the same algorithm this file described before promotion, with one deliberate shape change from what
-was sketched here: **one message per field** (`Partial<Record<F, string>>` / `string | null`), not
-arrays. Nothing in the app has ever needed more than one message per field or per form, and the
-render side (one `<p>` per field) only ever showed the first anyway — an array return would have been
-speculative. Revisit if a real case needs multiple messages per field; don't build it ahead of that.
-
-```ts
-// shared/api/formErrors.ts (verbatim)
-const toFieldPath = (key: string) => key.replace(/\[(\d+)\]/g, '.$1').toLowerCase();
-
-export function toFormErrors<F extends string>(
-  problem: ApiProblem,
-  fields: readonly F[],
-): { fieldErrors: Partial<Record<F, string>>; formError: string | null } {
-  const byField = new Map(fields.map((field) => [field.toLowerCase(), field]));
-  const fieldErrors: Partial<Record<F, string>> = {};
-  const formLevel: string[] = [];
-
-  for (const [key, entries] of Object.entries(problem.errors ?? {})) {
-    const message = entries[0]?.message;
-    if (!message) continue;
-    const field = byField.get(toFieldPath(key));
-    if (field) fieldErrors[field] = message;
-    else formLevel.push(message);
-  }
-
-  if (formLevel.length === 0 && Object.keys(fieldErrors).length === 0 && problem.title) {
-    formLevel.push(problem.title);
-  }
-  const [formError = null] = formLevel;
-  return { fieldErrors, formError };
-}
-```
+Case-insensitive field matching, indexed paths and unmatched messages are implemented in
+[`formErrors.ts`](../../../../apps/admin-frontend/src/shared/api/formErrors.ts).
+It returns the first field entry with its message, code and metadata, and one form-level message.
+[`applyApiProblem.ts`](../../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts) keeps the code
+as the RHF error type and preserves metadata. A feature can subscribe to its field error and interpret
+metadata for that code; shared mapping never interprets a client id or navigation target (ADR 0085).
 
 `toFormErrors` only ever produces data — it never calls a setter or knows a state library exists.
 Feeding its output into React Hook Form's `setError` is `shared/form/applyApiProblem.ts`'s one job,

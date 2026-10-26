@@ -1,3 +1,6 @@
+import { useFormContext, useFormState } from 'react-hook-form';
+import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
+import { NewTabLink } from '@/shared/ui/new-tab-link';
 import {
   BirthDateField,
   CpfField,
@@ -9,8 +12,18 @@ import {
 import { PageSection } from '@/widgets/page-section';
 import { CLIENT_FULL_NAME_MAX_LENGTH, CLIENT_NOTES_MAX_LENGTH } from '../../../../model/client';
 import type { ClientFormFieldValues } from '../clientForm';
+import { editClientPath } from '../../../clientsPaths';
 
 function ClientPersonSection() {
+  const { control } = useFormContext<ClientFormFieldValues>();
+  const { errors } = useFormState({ control, name: ['cpf', 'email'], exact: true });
+  const cpfError = errors.cpf as ApiFormFieldError | undefined;
+  const emailError = errors.email as ApiFormFieldError | undefined;
+  const existingCpfClientId =
+    cpfError?.type === 'Client.DuplicateCpf' ? cpfError.meta?.clientId : undefined;
+  const existingEmailClientId =
+    emailError?.type === 'Client.DuplicateEmail' ? emailError.meta?.clientId : undefined;
+
   return (
     <PageSection title="Dados da pessoa" hideTitle>
       <div className="grid gap-4 md:grid-cols-2">
@@ -27,8 +40,22 @@ function ClientPersonSection() {
 
         <BirthDateField<ClientFormFieldValues> name="birthDate" />
         <PhoneField<ClientFormFieldValues> name="phone" />
-        <EmailField<ClientFormFieldValues> name="email" />
-        <CpfField<ClientFormFieldValues> name="cpf" />
+        <div className="space-y-1.5">
+          <EmailField<ClientFormFieldValues> name="email" />
+          {existingEmailClientId && (
+            <NewTabLink to={editClientPath(encodeURIComponent(existingEmailClientId))}>
+              Abrir cadastro existente
+            </NewTabLink>
+          )}
+        </div>
+        <div className="space-y-1.5">
+          <CpfField<ClientFormFieldValues> name="cpf" />
+          {existingCpfClientId && (
+            <NewTabLink to={editClientPath(encodeURIComponent(existingCpfClientId))}>
+              Abrir cadastro existente
+            </NewTabLink>
+          )}
+        </div>
 
         <div className="space-y-1.5 md:col-span-2">
           <TextareaField<ClientFormFieldValues>

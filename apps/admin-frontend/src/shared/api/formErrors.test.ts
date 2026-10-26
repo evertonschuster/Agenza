@@ -24,8 +24,11 @@ describe('toFormErrors', () => {
     const { fieldErrors, formError } = toFormErrors(problem, FIELDS);
 
     expect(fieldErrors).toEqual({
-      name: 'O nome da etiqueta é obrigatório.',
-      color: 'A cor da etiqueta deve ser uma das seguintes: #0d9488.',
+      name: { code: 'NotEmptyValidator', message: 'O nome da etiqueta é obrigatório.' },
+      color: {
+        code: 'PredicateValidator',
+        message: 'A cor da etiqueta deve ser uma das seguintes: #0d9488.',
+      },
     });
     expect(formError).toBeNull();
   });
@@ -70,7 +73,7 @@ describe('toFormErrors', () => {
 
     const { fieldErrors } = toFormErrors(problem, FIELDS);
 
-    expect(fieldErrors.description).toBe(
+    expect(fieldErrors.description?.message).toBe(
       'A descrição da etiqueta deve ter no máximo 200 caracteres.',
     );
   });
@@ -93,8 +96,8 @@ describe('toFormErrors', () => {
     ] as const);
 
     expect(fieldErrors).toEqual({
-      'guardians.1.name': 'O nome do responsável é obrigatório.',
-      'referenceContacts.0.purposes': 'Informe ao menos uma finalidade.',
+      'guardians.1.name': { message: 'O nome do responsável é obrigatório.' },
+      'referenceContacts.0.purposes': { message: 'Informe ao menos uma finalidade.' },
     });
     expect(formError).toBe('Um índice que o formulário não tem.');
   });

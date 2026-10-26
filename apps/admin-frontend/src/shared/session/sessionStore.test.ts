@@ -84,7 +84,7 @@ describe('sessionStore', () => {
       });
     });
 
-    it('logs missing_tenant_claim with the outgoing tenant when an authenticated session renews without one', () => {
+    it('logs identity_changed with the outgoing tenant when an authenticated session loses its claim', () => {
       sessionStore.dispatch({
         type: 'USER_LOADED',
         principal: makePrincipal({ tenantId: TENANT }),
@@ -93,7 +93,7 @@ describe('sessionStore', () => {
 
       sessionStore.dispatch({ type: 'USER_LOADED', principal: makePrincipal() });
 
-      expect(logger.warn).toHaveBeenCalledWith('auth.missing_tenant_claim', {
+      expect(logger.warn).toHaveBeenCalledWith('auth.identity_changed', {
         tenantId: TENANT,
         timestamp: NOW,
       });
@@ -144,8 +144,29 @@ describe('sessionStore', () => {
   });
 
   describe('getAuthCredentials', () => {
+    it('revokes outgoing requests synchronously and logs identity changes without personal data', () => {
+      sessionStore.dispatch({
+        type: 'USER_LOADED',
+        principal: makePrincipal({ tenantId: TENANT }),
+      });
+      const { signal } = getAuthCredentials();
+      sessionStore.dispatch({
+        type: 'USER_LOADED',
+        principal: makePrincipal({ tenantId: TENANT, subject: 'other-user' }),
+      });
+      expect(signal.aborted).toBe(true);
+      expect(getAuthCredentials()).toMatchObject({ accessToken: null, tenantId: null });
+      expect(logger.warn).toHaveBeenCalledWith(
+        'auth.identity_changed',
+        expect.objectContaining({ tenantId: TENANT }),
+      );
+      expect(Object.keys(vi.mocked(logger.warn).mock.lastCall?.[1] ?? {})).toEqual([
+        'tenantId',
+        'timestamp',
+      ]);
+    });
     it('returns nulls when there is no authenticated session', () => {
-      expect(getAuthCredentials()).toEqual({ accessToken: null, tenantId: null });
+      expect(getAuthCredentials()).toMatchObject({ accessToken: null, tenantId: null });
     });
 
     it('reports the live access token and tenant once the session is authenticated', () => {
@@ -153,7 +174,7 @@ describe('sessionStore', () => {
 
       sessionStore.dispatch({ type: 'USER_LOADED', principal });
 
-      expect(getAuthCredentials()).toEqual({
+      expect(getAuthCredentials()).toMatchObject({
         accessToken: principal.accessToken,
         tenantId: 'tenant-abc',
       });
@@ -173,11 +194,17 @@ describe('sessionStore', () => {
       sessionStore.reset();
 
       expect(sessionStore.getSnapshot()).toEqual({
-        session: { status: 'checking', accessToken: null, expiresAt: null, failureReason: null },
+        session: {
+          status: 'checking',
+          subject: null,
+          accessToken: null,
+          expiresAt: null,
+          failureReason: null,
+        },
         tenant: null,
         user: null,
       });
-      expect(getAuthCredentials()).toEqual({ accessToken: null, tenantId: null });
+      expect(getAuthCredentials()).toMatchObject({ accessToken: null, tenantId: null });
 
       listener.mockClear();
       sessionStore.dispatch({ type: 'LOGIN_STARTED' });

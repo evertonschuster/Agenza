@@ -26,8 +26,8 @@ and has no input to attach to: render it in the section.
 
 | Layer | File | Job |
 | --- | --- | --- |
-| Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — `ApiProblem` → `{fieldErrors, formError}`. Knows `ApiProblem`, nothing about RHF. |
-| RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem(problem, methods)` — builds the current field paths from `methods.getValues()`, calls the above, then `setError` per field, `setError('root.serverError', …)` for the form-level message and `setFocus` on the first invalid field. Knows both shapes; the only file that does. |
+| Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — preserves the first field entry (message, code, metadata) and returns one form-level message. Knows `ApiProblem`, nothing about RHF. |
+| RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem(problem, methods)` — builds the current field paths from `methods.getValues()`, calls the above, then `setError` per field (code as type, metadata preserved), `setError('root.serverError', …)` for the form-level message and `setFocus` on the first invalid field. Knows both shapes; the only file that does. |
 | Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `SelectField`, `SearchField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
 
 Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed

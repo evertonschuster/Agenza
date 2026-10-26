@@ -67,14 +67,9 @@ The only scope check anywhere is `identity-admin` on M2M tenant provisioning. So
 is the *whole* authorization story — do not review a change as though an authorization layer sat
 behind it, and do not approve a UI that hides a control and calls that a control.
 
-**Identity change on silent renewal is not handled yet.** A renewed token whose `sub` or `tenant_id`
-differs from the live one must clear the session and force a full login — otherwise the next request
-goes out as the new identity while React still holds rendered state, loaded data and caches
-belonging to the previous one. Today `SessionPrincipal` does not even carry `sub`, and
-`reduceSession` recomputes from the event without comparing. Nothing is broken while zero screens
-load tenant data; **the first slice that does must add the comparison**, and a reviewer of that slice
-must ask for it. Detail in [`references/frontend.md`](references/frontend.md).
-
+**Identity change on silent renewal requires explicit login.** ADR 0083 compares subject and tenant before replacing
+credentials, clears the session and cancels its request scope. Review that late events cannot release that state
+and that protected data unmounts. Details in [`references/frontend.md`](references/frontend.md).
 ## 5. Tests
 
 A test may fabricate a tenant **only** by going through the same path production uses.

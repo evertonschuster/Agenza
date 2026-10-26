@@ -42,7 +42,7 @@ src/
     │                        unwrap (Result → exception at the framework boundary), formErrors
     │                        (ApiProblem → per-field errors, no state-library knowledge), generated types
     ├── session/             Session core — no identity-provider knowledge
-    │   ├── sessionMachine.ts   pure reducer, reduceSession(event): AuthSnapshot
+    │   ├── sessionMachine.ts   pure reducer, reduceSession(event, previous): AuthSnapshot
     │   ├── sessionStore.ts     snapshot, subscribe, dispatch, getAuthCredentials
     │   ├── session.ts          types, including SessionPrincipal
     │   └── tenant.ts           decode the tenant_id claim from the access token
@@ -91,7 +91,7 @@ proven by its mock-free tests, not by its folder name.
 - Within a slice: `ui` → `model` / `api`, and `api` → `model`. The domain entity is defined in
   `model/` and imported by the layers that use it — the wire layer never owns it.
 - **Functional core, imperative shell** — and the one `model → api` edge it still needs. The pure
-  core (`sessionMachine.ts`'s `reduceSession(event): AuthSnapshot`, plus `session.ts`, `tenant.ts`,
+  core (`sessionMachine.ts`'s `reduceSession(event, previous): AuthSnapshot`, plus `session.ts`, `tenant.ts`,
   `sessionStore.ts`) sits in `shared/session/` and carries no OIDC reference at all — not even
   `import type`. The shell is `features/auth/model/sessionDriver.ts`: it subscribes to the
   `oidc-client-ts` `UserManager` events, maps a `User` to a `SessionPrincipal`, and dispatches into
@@ -371,7 +371,7 @@ gerado não cobre: [`docs/API.md`](../../../docs/API.md).
 - **`AuthProvider`** exposes the session snapshot through a plain React Context;
   `useSyncExternalStore` subscribes to the `shared/session` store. The `UserManager`'s event
   emitter is wired to that store by `sessionDriver` (below), not by the provider. No DI container.
-- **Session state machine** is a pure `reduceSession(event): AuthSnapshot` in
+- **Session state machine** is a pure `reduceSession(event, previous): AuthSnapshot` in
   `shared/session/sessionMachine.ts` — zero React, zero `oidc-client-ts` (not even `import type`),
   tested directly with `SessionPrincipal` fixtures and no mocking. `AuthProvider` reads the store
   from `shared/session` and drives it through `startListening` / `login` / `logout` in
@@ -586,3 +586,11 @@ Unit/component tests use Vitest + React Testing Library with module mocks (`vi.m
 - Routes / env contracts — [`contracts/routes-contract.md`](../specs/001-oidc-shell-scaffold/contracts/routes-contract.md), [`contracts/env-contract.md`](../specs/001-oidc-shell-scaffold/contracts/env-contract.md)
 - Feature-planning history & the 15 scaffold decisions — [`plan.md`](../specs/001-oidc-shell-scaffold/plan.md), [`research.md`](../specs/001-oidc-shell-scaffold/research.md)
 - Backend contracts this app depends on — [ADR 0003](../../../docs/adr/0003-openiddict-identity-service.md) (OIDC), [ADR 0006](../../../docs/adr/0006-tenant-header-base-entity-generic-repository.md) (tenant header), [ADR 0005](../../../docs/adr/0005-cqrs-vertical-slice-result-pattern.md) / [ADR 0014](../../../docs/adr/0014-result-pattern-domain-and-persistence-no-exceptions.md) (Result pattern)
+
+## Session identity changes
+
+The session compares the OIDC subject and token-derived tenant before accepting renewal. Identity changes clear credentials, abort the outgoing request scope and unmount protected feature state until explicit login. The OIDC adapter removes its stored user and rejects late startup/events; the API client combines session and caller cancellation. See [ADR 0083](../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md).
+
+## Existing person on a CPF conflict
+
+The recovery link of [ADR 0084](../../../docs/adr/0084-admin-frontend-open-existing-cpf-conflict.md) now follows [ADR 0085](../../../docs/adr/0085-admin-frontend-cpf-link-from-field-error.md): shared form mapping preserves field error codes and metadata, and ClientPersonSection subscribes directly to the CPF and e-mail errors. The section uses NewTabLink from shared/ui to open the internal edit route in another tab, preserving the draft ([ADR 0086](../../../docs/adr/0086-admin-frontend-reusable-new-tab-link.md)). The form controls error validation and clearing; no separate conflict state or page props exist.

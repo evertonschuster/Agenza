@@ -7,6 +7,7 @@ import { DATE_FIELDS } from './generated/dateFields';
 export interface ApiClientCredentials {
   accessToken: string | null;
   tenantId: string | null;
+  signal?: AbortSignal;
 }
 
 export class MissingSessionError extends Error {
@@ -42,12 +43,15 @@ export function createApiClient(getCredentials: () => ApiClientCredentials): Cli
 
   client.use({
     onRequest({ request }) {
-      const { accessToken, tenantId } = getCredentials();
+      const { accessToken, tenantId, signal } = getCredentials();
       if (!accessToken || !tenantId) {
         throw new MissingSessionError();
       }
       request.headers.set('Authorization', `Bearer ${accessToken}`);
       request.headers.set('X-Tenant-Id', tenantId);
+      if (signal) {
+        return new Request(request, { signal: AbortSignal.any([request.signal, signal]) });
+      }
       return request;
     },
   });
