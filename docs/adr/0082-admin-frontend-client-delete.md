@@ -1,4 +1,4 @@
-# ADR 0081 — admin-frontend: deleting a person works like deleting a tag
+# ADR 0082 — admin-frontend: deleting a person works like deleting a tag
 
 Status: accepted (2026-10); the frontend half of #159, over the endpoint of
 [ADR 0080](0080-clients-delete.md); retires the `useCloseRoute` row of ARCHITECTURE §6

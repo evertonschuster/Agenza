@@ -41,7 +41,7 @@ lógica mora no hook **daquela** página (`use<Page>.ts`). Hooks não são compa
 as exceções são um acessor puro de contexto como `useAuth`, um hook genérico, sem domínio, num widget, como o
 `usePaginatedList` de `widgets/paginated-list-section` ([ADR 0071](../../docs/adr/0071-admin-frontend-paged-list-hook.md)),
 e o `useCloseRoute` de `shared/hooks/`, que fecha uma rota aberta sobre a lista
-([ADR 0081](../../docs/adr/0081-admin-frontend-client-delete.md)).
+([ADR 0082](../../docs/adr/0082-admin-frontend-client-delete.md)).
 Uma lista paginada declara a interface dos seus filtros em `model/`, e o hook da página só passa os filtros
 iniciais e o repositório ao `usePaginatedList`, que guarda filtros, página e tamanho no próprio estado, fora da URL
 ([ADR 0072](../../docs/adr/0072-admin-frontend-paged-list-state-in-the-hook.md)).

@@ -33,6 +33,8 @@ public static class IdentityJwtBearerExtensions
                 options.Authority = authority;
                 options.Audience = audience;
                 options.RequireHttpsMetadata = configuration.GetValue("Identity:RequireHttpsMetadata", true);
+                // The accessors read "sub" and "tenant_id" as the token names them; the default map renames "sub".
+                options.MapInboundClaims = false;
             });
 
         services.AddAuthorization();
