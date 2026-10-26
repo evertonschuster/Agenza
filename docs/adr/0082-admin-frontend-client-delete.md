@@ -65,6 +65,15 @@ owner turned it down on 2026-10-25: deleting a person must work like deleting a 
 - `409 Client.HasAppointments` cannot happen before #153 creates appointments ([ADR 0080](0080-clients-delete.md)); the
   page test drives it through the repository mock and the e2e cannot reach it.
 
+## PR review follow-up (2026-10-26)
+
+Deleting the only person on the last page exposed a race: a fast refetch corrected the page in the
+dialog's query string, then closing through history restored the list's old page. `useSearchParamsState`
+now writes an updated value only while its owning route is active. A correction received under a child
+dialog stays in state and is written with `replace` when the list is active again. A response received
+after closing follows the same path. This leaves fetching driven by actions and topics, preserves the
+filters, and adds no history entry. The shared hook also protects Etiquetas from the same race.
+
 ## Alternatives considered
 
 - **Excluir pessoa on the edit page, beside Desativar/Reativar**, with the dialog opened by state in the page hook and a

@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event';
 import { createMemoryRouter, RouterProvider, useLocation, type RouteObject } from 'react-router';
 import { toast } from '@/shared/ui/toast';
 import { routerAt } from '@/test/renderRoutes';
+import { pending } from '@/test/pending';
 import { ClientListPage } from '../ClientListPage/ClientListPage';
 import { ClientDeletePage } from './ClientDeletePage';
 import type { Client } from '../../../model/client';
@@ -51,10 +52,10 @@ function listItemOf({ id, fullName, phone, email, cpf, status }: Client): Client
   return { id, fullName, phone, email, cpf, status };
 }
 
-function listOf(clients: Client[]) {
+function listOf(clients: Client[], totalCount = clients.length) {
   return {
     ok: true,
-    data: { items: clients.map(listItemOf), totalCount: clients.length, page: 1, pageSize: 20 },
+    data: { items: clients.map(listItemOf), totalCount, page: 1, pageSize: 20 },
   };
 }
 
@@ -198,6 +199,50 @@ describe('ClientDeletePage', () => {
     });
     toastAddSpy.mockRestore();
   });
+
+  it.each(['before', 'after'] as const)(
+    'keeps the corrected page and filters in the address when the last-page response arrives %s the dialog closes',
+    async (timing) => {
+      const user = userEvent.setup();
+      const refresh = pending<ReturnType<typeof listOf>>();
+      mockList
+        .mockResolvedValueOnce(listOf([ANA], 21))
+        .mockReturnValueOnce(
+          timing === 'before' ? Promise.resolve(listOf([], 20)) : refresh.promise,
+        )
+        .mockResolvedValue(listOf([BRUNO], 20));
+      mockDelete.mockResolvedValue({ ok: true, data: undefined });
+      const router = createMemoryRouter(routes(), {
+        initialEntries: ['/pessoas?search=a&status=all&page=2'],
+      });
+      render(<RouterProvider router={router} />);
+      await openDeletionOfAna(user);
+
+      await user.click(screen.getByRole('button', { name: 'Excluir' }));
+      await waitFor(() =>
+        expect(screen.queryByRole('heading', { name: 'Excluir pessoa?' })).not.toBeInTheDocument(),
+      );
+      if (timing === 'after') {
+        await act(async () => {
+          refresh.resolve(listOf([], 20));
+          await refresh.promise;
+        });
+      }
+
+      await screen.findByText('Bruno Lima');
+      await waitFor(() => expect(location()).toBe('location: /pessoas?search=a&status=all'));
+      expect(mockList).toHaveBeenCalledTimes(3);
+      expect(mockList).toHaveBeenLastCalledWith(
+        { search: 'a', status: 'all', page: 1, pageSize: 20 },
+        expect.any(AbortSignal),
+      );
+
+      await act(() => router.navigate(-1));
+
+      expect(location()).toBe('location: /pessoas?search=a&status=all');
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    },
+  );
 
   it('shows the backend reason verbatim and keeps the person when appointments block the deletion', async () => {
     const user = userEvent.setup();

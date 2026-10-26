@@ -1,7 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { act, renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { MemoryRouter, useLocation, useNavigate, useNavigationType } from 'react-router';
+import {
+  MemoryRouter,
+  Route,
+  Routes,
+  useLocation,
+  useNavigate,
+  useNavigationType,
+} from 'react-router';
 import { useSearchParamsState } from './useSearchParamsState';
 
 interface Query {
@@ -16,7 +23,16 @@ const DEFAULTS: Query = { search: '', status: 'active', page: 1, pageSize: 20, a
 
 function renderAt(address: string) {
   function wrapper({ children }: { children: ReactNode }) {
-    return <MemoryRouter initialEntries={[address]}>{children}</MemoryRouter>;
+    return (
+      <MemoryRouter initialEntries={[address]}>
+        <Routes>
+          <Route path="pessoas" element={children}>
+            <Route index element={null} />
+            <Route path=":id/excluir" element={null} />
+          </Route>
+        </Routes>
+      </MemoryRouter>
+    );
   }
 
   return renderHook(
@@ -26,6 +42,7 @@ function renderAt(address: string) {
         value,
         setValue,
         search: useLocation().search,
+        pathname: useLocation().pathname,
         navigationType: useNavigationType(),
         navigate: useNavigate(),
       };
@@ -78,6 +95,42 @@ describe('useSearchParamsState', () => {
   });
 
   describe('writing', () => {
+    it('keeps a correction off the child route and writes it on returning to the list', () => {
+      const { result } = renderAt('/pessoas?other=1&search=ana&status=all&page=2');
+
+      act(() => {
+        void result.current.navigate('/pessoas/1/excluir');
+      });
+      act(() => result.current.setValue({ ...DEFAULTS, search: 'ana', status: 'all' }));
+
+      expect(result.current.pathname).toBe('/pessoas/1/excluir');
+      expect(result.current.search).toBe('');
+      expect(result.current.value.page).toBe(1);
+
+      act(() => {
+        void result.current.navigate(-1);
+      });
+
+      expect(result.current.pathname).toBe('/pessoas');
+      expect(result.current.search).toBe('?other=1&search=ana&status=all');
+      expect(result.current.navigationType).toBe('REPLACE');
+    });
+
+    it('writes a correction on the parent when the child was opened directly', () => {
+      const { result } = renderAt('/pessoas/1/excluir?status=all&page=2');
+
+      act(() => result.current.setValue({ ...DEFAULTS, status: 'all' }));
+
+      expect(result.current.search).toBe('?status=all&page=2');
+
+      act(() => {
+        void result.current.navigate('/pessoas', { replace: true });
+      });
+
+      expect(result.current.pathname).toBe('/pessoas');
+      expect(result.current.search).toBe('?status=all');
+    });
+
     it('hands back the new value and writes the keys that differ from the defaults', () => {
       const { result } = renderAt('/pessoas');
 

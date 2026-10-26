@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useEffect, useEffectEvent, useRef, useState } from 'react';
+import { useMatch, useResolvedPath, useSearchParams } from 'react-router';
 
 type SearchParamValue = string | number | boolean;
 
@@ -31,9 +31,10 @@ function readParams<T extends SearchParamsRecord<T>>(params: URLSearchParams, de
 export function useSearchParamsState<T extends SearchParamsRecord<T>>(defaults: T) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [value, setValue] = useState(() => readParams(searchParams, defaults));
+  const hasChanged = useRef(false);
+  const isCurrentRoute = useMatch(useResolvedPath('.').pathname) !== null;
 
-  function update(next: T) {
-    setValue(next);
+  const writeParams = useEffectEvent((next: T) => {
     setSearchParams(
       (current) => {
         const params = new URLSearchParams(current);
@@ -45,6 +46,16 @@ export function useSearchParamsState<T extends SearchParamsRecord<T>>(defaults: 
       },
       { replace: true },
     );
+  });
+
+  useEffect(() => {
+    // A dialog can close through history after a fast page correction; write on the owning route.
+    if (hasChanged.current && isCurrentRoute) writeParams(value);
+  }, [value, isCurrentRoute]);
+
+  function update(next: T) {
+    hasChanged.current = true;
+    setValue(next);
   }
 
   return [value, update] as const;

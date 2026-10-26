@@ -52,8 +52,8 @@ src/
     │                        domain knowledge; a concrete topic (e.g. tagDeleted) lives in the
     │                        feature that owns it, never here
     ├── hooks/               Generic hooks with no domain: useSearchParamsState (state kept in
-    │                        the query string) and useCloseRoute (the close of a route opened over
-    │                        its list, ADR 0082)
+    │                        the query string, written only on its owning route) and useCloseRoute
+    │                        (the close of a route opened over its list, ADR 0082)
     ├── pagination/          paging.ts: what every paged list shares (first page, default size,
     │                        last page, Paging and PagedResult<T>); no React (§5). The pager's own
     │                        math (the window of page numbers, the offered sizes) is in
