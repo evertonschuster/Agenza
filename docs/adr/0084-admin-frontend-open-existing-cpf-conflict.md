@@ -6,6 +6,7 @@ Status: accepted (2026-10-26); completes the frontend recovery path of
 
 The error mapping and page-owned conflict handling are superseded by [ADR 0085](0085-admin-frontend-cpf-link-from-field-error.md).
 The link and its destination remain; its lifetime now follows the form field error.
+Its label and shared presentation are amended by [ADR 0086](0086-admin-frontend-reusable-new-tab-link.md).
 
 ## Context
 

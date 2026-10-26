@@ -609,7 +609,9 @@ describe('ClientFormPage', () => {
       renderPage();
       const user = userEvent.setup();
       await fillAndSubmit(user);
-      const link = await screen.findByRole('link', { name: 'Abrir cadastro existente (nova aba)' });
+      const link = await screen.findByRole('link', {
+        name: 'Abrir cadastro existente',
+      });
       expect(link).toHaveAttribute('href', `/pessoas/${existingId}/editar`);
       expect(link).toHaveAttribute('target', '_blank');
       expect(link).toHaveAttribute('rel', 'noopener noreferrer');
@@ -641,6 +643,41 @@ describe('ClientFormPage', () => {
       ).not.toBeInTheDocument();
     });
 
+    it('opens the existing person from an e-mail conflict and follows that field error', async () => {
+      mockCreate.mockResolvedValue(
+        problem({
+          status: 409,
+          code: 'Client.DuplicateEmail',
+          errors: {
+            email: [
+              {
+                code: 'Client.DuplicateEmail',
+                message: 'E-mail em uso.',
+                meta: { clientId: existingId },
+              },
+            ],
+          },
+        }),
+      );
+      renderPage();
+      const user = userEvent.setup();
+      await fillAndSubmit(user);
+      const link = await screen.findByRole('link', { name: 'Abrir cadastro existente' });
+      expect(link).toHaveAttribute('href', `/pessoas/${existingId}/editar`);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(screen.getByLabelText('E-mail')).toHaveFocus();
+      expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
+      expect(screen.getByLabelText('CPF')).not.toHaveAttribute('aria-invalid', 'true');
+      await user.clear(screen.getByLabelText('E-mail'));
+      expect(
+        screen.queryByRole('link', { name: 'Abrir cadastro existente' }),
+      ).not.toBeInTheDocument();
+      await user.type(screen.getByLabelText('E-mail'), 'maria@example.com');
+      expect(
+        screen.queryByRole('link', { name: 'Abrir cadastro existente' }),
+      ).not.toBeInTheDocument();
+    });
+
     it.each([
       problem({
         code: 'Client.DuplicateCpf',
@@ -653,7 +690,6 @@ describe('ClientFormPage', () => {
             {
               code: 'Client.DuplicateEmail',
               message: 'E-mail em uso.',
-              meta: { clientId: existingId },
             },
           ],
         },
@@ -667,7 +703,7 @@ describe('ClientFormPage', () => {
         },
       }),
     ])(
-      'keeps the error without a link when the CPF conflict metadata is absent or unrelated: %j',
+      'keeps the error without a link when conflict metadata is absent or unrelated: %j',
       async (failure) => {
         mockCreate.mockResolvedValue(failure);
         renderPage();
@@ -1038,15 +1074,18 @@ describe('ClientFormPage, editing a person', () => {
       expect(mockUpdate.mock.calls[0]?.[1]).toMatchObject({ guardians: [] });
     });
 
-    it('offers the other person when an edit conflicts with an existing CPF', async () => {
+    it.each([
+      ['cpf', 'Client.DuplicateCpf'],
+      ['email', 'Client.DuplicateEmail'],
+    ] as const)('offers the other person when an edit conflicts on %s', async (field, code) => {
       mockUpdate.mockResolvedValue(
         problem({
-          code: 'Client.DuplicateCpf',
+          code,
           errors: {
-            cpf: [
+            [field]: [
               {
-                code: 'Client.DuplicateCpf',
-                message: 'CPF em uso.',
+                code,
+                message: 'Já existe uma pessoa com este dado.',
                 meta: { clientId: 'other-person' },
               },
             ],

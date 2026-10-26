@@ -1,3 +1,3 @@
 # Field error
 
-The form field error retains its message, code and optional metadata. The CPF error's `meta.clientId` identifies the existing person when its type is `Client.DuplicateCpf`. No separate conflict state, submitted CPF copy or page prop exists. The person, guardians and references do not change.
+The form field error retains its message, code and optional metadata. Its `meta.clientId` identifies the existing person for `Client.DuplicateCpf` on CPF or `Client.DuplicateEmail` on e-mail. No separate conflict state, submitted value copy or page prop exists. The person, guardians and references do not change.

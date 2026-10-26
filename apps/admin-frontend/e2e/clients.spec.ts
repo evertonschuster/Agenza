@@ -99,11 +99,39 @@ test.describe('Register a person', () => {
     await expect(person.getByLabel('Nome completo')).toHaveValue(secondName);
     await expect(page).toHaveURL(/\/pessoas\/nova$/);
     const popupPromise = page.waitForEvent('popup');
-    await person.getByRole('link', { name: 'Abrir cadastro existente (nova aba)' }).click();
+    await person.getByRole('link', { name: 'Abrir cadastro existente', exact: true }).click();
     const existing = await popupPromise;
     await expect(existing).toHaveURL(/\/pessoas\/[^/]+\/editar$/);
     await expect(existing.getByLabel('Nome completo')).toHaveValue(firstName);
     await expect(person.getByLabel('Nome completo')).toHaveValue(secondName);
+    await existing.close();
+  });
+
+  test('opens the existing person from a duplicate e-mail and preserves the draft', async ({
+    page,
+  }) => {
+    const email = `duplicado.${Date.now()}@example.com`;
+    const firstName = uniqueName('E-mail existente E2E');
+    await openNewPersonForm(page);
+    await page.getByLabel('Nome completo').fill(firstName);
+    await page.getByLabel('E-mail').fill(email);
+    await page.getByRole('button', { name: 'Salvar' }).click();
+    await expect(page).toHaveURL(/\/pessoas$/);
+
+    await page.getByRole('link', { name: 'Nova pessoa' }).click();
+    const secondName = uniqueName('E-mail duplicado E2E');
+    await page.getByLabel('Nome completo').fill(secondName);
+    await page.getByLabel('E-mail').fill(email.toUpperCase());
+    await page.getByRole('button', { name: 'Salvar' }).click();
+    await expect(
+      page.getByText('Já existe uma pessoa ativa cadastrada com este e-mail.'),
+    ).toBeVisible();
+    const popupPromise = page.waitForEvent('popup');
+    await page.getByRole('link', { name: 'Abrir cadastro existente', exact: true }).click();
+    const existing = await popupPromise;
+    await expect(existing).toHaveURL(/\/pessoas\/[^/]+\/editar$/);
+    await expect(existing.getByLabel('Nome completo')).toHaveValue(firstName);
+    await expect(page.getByLabel('Nome completo')).toHaveValue(secondName);
     await existing.close();
   });
 });

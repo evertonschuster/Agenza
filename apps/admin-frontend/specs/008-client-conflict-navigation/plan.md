@@ -4,7 +4,7 @@
 
 ## Summary
 
-Preserve the field error code and metadata in the generic form mapping. ClientPersonSection observes the CPF error through useFormState and renders the link when it contains the duplicate code and existing client id. The form's own validation controls the error lifetime. The internal edit path opens in another tab and preserves the current page.
+Preserve the field error code and metadata in the generic form mapping. ClientPersonSection observes CPF and e-mail errors through useFormState and renders each link when its error contains the matching duplicate code and existing client id. The form's own validation controls each error lifetime. The shared NewTabLink handles new-tab presentation and attributes, using the visible label “Abrir cadastro existente”; the internal edit path preserves the current page.
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ Strict types; metadata is read from the generated problem type; tenant authority
 
 ## Project Structure
 
-Change shared/api/formErrors and shared/form/applyApiProblem to preserve generic field error data; ClientPersonSection reads its own CPF error. Keep client-specific interpretation in that section. The page hook, shell and props need no conflict handling. ADR 0085 records the removal of the original state-based implementation of ADR 0084. Sibling documents define behavior and validation.
+Change shared/api/formErrors and shared/form/applyApiProblem to preserve generic field error data; ClientPersonSection reads its own field errors. Keep client-specific interpretation in that section. The page hook, shell and props need no conflict handling. ADR 0085 records removal of the original state-based implementation; ADR 0086 adds NewTabLink and the same recovery for e-mail. Sibling documents define behavior and validation.
 
 ## Validation
 

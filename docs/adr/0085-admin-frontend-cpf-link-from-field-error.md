@@ -3,6 +3,9 @@
 Status: accepted (2026-10-26); supersedes the error mapping and conflict-handling portion of
 [ADR 0084](0084-admin-frontend-open-existing-cpf-conflict.md)
 
+The presentation and reuse of this behavior for e-mail conflicts are amended by
+[ADR 0086](0086-admin-frontend-reusable-new-tab-link.md).
+
 The owner requested that `ClientPersonSection` observe the CPF error directly. Keeping the submitted CPF,
 an extra state, a value subscription and props through the page duplicated the form's error lifetime.
 

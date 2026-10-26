@@ -2,7 +2,7 @@
 
 Run the colocated ClientFormPage tests for create/edit conflicts, missing and unrelated metadata, edited CPF and resubmission. Run all frontend gates.
 
-On the existing Aspire stack, run `e2e/clients.spec.ts`: register one person with CPF, submit another with that CPF, open the conflict link and verify that the new tab contains the first person's edit form while the original draft stays intact.
+On the existing Aspire stack, run `e2e/clients.spec.ts`: register one person with CPF or e-mail, submit another with the same value, open “Abrir cadastro existente” and verify that the new tab contains the first person's edit form while the original draft stays intact. The e-mail scenario uses uppercase input to preserve the normalization check.
 
 ## Validation on 2026-10-26
 

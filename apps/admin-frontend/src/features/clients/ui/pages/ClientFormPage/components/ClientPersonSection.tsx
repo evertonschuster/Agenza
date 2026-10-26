@@ -1,7 +1,6 @@
-import { Link } from 'react-router';
-import { ExternalLinkIcon } from 'lucide-react';
 import { useFormContext, useFormState } from 'react-hook-form';
 import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
+import { NewTabLink } from '@/shared/ui/new-tab-link';
 import {
   BirthDateField,
   CpfField,
@@ -17,9 +16,13 @@ import { editClientPath } from '../../../clientsPaths';
 
 function ClientPersonSection() {
   const { control } = useFormContext<ClientFormFieldValues>();
-  const { errors } = useFormState({ control, name: 'cpf', exact: true });
-  const error = errors.cpf as ApiFormFieldError | undefined;
-  const existingClientId = error?.type === 'Client.DuplicateCpf' ? error.meta?.clientId : undefined;
+  const { errors } = useFormState({ control, name: ['cpf', 'email'], exact: true });
+  const cpfError = errors.cpf as ApiFormFieldError | undefined;
+  const emailError = errors.email as ApiFormFieldError | undefined;
+  const existingCpfClientId =
+    cpfError?.type === 'Client.DuplicateCpf' ? cpfError.meta?.clientId : undefined;
+  const existingEmailClientId =
+    emailError?.type === 'Client.DuplicateEmail' ? emailError.meta?.clientId : undefined;
 
   return (
     <PageSection title="Dados da pessoa" hideTitle>
@@ -37,19 +40,20 @@ function ClientPersonSection() {
 
         <BirthDateField<ClientFormFieldValues> name="birthDate" />
         <PhoneField<ClientFormFieldValues> name="phone" />
-        <EmailField<ClientFormFieldValues> name="email" />
+        <div className="space-y-1.5">
+          <EmailField<ClientFormFieldValues> name="email" />
+          {existingEmailClientId && (
+            <NewTabLink to={editClientPath(encodeURIComponent(existingEmailClientId))}>
+              Abrir cadastro existente
+            </NewTabLink>
+          )}
+        </div>
         <div className="space-y-1.5">
           <CpfField<ClientFormFieldValues> name="cpf" />
-          {existingClientId && (
-            <Link
-              to={editClientPath(encodeURIComponent(existingClientId))}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center gap-1 rounded-sm text-sm font-medium text-primary underline-offset-4 outline-none hover:underline focus-visible:ring-[3px] focus-visible:ring-ring/50"
-            >
-              Abrir cadastro existente (nova aba)
-              <ExternalLinkIcon className="size-3.5" aria-hidden="true" />
-            </Link>
+          {existingCpfClientId && (
+            <NewTabLink to={editClientPath(encodeURIComponent(existingCpfClientId))}>
+              Abrir cadastro existente
+            </NewTabLink>
           )}
         </div>
 
