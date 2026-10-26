@@ -82,7 +82,8 @@ with another id; the same `404` body for an unknown, another tenant's (its row u
 
 The same run showed `CreatedBy`, `UpdatedBy` and `DeletedBy` empty on every row of the service: the bearer handler maps
 the token's `sub` to the name-identifier claim, and `HttpContextCurrentUserAccessor` looks for `sub`. That predates this
-change and is a separate fix; once it lands, a deletion records its actor with nothing changed here.
+change and is fixed by [ADR 0081](0081-bearer-keeps-token-claim-names.md), after which a deletion records its actor with
+nothing changed here.
 
 ## Considered and rejected
 
