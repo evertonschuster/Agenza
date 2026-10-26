@@ -582,12 +582,103 @@ describe('ClientFormPage', () => {
   });
 
   describe('backend responses', () => {
+    const existingId = '0197f2a0-0000-7000-8000-0000000000bb';
+    const cpfConflict = () =>
+      problem({
+        status: 409,
+        code: 'Client.DuplicateCpf',
+        errors: {
+          cpf: [
+            {
+              code: 'Client.DuplicateCpf',
+              message: 'Já existe uma pessoa cadastrada com este CPF.',
+              meta: { clientId: existingId, clientName: 'Pessoa existente' },
+            },
+          ],
+        },
+      });
     async function fillAndSubmit(user: ReturnType<typeof userEvent.setup>) {
       await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
       await user.type(screen.getByLabelText('CPF'), '52998224725');
       await user.type(screen.getByLabelText('E-mail'), 'maria@example.com');
       await user.click(screen.getByRole('button', { name: 'Salvar' }));
     }
+
+    it('offers the existing edit form in a new tab while preserving the draft', async () => {
+      mockCreate.mockResolvedValue(cpfConflict());
+      renderPage();
+      const user = userEvent.setup();
+      await fillAndSubmit(user);
+      const link = await screen.findByRole('link', { name: 'Abrir cadastro existente (nova aba)' });
+      expect(link).toHaveAttribute('href', `/pessoas/${existingId}/editar`);
+      expect(link).toHaveAttribute('target', '_blank');
+      expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+      expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
+      expect(screen.getByLabelText('E-mail')).toHaveValue('maria@example.com');
+      expect(screen.getByLabelText('CPF')).toHaveFocus();
+      await user.clear(screen.getByLabelText('CPF'));
+      expect(
+        screen.queryByRole('link', { name: /Abrir cadastro existente/ }),
+      ).not.toBeInTheDocument();
+      await user.type(screen.getByLabelText('CPF'), '52998224725');
+      expect(
+        screen.queryByRole('link', { name: /Abrir cadastro existente/ }),
+      ).not.toBeInTheDocument();
+    });
+
+    it('removes the previous conflict link when a subsequent submission fails for another reason', async () => {
+      mockCreate
+        .mockResolvedValueOnce(cpfConflict())
+        .mockResolvedValueOnce(problem({ code: 'Client.SaveFailed', title: 'Tente novamente.' }));
+      renderPage();
+      const user = userEvent.setup();
+      await fillAndSubmit(user);
+      await screen.findByRole('link', { name: /Abrir cadastro existente/ });
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+      await screen.findByText('Tente novamente.');
+      expect(
+        screen.queryByRole('link', { name: /Abrir cadastro existente/ }),
+      ).not.toBeInTheDocument();
+    });
+
+    it.each([
+      problem({
+        code: 'Client.DuplicateCpf',
+        errors: { cpf: [{ code: 'Client.DuplicateCpf', message: 'CPF em uso.' }] },
+      }),
+      problem({
+        code: 'Client.DuplicateEmail',
+        errors: {
+          email: [
+            {
+              code: 'Client.DuplicateEmail',
+              message: 'E-mail em uso.',
+              meta: { clientId: existingId },
+            },
+          ],
+        },
+      }),
+      problem({
+        code: 'Client.DuplicateCpf',
+        errors: {
+          cpf: [
+            { code: 'Validation.Failed', message: 'CPF inválido.', meta: { clientId: existingId } },
+          ],
+        },
+      }),
+    ])(
+      'keeps the error without a link when the CPF conflict metadata is absent or unrelated: %j',
+      async (failure) => {
+        mockCreate.mockResolvedValue(failure);
+        renderPage();
+        await fillAndSubmit(userEvent.setup());
+        await waitFor(() => expect(mockCreate).toHaveBeenCalledOnce());
+        expect(
+          screen.queryByRole('link', { name: /Abrir cadastro existente/ }),
+        ).not.toBeInTheDocument();
+        expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
+      },
+    );
 
     it('shows the duplicate CPF message on the CPF field and focuses it', async () => {
       const user = userEvent.setup();
@@ -945,6 +1036,29 @@ describe('ClientFormPage, editing a person', () => {
 
       await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
       expect(mockUpdate.mock.calls[0]?.[1]).toMatchObject({ guardians: [] });
+    });
+
+    it('offers the other person when an edit conflicts with an existing CPF', async () => {
+      mockUpdate.mockResolvedValue(
+        problem({
+          code: 'Client.DuplicateCpf',
+          errors: {
+            cpf: [
+              {
+                code: 'Client.DuplicateCpf',
+                message: 'CPF em uso.',
+                meta: { clientId: 'other-person' },
+              },
+            ],
+          },
+        }),
+      );
+      renderEditPage();
+      await screen.findByLabelText('Nome completo');
+      await userEvent.click(screen.getByRole('button', { name: 'Salvar' }));
+      const link = await screen.findByRole('link', { name: /Abrir cadastro existente/ });
+      expect(link).toHaveAttribute('href', '/pessoas/other-person/editar');
+      expect(screen.getByLabelText('Nome completo')).toHaveValue(EXISTING.fullName);
     });
 
     it('still asks for a guardian when the saved person is a minor and it was removed', async () => {

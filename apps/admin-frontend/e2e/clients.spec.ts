@@ -81,8 +81,9 @@ test.describe('Register a person', () => {
     page,
   }) => {
     const cpf = validCpf();
+    const firstName = uniqueName('Primeira E2E');
     await openNewPersonForm(page);
-    await page.getByLabel('Nome completo').fill(uniqueName('Primeira E2E'));
+    await page.getByLabel('Nome completo').fill(firstName);
     await page.getByRole('region', { name: 'Dados da pessoa' }).getByLabel('CPF').fill(cpf);
     await page.getByRole('button', { name: 'Salvar' }).click();
     await expect(page).toHaveURL(/\/pessoas$/);
@@ -97,6 +98,13 @@ test.describe('Register a person', () => {
     await expect(person.getByText('Já existe uma pessoa cadastrada com este CPF.')).toBeVisible();
     await expect(person.getByLabel('Nome completo')).toHaveValue(secondName);
     await expect(page).toHaveURL(/\/pessoas\/nova$/);
+    const popupPromise = page.waitForEvent('popup');
+    await person.getByRole('link', { name: 'Abrir cadastro existente (nova aba)' }).click();
+    const existing = await popupPromise;
+    await expect(existing).toHaveURL(/\/pessoas\/[^/]+\/editar$/);
+    await expect(existing.getByLabel('Nome completo')).toHaveValue(firstName);
+    await expect(person.getByLabel('Nome completo')).toHaveValue(secondName);
+    await existing.close();
   });
 });
 

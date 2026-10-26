@@ -590,3 +590,7 @@ Unit/component tests use Vitest + React Testing Library with module mocks (`vi.m
 ## Session identity changes
 
 The session compares the OIDC subject and token-derived tenant before accepting renewal. Identity changes clear credentials, abort the outgoing request scope and unmount protected feature state until explicit login. The OIDC adapter removes its stored user and rejects late startup/events; the API client combines session and caller cancellation. See [ADR 0083](../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md).
+
+## Existing person on a CPF conflict
+
+The recovery link of [ADR 0084](../../../docs/adr/0084-admin-frontend-open-existing-cpf-conflict.md) now follows [ADR 0085](../../../docs/adr/0085-admin-frontend-cpf-link-from-field-error.md): shared form mapping preserves field error codes and metadata, and ClientPersonSection subscribes directly to the CPF error. The section opens the internal edit route in another tab, preserving the draft. The form controls error validation and clearing; no separate conflict state or page props exist.

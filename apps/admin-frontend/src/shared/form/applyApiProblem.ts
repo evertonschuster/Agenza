@@ -1,6 +1,8 @@
-import type { FieldValues, Path, UseFormReturn } from 'react-hook-form';
+import type { FieldError, FieldValues, Path, UseFormReturn } from 'react-hook-form';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
-import { toFormErrors } from '@/shared/api/formErrors';
+import { toFormErrors, type FormFieldError } from '@/shared/api/formErrors';
+
+export type ApiFormFieldError = FieldError & Pick<FormFieldError, 'meta'>;
 
 function fieldPathsOf(values: unknown, prefix = ''): string[] {
   if (
@@ -25,8 +27,11 @@ export function applyApiProblem<T extends FieldValues>(
   const { fieldErrors, formError } = toFormErrors(problem, fields);
 
   for (const field of fields) {
-    const message = fieldErrors[field];
-    if (message) methods.setError(field, { type: 'server', message });
+    const fieldError = fieldErrors[field];
+    if (fieldError) {
+      const { code, ...details } = fieldError;
+      methods.setError(field, { ...details, type: code ?? 'server' });
+    }
   }
   if (formError) {
     methods.setError('root.serverError', { type: problem.code ?? 'server', message: formError });

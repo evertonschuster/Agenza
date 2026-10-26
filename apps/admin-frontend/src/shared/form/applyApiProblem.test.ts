@@ -16,6 +16,33 @@ function formMethods() {
 }
 
 describe('applyApiProblem', () => {
+  it('keeps the field code and metadata in the form error', () => {
+    const methods = {
+      getValues: () => ({ cpf: '' }),
+      setError: vi.fn(),
+      setFocus: vi.fn(),
+    };
+    applyApiProblem(
+      {
+        errors: {
+          Cpf: [
+            {
+              code: 'Client.DuplicateCpf',
+              message: 'CPF em uso.',
+              meta: { clientId: 'existing-person' },
+            },
+          ],
+        },
+      },
+      methods,
+    );
+    expect(methods.setError).toHaveBeenCalledWith('cpf', {
+      type: 'Client.DuplicateCpf',
+      message: 'CPF em uso.',
+      meta: { clientId: 'existing-person' },
+    });
+    expect(methods.setFocus).toHaveBeenCalledWith('cpf');
+  });
   it('sets an error for each mapped field', () => {
     const methods = formMethods();
     const problem: ApiProblem = {
