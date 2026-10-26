@@ -42,4 +42,16 @@ function reactivate(id: string): Promise<ApiResult<Client>> {
   return servicesApi.post('/api/v{version}/clients/{id}/reactivate', { path: { id } });
 }
 
-export const clientsRepository = { list, get, create, update, deactivate, reactivate };
+function deleteClient(id: string): Promise<ApiResult<void>> {
+  return servicesApi.del('/api/v{version}/clients/{id}', { path: { id } });
+}
+
+export const clientsRepository = {
+  list,
+  get,
+  create,
+  update,
+  deactivate,
+  reactivate,
+  delete: deleteClient,
+};

@@ -1,10 +1,12 @@
-import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router';
+import { useEffect, useRef, useState, type SubmitEvent } from 'react';
+import { useParams } from 'react-router';
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
+import { useCloseRoute } from '@/shared/hooks/useCloseRoute';
 import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
+import { createClient, updateClient } from '../../../application/clientUseCases';
 import type { ClientStatus } from '../../../model/clientStatus';
 import { CLIENTS_PATH } from '../../clientsPaths';
 import {
@@ -22,8 +24,7 @@ import {
 
 export function useClientFormPage(): UseClientFormPageResult {
   const { id } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const backToList = useCloseRoute(CLIENTS_PATH);
   const [isConfirming, setIsConfirming] = useState(false);
   const isMountedRef = useRef(true);
   const isEdit = id !== undefined;
@@ -36,15 +37,6 @@ export function useClientFormPage(): UseClientFormPageResult {
   const isLoading = isEdit && status === undefined;
   const isSaving = methods.formState.isSubmitting;
   const canSubmit = !isLoading && !isSaving;
-  const canGoBack = location.key !== 'default';
-
-  const backToList = useCallback(() => {
-    if (canGoBack) {
-      void navigate(-1);
-      return;
-    }
-    void navigate(CLIENTS_PATH, { replace: true });
-  }, [navigate, canGoBack]);
 
   useEffect(() => {
     isMountedRef.current = true;
@@ -75,9 +67,7 @@ export function useClientFormPage(): UseClientFormPageResult {
   }, [id, methods, backToList]);
 
   async function onValid(values: ClientFormValues) {
-    const result = isEdit
-      ? await clientsRepository.update(id, values)
-      : await clientsRepository.create(values);
+    const result = isEdit ? await updateClient(id, values) : await createClient(values);
 
     if (result.ok) {
       toast.add({

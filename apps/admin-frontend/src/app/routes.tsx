@@ -34,9 +34,18 @@ export const router = createBrowserRouter([
             handle: crumb('Pessoas'),
             children: [
               {
-                index: true,
                 lazy: () =>
                   import('@/features/clients').then((m) => ({ Component: m.ClientListPage })),
+                children: [
+                  { index: true, element: null },
+                  {
+                    path: ':id/excluir',
+                    lazy: () =>
+                      import('@/features/clients').then((m) => ({
+                        Component: m.ClientDeletePage,
+                      })),
+                  },
+                ],
               },
               {
                 path: 'nova',

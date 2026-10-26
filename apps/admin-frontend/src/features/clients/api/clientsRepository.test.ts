@@ -4,14 +4,15 @@ import type { ClientInput } from '../model/client';
 import { clientsRepository } from './clientsRepository';
 import type { ClientListQuery } from '../model/clientListFilters';
 
-const { mockGet, mockPost, mockPut } = vi.hoisted(() => ({
+const { mockGet, mockPost, mockPut, mockDel } = vi.hoisted(() => ({
   mockGet: vi.fn(),
   mockPost: vi.fn(),
   mockPut: vi.fn(),
+  mockDel: vi.fn(),
 }));
 
 vi.mock('@/shared/api/servicesApi', () => ({
-  servicesApi: { get: mockGet, post: mockPost, put: mockPut },
+  servicesApi: { get: mockGet, post: mockPost, put: mockPut, del: mockDel },
 }));
 
 const LIST_ITEM = {
@@ -238,5 +239,26 @@ describe('clientsRepository.deactivate and reactivate', () => {
     mockPost.mockResolvedValue({ ok: false, error });
 
     expect(await clientsRepository.reactivate('abc')).toEqual({ ok: false, error });
+  });
+});
+
+describe('clientsRepository.delete', () => {
+  it('deletes that person through DELETE /clients/{id}, with no body', async () => {
+    mockDel.mockResolvedValue({ ok: true, data: undefined });
+
+    expect(await clientsRepository.delete('abc')).toEqual({ ok: true, data: undefined });
+
+    expect(mockDel).toHaveBeenCalledWith('/api/v{version}/clients/{id}', { path: { id: 'abc' } });
+  });
+
+  it('forwards a blocked deletion verbatim, without throwing', async () => {
+    const error = {
+      status: 409,
+      code: 'Client.HasAppointments',
+      title: 'Não é possível excluir esta pessoa.',
+    };
+    mockDel.mockResolvedValue({ ok: false, error });
+
+    expect(await clientsRepository.delete('abc')).toEqual({ ok: false, error });
   });
 });

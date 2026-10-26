@@ -20,7 +20,7 @@ superseded is historical evidence, not current implementation guidance.
 | Logging and telemetry | 0054 |
 | admin-frontend architecture | 0033, 0034, 0035, 0036, 0037, 0038, 0075 |
 | admin-frontend UI foundation | 0039, 0040, 0043 |
-| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076, 0077 as amended by 0078, 0078 |
+| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076, 0077 as amended by 0078, 0078, 0082 |
 | AI agent instruction files | 0041 |
 
 ## Superseded decisions
@@ -106,4 +106,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0078 a calendar date sent as an instant keeps its written day; the admin-frontend sends its `Date` as `JSON.stringify` writes it ·
 0079 admin-frontend every page header comes from the routes (handle.crumb), with a back arrow to the level above ·
 0080 clients delete: the person and its contacts soft-deleted together, any appointment blocks, a repeat is 404 ·
-0081 the bearer keeps the token's claim names, so `sub` reaches the audit columns.
+0081 the bearer keeps the token's claim names, so `sub` reaches the audit columns ·
+0082 admin-frontend deleting a person works like deleting a tag: a trash can in the list, a dialog route over it, useCloseRoute shared.

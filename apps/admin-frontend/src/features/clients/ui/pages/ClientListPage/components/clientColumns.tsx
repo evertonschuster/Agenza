@@ -1,12 +1,13 @@
+import { PencilIcon, Trash2Icon } from 'lucide-react';
 import { Link } from 'react-router';
 import { maskCpf } from '@/shared/values/cpf';
+import { ActionLink } from '@/shared/ui/action-link';
 import { OptionalText } from '@/shared/ui/optional-text';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import type { ClientListItem } from '../../../../model/clientList';
-import { editClientPath } from '../../../clientsPaths';
+import { deleteClientPath, editClientPath } from '../../../clientsPaths';
 import { ClientStatusBadge } from '../../../components/ClientStatusBadge';
-import { ClientEditLink } from './ClientEditLink';
 
 export function clientColumns(): ListSectionColumn<ClientListItem>[] {
   return [
@@ -56,8 +57,30 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
       key: 'actions',
       header: 'Ações',
       align: 'end',
-      skeleton: <Skeleton className="size-7" />,
-      cell: (client) => <ClientEditLink client={client} />,
+      skeleton: (
+        <div className="flex items-center gap-1">
+          <Skeleton className="size-7" />
+          <Skeleton className="size-7" />
+        </div>
+      ),
+      cell: (client) => (
+        <div className="flex items-center gap-1">
+          <ActionLink
+            to={editClientPath(client.id)}
+            icon={PencilIcon}
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Editar ${client.fullName}`}
+          />
+          <ActionLink
+            to={deleteClientPath(client.id)}
+            icon={Trash2Icon}
+            variant="ghost"
+            size="icon-sm"
+            aria-label={`Excluir ${client.fullName}`}
+          />
+        </div>
+      ),
     },
   ];
 }

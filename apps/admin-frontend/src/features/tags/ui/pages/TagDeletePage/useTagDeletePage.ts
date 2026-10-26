@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router';
+import { useEffect, useState } from 'react';
+import { useParams } from 'react-router';
+import { useCloseRoute } from '@/shared/hooks/useCloseRoute';
 import { toast } from '@/shared/ui/toast';
 import { tagsRepository } from '../../../api/tagsRepository';
 import { deleteTag } from '../../../application/tagUseCases';
@@ -9,18 +10,8 @@ import type { UseTagDeletePageResult } from './useTagDeletePage.types';
 
 export function useTagDeletePage(): UseTagDeletePageResult {
   const { id = '' } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const close = useCloseRoute(TAGS_PATH);
   const [tag, setTag] = useState<Tag>();
-  const canGoBack = location.key !== 'default';
-
-  const close = useCallback(() => {
-    if (canGoBack) {
-      void navigate(-1);
-      return;
-    }
-    void navigate(TAGS_PATH, { replace: true });
-  }, [navigate, canGoBack]);
 
   useEffect(() => {
     const controller = new AbortController();

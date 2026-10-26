@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useRef, useState, type SubmitEvent } from 'react';
-import { useLocation, useNavigate, useParams } from 'react-router';
+import { useEffect, useRef, useState, type SubmitEvent } from 'react';
+import { useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { useCloseRoute } from '@/shared/hooks/useCloseRoute';
 import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
@@ -17,8 +18,7 @@ import { TagFormStatus, type UseTagFormPageResult } from './useTagFormPage.types
 
 export function useTagFormPage(): UseTagFormPageResult {
   const { id } = useParams();
-  const location = useLocation();
-  const navigate = useNavigate();
+  const close = useCloseRoute(TAGS_PATH);
   const [loadedId, setLoadedId] = useState<string>();
   const isMountedRef = useRef(true);
   const isEdit = id !== undefined;
@@ -30,15 +30,6 @@ export function useTagFormPage(): UseTagFormPageResult {
   });
   const isSaving = methods.formState.isSubmitting;
   const canSubmit = !isLoading && !isSaving;
-  const canGoBack = location.key !== 'default';
-
-  const close = useCallback(() => {
-    if (canGoBack) {
-      void navigate(-1);
-      return;
-    }
-    void navigate(TAGS_PATH, { replace: true });
-  }, [navigate, canGoBack]);
 
   useEffect(() => {
     isMountedRef.current = true;
