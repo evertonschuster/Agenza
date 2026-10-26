@@ -244,3 +244,34 @@ test.describe('Edit a person', () => {
     await expect(page.getByRole('button', { name: 'Desativar pessoa' })).toBeVisible();
   });
 });
+
+test.describe('Delete a person', () => {
+  test.beforeEach(async ({ page }) => {
+    await loginAsDemoUser(page);
+  });
+
+  test('deletes the person from the trash can in the list, after confirming, and leaves them out of every situation', async ({
+    page,
+  }) => {
+    const person = {
+      name: uniqueName('Exclusao E2E'),
+      email: `exclusao.${Date.now()}@example.com`,
+      cpf: validCpf(),
+    };
+    await registerPerson(page, person);
+    await searchFor(page, person.name);
+
+    await page.getByRole('link', { name: `Excluir ${person.name}`, exact: true }).click();
+    await expect(page).toHaveURL(/\/pessoas\/[0-9a-f-]{36}\/excluir$/);
+    const dialog = page.getByRole('dialog');
+    await expect(dialog.getByText(`Tem certeza que deseja excluir ${person.name}?`)).toBeVisible();
+    await dialog.getByRole('button', { name: 'Excluir' }).click();
+
+    await expect(page.getByText('Pessoa excluída')).toBeVisible();
+    await expect(page).toHaveURL(/\/pessoas\?search=/);
+    await expect(page.getByText(`Nenhuma pessoa encontrada para «${person.name}»`)).toBeVisible();
+
+    await page.goto(`/pessoas?search=${encodeURIComponent(person.name)}&status=all`);
+    await expect(page.getByText(`Nenhuma pessoa encontrada para «${person.name}»`)).toBeVisible();
+  });
+});

@@ -1,5 +1,6 @@
 import { PlusIcon } from 'lucide-react';
 import { FormProvider } from 'react-hook-form';
+import { Outlet } from 'react-router';
 import type { CountNoun } from '@/shared/format/count';
 import { ActionLink } from '@/shared/ui/action-link';
 import type { ListSectionEmptyCopy } from '@/widgets/list-section';
@@ -47,6 +48,8 @@ export function ClientListPage() {
         pagination={pagination}
         itemLabel={ITEM_LABEL}
       />
+
+      <Outlet />
     </div>
   );
 }

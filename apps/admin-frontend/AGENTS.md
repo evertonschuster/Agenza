@@ -38,8 +38,10 @@ ainda. Crie-os quando uma segunda feature precisar da mesma entidade, não antes
 
 **Páginas são cascas.** `<Page>.tsx` não tem `useState`, `useEffect` nem `useRef` próprios; toda a
 lógica mora no hook **daquela** página (`use<Page>.ts`). Hooks não são compartilhados entre páginas —
-as exceções são um acessor puro de contexto como `useAuth` e um hook genérico, sem domínio, num widget, como o
-`usePaginatedList` de `widgets/paginated-list-section` ([ADR 0071](../../docs/adr/0071-admin-frontend-paged-list-hook.md)).
+as exceções são um acessor puro de contexto como `useAuth`, um hook genérico, sem domínio, num widget, como o
+`usePaginatedList` de `widgets/paginated-list-section` ([ADR 0071](../../docs/adr/0071-admin-frontend-paged-list-hook.md)),
+e o `useCloseRoute` de `shared/hooks/`, que fecha uma rota aberta sobre a lista
+([ADR 0081](../../docs/adr/0081-admin-frontend-client-delete.md)).
 Uma lista paginada declara a interface dos seus filtros em `model/`, e o hook da página só passa os filtros
 iniciais e o repositório ao `usePaginatedList`, que guarda filtros, página e tamanho no próprio estado, fora da URL
 ([ADR 0072](../../docs/adr/0072-admin-frontend-paged-list-state-in-the-hook.md)).
@@ -49,8 +51,9 @@ iniciais e o repositório ao `usePaginatedList`, que guarda filtros, página e t
 página além da última. Nenhum efeito depende do estado dele: não acrescente um `useEffect` com dependências que
 dispare `fetchPage`, e uma ação nova passa pelo `request` do hook, conforme a
 [ADR 0073](../../docs/adr/0073-admin-frontend-paged-list-asks-only-when-told.md). Pessoas e Etiquetas usam o mesmo
-hook; em Etiquetas os tópicos `tagSaved` e `tagDeleted` chamam o `refetch`, que pede de novo a página da tela sem
-tirar as linhas dela, conforme a [ADR 0074](../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md).
+hook; em Etiquetas os tópicos `tagSaved` e `tagDeleted`, e em Pessoas o `clientDeleted`, chamam o `refetch`, que pede
+de novo a página da tela sem tirar as linhas dela, conforme a
+[ADR 0074](../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md).
 
 **`loader` e `action` moram em `ui/pages/<Page>/route.ts`** e são reexportados pelo barril, para que
 `app/routes.tsx` os importe via `@/features/<slice>` e a direção continue `app → features`.

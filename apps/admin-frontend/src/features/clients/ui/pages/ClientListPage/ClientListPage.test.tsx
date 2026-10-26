@@ -6,6 +6,7 @@ import { routerAt } from '@/test/renderRoutes';
 import { footerSkeleton } from '@/test/footerSkeleton';
 import { pending } from '@/test/pending';
 import { ClientListPage } from './ClientListPage';
+import { clientDeleted } from '../../../model/clientEvents';
 import type { ClientListQuery } from '../../../model/clientListFilters';
 import type { ClientList, ClientListItem } from '../../../model/clientList';
 
@@ -235,6 +236,47 @@ describe('ClientListPage', () => {
     );
   });
 
+  it('offers to delete each person, active or inactive, under /pessoas/:id/excluir', async () => {
+    renderPage(CLIENTS);
+
+    const remove = await screen.findByRole('link', { name: 'Excluir Ana Souza' });
+    expect(remove).toHaveAttribute('href', '/pessoas/c1/excluir');
+    expect(remove.querySelector('svg')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByRole('link', { name: 'Excluir Bruno Lima' })).toHaveAttribute(
+      'href',
+      '/pessoas/c2/excluir',
+    );
+  });
+
+  it('asks exactly once for the filters on screen when a person is deleted, keeping the rows until the answer', async () => {
+    serve(CLIENTS);
+    const { container } = renderClientListPage(['/pessoas?status=all']);
+    await screen.findByText('Bruno Lima');
+    const refetched = pending<ReturnType<typeof listOf>>();
+    mockList.mockImplementationOnce(() => refetched.promise);
+
+    act(() => {
+      clientDeleted.publish({ id: 'c2' });
+      expect(mockList).toHaveBeenCalledTimes(2);
+      expect(mockList).toHaveBeenLastCalledWith(
+        { ...FIRST_PAGE_OF_ACTIVE, status: 'all' },
+        expect.any(AbortSignal),
+      );
+    });
+
+    expect(screen.getByText('Bruno Lima')).toBeInTheDocument();
+    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+
+    await act(async () => {
+      refetched.resolve(listOf([ANA]));
+      await refetched.promise;
+    });
+
+    expect(screen.queryByText('Bruno Lima')).not.toBeInTheDocument();
+    expect(screen.getByText('Ana Souza')).toBeInTheDocument();
+    expect(mockList).toHaveBeenCalledTimes(2);
+  });
+
   it('limits the search field to what the backend accepts', async () => {
     renderPage(CLIENTS);
 
@@ -443,6 +485,21 @@ describe('ClientListPage', () => {
       expect(screen.getByRole('link', { name: 'Nova pessoa' })).toHaveAttribute(
         'href',
         '/pessoas/nova',
+      );
+    });
+
+    it('keeps the address of the list out of the edit and delete links', async () => {
+      serve(CLIENTS);
+      renderClientListPage(['/pessoas?search=ana&status=all']);
+      await screen.findByText('Ana Souza');
+
+      expect(screen.getByRole('link', { name: 'Editar Ana Souza' })).toHaveAttribute(
+        'href',
+        '/pessoas/c1/editar',
+      );
+      expect(screen.getByRole('link', { name: 'Excluir Ana Souza' })).toHaveAttribute(
+        'href',
+        '/pessoas/c1/excluir',
       );
     });
   });

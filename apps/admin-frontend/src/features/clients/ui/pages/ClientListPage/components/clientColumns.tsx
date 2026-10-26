@@ -6,6 +6,7 @@ import type { ListSectionColumn } from '@/widgets/list-section';
 import type { ClientListItem } from '../../../../model/clientList';
 import { editClientPath } from '../../../clientsPaths';
 import { ClientStatusBadge } from '../../../components/ClientStatusBadge';
+import { ClientDeleteLink } from './ClientDeleteLink';
 import { ClientEditLink } from './ClientEditLink';
 
 export function clientColumns(): ListSectionColumn<ClientListItem>[] {
@@ -56,8 +57,18 @@ export function clientColumns(): ListSectionColumn<ClientListItem>[] {
       key: 'actions',
       header: 'Ações',
       align: 'end',
-      skeleton: <Skeleton className="size-7" />,
-      cell: (client) => <ClientEditLink client={client} />,
+      skeleton: (
+        <div className="flex items-center gap-1">
+          <Skeleton className="size-7" />
+          <Skeleton className="size-7" />
+        </div>
+      ),
+      cell: (client) => (
+        <div className="flex items-center gap-1">
+          <ClientEditLink client={client} />
+          <ClientDeleteLink client={client} />
+        </div>
+      ),
     },
   ];
 }
