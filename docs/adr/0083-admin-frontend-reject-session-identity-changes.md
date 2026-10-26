@@ -43,3 +43,11 @@ late events, request cancellation, protected form removal and explicit login. Sp
 - Switching tenant on every page duplicates a security lifecycle across features.
 - Clearing storage alone leaves live credentials and mounted data until a reload.
 - A global request registry or request-per-tenant cache is unnecessary: one signal represents the session.
+
+## Review follow-up (2026-10-26)
+
+The first implementation compared identities only when both snapshots were authenticated. A renewal without
+subject or tenant discarded the accepted identity, allowing a later valid user event to authenticate again.
+The comparison now also rejects disappearance of either claim from an authenticated session, using the existing
+`identity_changed` latch, credential cleanup and explicit login flow. Initial authentication still reports the
+specific missing-claim failure. Regression tests cover missing claims followed by late events and a fresh login.

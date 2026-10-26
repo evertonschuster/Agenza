@@ -16,7 +16,7 @@ Como usuário autenticado, quero continuar trabalhando após uma renovação da 
 ### Edge Cases
 
 - Resposta inicial de sessão chega depois de um evento mais recente ou após desmontagem.
-- Renovação sem identificação do usuário ou sem negócio.
+- Renovação sem identificação do usuário ou sem negócio mantém o bloqueio até novo login explícito, inclusive se eventos posteriores trouxerem uma identidade válida.
 - Remoção das credenciais persistidas falha; a sessão em memória continua bloqueada.
 - Cancelamento não desfaz uma operação que o servidor já tenha concluído.
 

@@ -107,7 +107,6 @@ export function reduceSession(
     const next = resolveAuthenticated(event.principal);
     if (
       previous.session.status === 'authenticated' &&
-      next.session.status === 'authenticated' &&
       (previous.session.subject !== next.session.subject ||
         previous.tenant?.tenantId !== next.tenant?.tenantId)
     ) {

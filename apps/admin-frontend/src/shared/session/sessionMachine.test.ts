@@ -83,6 +83,40 @@ describe('reduceSession (pure — no React, no identity-provider wiring)', () =>
     ).toBe('missing_subject_claim');
   });
 
+  it.each([
+    ['subject', makePrincipal({ tenantId: TENANT_A, subject: '' })],
+    ['tenant', makePrincipal()],
+  ] as const)('requires explicit login after a renewal loses its %s', (_, invalidPrincipal) => {
+    const principal = makePrincipal({ tenantId: TENANT_A });
+    const previous = reduceSession({ type: 'USER_LOADED', principal });
+    const blocked = reduceSession({ type: 'USER_LOADED', principal: invalidPrincipal }, previous);
+    expect(blocked.session).toMatchObject({
+      status: 'unauthenticated',
+      failureReason: 'identity_changed',
+      accessToken: null,
+      subject: null,
+    });
+    expect(blocked.tenant).toBeNull();
+    expect(blocked.user).toBeNull();
+
+    const changedPrincipal = makePrincipal({ tenantId: TENANT_B, subject: 'user-2' });
+    for (const event of [
+      { type: 'USER_UNLOADED' },
+      { type: 'SILENT_RENEW_ERROR' },
+      { type: 'USER_LOADED', principal },
+      { type: 'USER_LOADED', principal: makePrincipal({ tenantId: TENANT_A, subject: 'user-2' }) },
+      { type: 'USER_LOADED', principal: makePrincipal({ tenantId: TENANT_B }) },
+      { type: 'INITIAL_USER', principal: changedPrincipal },
+    ] as const) {
+      expect(reduceSession(event, blocked)).toBe(blocked);
+    }
+
+    const signingIn = reduceSession({ type: 'LOGIN_STARTED' }, blocked);
+    expect(
+      reduceSession({ type: 'USER_LOADED', principal: changedPrincipal }, signingIn).session.status,
+    ).toBe('authenticated');
+  });
+
   it('keeps identity changes blocked across late events until explicit login', () => {
     const principal = makePrincipal({ tenantId: TENANT_A });
     const previous = reduceSession({ type: 'USER_LOADED', principal });

@@ -68,8 +68,13 @@ describe('startListening', () => {
     stopListening();
   });
 
-  it.each([{ tenantId: 'tenant-other' }, { tenantId: 'tenant-abc', subject: 'user-2' }])(
-    'removes persisted credentials and blocks late events after identity changes: %j',
+  it.each([
+    { tenantId: 'tenant-other' },
+    { tenantId: 'tenant-abc', subject: 'user-2' },
+    { tenantId: 'tenant-abc', subject: '' },
+    {},
+  ])(
+    'removes persisted credentials and blocks late events when identity changes or disappears: %j',
     async (changed) => {
       mockGetUser.mockResolvedValue(makeOidcUser({ tenantId: 'tenant-abc' }));
       const stop = startListening();

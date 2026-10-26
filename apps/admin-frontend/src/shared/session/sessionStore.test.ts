@@ -84,7 +84,7 @@ describe('sessionStore', () => {
       });
     });
 
-    it('logs missing_tenant_claim with the outgoing tenant when an authenticated session renews without one', () => {
+    it('logs identity_changed with the outgoing tenant when an authenticated session loses its claim', () => {
       sessionStore.dispatch({
         type: 'USER_LOADED',
         principal: makePrincipal({ tenantId: TENANT }),
@@ -93,7 +93,7 @@ describe('sessionStore', () => {
 
       sessionStore.dispatch({ type: 'USER_LOADED', principal: makePrincipal() });
 
-      expect(logger.warn).toHaveBeenCalledWith('auth.missing_tenant_claim', {
+      expect(logger.warn).toHaveBeenCalledWith('auth.identity_changed', {
         tenantId: TENANT,
         timestamp: NOW,
       });
