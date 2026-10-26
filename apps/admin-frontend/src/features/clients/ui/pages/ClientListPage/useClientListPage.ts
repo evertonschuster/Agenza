@@ -4,7 +4,7 @@ import { useSearchParamsState } from '@/shared/hooks/useSearchParamsState';
 import { useTopic } from '@/shared/pubsub/useTopic';
 import { usePaginatedList } from '@/widgets/paginated-list-section';
 import { clientsRepository } from '../../../api/clientsRepository';
-import { clientDeleted } from '../../../model/clientEvents';
+import { clientCreated, clientDeleted, clientUpdated } from '../../../model/clientEvents';
 import {
   INITIAL_CLIENT_LIST_FILTERS,
   INITIAL_CLIENT_LIST_QUERY,
@@ -21,6 +21,8 @@ export function useClientListPage(): UseClientListPageResult {
   const filterForm = useForm<ClientListFilters>({ defaultValues: filters });
   const chosenStatus = useWatch({ control: filterForm.control, name: 'status' });
 
+  useTopic(clientCreated, refetch);
+  useTopic(clientUpdated, refetch);
   useTopic(clientDeleted, refetch);
 
   function onFiltersSubmit(event: SubmitEvent<HTMLFormElement>) {

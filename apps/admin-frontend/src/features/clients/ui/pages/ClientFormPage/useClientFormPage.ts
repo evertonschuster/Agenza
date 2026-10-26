@@ -6,6 +6,7 @@ import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { useCloseRoute } from '@/shared/hooks/useCloseRoute';
 import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
+import { createClient, updateClient } from '../../../application/clientUseCases';
 import type { ClientStatus } from '../../../model/clientStatus';
 import { CLIENTS_PATH } from '../../clientsPaths';
 import {
@@ -66,9 +67,7 @@ export function useClientFormPage(): UseClientFormPageResult {
   }, [id, methods, backToList]);
 
   async function onValid(values: ClientFormValues) {
-    const result = isEdit
-      ? await clientsRepository.update(id, values)
-      : await clientsRepository.create(values);
+    const result = isEdit ? await updateClient(id, values) : await createClient(values);
 
     if (result.ok) {
       toast.add({

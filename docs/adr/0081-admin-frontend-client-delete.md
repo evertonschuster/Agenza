@@ -16,8 +16,9 @@ owner turned it down on 2026-10-25: deleting a person must work like deleting a 
 
 ## Decision
 
-1. **A trash can in the list.** The **Ações** column gets `ClientDeleteLink` beside the pencil, an `ActionLink` named
-   "Excluir {nome}" to `/pessoas/:id/excluir`, written once as `deleteClientPath(id)` in `clientsPaths.ts`. The edit
+1. **A trash can in the list.** The **Ações** column gets a second `ActionLink` beside the pencil, named
+   "Excluir {nome}", to `/pessoas/:id/excluir`, written once as `deleteClientPath(id)` in `clientsPaths.ts`. Both links
+   are written in `clientColumns.tsx` itself; the pencil's `ClientEditLink` component goes away with them. The edit
    page has no delete button, as the tag form has none. When Detalhes is built, where the action also lives is decided
    again.
 2. **The route opens over the list.** Under `pessoas`, a pathless layout route renders `ClientListPage`, whose children
@@ -33,8 +34,15 @@ owner turned it down on 2026-10-25: deleting a person must work like deleting a 
    subscribes it to `usePaginatedList`'s `refetch`: the list stays mounted under the dialog, asks again for the page on
    screen with the filters it holds, keeps its rows until the answer and moves to the last page when the total shrinks
    under it ([ADR 0073](0073-admin-frontend-paged-list-asks-only-when-told.md),
-   [ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md)). Create, edit, deactivate and reactivate publish
-   nothing: they are whole pages, and the list mounts again behind them.
+   [ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md)). Create and edit go through the same file, as
+   Etiquetas' do: `createClient(input)` publishes `clientCreated` and `updateClient(id, input)` publishes
+   `clientUpdated`, each with the saved id and only on success, and the list subscribes `refetch` to both. Each
+   mutation has its own topic, unlike Etiquetas' shared `tagSaved`, at the owner's choice: a later listener can react to
+   one kind of change without telling the two apart, and nothing has to be split when one does. Today the form is a
+   whole page and the list is not mounted while it is open, so the list's first load after the form already shows the
+   change and neither topic has a listener alive when it fires; they keep every mutation that changes a row behind a
+   use case that announces it, so a list mounted under the form, or any other listener, needs no change in the form.
+   Deactivate and reactivate still call the repository directly from the edit page and announce nothing.
 5. **The copy follows the tag dialog.** "Excluir pessoa?"; "Tem certeza que deseja excluir {nome}?" and "Essa ação não
    pode ser desfeita." on separate lines; the success toast "Pessoa excluída" / "O cadastro de {nome} foi excluído.".
    A refusal shows `ConfirmDialog`'s "Não é possível excluir" with the backend's message as it comes, which for
@@ -67,3 +75,8 @@ owner turned it down on 2026-10-25: deleting a person must work like deleting a 
   already names the way out.
 - **`clientDeleted` published by the page hook** instead of a use case: Etiquetas publishes from
   `application/tagUseCases.ts`, and the owner asked for the same shape.
+- **A `ClientDeleteLink` component beside `ClientEditLink`**, as `TagDeleteLink` sits beside `TagEditLink`: the first
+  version of this change, removed before merge with `ClientEditLink` at the owner's choice. Each was a fixed set of
+  `ActionLink` props (path, icon, `ghost`, `icon-sm`, the accessible name) with one caller and a `.types.ts` for one
+  prop; the column reads the same with the two links written in it, and no test referred to either component.
+  Etiquetas keeps its two link components until it is changed on its own.

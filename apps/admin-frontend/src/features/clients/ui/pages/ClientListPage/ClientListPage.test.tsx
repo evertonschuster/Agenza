@@ -6,7 +6,7 @@ import { routerAt } from '@/test/renderRoutes';
 import { footerSkeleton } from '@/test/footerSkeleton';
 import { pending } from '@/test/pending';
 import { ClientListPage } from './ClientListPage';
-import { clientDeleted } from '../../../model/clientEvents';
+import { clientCreated, clientDeleted, clientUpdated } from '../../../model/clientEvents';
 import type { ClientListQuery } from '../../../model/clientListFilters';
 import type { ClientList, ClientListItem } from '../../../model/clientList';
 
@@ -248,34 +248,41 @@ describe('ClientListPage', () => {
     );
   });
 
-  it('asks exactly once for the filters on screen when a person is deleted, keeping the rows until the answer', async () => {
-    serve(CLIENTS);
-    const { container } = renderClientListPage(['/pessoas?status=all']);
-    await screen.findByText('Bruno Lima');
-    const refetched = pending<ReturnType<typeof listOf>>();
-    mockList.mockImplementationOnce(() => refetched.promise);
+  it.each([
+    ['a person is created', clientCreated],
+    ['a person is updated', clientUpdated],
+    ['a person is deleted', clientDeleted],
+  ] as const)(
+    'asks exactly once for the filters on screen when %s, keeping the rows until the answer',
+    async (_event, topic) => {
+      serve(CLIENTS);
+      const { container } = renderClientListPage(['/pessoas?status=all']);
+      await screen.findByText('Bruno Lima');
+      const refetched = pending<ReturnType<typeof listOf>>();
+      mockList.mockImplementationOnce(() => refetched.promise);
 
-    act(() => {
-      clientDeleted.publish({ id: 'c2' });
+      act(() => {
+        topic.publish({ id: 'c2' });
+        expect(mockList).toHaveBeenCalledTimes(2);
+        expect(mockList).toHaveBeenLastCalledWith(
+          { ...FIRST_PAGE_OF_ACTIVE, status: 'all' },
+          expect.any(AbortSignal),
+        );
+      });
+
+      expect(screen.getByText('Bruno Lima')).toBeInTheDocument();
+      expect(container.querySelector('[aria-busy="true"]')).toBeNull();
+
+      await act(async () => {
+        refetched.resolve(listOf([ANA]));
+        await refetched.promise;
+      });
+
+      expect(screen.queryByText('Bruno Lima')).not.toBeInTheDocument();
+      expect(screen.getByText('Ana Souza')).toBeInTheDocument();
       expect(mockList).toHaveBeenCalledTimes(2);
-      expect(mockList).toHaveBeenLastCalledWith(
-        { ...FIRST_PAGE_OF_ACTIVE, status: 'all' },
-        expect.any(AbortSignal),
-      );
-    });
-
-    expect(screen.getByText('Bruno Lima')).toBeInTheDocument();
-    expect(container.querySelector('[aria-busy="true"]')).toBeNull();
-
-    await act(async () => {
-      refetched.resolve(listOf([ANA]));
-      await refetched.promise;
-    });
-
-    expect(screen.queryByText('Bruno Lima')).not.toBeInTheDocument();
-    expect(screen.getByText('Ana Souza')).toBeInTheDocument();
-    expect(mockList).toHaveBeenCalledTimes(2);
-  });
+    },
+  );
 
   it('limits the search field to what the backend accepts', async () => {
     renderPage(CLIENTS);

@@ -51,7 +51,7 @@ iniciais e o repositório ao `usePaginatedList`, que guarda filtros, página e t
 página além da última. Nenhum efeito depende do estado dele: não acrescente um `useEffect` com dependências que
 dispare `fetchPage`, e uma ação nova passa pelo `request` do hook, conforme a
 [ADR 0073](../../docs/adr/0073-admin-frontend-paged-list-asks-only-when-told.md). Pessoas e Etiquetas usam o mesmo
-hook; em Etiquetas os tópicos `tagSaved` e `tagDeleted`, e em Pessoas o `clientDeleted`, chamam o `refetch`, que pede
+hook; os tópicos `tagSaved` e `tagDeleted` em Etiquetas, e `clientCreated`, `clientUpdated` e `clientDeleted` em Pessoas, chamam o `refetch`, que pede
 de novo a página da tela sem tirar as linhas dela, conforme a
 [ADR 0074](../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md).
 
