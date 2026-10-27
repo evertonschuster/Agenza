@@ -1,242 +1,73 @@
-# Worked test patterns
+# Test seams and live examples
 
-Each pattern shows the smallest shape that matters and names the live file to copy from. Read the
-live file — it is the truth; these are silhouettes.
+Open the example matching the change. Copy the seam and assertion strategy, not an entire fixture
+or an old feature's assumptions.
 
----
+## Pure rules and stores
 
-## 1. A pure function — zero mocks
+[sessionMachine.test.ts](../../../../apps/admin-frontend/src/shared/session/sessionMachine.test.ts)
+tests the reducer with plain principal fixtures, without identity-provider wiring. Use table cases
+when several inputs exercise the same rule. Reuse
+[oidcUser.ts](../../../../apps/admin-frontend/src/test/oidcUser.ts) for principal/token construction.
 
-Live: [`sessionMachine.test.ts`](../../../../apps/admin-frontend/src/shared/session/sessionMachine.test.ts)
+[sessionStore.test.ts](../../../../apps/admin-frontend/src/shared/session/sessionStore.test.ts)
+resets the store and mocks between cases, then verifies snapshots, subscription/unsubscription and
+credential reads. Reset state as well as call history. Restore fake timers after a test that changes
+the clock. For OS-theme behavior,
+[themeStore.test.ts](../../../../apps/admin-frontend/src/shared/theme/themeStore.test.ts) supplies a
+controllable media query; the global setup stub alone does not simulate preference changes.
 
-The whole test is a fixture in and an assertion out. If you reach for `vi.mock` here, the module
-under test has a dependency it should not have.
+## Events and async races
 
-```ts
-import { describe, expect, it } from 'vitest';
-import { makePrincipal } from '@/test/oidcUser';
-import { reduceSession } from './sessionMachine';
+[AuthProvider.test.tsx](../../../../apps/admin-frontend/src/features/auth/ui/AuthProvider.test.tsx)
+captures event callbacks in `vi.hoisted`, registers them through a mocked auth module and fires them
+inside `act()`. Clear the captured callbacks as well as store state between tests.
 
-describe('reduceSession', () => {
-  it('USER_LOADED with a token missing tenant_id -> unauthenticated (spec FR-009)', () => {
-    const result = reduceSession({ type: 'USER_LOADED', principal: makePrincipal() });
+Use [pending.ts](../../../../apps/admin-frontend/src/test/pending.ts) to resolve requests in a chosen
+order. Assert the consequence of a stale answer, unmount or competing event, rather than merely
+asserting that an abort function was called.
+[use-paginated-list.test.tsx](../../../../apps/admin-frontend/src/widgets/paginated-list-section/use-paginated-list.test.tsx)
+shows controlled list state, immediate requests from actions, cancellation and a corrected last
+page. A state update alone must not accidentally become a second fetch trigger.
 
-    expect(result.session.status).toBe('unauthenticated');
-    expect(result.session.failureReason).toBe('missing_tenant_claim');
-  });
-});
-```
+## Pages and navigation
 
-Exhaustive branch sets use `it.each` with an `as const` tuple array so the case list stays readable
-and TypeScript keeps the literal types.
+[ClientListPage.test.tsx](../../../../apps/admin-frontend/src/features/clients/ui/pages/ClientListPage/ClientListPage.test.tsx)
+renders the list with a data router and mocks its repository. Use
+[renderRoutes.tsx](../../../../apps/admin-frontend/src/test/renderRoutes.tsx) when the component
+depends on route matches/handles; a plain `MemoryRouter` cannot supply every data-router API.
+Assert the destination or visible outcome instead of spying on router internals.
 
-Fixture builders live in [`src/test/oidcUser.ts`](../../../../apps/admin-frontend/src/test/oidcUser.ts)
-(`makePrincipal`, `makeOidcUser`, `makeAccessToken`). Add to that file rather than hand-rolling a
-principal in a test; a token built by hand tends to be missing exactly the claim under test.
-Beside it, `src/test/pending.ts` gives a promise the test resolves by hand (`pending<T>()`, for an
-answer that arrives after another) and `src/test/footerSkeleton.ts` finds the paged list's footer
-skeleton; import them instead of declaring a copy in the test file.
+[LoginPage.test.tsx](../../../../apps/admin-frontend/src/features/auth/ui/pages/LoginPage/LoginPage.test.tsx)
+uses `StrictMode` to verify a single login redirect despite repeated development effects. Use that
+wrapper for this failure mode; ordinary list loading may legitimately start and abort a development
+mount request before starting the next one.
 
----
+For a form or dialog, use `userEvent.setup()` to operate the actual control and assert its effect:
+validation displayed, submission suppressed, successful save or closure. A render-only test does
+not prove the action works. Use accessible names; reserve test ids for values without an accessible
+query.
 
-## 2. A module-singleton store
+## API transport seam
 
-Live: [`sessionStore.test.ts`](../../../../apps/admin-frontend/src/shared/session/sessionStore.test.ts)
+[tagsRepository.test.ts](../../../../apps/admin-frontend/src/features/tags/api/tagsRepository.test.ts)
+tests typed delegation by mocking `servicesApi` and checking request parameters and returned
+results. A failing API result remains a value.
 
-The store is module state: it survives between tests in the same file. `reset()` in `beforeEach` is
-not optional, and it is also what forces the store to expose one.
+[servicesFacade.test.ts](../../../../apps/admin-frontend/src/shared/api/servicesFacade.test.ts)
+passes a fake client to the factory. Inspect those cases when changing envelope or failure
+normalization, rather than reproducing their taxonomy in each feature test. Header/session wiring
+is tested at [apiClient.test.ts](../../../../apps/admin-frontend/src/shared/api/apiClient.test.ts).
 
-```ts
-beforeEach(() => {
-  vi.clearAllMocks();
-  sessionStore.reset();
-});
-```
+## Real-stack flows
 
-Three things worth testing and nothing else: that a dispatch replaces the snapshot and notifies every
-subscriber, that unsubscribe actually stops notifications, and that the derived reader
-(`getAuthCredentials`) agrees with the snapshot.
+Use [e2e/helpers.ts](../../../../apps/admin-frontend/e2e/helpers.ts) for seeded login. It reads the
+identity service's development configuration instead of copying credentials. Examples live in
+[auth.spec.ts](../../../../apps/admin-frontend/e2e/auth.spec.ts),
+[clients.spec.ts](../../../../apps/admin-frontend/e2e/clients.spec.ts) and
+[tags.spec.ts](../../../../apps/admin-frontend/e2e/tags.spec.ts).
 
-Timestamps go through fake timers so the assertion is exact rather than approximate:
-
-```ts
-vi.useFakeTimers({ now: Date.parse('2026-09-03T12:00:00.000Z') });
-```
-
-Pair it with `vi.useRealTimers()` in `afterEach`.
-
-**`themeStore` gotcha:** jsdom does not implement `window.matchMedia`. A store that reads the OS
-preference throws on import unless you define a stub before the module is imported — define it in the
-test file's own setup, not in `src/vitest-setup.ts`, so only the tests that need it carry it.
-
----
-
-## 3. A hook over a provider, with a mocked module
-
-Live: [`AuthProvider.test.tsx`](../../../../apps/admin-frontend/src/features/auth/ui/AuthProvider.test.tsx)
-
-The pattern that makes an event-emitter integration testable: capture the handlers the module under
-test registers, then fire them yourself inside `act()`.
-
-```tsx
-const { mockGetUser, handlers } = vi.hoisted(() => ({
-  mockGetUser: vi.fn(),
-  handlers: { userLoaded: undefined as Handler<User> | undefined },
-}));
-
-vi.mock('../api/authClient', () => ({
-  authClient: {
-    getUser: mockGetUser,
-    events: {
-      addUserLoaded: (fn: Handler<User>) => {
-        handlers.userLoaded = fn;
-      },
-      removeUserLoaded: vi.fn(),
-    },
-  },
-}));
-
-function wrapper({ children }: { children: ReactNode }) {
-  return <AuthProvider>{children}</AuthProvider>;
-}
-
-const { result } = renderHook(() => useAuth(), { wrapper });
-await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
-
-act(() => {
-  handlers.userLoaded?.(makeOidcUser({ tenantId: TENANT_A }));
-});
-```
-
-Reset the captured handlers in `beforeEach` alongside `sessionStore.reset()` — a stale handler from
-the previous test dispatches into the store you just reset.
-
-**Races are testable, and this is where they belong.** Hold a promise open (`mockSignoutRedirect`
-returning a promise you resolve by hand), fire the competing event mid-flight, and assert the state
-did *not* move. The logout-vs-renewal races in the live file are the model.
-
----
-
-## 4. A page: assert the consequence, under StrictMode
-
-Live: [`LoginPage.test.tsx`](../../../../apps/admin-frontend/src/features/auth/ui/pages/LoginPage/LoginPage.test.tsx)
-and [`AuthCallbackPage.test.tsx`](../../../../apps/admin-frontend/src/features/auth/ui/pages/AuthCallbackPage/AuthCallbackPage.test.tsx)
-
-The shell has no logic, so there is nothing to assert about it directly. Render it with a hand-built
-context value and check what the hook did.
-
-```tsx
-render(
-  <StrictMode>
-    <AuthContext.Provider value={value}>
-      <LoginPage />
-    </AuthContext.Provider>
-  </StrictMode>,
-);
-
-expect(login).toHaveBeenCalledTimes(1);
-```
-
-`<StrictMode>` is load-bearing: without it a missing mount guard passes. Where a page navigates,
-assert the destination rendered rather than spying on the router.
-
----
-
-## 5. A component whose behaviour is routing
-
-Live: [`ProtectedRoute.test.tsx`](../../../../apps/admin-frontend/src/features/auth/ui/ProtectedRoute.test.tsx)
-
-Give every destination a marker element and assert which one is on screen. Nothing is spied on, so
-the test survives a router upgrade.
-
-```tsx
-render(
-  <MemoryRouter initialEntries={['/']}>
-    <AuthContext.Provider value={value}>
-      <Routes>
-        <Route path="/login" element={<div>Login Screen</div>} />
-        <Route path="/" element={<ProtectedRoute><div>Protected Shell</div></ProtectedRoute>} />
-      </Routes>
-    </AuthContext.Provider>
-  </MemoryRouter>,
-);
-
-expect(screen.getByText('Login Screen')).toBeInTheDocument();
-expect(screen.queryByText('Protected Shell')).not.toBeInTheDocument();
-```
-
-Assert both the presence *and* the absence. "Redirected" and "rendered nothing yet" are different
-states and a single positive assertion cannot tell them apart — which is exactly the `checking`
-status bug this file pins.
-
-User interaction goes through `userEvent.setup()`, never `fireEvent`: it produces the real event
-sequence, including focus.
-
----
-
-## 6. A visible action
-
-Use `userEvent.setup()` to click the same control a person uses. Assert both the resulting
-state and the accessible name of the action; a render-only assertion does not prove the
-control works.
-
-```ts
-const user = userEvent.setup();
-await user.click(screen.getByRole('button', { name: 'Buscar' }));
-expect(screen.getByRole('dialog')).toBeInTheDocument();
-```
-
----
-
-## 7. Injecting a fake instead of mocking a module
-
-Live: [`servicesFacade.test.ts`](../../../../apps/admin-frontend/src/shared/api/servicesFacade.test.ts)
-
-When the unit is already a factory, hand it a fake and skip `vi.mock` entirely — fewer moving parts
-and the test doubles as documentation of the seam.
-
-```ts
-const GET = vi.fn<(path: string, init: unknown) => Promise<RawShape>>();
-const api = createServicesFacade({ GET, POST: vi.fn(), PUT: vi.fn(), DELETE: vi.fn() } as unknown as Client<paths>);
-```
-
-What is worth asserting at this layer: that the version segment and tenant header are injected so no
-caller restates them, that the envelope is unwrapped, and that each failure class normalises to the
-right `ApiProblem` (`SESSION_PROBLEM` / `NETWORK_PROBLEM` / `SERVER_PROBLEM`). Never assert on a
-free-text backend message — branch on `code`, same rule as production code.
-
----
-
-## 8. An e2e
-
-Live: [`e2e/auth.spec.ts`](../../../../apps/admin-frontend/e2e/auth.spec.ts)
-
-Real stack, real login form, no mocks. Requires `dotnet run --project backend/AppHost
---launch-profile http` running from the repo root.
-
-```ts
-async function loginAsDemoUser(page: Page) {
-  await page.goto('/');
-  await page.waitForURL(LOGIN_URL_RE);
-  await page.locator('#Email').fill(DEMO_EMAIL);
-  await page.locator('#Password').fill(DEMO_PASSWORD);
-  await page.locator('button[type="submit"]').click();
-  await page.waitForURL('http://localhost:5173/');
-}
-```
-
-Rules that keep these green:
-
-- **Read the demo login from the seed's own config.** `DEMO_EMAIL` and `DEMO_PASSWORD` come from
-  `DemoTenant` in identity-service's `appsettings.Development.json`, the values its seeder creates the
-  user from; never type them again in a spec.
-- **Read seeded ids from the running system.** The demo tenant's id is generated fresh on every
-  seed; the live file decodes it out of the issued access token instead of asserting a constant.
-- **Prefer a reload over waiting out a real clock.** Session persistence is proven by reloading and
-  re-checking, not by sleeping until a token expires.
-- **Assert the negative that proves the positive.** Logout is only real if landing back on `/login`
-  reaches identity-service's credentials form again — a silently restored session would bounce
-  straight into the app.
-- Query by role and pt-BR accessible name (`getByRole('button', { name: /sair/i })`), same as the
-  component tests.
-- A `data-testid` is a last resort, for a value with no accessible name of its own.
+Keep the real stack and login flow. Derive generated ids from the session or response, wait for an
+observable state, and use reloads where they prove persistence. When checking logout, verify that
+the credentials form is reached again; a navigation that silently restores the session does not
+prove logout.

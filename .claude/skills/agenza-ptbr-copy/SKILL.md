@@ -1,105 +1,49 @@
 ---
 name: agenza-ptbr-copy
-description: Use when writing or reviewing any user-visible string in the admin frontend — labels, buttons, headings, dialog and toast text, empty states, error messages, "Em breve" screens, accessible names — or when formatting a date, time, duration, price, percentage or count for display. Trigger on new pt-BR copy, on branching over an ApiProblem code, and on any Intl / toLocaleString call.
+description: Write or revise admin-frontend pt-BR interface copy, failure and empty states, accessible labels, and displayed numbers or dates.
 ---
 
-# pt-BR copy and formatting
+# Product language
 
-The reader is the owner-operator of a small service business — a salon, a clinic, a studio. One
-person, one business ([AGENTS.md](../../../AGENTS.md) → "O produto"). She is not an IT manager and
-did not ask for a system; she asked for her day to run. Write to her.
+Write for the owner operating a service business: name the action and the thing affected, using
+short sentences and sentence case. Prefer “Serviço salvo.” to “Sua solicitação foi processada com
+sucesso.” Keep code identifiers in English and user-facing text in pt-BR, including accessible names.
+Preserve key names such as `Ctrl`, `Esc` and `Enter`.
 
-Two rules decide most questions:
+Use the vocabulary already present in the relevant screen and
+[architecture guide](../../../apps/admin-frontend/docs/ARCHITECTURE.md): Pessoa, Responsável,
+Pessoa de referência and Etiqueta correspond to `Client`, `ClientGuardian`,
+`ClientReferenceContact` and `Tag` in code. Do not rename navigation destinations as a copy cleanup.
 
-- **Visible text is pt-BR; code identifiers are English.** Key names — `Ctrl`, `Esc`, `Enter`,
-  `Shift`, `Tab` — are **not** translated: that is what is printed on the ABNT2 keyboard in
-  front of her. Everything around them is pt-BR — "Pressione Esc para fechar", never "Pressione
-  Escape".
-- **Never surface a raw backend message.** Branch on the stable `code`, write the pt-BR yourself.
-  → [`references/states.md`](references/states.md)
+| Action                      | Wording                                                               |
+| --------------------------- | --------------------------------------------------------------------- |
+| Commit form changes         | Salvar                                                                |
+| Abandon editing             | Cancelar; Fechar when there is no edit, Voltar for navigation         |
+| Destroy a record            | Excluir; Remover means disassociating something without destroying it |
+| Start creation              | Novo/Nova followed by the domain noun                                 |
+| Modify, search, end session | Editar, Buscar, Sair                                                  |
 
-Formatting depth (money, duration, dates, plurals, the timezone trap) →
-[`references/formatting.md`](references/formatting.md).
-Failure, empty, loading and "Em breve" copy → [`references/states.md`](references/states.md).
-Error taxonomy and per-field form errors are `agenza-api-contract`'s job, not this skill's.
+Keep the same action verb in the button, confirmation and success message. Avoid vague errors,
+technical implementation language and routine exclamation marks. Use gender-neutral wording when
+the person's gender is unknown.
 
-## Voice
+An icon-only control needs an accessible name. When text is visible, the accessible name must
+include that label and describe the same action; decorative icons stay hidden from assistive
+technology. Preserve the page's document language when changing HTML or layout.
 
-| Do | Not | Why |
-| --- | --- | --- |
-| "Serviço salvo." | "Sua solicitação foi processada com sucesso." | Say the thing that happened, in her nouns. |
-| "Excluir serviço" | "Realizar exclusão do registro" | Active voice, real verb. The control says exactly what happens. |
-| "você" | "o usuário", "o cliente do sistema" | Second person. She is not a row in a table. |
-| "Não foi possível salvar o serviço." | "Ops! Algo deu errado 😕" | No apology, no mascot, no vagueness. |
-| "Olá, {nome}" | "Bem-vindo, {nome}" | Gendered greetings are wrong half the time. Hardcoding "Bem-vinda" is equally wrong. |
-| "Nenhum serviço ainda" | "Sem resultados" | "ainda" says the emptiness is temporary and hers to fill. |
+## Choose the relevant detail
 
-**Name things the way the owner recognises them, not the way the system is built.** She has
-*etiquetas*, not `tags`; the code identifier stays `tag`. She has an *Agenda*, not "Agendamentos".
-The six destination labels are fixed by
-[spec FR-005](../../../apps/admin-frontend/specs/002-ui-foundation/spec.md) — don't invent synonyms
-for them screen by screen.
+- Failure, empty, loading, confirmation or unavailable-screen copy:
+  [states.md](references/states.md).
+- Numbers, money, durations, dates or locale-sensitive assertions:
+  [formatting.md](references/formatting.md).
 
-**Sentence case, always** — "Novo serviço", not "Novo Serviço". Portuguese capitalises proper nouns
-and the first word, nothing else. Title Case in a pt-BR button is the single loudest tell that a
-string was translated from an English mockup. No ALL CAPS labels either.
+Display API messages intended for users through the existing normalized problem/form surfaces;
+branch on stable codes and typed metadata, never on free text. Do not surface exception messages,
+provider descriptions or diagnostic payloads. The exact boundary is described with the live code in
+[states.md](references/states.md).
 
-**A control and its confirmation are the same verb.** Button "Excluir serviço" → dialog "Excluir
-este serviço?" → confirm "Excluir" → toast "Serviço excluído." If the toast says "removido", the
-person cannot tell whether the same thing happened.
-
-**One exclamation mark per screen at most**, and only for something genuinely worth celebrating.
-Never on an error.
-
-## Recurring vocabulary
-
-Consistency beats cleverness: the same action must read identically on every screen, in the command
-palette.
-
-| Use | Never | Note |
-| --- | --- | --- |
-| **Salvar** | Enviar, Confirmar, OK, Aplicar | The commit verb for a form. |
-| **Cancelar** | Voltar, Descartar | Abandons an edit in progress. Use **Fechar** when nothing changed, **Voltar** when it is navigation. |
-| **Excluir** | Deletar, Apagar | Destroys the record. **Remover** is for taking something out of a list without destroying it — an etiqueta off a serviço. |
-| **Novo serviço** | Adicionar, Criar, "+" alone | Name the thing. The same string works as a button, a palette entry and an accessible name. |
-| **Editar** | Alterar, Modificar | — |
-| **Buscar** | Pesquisar, Procurar | Reserve **Filtrar** for actual filters. |
-| **Sair** | Logout, Encerrar sessão, Desconectar | — |
-| **Voltar** | Retornar, a bare "←" | An arrow with no accessible name fails review. |
-| **Em breve** | Em construção, Em desenvolvimento, Coming soon | And never as the whole message — see states. |
-| **Nenhum(a) … ainda** | Sem resultados, Lista vazia, Nada por aqui | The never-created empty state. |
-| **Não foi possível …** | Erro ao …, Falha ao …, Ops! | Names the action that failed, then the next step. |
-
-The domain nouns follow the same rule from the other side: the screen says **Pessoa**, **Responsável**,
-**Pessoa de referência**, **Etiqueta**, while the code keeps the backend's English names (`Client`,
-`ClientGuardian`, `ClientReferenceContact`, `Tag`). The full screen × code table is in
-[`docs/ARCHITECTURE.md` §1](../../../apps/admin-frontend/docs/ARCHITECTURE.md), under "Vocabulary".
-
-## Where strings and formatters live
-
-**There is no message catalog and no `t()`.** Internationalisation beyond pt-BR is explicitly out of
-scope for the UI foundation, so a string sits in the component that renders it. Do not introduce an
-i18n layer to "prepare" for a language nobody asked for.
-
-The one exception: a **code → message map is data, not markup**. It belongs in the slice's `model/`,
-where it is pure and testable without React, next to the branch that consumes it.
-
-**Formatters live in `src/shared/format/`** (`date.ts`, `age.ts`, `count.ts`) — cross-cutting, no business rule,
-so `shared/` by the dependency direction in
-[`docs/ARCHITECTURE.md` §1](../../../apps/admin-frontend/docs/ARCHITECTURE.md). A value with its own
-validation and limits (CPF, phone, e-mail, birth date) is not a formatter: its mask and parse live with
-its schema in `src/shared/values/<value>.ts`. Note that the coverage exclusion covers `src/shared/ui/**`
-only — both folders are measured, and these are exactly the pure functions that make the gate easy.
-
-## What breaks
-
-- **`index.html` still declares `<html lang="en">`** while every string in the app is pt-BR. A screen
-  reader pronounces "Serviços" with English phonemes. Fix it in the same PR as the first real screen.
-- **A pt-BR currency string never contains a plain space.** `Intl` puts a non-breaking space between
-  `R$` and the digits, and *which* non-breaking space has changed between ICU versions. A test
-  asserting `'R$ 129,90'` typed with U+0020 fails, and looks like a formatting bug when it is an
-  assertion bug. → [`references/formatting.md`](references/formatting.md)
-- **A date-only value shifts a day.** `new Date('2026-09-04')` is UTC midnight, which is 3 September
-  in São Paulo. → [`references/formatting.md`](references/formatting.md)
-- **An icon-only control needs an accessible name.** Other controls should expose the same
-  action in their visible label and accessible name.
+Keep ordinary copy with its rendering component and reusable code-to-message data in the owning
+slice's `model/`. Reuse [shared/format](../../../apps/admin-frontend/src/shared/format/) for display
+helpers and [shared/values](../../../apps/admin-frontend/src/shared/values/) for domain parsing and
+validation. Do not introduce an i18n catalog or new formatting abstraction for a single wording edit.

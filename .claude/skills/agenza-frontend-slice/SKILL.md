@@ -1,103 +1,49 @@
 ---
 name: agenza-frontend-slice
-description: Use when creating or changing a feature slice in apps/admin-frontend — scaffolding src/features/<slice>/ with model, api and ui, adding a page plus its hook, writing a loader/action or a repository, wiring a route in app/routes.tsx, or deciding whether new code belongs in a slice at all or in app/.
+description: Build or change an admin-frontend feature, including its model, repository, page hook and route wiring. Use when deciding where feature behavior belongs or extending an existing slice.
 ---
 
-# Building a feature slice — admin-frontend
+# Build a frontend feature
 
-Read before you write: [`docs/ARCHITECTURE.md`](../../../apps/admin-frontend/docs/ARCHITECTURE.md)
-§1 (shape and dependency direction), §2 (talking to the backend), §6 (what deliberately does not
-exist yet). This skill is the workflow; the architecture doc is the truth.
+Use the [frontend architecture](../../../apps/admin-frontend/docs/ARCHITECTURE.md) for the applicable
+rule, then inspect the code being changed. Read only the references needed for the task:
 
-`src/features/auth/` is the **only** slice today and is the worked example for the folder shape, the
-barrel and the shell+hook split. It is *not* an example of the API path: no slice calls the backend
-yet, on purpose ([ADR 0038](../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)).
+- Page, list, dialog or route: [references/pages.md](references/pages.md).
+- Repository or API result consumption: [references/api-integration.md](references/api-integration.md).
 
-## 0. First decide it IS a slice
+## Place the behavior
 
-A slice has **`model/` AND `api/`** — a domain type with rules, and a repository that talks to the
-backend. A screen with neither is not a slice: it goes in `src/app/`, exactly like the provisional
-`src/app/HomePage.tsx` and the "Em breve" screens in
-[`specs/002-ui-foundation/plan.md`](../../../apps/admin-frontend/specs/002-ui-foundation/plan.md) (D6).
+1. Identify the owning slice and its public `index.ts`. Extend that slice when it owns the behavior.
+   A provisional screen without domain behavior belongs in `app/`; do not create empty segments.
+2. Consult [Shape](../../../apps/admin-frontend/docs/ARCHITECTURE.md#1-shape) when a dependency crosses
+   a boundary. Import another slice through its barrel. The executable checks are in
+   [layerBoundaries.js](../../../apps/admin-frontend/eslint-rules/layerBoundaries.js).
+3. Compare a relevant live implementation rather than copying the nearest file indiscriminately:
+   [clients](../../../apps/admin-frontend/src/features/clients) for a business feature,
+   [tags](../../../apps/admin-frontend/src/features/tags) for route dialogs, or
+   [auth](../../../apps/admin-frontend/src/features/auth) for OIDC integration.
+4. Keep page lifecycle in its page hook and pure domain rules in `model/`. Reuse an existing generic
+   widget or shared hook where its responsibility fits; a second caller alone does not justify
+   coupling two page lifecycles.
 
-Creating `features/<name>/ui/` with an empty `model/` beside it is the most common wrong first move —
-it buys a barrel, an ESLint boundary and three folders to earn nothing.
+## Implement the affected path
 
-When you *do* build the first real business route, **delete `src/app/HomePage.tsx`** instead of
-shipping beside it. That retirement trigger is written down in ARCHITECTURE §6.
+Follow the page or repository reference above. Route composition belongs in
+[routes.tsx](../../../apps/admin-frontend/src/app/routes.tsx); expose feature components through
+the barrel. Create `route.ts` only when implementing a loader or action, not as empty scaffolding.
 
-## 1. Scaffold
+For conditional work, open the corresponding procedure:
 
-```
-src/features/<slice>/
-├── model/<entity>.ts             domain type + rules. No React, no wire types.
-├── api/<entity>Repository.ts     thin typed delegation over servicesApi
-├── ui/pages/<Page>/
-│   ├── <Page>.tsx                shell
-│   ├── use<Page>.ts              this page's own hook
-│   └── route.ts                  loader / action
-└── index.ts                      the slice's ONLY public surface
-```
+- Forms and server validation: [agenza-form-field](../agenza-form-field/SKILL.md).
+- Primitives, semantic tokens and keyboard behavior: [agenza-ui-primitive](../agenza-ui-primitive/SKILL.md).
+- Visible copy and formatting: [agenza-ptbr-copy](../agenza-ptbr-copy/SKILL.md).
+- Tenant/session changes: [agenza-tenant-isolation](../agenza-tenant-isolation/SKILL.md).
+- Test selection and coverage: [agenza-testing](../agenza-testing/SKILL.md).
 
-Folders and identifiers are English (`services`, `clientRepository`, `AppointmentList`); route paths
-and every visible string are pt-BR (`/agenda`, "Nenhum cliente encontrado"). See
-`agenza-ptbr-copy` before writing copy, dates, numbers or currency.
+## Verify
 
-`entities/` and a top-level `pages/` layer **do not exist on purpose**. Create one when a *second*
-slice needs the same entity — not in anticipation.
-
-## 2. The barrel is the only door
-
-`index.ts` re-exports pages, providers and each page's `loader`/`action`. Nothing outside the slice
-may import `features/<slice>/…` past its `index.ts`, whether written as `@/…` or relative. The custom
-ESLint rule `agenza/layer-boundaries`
-([`eslint-rules/layerBoundaries.js`](../../../apps/admin-frontend/eslint-rules/layerBoundaries.js))
-enforces it together with the layer direction. It only inspects files inside `app/`, `features/`,
-`widgets/` and `shared/` — `src/main.tsx`, `src/test/`, `e2e/` and config files are on review.
-
-Direction is `app → features → widgets → shared`, and inside a slice `ui → model | api`,
-`api → model`. A domain type never lives in `api/`. `widgets/` imports `shared/` and, to compose one, another widget (never a cycle);
-`shared/` imports none of the others.
-
-## 3. Route wiring
-
-`loader` and `action` live in `ui/pages/<Page>/route.ts` and are re-exported by the barrel, so
-`app/routes.tsx` imports `@/features/<slice>` and the direction stays `app → features`. Server data
-reaches the shell through `useLoaderData()` / `useActionData()` / `useNavigation()` — never through
-page-owned state. Nothing implements this yet; you are writing the first one. Shape and example in
-[references/pages.md](references/pages.md).
-
-## 4. Pages are shells
-
-`<Page>.tsx` holds no `useState`, `useEffect` or `useRef` of its own. All of it lives in that page's
-**own** hook. Hooks are never shared between pages — the exceptions are a pure Context accessor
-like `useAuth` and a generic hook with no domain in a widget, such as `usePaginatedList` (ADR 0071), which
-a paged list's hook calls with its initial filters and repository `list` (ADR 0072: the hook keeps that state, not the URL). Two pages wanting the same logic means the logic is a pure function for `model/`, not
-a shared hook. Details, sub-component placement and the StrictMode guards:
-[references/pages.md](references/pages.md).
-
-## 5. Repository and Result
-
-The row everyone misreads: **`unwrapOrThrow` is used only at the `loader` / `queryFn` boundary. An
-`action` or a mutation passes the `Result` straight through**, because a 400 with field errors is
-expected flow returning to the form — not an error screen. `servicesApi` never rejects, a repository
-does zero error handling, and a page has no `try/catch`. Never branch on a backend message string;
-branch on `result.error.code`. Full shape, boundary table and testing:
-[references/api-integration.md](references/api-integration.md).
-
-## 6. UI, tests
-
-- Primitives come from `shared/ui/` over Base UI, which uses a `render` prop —
-  Radix's `asChild` + `Slot` snippets do not compile here
-  ([ADR 0039](../../../docs/adr/0039-admin-frontend-base-ui-primitives.md)). Use
-  `agenza-ui-primitive` before adding anything to `shared/ui/`.
-- A page with a form uses `shared/form/fields/` (`TextField`/`TextareaField`/`ControlledField`/
-  `ColorField`/`SelectField`/`SearchField`) + React Hook Form + Zod, not a hand-rolled `useState` per field — see
-  `agenza-form-field`.
-- Semantic tokens only (`bg-background`, `text-muted-foreground`).
-- Tests are colocated, Vitest + RTL, module mocks via `vi.mock` / `vi.hoisted` — no network mocking.
-  Coverage thresholds in `vitest.config.ts` are a real gate: `shared/ui/` and slice barrels are
-  excluded, so your `model/`, `api/` and page hooks carry the number. See `agenza-testing`.
-- Before pushing: `npm run lint`, `npx tsc --noEmit`, `npm run format`, `npm run test:coverage`, plus
-  `npm run generate:api-types:check` if you touched an endpoint. Expect `exactOptionalPropertyTypes`
-  friction on spread props (`X | undefined` must be explicit).
+Exercise the behavior and failure path that changed. Select the relevant checks from
+[package.json](../../../apps/admin-frontend/package.json) and the
+[frontend CI](../../../.github/workflows/frontend-ci.yml). Report what ran and any unverified path.
+If the wire contract changed, follow the regeneration procedure in
+[agenza-api-contract](../agenza-api-contract/SKILL.md).

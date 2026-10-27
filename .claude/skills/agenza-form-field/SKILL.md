@@ -1,304 +1,102 @@
 ---
 name: agenza-form-field
-description: Use when building or changing a form in admin-frontend — wiring React Hook Form + Zod for a new entity, adding a field with shared/form/fields/ (TextField, TextareaField, ControlledField, ColorField), deciding whether a custom control needs its own XField specialization, or feeding a backend ApiProblem back into the form via applyApiProblem.
+description: Build or change admin-frontend forms with React Hook Form, Zod and shared fields, including dynamic arrays, custom controls and API field errors.
 ---
 
-# Forms — React Hook Form + Zod + `shared/form/fields/`
+# Forms
 
-`TagFormPage` (`src/features/tags/ui/pages/TagFormPage/`) is the reference implementation for a
-dialog form. `ClientFormPage` (`src/features/clients/ui/pages/ClientFormPage/`) is the second
-consumer and the reference for a full-page form with **field arrays** (`useFieldArray`, nested paths
-such as `guardians.${number}.name`), masked inputs (`MaskedField`: `mask` shows the stored value, `unmask` stores what is typed, so `CpfField` keeps the digits), a typed-or-picked date (`DateField`: mask plus calendar popover, bounded by `minDate`/`maxDate`) and a custom multi-value control
-(`CheckboxGroup` through a `ControlledField` render function). Read
-[`docs/ARCHITECTURE.md` §5](../../../apps/admin-frontend/docs/ARCHITECTURE.md) (the "Tag create/edit
-UI reintroduced on React Hook Form + Zod" row and the row right after it) for the decision history
-and the two gotchas below in their original context, and §6's "Provisional" section for what's still
-unproven.
+Use the live [TagFormPage](../../../apps/admin-frontend/src/features/tags/ui/pages/TagFormPage/)
+for a dialog form and [ClientFormPage](../../../apps/admin-frontend/src/features/clients/ui/pages/ClientFormPage/)
+for a full-page form with nested arrays and value presets. Read only the parts relevant to the change.
 
-Backend errors on a list item arrive keyed `guardians[1].name`; `toFormErrors` normalizes that to
-`guardians.1.name`, and `applyApiProblem` matches it against the **current** field paths: it derives
-them from `methods.getValues()` when the response arrives (top-level plus one per item), so a page
-keeps no path list of its own. A field-array root error (e.g.
-"informe ao menos um responsável") lives at `errors.guardians.message` / `errors.guardians.root.message`
-and has no input to attach to: render it in the section.
+## Wire the form
 
-## The three layers, one job each
+- Keep reusable domain limits and pure rules in the slice's `model/`; keep the page's Zod schema,
+  defaults and edit-to-field conversion beside the form page. Reuse schemas and parsers from
+  [shared/values](../../../apps/admin-frontend/src/shared/values/) for existing value types instead
+  of adding another regex or conversion.
+- When schema input and output differ, use `z.input<typeof schema>` for fields/defaults and
+  `z.output<typeof schema>` for submission, with `useForm<Input, unknown, Output>`. Transforms and
+  narrowing refinements can make one `z.infer` type insufficient; follow `tagForm.ts`.
+- Return all editable fields from the defaults/conversion function. The error bridge discovers
+  paths from the current form values, including array items; do not maintain a second field list.
+- Keep RHF and submission logic in the page hook; wrap the shell in `FormProvider`. Use
+  `formState.isSubmitting` and the loading state to guard both the submit handler and submit button.
+  A synchronous handler can call `void methods.handleSubmit(onValid)(event)` without passing a
+  promise-returning function directly to the JSX handler.
+- Use `DialogFormFooter` or `PageFormFooter` from
+  [widgets/form-footer](../../../apps/admin-frontend/src/widgets/form-footer/), passing the current
+  `canSubmit` and `isSaving`. Use the footer's current props rather than copying an old call site.
 
-| Layer | File | Job |
-| --- | --- | --- |
-| Error mapping | `shared/api/formErrors.ts` | `toFormErrors<F>(problem, fields)` — preserves the first field entry (message, code, metadata) and returns one form-level message. Knows `ApiProblem`, nothing about RHF. |
-| RHF bridge | `shared/form/applyApiProblem.ts` | `applyApiProblem(problem, methods)` — builds the current field paths from `methods.getValues()`, calls the above, then `setError` per field (code as type, metadata preserved), `setError('root.serverError', …)` for the form-level message and `setFocus` on the first invalid field. Knows both shapes; the only file that does. |
-| Field components | `shared/form/fields/` | `TextField`/`TextareaField`, `MaskedField`, `DateField`, `ControlledField`, `ColorField`, `SelectField`, `SearchField`, `FormErrorBanner` — RHF wiring, zero entity knowledge. They render into `shared/ui/form-field/`'s `FormField` (label, hint, error, the `aria-*` wiring), which stays presentational and RHF-free like the rest of `shared/ui/` (`agenza-ui-primitive`). |
+An edit route fetches its record from the backend and resets the form from that response; a list row
+is not a fresh edit snapshot. Abort the read in effect cleanup and ignore an aborted response. Check
+whether the mounted page can change `:id`, so loading or submission cannot silently use the previous
+record. On a failed read, follow the owning screen's recovery flow; the existing forms toast the
+problem and close/back out. A late successful save may publish its result, but must not navigate a
+user who already left the page; preserve the existing mounted guard.
 
-Never let a field component or `shared/form/` read `problem.errors` directly — that parsing (indexed
-keys, the collapsed `""` key for a 409/404) lives in `formErrors.ts` alone. See `agenza-api-contract`'s
-`references/errors.md` for that taxonomy in full.
+For a saving dialog, cover every close path: ignore closing in `onOpenChange`, disable Cancelar and
+hide the close button. Keep cancellation available while merely loading. This belongs in the form
+using the dialog, without adding a busy context to the UI primitive.
 
-## Wiring a new entity's form
+## Choose and connect fields
 
-1. **Limits and invariants** in the slice's `model/<entity>.ts`, beside the entity's types, mirroring
-   the backend aggregate: plain constants (`TAG_NAME_MAX_LENGTH`, `MAX_GUARDIANS`) and pure functions
-   over the plain types (`needsGuardian(birthDate, guardianCount, today)`). No Zod, no pt-BR copy, no
-   class. Anything outside the form that needs the rule (a list badge, another page) imports it from
-   there, and so does the form's own UI when it shows the rule before submit.
+Use [shared/form/fields](../../../apps/admin-frontend/src/shared/form/fields/) for field configuration.
+Pass the form-values generic explicitly so `name` is checked as `Path<T>`; for a typed custom value,
+also pass the specific path to `ControlledField<T, N>` or `SelectField<T, N>`.
 
-   **Schema** in the page that owns the form, `ui/pages/<X>FormPage/<x>Form.ts`, mirroring
-   `tagForm.ts`, built from those limits and composing those invariants:
-   ```ts
-   export const xFormSchema = z.object({
-     name: z.string().trim().min(1, '…').max(X_NAME_MAX_LENGTH, `… ${X_NAME_MAX_LENGTH} …`),
-   });
-   export type XFormFieldValues = z.input<typeof xFormSchema>;
-   export type XFormValues = z.output<typeof xFormSchema>;
+- Reuse the value preset and its schema together for CPF, phone, e-mail and birth date. `MaskedField`
+  displays `mask(value)` and stores `unmask(typed)`; a CPF remains digits in the form.
+- Use `SelectField` and `SearchField` for form/filter controls. Their inline-label mode is for
+  toolbars: it retains an accessible name but has no hint or field-error line. Do not choose that
+  mode for a field that needs inline validation feedback.
+- Use `ControlledField` for another custom control; add a specialization when concrete repeated
+  configuration or control behavior justifies it.
+- Forward RHF's `ref` and `onBlur` to the actual focus target, and preserve the supplied
+  `aria-invalid`/`aria-describedby`. A composite control without a labelable input needs
+  `labelHtmlFor={false}` and an accessible name, as in `ColorField`; an `htmlFor` pointing at
+  nothing does not label a radiogroup.
+- Give the first appropriate field focus when fields mount after a dialog read. Preserve keyboard
+  behavior supplied by the primitive: Tab navigation, Enter activation and Esc closing. For dates,
+  retain the calendar's keyboard focus and return focus when clearing from the input.
+- With `useFieldArray`, render array-root errors in the section because they have no individual
+  input. Check the current paths after adding/removing items, not just the initial array shape.
 
-   export function toXFormFieldValues(x?: X): XFormFieldValues {
-     return { name: x?.name ?? '', description: x?.description ?? '' };
-   }
-   ```
-   **Use `z.input`/`z.output`, never a single `z.infer`, the moment the schema has a `.refine()` or
-   `.transform()`.** See Gotcha 1 below — this is not optional once either is present.
-   **No field list for errors**: `applyApiProblem` derives the paths from `methods.getValues()`, so
-   `toXFormFieldValues()` must return every field (the `z.input` return type already forces it).
-   Export `X_FORM_FIELDS = xFormSchema.keyof().options` only when something renders from it, like
-   the loading skeleton below; an export kept alive only by its own test is dead code.
-   `toXFormFieldValues` is the inverse of the
-   schema's `.transform()`s (a `null` description back to `''`) and sits beside them: `useForm`'s
-   `defaultValues` is `toXFormFieldValues()`, the edit fetch's `reset` is `toXFormFieldValues(entity)`.
+`DateField` holds `Date | null`, keeping typed text inside the control. Empty text is `null`; incomplete
+or impossible text produces an invalid `Date` so the schema refuses it rather than silently clearing
+it. Numeric date order follows the browser; the calendar and date-only reads use UTC. Reuse
+`BirthDateField`/`birthDateSchema` for bounds and validation. See
+[date formatting](../agenza-ptbr-copy/references/formatting.md) when changing date handling.
 
-2. **The page's hook** (`use<X>FormPage.ts`) calls RHF directly:
-   ```ts
-   const { id } = useParams();
-   const isEdit = id !== undefined;
-   const methods = useForm<XFormFieldValues, unknown, XFormValues>({
-     resolver: zodResolver(xFormSchema),
-     defaultValues: toXFormFieldValues(),
-   });
-   const isSaving = methods.formState.isSubmitting;
-   const canSubmit = !isLoading && !isSaving;
+## Apply API errors without losing recovery data
 
-   async function onValid(values: XFormValues) {
-     const result = isEdit ? await xRepository.update(id, values) : await xRepository.create(values);
-     if (result.ok) { /* publish, toast, navigate */ return; }
-     applyApiProblem(result.error, methods);
-   }
+Keep these responsibilities separate:
 
-   function submit(event: SubmitEvent<HTMLFormElement>) {
-     event.preventDefault();
-     if (canSubmit) void methods.handleSubmit(onValid)(event);
-   }
+- [formErrors.ts](../../../apps/admin-frontend/src/shared/api/formErrors.ts) matches API keys to
+  current paths, normalizes indexed keys such as `guardians[1].name`, and preserves the first
+  entry's message, code and metadata. Unknown paths become form-level errors.
+- [applyApiProblem.ts](../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts) bridges to
+  RHF: it sets the code as the field error's `type`, preserves `meta`, sets `root.serverError` when
+  needed and focuses the first invalid field in form order. Call it for an unsuccessful submission;
+  render `FormErrorBanner` for the form-level message.
+- Feature UI interprets feature-specific codes/metadata. Shared fields and the bridge do not parse
+  client conflicts. In
+  [ClientPersonSection](../../../apps/admin-frontend/src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx),
+  `useFormState` observes the current CPF/e-mail error; only its matching duplicate code and
+  `meta.clientId` expose the recovery link. The field error owns that lifetime, without a second
+  conflict state or submitted-value copy. Build the internal route from the encoded id and reuse
+  `NewTabLink`; metadata does not supply an arbitrary URL.
 
-   return { methods, isSaving, canSubmit, onSubmit: submit, /* … */ };
-   ```
-   The route's `id` — never a fetched copy of the entity — decides create vs. update, so the form
-   can't write to a record other than the one in the URL. The `void` inside `submit` is not style —
-   handing `methods.handleSubmit(onValid)` (a `Promise`-returning function) straight to `onSubmit`
-   trips `@typescript-eslint/no-misused-promises`; `tsc` alone won't catch it, only `npm run lint`.
+Display the contracted API title/field messages through the existing error components. Branch on
+codes and typed metadata, never by parsing message text. Do not replace these messages with exception
+or OIDC-provider descriptions. HTTP envelope details belong to the API contract workflow.
 
-   `canSubmit` is the rule behind the **Salvar** button's `disabled` state. The form's
-   `onSubmit` calls `submit`. The footer is a widget, chosen by where the form lives:
-   ```tsx
-   import { DialogFormFooter, PageFormFooter } from '@/widgets/form-footer';
+## Verify the changed behavior
 
-   <DialogFormFooter canSubmit={canSubmit} isSaving={isSaving} />
-   <PageFormFooter isSaving={isSaving} cancelTo="/pessoas" />
-   ```
-   `DialogFormFooter` goes inside a `Dialog` (its Cancelar is a `DialogClose`); `PageFormFooter` goes on
-   a full page and requires `cancelTo` (its Cancelar is a link that turns into a disabled button while
-   saving). Both render **Salvar**/**Salvando…** as an `ActionButton`, which turns `pending` into a
-   spinner and disables the button.
-
-   **While saving, the dialog offers no way out** — a Cancelar clicked mid-request would close the
-   dialog while the save still lands, a Cancel that doesn't cancel. Three lines, all with APIs the
-   dialog already had: the hook's `onOpenChange` ignores a close while `isSaving` (a controlled dialog
-   stays open when its handler doesn't close it, which covers Esc and outside press),
-   `DialogFormFooter` disables its Cancelar, and the shell passes `showCloseButton={!isSaving}` to
-   `DialogContent`. `shared/ui/dialog` itself stays a plain wrapper — a `busy` prop with a context was
-   tried there and reverted as more machinery than three lines per dialog.
-
-3. **The page shell** wraps its `<form>` in `<FormProvider {...methods}>` — every field component reads
-   `register`/`control`/`errors` via `useFormContext()`, not as props. A form-level error is
-   `<FormErrorBanner />` — no props, it reads `root.serverError` from context itself and renders
-   nothing when there isn't one. It shows the problem's code under the message ("Código: …"), as the
-   failure standard asks: `applyApiProblem` keeps the code as the error's `type`, and `'server'`
-   when the problem has none.
-
-4. **Fields are configuration**, not markup. Import the generic components straight from
-   `shared/form/fields` — there's no per-entity instantiation step — and give each one the form's
-   field-values type as an explicit JSX type argument:
-   ```tsx
-   import { ColorField, TextField } from '@/shared/form/fields';
-   import { X_NAME_MAX_LENGTH } from '../../../../model/x';
-   import type { XFormFieldValues } from '../xForm';
-
-   <TextField<XFormFieldValues> name="name" label="Nome" hint="…" maxLength={X_NAME_MAX_LENGTH} />
-   <ColorField<XFormFieldValues> name="color" label="Cor" aria-label="Cor…" options={PALETTE} />
-   ```
-   The type argument is what makes `name` type-check against `Path<XFormFieldValues>` — a bare
-   `<TextField name="name" …>` with no argument still compiles (`T` falls back to the unconstrained
-   `FieldValues`), but silently accepts any string as `name`, losing the one thing worth keeping. A
-   native-input field (`register()`-bound) is `TextField`/`TextareaField`. A custom control needs
-   `ControlledField` (pass a render function) or a named specialization built on top of it, per the
-   rule below. When the render function needs the value's own type, pass the path as the second type
-   argument and drop any cast: with
-   ``<ControlledField<XFormFieldValues, `contacts.${number}.purposes`> …>``, `field.value` is that
-   array, not the union of every value in the form.
-
-5. **A CPF, phone, e-mail or birth date is not configured by hand: reuse the pair.** The schema half
-   comes from that value's file in `@/shared/values/` (`cpfSchema` from `@/shared/values/cpf`, then
-   `phoneSchema`, `emailSchema`: an empty field becomes `null`, anything else is parsed and fails
-   with the pt-BR message; `birthDateSchema` takes the `Date | null` that `DateField` keeps in the
-   form and checks it), the
-   field half from `@/shared/form/fields` (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`:
-   mask, input type, limit, placeholder, default label and `opcional` hint already set, each one
-   overridable by prop):
-   ```ts
-   const personSchema = z.object({ phone: phoneSchema, cpf: cpfSchema });
-   ```
-   ```tsx
-   <CpfField<XFormFieldValues> name="cpf" />
-   <PhoneField<XFormFieldValues> name="phone" label="Telefone do contato" />
-   ```
-   The parsing underneath sits in the same file as the schema (`parseCpf`, `parsePhone`, `parseEmail`:
-   canonical value or `null`, mirroring the backend's `Create`), so never re-validate with a regex of
-   your own. A new value type (a CNPJ) is one file, `shared/values/cnpj.ts`, mirroring the backend's
-   value object: its `parseX`, its limits and a schema built with `optionalValue(parse)` (its
-   `fail(message)` becomes the Zod issue); plus, only if several forms will configure it the same way,
-   a preset field in `shared/form/fields/`. The schemas have no required variant yet; add it to `optionalValue` when the first
-   form needs one.
-
-## Editing an existing entity: fetch fresh, don't trust what the list already had
-
-An edit route fetches its own record from the backend on mount — it does not reuse whatever the list
-row happened to be holding (router navigation state, a cached list item). The list might be stale
-(paginated, or changed by someone else since); the edit form's job is to show what the backend has
-*now*. The hook returns a flat result whose `status` is **derived**, not stored: the hook keeps the id
-of the record currently in the form (`loadedId`) and reports `'loading'` while `isEdit && loadedId !==
-id` — the in-flight key compared with the last resolved one. React
-Router keeps the page mounted when only `:id` changes, so a status set once at mount would keep the old
-record on screen, Salvar enabled, while the new one loads; the derived one can't.
-
-`useForm`'s own `defaultValues` are captured once, synchronously, at mount — they can't wait for an
-async fetch. Fetch in a `useEffect` keyed on the id, with an `AbortController` aborted in the cleanup
-and the answer dropped when its signal is aborted (the shape `usePaginatedList` uses; `StrictMode` runs
-the effect twice in development, and an un-aborted first request still completes), and call
-`methods.reset(values)` once it resolves; don't reach
-for RHF's async-`defaultValues`-promise feature — it doesn't compose with this app's `ApiResult`
-never-throws model, and every other fetch here is a plain effect + explicit status, not a
-framework-owned loading flag. A failed fetch (not-found, or any other `ApiProblem`) is not an inline
-error state — same as everywhere else in this app that fetches, it toasts the backend's own `title`
-verbatim and navigates back, no retry affordance.
-
-The page renders `<FormFieldsSkeleton fieldCount={X_FORM_FIELDS.length} />` for the `'loading'`
-branch — one label+control skeleton row per field, matching `list-section`'s own skeleton convention
-(`aria-busy`, `aria-live`). Keep the dialog's Cancelar button working during loading (own
-`onOpenChange`, not gated on the form being ready) — the person should never be stuck in a dialog
-they can't close because a fetch hasn't resolved yet. Give the first field `autoFocus`: in edit mode
-the fields mount only after the fetch, and without it keyboard focus stays on Cancelar.
-
-A custom control's specialization must forward `field.ref` (and `field.onBlur`) from `ControlledField`
-to the element that should receive focus — otherwise React Hook Form's focus-on-error silently skips
-it. `ColorField` → `ColorSwatchPicker` puts the ref on the radiogroup's tab stop.
-
-## When to build a new `XField` specialization vs. use `ControlledField` directly
-
-`ControlledField` is the generic escape hatch — any custom control, at the cost of a render function
-at every call site. `ColorField` is what a specialization looks like: it exists because the ask was
-for call sites to read as configuration, and it was justified by having a real consumer (`ColorField`
-itself became `ControlledField`'s first consumer, so `ControlledField` didn't ship speculative).
-
-**Don't build a second specialization until a second real control needs it.** Same bias this codebase
-already applies to `entities/` and to not rebuilding `color-swatch-picker` before something used it
-(ARCHITECTURE §1, §5) — a one-off specialization for a control only `ControlledField` has ever wrapped
-is guessing at an API shape with a sample size of one.
-
-**A select is `SelectField`, never the six `shared/ui/select` parts composed by hand**
-([ADR 0076](../../../docs/adr/0076-admin-frontend-clients-list-filter-bar.md)). It is the second
-specialization, built on the owner's ask: the Pessoas filter bar's first version hand-composed
-`Select`/`SelectLabel`/`SelectTrigger`/`SelectValue`/`SelectContent`/`SelectItem` in a one-off component.
-Options are `{ value, label }` (`SelectFieldOption<V>`); pass the path as the second type argument so
-`value` is typed by the field:
-```tsx
-<SelectField<XFormFieldValues, 'size'> name="size" label="Tamanho" options={SIZE_OPTIONS} />
-<SelectField<XFilters, 'status'> name="status" label="Situação" options={STATUS_OPTIONS}
-  labelPlacement="inline" className="w-full @pagination:w-fit" />
-```
-The default renders through `FormField` (label above, hint, error) and fills the width, like the
-other fields. `labelPlacement="inline"` is for a toolbar: the label goes inside the trigger
-("Situação: Ativas", a hidden `SelectLabel` names it) and there is no hint or error line, so the type
-refuses a `hint`.
-
-**A search box is `SearchField`**, the same idea for text: the `InputGroup` with the search icon is
-inside, the input's own props (`placeholder`, `maxLength`) pass through, and `labelPlacement="inline"`
-keeps the label as the accessible name only, with the placeholder on screen:
-```tsx
-<SearchField<XFilters> name="search" label="Buscar pessoas por nome, e-mail ou CPF"
-  placeholder="Buscar por nome, e-mail ou CPF..." maxLength={X_SEARCH_MAX_LENGTH} labelPlacement="inline" />
-```
-A filter bar is a form too: `useForm` in the page's hook, `FormProvider` in the shell, `SearchField`
-for its text and `SelectField` for its choices (Pessoas is the reference; Etiquetas has the same bar with a search alone). The paging
-footer's "Itens por página" is not a form and still composes the parts itself.
-
-The value presets (`CpfField`, `PhoneField`, `EmailField`, `BirthDateField`) are a different thing:
-they are not custom controls but fixed configurations of `MaskedField`/`TextField`/`DateField`, kept in
-one place because the same value was being configured by hand at several call sites (the phone three
-times). Add another only for a value type that will be configured the same way in more than one form.
-
-## Two gotchas, both caught by `tsc`/review, not by a test
-
-**1. `z.infer` is not enough once a schema has `.refine()` or `.transform()`.** A schema's *input*
-shape (what `register()`/`Controller`/`defaultValues` actually hold) and *output* shape (what
-`onSubmit` receives after Zod runs) diverge the moment either is present —
-`tagFormSchema`'s `color` (`.refine` narrows `string | null` → `string`) and `description`
-(`.transform` turns `'' | whitespace` → `null`) both do. `useForm<TFieldValues, TContext,
-TTransformedValues>` needs the input shape as its first generic, the output shape as its third.
-Modeling both as one `z.infer<typeof schema>` type — the natural first guess — compiles right up
-until `resolver: zodResolver(schema)` is attached to `useForm`, where `tsc` names a `Resolver<Input,
-any, Output>` mismatch. Fix: `z.input<typeof schema>` for the field components and
-`useForm`'s first generic (`applyApiProblem` infers its own from `methods`), `z.output<typeof schema>` for `onValid`'s parameter — see
-`TagFormFieldValues`/`TagFormValues` in `tagForm.ts`.
-
-**2. Not every control accepts `id`/`htmlFor`.** `FormField`'s `<Label htmlFor={id}>` assumes the
-control underneath can take that `id` — true for `Input`/`Textarea`, false for anything shaped like a
-composite ARIA widget (a radiogroup, a listbox) with no single focusable element to point a label at.
-`ColorSwatchPicker` has no `id` prop in its own type; a naive reuse of `FormField` for it renders a
-`<label>` pointing at nothing. `labelHtmlFor?: boolean` on `FormField`/`ControlledField` (default
-`true`) is the escape valve — `ColorField` passes `false` and relies on `aria-label` instead, same
-as the pre-RHF Cor field did by hand.
-
-## Testing
-
-No new tier — `agenza-testing`'s existing "component whose behaviour is context-driven" tier already
-covers this: RTL `render` inside the relevant provider. For a field component that's not just base
-`FormField`, the provider is a small `<FormProvider>` test harness, not `MemoryRouter`:
-
-```tsx
-function Harness({ withError = false }: { withError?: boolean }) {
-  const methods = useForm<DummyValues>({ defaultValues: { /* … */ } });
-  useEffect(() => {
-    if (withError) methods.setError('name', { type: 'test', message: 'Erro de teste' });
-  }, [withError, methods]);
-  return (
-    <FormProvider {...methods}>
-      <TextField name="name" label="Nome" />
-    </FormProvider>
-  );
-}
-```
-
-Worked examples: `text-fields.test.tsx`, `controlled-field.test.tsx`, `color-field.test.tsx`,
-`form-error-banner.test.tsx` in
-`shared/form/fields/components/`. A dummy `FieldValues` shape local to the test file is enough —
-these components are generic, so a real entity's schema is never needed to test them.
-
-## Before you push
-
-`npm run lint && npx tsc --noEmit && npm run format:check && npm run test:coverage`, from
-`apps/admin-frontend/`. `shared/form/fields/**` and `shared/ui/form-field/**` are in `vitest.config.ts`'s `coverage.exclude` (pure
-prop-driven renderers, same reasoning as `empty-state`) — `shared/api/formErrors.ts` and
-`shared/form/applyApiProblem.ts` are not, and carry real logic, so they're expected to show up in the
-coverage number like any other `shared/` file with behaviour.
-
-If this is the **first** form for a new entity and you're adding `react-hook-form` /
-`@hookform/resolvers` / `zod` to a workspace that doesn't have them yet (it won't be — `tags` already
-pulled all three in) — or any other new dependency — regenerate the lockfile in the Linux container per
-[`AGENTS.md`](../../../apps/admin-frontend/AGENTS.md), not on Windows.
+Use the existing colocated component/error-bridge tests as references. Exercise the paths affected:
+schema input/output, loading and saving guards, dynamic paths, error focus, preserved metadata,
+stale conflict removal or keyboard interaction. Check coverage scope in the live
+[Vitest configuration](../../../apps/admin-frontend/vitest.config.ts), without assuming a whole UI
+directory is excluded. Commands and required gates live in
+[QUALITY.md](../../../docs/QUALITY.md); dependency changes also follow the
+[lockfile procedure](../../../apps/admin-frontend/README.md#lockfile).

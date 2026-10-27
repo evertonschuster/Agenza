@@ -1,109 +1,61 @@
-# The ui segment: page shells, per-page hooks, route.ts
+# Pages, lists and route dialogs
 
-Authoritative source: [`docs/ARCHITECTURE.md`](../../../../apps/admin-frontend/docs/ARCHITECTURE.md)
-§1 ("Route pages are shells") and §4. Live examples:
-`src/features/auth/ui/pages/LoginPage/` and `src/features/auth/ui/pages/AuthCallbackPage/`.
+The [architecture](../../../../apps/admin-frontend/docs/ARCHITECTURE.md#1-shape) owns the placement
+rules. Use this procedure for the page's lifecycle and route integration.
 
-## One folder per route
+## Page and route
 
-```
-ui/pages/<Page>/
-├── <Page>.tsx        shell — renders, branches on what the hook returns
-├── use<Page>.ts      this page's own state and effects
-├── route.ts          loader / action
-├── components/       created only when this page actually grows sub-components
-└── <Page>.test.tsx   colocated
-```
+Keep rendering in the page component and its state, effects and handlers in the page's hook. Start
+with the affected page; [useClientFormPage](../../../../apps/admin-frontend/src/features/clients/ui/pages/ClientFormPage/useClientFormPage.ts)
+shows a form lifecycle, while
+[useTagFormPage](../../../../apps/admin-frontend/src/features/tags/ui/pages/TagFormPage/useTagFormPage.ts)
+shows loading and saving inside a route dialog. Create page-local components only when needed;
+components shared within the slice belong in its `ui/components/`.
 
-`components/` is not scaffolding you create up front. A sub-component that a second page needs is a
-sign it belongs in `shared/ui/` (see `agenza-ui-primitive`) — not in a sibling page's folder.
+When wiring the route, inspect [routes.tsx](../../../../apps/admin-frontend/src/app/routes.tsx).
+Expose the component through the slice barrel, provide the route's `handle` when it needs a page
+header, and retain the parent `<Outlet />` when a child dialog must leave the list mounted.
+[useCloseRoute](../../../../apps/admin-frontend/src/shared/hooks/useCloseRoute.ts) handles closing
+with a fallback for direct navigation.
 
-## The shell rule
+Choose the data-loading mechanism the screen needs. Existing page hooks load through repositories;
+do not rewrite them into loaders or actions merely to follow an illustrative template. If a loader
+or action is needed, keep it with the page in `route.ts`, re-export it through the slice barrel,
+and use the result boundary described in [api-integration.md](api-integration.md).
 
-`<Page>.tsx` contains **no `useState`, no `useEffect`, no `useRef`**. It calls its hook, then renders.
-`LoginPage.tsx` is three lines and `AuthCallbackPage.tsx` is a hook call plus one `<Navigate>` — that
-is the target, not an accident of them being small.
+## Paginated list
 
-The reason is testability and the StrictMode class of bug. Both existing hooks carry a
-double-invoke guard (`useLoginRedirect.ts` protects the PKCE write; `useAuthCallback.ts` protects the
-single-use code) with a terse *why* comment. That guard has to live somewhere it can be unit-tested
-without rendering a route tree — the hook. Spread across a component body, it becomes a race you
-rediscover in production.
+Inspect [useClientListPage](../../../../apps/admin-frontend/src/features/clients/ui/pages/ClientListPage/useClientListPage.ts)
+or [useTagListPage](../../../../apps/admin-frontend/src/features/tags/ui/pages/TagListPage/useTagListPage.ts)
+before changing list state:
 
-**Hooks are never shared between pages.** The exceptions are a pure Context accessor like
-`useAuth`, and a generic hook with no domain that a widget exports, such as `usePaginatedList` in
-`widgets/paginated-list-section` (ADR 0071): a paged list declares its filters in `model/` as an
-interface, and its page hook passes the initial filters and the repository's `list` to
-`usePaginatedList`, which keeps the filters, the page and the size in its own state (ADR 0072). If two pages want the same behaviour, extract the *pure* part into `model/` as a plain
-function and let each hook call it. A `useSharedThing` imported by two pages is the smell that ends
-with one page's lifecycle quietly driving another's.
+1. Keep filter types and initial query values in the slice's `model/`.
+2. Pass the controlled state and repository function to
+   [usePaginatedList](../../../../apps/admin-frontend/src/widgets/paginated-list-section/use-paginated-list.ts).
+   The page chooses the state source. These route lists use
+   [useSearchParamsState](../../../../apps/admin-frontend/src/shared/hooks/useSearchParamsState.ts),
+   which reads the initial URL and writes subsequent changes on the owning route.
+3. Keep draft form fields separate from applied filters. Submit through `applyFilters`; use the
+   hook's pagination actions and `refetch` for their respective operations.
+4. Do not add an effect keyed on query state to fetch again. The list hook sends from its actions,
+   loads on mount and corrects a page beyond the last one. A controlled-state update alone does not
+   trigger a request.
+5. Check mutation topics and their subscribers when a successful save or deletion should refresh
+   the mounted list. `refetch` retains the displayed result while requesting its replacement.
 
-Repo rule, no exceptions: no "what" comments, no JSDoc. A short "why" is allowed only for a genuine
-race or a non-obvious constraint — the two guards above are the whole standard.
+## Pending work and navigation
 
-## route.ts
+A read effect owns an `AbortController`, forwards its signal and ignores an aborted answer.
+For editing, associate the loaded data with the route id so an older record is not shown as ready
+for a new id. After a mutation, preserve the existing unmount guard around navigation or dialog
+closure; an answer arriving after the person leaves must not redirect them back.
 
-`loader` and `action` live here and are re-exported by the slice barrel, so `app/routes.tsx` imports
-`@/features/<slice>` and the direction stays `app → features`. Nothing implements this yet; you are
-the first.
+Use the loading and error state owned by the chosen mechanism: hook/form state for hook-driven
+work, router state for loaders/actions. Reuse the existing form/error mapping rather than adding
+a page-level exception wrapper or interpreting message text.
 
-```ts
-// ui/pages/ClientsPage/route.ts
-import { unwrapOrThrow } from '@/shared/api/unwrap';
-import { clientRepository } from '../../../api/clientRepository';
+## Verification
 
-export async function loader({ request }: LoaderFunctionArgs) {
-  const search = new URL(request.url).searchParams.get('busca') ?? '';
-  return { clients: unwrapOrThrow(await clientRepository.list({ search })) };
-}
-
-export async function action({ request }: ActionFunctionArgs) {
-  const form = await request.formData();
-  const result = await clientRepository.create(toCommand(form));
-  return result.ok ? redirect(`/clientes/${result.data.id}`) : result;
-}
-```
-
-Note the asymmetry, and keep it: the `loader` unwraps, the `action` returns the `Result`. Details in
-[api-integration.md](api-integration.md).
-
-Server data reaches the shell through `useLoaderData()` / `useActionData()` / `useNavigation()`.
-Copying loader data into `useState` on mount is the mistake that reintroduces every staleness bug
-router revalidation exists to prevent.
-
-Then in the barrel:
-
-```ts
-export { ClientsPage } from './ui/pages/ClientsPage/ClientsPage';
-export { loader as clientsLoader, action as clientsAction } from './ui/pages/ClientsPage/route';
-```
-
-`app/routes.tsx` imports those from `@/features/<slice>` — never from the file path.
-
-## Rendering
-
-- Primitives from `shared/ui/`, built on Base UI, which composes through a **`render` prop**. Radix's
-  `asChild` + `Slot` is gone
-  ([ADR 0039](../../../../docs/adr/0039-admin-frontend-base-ui-primitives.md)) — a snippet copied
-  from a shadcn/Radix tutorial will not compile, and the fix is the `render` prop, not a cast.
-- Semantic tokens only: `bg-background`, `text-muted-foreground`, `border-border`. A raw palette
-  class breaks light/dark/system, which is a real three-state theme in `shared/theme/`.
-- Prefer the primitive's own keyboard behaviour to a hand-written key handler.
-- Put each business action on a visible button or link with an accessible name.
-- All visible strings pt-BR, including empty states and error copy; key names (`Ctrl`, `Esc`,
-  `Enter`) are not translated. See `agenza-ptbr-copy`.
-
-## Error and pending states
-
-A thrown `ApiProblemError` from the loader is handled by the route `errorElement` —
-`src/app/AppRouteError.tsx` already renders `problem.title` and logs the `code`. Do not add a
-per-page `try/catch` to duplicate it. Pending UI comes from `useNavigation()`, not from a
-hook-owned `isLoading` flag you set yourself.
-
-## Testing a page
-
-Render through a memory router so `loader`/`action` and `useNavigation` behave as in production;
-assert on accessible names and visible pt-BR copy rather than test ids. Mock at the module boundary
-(`vi.mock` of the repository or `servicesApi`), never at the network. The hook gets its own test for
-the guard and branch logic — that is where the coverage gate is actually satisfied, since
-`shared/ui/` and the slice barrel are excluded from coverage. See `agenza-testing`.
+Test the changed behavior at its boundary: apply a filter, change a page, close a direct-link
+dialog, or leave while a request is pending. Use
+[agenza-testing](../../agenza-testing/SKILL.md) for the appropriate test tier and live examples.
