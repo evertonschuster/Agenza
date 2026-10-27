@@ -22,8 +22,8 @@ Histórico fica nas ADRs e no Git, acessível pelo
 
 - `app → features → widgets → shared`; consumidores externos acessam uma feature pelo barril.
   O [ESLint](eslint.config.js) verifica direção entre camadas e esse limite público.
-- Páginas são apresentação; estado e efeitos ficam no hook da página. Reutilização genérica fica
-  em shared/widgets conforme a responsabilidade.
+- Páginas compõem e renderizam a UI; estado, efeitos e handlers ficam no hook da página.
+  Reutilização genérica fica em shared/widgets conforme a responsabilidade.
 - Listas usam estado controlado: Pessoas e Etiquetas o fornecem por `useSearchParamsState`.
   O formulário de filtros não dispara busca ao digitar; ações aplicam a consulta.
 - `servicesApi` devolve `ApiResult`; token, tenant, versão e envelope pertencem à camada HTTP.

@@ -29,7 +29,7 @@ for a full-page form with nested arrays and value presets. Read only the parts r
   `canSubmit` and `isSaving`. Use the footer's current props rather than copying an old call site.
 
 An edit route fetches its record from the backend and resets the form from that response; a list row
-is not a fresh edit snapshot. Abort the read in effect cleanup and ignore an aborted response. Check
+is not a fresh snapshot for editing. Abort the read in effect cleanup and ignore an aborted response. Check
 whether the mounted page can change `:id`, so loading or submission cannot silently use the previous
 record. On a failed read, follow the owning screen's recovery flow; the existing forms toast the
 problem and close/back out. A late successful save may publish its result, but must not navigate a

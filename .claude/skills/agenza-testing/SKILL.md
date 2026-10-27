@@ -30,9 +30,12 @@ Keep tests colocated. Inspect [vitest-setup.ts](../../../apps/admin-frontend/src
 before adding environment or browser API stubs, and reuse the helpers in
 [src/test/](../../../apps/admin-frontend/src/test).
 
-Mock the module boundary with `vi.mock`/`vi.hoisted`, or pass a fake to an existing factory; do not
-add network interception. A mock path resolves from the test file. Reset affected singleton state,
-captured handlers and mock implementations as needed so one case cannot drive the next.
+In page, component and repository tests, mock the module boundary with `vi.mock`/`vi.hoisted`, or
+pass a fake to an existing factory. Do not introduce browser-traffic interception in page or
+component tests. At the API-client transport boundary, stub `fetch` to inspect request headers or
+cancellation, as in [apiClient.test.ts](../../../apps/admin-frontend/src/shared/api/apiClient.test.ts).
+A mock path resolves from the test file. Reset affected singleton state, captured handlers and
+mock implementations as needed so one case cannot drive the next.
 
 Use `userEvent.setup()` for interactions and accessible roles/pt-BR names for UI assertions. Use
 `StrictMode` when proving behavior affected by repeated mount effects; it is not a wrapper required
@@ -57,4 +60,6 @@ Playwright uses the real Aspire stack and seeded login. Follow
 [README.md](../../../apps/admin-frontend/README.md) for startup and reuse
 [e2e/helpers.ts](../../../apps/admin-frontend/e2e/helpers.ts) for login. The suite's worker and server
 settings are owned by `playwright.config.ts`; do not start a competing frontend server or replace
-the authenticated flow with mocks. Read seeded identities from the running flow, not hardcoded ids.
+the authenticated flow with mocks. Obtain seeded login credentials through `e2e/helpers.ts`, which
+reads development configuration. Read generated tenant/entity ids from the current session or
+responses instead of hardcoding them.
