@@ -1,128 +1,89 @@
-# Backend — defence in depth, layer by layer
+# Trace server-side tenant scope
 
-Six layers. Each exists because the one above it can be wrong, so a review question is always
-"which layer does this change weaken?" — not "is it still safe overall?".
+The [backend guide](../../../../backend/docs/ARCHITECTURE.md#5-tenancy-and-persistence) owns the
+persistence policy. Use this reference to inspect the affected enforcement path and choose evidence.
 
-## 1. The action filter — the boundary
+## Authentication and HTTP entry
 
-`backend/shared/Admin.Identity.Client/TenantHeaderFilter.cs`. A global `IAsyncActionFilter` that runs
-before any controller action and **Forbids unless the `X-Tenant-Id` header parses as a GUID, the
-principal carries a `tenant_id` claim, and the two are equal**. Missing header, unparseable header,
-missing claim and mismatch all take the same path: 403, `ProblemDetails`, `code` extension
-`Tenant.ContextMismatch`, title *"O tenant autenticado não corresponde ao X-Tenant-Id."*
+Read [IdentityJwtBearerExtensions](../../../../backend/shared/Admin.Identity.Client/IdentityJwtBearerExtensions.cs)
+for authority, audience and claim mapping, then
+[HttpContextTenantAccessor](../../../../backend/shared/Admin.Identity.Client/HttpContextTenantAccessor.cs)
+for the claim source and
+[TenantHeaderFilter](../../../../backend/shared/Admin.Identity.Client/TenantHeaderFilter.cs)
+for header/claim comparison.
 
-Two properties worth defending in review:
+- Verify the route actually uses authentication and registers the filter; registering its service
+  in DI alone does not install a global MVC filter.
+  [services-service Program](../../../../backend/services/services-service/ServicesService.Api/Program.cs)
+  is the tenant-owned API reference.
+- A missing/unparseable header, absent/unparseable claim or mismatch is rejected by the filter.
+  The accessor reads the authenticated principal, never the header being compared.
+  Preserve `MapInboundClaims = false` where accessors depend on the token's original claim names.
+- Inspect any `IgnoreTenant` exception by endpoint and policy. A tenant-free provisioning endpoint
+  needs its own authorization, as
+  [TenantsController](../../../../backend/services/identity-service/IdentityService.Api/Controllers/TenantsController.cs)
+  checks `identity-admin`. Do not install tenant requirements indiscriminately on OIDC endpoints.
+- A validated tenant does not establish a role/permission check. Follow the endpoint's actual
+  policy rather than assuming an additional authorization layer.
 
-- **Default-required, opt-out.** Every action needs a validated tenant unless marked
-  `[IgnoreTenant]`. This inverts the old per-action opt-in, so a new action cannot ship unscoped by
-  omission — only by an explicit attribute someone has to write and someone has to approve. There
-  are **zero `[IgnoreTenant]` uses in the codebase today.**
-- **Registered in `services-service`'s `Program.cs` only.** identity-service deliberately does not
-  register it: `TenantsController` is M2M provisioning (no tenant claim can exist for a tenant that
-  does not exist yet, gated on the `identity-admin` scope instead) and the OIDC endpoints must keep
-  working for callers that never send a custom header. Blanket-marking them `[IgnoreTenant]` was
-  considered and rejected — adding a filter to login/token/logout for no benefit. A *new*
-  tenant-scoped controller in identity-service registers the filter in that service.
+## Reads, writes and relationships
 
-## 2. The accessor — the source
+For a query-filter or context change, read
+[ModelBuilderExtensions](../../../../backend/shared/Admin.SharedKernel.EntityFrameworkCore/ModelBuilderExtensions.cs),
+[ServicesDataContext](../../../../backend/services/services-service/ServicesService.Infrastructure/Persistence/ServicesDataContext.cs)
+and the
+[tenant-scoping tests](../../../../backend/services/services-service/ServicesService.PersistenceTests/ServicesDataContextTenantScopingTests.cs).
 
-`HttpContextTenantAccessor` reads `tenant_id` off `HttpContext.User` — the authenticated principal,
-never the header. This is the direction that matters: the filter compares the header *against* the
-accessor. If a change ever makes the accessor read the header, the filter degenerates into comparing
-the header with itself and the whole scheme is gone with no test failing.
+The tenant predicate must remain tied to the context instance used for the query: a captured GUID
+constant can be reused through EF's cached model. Check two tenants against the same model.
+The context's no-tenant fallback is `Guid.Empty`; it must not become permission to read globally.
+Named `Tenant` and `SoftDelete` filters are independent. A deleted-row query must retain tenant
+scope; unqualified `IgnoreQueryFilters()` disables both.
 
-`TenantId` throws when the claim is absent; `TryGetTenantId` is for endpoints callable by both user
-and M2M tokens. Past the filter, an action can use the throwing property — the filter has already
-guaranteed the claim is there.
+For writes, trace
+[AuditableEntitySaveChangesInterceptor](../../../../backend/services/services-service/ServicesService.Infrastructure/Persistence/Interceptors/AuditableEntitySaveChangesInterceptor.cs)
+and its [tests](../../../../backend/services/services-service/ServicesService.PersistenceTests/AuditableEntitySaveChangesInterceptorTests.cs).
+It assigns the current tenant to an Added tenant-owned entity whose tenant is empty, or throws
+when the provider has none. It does not reassign a prepopulated tenant or independently validate
+the tenant on every Modified entity. Do not treat the interceptor as blanket write authorization:
+trace how the entity entered the context and prevent a business caller from supplying its tenant.
 
-## 3. The global query filter — every read
+Inspect aggregate children, alternate keys and composite tenant FKs in the relevant configuration;
+[ClientConfiguration](../../../../backend/services/services-service/ServicesService.Infrastructure/Persistence/Configurations/ClientConfiguration.cs)
+is a live example. An Id-only relationship can bypass tenant ownership even when both rows were
+loaded correctly. Model metadata and EF InMemory evidence do not prove that PostgreSQL rejects it.
 
-`Admin.SharedKernel.EntityFrameworkCore/ModelBuilderExtensions.cs`, `ApplyAuditableConventions`,
-called once from `ServicesDataContext.OnModelCreating`. It walks the model and registers two named
-filters plus the supporting indexes: `SoftDelete` on every `BaseEntity`, `Tenant` on every
-`ITenantOwned` one ([ADR 0046](../../../../docs/adr/0046-separate-soft-delete-and-tenant-query-filters.md)).
-Two filters rather than one combined predicate, so a read can include soft-deleted rows without
-leaving the tenant.
+For connection/role changes, read
+[001-service-roles.sh](../../../../infra/postgres/init/001-service-roles.sh) and the AppHost wiring.
+Roles restrict ownership and grants between service schemas, not between tenants within a schema.
+Check both positive grants and revocations using the actual application role, not an administrator.
 
-**The trap, and the single most valuable thing to know about this file:** EF Core compiles and caches
-the model per `DbContext` *type*, not per instance. An earlier version baked the tenant into the
-expression as `Expression.Constant(guidValue)` — so whichever request happened to build the model
-first had **its** tenant permanently baked in for every later request, on every connection, forever.
-The fix is `Expression.Property(Expression.Constant(dbContext, dbContext.GetType()), CurrentTenantId)`:
-a `this`-instance member access is the one thing EF re-evaluates against the context actually running
-each query. `ServicesDataContextTenantScopingTests` constructs two contexts for two tenants against
-the same cached model precisely to catch a regression here. Any diff that touches `BuildTenantFilter`,
-`CurrentTenantId`, or how the context is registered in DI is a stop-and-read.
+## FastAPI entry and delegation
 
-With no tenant in context — background work, an M2M token — `CurrentTenantId` is `Guid.Empty`, which
-no real row carries, so reads come back **empty rather than global**. Fail closed.
+Trace [verify_token.py](../../../../ai-services/assistant-service/app/auth/verify_token.py) before
+[tenant_context.py](../../../../ai-services/assistant-service/app/auth/tenant_context.py).
+The validator obtains a signing key through JWKS and checks the JWT with the configured algorithm,
+issuer and audience. The context dependency then compares UUID claim/header values; routes consume
+the resulting context rather than establishing a second authority from raw request values.
 
-`IgnoreQueryFilters()` without keys drops tenant scoping and soft-delete together. Its one legitimate
-use in the repo is a persistence test asserting a row was soft-deleted rather than removed. No
-repository ignores either filter; a future read that must see deleted rows ignores `SoftDelete` alone,
-through a helper in `Admin.SharedKernel.EntityFrameworkCore` and its own decision. The filter keys are
-`internal` there, so application code has no name with which to switch `Tenant` off.
+The context carries subject and scope; carrying scope is not an operation-level scope check.
+Health/readiness can remain tenant-free. A tenant-owned downstream call delegates the caller's
+access token with the validated header, as required by
+[ADR 0022](../../../../docs/adr/0022-ai-tenant-context-and-delegation.md).
+[ServiceTokenClient](../../../../ai-services/assistant-service/app/auth/service_token_client.py)
+only obtains/caches a client-credentials token; it does not add a tenant identity. Reserve it for
+explicitly tenant-free control-plane work. Background tenant access needs a designed job identity
+and immutable tenant context, not a process-wide current tenant.
 
-## 4. The save interceptor — every write
+## Choose the proof
 
-`AuditableEntitySaveChangesInterceptor` stamps audit fields, turns a `Deleted` entry into a soft
-delete, and for every `Added` `ITenantOwned` with an empty `TenantId` calls `AssignTenant` from
-`ICurrentTenantProvider` — **or throws** if no tenant is available, so a tenant-less row cannot reach
-the database ([ADR 0008](../../../../docs/adr/0008-automatic-tenant-assignment-on-save.md)).
+Use existing persistence tests for tenant assignment, named filters and context/model-cache behavior.
+Trusted provider doubles isolate those mechanisms; they do not exercise JWT validation.
+The [AI-service tests](../../../../ai-services/assistant-service/tests/) exercise its token/context
+dependencies. Select existing cases that cover the changed behavior and add a regression when a
+meaningful case is missing; changing a test file is not itself the acceptance criterion.
 
-This is why **no command, DTO, mapping extension or repository method carries a tenant**. A diff that
-adds `Guid tenantId` to a command record or a repository signature is undoing the decision, not
-extending it. New tenant-owned entities inherit `TenantOwnedEntity`
-([ADR 0009](../../../../docs/adr/0009-tenant-owned-entity-base-class.md)) and declare nothing about
-tenancy themselves.
-
-The trade-off is stated plainly in ADR 0008: an entity can exist tenant-less *in memory* between
-construction and save. The guarantee moved from "unrepresentable" to "unpersistable" — so a review of
-domain code must not assume a constructed entity already has a tenant.
-
-## 5. The schema — composite keys
-
-[ADR 0024](../../../../docs/adr/0024-database-enforced-data-ownership.md) (superseding
-[ADR 0013](../../../../docs/adr/0013-tenant-scoped-relationships-enforced-at-the-application-layer.md)):
-tenant-owned principals expose `(TenantId, Id)` as a candidate key, and relationships between
-tenant-owned entities use composite FKs carrying `TenantId`. An `Id`-only FK between two tenant-owned
-entities is a finding — it lets a row from tenant A point at a row from tenant B for anything that
-writes outside EF.
-
-## 6. The database roles — the floor
-
-`infra/postgres/init/001-service-roles.sh`. `identity_app` owns only the `identity` schema,
-`services_app` only `services`; `PUBLIC` gets neither create nor usage. A compromised or
-mis-configured service connection cannot read the other module's tables even with a correct
-connection string. Changes here are infrastructure-level findings: check that a new schema gets an
-owner and that the other role is revoked, not merely not granted.
-
-## AI service (`ai-services/assistant-service`)
-
-`app/auth/tenant_context.py` is the same contract in FastAPI shape:
-`require_tenant_context` depends on `require_valid_token`, parses the `tenant_id` claim and the
-`X-Tenant-Id` header as UUIDs, and raises 403 `invalid_tenant_context` on missing, malformed, or
-mismatched. **The `TenantContext` it returns is the only tenant value application code may touch** —
-a route that reaches into raw claims itself has bypassed the boundary.
-[ADR 0022](../../../../docs/adr/0022-ai-tenant-context-and-delegation.md) also settles:
-
-- Liveness and readiness stay tenant-free; every tenant-owned route requires the dependency.
-- Calling another tenant-owned service **delegates the caller's access token** and forwards the
-  validated header. `ServiceTokenClient`'s client-credentials token is reserved for explicitly
-  tenant-free control-plane work — using it to reach a tenant-owned API is the request that "fails
-  closed today and creates pressure to weaken the downstream check later".
-- Background work carries an immutable job envelope with the tenant id. There is no process-wide
-  "current tenant" and inventing one is the finding.
-
-## Tests
-
-The two mechanisms with dedicated regression coverage live in `ServicesService.PersistenceTests`
-([ADR 0019](../../../../docs/adr/0019-narrow-tenant-isolation-persistence-tests.md)) — EF InMemory,
-no Docker: `AuditableEntitySaveChangesInterceptorTests` (assignment on add, throw with no tenant,
-soft delete) and `ServicesDataContextTenantScopingTests` (per-tenant reads, both named filters on
-every tenant-owned entity, ignoring `SoftDelete` keeping the tenant, and the two-context
-model-cache scenario from §3). The project is intentionally named without a `.Tests` suffix so the
-80% assembly coverage gate does not pressure anyone into padding it with unrelated tests.
-
-The AI service's tenant checks are covered by unit tests for missing claim, missing header, malformed
-UUID and mismatch. A change to `require_tenant_context` that does not touch them is under-tested.
+Real FK/role enforcement and concurrent uniqueness need PostgreSQL evidence. Follow
+[backend tests policy](../../../../backend/docs/ARCHITECTURE.md#9-tests) and report what was actually
+run on a disposable database. Historical ADR references to an architecture guard do not prove a
+current check exists. State which properties remain unverified.

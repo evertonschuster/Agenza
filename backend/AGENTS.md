@@ -1,70 +1,55 @@
 # backend — instruções para agentes
 
-Complementa o [AGENTS.md da raiz](../AGENTS.md), que vale primeiro. Aqui só o que é específico do
-backend .NET.
+Complementa o [AGENTS da raiz](../AGENTS.md). Os pins estão em [global.json](global.json),
+[Directory.Packages.props](Directory.Packages.props) e [.config/dotnet-tools.json](.config/dotnet-tools.json).
 
-> Aponta, não copia ([ADR 0041](../docs/adr/0041-ai-instruction-files-reinstated.md)). Versões vêm de
-> `global.json` e `Directory.Packages.props`; a forma e as regras vêm de
-> [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md). Este arquivo não lista features, endpoints nem
-> entidades — isso é o código.
+## Consulta por tarefa
 
-## Antes de tocar no código
+Leia somente as regras e os exemplos ligados à mudança:
 
-1. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — a forma, as regras e o porquê. **O §10 diz qual
-   código copiar e qual é da geração anterior**: o arquivo mais próximo nem sempre é o exemplo certo.
-2. O [índice de ADRs](../docs/adr/README.md) — abra só as ADRs vigentes da preocupação em jogo; uma
-   passagem marcada como superseded é histórico, não instrução.
-3. [`docs/API.md`](../docs/API.md) — as formas da fronteira HTTP: envelope, erros, status.
-4. Skills: `agenza-backend-slice` para criar ou mudar uma fatia; `agenza-backend-review` para revisar
-   uma mudança, inclusive a sua antes do PR; `agenza-tenant-isolation` para qualquer coisa que toque
-   tenant; `agenza-api-contract` para o contrato com o frontend.
+| Mudança                                   | Referência                                                                                                       |
+| ----------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| Serviço, camada ou dependência            | [Arquitetura §1](docs/ARCHITECTURE.md#1-shape)                                                                   |
+| Request, handler, validator ou mapeamento | [§2](docs/ARCHITECTURE.md#2-anatomy-of-a-feature) e [§4](docs/ARCHITECTURE.md#4-errors--one-pipeline-five-gates) |
+| Agregado, filho ou value object           | [§3](docs/ARCHITECTURE.md#3-domain)                                                                              |
+| Tenant, repositório, EF ou migração       | [§5](docs/ARCHITECTURE.md#5-tenancy-and-persistence)                                                             |
+| Fronteira HTTP                            | [§6](docs/ARCHITECTURE.md#6-http-surface), controller e OpenAPI atuais                                           |
+| Tempo, estilo ou logging                  | [§7](docs/ARCHITECTURE.md#7-time) e [§8](docs/ARCHITECTURE.md#8-code-style)                                      |
+| Validação e garantias                     | [§9](docs/ARCHITECTURE.md#9-tests) e [§11](docs/ARCHITECTURE.md#11-what-enforces-what)                           |
 
-## Forma
+O [§10](docs/ARCHITECTURE.md#10-reference-code-and-the-older-generation) aponta exemplos da forma
+atual. Compare-os com o código afetado; uma divergência não autoriza refatorar áreas independentes.
+O [índice de ADRs](../docs/adr/README.md) encaminha para decisões relevantes e suas substituições.
 
-Serviços agregados por contexto ([ADR 0001](../docs/adr/0001-context-aggregated-services.md)): uma
-capacidade nova que cabe num contexto existente é uma pasta `<Feature>/<Operation>/` na Application
-daquele serviço, não um serviço novo. Dentro do serviço, Clean Architecture com portas e adaptadores —
-`Domain ← Application ← Infrastructure ← Api`, imposto pelas referências de projeto. As fatias
-verticais organizam a Application; não substituem as camadas.
+## Invariantes
 
-## Regras que quebram build ou review
+- Cada serviço pertence a um contexto; uma operação que cabe nele não exige outro serviço.
+- Domain permanece sem infraestrutura e pacotes, podendo referenciar os value objects compartilhados.
+  O handler orquestra a operação através de portas; o domínio preserva suas invariantes.
+- Falhas esperadas usam Result. Validação de entrada, domínio, estado atual e persistência têm
+  responsabilidades distintas; nomes ou sintaxe isolados não provam um defeito.
+- O tenant de servidor vem da claim validada. Um header ou tenant enviado pelo cliente não autoriza
+  acesso; filtros, atribuição no save, relacionamentos e roles têm limites próprios descritos no §5.
 
-Cada linha é um lembrete; a regra, com o porquê, está na seção indicada da
-[ARCHITECTURE](docs/ARCHITECTURE.md).
+## Skills
 
-- **O Domain só referencia `Admin.SharedKernel.ValueObjects`** — nenhum outro projeto, nenhum pacote. [§1](docs/ARCHITECTURE.md#1-shape)
-- **A forma mais simples correta primeiro** — mecanismo de desempenho só com evidência no PR.
-  [Regras gerais](docs/ARCHITECTURE.md)
-- **O handler é dono da orquestração; entrada e saída são records explícitos.**
-  [§2](docs/ARCHITECTURE.md#2-anatomy-of-a-feature)
-- **Domínio rico** — a raiz cria os filhos, agregados se referenciam por id, value objects com
-  `Create`/`Restore`, transição com nome de intenção, factory estática. [§3](docs/ARCHITECTURE.md#3-domain)
-- **Erros são valores, em cinco portões** — validator síncrono e com código em toda regra; `try/catch`
-  em handler é achado. [§4](docs/ARCHITECTURE.md#4-errors--one-pipeline-five-gates)
-- **O tenant nunca é parâmetro; repositório simples sobre os filtros do `DbContext`; o banco decide a
-  unicidade; migração só aditiva.** [§5](docs/ARCHITECTURE.md#5-tenancy-and-persistence)
-- **Controller sem lógica; enum no fio é string.** [§6](docs/ARCHITECTURE.md#6-http-surface)
-- **UTC, sempre.** [§7](docs/ARCHITECTURE.md#7-time)
-- **Log com `ILogger<T>` e template com placeholders, nunca string interpolada; nível em `Serilog:MinimumLevel`.**
-  [§8](docs/ARCHITECTURE.md#logging)
-- **Corpo em bloco com guard clauses; sem comentário de "o quê".** [§8](docs/ARCHITECTURE.md#8-code-style)
+As fontes canônicas estão na raiz. Quando o host não as descobrir, abra o caminho da tarefa;
+essa leitura explícita não pressupõe descoberta nativa.
 
-## Portões
+| Tarefa                             | Procedimento                                                                  |
+| ---------------------------------- | ----------------------------------------------------------------------------- |
+| Construir ou alterar uma fatia     | [agenza-backend-slice](../.claude/skills/agenza-backend-slice/SKILL.md)       |
+| Revisar um diff                    | [agenza-backend-review](../.claude/skills/agenza-backend-review/SKILL.md)     |
+| Alterar uma fronteira de tenant    | [agenza-tenant-isolation](../.claude/skills/agenza-tenant-isolation/SKILL.md) |
+| Regenerar contrato para o frontend | [agenza-api-contract](../.claude/skills/agenza-api-contract/SKILL.md)         |
 
-```bash
-dotnet build backend/AdminBackend.slnx -c Release
-dotnet test backend/AdminBackend.slnx -c Release
-```
+## Validação e entrega
 
-Warnings são erros, e o gate de cobertura de Domain + Application roda no `dotnet test` local igual ao
-CI. Mudou o contrato de um endpoint? Regenere os tipos do frontend no mesmo PR — `npm run
-generate:api-types` em `apps/admin-frontend`, com o serviço rodando; o `generate:api-types:check` do CI
-compara byte a byte. Mudou algo que só o PostgreSQL garante (índice único, FK composta, `CHECK`)?
-Verifique à mão num PostgreSQL descartável e registre no PR o que rodou (ARCHITECTURE §9).
+Use os [comandos do README](README.md#commands) e os [gates aplicáveis](../docs/QUALITY.md).
+Escolha testes pelo comportamento e risco alterados; propriedades exclusivas do PostgreSQL
+seguem a verificação descartável do §9. Em Markdown, confira fontes, links, formatação e diff.
 
-## Ao terminar
-
-- Decisão nova, ou tentada e revertida → ADR.
-- Uma regra deste diretório mudou → `docs/ARCHITECTURE.md` no mesmo PR. Uma fatia nova virou a
-  referência de alguma preocupação → troque a linha do §10.
-- Não escreva aqui, no README nem na ARCHITECTURE lista de features, status ou "hoje só X faz Y".
+Uma mudança de contrato leva os tipos OpenAPI regenerados no PR backend; o trabalho de frontend
+segue o fluxo separado da raiz. Registre o que realmente executou e o que continua sem prova.
+Decisões arquiteturais seguem o processo da raiz. Atualize a regra ou o exemplo que a alteração
+invalida, sem criar inventários de features, contagens ou relatórios adicionais de execução.

@@ -1,49 +1,45 @@
-# Backend tests
+# Select backend tests
 
-Rules: [ARCHITECTURE §9](../../../../backend/docs/ARCHITECTURE.md#9-tests). Tools: xUnit,
-AwesomeAssertions (`.Should()`), NSubstitute. Code to copy: the tests of the slices named in §10.
+The [architecture](../../../../backend/docs/ARCHITECTURE.md#9-tests) defines the available tiers and
+their limits. The [backend README](../../../../backend/README.md) owns execution commands;
+[QUALITY](../../../../docs/QUALITY.md) explains coverage.
 
-## 1. What goes where
+| Changed behavior                              | Useful evidence                                                                     |
+| --------------------------------------------- | ----------------------------------------------------------------------------------- |
+| Domain rule, normalization or transition      | Direct test of allowed/refused input and unchanged state after rejection            |
+| Request validation                            | Code and property for the invalid input; valid request still accepted               |
+| Handler outcome                               | Result, field metadata and repository/save interactions at success or rejection     |
+| Wire parsing or mapping                       | JSON binding through the configured options; actual serialized output when relevant |
+| Tenant assignment, query filter or conversion | Focused persistence test, with contexts scoped to different tenants when needed     |
+| Database-only constraint or race              | Reproducible disposable-PostgreSQL scenario, according to the current policy        |
 
-| You wrote | Prove | File |
-| --- | --- | --- |
-| a value object of the service | every rule; every normalization; blank → `null` when optional; `Restore` does not validate | `<Service>.Tests/<Feature>/<ValueObject>Tests.cs` |
-| a shared value object | every rule with its message; every normalization; the boundary of each limit; `Restore` does not validate | `backend/shared/Admin.SharedKernel.Tests/<ValueObject>Tests.cs` |
-| an aggregate | every invariant; every transition, allowed and refused; children built and linked to the root; no tenant before save; a failed `Update` changes nothing | `<Service>.Tests/<Feature>/<Entity>Tests.cs` |
-| a validator | every rule yields its **code** on its **property**; a valid request passes | `…/<Feature>/<Operation>/<Operation>…ValidatorTests.cs` |
-| a handler | success persists and returns the response; each `NotFound` and conflict with code, field and `meta`; a rejection persists nothing; a failed save answers `<Entity>.SaveFailed`; each read happens once | `…/<Feature>/<Operation>/<Operation>…HandlerTests.cs` |
-| a command bound from a body | the wire JSON binds; a `tenantId` in the body is ignored | `…/<Feature>/<Operation>/<Operation>CommandBindingTests.cs` |
-| a command member typed as a shared value object | the wire JSON binds to it, and an invalid value fails with the type's message under that field | `…/<Feature>/<Operation>/<Operation>Command<ValueObject>BindingTests.cs` |
-| tenant assignment, a filter, a conversion, an index, a relationship | the EF behaviour | `<Service>.PersistenceTests/<Entity>PersistenceTests.cs` |
-| a response mapping | through the handler's tests, not on its own | — |
+Choose the boundary that would detect the regression; do not add a test solely because a filename
+changed. For a handler rejection, prove that nothing reaches the relevant persistence side effect.
+For a failed save, prove the generic use-case Result. For a field conflict found by a pre-check,
+assert that its code, field and recovery metadata reach the caller.
 
-## 2. How the tests are written
+## Reuse the live setup
 
-- Names are `Method_Condition_Expectation`: `Handle_WithDuplicateCpf_ReturnsAFieldConflict`.
-- Each class has small builders with defaults (`Command(fullName: …)`) so a test states only what
-  matters to it. Data shared by a feature's tests lives in an `internal static <Feature>TestData`.
-- Substitutes are fields; the constructor sets the happy path (lookups return `null`, the save
-  succeeds) and each test overrides only its case. Interactions are asserted with `Received(1)` and
-  `DidNotReceive()` — a rejected command must not reach `Add` or `SaveChangesAsync`.
-- Time is a fixed `TimeProvider`. A helper used by a second feature moves to a shared place in the test
-  project — not before.
-- Every validator rule is one row of a `TheoryData` (case, request, property, code), so a new rule is a
-  new row.
-- Assert the code. Assert a message only when the message is the behaviour (a limit interpolated into
-  it).
+Inspect the relevant files under
+[Clients tests](../../../../backend/services/services-service/ServicesService.Tests/Clients/)
+and [ClientPersistenceTests](../../../../backend/services/services-service/ServicesService.PersistenceTests/ClientPersistenceTests.cs).
+Use the existing fixture/builders, NSubstitute conventions and fixed TimeProvider; make the case
+state what changes from the baseline. Assert stable codes and field paths; assert message wording
+when the message itself is the behavior.
 
-## 3. Persistence tests
+A shared value object has tests in
+[Admin.SharedKernel.Tests](../../../../backend/shared/Admin.SharedKernel.Tests/);
+its endpoint binding still needs evidence when that boundary changes. Avoid testing a private
+helper directly or copying the same invariant into several tests at the same tier.
 
-One EF InMemory context per test, with a substituted tenant provider and current user; two contexts on
-the same database for two tenants when the test is about isolation. Model tests (`Model_…`) assert index
-definitions, filters, `CHECK`s and composite keys from the model metadata. InMemory proves none of the
-PostgreSQL guarantees — a filtered unique index, a `CHECK`, a composite foreign key under writes; those
-are verified by hand on a disposable PostgreSQL and reported in the PR.
+## State what the check proves
 
-## 4. Not tested here
+EF InMemory can exercise query filtering, assignment and conversion paths. Model metadata can show
+that an index or FK is configured. Neither demonstrates PostgreSQL enforcing a composite FK,
+filtered unique index or CHECK under writes/concurrency.
 
-The framework (binding attributes, `ProducesResponseType`), the shared kernel (it has its own project),
-private methods directly, and the same rule twice at the same tier.
-
-Coverage of Domain + Application is a build gate; a drop below it fails `dotnet test` locally exactly as
-in CI. Raise it with tests of rules and branches, never with tests that assert nothing.
+Use the current [verification policy](../../../../backend/docs/ARCHITECTURE.md#11-what-enforces-what)
+for guarantees outside the automated tiers. A new relational-test layer is a separate decision;
+do not silently introduce it during a documentation or small feature change.
+Run the affected test/gate when executable behavior changed. For documentation alone, validate
+links, skill format and diff without starting the application or claiming its tests passed.

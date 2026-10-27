@@ -1,85 +1,48 @@
 ---
 name: agenza-backend-slice
-description: Use when building or changing backend functionality in a .NET service under backend/services/ — modeling an aggregate, child entity, value object (a service's own or one shared by every service), state transition, factory or domain error; writing a command, query, handler, validator, mapping or response DTO; adding a repository method, EF configuration or migration; adding a controller action; writing backend unit or persistence tests; or deciding which existing slice to copy and where shared logic belongs.
+description: Build or change a use case in an Agenza .NET service, including domain behavior, handlers, persistence and its HTTP boundary. Use when extending a slice or choosing the relevant implementation pattern.
 ---
 
-# Building a backend slice
+# Build a backend slice
 
-The rules live in [`backend/docs/ARCHITECTURE.md`](../../../backend/docs/ARCHITECTURE.md); this skill is
-the order of work and the decisions you meet on the way. Two generations of slices coexist, and
-**ARCHITECTURE §10 names the code to copy** — the nearest file is often the older one.
+Use the [backend architecture](../../../backend/docs/ARCHITECTURE.md) for the applicable rule.
+[Reference code](../../../backend/docs/ARCHITECTURE.md#10-reference-code-and-the-older-generation)
+distinguishes current patterns from older slices; read the example related to the change.
 
-## Map
+| Work                                                     | Procedure                                       |
+| -------------------------------------------------------- | ----------------------------------------------- |
+| Aggregate, child, behavior or service-local value object | [domain.md](references/domain.md)               |
+| Shared string/date value object and binding              | [value-objects.md](references/value-objects.md) |
+| Request, validator, mapping, handler or response         | [use-case.md](references/use-case.md)           |
+| Repository, EF configuration or migration                | [persistence.md](references/persistence.md)     |
+| Selecting and writing backend tests                      | [tests.md](references/tests.md)                 |
 
-| You are about to… | Read | Rules |
-| --- | --- | --- |
-| model an aggregate, a child, a value object of the service, a transition, a factory, a domain error | [references/domain.md](references/domain.md) | §3 |
-| add or change a value object that every service shares, or type a request member with one | [references/value-objects.md](references/value-objects.md) | §3, ADR 0055 |
-| write a command or query, its validator, the mapping, the handler, the response | [references/use-case.md](references/use-case.md) | §2, §4, §6, §7 |
-| write a repository method, a configuration, an index, a migration | [references/persistence.md](references/persistence.md) | §5 |
-| write tests | [references/tests.md](references/tests.md) | §9 |
-| review a change, yours included | skill `agenza-backend-review` | — |
-| touch anything tenant-scoped | skill `agenza-tenant-isolation` | §5 |
-| change a contract the frontend consumes | skill `agenza-api-contract` | §6 |
+## Scope the use case
 
-## 0. Place it, or stop
+Find the business context and aggregate that own the behavior before adding a folder. An operation
+inside an existing context does not require another service. Work from the relevant domain rule
+through the handler, adapter and HTTP boundary; only change layers the task affects.
 
-- Which business context owns it? An existing one → a `<Feature>/` folder in that service
-  ([ADR 0001](../../../docs/adr/0001-context-aggregated-services.md)). A new service is an ADR first.
-- A new aggregate, a child of an existing one, or an operation on an existing one? Decide with
-  [references/domain.md](references/domain.md) §1 before creating any folder.
-- Stop and write the decision down (an ADR, and say so to the user) when the work needs a rule
-  ARCHITECTURE does not have, a new member in a shared project, a new exception type, `[IgnoreTenant]`,
-  a migration that rewrites data, a time zone, or any mechanism from "Keep it simple" below.
+Preserve the domain's invariants and the existing public contract. If an architectural choice
+changes a service boundary, shared contract, security rule or persistence guarantee, follow the
+[root workflow](../../../AGENTS.md). Routine implementation choices do not require this skill to
+generate extra reports or interrupt the task.
 
-## 1. Order of work
+## Implement and verify
 
-Inside out — each layer compiles against the one before it, and each layer's tests go with it.
+Use the procedure above for the affected layer. Keep orchestration in the handler and use existing
+ports and persistence helpers. A performance mechanism needs a concrete problem or product rule;
+do not generalize for imagined callers.
 
-1. **Domain.** Value objects, then the aggregate's factories and behaviour, then their tests.
-2. **Application.** The command or query and its inputs, the validator, `ToModel`/`ApplyTo`, the
-   handler, the response, the port methods the handler calls — then their tests.
-3. **Infrastructure.** Configuration, repository, registration, migration; persistence tests when
-   tenant assignment, a filter, a conversion or an index changed.
-4. **Api.** The controller action.
-5. **Contract.** Regenerate the frontend's types in the same change; touch
-   [`docs/API.md`](../../../docs/API.md) only when a shape shared by every endpoint changed.
-6. **Verify.**
+When touching older code, compare its behavior and relevant current rule. Convert the portion needed
+for correctness or the requested change; do not rewrite unrelated patterns merely because an older
+example exists nearby. A broader architectural migration is a separate decision.
 
-   ```bash
-   dotnet build backend/AdminBackend.slnx -c Release
-   dotnet test backend/AdminBackend.slnx -c Release
-   ```
+For tenant boundaries, read [agenza-tenant-isolation](../agenza-tenant-isolation/SKILL.md).
+For a changed frontend contract, follow [agenza-api-contract](../agenza-api-contract/SKILL.md) for
+regeneration and the backend-first PR workflow; check the current code/schema for endpoint details.
 
-   A unique index, composite FK or `CHECK` is proved by hand on a disposable PostgreSQL — never the
-   `agenza-postgres-data` volume — including concurrent writes for a uniqueness rule; the PR says what
-   was run.
-7. **Self-review** with `agenza-backend-review`, then deliver (§4).
-
-## 2. Keep it simple
-
-Write the simplest correct form (ARCHITECTURE, rules of thumb): load the aggregate, change it through
-behaviour, save; read through the repository and map in the handler. Do not add, without a measured
-problem or a product rule named in the PR:
-
-- a cache, a projection inside a repository, raw SQL, a compiled query, a split query;
-- a transaction you open yourself, a gap-free sequence, a denormalized column;
-- `Task.WhenAll` in a handler, a second repository method that differs only in tracking;
-- an interface with one implementation outside `Abstractions/`, a parameter or port method no caller
-  uses yet, a generic base type "for the next feature".
-
-Two things look like optimization and are not: never a query per row (read a set of ids in one query),
-and `AsNoTracking` on pre-check lookups (`Find…Async`), whose result is never changed.
-
-## 3. Touching an older slice
-
-Converting is part of touching: when your change edits something listed in ARCHITECTURE §10's "older
-shape" column, bring **that part** to the current shape in the same PR, in its own commit — scoped to
-what you touch, never a sweep of other slices.
-
-## 4. Deliver
-
-A feature that spans backend and frontend is two PRs cut from `main`, backend first; the backend PR
-carries the regenerated `services-api.d.ts`. A new decision, or one tried and reverted, goes in an ADR.
-A slice that becomes the better example of a concern replaces its row in ARCHITECTURE §10. No doc gets a
-feature list or a "today only X does Y".
+Select tests using [tests.md](references/tests.md) and commands from the
+[backend README](../../../backend/README.md). Use
+[agenza-backend-review](../agenza-backend-review/SKILL.md) when a review is needed.
+In the PR, identify the behavior changed, checks actually run and any unverified guarantee.

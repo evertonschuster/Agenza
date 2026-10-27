@@ -1,108 +1,64 @@
 ---
 name: agenza-backend-review
-description: Use when reviewing a backend change — a PR, branch or diff touching backend/services/ or backend/shared/ — or self-reviewing your own backend work before opening a PR. Judges it against backend/docs/ARCHITECTURE.md (aggregate boundaries, rich domain, handler-owned orchestration, simple repositories over the DbContext's filters, clean validation, factories, DTOs, no premature optimization) and writes severity-ranked findings in pt-BR.
+description: Review backend diffs for concrete defects, security and data risks, contract regressions, and justified architectural concerns. Report findings in pt-BR with evidence and severity based on impact.
 ---
 
-# Reviewing a backend change
+# Review a backend change
 
-Early slices set the rules: whatever a merged slice does, the next one copies. Review the **precedent**,
-not only the bug — a shape that is harmless today and wrong as a pattern is a finding.
+The [architecture](../../../backend/docs/ARCHITECTURE.md) owns the technical rules. Review the
+affected flow and its callers; an older pattern is context, not an instruction to convert unrelated
+code. Use [reference code](../../../backend/docs/ARCHITECTURE.md#10-reference-code-and-the-older-generation)
+when the nearest file does not represent the current convention.
 
-The rules are in [`backend/docs/ARCHITECTURE.md`](../../../backend/docs/ARCHITECTURE.md); how each piece
-should be written is in the `agenza-backend-slice` references, each ending in a "Red flags" list. This
-skill is the order of the review and the way to report it.
+## Establish the scope
 
-## 1. Scope the change
+Identify the requested base, head or working-tree diff before reviewing. Inspect the full affected
+methods, configuration and callers, not only added lines. A search hit such as `TenantId`,
+`IgnoreQueryFilters`, `catch` or a `Helper` class is a lead to investigate, not a finding or severity.
 
-```bash
-git diff --stat main...HEAD -- backend/
-git diff main...HEAD -U0 -- backend/ | grep '^+' | grep -v '^+++'
-```
+Read only the rules relevant to the change:
 
-For your own uncommitted work, diff against `main` without `...HEAD`. Sort the files by layer (Domain,
-Application, Infrastructure, Api, Tests, Migrations). Note every file
-that ARCHITECTURE §10 lists in its "older shape" column: touching one obliges converting the touched
-part.
+| Change                         | Questions and source                                                                                                                                                                                                                                          |
+| ------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Identity or tenant scope       | Trace the authority, fail-closed behavior and affected defenses with [tenant isolation](../agenza-tenant-isolation/SKILL.md)                                                                                                                                  |
+| Project or aggregate boundary  | Check references, callers and the consistency boundary against [shape](../../../backend/docs/ARCHITECTURE.md#1-shape) and [domain](../../../backend/docs/ARCHITECTURE.md#3-domain)                                                                            |
+| Request, handler or error flow | Trace binding, validation, domain behavior, side effects and result mapping against [use-case rules](../../../backend/docs/ARCHITECTURE.md#2-anatomy-of-a-feature) and [error gates](../../../backend/docs/ARCHITECTURE.md#4-errors--one-pipeline-five-gates) |
+| Repository or migration        | Check tracking, filters, constraints, concurrent writes and both migration directions against [persistence](../../../backend/docs/ARCHITECTURE.md#5-tenancy-and-persistence)                                                                                  |
+| HTTP contract                  | Compare controller, serializer and generated types with [HTTP surface](../../../backend/docs/ARCHITECTURE.md#6-http-surface); the wire schema is not proof of runtime behavior                                                                                |
+| Time, logging or style         | Consult the affected [time](../../../backend/docs/ARCHITECTURE.md#7-time) or [style](../../../backend/docs/ARCHITECTURE.md#8-code-style) rule without rewriting independent code                                                                              |
+| Verification                   | Identify what the [test tiers](../../../backend/docs/ARCHITECTURE.md#9-tests) and [current checks](../../../backend/docs/ARCHITECTURE.md#11-what-enforces-what) actually establish                                                                            |
 
-## 2. Grep the added lines
+For a new abstraction or optimization, explain its concrete cost, missing requirement or affected
+invariant. For an architectural deviation, identify the real coupling or rule bypass it introduces.
+A different name or shape alone does not demonstrate a high-impact defect.
 
-Cheap, and it catches most of what matters. Each hit is a question, not a verdict.
+## Establish the evidence
 
-| Pattern on an added line | Where | Why it is a flag | Default |
-| --- | --- | --- | --- |
-| `TenantId` | Application, Api, a repository signature | tenant threaded by hand — load `agenza-tenant-isolation` | Bloqueante |
-| `IgnoreQueryFilters`, `DeletedAt`, `TenantId ==` | repositories | the `DbContext` owns those filters | Bloqueante |
-| `[IgnoreTenant]` | Api | a first use has to justify itself | Bloqueante |
-| `DropColumn`, `DropTable`, `RenameColumn`, `AlterColumn` | migrations | existing data at risk | Alta |
-| `try {`, `catch (` | Application | business flow as an exception | Alta |
-| `throw new` | Domain, Application | only programmer-error guards throw (§4) | Alta |
-| `MustAsync`, `CustomAsync`, `Repository`, `DbContext` | `*Validator.cs` | a validator with I/O | Alta |
-| `{ get; set; }`, `public void Set` | Domain | state changed without a rule | Alta |
-| a public constructor | Domain | bypasses `Create` | Alta |
-| a property or collection typed as another root; `Include` of another root | Domain, repositories | a navigation between aggregates | Alta |
-| `class …Loader`, `…Manager`, `…Service`, `…Helper`; `abstract class …Handler` | Application | orchestration outside a handler | Alta |
-| `DbContext`, `IDispatcher`, `HttpContext`, `ITenantAccessor` | a handler | a handler reaching past its ports | Alta |
-| `DateTime.Now`, `DateTime.UtcNow`, `DateTime.Today`, `TimeZoneInfo` | anywhere | UTC through `TimeProvider` (§7) | Alta |
-| `AutoMapper`, `Mapster`, `.Adapt<` | anywhere | mapping is `ToModel` and `From<Entity>` | Alta |
-| `SqlQuery`, `FromSql`, `ExecuteSql`, `BeginTransaction`, `IMemoryCache`, `Task.WhenAll` | Application; Infrastructure outside the service's `UnitOfWork` (its transaction shape is decided, ADR 0005) | an optimization — where is the evidence? | Média; Alta when it adds a mechanism with none |
-| `Select(` building a `…Response`, `…Summary` or `…Dto` | repositories | a projection inside a repository | Média |
-| `class …Factory`, `class …Builder` | Domain, Application | factories are static methods on the type | Média |
-| `new DomainError(` inside a method | Domain | an unnamed error | Média |
-| a `RuleFor` chain with no `.WithErrorCode` | `*Validator.cs` | FluentValidation's internal name leaks to the API | Média |
-| a domain type as a member (a shared string value object such as `CpfNumber` is fine, ADR 0055; so is a plain enum, ADR 0058) | commands, inputs, responses | the wire carries strings and primitives | Média |
-| a list of enums with no `IsInEnum` rule, a `<Concept>Names` class, a per-enum or per-feature JSON converter | validators, Application, `Program.cs` | an unvalidated value reaches the response; `AddWireFormat()` already names every enum (ADR 0058) | Média |
-| `//`, `///` | anywhere | "what" comments are not allowed | Baixa |
+Choose the cheapest check that can distinguish the suspected failure from correct behavior. Follow
+the [backend commands](../../../backend/README.md#commands) for relevant build/tests and the
+persistence procedure for database-only properties. Do not run the entire application to review
+wording; links, source comparison and formatting are appropriate for documentation changes.
 
-## 3. Read it, in this order
+Separate observed results from reasoned risks. Line coverage does not prove HTTP authorization,
+PostgreSQL constraints or concurrency. A green build does not establish that adding a project
+reference respects the architectural direction. Preserve the distinction between existing checks
+and manual evidence; do not credit a removed guard or a test that was not run.
 
-Evaluate every step even after an early finding — each is an independent way to go wrong.
+## Classify and report
 
-1. **Safety.** Tenant (every layer fails closed), data loss in a migration, a contract change without
-   regenerated frontend types.
-2. **Boundaries.** Project references; aggregate boundaries (references by id, children only through
-   their root, one repository per root); orchestration only in handlers.
-3. **Domain richness.** Value objects by the threshold in §3; behaviour named after intention with
-   refused transitions; factories as static methods; one named error per rule.
-4. **Use case.** The five gates in order; pre-checks before side effects; field conflicts with `meta`;
-   generic save failure; DTOs with no domain type but the shared string value objects.
-5. **Persistence.** Repository returns and parameters; configuration against §5; the migration's `Up`
-   and `Down` read line by line.
-6. **Simplicity.** Anything added for performance, flexibility or "the next feature": ask what measured
-   problem or product rule it answers. An unused port method, parameter or abstraction is a finding.
-7. **Tests.** Each rule and branch proved at the right tier (`agenza-backend-slice`
-   references/tests.md); PostgreSQL-only guarantees verified by hand and reported in the PR.
-8. **Docs.** A new decision has an ADR; a rule change updated ARCHITECTURE; a better example updated
-   §10; no doc gained a feature list.
-9. **Style.** Block bodies with guard clauses (§8), names.
+| Severity   | Criterion                                                                                                                                           |
+| ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Bloqueante | A demonstrated release blocker, such as cross-tenant access, data loss, an unusable contract or a failing required check attributable to the change |
+| Alta       | A credible, serious failure with a concrete trigger or a newly reachable path that bypasses a critical invariant; state the impact and likelihood   |
+| Média      | A bounded defect or architectural risk with a concrete consequence and lower impact or likelihood                                                   |
+| Baixa      | A local issue with a minor consequence; style/preferences without a defect belong in suggestions                                                    |
 
-## 4. Prove what you claim
+Distinguish defects, architectural risks and optional suggestions. A convention still matters, but
+its violation does not automatically deserve the same severity as a data or authorization defect.
+Do not manufacture findings to fill a quota.
 
-A claim backed by a run beats an argument. Cheapest first:
-
-- `dotnet build backend/AdminBackend.slnx -c Release` and `dotnet test backend/AdminBackend.slnx -c Release`;
-- `dotnet ef migrations has-pending-model-changes` (command in ARCHITECTURE §5);
-- a failing unit test written to show the case, or a short probe — then leave the tree as you found it.
-
-Say which findings were proved and which are reasoned.
-
-## 5. Severity
-
-| Severity | When |
-| --- | --- |
-| **Bloqueante** | another tenant's data readable or writable, data loss, a broken contract without regenerated types, a red build or test |
-| **Alta** | a boundary broken (layer, aggregate, error gates, orchestration outside the handler) or a mechanism added without evidence. In new code this becomes precedent, so it is Alta even with no visible bug |
-| **Média** | a divergence from the reference with no immediate risk: a missing value object by the threshold, a validator without codes, an unnamed domain error, a test at the wrong tier |
-| **Baixa** | names, style, comments |
-
-## 6. Write the findings
-
-In pt-BR, most severe first. Each finding:
-
-- `[Severidade] título curto`
-- `arquivo:linha`
-- what happens, as a concrete scenario — "um `PUT` com a mesma etiqueta duas vezes grava…", not
-  "viola DDD";
-- the rule it breaks (ARCHITECTURE §n, ADR nnnn);
-- the direction of the fix, and which layer should own it.
-
-Deliver the findings for discussion; do not fix unasked. End with what the review did not cover.
+For each finding, give the verified file/line, triggering scenario, consequence, evidence or
+uncertainty, and a correction proportional to the problem. Cite the relevant rule when useful.
+Keep the report in pt-BR, ordered by impact, and close with checks run and material coverage limits.
+If no actionable issue remains, say so. A review-only request does not authorize implementing fixes;
+a task that also requests corrections retains that authorization.
