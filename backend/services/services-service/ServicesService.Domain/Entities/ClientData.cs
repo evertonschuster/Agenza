@@ -8,4 +8,5 @@ public sealed record ClientData(
     CpfNumber? Cpf,
     AdministrativeNotes? AdministrativeNotes,
     IReadOnlyCollection<GuardianData> Guardians,
-    IReadOnlyCollection<ReferenceContactData> ReferenceContacts);
+    IReadOnlyCollection<ReferenceContactData> ReferenceContacts,
+    IReadOnlyCollection<Guid> TagIds);

@@ -49,8 +49,14 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
             .HasForeignKey(r => new { r.TenantId, r.ClientId })
             .HasPrincipalKey(c => new { c.TenantId, c.Id })
             .OnDelete(DeleteBehavior.Cascade);
+        builder.HasMany(c => c.Tags)
+            .WithOne()
+            .HasForeignKey(t => new { t.TenantId, t.ClientId })
+            .HasPrincipalKey(c => new { c.TenantId, c.Id })
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Navigation(c => c.Guardians).UsePropertyAccessMode(PropertyAccessMode.Field);
         builder.Navigation(c => c.ReferenceContacts).UsePropertyAccessMode(PropertyAccessMode.Field);
+        builder.Navigation(c => c.Tags).UsePropertyAccessMode(PropertyAccessMode.Field);
     }
 }

@@ -6,6 +6,7 @@ public class Client : TenantOwnedEntity
 {
     public const int MaxGuardians = 10;
     public const int MaxReferenceContacts = 10;
+    public const int MaxTags = 20;
 
     public static readonly DomainError TooManyGuardians = new(
         "Client.TooManyGuardians",
@@ -14,6 +15,14 @@ public class Client : TenantOwnedEntity
     public static readonly DomainError TooManyReferenceContacts = new(
         "Client.TooManyReferenceContacts",
         $"Informe no máximo {MaxReferenceContacts} pessoas de referência.");
+
+    public static readonly DomainError TooManyTags = new(
+        "Client.TooManyTags",
+        $"Informe no máximo {MaxTags} etiquetas.");
+
+    public static readonly DomainError DuplicateTag = new(
+        "Client.DuplicateTag",
+        "A lista de etiquetas não pode conter etiquetas repetidas.");
 
     public static readonly DomainError GuardianRequired = new(
         "Client.GuardianRequired",
@@ -40,6 +49,9 @@ public class Client : TenantOwnedEntity
 
     private readonly List<ClientReferenceContact> _referenceContacts = [];
     public IReadOnlyCollection<ClientReferenceContact> ReferenceContacts => _referenceContacts;
+
+    private readonly List<ClientTag> _tags = [];
+    public IReadOnlyCollection<ClientTag> Tags => _tags;
 
     // EF Core materialization only.
     private Client()
@@ -78,6 +90,12 @@ public class Client : TenantOwnedEntity
             return DomainResult.Failure<Client>(contactRulesResult.Error);
         }
 
+        var tagIdsResult = ValidateTagIds(data.TagIds);
+        if (tagIdsResult.IsFailure)
+        {
+            return DomainResult.Failure<Client>(tagIdsResult.Error);
+        }
+
         var client = new Client(
             Guid.CreateVersion7(),
             data.FullName,
@@ -93,6 +111,11 @@ public class Client : TenantOwnedEntity
             return DomainResult.Failure<Client>(addContactsResult.Error);
         }
 
+        var clientTags = data.TagIds
+            .Select(tagId => ClientTag.Create(client.Id, tagId))
+            .ToList();
+        client._tags.AddRange(clientTags);
+
         return DomainResult.Success(client);
     }
 
@@ -106,6 +129,12 @@ public class Client : TenantOwnedEntity
         if (contactRulesResult.IsFailure)
         {
             return contactRulesResult;
+        }
+
+        var tagIdsResult = ValidateTagIds(data.TagIds);
+        if (tagIdsResult.IsFailure)
+        {
+            return tagIdsResult;
         }
 
         var guardiansResult = CreateGuardians(data.Guardians);
@@ -131,6 +160,8 @@ public class Client : TenantOwnedEntity
         _guardians.AddRange(guardiansResult.Value);
         _referenceContacts.Clear();
         _referenceContacts.AddRange(referenceContactsResult.Value);
+
+        SyncTags(data.TagIds);
 
         return DomainResult.Success();
     }
@@ -216,6 +247,36 @@ public class Client : TenantOwnedEntity
         }
 
         return DomainResult.Success(contacts);
+    }
+
+    private void SyncTags(IReadOnlyCollection<Guid> tagIds)
+    {
+        var wantedTagIds = tagIds.ToHashSet();
+        _tags.RemoveAll(tag => !wantedTagIds.Contains(tag.TagId));
+
+        var keptTagIds = _tags
+            .Select(tag => tag.TagId)
+            .ToHashSet();
+        var addedTags = tagIds
+            .Where(tagId => !keptTagIds.Contains(tagId))
+            .Select(tagId => ClientTag.Create(Id, tagId))
+            .ToList();
+        _tags.AddRange(addedTags);
+    }
+
+    private static DomainResult ValidateTagIds(IReadOnlyCollection<Guid> tagIds)
+    {
+        if (tagIds.Count > MaxTags)
+        {
+            return DomainResult.Failure(TooManyTags);
+        }
+
+        if (tagIds.Distinct().Count() != tagIds.Count)
+        {
+            return DomainResult.Failure(DuplicateTag);
+        }
+
+        return DomainResult.Success();
     }
 
     private static DomainResult ValidateContactRules(

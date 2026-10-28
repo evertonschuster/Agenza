@@ -152,4 +152,36 @@ public class ClientTests
 
         act.Should().Throw<InvalidOperationException>();
     }
+
+    [Fact]
+    public void Create_WithTags_LinksEachTagToTheClient()
+    {
+        Guid[] tagIds = [Guid.NewGuid(), Guid.NewGuid()];
+
+        var client = Client.Create(ClientTestData.Data(tagIds: tagIds), ClientTestData.Today).Value;
+
+        client.Tags.Select(tag => tag.TagId).Should().Equal(tagIds);
+        client.Tags.Should().OnlyContain(tag => tag.ClientId == client.Id && tag.Id != Guid.Empty);
+    }
+
+    [Fact]
+    public void Create_WithMoreTagsThanAllowed_Fails()
+    {
+        var tagIds = Enumerable.Range(0, Client.MaxTags + 1).Select(_ => Guid.NewGuid()).ToArray();
+
+        var result = Client.Create(ClientTestData.Data(tagIds: tagIds), ClientTestData.Today);
+
+        result.Error.Code.Should().Be("Client.TooManyTags");
+        Client.Create(ClientTestData.Data(tagIds: tagIds[..Client.MaxTags]), ClientTestData.Today).IsSuccess.Should().BeTrue();
+    }
+
+    [Fact]
+    public void Create_WithARepeatedTag_Fails()
+    {
+        var tagId = Guid.NewGuid();
+
+        var result = Client.Create(ClientTestData.Data(tagIds: [tagId, tagId]), ClientTestData.Today);
+
+        result.Error.Code.Should().Be("Client.DuplicateTag");
+    }
 }

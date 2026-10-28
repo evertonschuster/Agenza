@@ -7,11 +7,12 @@ namespace ServicesService.Tests.Clients.GetClientById;
 public class GetClientByIdQueryHandlerTests
 {
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
+    private readonly ITagRepository _tagRepository = Substitute.For<ITagRepository>();
     private readonly GetClientByIdQueryHandler _handler;
 
     public GetClientByIdQueryHandlerTests()
     {
-        _handler = new GetClientByIdQueryHandler(_repository);
+        _handler = new GetClientByIdQueryHandler(_repository, _tagRepository);
     }
 
     private void Stores(Client client)
@@ -157,5 +158,33 @@ public class GetClientByIdQueryHandlerTests
         await _repository.Received(1).GetByIdAsync(client.Id, Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsTheTagsOrderedByName()
+    {
+        var vip = ClientTestData.Tag("VIP", "#0d9488");
+        var allergy = ClientTestData.Tag("Alergia", "#ef4444");
+        var client = Client.Create(ClientTestData.Data(tagIds: [vip.Id, allergy.Id]), ClientTestData.Today).Value;
+        Stores(client);
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns([vip, allergy]);
+
+        var result = await _handler.Handle(new GetClientByIdQuery(client.Id), CancellationToken.None);
+
+        result.Value.Tags.Select(tag => (tag.Id, tag.Name, tag.Color)).Should().Equal(
+            (allergy.Id, "Alergia", "#ef4444"),
+            (vip.Id, "VIP", "#0d9488"));
+    }
+
+    [Fact]
+    public async Task Handle_ForAClientWithoutTags_ReturnsNoTags()
+    {
+        var client = CompleteClient();
+        Stores(client);
+
+        var result = await _handler.Handle(new GetClientByIdQuery(client.Id), CancellationToken.None);
+
+        result.Value.Tags.Should().BeEmpty();
     }
 }

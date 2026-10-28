@@ -503,6 +503,10 @@ task into a migration of unrelated code.
 - Aggregate invariants, children and named errors:
   [Client](../services/services-service/ServicesService.Domain/Entities/Client.cs) and
   [ClientConfiguration](../services/services-service/ServicesService.Infrastructure/Persistence/Configurations/ClientConfiguration.cs).
+- Many-to-many between aggregates kept by id:
+  [ClientTag](../services/services-service/ServicesService.Domain/Entities/ClientTag.cs) and
+  [ClientTagConfiguration](../services/services-service/ServicesService.Infrastructure/Persistence/Configurations/ClientTagConfiguration.cs),
+  with tenant-composite foreign keys ([ADR 0089](../../docs/adr/0089-clients-tags.md)).
 - Shared scalar value object:
   [CpfNumber](../shared/Admin.SharedKernel.ValueObjects/CpfNumber.cs); context-specific values stay in
   [the service's ValueObjects](../services/services-service/ServicesService.Domain/ValueObjects/).

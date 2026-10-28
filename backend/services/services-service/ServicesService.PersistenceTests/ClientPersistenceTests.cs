@@ -44,7 +44,8 @@ public class ClientPersistenceTests
         string? email = null,
         DateOnly? birthDate = null,
         IReadOnlyCollection<GuardianData>? guardians = null,
-        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null) =>
+        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null,
+        IReadOnlyCollection<Guid>? tagIds = null) =>
         Client.Create(
             new ClientData(
                 FullName.Create(fullName).Value,
@@ -54,7 +55,8 @@ public class ClientPersistenceTests
                 cpf is null ? null : CpfNumber.Create(cpf).Value,
                 null,
                 guardians ?? [],
-                referenceContacts ?? []),
+                referenceContacts ?? [],
+                tagIds ?? []),
             Today).Value;
 
     private static GuardianData Guardian(string name = "Ana Souza")
@@ -553,7 +555,8 @@ public class ClientPersistenceTests
                         new GuardianData("Ana Lima", "Mãe", null, null),
                         new GuardianData("Cris Souza", "Prima", null, null),
                     ],
-                    [ReferenceContact()]),
+                    [ReferenceContact()],
+                    []),
                 Today);
             result.IsSuccess.Should().BeTrue();
             await repository.UpdateAsync(loaded, TestContext.Current.CancellationToken);
@@ -738,7 +741,7 @@ public class ClientPersistenceTests
         {
             var repository = new ClientRepository(context);
             var loaded = (await repository.GetByIdAsync(client.Id, CancellationToken.None))!;
-            var data = new ClientData(loaded.FullName, null, null, null, null, null, [Guardian("Bia Souza")], []);
+            var data = new ClientData(loaded.FullName, null, null, null, null, null, [Guardian("Bia Souza")], [], []);
             loaded.Update(data, Today).IsSuccess.Should().BeTrue();
             await repository.UpdateAsync(loaded, CancellationToken.None);
             await context.SaveChangesAsync(CancellationToken.None);
@@ -842,5 +845,142 @@ public class ClientPersistenceTests
             foreignKey.Properties.Select(property => property.Name).Should().Equal("TenantId", "ClientId");
             foreignKey.PrincipalKey.Properties.Select(property => property.Name).Should().Equal("TenantId", "Id");
         }
+    }
+
+    private static async Task UpdateTagsThroughTheRepository(string databaseName, Guid tenantId, Guid clientId, params Guid[] tagIds)
+    {
+        await using var context = CreateContext(databaseName, tenantId);
+        var repository = new ClientRepository(context);
+        var loaded = (await repository.GetByIdAsync(clientId, CancellationToken.None))!;
+        var data = new ClientData(loaded.FullName, null, null, null, null, null, [], [], tagIds);
+        loaded.Update(data, Today).IsSuccess.Should().BeTrue();
+        await repository.UpdateAsync(loaded, CancellationToken.None);
+        await context.SaveChangesAsync(CancellationToken.None);
+    }
+
+    [Fact]
+    public async Task SaveChanges_AssignsTheCurrentTenantToEveryTagLink_AndGetByIdLoadsThem()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        Guid[] tagIds = [Guid.NewGuid(), Guid.NewGuid()];
+        var client = NewClient(tagIds: tagIds);
+
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        client.Tags.Should().OnlyContain(tag => tag.TenantId == tenantId);
+        await using var verification = CreateContext(databaseName, tenantId);
+        var loaded = await new ClientRepository(verification).GetByIdAsync(client.Id, TestContext.Current.CancellationToken);
+        loaded!.Tags.Select(tag => tag.TagId).Should().BeEquivalentTo(tagIds);
+        loaded.Tags.Should().OnlyContain(tag => tag.ClientId == client.Id && tag.TenantId == tenantId);
+    }
+
+    [Fact]
+    public async Task Update_SynchronizesTheTagLinksById()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var kept = Guid.NewGuid();
+        var removed = Guid.NewGuid();
+        var added = Guid.NewGuid();
+        var client = NewClient(tagIds: [kept, removed]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        var keptLink = client.Tags.Single(tag => tag.TagId == kept);
+        var removedLinkId = client.Tags.Single(tag => tag.TagId == removed).Id;
+
+        await UpdateTagsThroughTheRepository(databaseName, tenantId, client.Id, kept, added);
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var links = await verification.Set<ClientTag>().IgnoreQueryFilters()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        links.Should().HaveCount(3);
+        links.Single(link => link.Id == removedLinkId).DeletedAt.Should().NotBeNull();
+        var storedKept = links.Single(link => link.Id == keptLink.Id);
+        storedKept.DeletedAt.Should().BeNull();
+        storedKept.UpdatedAt.Should().Be(keptLink.UpdatedAt);
+        var storedAdded = links.Single(link => link.TagId == added);
+        storedAdded.DeletedAt.Should().BeNull();
+        storedAdded.TenantId.Should().Be(tenantId);
+    }
+
+    [Fact]
+    public async Task Remove_SoftDeletesTheTagLinksTheClientHolds()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var client = NewClient(tagIds: [Guid.NewGuid(), Guid.NewGuid()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        await RemoveThroughTheRepository(databaseName, tenantId, client.Id);
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var stored = await verification.Clients.IgnoreQueryFilters()
+            .SingleAsync(c => c.Id == client.Id, TestContext.Current.CancellationToken);
+        var links = await verification.Set<ClientTag>().IgnoreQueryFilters()
+            .ToListAsync(TestContext.Current.CancellationToken);
+        links.Should().HaveCount(2).And.OnlyContain(link => link.DeletedAt == stored.DeletedAt);
+    }
+
+    [Fact]
+    public async Task CountByTagId_CountsLiveClientsOfTheTenantWhateverTheirStatus()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var otherTenantId = Guid.NewGuid();
+        var tagId = Guid.NewGuid();
+        var active = NewClient("Ana Lima", tagIds: [tagId]);
+        var inactive = NewClient("Bia Lima", tagIds: [tagId]);
+        var deleted = NewClient("Cris Lima", tagIds: [tagId]);
+        var untagged = NewClient("Dora Lima", tagIds: [Guid.NewGuid()]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, active);
+            await Save(context, inactive);
+            await Save(context, deleted);
+            await Save(context, untagged);
+        }
+
+        await using (var context = CreateContext(databaseName, otherTenantId))
+        {
+            await Save(context, NewClient("Eva Lima", tagIds: [tagId]));
+        }
+
+        await SetStatus(databaseName, tenantId, inactive.Id, ClientStatus.Inactive);
+        await RemoveThroughTheRepository(databaseName, tenantId, deleted.Id);
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var count = await new ClientRepository(verification).CountByTagIdAsync(tagId, TestContext.Current.CancellationToken);
+
+        count.Should().Be(2);
+    }
+
+    [Fact]
+    public async Task CountByTagId_IgnoresALinkRemovedFromALiveClient()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var tagId = Guid.NewGuid();
+        var client = NewClient(tagIds: [tagId]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        await UpdateTagsThroughTheRepository(databaseName, tenantId, client.Id, Guid.NewGuid());
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var count = await new ClientRepository(verification).CountByTagIdAsync(tagId, TestContext.Current.CancellationToken);
+
+        count.Should().Be(0);
     }
 }

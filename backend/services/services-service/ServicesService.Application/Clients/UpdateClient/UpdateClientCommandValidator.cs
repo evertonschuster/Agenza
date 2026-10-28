@@ -43,6 +43,23 @@ public sealed class UpdateClientCommandValidator : AbstractValidator<UpdateClien
             .SetValidator(new UpdateReferenceContactInputValidator())
             .When(command => command.ReferenceContacts is null
                 || command.ReferenceContacts.Count <= Client.MaxReferenceContacts);
+
+        RuleFor(command => command.TagIds)
+            .Must(tagIds => tagIds is null || tagIds.Count <= Client.MaxTags)
+            .WithErrorCode(Client.TooManyTags.Code)
+            .WithMessage($"Informe no máximo {Client.MaxTags} etiquetas.");
+
+        RuleFor(command => command.TagIds)
+            .Must(tagIds => tagIds is null || tagIds.Distinct().Count() == tagIds.Count)
+            .WithErrorCode(Client.DuplicateTag.Code)
+            .WithMessage("A lista de etiquetas não pode conter etiquetas repetidas.")
+            .When(command => command.TagIds is null || command.TagIds.Count <= Client.MaxTags);
+
+        RuleForEach(command => command.TagIds)
+            .NotEmpty()
+            .WithErrorCode("Client.TagIdRequired")
+            .WithMessage("Informe uma etiqueta válida.")
+            .When(command => command.TagIds is null || command.TagIds.Count <= Client.MaxTags);
     }
 }
 

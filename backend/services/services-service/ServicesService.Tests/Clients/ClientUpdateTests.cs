@@ -170,4 +170,72 @@ public class ClientUpdateTests
         Update(client, guardians).Error.Code.Should().Be("Client.TooManyGuardians");
         Update(client, referenceContacts: referenceContacts).Error.Code.Should().Be("Client.TooManyReferenceContacts");
     }
+
+    private static Client ClientWithTags(params Guid[] tagIds)
+    {
+        return Client.Create(ClientTestData.Data(ClientTestData.Name("Paula Rocha"), tagIds: tagIds), Today).Value;
+    }
+
+    private static DomainResult UpdateTags(Client client, params Guid[] tagIds)
+    {
+        return client.Update(ClientTestData.Data(ClientTestData.Name("Paula Rocha"), tagIds: tagIds), Today);
+    }
+
+    [Fact]
+    public void Update_KeepsTheLinkOfATagThatStaysAndReplacesTheOthers()
+    {
+        var kept = Guid.NewGuid();
+        var removed = Guid.NewGuid();
+        var added = Guid.NewGuid();
+        var client = ClientWithTags(kept, removed);
+        var keptLinkId = client.Tags.Single(tag => tag.TagId == kept).Id;
+
+        var result = UpdateTags(client, kept, added);
+
+        result.IsSuccess.Should().BeTrue();
+        client.Tags.Select(tag => tag.TagId).Should().BeEquivalentTo([kept, added]);
+        client.Tags.Single(tag => tag.TagId == kept).Id.Should().Be(keptLinkId);
+        client.Tags.Single(tag => tag.TagId == added).ClientId.Should().Be(client.Id);
+    }
+
+    [Fact]
+    public void Update_WithNoTags_RemovesEveryTag()
+    {
+        var client = ClientWithTags(Guid.NewGuid(), Guid.NewGuid());
+
+        UpdateTags(client).IsSuccess.Should().BeTrue();
+
+        client.Tags.Should().BeEmpty();
+    }
+
+    [Fact]
+    public void Update_WithInvalidTags_LeavesTheAggregateUntouched()
+    {
+        var tagId = Guid.NewGuid();
+        var client = ClientWithTags(tagId);
+        var linkId = client.Tags.Single().Id;
+        var tooMany = Enumerable.Range(0, Client.MaxTags + 1).Select(_ => Guid.NewGuid()).ToArray();
+
+        var tooManyResult = client.Update(ClientTestData.Data(ClientTestData.Name("Outro Nome"), tagIds: tooMany), Today);
+        var repeatedResult = client.Update(ClientTestData.Data(ClientTestData.Name("Outro Nome"), tagIds: [tagId, tagId]), Today);
+
+        tooManyResult.Error.Code.Should().Be("Client.TooManyTags");
+        repeatedResult.Error.Code.Should().Be("Client.DuplicateTag");
+        client.FullName.Value.Should().Be("Paula Rocha");
+        client.Tags.Should().ContainSingle().Which.Id.Should().Be(linkId);
+    }
+
+    [Fact]
+    public void Update_RefusedByAnotherRule_LeavesTheTagsUntouched()
+    {
+        var tagId = Guid.NewGuid();
+        var client = ClientWithTags(tagId);
+
+        var result = client.Update(
+            ClientTestData.Data(ClientTestData.Name("Paula Rocha"), ClientTestData.Birth(new DateOnly(2015, 3, 10)), tagIds: [Guid.NewGuid()]),
+            Today);
+
+        result.Error.Code.Should().Be("Client.GuardianRequired");
+        client.Tags.Should().ContainSingle().Which.TagId.Should().Be(tagId);
+    }
 }

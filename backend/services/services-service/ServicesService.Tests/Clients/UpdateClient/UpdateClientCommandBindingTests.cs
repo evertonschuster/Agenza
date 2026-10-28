@@ -76,4 +76,28 @@ public class UpdateClientCommandBindingTests
         command.Guardians.Should().BeNull();
         command.ReferenceContacts.Should().BeNull();
     }
+
+    [Fact]
+    public void Deserialize_ReadsTheTagIds()
+    {
+        const string json = """
+            { "fullName": "Maria Souza", "tagIds": ["66666666-6666-6666-6666-666666666666", "77777777-7777-7777-7777-777777777777"] }
+            """;
+
+        var command = JsonSerializer.Deserialize<UpdateClientCommand>(json, WireJson.Options)!;
+
+        command.TagIds.Should().Equal(Guid.Parse("66666666-6666-6666-6666-666666666666"), Guid.Parse("77777777-7777-7777-7777-777777777777"));
+    }
+
+    [Fact]
+    public void Deserialize_WithoutTagIds_LeavesThemNull()
+    {
+        const string json = """
+            { "fullName": "Maria Souza" }
+            """;
+
+        var command = JsonSerializer.Deserialize<UpdateClientCommand>(json, WireJson.Options)!;
+
+        command.TagIds.Should().BeNull();
+    }
 }

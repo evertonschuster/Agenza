@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using ServicesService.Application.Tags;
 using ServicesService.Infrastructure.Repositories;
 
 namespace ServicesService.PersistenceTests;
@@ -36,6 +37,29 @@ public class ServicePersistenceTests
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
 
         return service.Id;
+    }
+
+    private static async Task<Guid> SaveNamedService(string databaseName, Guid tenantId, string name, Guid tagId)
+    {
+        var service = NewService(name);
+
+        await using var context = PersistenceContext.Create(databaseName, tenantId);
+        var tags = await new TagRepository(context).GetByIdsAsync([tagId], CancellationToken.None);
+        service.SetTags(tags);
+        new ServiceRepository(context).Add(service);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+
+        return service.Id;
+    }
+
+    private static async Task RemoveService(string databaseName, Guid tenantId, Guid serviceId)
+    {
+        await using var context = PersistenceContext.Create(databaseName, tenantId);
+        var services = new ServiceRepository(context);
+        var service = await services.GetByIdAsync(serviceId, CancellationToken.None);
+
+        services.Remove(service!);
+        await context.SaveChangesAsync(TestContext.Current.CancellationToken);
     }
 
     private static async Task<string[]> TagNamesOf(string databaseName, Guid tenantId, Guid serviceId)
@@ -170,5 +194,25 @@ public class ServicePersistenceTests
         }
 
         (await LiveTagCount(databaseName, tenantId)).Should().Be(2);
+    }
+
+    [Fact]
+    public async Task ListByTagId_ReturnsLiveServicesWithTheTagInNameOrderUpToTheLimit()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var tagIds = await SaveTags(databaseName, tenantId, "Vip", "Kids");
+        var haircut = await SaveNamedService(databaseName, tenantId, "Corte", tagIds[0]);
+        var beard = await SaveNamedService(databaseName, tenantId, "Barba", tagIds[0]);
+        await SaveNamedService(databaseName, tenantId, "Escova", tagIds[0]);
+        await SaveNamedService(databaseName, tenantId, "Manicure", tagIds[1]);
+        var straightening = await SaveNamedService(databaseName, tenantId, "Alisamento", tagIds[0]);
+        await RemoveService(databaseName, tenantId, straightening);
+
+        await using var context = PersistenceContext.Create(databaseName, tenantId);
+        var repository = new ServiceRepository(context);
+        var usages = await repository.ListByTagIdAsync(tagIds[0], 2, TestContext.Current.CancellationToken);
+
+        usages.Should().Equal(new TagUsage(beard, "Barba"), new TagUsage(haircut, "Corte"));
     }
 }

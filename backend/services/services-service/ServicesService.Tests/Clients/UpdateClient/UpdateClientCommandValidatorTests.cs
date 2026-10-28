@@ -18,7 +18,8 @@ public class UpdateClientCommandValidatorTests
         string? notes = null,
         IReadOnlyList<UpdateGuardianInput>? guardians = null,
         IReadOnlyList<UpdateReferenceContactInput>? referenceContacts = null,
-        Guid? clientId = null) =>
+        Guid? clientId = null,
+        IReadOnlyList<Guid>? tagIds = null) =>
         new(
             clientId ?? ClientId,
             ClientTestData.Name(fullName),
@@ -28,7 +29,8 @@ public class UpdateClientCommandValidatorTests
             cpf is null ? null : ClientTestData.Cpf(cpf),
             notes is null ? null : ClientTestData.Notes(notes),
             guardians,
-            referenceContacts);
+            referenceContacts,
+            tagIds);
 
     private static UpdateGuardianInput Guardian(
         Guid? id = null,
@@ -65,6 +67,7 @@ public class UpdateClientCommandValidatorTests
         var tooManyGuardians = Enumerable.Repeat(Guardian(), 11).ToArray();
         var tooManyReferences = Enumerable.Repeat(Reference(), 11).ToArray();
         var repeatedId = Guid.NewGuid();
+        var repeatedTagId = Guid.NewGuid();
 
         return new TheoryData<string, UpdateClientCommand, string, string>
         {
@@ -82,6 +85,9 @@ public class UpdateClientCommandValidatorTests
             { "reference without purposes", Command(referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
             { "reference with an undefined purpose", Command(referenceContacts: [Reference(purposes: [(ContactPurpose)3])]), "ReferenceContacts[0].Purposes[0]", "ClientReferenceContact.PurposeUnknown" },
             { "reference with null purposes", Command(referenceContacts: [new UpdateReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, null)]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
+            { "too many tags", Command(tagIds: Enumerable.Range(0, Client.MaxTags + 1).Select(_ => Guid.NewGuid()).ToArray()), "TagIds", "Client.TooManyTags" },
+            { "repeated tag", Command(tagIds: [repeatedTagId, repeatedTagId]), "TagIds", "Client.DuplicateTag" },
+            { "empty tag id", Command(tagIds: [Guid.Empty]), "TagIds[0]", "Client.TagIdRequired" },
         };
     }
 
@@ -208,5 +214,22 @@ public class UpdateClientCommandValidatorTests
 
         result.Errors.Where(error => error.PropertyName == propertyName).Select(error => error.ErrorCode)
             .Should().Equal([expectedCode], rule);
+    }
+
+    [Fact]
+    public async Task Validate_WithNullOrEmptyTagIds_Passes()
+    {
+        (await Validate(Command(tagIds: null))).IsValid.Should().BeTrue();
+        (await Validate(Command(tagIds: []))).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_WithMoreTagsThanAllowed_SkipsTheRulesOfEachTag()
+    {
+        var tagIds = Enumerable.Repeat(Guid.Empty, Client.MaxTags + 1).ToArray();
+
+        var result = await Validate(Command(tagIds: tagIds));
+
+        result.Errors.Select(error => error.ErrorCode).Should().Equal("Client.TooManyTags");
     }
 }

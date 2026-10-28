@@ -130,12 +130,14 @@ const INPUT: ClientInput = {
 const CLIENT = { id: 'abc', ...INPUT, status: 'active' };
 
 describe('clientsRepository.create', () => {
-  it('posts the whole person with its contacts to POST /clients and forwards the saved person verbatim', async () => {
+  it('posts the whole person with its contacts and no tags to POST /clients and forwards the saved person verbatim', async () => {
     mockPost.mockResolvedValue({ ok: true, data: CLIENT });
 
     const result = await clientsRepository.create(INPUT);
 
-    expect(mockPost).toHaveBeenCalledWith('/api/v{version}/clients', { body: INPUT });
+    expect(mockPost).toHaveBeenCalledWith('/api/v{version}/clients', {
+      body: { ...INPUT, tagIds: [] },
+    });
     expect(result).toEqual({ ok: true, data: CLIENT });
   });
 
@@ -199,14 +201,14 @@ describe('clientsRepository.get', () => {
 });
 
 describe('clientsRepository.update', () => {
-  it('puts the whole person with its contacts to PUT /clients/{id}, naming the client in the body too', async () => {
+  it('puts the whole person with its contacts and no tags to PUT /clients/{id}, naming the client in the body too', async () => {
     mockPut.mockResolvedValue({ ok: true, data: CLIENT });
 
     const result = await clientsRepository.update('abc', INPUT);
 
     expect(mockPut).toHaveBeenCalledWith('/api/v{version}/clients/{id}', {
       path: { id: 'abc' },
-      body: { clientId: 'abc', ...INPUT },
+      body: { clientId: 'abc', ...INPUT, tagIds: [] },
     });
     expect(result).toEqual({ ok: true, data: CLIENT });
   });

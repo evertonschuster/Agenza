@@ -300,6 +300,53 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         });
                 });
 
+            modelBuilder.Entity("ServicesService.Domain.Entities.ClientTag", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ClientId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("CreatedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("DeletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("DeletedBy")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TagId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TenantId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UpdatedBy")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DeletedAt");
+
+                    b.HasIndex("TenantId");
+
+                    b.HasIndex("TenantId", "TagId");
+
+                    b.HasIndex("TenantId", "ClientId", "TagId")
+                        .IsUnique()
+                        .HasFilter("\"DeletedAt\" IS NULL");
+
+                    b.ToTable("ClientTags", "services");
+                });
+
             modelBuilder.Entity("ServicesService.Domain.Entities.Service", b =>
                 {
                     b.Property<Guid>("Id")
@@ -496,6 +543,23 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("ServicesService.Domain.Entities.ClientTag", b =>
+                {
+                    b.HasOne("ServicesService.Domain.Entities.Client", null)
+                        .WithMany("Tags")
+                        .HasForeignKey("TenantId", "ClientId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ServicesService.Domain.Entities.Tag", null)
+                        .WithMany()
+                        .HasForeignKey("TenantId", "TagId")
+                        .HasPrincipalKey("TenantId", "Id")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("ServicesService.Domain.Entities.Service", b =>
                 {
                     b.HasOne("ServicesService.Domain.Entities.Category", null)
@@ -510,6 +574,8 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                     b.Navigation("Guardians");
 
                     b.Navigation("ReferenceContacts");
+
+                    b.Navigation("Tags");
                 });
 #pragma warning restore 612, 618
         }
