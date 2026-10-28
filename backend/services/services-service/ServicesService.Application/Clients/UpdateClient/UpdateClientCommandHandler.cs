@@ -26,7 +26,7 @@ public sealed class UpdateClientCommandHandler(
             return Result.Failure<ClientResponse>(ToError(updateResult.Error));
         }
 
-        var tags = await tagRepository.GetByIdsAsync(client.Tags.Select(clientTag => clientTag.TagId).ToList(), cancellationToken);
+        var tags = await GetTagsAsync(client, cancellationToken);
         if (tags.Count != client.Tags.Count)
         {
             return Result.Failure<ClientResponse>(TagNotFound());
@@ -55,6 +55,15 @@ public sealed class UpdateClientCommandHandler(
         }
 
         return ClientResponse.FromClient(client, tags);
+    }
+
+    private async Task<IReadOnlyList<Tag>> GetTagsAsync(Client client, CancellationToken cancellationToken)
+    {
+        var tagIds = client.Tags
+            .Select(clientTag => clientTag.TagId)
+            .ToList();
+
+        return await tagRepository.GetByIdsAsync(tagIds, cancellationToken);
     }
 
     private static Error ToError(DomainError error)

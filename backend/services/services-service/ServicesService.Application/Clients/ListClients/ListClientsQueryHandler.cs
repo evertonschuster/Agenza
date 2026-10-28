@@ -10,10 +10,21 @@ public sealed class ListClientsQueryHandler(IClientRepository clientRepository, 
         var clientFilter = query.ToFilter();
         var clients = await clientRepository.ListAsync(clientFilter, cancellationToken);
 
-        var tagIds = clients.Items.SelectMany(client => client.Tags).Select(clientTag => clientTag.TagId).Distinct().ToList();
-        var tags = await tagRepository.GetByIdsAsync(tagIds, cancellationToken);
-        var tagsById = tags.ToDictionary(tag => tag.Id);
+        var tagsById = await GetTagsByIdAsync(clients.Items, cancellationToken);
 
         return Result.Success(clients.Map(client => ClientListItemResponse.FromClient(client, tagsById)));
+    }
+
+    private async Task<Dictionary<Guid, Tag>> GetTagsByIdAsync(IReadOnlyList<Client> clients, CancellationToken cancellationToken)
+    {
+        var tagIds = clients
+            .SelectMany(client => client.Tags)
+            .Select(clientTag => clientTag.TagId)
+            .Distinct()
+            .ToList();
+
+        var tags = await tagRepository.GetByIdsAsync(tagIds, cancellationToken);
+
+        return tags.ToDictionary(tag => tag.Id);
     }
 }
