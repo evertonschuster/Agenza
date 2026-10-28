@@ -29,7 +29,8 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
         return query
             .Include(client => client.Guardians.OrderBy(guardian => guardian.Name).ThenBy(guardian => guardian.Id))
             .Include(client => client.ReferenceContacts.OrderBy(contact => contact.Name).ThenBy(contact => contact.Id))
-            .Include(client => client.Tags);
+            .Include(client => client.Tags)
+            .AsSplitQuery();
     }
 
     private static IOrderedQueryable<Client> FilterAndOrder(IQueryable<Client> query, ClientListFilter filter)

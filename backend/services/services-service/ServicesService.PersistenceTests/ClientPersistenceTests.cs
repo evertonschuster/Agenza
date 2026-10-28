@@ -963,4 +963,24 @@ public class ClientPersistenceTests
 
         count.Should().Be(2);
     }
+
+    [Fact]
+    public async Task CountByTagId_IgnoresALinkRemovedFromALiveClient()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var tagId = Guid.NewGuid();
+        var client = NewClient(tagIds: [tagId]);
+        await using (var context = CreateContext(databaseName, tenantId))
+        {
+            await Save(context, client);
+        }
+
+        await UpdateTagsThroughTheRepository(databaseName, tenantId, client.Id, Guid.NewGuid());
+
+        await using var verification = CreateContext(databaseName, tenantId);
+        var count = await new ClientRepository(verification).CountByTagIdAsync(tagId, TestContext.Current.CancellationToken);
+
+        count.Should().Be(0);
+    }
 }

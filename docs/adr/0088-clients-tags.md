@@ -65,6 +65,11 @@ code does not change; the pt-BR message names only the non-zero parts ("2 serviÃ
   the form sends an empty `tagIds`. No screen sets tags before then, so nothing is lost today, but the effect is real.
 - ARCHITECTURE Â§10 points to `ClientTag` and `ClientTagConfiguration` as the example of a many-to-many between
   aggregates kept by id.
+- Reading a client loads three collections (up to 10 guardians, 10 reference contacts and 20 tags), so
+  `ClientRepository` loads them with a split query instead of one join that multiplies their rows.
+- Accepted limit, as for services: a tag deleted between a client's tag read and its save leaves a live link to a
+  soft-deleted tag, since the soft delete is an `UPDATE` the restrict FK does not see. The tag disappears from the
+  responses and the next edit of that person removes the link. No row lock guards this window.
 
 Verified by hand on a disposable PostgreSQL 18 started from `infra/postgres/init`: the migration chain applied from
 zero, then `AddClientTags` Down and Up again. As `services_app`: a link to another tenant's tag and to another tenant's

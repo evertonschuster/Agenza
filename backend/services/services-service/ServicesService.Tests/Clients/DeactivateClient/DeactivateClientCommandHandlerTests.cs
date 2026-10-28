@@ -154,4 +154,20 @@ public class DeactivateClientCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Tags.Should().ContainSingle().Which.Should().Be(new TagSummary(vip.Id, "VIP", "#0d9488"));
     }
+
+    [Fact]
+    public async Task Handle_WhenTheClientIsAlreadyInactive_ReturnsItsTags()
+    {
+        var vip = ClientTestData.Tag();
+        var tagged = Client.Create(ClientTestData.Data(ClientTestData.Name("Rita Lima"), tagIds: [vip.Id]), ClientTestData.Today).Value;
+        tagged.Inactivate();
+        _repository.GetByIdAsync(tagged.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(tagged));
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns([vip]);
+
+        var result = await Handler().Handle(new DeactivateClientCommand(tagged.Id), CancellationToken.None);
+
+        result.Value.Tags.Should().ContainSingle().Which.Should().Be(new TagSummary(vip.Id, "VIP", "#0d9488"));
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
 }
