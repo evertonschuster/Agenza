@@ -1,131 +1,48 @@
-# Error taxonomy, the Problem shape, and field errors in a form
+# Map an API failure to its consumer
 
-Read [`SKILL.md`](../SKILL.md) first. This file is only for when the task actually handles a failure.
+The maintained wire shapes are in [docs/API.md §4](../../../../docs/API.md#4-falhas-na-fronteira-http).
+The [message policy](../../../../docs/API.md#7-consumo-no-frontend-e-política-de-mensagens)
+describes the facade's normalization and current display behavior; do not duplicate its taxonomy
+in each feature.
 
-## The wire shape
+## Identify the failure before choosing UI
 
-One type for every failure, on every endpoint:
-`backend/shared/Admin.SharedKernel.AspNetCore/ApiProblemDetails.cs`, surfacing in the frontend as
-`components['schemas']['ApiProblemDetails']`, re-exported by `servicesFacade.ts` as `ApiProblem`.
-It is RFC 7807 (`type`, `title`, `status`, `detail`, `instance`) plus four Agenza fields: `code`,
-`traceId`, `correlationId`, `errors`.
+Read the result returned by
+[servicesFacade.ts](../../../../apps/admin-frontend/src/shared/api/servicesFacade.ts).
+The generated ApiProblem fields are optional and nullable; code and errors may be absent.
+A title string is enough for the facade to preserve a received problem except on 429.
 
-**Every field is optional and nullable in the generated type.** The facade's `isProblem` guard only
-requires `title` to be a string, so a branch that reads `code` must tolerate `null`. Render a
-fallback rather than an empty string.
+SERVER_PROBLEM means an HTTP failure had no recognized problem object. An empty 404/405 can come
+from the service itself. A 500 with a recognized problem is preserved. A rejected client call
+uses NETWORK_PROBLEM unless it is MissingSessionError; this is not proof of the physical cause.
 
-`traceId` / `correlationId` are for `shared/logger.ts` and a support surface — not body copy.
+Use isTransientProblem when the existing consumer needs retry classification. The facade does not
+navigate or retry. Decide the consumer's behavior from the code/status and established UX, not
+from title or detail. Use existing fallback copy when no usable message is available.
 
-## Who produces which status
+## Apply a failure to a form
 
-Backend mapping lives in `ResultExtensions.ToHttpStatusCode` and `ApiProblemDetailsFactory`:
+Use [toFormErrors](../../../../apps/admin-frontend/src/shared/api/formErrors.ts) with the form's
+field paths, or the existing
+[applyApiProblem](../../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts) bridge for
+React Hook Form. Do not add a parallel error parser.
 
-| Origin | Status | `code` |
-| --- | --- | --- |
-| `ErrorType.Validation` (FluentValidation, via `Dispatcher`) | 400 | `Validation.Failed` |
-| `ErrorType.Failure` | 400 | handler's own, e.g. `Owner.CreationFailed` |
-| `ErrorType.Forbidden` | 403 | handler's own |
-| `ErrorType.NotFound` | 404 | `<Aggregate>.NotFound` |
-| `ErrorType.Conflict` | 409 | `<Aggregate>.DuplicateName`, … |
-| authorization middleware | 401 / 403 | `Authorization.Unauthorized` / `Authorization.Forbidden` |
-| `GenericExceptionHandler` | 500 | `Unexpected.Error` |
+The mapper preserves the first entry's message, code and metadata for a matched field, normalizes
+indexed paths and sends unmatched messages to the form level. It returns one general message,
+using title only if no field or general message was collected. The bridge preserves metadata and
+uses the code as the field error type, with a fallback when absent.
 
-Codes are `<Aggregate>.<Reason>` in English and stable; `title` is pt-BR prose written for the user
-and is **not** stable. Branch on `code`, display `title`.
+A field entry can carry metadata from a conflict. Check that field's error code before using its
+metadata; the shared mapper does not interpret a client id, build a URL or authorize navigation.
+The [person section](../../../../apps/admin-frontend/src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx)
+shows how a feature observes the field error and renders a conflict destination.
 
-A real 500 still arrives as a Problem body, so it becomes `fail(problem)` with `Unexpected.Error` —
-**not** `SERVER_PROBLEM`. `SERVER_PROBLEM` means a non-2xx whose body was not a Problem at all
-(a proxy or gateway page, an empty error), i.e. something answered that was not the service.
+Consult [formErrors.test.ts](../../../../apps/admin-frontend/src/shared/api/formErrors.test.ts)
+and [applyApiProblem.test.ts](../../../../apps/admin-frontend/src/shared/form/applyApiProblem.test.ts)
+for the boundary being changed. Unknown keys, including the body parameter's command entry, are
+not silently removed by the mapper. Framework messages can remain in English; a documentation
+cleanup must not claim translation or filtering that the code does not implement.
 
-## The four synthetic problems
-
-Exported from `servicesFacade.ts`, all `status: 0` except `RATE_LIMIT_PROBLEM`:
-
-| Constant | Raised when | UI |
-| --- | --- | --- |
-| `SESSION_PROBLEM` | `MissingSessionError` — no token or tenant at request time | send to login; same destination as a real `Authorization.Unauthorized` |
-| `NETWORK_PROBLEM` | the fetch itself threw (offline, DNS, connection refused) | retry affordance |
-| `SERVER_PROBLEM` | non-2xx with no Problem body | retry affordance, and log it |
-| `RATE_LIMIT_PROBLEM` | any `429`, whatever the body (`status: 429`) | retry affordance; transient, so `ConfirmDialog` offers **Tentar novamente**; no automatic retry |
-
-`SESSION_PROBLEM` exists separately from `NETWORK_PROBLEM` for one reason: an expired session must
-not read as "sem conexão", because the user's actual next step is entirely different.
-
-## `errors` is not always field errors
-
-This is the trap. `errors` is `Record<string, { code?, message?, meta? }[]>` and gets filled **three
-different ways** (`ApiProblemDetailsFactory`):
-
-1. **Validation (400).** Keys come from FluentValidation's `PropertyName`, grouped in
-   `Dispatcher.cs`, and `ApiProblemDetailsFactory` writes them as the **camelCase path of the JSON
-   body** (`name`, `durationMinutes`, `guardians[0].name`; ADR 0051). A cross-field rule can be re-keyed onto one
-   field with `OverridePropertyName` (see `CreateServiceCommandValidator.cs`), so the key set is not
-   mechanically the command's properties either. `toFormErrors` turns the index of a list item into a
-   path segment: `guardians[1].name` becomes `guardians.1.name`.
-2. **A body that did not bind (400).** Before any validator runs, MVC fills the keys from the JSON
-   member path (`cpf`, `guardians[0].cpf`), each item with `code: "Validation.Failed"`. The `message` is
-   pt-BR only when a shared value object rejected the value; otherwise it is the framework's English
-   text, with the C# type name and the parser position. A failure that is not a member (malformed JSON,
-   empty body) sits under `""`, and a body-read failure adds one more entry under the action's
-   parameter name (`command`). Only the first invalid value is reported. See `docs/API.md` §4.3.
-3. **Any error without field errors** (Conflict, NotFound, Failure, and a Validation the domain
-   rejected after the validator let it through). `CreateSingleErrorDictionary`
-   puts the error itself under the **empty-string key `""`**. So a 409 arrives with a populated
-   `errors` that maps to no field at all. The exception: a handler may build the `Error` with its own
-   `FieldErrors`, and then the 409 is keyed by field (`cpf`, `email` in `CreateClient`).
-
-`meta` is an optional string map on one entry, absent when empty. It carries context for the client,
-never prose: the CPF and e-mail conflicts put `clientId` and `clientName` there, and the record can always
-be opened because neither conflict matches a deleted person. Branch on the entry's `code` before
-trusting a `meta` key.
-
-Authorization and unexpected problems carry an empty `errors` object, never `null` in practice —
-but the type says nullable, so guard anyway.
-
-A form that iterates `errors` and matches keys to inputs will therefore **silently drop** every
-409 and every cross-field message. Unmatched keys must fall back to a form-level message.
-
-## Mapping to a form
-
-**Promoted, not a reference snippet anymore.** `tags` (`specs/003-tags-crud/`) was the first form;
-`toFormErrors` now lives in `shared/api/formErrors.ts`, promoted the moment a second form was staged
-for — see `docs/ARCHITECTURE.md` §5 ("Tag create/edit UI reintroduced on React Hook Form + Zod") for
-the promotion itself, and the `agenza-form-field` skill for how a new form actually wires it in.
-
-Case-insensitive field matching, indexed paths and unmatched messages are implemented in
-[`formErrors.ts`](../../../../apps/admin-frontend/src/shared/api/formErrors.ts).
-It returns the first field entry with its message, code and metadata, and one form-level message.
-[`applyApiProblem.ts`](../../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts) keeps the code
-as the RHF error type and preserves metadata. A feature can subscribe to its field error and interpret
-metadata for that code; shared mapping never interprets a client id or navigation target (ADR 0085).
-
-`toFormErrors` only ever produces data — it never calls a setter or knows a state library exists.
-Feeding its output into React Hook Form's `setError` is `shared/form/applyApiProblem.ts`'s one job,
-not this function's; see `agenza-form-field` for that bridge and for `root.serverError`, the RHF
-convention for the form-level message.
-
-Rendering rules that belong with it: field messages go on the input via `aria-describedby` and
-`aria-invalid`; the form-level list goes in a live region above the submit button so a screen reader
-announces it after a failed submit. Messages are already pt-BR — display them, never rewrite them.
-
-## Branching, in shape
-
-```ts
-const result = await serviceRepository.create(command);
-if (result.ok) return redirect(`/servicos/${result.data.id}`);
-
-switch (result.error.code) {
-  case 'Validation.Failed':
-    return toFormErrors(result.error, FIELDS);
-  case 'Service.DuplicateName':
-    return { formLevel: [result.error.title ?? 'Não foi possível salvar.'] };
-  case 'Session.Missing':
-  case 'Authorization.Unauthorized':
-    return redirect('/login');
-  default:
-    return { formLevel: [result.error.title ?? 'Não foi possível salvar.'] };
-}
-```
-
-Note what is absent: no `try/catch` (the call cannot reject), no `unwrapOrThrow` (this is an
-`action`, so the `Result` stays a value), and no reading of `detail` or `title` to decide anything.
+For a non-form consumer, retain the established list, toast or dialog behavior and supply a fallback
+when message fields are absent. Keep presentation/accessibility wiring with the consumer instead
+of recreating transport policy here.

@@ -1,330 +1,214 @@
 # API — convenções de request/response do backend
 
-Este documento descreve como o `services-service` **realmente se comporta**, verificado com
-requisições reais (`curl`) contra a instância local (porta 5080, via Aspire) em 2026-09-13, token de
-`owner@demo.local` no tenant demo. Não é uma cópia do código — é o comportamento observado na
-fronteira HTTP, com pointers para onde cada regra vive. Séries de erro por entidade (que campo,
-que `code`, que mensagem) **não são catalogadas aqui**: isso muda por feature e vive no código — nos
-validators, nos `DomainError` das entidades e value objects, e nos handlers de cada
-`<Feature>/` ([`backend/docs/ARCHITECTURE.md`](../backend/docs/ARCHITECTURE.md) §4). O que este
-documento fixa são as **formas** (envelopes, status HTTP, casing, idioma) que se repetem em qualquer
-endpoint novo; os exemplos são amostras, não inventário.
-
-Autoridade sobre isso: `Admin.SharedKernel` (`Result`, `Error`, `ErrorType`) e
-`Admin.SharedKernel.AspNetCore` (`ApiResponse<T>`, `ApiProblemDetails`, `ApiProblemDetailsFactory`,
-`ResultExtensions.ToActionResult`) em `backend/shared/`. Válido para qualquer serviço que reuse esse
-shared kernel — hoje, `services-service`; `identity-service` também referencia o mesmo pacote.
+Este guia descreve a fronteira dos controllers de negócio do services-service que usam o pipeline
+compartilhado de Result. Saúde, documentação de desenvolvimento e protocolos OIDC têm contratos
+próprios. Schemas, parâmetros e códigos de cada operação pertencem ao controller, ao OpenAPI e ao
+código da feature; aqui ficam as convenções que o consumidor precisa conhecer.
 
 ## 1. Onde isso mora
 
-| Peça | Valor |
-| --- | --- |
-| Serviço testado | `backend/services/services-service` (`ServicesService.Api`) |
-| Base URL local | `http://localhost:5080` (Aspire fixa a porta em `backend/AppHost/AppHost.cs`) |
-| Emissor do token | `identity-service`, `http://localhost:5081/` (OpenIddict) |
-| Audience exigida | `services-api` |
-| Versionamento | por segmento de URL: `/api/v{version}/...`, única versão hoje é `1.0` |
-| Docs interativos (dev only) | `/api-docs` (Scalar) — `ServicesService.Api/Setup/DocumentationExtensions.cs` |
+| Responsabilidade                         | Fonte                                                                                                                                                                                                   |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Envelope e conversão de Result para HTTP | [ResultExtensions](../backend/shared/Admin.SharedKernel.AspNetCore/ResultExtensions.cs) e [ApiResponse](../backend/shared/Admin.SharedKernel.AspNetCore/ApiResponse.cs)                                 |
+| Problemas e erros por campo              | [ApiProblemDetailsFactory](../backend/shared/Admin.SharedKernel.AspNetCore/ApiProblemDetailsFactory.cs)                                                                                                 |
+| Autorização e tenant                     | [Configuração do serviço](../backend/services/services-service/ServicesService.Api/Program.cs) e [TenantHeaderFilter](../backend/shared/Admin.Identity.Client/TenantHeaderFilter.cs)                    |
+| Rotas e respostas declaradas             | [Controllers](../backend/services/services-service/ServicesService.Api/Controllers) e [documentação OpenAPI](../backend/services/services-service/ServicesService.Api/Setup/DocumentationExtensions.cs) |
+| Normalização no frontend                 | [servicesFacade.ts](../apps/admin-frontend/src/shared/api/servicesFacade.ts)                                                                                                                            |
+| Portas e composição local                | [AppHost](../backend/AppHost/AppHost.cs)                                                                                                                                                                |
+
+As regras das camadas e os exemplos atuais de backend estão na
+[arquitetura](../backend/docs/ARCHITECTURE.md). Use o [índice de ADRs](adr/README.md) para consultar
+o motivo de uma decisão relevante, sem tratar observações históricas como uma execução atual.
 
 ## 2. Autenticação e tenant — duas checagens, uma mensagem
 
-Toda rota exige Bearer JWT (`FallbackPolicy` = `RequireAuthenticatedUser`) **e** um header
-`X-Tenant-Id` que bata com a claim `tenant_id` do token validado (`TenantHeaderFilter`, fail-closed:
-header ausente, não-GUID, ou divergente da claim — os três caem no mesmo branch). O header é
-conveniência de roteamento, nunca a fronteira de segurança real ([ADR 0006](adr/0006-tenant-header-base-entity-generic-repository.md)).
+A configuração do serviço exige autenticação, salvo endpoints explicitamente anônimos. Nas ações
+sujeitas ao TenantHeaderFilter, o header X-Tenant-Id precisa ser um UUID igual à claim tenant_id do
+token validado. Claim ou header ausentes, inválidos ou divergentes recebem a mesma rejeição.
+IgnoreTenant dispensa essa comparação, mas não concede acesso anônimo.
 
-**Sem token ou token inválido → 401**, corpo na forma canônica (§4.1):
+| Rejeição                                        | Status | Forma                                               |
+| ----------------------------------------------- | ------ | --------------------------------------------------- |
+| Autenticação obrigatória ou credencial inválida | 401    | Problema de autorização do pipeline compartilhado   |
+| Autorização insuficiente                        | 403    | Problema de autorização do pipeline compartilhado   |
+| Contexto de tenant inválido                     | 403    | ProblemDetails reduzido, com Tenant.ContextMismatch |
 
-```json
-{"type":"https://agenza/errors/authorization","title":"Autenticação obrigatória.","status":401,"code":"Authorization.Unauthorized","traceId":"...","correlationId":"...","errors":{}}
-```
+O problema reduzido do filtro inclui type, title, status e code; não acrescenta traceId,
+correlationId nem errors. A claim validada continua sendo a fonte de tenant do servidor:
+o header não autoriza acesso ([ADR 0006](adr/0006-tenant-header-base-entity-generic-repository.md)).
+Um consumidor não deve tentar resolver um 403 escolhendo outro tenant.
 
-**Token válido, `X-Tenant-Id` ausente OU divergente → 403**, mas com uma forma **menor** que todo
-resto da API — sem `traceId`, `correlationId` nem `errors`. Isso acontece porque esse 403 específico
-não passa por `ApiProblemDetailsFactory`: é montado à mão dentro de `TenantHeaderFilter`
-(`Admin.Identity.Client`), que cria um `ProblemDetails` genérico e só anexa `code` via
-`Extensions["code"]`:
+## 3. Envelope de sucesso — ApiResponse
 
-```json
-{"type":"https://agenza/errors/authorization","title":"O tenant autenticado não corresponde ao X-Tenant-Id.","status":403,"code":"Tenant.ContextMismatch"}
-```
+A conversão genérica de Result envolve o valor de um ObjectResult em
+{ data, success, timestamp, traceId, correlationId }. O status e, numa criação, o Location são
+definidos pelo controller. Uma operação sem conteúdo, como delete com 204, não recebe esse corpo.
 
-Note que o backend nunca diferencia "header ausente" de "header divergente" — mesmo código,
-mesma mensagem, de propósito (não vazar qual parte da checagem falhou).
-
-## 3. Envelope de sucesso — `ApiResponse<T>`
-
-Toda resposta 2xx com corpo é `{ data, success: true, timestamp, traceId, correlationId }`. `data` é
-o único campo que muda por endpoint.
-
-**Lista simples** — `data` é um array (`IReadOnlyList<T>`), sem paginação. Exemplo, `GET /api/v1/tags`:
+A listagem de etiquetas retorna uma página, conforme o
+[TagsController](../backend/services/services-service/ServicesService.Api/Controllers/TagsController.cs),
+a [query](../backend/services/services-service/ServicesService.Application/Tags/ListTags/ListTagsQuery.cs)
+e o [consumidor](../apps/admin-frontend/src/features/tags/api/tagsRepository.ts).
+Exemplo ilustrativo de página sem resultados, omitindo os campos de rastreio:
 
 ```json
-{"data":[{"id":"01a09ce6-fc92-7272-8df9-e1009a6201bb","name":"Everton","color":"#0d9488","description":null}],"success":true,"timestamp":"2026-09-13T22:42:22.21Z","traceId":"...","correlationId":"..."}
+{
+  "data": { "items": [], "totalCount": 0, "page": 1, "pageSize": 20 },
+  "success": true
+}
 ```
 
-**Lista paginada** — `data` é `PagedResult<T>`: `{ items, totalCount, page, pageSize }`, com
-`page`/`pageSize` validados pelo validator da query (fora do intervalo → 400, ver §6). Exemplo,
-`GET /api/v1/services`:
+Uma página além da última pode ser um sucesso com items vazio, total real e página pedida.
+Regras de paginação e busca pertencem ao validator e ao repositório da operação.
 
-```json
-{"data":{"items":[{"id":"...","code":1,"name":"Teste","description":null,"durationMinutes":2,"minDurationMinutes":1,"maxDurationMinutes":3,"price":10.00,"maxDiscountPercentage":10.00,"categoryId":null,"categoryName":null,"tags":[]}],"totalCount":1,"page":1,"pageSize":20},"success":true, "...":"..."}
-```
+No JSON, decimais são números sem garantia de zeros à direita; quem exibe formata moeda e percentual.
+Datas de calendário usam yyyy-MM-dd; instantes são UTC. Os enums do formato compartilhado são
+strings camelCase. A conversão de datas para o frontend é feita pelo
+[cliente](../apps/admin-frontend/src/shared/api/apiClient.ts) com os campos produzidos pelo
+[gerador](../apps/admin-frontend/scripts/generateApiTypes.mjs), não por cada repositório.
 
-**Lista paginada com busca e filtro** — o mesmo `PagedResult<T>`, com `search` (texto) e `status` (`active`, `inactive`
-ou `all`) além de `page`/`pageSize`. Exemplo, `GET /api/v1/clients` (padrão: `page=1`, `pageSize=20`, sem `search`, e sem
-`status`, que lista todas as situações, [ADR 0067](adr/0067-admin-frontend-clients-list.md)),
-verificado em 2026-10-12 num PostgreSQL descartável com a stack real em portas privadas
-([ADR 0063](adr/0063-clients-list-and-search-contract.md)):
+## 4. Falhas na fronteira HTTP
 
-```json
-{"data":{"items":[{"id":"01a131d6-2bd6-7fcc-a1eb-aeaff8ac3721","fullName":"a_b Cliente","birthDate":null,"phone":null,"email":null,"cpf":null,"status":"active"},{"id":"01a131d6-2b9a-7a60-9c63-949aab1e7054","fullName":"Álvaro Reis","birthDate":null,"phone":null,"email":"alvaro@example.com","cpf":"39053344705","status":"active"}],"totalCount":21,"page":1,"pageSize":20},"success":true,"...":"..."}
-```
+O status, o Content-Type e a declaração OpenAPI não garantem, sozinhos, que o corpo tenha todos os
+campos de ApiProblemDetails. A rejeição pode acontecer na aplicação, em um filtro ou antes da action.
 
-Uma página além da última não é erro: `GET /api/v1/clients?page=99` responde `200` com a lista vazia, o total real e a
-página pedida:
+### 4.1 Forma canônica — ApiProblemDetailsFactory
 
-```json
-{"data":{"items":[],"totalCount":21,"page":99,"pageSize":20},"success":true,"...":"..."}
-```
+A factory usa type, title, status, code, traceId, correlationId e errors. Em validação, o título
+é genérico; o código específico pode estar no topo ou nas entradas por campo, conforme a origem.
+Erros de aplicação usam a mensagem do Error no título.
 
-**Criação** (`201 Created`, header `Location` presente, `data` é o recurso criado):
+| Origem                                                                         | Conteúdo de errors                                  |
+| ------------------------------------------------------------------------------ | --------------------------------------------------- |
+| Validator com FieldErrors                                                      | Uma lista de entradas por caminho de campo          |
+| Domínio ou aplicação sem FieldErrors                                           | O erro sob a chave vazia ""                         |
+| Conflito com campo informado pelo handler                                      | Entradas no campo correspondente, com meta opcional |
+| Autorização, erro inesperado ou rejeição de leitura do transporte pela factory | Objeto vazio                                        |
 
-```
-HTTP/1.1 201 Created
-Location: /api/v1/tags/01a09cef-9875-7588-90c0-06360a4f10d0
+Cada entrada pode conter code, message e meta. Meta é um mapa de strings, omitido quando nulo;
+carrega contexto que a feature interpreta após conferir o código, como o identificador de um
+cadastro em conflito. Não trate um metadado arbitrário como URL ou autorização de acesso.
 
-{"data":{"id":"01a09cef-9875-7588-90c0-06360a4f10d0","name":"__doc_probe_tag__","color":"#0d9488","description":"..."},"success":true,"...":"..."}
-```
-
-**Atualização** — `200 OK`, mesma forma de `data` da criação, sem `Location`. **Delete** — `204 No
-Content`, sem corpo.
-
-Detalhes do fio que mordem quem formata para exibição:
-
-- Números decimais chegam como número JSON puro, sem zeros à direita garantidos (`100.0`, `10`, não
-  `100.00`/`10.00`) — formatação de moeda/percentual é responsabilidade de quem consome
-  ([`agenza-ptbr-copy`](../.claude/skills/agenza-ptbr-copy/SKILL.md)).
-- Datas de calendário são `yyyy-MM-dd`; instantes são UTC; enums são strings camelCase
-  (`active`), nunca números.
-
-## 4. Envelope de erro — três formas atrás do mesmo `application/problem+json`
-
-O OpenAPI gerado (`services-api.d.ts`) declara **uma única forma** (`ApiProblemDetails`) para todo
-400/401/403/404/409/500, em toda rota. Na prática, o mesmo status HTTP pode vir em três formas
-JSON diferentes, dependendo de **qual camada** rejeitou a requisição. Quem escreve tratamento de
-erro genérico (repositório, `unwrap`, formulário) precisa saber que o `code` pode não existir e que
-a mensagem pode vir em inglês.
-
-### 4.1 Forma canônica — `ApiProblemDetailsFactory` (a maioria dos casos)
-
-Usada para: erro de validação do FluentValidation (400), falha do model binder (400, §4.3),
-`NotFound`/`Conflict`/`Forbidden` de aplicação, exceção não tratada (500). Sempre `{ type, title, status, code, traceId, correlationId,
-errors }`. `errors` muda de forma dependendo do tipo:
-
-**Validação** (`ErrorType.Validation` com `FieldErrors`) — `code` é sempre `"Validation.Failed"`
-(genérico; o código específico da regra vive dentro de `errors`), `errors` tem uma chave por
-**campo validado da requisição**, seja do corpo, da rota ou da query, e cada chave traz uma lista de
-`{code, message}`.
-
-O `code` de cada item é o código de negócio da regra, no formato `<Tipo>.<Regra>` — o mesmo
-`DomainError` que o domínio devolveria, reaproveitado pelo validator com `.WithErrorCode(...)`; por
-exemplo `{"code":"ClientContact.NameRequired","message":"O nome do contato é obrigatório."}`. Validators anteriores a
-essa regra ([ADR 0044](adr/0044-clients-aggregate-uniqueness-and-conflict-contract.md)) ainda expõem o
-nome interno do FluentValidation (`NotEmptyValidator`, `PredicateValidator`), que não distingue uma
-regra `.Must(...)` de outra — é legado, convertido quando a fatia é tocada. O exemplo verificado abaixo
-é dessa forma legada:
-
-```json
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"name":[{"code":"NotEmptyValidator","message":"O nome da etiqueta é obrigatório."}],"color":[{"code":"PredicateValidator","message":"A cor da etiqueta deve ser uma das seguintes: #0d9488, #0ea5e9, #8b5cf6, #ec4899, #ef4444, #f59e0b, #22c55e, #64748b."}]}}
-```
-
-> **Casing:** as chaves de `errors` são o caminho do campo em **camelCase**, igual ao corpo JSON
-> (`name`, `color`, `page`, `pageSize`, `tagId`). Itens de uma lista levam o índice na chave:
-> `guardians[0].name`, `referenceContacts[1].purposes`; o erro da lista inteira vem na chave da
-> lista (`guardians`). Dentro do backend os caminhos continuam com o nome da propriedade C#
-> (`Guardians[0].Name`, o que o FluentValidation e os handlers produzem); a conversão acontece num
-> lugar só, em `ApiProblemDetailsFactory`, ao montar a resposta
-> ([ADR 0051](adr/0051-camelcase-error-keys-on-the-wire.md)).
-
-**Validação do domínio** (`ErrorType.Validation` sem `FieldErrors`) — quando uma regra escapa do validator e
-só o domínio a recusa (portão 3 da [ARCHITECTURE §4](../backend/docs/ARCHITECTURE.md)), o `DomainErrorMapper`
-devolve o `DomainError` sem campo. O `title` continua o genérico de validação, o `code` do topo é o do domínio
-(não `Validation.Failed`) e `errors` traz a chave vazia `""` com o mesmo `code` e a mensagem do domínio, que é o
-fallback em pt-BR. O domínio não sabe qual campo nem qual índice da lista falhou, então a mensagem vai para o nível
-do formulário:
-
-```json
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Client.GuardianRequired","traceId":"...","correlationId":"...","errors":{"":[{"code":"Client.GuardianRequired","message":"Informe ao menos um responsável para pessoas menores de 18 anos."}]}}
-```
-
-**Aplicação** (`NotFound`/`Conflict`/`Forbidden`, sem `FieldErrors`) — `errors` colapsa para
-**uma única chave vazia** (`""`), cujo valor repete o `code`/mensagem do nível raiz. Não é um campo
-de formulário: é o mesmo formato reaproveitado para carregar um erro sem campo associado.
-
-```json
-{"type":"https://agenza/errors/application","title":"Esta etiqueta está em uso por 1 serviço(s) e não pode ser excluída.","status":409,"code":"Tag.InUse","traceId":"...","correlationId":"...","errors":{"":[{"code":"Tag.InUse","message":"Esta etiqueta está em uso por 1 serviço(s) e não pode ser excluída."}]}}
-```
-
-**Conflito por campo, com `meta`** — um handler pode devolver o `Conflict` já chaveado pelo campo (em vez da
-chave `""`), para o formulário mostrar a mensagem sob o input certo. Cada entrada de `errors` aceita um `meta`
-opcional (mapa string→string, **omitido quando nulo**, então nenhuma resposta anterior muda) com contexto para
-máquina — tipicamente o id e o nome do registro existente com que o novo colide, para a interface poder abri-lo.
-Vem um conflito por resposta, numa ordem fixa definida pelo handler. No backend, `Error.Conflict(code, message,
-field, meta)` (`Admin.SharedKernel`) monta o conflito já chaveado pelo campo, com o mesmo `code` e mensagem no topo e
-no campo. Exemplo verificado:
-
-```json
-{"type":"https://agenza/errors/application","title":"Já existe uma pessoa cadastrada com este CPF.","status":409,"code":"Client.DuplicateCpf","traceId":"...","correlationId":"...","errors":{"cpf":[{"code":"Client.DuplicateCpf","message":"Já existe uma pessoa cadastrada com este CPF.","meta":{"clientId":"01a0fddb-c51b-732a-8aaf-d2e35115e478","clientName":"Maria Souza"}}]}}
-```
+A factory converte caminhos C# para camelCase por segmento, preservando índices:
+Guardians[0].Name vira guardians[0].name
+([ADR 0051](adr/0051-camelcase-error-keys-on-the-wire.md)).
+A chave vazia representa uma mensagem geral, não um campo de formulário.
 
 ### 4.2 Forma reduzida do filtro de tenant
 
-Só `Tenant.ContextMismatch` (§2) usa essa forma menor — sem `traceId`/`correlationId`/`errors`.
-Único caso hoje fora de `ApiProblemDetailsFactory`.
+Tenant.ContextMismatch usa o ProblemDetails reduzido descrito no §2. O consumidor precisa
+aceitar a ausência dos campos enriquecidos da factory; uma rejeição de tenant não é uma falha de rede.
 
-### 4.3 Falha do model binding — quando a requisição nem chega no dispatcher
+### 4.3 Falha do model binding — antes do dispatcher
 
-Se o **model binder** do `[ApiController]` rejeita o corpo antes de qualquer `IValidator`/handler
-rodar — uma propriedade obrigatória do record **totalmente ausente** do JSON (não vazia: ausente),
-JSON malformado, um valor de tipo errado ou um value object compartilhado inválido
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`, `SearchText`; [ADR 0055](adr/0055-shared-string-value-objects.md)) — a resposta usa a **forma
-canônica de §4.1** (`AddModelStateProblemDetails`), não o `ValidationProblemDetails` do framework. O
-que muda é o conteúdo:
+O [mapeamento do ModelState](../backend/shared/Admin.SharedKernel.AspNetCore/MvcBuilderExtensions.cs)
+também usa a factory canônica, com Validation.Failed no topo e nas entradas. Propriedades ausentes,
+JSON malformado, tipos incorretos ou valores recusados no binding não chegam ao validator/handler.
 
-- `code` é sempre `Validation.Failed`, no topo e em cada item de `errors`: o binder não conhece a
-  regra de negócio que falhou;
-- a chave de `errors` é o campo em camelCase (`fullName`, `guardians[0].cpf`); uma falha que não é de
-  um campo — JSON malformado, corpo vazio — vem sob a chave vazia `""`;
-- a `message` é o texto do framework, **em inglês** ("The FullName field is required.", "A non-empty
-  request body is required."), exceto a de um value object compartilhado, que vem em pt-BR ("O CPF
-  informado é inválido.", "O nome completo é obrigatório.", "Informe um e-mail válido.", "A data de nascimento deve estar no passado.") e nunca ecoa o valor
-  recebido, e a de um enum lido da query ou da rota, que aceita um único nome em qualquer caixa e recusa número
-  ou nomes juntos com "O valor informado deve ser active, inactive ou all." (os nomes do enum, [ADR 0066](adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)),
-  também em pt-BR e sem ecoar o valor. Um valor de tipo errado traz o texto do
-  `System.Text.Json` — nome interno do tipo e posição do parser, não texto para o usuário;
-- só a **primeira** falha de valor é reportada: o `System.Text.Json` para no primeiro valor inválido,
-  então dois CPFs inválidos, ou um nome vazio e um CPF inválido, no mesmo corpo geram uma única entrada, a
-  do primeiro campo no JSON (o validator reportava todos os campos de uma vez);
-- uma falha de **leitura do corpo** (JSON malformado, corpo vazio, tipo errado, value object inválido)
-  vem com uma segunda chave em `errors`: o nome do parâmetro do corpo na action (`command` nos
-  controllers de hoje) com "The command field is required.". O framework marca o parâmetro inteiro
-  como ausente, a entrada só repete a falha real, e o backend não a remove. Uma propriedade ausente
-  (`fullName`) não a produz.
+O [mapper](../backend/shared/Admin.SharedKernel.AspNetCore/ModelStateErrorMapper.cs) preserva as
+mensagens do ModelState. Mensagens do framework podem estar em inglês e conter nomes internos ou
+posição do parser. Value objects compartilhados e o binder de enum de query/rota fornecem mensagens
+próprias em pt-BR. O formato canônico, portanto, não garante o idioma de cada mensagem.
 
-Verificado em 2026-10-06 num host descartável com os mesmos controllers e a mesma configuração de MVC
-e de OpenAPI do serviço, sem banco nem autenticação:
+Uma falha de leitura do corpo pode acrescentar a chave do parâmetro da action, como command,
+além do caminho que falhou ou da chave vazia. O backend não remove essa entrada. O parser de JSON
+pode parar no primeiro valor inválido; não espere a mesma coleção de erros produzida pelo validator.
 
-```json
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"fullName":[{"code":"Validation.Failed","message":"The FullName field is required."}]}}
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"":[{"code":"Validation.Failed","message":"Expected depth to be zero at the end of the JSON payload. ... Path: $ | LineNumber: 0 | BytePositionInLine: 19."}],"command":[{"code":"Validation.Failed","message":"The command field is required."}]}}
-{"type":"https://agenza/errors/validation","title":"Ocorreram erros de validação.","status":400,"code":"Validation.Failed","traceId":"...","correlationId":"...","errors":{"cpf":[{"code":"Validation.Failed","message":"O CPF informado é inválido."}],"command":[{"code":"Validation.Failed","message":"The command field is required."}]}}
-```
+Corpo e query/rota usam mecanismos distintos: o
+[formato JSON](../backend/shared/Admin.SharedKernel/JsonSerializerOptionsExtensions.cs) rejeita enums
+numéricos; o [binder de enum](../backend/shared/Admin.SharedKernel.AspNetCore/EnumNameModelBinder.cs)
+aceita exatamente um nome definido, sem distinguir caixa, e rejeita números, nomes desconhecidos ou
+nomes combinados. As conversões de value objects estão descritas nas
+[ADRs 0055](adr/0055-shared-string-value-objects.md) e
+[0065](adr/0065-string-value-objects-in-a-query-or-route.md).
 
-### 4.4 404 e 405 vazios de roteamento — sem corpo, sem Content-Type
+### 4.4 404 e 405 de roteamento podem não ter corpo
 
-Quando **nenhuma rota casa** — `{id:guid}` recebendo algo que não é GUID, uma versão de API que
-nenhum controller declara (`/api/v2/tags` → 404, não um erro de versionamento; hoje só existe
-`1.0`), ou um path inexistente — a resposta é um 404 do middleware de roteamento do ASP.NET,
-**antes** de qualquer filtro/controller/`ApiProblemDetailsFactory` rodar: `Content-Length: 0`, sem
-`Content-Type`, corpo vazio. O mesmo vale pra 405 (verbo não suportado numa rota que existe), que
-soma o header `Allow` com os verbos aceitos:
+Uma rota sem correspondência ou um verbo não suportado pode produzir 404/405 vazio no próprio
+serviço, sem passar por ApiProblemDetailsFactory. Isso difere de um recurso não encontrado pelo
+handler, que segue o pipeline de Result. Outras etapas, como autenticação, também podem rejeitar
+a requisição; não deduza uma sequência fixa de headers apenas pelo caminho solicitado.
 
-```
-HTTP/1.1 404 Not Found
-Content-Length: 0
-```
+A ausência de um problema reconhecível não prova que um proxy respondeu no lugar do serviço.
+O consumidor deve aceitar corpos ausentes e não presumir a presença de code.
 
-```
-HTTP/1.1 405 Method Not Allowed
-Content-Length: 0
-Allow: GET, POST
-```
+## 5. Status HTTP por ErrorType
 
-Ou seja: **um 404 pode vir com corpo JSON rico (§4.1, recurso não encontrado) ou completamente
-vazio (rota não casou)** — o status sozinho não diz qual. Só dá pra diferenciar checando se o corpo
-existe.
+O mapeamento está em [ResultExtensions](../backend/shared/Admin.SharedKernel.AspNetCore/ResultExtensions.cs).
 
-## 5. Status HTTP por `ErrorType` (`Admin.SharedKernel.AspNetCore.ResultExtensions`)
+| ErrorType          | Status |
+| ------------------ | ------ |
+| Validation         | 400    |
+| NotFound           | 404    |
+| Conflict           | 409    |
+| Forbidden          | 403    |
+| Failure e fallback | 400    |
 
-| `ErrorType` | Status | Quando |
-| --- | --- | --- |
-| `Validation` | 400 | FluentValidation falhou (comando ou query) |
-| `NotFound` | 404 | Handler não achou o recurso pelo id |
-| `Conflict` | 409 | Regra de negócio checada pelo handler (duplicado, recurso em uso), ou falha ao salvar rejeitada pelo banco — esta última sempre genérica, `<Entity>.SaveFailed`, sem campo ([ADR 0048](adr/0048-database-failures-are-generic-to-the-user.md)) |
-| `Forbidden` | 403 | Erro de aplicação do tipo Forbidden (raro; não confundir com o 403 de tenant, §4.2) |
-| `Failure` | 400 | Fallback genérico |
-| corpo recusado pelo servidor | 413 / 400 | `GenericExceptionHandler`, forma canônica: `Request.TooLarge` acima do `[RequestSizeLimit]` do endpoint, `Request.Invalid` para corpo truncado ou malformado no transporte |
-| exceção não tratada | 500 | `GenericExceptionHandler`, forma canônica, mensagem sempre genérica (não vaza detalhe da exceção) |
+O [handler de exceções](../backend/shared/Admin.SharedKernel.AspNetCore/GenericExceptionHandler.cs)
+trata falhas inesperadas com 500 genérico e rejeições de leitura de transporte com 400/413.
+Ele não substitui o tratamento de uma falha esperada por Result nem garante um corpo em toda
+rejeição de roteamento.
 
-## 6. Exemplos verificados (amostra, não catálogo)
+## 6. Exemplos de distinções relevantes
 
-Cada linha ilustra uma **categoria** de resposta que se repete em qualquer feature; a rota é só onde
-ela foi observada. Rodado ao vivo contra a instância local (2026-09-13) e contra um PostgreSQL
-descartável (2026-10-02; chaves de `errors` revistas em 2026-10-04), com os dados de teste removidos ao final.
+- Um identificador com formato inválido pode não casar com a rota; Guid.Empty tem formato de GUID
+  e pode ser recusado pelo validator como 400. O status depende de onde ocorreu a rejeição.
+- Um conflito pode conter erros por campo ou uma mensagem na chave vazia. Confira o código e a
+  estrutura recebida, sem deduzir o campo pelo status 409.
+- Uma falha de persistência traduzida usa a mensagem genérica definida para o save. Constraints e
+  detalhes internos não são uma mensagem para o usuário
+  ([ADR 0048](adr/0048-database-failures-are-generic-to-the-user.md)).
+- Um 500 com problema reconhecido pode conservar a mensagem do backend no frontend; um 404 vazio
+  pode receber uma mensagem local genérica. A origem e o formato importam além do status.
 
-| Cenário | Verbo + rota | Status | `code` |
-| --- | --- | --- | --- |
-| Nome duplicado | `POST /api/v1/tags` (nome já existe) | 409 | `Tag.DuplicateName` |
-| Recurso não encontrado | `PUT`/`DELETE /api/v1/tags/{id}` (id não existe) | 404 | `Tag.NotFound` |
-| Recurso em uso (regra cruzando entidades) | `DELETE /api/v1/tags/{id}` (tag usada por um `service`) | 409 | `Tag.InUse` |
-| Categoria não encontrada | `GET /api/v1/categories/{id}` (id não existe) | 404 | `Category.NotFound` |
-| Id vazio ≠ id inexistente | `DELETE /api/v1/tags/00000000-0000-0000-0000-000000000000` | 400 (não 404!) | `Validation.Failed` (`tagId`: `NotEmptyValidator`) |
-| Paginação fora do intervalo | `GET /api/v1/services?page=0` | 400 | `Validation.Failed` (`page`: `Paging.PageInvalid`) |
-| Paginação fora do intervalo | `GET /api/v1/services?pageSize=1000` | 400 | `Validation.Failed` (`pageSize`: `Paging.PageSizeInvalid`) |
-| CPF já cadastrado (pessoa ativa ou inativa) | `POST /api/v1/clients` | 409 | `Client.DuplicateCpf` (`errors.cpf[0].meta.clientId`) |
-| E-mail de pessoa ativa repetido (qualquer caixa) | `POST /api/v1/clients` | 409 | `Client.DuplicateEmail` (`errors.email[0].meta.clientId`) |
-| Menor sem responsável | `POST /api/v1/clients` (`birthDate` de menor, `guardians: []`) | 400 | `Validation.Failed` (`guardians`: `Client.GuardianRequired`) |
-| Campos de contato inválidos | `POST /api/v1/clients` | 400 | `Validation.Failed` (`guardians[0].name`: `ClientContact.NameRequired`, `referenceContacts[0].purposes`: `ClientReferenceContact.PurposesRequired`…) |
-| CPF inválido, em qualquer formatação (§4.3) | `POST /api/v1/clients` (`cpf` ou `guardians[0].cpf`) | 400 | `Validation.Failed` (`cpf`: `Validation.Failed`, "O CPF informado é inválido.") |
-| `fullName` ausente do JSON | `POST /api/v1/clients` | 400 (§4.3: mensagem do framework, em inglês) | `Validation.Failed` (`fullName`: `Validation.Failed`) |
-| Filtro de situação desconhecido, numérico ou com nomes juntos (§4.3, [ADR 0066](adr/0066-enums-read-from-a-query-or-a-route-by-one-name.md)) | `GET /api/v1/clients?status=deleted`, `?status=3`, `?status=active,inactive` | 400 (mensagem do binder do kernel, em pt-BR) | `Validation.Failed` (`status`: `Validation.Failed`, "O valor informado deve ser active, inactive ou all.") |
-| Página abaixo de 1, tamanho fora de 1–100 | `GET /api/v1/clients?page=0` | 400 | `Validation.Failed` (`page`: `Paging.PageInvalid`; `pageSize`: `Paging.PageSizeInvalid`) |
-| Página cujo deslocamento não cabe em `int` | `GET /api/v1/clients?page=21474838&pageSize=100` | 400 | `Validation.Failed` (`page`: `Paging.PageTooLarge`) |
-| Parâmetro de query que não é número (§4.3) | `GET /api/v1/clients?page=abc` | 400 (mensagem do framework, em inglês) | `Validation.Failed` (`page`: `Validation.Failed`) |
-| Busca acima de 254 caracteres (§4.3, [ADR 0065](adr/0065-string-value-objects-in-a-query-or-route.md)) | `GET /api/v1/clients?search=…`, `GET /api/v1/services?search=…` | 400 (mensagem do value object, em pt-BR) | `Validation.Failed` (`search`: `Validation.Failed`, "A busca deve ter no máximo 254 caracteres.") |
-O detalhe do meio da tabela (`00000000-...-0000`) é a pegadinha mais fácil de esquecer: a
-constraint de rota `{id:guid}` só valida **formato**, então um GUID zerado passa pelo roteamento
-normalmente e só é rejeitado dentro do `DeleteTagCommandValidator` (`NotEmpty`) — chega como 400 de
-validação, não 404 de "não encontrado", mesmo parecendo semanticamente "não existe".
+## 7. Consumo no frontend e política de mensagens
 
-Os `code`s de uma feature vivem no código dela: os validators e os `DomainError` declarados nas
-entidades e value objects (regras de forma), e os handlers (regras de estado), sob
-`backend/services/<service>/<Service>.Application/<Feature>/` e `<Service>.Domain/`.
+Esta seção descreve o comportamento de
+[servicesFacade.ts](../apps/admin-frontend/src/shared/api/servicesFacade.ts);
+os consumidores escolhem navegação, apresentação e tentativa posterior a partir do Result.
 
-## 7. Para quem consome isto (frontend e futuros agentes)
+| Resultado recebido pelo cliente                                         | Valor devolvido pela facade                                                     |
+| ----------------------------------------------------------------------- | ------------------------------------------------------------------------------- |
+| Sucesso                                                                 | ok com data do envelope, com datas revividas; 204 fica sem payload              |
+| Qualquer 429                                                            | RATE_LIMIT_PROBLEM, com status 429 e mensagem local, independentemente do corpo |
+| Outro non-2xx com objeto cujo title é string                            | O problema recebido, preservado                                                 |
+| Outro non-2xx sem esse objeto                                           | SERVER_PROBLEM local                                                            |
+| Rejeição do cliente por MissingSessionError                             | SESSION_PROBLEM local                                                           |
+| Outra rejeição lançada pelo cliente, inclusive falha de leitura/parsing | NETWORK_PROBLEM local                                                           |
 
-- **Ramifique por `code`, nunca por `title`/mensagem livre** — já é regra do
-  [AGENTS.md raiz](../AGENTS.md) e da skill [`agenza-api-contract`](../.claude/skills/agenza-api-contract/SKILL.md); §4.4 é o motivo concreto: o `code` pode
-  simplesmente não existir.
-- **Ignore a chave de `errors` que é o nome do parâmetro do corpo** (`command`, §4.3): numa falha de
-  leitura do corpo ela repete a falha real e não é um campo da requisição. Um consumidor que trata
-  toda chave desconhecida como erro de formulário a mostra como "The command field is required.".
-- Trate **ausência de `code`** como um caso válido (fallback genérico), não como bug — acontece nos
-  404/405 sem corpo (§4.4). O `code` de uma falha de binding existe, mas é sempre `Validation.Failed`:
-  não distingue a regra (§4.3).
-- **Não confie em `Content-Type` nem em corpo presente** para 404/405 — podem vir vazios (§4.4).
-- **Mostre a mensagem que veio na forma canônica (§4.1)** — `title` e cada `errors[campo][i].message`
-  são texto pt-BR escrito para o usuário final; exiba como chegou, sem reescrever. Texto próprio do
-  frontend só onde não há mensagem do backend utilizável: o texto de binding do framework (§4.3), que
-  sai em inglês, os 404/405 vazios (§4.4) e falhas de rede.
-- O contrato gerado (`shared/api/generated/services-api.d.ts`) promete `ApiProblemDetails` para
-  todo erro — a forma §4.2 e os 404/405 vazios (§4.4) divergem desse contrato na prática. Isso é o comportamento real
-  do serviço hoje, não necessariamente um bug a corrigir; só não dá pra assumir a forma rica em
-  100% dos casos.
+O guard não verifica a origem nem a completude do problema: title textual basta. Os problemas
+gerados, exceto RATE_LIMIT_PROBLEM, usam status 0; o status HTTP de uma resposta não reconhecida
+não é conservado em SERVER_PROBLEM. Nenhum desses valores causa redirect ou retry por si.
 
-## 8. Como reproduzir
+Mensagens de problemas preservados são exibidas pelos consumidores; isso inclui problemas 5xx.
+As mensagens locais vêm da normalização acima, não de uma tradução universal por código.
+Ramifique por code e status quando presentes; nunca interprete title, detail ou message como regra
+de controle. traceId e correlationId servem para diagnóstico.
 
-Backend local rodando (via Aspire, `dotnet run --project backend/AppHost` ou equivalente), token
-Bearer de um usuário autenticado (`identity-service`, audience `services-api`) e o `tenant_id` da
-claim desse token como `X-Tenant-Id`:
+O [mapeamento de formulário](../apps/admin-frontend/src/shared/api/formErrors.ts) usa a primeira
+entrada de cada chave quando tem mensagem, conserva código e meta e compara campos sem distinguir
+caixa, convertendo guardians[0].name para guardians.0.name. Mensagens de chaves desconhecidas,
+inclusive "" e command, entram no nível do formulário; o retorno contém somente a primeira mensagem
+geral. title é fallback quando nenhuma mensagem de campo ou geral foi encontrada.
+A [ponte React Hook Form](../apps/admin-frontend/src/shared/form/applyApiProblem.ts) aplica esses dados
+aos campos e a root.serverError.
 
-```bash
-curl -i http://localhost:5080/api/v1/tags \
-  -H "Authorization: Bearer $TOKEN" \
-  -H "X-Tenant-Id: $TENANT_ID"
-```
+**Limite atual:** nem a facade nem esse mapper traduzem mensagens do framework ou removem a entrada
+command. Elas podem chegar à interface. Alterar esse comportamento exige uma mudança própria de
+produto; não crie um filtro local divergente em cada formulário.
 
-Trocar verbo/rota/corpo para explorar os outros cenários desta página. Qualquer recurso criado
-durante exploração manual deve ser removido (`DELETE`) ao final — o tenant demo é compartilhado
-com login semeado do Playwright ([`agenza-testing`](../.claude/skills/agenza-testing/SKILL.md)).
+## 8. Verificação e manutenção
+
+O [gerador de tipos](../apps/admin-frontend/scripts/generateApiTypes.mjs) lê o OpenAPI do serviço em
+execução e produz os arquivos de contrato do frontend. O
+[check de drift](../apps/admin-frontend/scripts/checkGeneratedApiTypes.mjs) compara o conteúdo
+gerado com o versionado; não exercita todas as operações, mensagens ou respostas vazias.
+
+Os [testes da facade](../apps/admin-frontend/src/shared/api/servicesFacade.test.ts) e os
+[testes do mapper](../apps/admin-frontend/src/shared/api/formErrors.test.ts) verificam escolhas
+do consumidor. Smoke OIDC e Playwright no [workflow](../.github/workflows/frontend-ci.yml)
+têm escopos próprios. Uma dessas provas não substitui as demais.
+
+Ao mudar uma convenção, confira código, configuração e testes correspondentes e atualize a fonte
+afetada. Registre execuções manuais no PR, usando dados e ambiente descartáveis; não transforme
+resultados de uma exploração em catálogo permanente. O procedimento de geração e integração está
+na [skill de contrato](../.claude/skills/agenza-api-contract/SKILL.md).
