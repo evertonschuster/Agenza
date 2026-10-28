@@ -46,6 +46,13 @@ now requires a valid tenant context and returns that validated tenant id.
 - The architecture guard rejects tenant-owned AI routes that depend directly
   on raw JWT claims instead of `TenantContext`.
 
+> **2026-10-28 clarification:** the architecture-guard fitness function above is historical.
+> That script was removed with the framework recorded in
+> [ADR 0016](0016-ai-agent-governance-framework.md) and was not replaced.
+> The `TenantContext` requirement, its runtime validation and the unit-test obligations remain.
+> Review covers the dependency convention; the [current guarantee matrix](../../backend/docs/ARCHITECTURE.md#11-what-enforces-what)
+> identifies executed mechanisms and their limits without promising a general static guard.
+
 ## Consequences
 
 Machine-to-machine tokens without a tenant cannot call tenant-owned AI

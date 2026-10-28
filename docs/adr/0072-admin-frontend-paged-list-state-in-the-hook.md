@@ -6,6 +6,17 @@ Status: accepted (2026-10); amends [ADR 0070](0070-admin-frontend-list-paginatio
 [ADR 0073](0073-admin-frontend-paged-list-asks-only-when-told.md) (points 1 to 3: the hook asks the backend only from
 an action, on mount or to correct a page past the end, never from an effect keyed on its state)
 
+> **2026-10-28 evolution:** the requirement for state exclusively inside the hook was superseded by
+> [fa07d965](https://github.com/evertonschuster/Agenza/commit/fa07d965a4a2e0f029518a791389812dca54cc25).
+> `usePaginatedList` now receives controlled state and remains independent of the Router.
+> Pessoas and Etiquetas supply that state through `useSearchParamsState`: they read the URL on
+> mount and write applied changes with `replace` on the list's owning route. The internal-state
+> input examples, URL-removal inventory, ignored-URL tests, URL-related consequences and rejection
+> of controlled state below are historical, not instructions to restore that behavior.
+> The explicit request triggers from ADR 0073 and the `refetch` behavior of ADR 0074 remain.
+> See the [current list convention](../../apps/admin-frontend/docs/ARCHITECTURE.md#1-shape)
+> and its linked code; URL writes do not introduce a query-dependent fetch effect.
+
 ## Context
 
 `usePaginatedList` called `useSearchParams()`, read the filters with each list's `readFilters(params)`, read the page

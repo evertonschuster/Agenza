@@ -56,11 +56,10 @@ inclusive quando chamado pelos tópicos da feature. O hook deriva carregamento/e
 resposta; uma lista vazia só é reconhecida depois de sucesso.
 
 As ADRs [0072](../../../docs/adr/0072-admin-frontend-paged-list-state-in-the-hook.md) e
-[0074](../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md) ainda descrevem a etapa
-em que essas listas ficavam fora da URL. Para o comportamento vigente, confira os hooks acima e o
-[commit que introduziu o estado na URL](https://github.com/evertonschuster/Agenza/commit/fa07d965).
-A anotação dessas decisões históricas pertence à frente de governança; este guia não recomenda
-restaurar o comportamento anterior.
+[0074](../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md) anotam a evolução da
+etapa fora da URL para o estado controlado atual. Os hooks acima demonstram a forma vigente; o
+[commit de evolução](https://github.com/evertonschuster/Agenza/commit/fa07d965a4a2e0f029518a791389812dca54cc25)
+preserva a mudança implementada.
 
 ### Componentes e formulários
 

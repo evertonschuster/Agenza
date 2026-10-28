@@ -2,6 +2,13 @@
 
 Status: proposed (2026-09)
 
+> **2026-10-28 clarification:** the layer-boundaries rule is
+> [implemented](../../apps/admin-frontend/eslint.config.js); this does not ratify the inferred
+> rationale or resolve the naming question below. This ADR remains proposed.
+> The coverage premises below describe its reconstruction context; use the
+> [current guide](../../apps/admin-frontend/docs/ARCHITECTURE.md) and
+> [Vitest configuration](../../apps/admin-frontend/vitest.config.ts) for present behavior.
+
 > Draft reconstructed from the code of PR #125 and `apps/admin-frontend/docs/ARCHITECTURE.md` during
 > its review. The rationale below is inferred from what was built — confirm or correct it, and settle
 > the open question at the end, before marking this accepted.
@@ -13,8 +20,8 @@ transient-retry states and the success toast) and `ListSection`
 (loading / error / empty / ready, table or list rendering). Both started under `shared/ui/`.
 
 Neither fits there. `shared/ui/` holds presentational primitives over Base UI and is excluded from
-the coverage gate on exactly that premise — `agenza-testing` says it directly: *"if a thing has
-behaviour, it does not belong in `shared/ui/`"*. `ConfirmDialog` owns submission state and
+the coverage gate on exactly that premise — `agenza-testing` says it directly: _"if a thing has
+behaviour, it does not belong in `shared/ui/`"_. `ConfirmDialog` owns submission state and
 classifies failures with `isTransientProblem`; `ListSection` owns the state switch that keeps "did
 not load" from rendering as "empty". Neither belongs to `features/tags` either: nothing in them
 knows what a tag is, and the next confirmation or listing would have to reach into another slice.
