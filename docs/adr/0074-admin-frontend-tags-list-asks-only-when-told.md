@@ -15,8 +15,9 @@ a React Hook Form filter bar with `SearchField`, Buscar outside the field and Li
 > input, point 4, the ignored-URL expectations in point 5, and the URL-related consequences and
 > rejected alternatives below record the earlier implementation.
 > Requests still leave from actions, mount or correction of a page past the end. `refetch`
-> sends the last requested query, preserving the displayed rows while it waits; it does not
-> change the query or URL. See the [current list convention](../../apps/admin-frontend/docs/ARCHITECTURE.md#1-shape).
+> sends the last requested query without an immediate reset, preserving the displayed rows while
+> it waits. If the answer puts that page past the end, the usual correction updates the page and
+> its URL state. See the [current list convention](../../apps/admin-frontend/docs/ARCHITECTURE.md#1-shape).
 
 ## Context
 

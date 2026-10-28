@@ -19,11 +19,10 @@ NuGet, pip, and the workflows' actions.
 
 ## What each coverage gate actually measures — read before trusting a number
 
-- **Frontend**: `coverage.include: ['src/**']` in `vitest.config.ts` means
-  every source file counts, including files no test imports. Excluded:
-  declarative wiring (`main.tsx`, `App.tsx`, the route table) and the
-  stub pages listed explicitly in the config — remove a stub from that
-  list when its feature vertical is implemented.
+- **Frontend**: [vitest.config.ts](../apps/admin-frontend/vitest.config.ts) defines
+  included files, explicit exclusions and thresholds. The include pattern counts
+  source files even when no test imports them; only configured exclusions are
+  removed from the denominator. Review exclusions when a file's responsibility changes.
 - **Backend unit coverage**: `*.Tests`, configured in
   `backend/Directory.Build.props` + `.targets`. Coverlet instruments the
   assemblies each project references — **Domain + Application** —
