@@ -2026,6 +2026,7 @@ export interface components {
       email: null | string;
       cpf: null | string;
       status: components['schemas']['ClientStatus'];
+      tags: components['schemas']['TagSummary'][];
     };
     ClientResponse: {
       /** Format: uuid */
@@ -2040,6 +2041,7 @@ export interface components {
       status: components['schemas']['ClientStatus'];
       guardians: components['schemas']['GuardianResponse'][];
       referenceContacts: components['schemas']['ReferenceContactResponse'][];
+      tags: components['schemas']['TagSummary'][];
     };
     /** @enum {unknown} */
     ClientStatus: 'active' | 'inactive';
@@ -2060,6 +2062,7 @@ export interface components {
       administrativeNotes: null | string;
       guardians: null | components['schemas']['GuardianInput'][];
       referenceContacts: null | components['schemas']['ReferenceContactInput'][];
+      tagIds: null | string[];
     };
     CreateServiceCommand: {
       name: string;
@@ -2197,6 +2200,7 @@ export interface components {
       administrativeNotes: null | string;
       guardians: null | components['schemas']['UpdateGuardianInput'][];
       referenceContacts: null | components['schemas']['UpdateReferenceContactInput'][];
+      tagIds: null | string[];
     };
     UpdateGuardianInput: {
       name: string;
