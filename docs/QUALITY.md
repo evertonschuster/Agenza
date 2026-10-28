@@ -6,13 +6,13 @@ independently of repository correctness.
 
 ## Workflows (`.github/workflows/`)
 
-| Workflow               | Triggers on                   | What it gates                                                                                           |
-| ---------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `frontend-ci.yml`      | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
-| `backend-ci.yml`       | `backend/**`                  | warning-free build, unit coverage, and Docker-free EF tenant persistence tests                          |
-| `ai-services-ci.yml`   | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke                |
-| `codeql.yml`           | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
-| `sonar.yml`            | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
+| Workflow             | Triggers on                   | What it gates                                                                                           |
+| -------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
+| `frontend-ci.yml`    | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
+| `backend-ci.yml`     | `backend/**`                  | warning-free build, unit coverage, and Docker-free EF tenant persistence tests                          |
+| `ai-services-ci.yml` | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke                |
+| `codeql.yml`         | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
+| `sonar.yml`          | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
 
 Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for npm,
 NuGet, pip, and the workflows' actions.
@@ -42,6 +42,10 @@ NuGet, pip, and the workflows' actions.
   docs/adr/0029).
 - **AI services**: `--cov=app` in `pyproject.toml` measures the whole
   package, gate at 80% (`--cov-fail-under=80`).
+
+The backend's [current guarantee matrix](../backend/docs/ARCHITECTURE.md#11-what-enforces-what)
+identifies each mechanism and its limits. Line coverage, type drift, runtime smokes and PostgreSQL
+verification exercise different properties; none proves the complete behavior of the others.
 
 ## SonarQube Cloud setup (one-time, ~10 minutes)
 
