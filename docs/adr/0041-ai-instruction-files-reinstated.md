@@ -2,7 +2,7 @@
 
 Status: accepted (2026-09); extended to `backend/` (2026-10)
 
-> **2026-10-28 evolution:** [ADR 0087](0087-ai-instruction-sources-and-proportional-documentation.md)
+> **2026-10-28 evolution:** [ADR 0088](0088-ai-instruction-sources-and-proportional-documentation.md)
 > supersedes the discovery-path account and the accepted lack of skill access outside Claude below,
 > and replaces the blanket dismissal of mechanical checks with a distinction between objective
 > properties and semantic review. Agenza skills keep one source; hosts without native discovery

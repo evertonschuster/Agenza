@@ -43,7 +43,7 @@ apenas para satisfazer uma passagem histórica.
 
 Este arquivo e os AGENTS locais guardam invariantes e roteamento; skills descrevem procedimentos;
 specs definem comportamento e aceite. A política está na
-[ADR 0087](docs/adr/0087-ai-instruction-sources-and-proportional-documentation.md).
+[ADR 0088](docs/adr/0088-ai-instruction-sources-and-proportional-documentation.md).
 
 ## Regras que valem em todo o repositório
 
@@ -81,10 +81,12 @@ O Spec Kit está instalado no frontend. Para planejar suas features, execute o f
 `speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement` a partir de
 `apps/admin-frontend`, usando a sintaxe da integração instalada.
 Confira a [instalação](apps/admin-frontend/.specify/integration.json),
-o [produtor de planos](apps/admin-frontend/.agents/skills/speckit-plan/SKILL.md) e os
+o [workflow do preset](apps/admin-frontend/.specify/presets/agenza-proportional/workflow.md),
+decidido na [ADR 0087](docs/adr/0087-speckit-proportional-preset.md), e os
 [pré-requisitos](apps/admin-frontend/.specify/scripts/powershell/check-prerequisites.ps1).
-Uma correção pequena não exige esse fluxo por si só. Escolha artefatos pelo conhecimento necessário;
-não omita um arquivo exigido pelo tooling sem adaptar seus consumidores. A instalação no frontend
+Correções determinísticas de texto ou manutenção sem comportamento novo podem seguir diretamente.
+Mudanças de comportamento mantêm spec, plan e tasks separados; auxiliares precisam de uma razão.
+Não omita um arquivo exigido pelo tooling sem adaptar seus consumidores. A instalação no frontend
 não estabelece um fluxo automático para backend ou serviços de IA.
 
 Trabalho por PR. Não faça commit na `main` diretamente.

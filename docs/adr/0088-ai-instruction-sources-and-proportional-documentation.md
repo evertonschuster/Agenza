@@ -1,4 +1,4 @@
-# ADR 0087 — Instruction sources and proportional documentation
+# ADR 0088 — Instruction sources and proportional documentation
 
 Status: accepted (2026-10-28); amends
 [ADR 0041](0041-ai-instruction-files-reinstated.md) on discovery, skill access and mechanical checks.
@@ -7,7 +7,7 @@ The single-source and no-hand-rolled-sync constraints remain.
 ## Context
 
 The root instructions required an ADR for every decision and prescribed the frontend's Spec Kit
-flow across the monorepo. Local guides and skills had already been reconciled with the code, but
+flow across the monorepo. Local guides, skills and the Spec Kit preset had already been reconciled with the code, but
 shared policy and historical decisions could still direct another agent back to an obsolete shape.
 Repeated rules acquired different answers; more files did not provide more reliable guidance.
 
@@ -37,12 +37,12 @@ and review adjustments belong in the PR. Preserve meaningful failed alternatives
 decisions; a dated evolution note can reconcile an already implemented change without inventing
 another retrospective decision.
 
-Read only the sources relevant to the task. Additional planning artifacts need a purpose:
-research for a material uncertainty, a data model for a model change, an extra contract for a
-boundary not sufficiently described elsewhere, and a quickstart for specific reusable preparation.
-The frontend's installed Spec Kit producers and prerequisites still determine what its current
-flow requires; a smaller supported flow needs corresponding tooling changes. This ADR does not
-implement them or prescribe that installation for backend and AI work.
+Read only the sources relevant to the task. The frontend's supported flow is defined by
+[ADR 0087](0087-speckit-proportional-preset.md) and the
+[preset workflow](../../apps/admin-frontend/.specify/presets/agenza-proportional/workflow.md).
+Behavior changes retain separate spec, plan and tasks; additional artifacts require a reason.
+This decision does not introduce a one-file feature flow or prescribe the frontend installation
+for backend and AI work.
 
 Agenza skills keep their canonical bodies in `.claude/skills/agenza-*/`. Area AGENTS route to exact
 files; when native discovery is unavailable, an agent with file access reads that path explicitly.

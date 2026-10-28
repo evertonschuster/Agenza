@@ -22,7 +22,7 @@ superseded is historical evidence, not current implementation guidance.
 | admin-frontend UI foundation                                               | 0039, 0040                                                                                                                                                            |
 | admin-frontend screens                                                     | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076, 0077 as amended by 0078, 0078, 0082, 0084 as narrowed by 0085 and amended by 0086, 0085, 0086 |
 | AI agent instruction files and documentation scope                         | 0088, retaining the single-source constraints of 0041                                                                                                                 |
-| Feature planning and Spec Kit | 0087 |
+| Feature planning and Spec Kit                                              | 0087                                                                                                                                                                  |
 
 [0042](0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md) records an implemented lint
 rule but remains proposed: its rationale and naming question have not been ratified.
