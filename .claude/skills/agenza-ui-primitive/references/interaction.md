@@ -1,33 +1,26 @@
-# Actions, tooltips and focus
+# Accessible actions and focus
 
-Actions stay on visible controls. The header's **Buscar** button opens the command palette, a row's **Excluir** action opens its confirmation, and the confirmation's **Excluir** button performs the request.
+Use a button for an action and a link for navigation. An icon-only control needs an accessible name;
+a labelled control's name should match its visible label. Decorative icons use `aria-hidden="true"`.
+The action must remain understandable without a tooltip.
 
-## Accessible names
+## Tooltips
 
-An icon-only control needs an accessible name. A labelled control's accessible name should match
-its visible label. Decorative icons use `aria-hidden="true"`. Keep the action reachable and
-understandable without relying on a tooltip.
+Use the Base UI tooltip parts so content opens on focus as well as hover. Check the WCAG 1.4.13
+behaviours after changing a wrapper:
 
-## Tooltips under WCAG 1.4.13
+- `Esc` dismisses the tooltip without moving the pointer.
+- The pointer can move onto the tooltip without making it disappear.
+- Content persists until dismissed, hover/focus leaves, or it is no longer valid.
 
-Content that appears on hover or focus must be:
+A `title` attribute or a hover-only div does not replace this interaction or the control's accessible
+name.
 
-- **Dismissible** — `Esc` closes it without moving the pointer.
-- **Hoverable** — the pointer can travel onto the tooltip without it vanishing.
-- **Persistent** — it stays until dismissed, until hover/focus leaves, or until it is no longer valid.
+## Keyboard and focus
 
-It must open on **focus** as well as hover. Use the Base UI Tooltip part instead of a
-`mouseenter`-only div or a `title` attribute. A tooltip is never the only carrier of an
-accessible name.
+Preserve the Base UI part's focus trap, return focus, roving tabindex and keyboard navigation instead
+of introducing parallel handlers. When overlays nest, verify that `Esc` dismisses the appropriate
+overlay and focus returns to its trigger.
 
-## Focus
-
-- Every interactive control needs a visible focus indicator; see the focus-ring section in
-  [`tokens.md`](tokens.md).
-- Focus return after a dialog closes, and the focus trap while it is open, belong to the Base UI
-  part. Do not re-implement either.
-- `Esc` closes the topmost overlay and returns focus to the control that opened it.
-- Prefer the primitive's built-in keyboard behaviour (roving tabindex, typeahead, arrow navigation)
-  over a `keydown` handler of your own.
-- Route changes move focus to `<main tabIndex={-1}>` and announce through the live region — shell
-  concerns, not primitive concerns.
+Retain a visible focus indicator; [tokens.md](tokens.md) covers its theme styling. Route focus and
+announcements belong to the app shell, rather than each primitive.

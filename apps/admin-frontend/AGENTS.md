@@ -1,112 +1,60 @@
 # admin-frontend — instruções para agentes
 
-Complementa o [AGENTS.md da raiz](../../AGENTS.md), que vale primeiro. Aqui só o que é específico
-deste app.
+Complementa o [AGENTS da raiz](../../AGENTS.md). Versões vêm dos pins e do lockfile;
+implementação e gates vêm do código e da configuração.
 
-> Aponta, não copia. Versões vêm do `package.json` e do lockfile; a arquitetura e o histórico de
-> decisões vêm de [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md), que é a leitura obrigatória antes de
-> qualquer mudança estrutural. **§6 é a contraparte honesta**: o que é provisório, o que foi
-> deliberadamente deixado de fora e o que ainda não existe.
+## Consulta por tarefa
 
-## Antes de tocar no código
+Abra somente o que a mudança exigir:
 
-1. [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) — a forma e o porquê. §5 é o log de decisões,
-   incluindo o que foi **tentado e revertido**.
-2. [`.specify/memory/constitution.md`](.specify/memory/constitution.md) — os princípios inegociáveis
-   e as decisões explicitamente diferidas.
-3. As ADRs `docs/adr/00XX-admin-frontend-*.md` na raiz do monorepo.
+| Mudança                                  | Referência                                                                                        |
+| ---------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| Limites entre camadas, páginas ou listas | [Arquitetura §1](docs/ARCHITECTURE.md#1-shape)                                                    |
+| Consumo HTTP, erros ou tipos gerados     | [Arquitetura §2](docs/ARCHITECTURE.md#2-talking-to-the-backend) e código de contrato indicado ali |
+| Autenticação e tenant                    | [Arquitetura §3](docs/ARCHITECTURE.md#3-auth--tenancy)                                            |
+| Planejamento de feature                  | [Constituição](.specify/memory/constitution.md) e somente as ADRs da preocupação afetada          |
+| Ambiente, comandos ou dependências       | [README](README.md), inclusive [lockfile](README.md#lockfile)                                     |
 
-## Forma
+Histórico fica nas ADRs e no Git, acessível pelo
+[guia](docs/ARCHITECTURE.md#5-decisions-log); não precisa ser lido antes de uma correção pequena.
 
-Feature-Sliced Design. `app/` é o composition root, `features/<slice>/{model,api,ui}/` são as fatias
-verticais com `index.ts` como **única** superfície pública, `widgets/` guarda composições de UI
-genéricas, com comportamento mas sem domínio (`confirm-dialog`, `list-section`), e `shared/` é
-transversal e sem regra de negócio.
+## Invariantes do frontend
 
-**A direção de dependência é mecanicamente imposta**, não apenas pretendida: a regra
-`agenza/layer-boundaries` ([`eslint-rules/layerBoundaries.js`](eslint-rules/layerBoundaries.js),
-ligada em `eslint.config.js`) garante `app → features → widgets → shared` e barra quem, de fora de
-uma fatia, importa `features/<slice>/…` passando por cima do barril, seja via `@/` ou relativo. Ela
-só inspeciona arquivos dentro dessas quatro camadas: `src/main.tsx`, `src/test/`, `e2e/` e os
-arquivos de configuração ficam de fora. Decisão em
-[ADR 0042](../../docs/adr/0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md).
+- `app → features → widgets → shared`; consumidores externos acessam uma feature pelo barril.
+  O [ESLint](eslint.config.js) verifica direção entre camadas e esse limite público.
+- Páginas compõem e renderizam a UI; estado, efeitos e handlers ficam no hook da página.
+  Reutilização genérica fica em shared/widgets conforme a responsabilidade.
+- Listas usam estado controlado: Pessoas e Etiquetas o fornecem por `useSearchParamsState`.
+  O formulário de filtros não dispara busca ao digitar; ações aplicam a consulta.
+- `servicesApi` devolve `ApiResult`; token, tenant, versão e envelope pertencem à camada HTTP.
+  Mutação mantém falhas esperadas como valores; `unwrapOrThrow` existe na fronteira do framework.
+- Ramifique por código/status, nunca interpretando texto de erro.
+- Use controles existentes, tokens semânticos e o comportamento de teclado/foco do primitivo.
+  Todo controle precisa de nome acessível; conteúdo visível segue pt-BR.
 
-`entities/` e um `pages/` de topo **não existem de propósito** — nada é compartilhado entre features
-ainda. Crie-os quando uma segunda feature precisar da mesma entidade, não antes.
+## Skills
 
-## Regras que quebram build ou review
+As fontes estão em `.claude/skills/` na raiz. Se o host não as descobrir, abra o arquivo pelo
+caminho abaixo; esta é leitura explícita, não promessa de descoberta nativa. Leia referências
+adicionais apenas quando a tarefa tocar no assunto.
 
-**Páginas são cascas.** `<Page>.tsx` não tem `useState`, `useEffect` nem `useRef` próprios; toda a
-lógica mora no hook **daquela** página (`use<Page>.ts`). Hooks não são compartilhados entre páginas —
-as exceções são um acessor puro de contexto como `useAuth`, um hook genérico, sem domínio, num widget, como o
-`usePaginatedList` de `widgets/paginated-list-section` ([ADR 0071](../../docs/adr/0071-admin-frontend-paged-list-hook.md)),
-e o `useCloseRoute` de `shared/hooks/`, que fecha uma rota aberta sobre a lista
-([ADR 0082](../../docs/adr/0082-admin-frontend-client-delete.md)).
-Uma lista paginada declara a interface dos seus filtros em `model/`, e o hook da página só passa os filtros
-iniciais e o repositório ao `usePaginatedList`, que guarda filtros, página e tamanho no próprio estado, fora da URL
-([ADR 0072](../../docs/adr/0072-admin-frontend-paged-list-state-in-the-hook.md)).
+| Tarefa                | Skill                                                                            |
+| --------------------- | -------------------------------------------------------------------------------- |
+| Fatia frontend        | [agenza-frontend-slice](../../.claude/skills/agenza-frontend-slice/SKILL.md)     |
+| Primitivo de UI       | [agenza-ui-primitive](../../.claude/skills/agenza-ui-primitive/SKILL.md)         |
+| Formulário            | [agenza-form-field](../../.claude/skills/agenza-form-field/SKILL.md)             |
+| Tipos e contrato HTTP | [agenza-api-contract](../../.claude/skills/agenza-api-contract/SKILL.md)         |
+| Testes e cobertura    | [agenza-testing](../../.claude/skills/agenza-testing/SKILL.md)                   |
+| Texto e formatação    | [agenza-ptbr-copy](../../.claude/skills/agenza-ptbr-copy/SKILL.md)               |
+| Isolamento de tenant  | [agenza-tenant-isolation](../../.claude/skills/agenza-tenant-isolation/SKILL.md) |
 
-**Buscar no backend é uma ação, não uma reação.** O `usePaginatedList` só pede uma página quando uma ação manda
-(`applyFilters`, troca de página ou de tamanho, "Tentar novamente", `refetch`), na montagem e para corrigir uma
-página além da última. Nenhum efeito depende do estado dele: não acrescente um `useEffect` com dependências que
-dispare `fetchPage`, e uma ação nova passa pelo `request` do hook, conforme a
-[ADR 0073](../../docs/adr/0073-admin-frontend-paged-list-asks-only-when-told.md). Pessoas e Etiquetas usam o mesmo
-hook; os tópicos `tagSaved` e `tagDeleted` em Etiquetas, e `clientCreated`, `clientUpdated` e `clientDeleted` em Pessoas, chamam o `refetch`, que pede
-de novo a página da tela sem tirar as linhas dela, conforme a
-[ADR 0074](../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md).
+## Validação
 
-**`loader` e `action` moram em `ui/pages/<Page>/route.ts`** e são reexportados pelo barril, para que
-`app/routes.tsx` os importe via `@/features/<slice>` e a direção continue `app → features`.
+Use os [comandos do app](README.md#comandos) e confira os
+[gates aplicáveis](../../.github/workflows/frontend-ci.yml). Limiares e exclusões de cobertura
+estão no [Vitest](vitest.config.ts); uma pasta de UI não é isenta por definição.
+`exactOptionalPropertyTypes` exige atenção a props opcionais repassadas por spread.
+Alterou contrato? Regenere os tipos no PR backend correspondente e execute a checagem com o serviço.
 
-**`servicesApi` nunca rejeita.** Devolve `ApiResult<T>`. Um repositório não faz tratamento de erro e
-uma página não tem `try/catch`. A conversão para rejeição acontece num lugar só — `shared/api/unwrap.ts`
-— e **apenas** na fronteira de `loader`/`queryFn`. Em `action` e mutação o `Result` passa direto: um
-400 de validação é fluxo esperado, não tela de erro.
-
-**Nunca interprete mensagem livre do backend.** Ramifique em `result.error.code` e leia
-`result.error.errors` para erros por campo.
-
-**Tokens semânticos, nunca classes de paleta crua.** `bg-background`, `text-muted-foreground`,
-`border-border`. Cor crua quebra a portabilidade entre temas.
-
-**Prefira o comportamento do primitivo a um handler de tecla próprio.**
-
-## Portões de CI
-
-Todos precisam passar; nenhum é opcional. `tsc --noEmit` · ESLint · Prettier `--check` ·
-Vitest com limiares de cobertura reais · `generate:api-types:check` (regenera os tipos do OpenAPI e
-falha em drift) · Playwright contra o stack Aspire real, com login semeado e sem mocks.
-
-Dois atritos previsíveis, ambos esperados e não eventuais:
-
-- **`exactOptionalPropertyTypes`** — componentes gerados por CLI repassam props por spread e
-  frequentemente exigem `X | undefined` explícito.
-- **Lockfile** — ao adicionar ou atualizar dependência, regere o `package-lock.json` num container
-  Linux, da raiz do monorepo:
-  `docker run --rm -v "$PWD:/w" -w /w node:22.23.2@sha256:8a34c4ab3ea2c5cd194f07e317b2a8f09461d3c8b05c4e34c8ccd56d56024c4d sh -c "npm install -g npm@12.0.2 && npm install --package-lock-only --ignore-scripts --allow-remote=all"`.
-  Regerado no Windows, `npm ci` quebra no CI por causa dos bindings nativos do `@tailwindcss/oxide`.
-  As duas partes extras do comando são necessárias, não cosméticas: o `--allow-remote=all` porque o
-  npm 12 passou a bloquear por padrão o fetch das variantes de plataforma que este passo existe para
-  capturar (erro `EALLOWREMOTE` sem a flag); e o `npm install -g npm@12.0.2` porque o npm 10 que já
-  vem na imagem `node:22` quebra neste grafo de workspaces com `Cannot read properties of null
-(reading 'edgesOut')`. A tag é fixada por `sha256` de propósito — `node:22` sozinho é mutável e um
-  rug-pull na imagem upstream rodaria no ambiente de quem regenerar o lockfile. Isso significa que o
-  digest **não** recebe patch de segurança sozinho; revise-o de tempos em tempos com
-  `docker pull node:22 && docker inspect --format '{{index .RepoDigests 0}}' node:22`.
-
-## Ambiente
-
-Não roda fora do Aspire sem as seis variáveis `VITE_*` — `shared/env.ts` falha rápido de propósito.
-Ver [README.md](README.md) para a preparação de ambiente.
-
-## Skills deste app
-
-| Skill                     | Quando                                                     |
-| ------------------------- | ---------------------------------------------------------- |
-| `agenza-frontend-slice`   | construir ou alterar uma fatia de feature                  |
-| `agenza-ui-primitive`     | adicionar ou alterar algo em `shared/ui/`                  |
-| `agenza-api-contract`     | mexer em tipos gerados, envelope ou contrato de erro       |
-| `agenza-form-field`       | construir ou alterar um formulário (React Hook Form + Zod) |
-| `agenza-testing`          | escrever testes ou destravar o gate de cobertura           |
-| `agenza-ptbr-copy`        | escrever texto visível ou formatar número, data e moeda    |
-| `agenza-tenant-isolation` | revisar qualquer coisa que toque tenant                    |
+Para alteração exclusivamente documental, confira referências, formatação e diff. Não crie testes
+de aplicação para validar redação nem execute a suíte inteira por esse motivo.

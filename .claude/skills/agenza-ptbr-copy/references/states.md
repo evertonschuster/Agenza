@@ -1,119 +1,59 @@
-# Failure, empty, loading and "Em breve"
+# Failure and screen states
 
-Read [`SKILL.md`](../SKILL.md) first. The error *taxonomy* — which `code` a backend produces, the
-`ApiProblem` shape, the four synthetic problems, how `errors` maps onto a form — belongs to
-`agenza-api-contract` and its
-[`references/errors.md`](../../agenza-api-contract/references/errors.md). This file is only the
-prose that reaches the owner.
+## Explain a failure and provide a way forward
 
-## The failure standard
+Name what did not happen and offer a recovery the screen actually supports. Reuse the existing
+problem component so its stable code remains available for support. A retry instruction needs a
+working retry action; “contacte o administrador” alone does not help. When support is the only
+option, say which code/time to include and never request a password.
 
-[ADR 0020](../../../../docs/adr/0020-actionable-authentication-feedback.md) set it for authentication;
-it holds everywhere. A failure message is three things, and it is incomplete without all three:
+The live message boundary is
+[servicesFacade.ts](../../../../apps/admin-frontend/src/shared/api/servicesFacade.ts),
+[formErrors.ts](../../../../apps/admin-frontend/src/shared/api/formErrors.ts) and
+[applyApiProblem.ts](../../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts).
+The facade supplies curated fallback problems. For non-2xx responses other than 429, its current
+`isProblem` guard accepts any non-null object with a string `title`; it does not validate the
+problem's full schema, origin or suitability for display. A title alone is not evidence that a
+message belongs to the service's user-facing contract. Some valid API problems have only a title,
+so requiring a code would also reject supported responses.
 
-1. **A stable code** she can quote — the `code` on the problem, in English, never re-worded.
-2. **A curated pt-BR explanation** of what did not happen, written by us for this screen.
-3. **A recovery action** — as a control if one exists, as an instruction if not.
+The copy guidance here applies to the service's contracted user-facing messages and the local
+fallbacks. It is not a guarantee enforced by the current guard. Form mapping preserves field
+messages and uses the first unmatched message for the form; the title is a fallback when errors
+supply no usable message. Screens branch on codes/typed metadata, never on wording. Do not add
+exception text, OIDC-provider descriptions, `detail`, `type` or diagnostic ids as explanatory copy.
+Changes to response validation belong at the shared API boundary, not in per-page text filters.
 
-Every surface that shows a problem takes the `ApiProblem` itself and shows its code the same way:
-`problem.title` for the curated message (the backend sends it ready: for an application error it is the
-error's message) and `ProblemCode` (`shared/ui/problem-code`) for `problem.code`, small and muted. You rarely
-write either by hand: the table under "Where a failure renders" says what you call for each surface.
+| Surface                         | Existing path                                                                   |
+| ------------------------------- | ------------------------------------------------------------------------------- |
+| A list region fails             | The list's error state through `ListSection`, with its retry                    |
+| A confirmation action fails     | `ConfirmDialog`'s failure view and recovery                                     |
+| Submission validation fails     | `applyApiProblem(problem, methods)` and `FormErrorBanner`                       |
+| A mutation needs an error toast | `toast.serverError(screenTitle, problem)`; the description uses `problem.title` |
 
-ADR 0020 says it plainly: a generic *"contacte o administrador"* is **not sufficient**. Neither is
-"Tente novamente" with nothing to try again with. When the only path really is support, say what to
-include (the code and the time of the attempt) — and, on any credential-adjacent screen, that she
-must never share a password.
+Keep local schema messages specific to the field. Server-only validation, such as uniqueness, uses
+the mapped API field message. Do not show two competing messages for one field or turn expected
+validation into a full-screen failure. Preserve metadata used by the feature's recovery UI.
 
-**Never render** the provider's or the server's own words: `detail`, `type`, an exception message, an
-OIDC adapter description. `traceId` / `correlationId` go to `shared/logger.ts` and a support surface,
-never into body copy.
+## Distinguish empty, loading and failed
 
-`title` is the one grey area. It *is* pt-BR prose written for a user, so it is an acceptable
-**fallback** for a code your screen did not enumerate — that is what `AppRouteError` does. It is not
-stable and it does not know what screen it is on, so for every code your screen actually branches on,
-write the string yourself.
+| Situation                     | Copy and recovery                                                                                              |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| Nothing has been created      | “Nenhum serviço ainda”, a brief explanation and the creation action                                            |
+| Applied filters match nothing | Explain the absence of matches and offer Limpar busca/filtros                                                  |
+| Data did not load             | Explain the failure and show recovery; never report that no records exist                                      |
+| Data is loading               | Use the existing skeleton and `aria-busy`; if text is needed, name the content, such as “Carregando serviços…” |
 
-The four synthetic problems already carry curated titles in `src/shared/api/servicesFacade.ts` —
-note the shape: what happened, then what to do, in one line. Match it.
-
-## Where a failure renders
-
-| Shape | Use when | Example | What you call |
-| --- | --- | --- | --- |
-| Full screen | The session or the whole route is unusable | `FullScreenMessage` — session expired, route loader rejected | No route loader exists yet; when one does, show `problem.title` and `ProblemCode` |
-| Inline, in the region | One region failed and the rest of the screen is intact | A list that could not load, with **Tentar novamente** above the empty space; a confirm dialog whose action failed | Nothing: `usePaginatedList` with `ListSection`, and `ConfirmDialog`, already show message, code and retry |
-| Field error | A 400 with `errors` — expected flow, not an error screen | The message sits with the field, tied by `aria-describedby` | `applyApiProblem(error, methods)`; `FormErrorBanner` shows the form-level message and its code |
-| Toast | A mutation failed and the screen is still hers | "Não foi possível excluir o serviço." | `toast.serverError(title, error)` from `@/shared/ui/toast` |
-
-The middle two are the ones that get skipped. Routing a validation error to a full-screen error is
-the exact mistake [`docs/ARCHITECTURE.md` §2](../../../../apps/admin-frontend/docs/ARCHITECTURE.md)
-warns about: "nome já utilizado" is expected flow.
-
-For fields, prefer your own copy for anything you can check locally — a required field, a length, a
-format — because your form knows the label and the server does not. Fall back to the server's message
-for what only the server can know, like uniqueness. Never show both for one field.
-
-## Empty is not one state
-
-Three different situations, three different messages. Collapsing them is the most common copy bug in
-an admin panel.
-
-| Situation | Message | Action |
-| --- | --- | --- |
-| Never created | "Nenhum serviço ainda" + one line on what a serviço is for here | The primary action: **Novo serviço** |
-| Filter or search matched nothing | "Nenhum serviço encontrado para «corte»" | **Limpar busca** — never the create button, she is looking, not creating |
-| Load failed | **Not an empty state.** A failure. | See above |
-
-**Rendering a load failure as an empty state tells the owner she has no clients when the network is
-down.** She will believe it. Any list that can fail must distinguish "loaded, and there are none"
-from "did not load" before it renders a word.
-
-The first cell explains the emptiness, *then* offers the action — in that order. An empty state that
-is only a button teaches nothing.
-
-## Loading
-
-Prefer no text at all. A skeleton shaped like the content that is coming beats "Carregando…" and
-survives a slow connection without a layout jump. If a word is unavoidable, name the noun —
-"Carregando serviços…" — never "Aguarde", never "Processando sua solicitação".
-
-A region that is loading is `aria-busy`.
-
-## "Em breve"
-
-[FR-006](../../../../apps/admin-frontend/specs/002-ui-foundation/spec.md) is explicit: a destination
-without a backend renders an explanation **specific to that destination** and must not be presented
-as functional. The acceptance test is literally that four screens do not repeat one generic sentence.
-
-Each one says, in the owner's terms: what this part of the panel will do for her, and a way back to
-something that works. It does not say "em desenvolvimento", does not show a percentage, does not
-promise a date, and does not render disabled buttons or fake rows — a greyed-out control invites a
-click and teaches that the panel is broken rather than unfinished.
-
-The navigation marks these destinations as unavailable *before* the click (FR-006, acceptance
-scenario 2), so "Em breve" confirms an expectation rather than springing a surprise.
+Use the actual filters and current loading state; do not infer emptiness from an absent response.
+For a destination that is not available, explain what it will do and give a working way back. Do
+not promise a date or render fake rows/actions as if the feature worked.
 
 ## Confirmation and success
 
-A destructive dialog names what is lost and whether it comes back:
+Describe the record and the real consequence of the operation. Verify whether deletion is soft,
+recoverable or blocked by related data before promising anything in copy. The confirmation button
+repeats the action verb, such as Excluir, rather than “Sim” or “OK”.
 
-> **Excluir este serviço?**
-> "Corte feminino" sai do catálogo e não poderá ser recuperado. Os agendamentos já marcados não são
-> alterados.
-> [Cancelar] [Excluir]
-
-The confirm button repeats the verb — **Excluir**, never "OK", never "Sim". A dialog whose buttons
-are Sim/Não forces her to re-read the question to know what Sim does.
-
-Success is short, past, and silent where possible: "Serviço salvo." If the change is already visible
-on screen, a toast is noise — skip it. No exclamation mark on a routine save.
-
-## Before you ship a screen
-
-- Every failure path has a code, an explanation and a next step.
-- No `detail`, no exception text, no provider prose reaches the DOM.
-- Empty-because-none and empty-because-failed are different renders.
-- The button verb, the dialog title verb and the toast verb are the same word.
-- Sentence case everywhere; keys (`Ctrl`, `Esc`, `Enter`) untranslated.
-- The accessible name equals the visible label.
+Follow the screen's existing success feedback and avoid adding duplicate notifications. Keep a
+routine success short and specific, such as “Pessoa cadastrada” or “Etiqueta atualizada”. Check the
+same verb, accessible label and recovery path across success and failure states.

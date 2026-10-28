@@ -1,118 +1,50 @@
-# The api segment: repository, Result, and the one conversion boundary
+# Repository and API result consumption
 
-Authoritative source: [`docs/ARCHITECTURE.md`](../../../../apps/admin-frontend/docs/ARCHITECTURE.md) §2.
-Live code: `src/shared/api/servicesFacade.ts`, `src/shared/api/servicesApi.ts`,
-`src/shared/api/unwrap.ts`, `src/shared/result.ts`. Full wiring narrative:
-`specs/001-oidc-shell-scaffold/contracts/api-client-contract.md`.
+For the architecture, consult
+[Talking to the backend](../../../../apps/admin-frontend/docs/ARCHITECTURE.md#2-talking-to-the-backend).
+[docs/API.md](../../../../docs/API.md) owns HTTP conventions; do not reproduce its status/error
+tables in a feature procedure.
 
-No slice calls the backend today — the API layer stands with zero call sites deliberately
-([ADR 0038](../../../../docs/adr/0038-admin-frontend-remove-categories-harness.md)). Do not delete
-anything under `shared/api/` because "nothing imports it"; you are the first importer.
+## Change a repository
 
-## What a repository must NOT state
+1. Compare the affected operation with
+   [clientsRepository](../../../../apps/admin-frontend/src/features/clients/api/clientsRepository.ts)
+   or [tagsRepository](../../../../apps/admin-frontend/src/features/tags/api/tagsRepository.ts).
+2. Keep frontend model/input types owned by the slice and an explicit `Promise<ApiResult<T>>`
+   return type. Forward a structurally compatible result; add a mapper only when the wire and
+   frontend shapes differ.
+3. Send path, query, body and optional abort signal through `servicesApi`. Authentication, tenant
+   headers, versioning and failure normalization belong to the shared API layer. Inspect
+   [apiClient.ts](../../../../apps/admin-frontend/src/shared/api/apiClient.ts) or
+   [servicesFacade.ts](../../../../apps/admin-frontend/src/shared/api/servicesFacade.ts) when that
+   layer is the actual subject of the change; do not compensate for it in a repository.
+4. Preserve cancellation from the consumer and return failures as values. A repository does not
+   add a `try/catch` or turn an expected validation error into a rejection.
 
-The token. The tenant. The API version. The response envelope. Exception handling. All five are paid
-once in `shared/api/` so no call site restates them. A repository that adds a `try/catch`, a
-`headers` object, or a `v1.0` in the path is reimplementing the layer below it.
+## Consume the result
 
-Corollary: `X-Tenant-Id` is stripped from the generated types on purpose — there is no way to set it
-by hand, and you must not try. The tenant comes from the validated token claim; the header is routing
-convenience, not a boundary ([ADR 0006](../../../../docs/adr/0006-tenant-header-base-entity-generic-repository.md)).
-Use `agenza-tenant-isolation` for anything tenant-shaped.
+Read `run()` in [servicesFacade.ts](../../../../apps/admin-frontend/src/shared/api/servicesFacade.ts)
+for the effective normalized outcomes. Keep the `Result` through mutations so a failure can return
+to the form without discarding its values. Use
+[unwrapOrThrow](../../../../apps/admin-frontend/src/shared/api/unwrap.ts) only at a framework
+boundary that needs rejection, such as a route loader; do not introduce it inside a mutation.
 
-## Shape
+Branch on stable codes/statuses, not a substring of `title`, `detail` or a field message. Reuse
+[formErrors.ts](../../../../apps/admin-frontend/src/shared/api/formErrors.ts) and
+[applyApiProblem.ts](../../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts) for form
+mapping; they preserve the normalized messages and structured field details. A feature must not
+invent a second error taxonomy or infer structured data from free text.
 
-The domain entity is **hand-written in `model/`**, owned by the frontend. Never
-`components['schemas']['…']` — that inverts the dependency and makes the UI reach through to the wire
-layer for a type.
+When a mutation publishes a topic, follow the slice's existing use-case boundary, such as
+[tagUseCases.ts](../../../../apps/admin-frontend/src/features/tags/application/tagUseCases.ts),
+and keep the repository focused on transport delegation.
 
-```ts
-// features/<slice>/api/<entity>Repository.ts
-import type { ApiResult } from '@/shared/api/servicesFacade';
-import { servicesApi } from '@/shared/api/servicesApi';
-import type { Client, ClientListFilter } from '../model/client';
+## Verify the boundary
 
-export const clientRepository = {
-  list: (filter: ClientListFilter = {}): Promise<ApiResult<Client[]>> =>
-    servicesApi.get('/api/v{version}/clients', {
-      query: filter.search ? { Search: filter.search } : {},
-    }),
-};
-```
+Mock the `servicesApi` module to verify the request and the unchanged failure value; use a fake
+client when testing the facade itself. Test a loader's rejection only when that loader exists;
+test a mutation's failed result returning to its caller. Examples and test selection are in
+[agenza-testing](../../agenza-testing/SKILL.md).
 
-The return annotation is the compile-time checkpoint: when the wire shape changes under you, the
-delegation stops type-checking. Forward the result verbatim while the domain type is structurally
-what the endpoint returns. Add a `toDomain(dto)` mapper **only when wire and domain genuinely
-diverge** — not as a reflex, not "for symmetry".
-
-Regenerate wire types with `npm run generate:api-types`; CI fails on drift via
-`generate:api-types:check`. See `agenza-api-contract` when the envelope or error contract is in play.
-
-## `servicesApi` never rejects
-
-`run()` in `servicesFacade.ts` is one big `try/catch`, so every outcome arrives as a value:
-
-- `2xx` → `ok(payload)`, lifted out of the `{ data, success, … }` envelope.
-- non-`2xx` with an RFC 7807 problem body → `fail(problem)` verbatim.
-- no session (the client's middleware threw `MissingSessionError`) → `fail(SESSION_PROBLEM)`.
-- thrown fetch — offline, DNS, refused → `fail(NETWORK_PROBLEM)`.
-- non-`2xx` whose body is not a problem — gateway 5xx, empty error → `fail(SERVER_PROBLEM)`.
-
-Those three synthetic problems are exported from `servicesFacade.ts` with `status: 0` and a namespaced
-`code`, so the UI branches on them exactly like a backend problem. `SESSION_PROBLEM` is separate from
-the transport bucket precisely so an expired session never renders as "sem conexão".
-
-## The conversion boundary — the table people misread
-
-`Result` is the internal currency; the framework boundary is the cashier. React Router and TanStack
-Query signal failure **only** by a rejected promise, so a `loader` returning `{ ok: false, error }`
-reads as success. `shared/api/unwrap.ts` converts, in exactly one place:
-
-| Boundary               | Converts?                          | Why                                                                 |
-| ---------------------- | ---------------------------------- | ------------------------------------------------------------------- |
-| `repository → loader`  | `unwrapOrThrow`                    | the router signals failure only by rejection                        |
-| `repository → queryFn` | `unwrapOrThrow`                    | same; otherwise every query resolves "ok" with an error inside       |
-| `action` / mutation    | **no** — `Result` straight through | a 400 with `errors` is expected flow and returns to the form         |
-| anywhere below that    | no                                 | plain `Result`; do not open a new `try/catch`                        |
-
-A dead network is exceptional. "E-mail já cadastrado" is not. Routing the second one down the
-rejection path turns a validation message into a full error screen, and the user loses what they
-typed. If you find yourself calling `unwrapOrThrow` inside an `action`, stop — that is the bug.
-
-Thrown `ApiProblemError`s land on the route `errorElement`; `src/app/AppRouteError.tsx` already
-recognises them via `isApiProblemError` and renders `problem.title`.
-
-## Reading a failure
-
-```ts
-if (!result.ok) {
-  if (result.error.code === 'Session.Missing') return redirect('/login');
-  return { fieldErrors: result.error.errors };
-}
-```
-
-Branch on `result.error.code` and `status`; read per-field messages from `result.error.errors`;
-render `result.error.title` as-is. **Never parse or match a free-text backend message** — it is copy,
-it is pt-BR, and it changes without a contract bump.
-
-## Deliberately absent — do not reintroduce
-
-- **A server-state library.** Route `loader` + `action` + router revalidation cover one screen. When
-  a query lib lands it *replaces* the repository ([ADR 0035](../../../../docs/adr/0035-admin-frontend-no-server-state-library.md)).
-  Do not hand-roll caching inside a repository in the meantime.
-- **A shared request-cancellation layer.** Built and reverted twice ([ADR 0033](../../../../docs/adr/0033-admin-frontend-no-request-cancellation-layer.md)).
-  Cancellation stays with the consumer: the hook that fetches owns an `AbortController`, aborts it in
-  the effect cleanup and drops an answer whose signal is aborted (the list hook and the tag edit and
-  delete dialogs do this), and the repository method only takes an optional `signal` and forwards it.
-  A fetch effect with no abort doubles its request under `StrictMode` in development.
-- **A call-site `settle(call)` wrapper.** Tried and removed — error normalization belongs inside
-  `run()`, not in something every caller must remember.
-
-## Testing the api segment
-
-`vi.mock` the `servicesApi` module and assert two things: the path and params the repository sends,
-and that a failing result comes back out **as a value** (nothing thrown, nothing swallowed). A
-repository test that needs `expect().rejects` means error handling leaked into the repository.
-
-For a `loader`, test that a `fail(...)` becomes a rejection carrying the problem; for an `action`,
-test that the same `fail(...)` is *returned*. Those two tests are what keep the table above honest.
+If the OpenAPI contract changed or generated types drift, use the regeneration procedure in
+[agenza-api-contract](../../agenza-api-contract/SKILL.md).

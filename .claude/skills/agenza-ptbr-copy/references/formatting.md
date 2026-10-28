@@ -1,164 +1,61 @@
-# Formatting numbers, money, durations and dates
+# Displaying values
 
-Read [`SKILL.md`](../SKILL.md) first. This file is for when the task actually renders a value.
+Reuse [shared/format](../../../../apps/admin-frontend/src/shared/format/) and existing value parsers
+before adding a helper. Use `Intl` for locale data and keep reusable formatters at module scope.
+Check the actual generated/property type before coercing a value; do not assume every API number
+arrives as the same JavaScript type.
 
-**`Intl`, always.** No hand-rolled `padStart` clock, no `${value.toFixed(2)}` money, no
-`['jan','fev',…]` array. Locale is `pt-BR`, time zone is `America/Sao_Paulo`, currency is `BRL`.
-There is exactly one exception, named below (duration), and it is arithmetic rather than locale data.
+## Dates are either instants or calendar days
 
-**Hoist every formatter to module scope.** Constructing an `Intl.*` object is expensive and a list
-row does it once per render per cell. Build it once per module, call `.format()` in the component.
+- Render an instant in the explicit product zone, `America/Sao_Paulo`, rather than the device's
+  implicit zone. For a clock use `hourCycle: 'h23'` to keep midnight in the `00` hour.
+- A date-only value is represented by a `Date` at midnight UTC and read in UTC. Local `getDate()`
+  or `toLocaleDateString()` without a UTC zone can move `2026-09-04` to 3 September in Brazil.
+  Reuse [date.ts](../../../../apps/admin-frontend/src/shared/format/date.ts) for `utcDate`,
+  `parseIsoDate`, `todayUtc` and calendar-year calculations.
+- Form rules use `todayUtc()`, matching the backend's calendar day. This differs from displaying
+  an instant in São Paulo. Build test clocks with an explicit ISO instant ending in `Z`.
+- The numeric date field follows `navigator.language` for part order and separator; its copy and
+  calendar labels remain pt-BR. Reuse
+  [masked-date.ts](../../../../apps/admin-frontend/src/shared/form/fields/components/masked-date.ts)
+  and [DateField](../../../../apps/admin-frontend/src/shared/form/fields/components/date-field.tsx),
+  which use UTC, Gregorian dates and Latin digits. Do not force `dd/mm/aaaa` for every browser.
+- Preserve `DateField`'s distinct values: an empty field is `null`; incomplete/impossible text is an
+  invalid `Date` that the schema rejects. Do not convert invalid input to an absent birth date.
 
-```ts
-const LOCALE = 'pt-BR';
-const TIME_ZONE = 'America/Sao_Paulo';
+For new agenda copy, Hoje/Amanhã/Ontem are calendar-day comparisons in the display zone, not
+differences smaller than 24 hours. Prefer an absolute time when the person must act on it; relative
+time alone is more appropriate for an activity feed. Keep pt-BR month/weekday names in sentence case.
 
-const brl = new Intl.NumberFormat(LOCALE, { style: 'currency', currency: 'BRL' });
-const timeOfDay = new Intl.DateTimeFormat(LOCALE, {
-  timeZone: TIME_ZONE,
-  hour: '2-digit',
-  minute: '2-digit',
-  hourCycle: 'h23',
-});
-```
+## Numbers, money and percentages
 
-## Money
+- Reuse `formatNumber` and `formatCount` from
+  [count.ts](../../../../apps/admin-frontend/src/shared/format/count.ts). Its `Intl.PluralRules`
+  follows Portuguese rules; zero is not necessarily the English plural category. A count can be
+  zero, while an empty list still needs an explanatory empty state.
+- For money use `Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' })`. Formatting is
+  presentation; financial arithmetic and authoritative totals belong to the backend.
+- Currency output contains locale-controlled spacing, commonly a non-breaking space. Do not
+  compare it to a manually typed whole string containing only ordinary spaces; normalize spacing
+  when it is irrelevant to the assertion, or assert the meaningful formatted parts.
+- A percent formatter expects a fraction: `0.1` renders as `10%`. Check whether the source contract
+  uses a fraction or a percentage before formatting; a value of `10` is not interchangeable.
 
-`brl.format(129.9)` → `R$ 129,90`.
+For a money input, `Number('129,90')` is not a parser. Reuse the relevant control/parser or define the
+accepted decimal/thousands syntax explicitly before converting on submission. `inputMode="decimal"`
+is a keyboard hint, not validation. Preserve input sizing that prevents unwanted mobile focus zoom.
 
-Two traps, both of which look like product bugs and are not:
+## Durations
 
-- **The separator between `R$` and the digits is never U+0020.** ICU emits a non-breaking space, and
-  which one (U+00A0 or U+202F) has moved between ICU versions, so it also differs between your Node
-  and CI. Never assert a whole currency string typed with a normal space. Assert on a
-  whitespace-normalised copy, or assert the digits and the symbol separately.
-- **Numeric fields arrive typed `number | string`.** The generated types render every `int32` /
-  `double` as `number | string` — see `ServiceResponse.price`, `durationMinutes`, and neighbours in
-  `src/shared/api/generated/services-api.d.ts`. A formatter must accept `number | string` (and
-  coerce) or the call site must coerce; `strict` will not let you forget, and a `Number()` at the top
-  of the helper is the whole fix.
+The compact product convention uses minutes below an hour and hours plus two-digit remaining
+minutes above it: `45 min`, `1h`, `1h05`, `1h30`. This composition is integer arithmetic, rather than
+locale month/day data. A range joins the formatted endpoints with an en dash: `45 min – 1h30`.
+Add a shared helper when a real screen needs it; this convention does not imply one already exists.
 
-Money arithmetic belongs on the backend. Format for display; do not compute a total the owner will
-act on from `double`s in the browser.
+## Verification
 
-## Percentages
-
-`style: 'percent'` expects a **fraction**: `0.1` → `10%`. `maxDiscountPercentage` arrives as `10`
-meaning ten percent, so it must be divided before formatting — or formatted with plain
-`Intl.NumberFormat` and a literal `%`. Feeding `10` to a percent formatter yields `1.000%`, which
-reads plausible enough to ship.
-
-## Duration
-
-**Under an hour reads as minutes; an hour or more reads as hours.**
-
-| Minutes | Renders |
-| --- | --- |
-| 45 | `45 min` |
-| 60 | `1h` |
-| 90 | `1h30` |
-| 65 | `1h05` |
-| 150 | `2h30` |
-
-Chosen because the owner says "uma hora e meia", not "noventa minutos" — but she does say "quarenta e
-cinco minutos". Minutes are padded to two digits so `1h5` never appears and a column of durations
-stays aligned.
-
-This is the one place we compose by hand. `Intl.DurationFormat`'s pt-BR output (`1 h 30 min`,
-`1h 30min` narrow) is not the compact form the product wants, and support is still uneven; splitting
-minutes into hours and minutes is integer arithmetic, not a locale rule, so nothing locale-specific
-is being reinvented. A duration *range* — `ServiceResponse` carries `minDurationMinutes` and
-`maxDurationMinutes` — joins with an en dash: `45 min – 1h30`.
-
-## Dates and times
-
-Two kinds of value, and conflating them is the classic bug:
-
-**An instant** (`Format: date-time` on the wire, UTC) — format it with an explicit
-`timeZone: 'America/Sao_Paulo'`. Omitting the zone silently uses the *device's* zone: correct on the
-owner's phone in Brazil, wrong on a CI runner in UTC, and wrong in a way that only shows up as a
-flaky test at 21:00 BRT.
-
-**A date-only value** (`2026-09-04`, no time) is a `Date` at midnight UTC, and it is **read only in
-UTC**: `getUTCDate()` and friends, or `Intl.DateTimeFormat` with `timeZone: 'UTC'`. `new Date('2026-09-04')`
-is already that midnight; the bug is reading it back with the device's zone (`getDate()`,
-`toLocaleDateString()` without `timeZone: 'UTC'`), which prints 3 September in São Paulo, so the
-appointment renders one day early.
-
-In `admin-frontend` that is `utcDate` in `shared/format/date.ts`; the app holds a calendar day as a
-`Date` from the API response to the form, and only turns it into text where it is shown
-(`formatMaskedDate`, beside `DateField` in `shared/form/fields/components/masked-date.ts`).
-
-**A date's numeric format follows the person's browser, not a pinned `pt-BR`.** The owner's rule: if the
-browser is set to another language, its order is respected. `DateField` builds its layout once with
-`dateLayoutOf(navigator.language)`, reading the order of day, month and year and the separator from
-`Intl.DateTimeFormat(...).formatToParts`, with `numberingSystem: 'latn'` so the digits are the ones a person
-types; pt-BR gets `dd/mm/aaaa`, en-US `mm/dd/aaaa`, sv-SE `aaaa-mm-dd`. Copy (labels, month names in the
-calendar) stays pt-BR. Tests pin the language: `src/vitest-setup.ts` sets `navigator.language` to `pt-BR` and
-`playwright.config.ts` sets `locale: 'pt-BR'`, since jsdom and Desktop Chrome default to en-US.
-
-**"Today" for a form rule is the UTC day, like the backend's, not São Paulo's.** `todayUtc()`
-(`shared/format/date.ts`) is the same calendar date the API uses, so a date the form accepts is one the
-API accepts. The pinned zone above is for *rendering instants*; it is not the answer to "what is
-today?" when validating a date the person typed
-([ADR 0045](../../../../docs/adr/0045-backend-works-in-utc.md)). In a test, build the clock with an ISO
-instant with `Z` (`new Date('2026-10-02T12:00:00Z')`), so it passes on a machine in any zone.
-
-Brazil has had no daylight saving since 2019, so the offset itself never moves — which is exactly why
-this bug survives review: the only thing that shifts is a date-only value, and only by one day.
-
-**Clock: 24 hours.** `hourCycle: 'h23'` — pt-BR already defaults to 24-hour, but `hour12: false`
-produces `24:30` for half past midnight in some engines. `h23` produces `00:30`.
-
-**Weekday and month names are lowercase in pt-BR** and `Intl` returns them that way — `sex.`,
-`setembro`. Capitalise only when the value starts a sentence or a heading, and never Title Case
-`Sexta-Feira`. Note that the short weekday carries a trailing period; don't strip it by hand.
-
-### Shorthand a scheduling product needs
-
-| When | Renders |
-| --- | --- |
-| Same calendar day | `Hoje, 14:30` |
-| Next / previous calendar day | `Amanhã, 09:00` · `Ontem, 18:00` |
-| Same year | `12 de set, 14:30` |
-| Another year | `12 de set de 2025, 14:30` |
-
-"Hoje" and "amanhã" are **calendar-day** questions, not 24-hour-difference questions. Compare the
-`year`/`month`/`day` parts produced by a formatter pinned to `America/Sao_Paulo` — subtracting
-milliseconds calls 23:00 today and 01:00 tomorrow "the same day".
-
-In a list grouped by day, the group header carries the full date (`Hoje · sexta-feira, 12 de
-setembro`) and each row carries only `14:30`. Repeating the date on every row is what makes an agenda
-unreadable on a 375 px screen.
-
-`Intl.RelativeTimeFormat` ("há 2 dias") is for audit trails and activity feeds. For anything the
-owner has to act on, an absolute time plus the shorthand above wins — "há 3 horas" does not tell her
-whether she has to leave now.
-
-## Counts and plurals
-
-Use `Intl.PluralRules(LOCALE)` rather than `n === 1`. CLDR's rule for `pt` is `i = 0..1 → one`, so
-`select(0)` returns `'one'` — the opposite of the English instinct, and worth confirming in a
-one-liner before you depend on it. In `admin-frontend` that is `formatCount(count, { singular, plural })`
-in `shared/format/count.ts` ("1 pessoa", "1.234 pessoas"), beside `formatNumber`.
-
-Better still: **never render a zero count.** Zero is an empty state, and "Nenhum serviço ainda" says
-more than "0 serviços". → [`states.md`](states.md)
-
-## Input, not output
-
-The owner types `129,90`. `Number('129,90')` is `NaN`.
-
-- Avoid `<input type="number">` for money: the spinner is a mis-click hazard, the scroll wheel edits
-  the value, and comma acceptance is browser- and locale-dependent.
-- Use `inputMode="decimal"`, keep the raw string in state, and normalise once on submit — drop the
-  thousands separator `.`, swap `,` for `.`.
-- On mobile the font size of a text input must be at least 16px or iOS Safari zooms on focus, which
-  is spec acceptance scenario US2 #2 — a formatting concern that lands as a layout bug.
-
-## Testing
-
-The suite runs on jsdom over Node's ICU, so `Intl` is real and the output is the real thing —
-including the non-breaking spaces. Assert on normalised strings, keep the golden values in the test
-rather than reimplementing the formatter in the assertion, and pin `TZ` expectations to the São Paulo
-zone rather than to the machine's.
+Check boundary values that the change can affect: midnight in another device zone, leap days, UTC
+today near local midnight, invalid/incomplete input, currency spacing, percentage scale or plural
+categories. Use fixed expected values instead of calling the same formatter to calculate the test
+expectation. Pin browser language only when testing a specific numeric date layout; include another
+layout when changing locale handling.
