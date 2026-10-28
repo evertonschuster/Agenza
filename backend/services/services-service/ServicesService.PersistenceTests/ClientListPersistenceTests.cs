@@ -22,7 +22,8 @@ public class ClientListPersistenceTests
         string? cpf = null,
         string? email = null,
         IReadOnlyCollection<GuardianData>? guardians = null,
-        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null)
+        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null,
+        IReadOnlyCollection<Guid>? tagIds = null)
     {
         var data = new ClientData(
             FullName.Create(fullName).Value,
@@ -32,7 +33,8 @@ public class ClientListPersistenceTests
             cpf is null ? null : CpfNumber.Create(cpf).Value,
             null,
             guardians ?? [],
-            referenceContacts ?? []);
+            referenceContacts ?? [],
+            tagIds ?? []);
         return Client.Create(data, Today).Value;
     }
 
@@ -441,5 +443,26 @@ public class ClientListPersistenceTests
             property.GetIsStored().Should().BeTrue(name);
             property.IsNullable.Should().BeTrue(name);
         }
+    }
+
+    [Fact]
+    public async Task List_ReturnsEachClientWithItsTags()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var vip = Guid.NewGuid();
+        var allergy = Guid.NewGuid();
+        await SaveAll(
+            databaseName,
+            tenantId,
+            NewClient("Ana Lima", tagIds: [vip, allergy]),
+            NewClient("Bruno Dias", tagIds: [vip]),
+            NewClient("Carla Souza"));
+
+        var page = await List(databaseName, tenantId);
+
+        page.Items.Select(client => client.Tags.Select(tag => tag.TagId).ToHashSet()).Should().BeEquivalentTo(
+            new[] { new HashSet<Guid> { vip, allergy }, new HashSet<Guid> { vip }, new HashSet<Guid>() },
+            options => options.WithStrictOrdering());
     }
 }

@@ -11,6 +11,8 @@ public interface IClientRepository
 
     Task UpdateAsync(Client client, CancellationToken cancellationToken);
 
+    Task<int> CountByTagIdAsync(Guid tagId, CancellationToken cancellationToken);
+
     // excludeClientId ignores the client being edited, so saving a client without changing its CPF isn't a self-conflict.
     Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken);
 

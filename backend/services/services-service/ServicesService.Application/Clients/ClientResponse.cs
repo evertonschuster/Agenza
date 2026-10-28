@@ -1,3 +1,5 @@
+using ServicesService.Application.Tags;
+
 namespace ServicesService.Application.Clients;
 
 public sealed record ClientResponse(
@@ -10,10 +12,20 @@ public sealed record ClientResponse(
     string? AdministrativeNotes,
     ClientStatus Status,
     IReadOnlyList<GuardianResponse> Guardians,
-    IReadOnlyList<ReferenceContactResponse> ReferenceContacts)
+    IReadOnlyList<ReferenceContactResponse> ReferenceContacts,
+    IReadOnlyList<TagSummary> Tags)
 {
-    public static ClientResponse FromClient(Client client) =>
-        new(
+    public static ClientResponse FromClient(Client client, IReadOnlyCollection<Tag> tags)
+    {
+        var clientTagIds = client.Tags.Select(clientTag => clientTag.TagId).ToHashSet();
+        var clientTags = tags
+            .Where(tag => clientTagIds.Contains(tag.Id))
+            .OrderBy(tag => tag.Name)
+            .ThenBy(tag => tag.Id)
+            .Select(TagSummary.FromTag)
+            .ToList();
+
+        return new ClientResponse(
             client.Id,
             client.FullName.Value,
             client.BirthDate?.Value,
@@ -23,7 +35,9 @@ public sealed record ClientResponse(
             client.AdministrativeNotes?.Value,
             client.Status,
             client.Guardians.Select(GuardianResponse.FromGuardian).ToList(),
-            client.ReferenceContacts.Select(ReferenceContactResponse.FromReferenceContact).ToList());
+            client.ReferenceContacts.Select(ReferenceContactResponse.FromReferenceContact).ToList(),
+            clientTags);
+    }
 }
 
 public sealed record GuardianResponse(Guid Id, string Name, string Relationship, string? Phone, string? Cpf)

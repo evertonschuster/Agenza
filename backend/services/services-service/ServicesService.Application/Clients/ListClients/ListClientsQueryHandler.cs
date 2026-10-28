@@ -3,13 +3,16 @@ using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Clients.ListClients;
 
-public sealed class ListClientsQueryHandler(IClientRepository clientRepository) : IQueryHandler<ListClientsQuery, PagedResult<ClientListItemResponse>>
+public sealed class ListClientsQueryHandler(IClientRepository clientRepository, ITagRepository tagRepository) : IQueryHandler<ListClientsQuery, PagedResult<ClientListItemResponse>>
 {
     public async Task<Result<PagedResult<ClientListItemResponse>>> Handle(ListClientsQuery query, CancellationToken cancellationToken)
     {
         var clientFilter = query.ToFilter();
         var clients = await clientRepository.ListAsync(clientFilter, cancellationToken);
 
-        return Result.Success(clients.Map(ClientListItemResponse.FromClient));
+        var tags = await tagRepository.GetTagsOfAsync(clients.Items, cancellationToken);
+        var tagsById = tags.ToDictionary(tag => tag.Id);
+
+        return Result.Success(clients.Map(client => ClientListItemResponse.FromClient(client, tagsById)));
     }
 }

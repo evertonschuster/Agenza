@@ -65,9 +65,15 @@ internal static class ClientTestData
         CpfNumber? cpf = null,
         AdministrativeNotes? notes = null,
         IReadOnlyCollection<GuardianData>? guardians = null,
-        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null)
+        IReadOnlyCollection<ReferenceContactData>? referenceContacts = null,
+        IReadOnlyCollection<Guid>? tagIds = null)
     {
-        return new ClientData(fullName ?? Name(), birthDate, phone, email, cpf, notes, guardians ?? [], referenceContacts ?? []);
+        return new ClientData(fullName ?? Name(), birthDate, phone, email, cpf, notes, guardians ?? [], referenceContacts ?? [], tagIds ?? []);
+    }
+
+    public static Tag Tag(string name = "VIP", string color = "#0d9488")
+    {
+        return Domain.Entities.Tag.Create(Guid.NewGuid(), name, TagColor.Create(color).Value, null).Value;
     }
 
     public static Client ExistingClient()

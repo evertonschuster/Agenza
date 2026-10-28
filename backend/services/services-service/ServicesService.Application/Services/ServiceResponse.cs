@@ -1,3 +1,5 @@
+using ServicesService.Application.Tags;
+
 namespace ServicesService.Application.Services;
 
 public sealed record ServiceResponse(
@@ -27,7 +29,5 @@ public sealed record ServiceResponse(
             service.MaxDiscountPercentage,
             service.CategoryId,
             categoryName,
-            service.Tags.Select(tag => new TagSummary(tag.Id, tag.Name, tag.Color.Value)).ToList());
+            service.Tags.Select(TagSummary.FromTag).ToList());
 }
-
-public sealed record TagSummary(Guid Id, string Name, string Color);

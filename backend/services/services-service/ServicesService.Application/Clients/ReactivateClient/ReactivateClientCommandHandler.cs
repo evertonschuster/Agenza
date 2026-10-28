@@ -5,6 +5,7 @@ namespace ServicesService.Application.Clients.ReactivateClient;
 
 public sealed class ReactivateClientCommandHandler(
     IClientRepository clientRepository,
+    ITagRepository tagRepository,
     IUnitOfWork unitOfWork) : ICommandHandler<ReactivateClientCommand, ClientResponse>
 {
     public async Task<Result<ClientResponse>> Handle(ReactivateClientCommand command, CancellationToken cancellationToken)
@@ -15,9 +16,11 @@ public sealed class ReactivateClientCommandHandler(
             return Result.Failure<ClientResponse>(Error.NotFound("Client.NotFound", "A pessoa não foi encontrada."));
         }
 
+        var tags = await tagRepository.GetTagsOfAsync([client], cancellationToken);
+
         if (client.Status == ClientStatus.Active)
         {
-            return ClientResponse.FromClient(client);
+            return ClientResponse.FromClient(client, tags);
         }
 
         var cpfConflict = await FindCpfConflictAsync(client, cancellationToken);
@@ -48,7 +51,7 @@ public sealed class ReactivateClientCommandHandler(
                 "Não foi possível salvar a pessoa. Tente novamente."));
         }
 
-        return ClientResponse.FromClient(client);
+        return ClientResponse.FromClient(client, tags);
     }
 
     private async Task<Error?> FindCpfConflictAsync(Client client, CancellationToken cancellationToken)

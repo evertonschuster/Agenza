@@ -1,12 +1,14 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients.ReactivateClient;
+using ServicesService.Application.Tags;
 
 namespace ServicesService.Tests.Clients.ReactivateClient;
 
 public class ReactivateClientCommandHandlerTests
 {
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
+    private readonly ITagRepository _tagRepository = Substitute.For<ITagRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly Client _client = InactiveClientWithContacts();
 
@@ -21,7 +23,7 @@ public class ReactivateClientCommandHandlerTests
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
     }
 
-    private ReactivateClientCommandHandler Handler() => new(_repository, _unitOfWork);
+    private ReactivateClientCommandHandler Handler() => new(_repository, _tagRepository, _unitOfWork);
 
     private static Client InactiveClientWithContacts(EmailAddress? email = null)
     {
@@ -216,5 +218,21 @@ public class ReactivateClientCommandHandlerTests
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Client.SaveFailed");
         result.Error.FieldErrors.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_ReturnsTheTagsOfTheClient()
+    {
+        var vip = ClientTestData.Tag();
+        var tagged = Client.Create(ClientTestData.Data(ClientTestData.Name("Rita Lima"), tagIds: [vip.Id]), ClientTestData.Today).Value;
+        tagged.Inactivate();
+        _repository.GetByIdAsync(tagged.Id, Arg.Any<CancellationToken>()).Returns(Task.FromResult<Client?>(tagged));
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns([vip]);
+
+        var result = await Handler().Handle(new ReactivateClientCommand(tagged.Id), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Tags.Should().ContainSingle().Which.Should().Be(new TagSummary(vip.Id, "VIP", "#0d9488"));
     }
 }

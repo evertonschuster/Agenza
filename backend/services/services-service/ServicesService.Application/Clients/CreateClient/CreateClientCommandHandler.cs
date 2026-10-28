@@ -5,6 +5,7 @@ namespace ServicesService.Application.Clients.CreateClient;
 
 public sealed class CreateClientCommandHandler(
     IClientRepository clientRepository,
+    ITagRepository tagRepository,
     IUnitOfWork unitOfWork,
     TimeProvider timeProvider) : ICommandHandler<CreateClientCommand, ClientResponse>
 {
@@ -20,6 +21,12 @@ public sealed class CreateClientCommandHandler(
         }
 
         var client = clientResult!.Value!;
+
+        var tags = await tagRepository.GetTagsOfAsync([client], cancellationToken);
+        if (tags.Count != client.Tags.Count)
+        {
+            return Result.Failure<ClientResponse>(TagNotFound());
+        }
 
         var cpfConflict = await FindCpfConflictAsync(client, cancellationToken);
         if (cpfConflict is { } cpfError)
@@ -43,7 +50,17 @@ public sealed class CreateClientCommandHandler(
                 "Não foi possível salvar a pessoa. Tente novamente."));
         }
 
-        return ClientResponse.FromClient(client);
+        return ClientResponse.FromClient(client, tags);
+    }
+
+    private static Error TagNotFound()
+    {
+        const string message = "Uma ou mais etiquetas informadas não foram encontradas.";
+
+        return Error.Validation(
+            "Tag.NotFound",
+            message,
+            new Dictionary<string, IReadOnlyList<FieldError>> { ["TagIds"] = [new FieldError("Tag.NotFound", message)] });
     }
 
     private async Task<Error?> FindCpfConflictAsync(Client client, CancellationToken cancellationToken)

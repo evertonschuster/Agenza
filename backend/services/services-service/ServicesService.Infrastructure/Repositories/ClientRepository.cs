@@ -28,7 +28,8 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
     {
         return query
             .Include(client => client.Guardians.OrderBy(guardian => guardian.Name).ThenBy(guardian => guardian.Id))
-            .Include(client => client.ReferenceContacts.OrderBy(contact => contact.Name).ThenBy(contact => contact.Id));
+            .Include(client => client.ReferenceContacts.OrderBy(contact => contact.Name).ThenBy(contact => contact.Id))
+            .Include(client => client.Tags);
     }
 
     private static IOrderedQueryable<Client> FilterAndOrder(IQueryable<Client> query, ClientListFilter filter)
@@ -67,6 +68,7 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
     {
         await SyncContactsAsync(client.Id, client.Guardians, cancellationToken);
         await SyncContactsAsync(client.Id, client.ReferenceContacts, cancellationToken);
+        await SyncTagsAsync(client.Id, client.Tags, cancellationToken);
 
         DbContext.Entry(client).State = EntityState.Modified;
     }
@@ -85,6 +87,27 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
 
         DbContext.RemoveRange(removedContacts);
         DbContext.Set<TContact>().AddRange(addedContacts);
+    }
+
+    private async Task SyncTagsAsync(Guid clientId, IReadOnlyCollection<ClientTag> currentTags, CancellationToken cancellationToken)
+    {
+        var existingTags = await DbContext.Set<ClientTag>()
+            .Where(tag => tag.ClientId == clientId)
+            .ToListAsync(cancellationToken);
+
+        var currentIds = currentTags.Select(tag => tag.Id).ToHashSet();
+        var existingIds = existingTags.Select(tag => tag.Id).ToHashSet();
+
+        var removedTags = existingTags.ExceptBy(currentIds, tag => tag.Id);
+        var addedTags = currentTags.ExceptBy(existingIds, tag => tag.Id);
+
+        DbContext.RemoveRange(removedTags);
+        DbContext.Set<ClientTag>().AddRange(addedTags);
+    }
+
+    public Task<int> CountByTagIdAsync(Guid tagId, CancellationToken cancellationToken)
+    {
+        return Set.CountAsync(client => client.Tags.Any(tag => tag.TagId == tagId), cancellationToken);
     }
 
     public Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken)

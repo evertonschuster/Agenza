@@ -9,6 +9,7 @@ public class CreateClientCommandHandlerTests
     private static readonly DateTimeOffset NoonUtc = new(2026, 10, 2, 12, 0, 0, TimeSpan.Zero);
 
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
+    private readonly ITagRepository _tagRepository = Substitute.For<ITagRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 
     public CreateClientCommandHandlerTests()
@@ -21,7 +22,7 @@ public class CreateClientCommandHandlerTests
     }
 
     private CreateClientCommandHandler Handler(DateTimeOffset? utcNow = null) =>
-        new(_repository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc));
+        new(_repository, _tagRepository, _unitOfWork, new FixedTimeProvider(utcNow ?? NoonUtc));
 
     private static CreateClientCommand Command(
         string fullName = "Maria Souza",
@@ -31,7 +32,8 @@ public class CreateClientCommandHandlerTests
         CpfNumber? cpf = null,
         string? notes = null,
         IReadOnlyList<GuardianInput>? guardians = null,
-        IReadOnlyList<ReferenceContactInput>? referenceContacts = null) =>
+        IReadOnlyList<ReferenceContactInput>? referenceContacts = null,
+        IReadOnlyList<Guid>? tagIds = null) =>
         new(
             ClientTestData.Name(fullName),
             ClientTestData.Birth(birthDate),
@@ -40,7 +42,8 @@ public class CreateClientCommandHandlerTests
             cpf,
             notes is null ? null : ClientTestData.Notes(notes),
             guardians,
-            referenceContacts);
+            referenceContacts,
+            tagIds);
 
     private static GuardianInput Guardian() => new("Ana Souza", "Mãe", ClientTestData.Phone("(11) 98888-0000"), null);
 
@@ -252,5 +255,47 @@ public class CreateClientCommandHandlerTests
         result.Error.Type.Should().Be(ErrorType.Conflict);
         result.Error.Code.Should().Be("Client.SaveFailed");
         result.Error.FieldErrors.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Handle_WithTags_ReturnsThemOrderedByName()
+    {
+        var vip = ClientTestData.Tag("VIP", "#0d9488");
+        var allergy = ClientTestData.Tag("Alergia", "#ef4444");
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns([vip, allergy]);
+
+        var result = await Handler().Handle(Command(tagIds: [vip.Id, allergy.Id]), CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Tags.Select(tag => (tag.Id, tag.Name, tag.Color)).Should().Equal(
+            (allergy.Id, "Alergia", "#ef4444"),
+            (vip.Id, "VIP", "#0d9488"));
+        _repository.Received(1).Add(Arg.Is<Client>(client => client.Tags.Count == 2));
+    }
+
+    [Fact]
+    public async Task Handle_WithAnUnknownTag_ReturnsAFieldErrorAndPersistsNothing()
+    {
+        var vip = ClientTestData.Tag();
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns([vip]);
+
+        var result = await Handler().Handle(Command(tagIds: [vip.Id, Guid.NewGuid()]), CancellationToken.None);
+
+        result.Error.Type.Should().Be(ErrorType.Validation);
+        result.Error.Code.Should().Be("Tag.NotFound");
+        result.Error.FieldErrors!["TagIds"].Should().ContainSingle().Which.Code.Should().Be("Tag.NotFound");
+        _repository.DidNotReceive().Add(Arg.Any<Client>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_WithoutTags_DoesNotReadTags()
+    {
+        var result = await Handler().Handle(Command(), CancellationToken.None);
+
+        result.Value.Tags.Should().BeEmpty();
+        await _tagRepository.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 }

@@ -12,7 +12,8 @@ public static class CreateClientCommandExtensions
             command.Cpf,
             command.AdministrativeNotes,
             command.Guardians.ToGuardians(),
-            command.ReferenceContacts.ToReferenceContacts());
+            command.ReferenceContacts.ToReferenceContacts(),
+            command.TagIds ?? []);
     }
 
     private static List<GuardianData> ToGuardians(this IReadOnlyList<GuardianInput>? inputs)

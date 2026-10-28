@@ -6,6 +6,7 @@ namespace ServicesService.Application.Clients.DeactivateClient;
 public sealed class DeactivateClientCommandHandler(
     IClientRepository clientRepository,
     IAppointmentRepository appointmentRepository,
+    ITagRepository tagRepository,
     IUnitOfWork unitOfWork) : ICommandHandler<DeactivateClientCommand, ClientResponse>
 {
     public async Task<Result<ClientResponse>> Handle(DeactivateClientCommand command, CancellationToken cancellationToken)
@@ -16,9 +17,11 @@ public sealed class DeactivateClientCommandHandler(
             return Result.Failure<ClientResponse>(Error.NotFound("Client.NotFound", "A pessoa não foi encontrada."));
         }
 
+        var tags = await tagRepository.GetTagsOfAsync([client], cancellationToken);
+
         if (client.Status == ClientStatus.Inactive)
         {
-            return ClientResponse.FromClient(client);
+            return ClientResponse.FromClient(client, tags);
         }
 
         var upcomingAppointmentConflict = await FindUpcomingAppointmentConflictAsync(client, cancellationToken);
@@ -43,7 +46,7 @@ public sealed class DeactivateClientCommandHandler(
                 "Não foi possível salvar a pessoa. Tente novamente."));
         }
 
-        return ClientResponse.FromClient(client);
+        return ClientResponse.FromClient(client, tags);
     }
 
     private async Task<Error?> FindUpcomingAppointmentConflictAsync(Client client, CancellationToken cancellationToken)

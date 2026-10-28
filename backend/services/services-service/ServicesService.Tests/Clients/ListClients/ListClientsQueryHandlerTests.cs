@@ -8,11 +8,12 @@ namespace ServicesService.Tests.Clients.ListClients;
 public class ListClientsQueryHandlerTests
 {
     private readonly IClientRepository _repository = Substitute.For<IClientRepository>();
+    private readonly ITagRepository _tagRepository = Substitute.For<ITagRepository>();
     private readonly ListClientsQueryHandler _handler;
 
     public ListClientsQueryHandlerTests()
     {
-        _handler = new ListClientsQueryHandler(_repository);
+        _handler = new ListClientsQueryHandler(_repository, _tagRepository);
         Returns([], 0);
     }
 
@@ -206,5 +207,38 @@ public class ListClientsQueryHandlerTests
         await _repository.DidNotReceive().GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         await _repository.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
         _repository.DidNotReceive().Add(Arg.Any<Client>());
+    }
+
+    [Fact]
+    public async Task Handle_ReadsTheTagsOfTheWholePageOnceAndGivesEachClientItsOwn()
+    {
+        var vip = ClientTestData.Tag("VIP", "#0d9488");
+        var allergy = ClientTestData.Tag("Alergia", "#ef4444");
+        var ana = Client.Create(ClientTestData.Data(ClientTestData.Name("Ana"), tagIds: [vip.Id, allergy.Id]), ClientTestData.Today).Value;
+        var bia = Client.Create(ClientTestData.Data(ClientTestData.Name("Bia"), tagIds: [vip.Id]), ClientTestData.Today).Value;
+        Returns([ana, bia, MinimalClient("Carla")], 3);
+        _tagRepository.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+            .Returns([vip, allergy]);
+
+        var result = await _handler.Handle(new ListClientsQuery(), CancellationToken.None);
+
+        var items = result.Value.Items;
+        items[0].Tags.Select(tag => tag.Name).Should().Equal("Alergia", "VIP");
+        items[1].Tags.Select(tag => tag.Id).Should().Equal(vip.Id);
+        items[2].Tags.Should().BeEmpty();
+        await _tagRepository.Received(1).GetByIdsAsync(
+            Arg.Is<IReadOnlyCollection<Guid>>(ids => ids.Count == 2 && ids.Contains(vip.Id) && ids.Contains(allergy.Id)),
+            Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ForAPageWithoutTags_DoesNotReadTags()
+    {
+        Returns([MinimalClient("Ana")], 1);
+
+        var result = await _handler.Handle(new ListClientsQuery(), CancellationToken.None);
+
+        result.Value.Items.Should().ContainSingle().Which.Tags.Should().BeEmpty();
+        await _tagRepository.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 }

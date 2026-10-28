@@ -10,7 +10,8 @@ public sealed record CreateClientCommand(
     CpfNumber? Cpf,
     AdministrativeNotes? AdministrativeNotes,
     IReadOnlyList<GuardianInput>? Guardians,
-    IReadOnlyList<ReferenceContactInput>? ReferenceContacts) : ICommand<ClientResponse>;
+    IReadOnlyList<ReferenceContactInput>? ReferenceContacts,
+    IReadOnlyList<Guid>? TagIds) : ICommand<ClientResponse>;
 
 public sealed record GuardianInput(string Name, string Relationship, PhoneNumber? Phone, CpfNumber? Cpf);
 
