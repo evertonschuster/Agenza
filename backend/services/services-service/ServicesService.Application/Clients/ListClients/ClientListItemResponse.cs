@@ -15,8 +15,7 @@ public sealed record ClientListItemResponse(
     public static ClientListItemResponse FromClient(Client client, IReadOnlyDictionary<Guid, Tag> tagsById)
     {
         var clientTags = client.Tags
-            .Select(clientTag => tagsById.GetValueOrDefault(clientTag.TagId))
-            .OfType<Tag>()
+            .Select(clientTag => tagsById[clientTag.TagId])
             .OrderBy(tag => tag.Name)
             .ThenBy(tag => tag.Id)
             .Select(TagSummary.FromTag)

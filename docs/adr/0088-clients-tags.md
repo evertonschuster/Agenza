@@ -69,8 +69,10 @@ code does not change; the pt-BR message names only the non-zero parts ("2 servi√
 - Reading a client loads three collections (up to 10 guardians, 10 reference contacts and 20 tags), so
   `ClientRepository` loads them with a split query instead of one join that multiplies their rows.
 - Accepted limit, as for services: a tag deleted between a client's tag read and its save leaves a live link to a
-  soft-deleted tag, since the soft delete is an `UPDATE` the restrict FK does not see. The tag disappears from the
-  responses and the next edit of that person removes the link. No row lock guards this window.
+  soft-deleted tag, since the soft delete is an `UPDATE` the restrict FK does not see. The tag disappears from that
+  person's own responses, but the list maps each link straight to its tag and answers `500` for the whole page
+  until an edit of that person removes the link. No row lock guards this window and the list does not skip a
+  missing tag: both were turned down for a race this unlikely.
 - Accepted limit of the split query on the list: the page and each collection are separate statements, so a person
   inserted or renamed ahead of the page between them shifts it, and a person on the page can come back with empty
   tags or contacts. The list is read without tracking and never saved, so the next load corrects it. A single

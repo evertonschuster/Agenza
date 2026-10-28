@@ -17,9 +17,7 @@ public sealed record ClientResponse(
 {
     public static ClientResponse FromClient(Client client, IReadOnlyCollection<Tag> tags)
     {
-        var clientTagIds = client.Tags.Select(clientTag => clientTag.TagId).ToHashSet();
         var clientTags = tags
-            .Where(tag => clientTagIds.Contains(tag.Id))
             .OrderBy(tag => tag.Name)
             .ThenBy(tag => tag.Id)
             .Select(TagSummary.FromTag)
