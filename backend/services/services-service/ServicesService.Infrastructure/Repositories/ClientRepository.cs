@@ -108,7 +108,9 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
 
     public Task<int> CountByTagIdAsync(Guid tagId, CancellationToken cancellationToken)
     {
-        return Set.CountAsync(client => client.Tags.Any(tag => tag.TagId == tagId), cancellationToken);
+        return Set
+            .Where(client => client.Tags.Any(tag => tag.TagId == tagId))
+            .CountAsync(cancellationToken);
     }
 
     public Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken)

@@ -17,6 +17,12 @@ public sealed record ClientResponse(
 {
     public static ClientResponse FromClient(Client client, IReadOnlyCollection<Tag> tags)
     {
+        var guardians = client.Guardians
+            .Select(GuardianResponse.FromGuardian)
+            .ToList();
+        var referenceContacts = client.ReferenceContacts
+            .Select(ReferenceContactResponse.FromReferenceContact)
+            .ToList();
         var clientTags = tags
             .OrderBy(tag => tag.Name)
             .ThenBy(tag => tag.Id)
@@ -32,8 +38,8 @@ public sealed record ClientResponse(
             client.Cpf?.Value,
             client.AdministrativeNotes?.Value,
             client.Status,
-            client.Guardians.Select(GuardianResponse.FromGuardian).ToList(),
-            client.ReferenceContacts.Select(ReferenceContactResponse.FromReferenceContact).ToList(),
+            guardians,
+            referenceContacts,
             clientTags);
     }
 }

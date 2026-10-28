@@ -111,7 +111,10 @@ public class Client : TenantOwnedEntity
             return DomainResult.Failure<Client>(addContactsResult.Error);
         }
 
-        client._tags.AddRange(data.TagIds.Select(tagId => ClientTag.Create(client.Id, tagId)));
+        var clientTags = data.TagIds
+            .Select(tagId => ClientTag.Create(client.Id, tagId))
+            .ToList();
+        client._tags.AddRange(clientTags);
 
         return DomainResult.Success(client);
     }
@@ -251,9 +254,14 @@ public class Client : TenantOwnedEntity
         var wantedTagIds = tagIds.ToHashSet();
         _tags.RemoveAll(tag => !wantedTagIds.Contains(tag.TagId));
 
-        var keptTagIds = _tags.Select(tag => tag.TagId).ToHashSet();
-        var addedTagIds = tagIds.Where(tagId => !keptTagIds.Contains(tagId));
-        _tags.AddRange(addedTagIds.Select(tagId => ClientTag.Create(Id, tagId)));
+        var keptTagIds = _tags
+            .Select(tag => tag.TagId)
+            .ToHashSet();
+        var addedTags = tagIds
+            .Where(tagId => !keptTagIds.Contains(tagId))
+            .Select(tagId => ClientTag.Create(Id, tagId))
+            .ToList();
+        _tags.AddRange(addedTags);
     }
 
     private static DomainResult ValidateTagIds(IReadOnlyCollection<Guid> tagIds)

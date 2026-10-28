@@ -39,7 +39,9 @@ public sealed class DeleteTagCommandHandler : ICommandHandler<DeleteTagCommand>
         var clientCount = await _clientRepository.CountByTagIdAsync(command.TagId, cancellationToken);
         if (serviceCount + clientCount > 0)
         {
-            return Result.Failure(Error.Conflict("Tag.InUse", InUseMessage(serviceCount, clientCount)));
+            var message = InUseMessage(serviceCount, clientCount);
+
+            return Result.Failure(Error.Conflict("Tag.InUse", message));
         }
 
         _tagRepository.Remove(tag);
