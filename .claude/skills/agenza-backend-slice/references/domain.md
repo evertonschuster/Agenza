@@ -1,108 +1,41 @@
-# Domain — modeling decisions
+# Domain modeling
 
-Rules: [ARCHITECTURE §3](../../../../backend/docs/ARCHITECTURE.md#3-domain). Code to copy: §10 rows
-"Value objects", "Aggregate with children…", "Domain errors". This file is how to decide and how to
-write; it does not repeat the rules.
+The [domain rules](../../../../backend/docs/ARCHITECTURE.md#3-domain) own factories, value objects,
+errors and aggregate invariants. This procedure helps choose the affected boundary.
 
-## 1. Aggregate, child, or a reference to another aggregate?
+## Choose the owner
 
-Ask in order and stop at the first yes:
+- Identify the invariant and the state that must change atomically to preserve it. A dependent part
+  of that consistency boundary is a child; a concept with an independent lifecycle can be a root.
+- Link independent roots by id. A relationship collection belongs to its owner; do not load another
+  root into the domain to enforce an invariant that the handler must resolve.
+- Decide whether a value has format/normalization or a contextual business rule. Reuse an existing
+  shared type when its semantics match; use [value-objects.md](value-objects.md) for shared formats.
+  A primitive or enum remains appropriate when its owner can express the rule directly.
 
-1. **Must it change in the same transaction as another root to keep a rule true?** ("a minor has at
-   least one guardian") → a **child** of that root.
-2. **Does it have a life of its own** — created, listed, edited or deleted on its own, reachable by its
-   own route? → its **own aggregate**: root, repository, feature folder.
-3. **Is the link "uses / is tagged with / belongs to"** another thing that has a life of its own? → the
-   owner keeps the other's **id**. A set of ids is a small child of the owner that holds the other's id,
-   keyed `(TenantId, OwnerId, OtherId)`.
+Compare [Client](../../../../backend/services/services-service/ServicesService.Domain/Entities/Client.cs),
+its [ClientData](../../../../backend/services/services-service/ServicesService.Domain/Entities/ClientData.cs)
+and [ClientGuardian](../../../../backend/services/services-service/ServicesService.Domain/Entities/ClientGuardian.cs)
+for an aggregate described by data records and children created by their root.
+For a service-local value, inspect the relevant type under
+[ValueObjects](../../../../backend/services/services-service/ServicesService.Domain/ValueObjects/).
 
-A wrong boundary shows up as: a handler that must save two roots together to keep a rule; a child that
-wants its own endpoint; a root that loads another root to answer a question about itself.
+## Change behavior
 
-## 2. Value object or primitive?
+1. Name the operation by the business intention and enumerate its allowed/refused states.
+2. Follow the owning factory or behavior method. Pass external facts such as today from the handler;
+   keep clock, persistence and tenant acquisition outside the domain.
+3. Validate the complete candidate state before assigning it. For a composition update, preserve the
+   aggregate's defined replacement semantics and avoid partial changes on rejection.
+4. Keep the rule's named error and limits with its owner. A validator may use the same code/constant;
+   it does not become the authority for domain validity.
+5. Check identities and child creation through the existing factories. Data records describe desired
+   state; they do not bypass construction or turn a domain entity into a request DTO.
 
-Apply the threshold in §3. In this codebase it reads as:
+Read the handler as well as the entity when changing a transition: domain refusal and an idempotent
+HTTP/application outcome can be intentionally different. Do not infer API status from the domain
+method alone.
 
-| Becomes a value object | Because |
-| --- | --- |
-| CPF, e-mail, phone | format and normalization |
-| a duration range | a rule over several values |
-| a colour from a palette | a closed set that carries a rule |
-| a birth date | its rule needs `today` |
-| price, discount | money and a percentage |
-
-| May stay a primitive or a plain enum | Validated by |
-| --- | --- |
-| a tag's name, a guardian's name, a contact's relationship, a description | its owner, with a named `DomainError` |
-| a set of independent options with no rule beyond membership (contact purposes) | a plain enum in an `IReadOnlySet` on the entity: its own copy, refused when empty or when a value is not a member (ADR 0058) |
-
-Writing a service's own (a value that is shared by every service is a different job — see the last bullet):
-
-- `sealed record`, private constructor, one `Value` (or the few values it groups).
-- `Create(raw)` trims and normalizes, then validates, and fails on the **first** broken rule. An
-  optional value returns `Success(null)` for blank input — the caller does not pre-check for blank.
-- `Restore(stored)` only rebuilds; no rule runs.
-- Limits are `public const`; each rule's error is `public static readonly DomainError`, named
-  `<Type>.<Rule>` and worded about the value ("O CPF informado é inválido."), never about the entity
-  that holds it.
-- A pure predicate (`IsValid`, `HasValidShape`) when the validator needs the check without building the
-  value. The predicate and `Create` share the private check, so they cannot disagree.
-- No reference to an entity, a repository, a clock or configuration; what a rule needs comes in as a
-  parameter (`today`).
-- A value with a format and no business context, the same in every service (CPF, full name, phone,
-  e-mail, birth date, administrative notes), is not written here: it goes to
-  `Admin.SharedKernel.ValueObjects` and follows [value-objects.md](value-objects.md). The one thing to
-  know from this file: it has no `DomainResult` and no `DomainError` — `Create` returns a `ParseResult<T>`.
-
-## 3. Behaviour
-
-- Name the method after the intention (`Inactivate`, `Reactivate`, `ReplaceContacts`, `Reprice`), not
-  after the field (`SetStatus`). If you cannot name the intention, ask what the user is doing.
-- Each method: refuse what is not allowed from the current state with a named error (an inactive
-  client asked to inactivate again, for instance) → validate every new value → assign → `Success`.
-  Nothing is assigned before the last check passes.
-- A whole-record `Update(…)` is for an edit form over free data with no transition. It runs the same
-  private validations as `Create`, so both refuse the same input.
-- Children change through the root: one method receives the desired state as data records, applies the
-  aggregate's defined composition semantics, and re-checks its rules (limits, "a minor has a guardian") on the result.
-- What the behaviour needs from outside — today, a generated number, the fact that another aggregate
-  exists — arrives as a parameter the handler already resolved. The domain never asks for it.
-
-## 4. Factories and ids
-
-| Type | Factory | Called by |
-| --- | --- | --- |
-| Root | `public static DomainResult<T> Create(Guid id, <value objects>, <context>, <child data>)` | `ToModel` in the Application |
-| Root with many members | `public static DomainResult<T> Create(<Entity>Data data, <context>)`, which mints its own id; `Update(<Entity>Data data, <context>)` | the handler, with `command.To<Entity>Data()` (ADR 0059) |
-| Child | `internal static DomainResult<TChild> Create(Guid rootId, <Child>Data data)` | its root only |
-| Value object | `Create(raw)` and `Restore(stored)` | `ToModel`, `ApplyTo`, EF conversions; a shared one: the JSON converter and the EF convention, never `ToModel` |
-
-- A root's `Create` takes value objects already built, not raw strings, for fields that are value
-  objects; its own primitive fields it validates itself.
-- `<Child>Data` is a record next to the child, carrying value objects; it is how the outside describes a
-  child without creating one. A root with many members has its own `<Entity>Data` (`ClientData`): the
-  value objects as received plus the child data lists, shared by `Create` and `Update`.
-- Ids are `Guid.CreateVersion7()`: the root's minted by `ToModel`, or by its own `Create` when it takes an
-  `<Entity>Data`; a child's by its internal factory.
-- EF gets a private parameterless constructor; required reference properties are set to `null!` there.
-- No `<X>Factory` class, no builder, no public constructor, no static "create from command" on the
-  entity — the entity never sees a command.
-
-## 5. Errors
-
-One `static readonly DomainError` per rule, on the type that owns the rule, `<Type>.<Rule>`, pt-BR
-message. A rule over the whole aggregate belongs to the root (`Client.GuardianRequired`); a rule over a
-value belongs to the value object, or to the entity that owns the set (`ClientReferenceContact.PurposesRequired`). The validator reuses these codes. A shared
-string value object has no `DomainError`: its failure is the message of the rule that broke, in the
-`ParseResult<T>` that `Create` returns.
-
-## 6. Red flags in the domain
-
-- `{ get; set; }`, a public setter, a `public void Set…`
-- a property or collection typed as another aggregate root
-- `new DomainError(` inside a method instead of a named field
-- a public constructor; a `<X>Factory` or builder
-- `DateTime.Now`, `DateTime.UtcNow`, `DateTime.Today`; a tenant anywhere in `Create`
-- a reference to Application, EF Core, JSON attributes or an interface implemented elsewhere
-- a `Deleted` value in a status enum
-- a comment carrying a rule that a method or error name could carry
+Test new or changed invariants directly, including rejected updates leaving the prior state intact.
+Use [ClientTests](../../../../backend/services/services-service/ServicesService.Tests/Clients/ClientTests.cs)
+as a live example, and [tests.md](tests.md) to select additional boundaries.

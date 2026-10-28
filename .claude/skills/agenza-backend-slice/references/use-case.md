@@ -1,132 +1,52 @@
-# Use case — request, validator, mapping, handler, response
+# Implement a use case
 
-Rules: [ARCHITECTURE §2, §4, §6, §7](../../../../backend/docs/ARCHITECTURE.md#2-anatomy-of-a-feature).
-Code to copy: §10 rows "Handler…", "Orchestration owned by the handler", "Validator codes and
-messages", plus the earlier slices for reads, edits and paging. This file is how to write each piece.
+The architecture owns the [slice shape](../../../../backend/docs/ARCHITECTURE.md#2-anatomy-of-a-feature),
+[error pipeline](../../../../backend/docs/ARCHITECTURE.md#4-errors--one-pipeline-five-gates) and
+[HTTP boundary](../../../../backend/docs/ARCHITECTURE.md#6-http-surface). Read the affected operation
+and a current example before editing.
 
-## 1. The request — the input DTO
+## Request and validation
 
-- `<Verb><Noun>Command` changes state; `<Verb><Noun>Query` only reads. A positional `sealed record`
-  implementing `ICommand`, `ICommand<TResponse>` or `IQuery<TResponse>`.
-- Members are what crosses the wire: primitives, strings, `DateOnly?`, `Guid`, and lists as
-  `IReadOnlyList<<Thing>Input>?`, with the `<Thing>Input` records in the same file. No domain type —
-  except a shared string value object such as `CpfNumber?`, which binds from the JSON string and needs
-  no validator rule (ADR 0055) — no tenant. An enum is allowed: the kernel's `AddWireFormat()` already names
-  every enum in camelCase and refuses integers, in the MVC and the minimal-API JSON options, and reads one from
-  a query or a route by exactly one name (ADR 0066), so there is nothing to register, no `<Concept>Names` class
-  and no values chosen to dodge the parser. A list of enums in a body gets an `IsInEnum` rule per item with
-  the domain's code (ADR 0058); a query enum needs no rule.
-- A route id is a member (`<Entity>Id`) that the controller fills with `with { … }`.
-- A list query extends `PagedQuery` (`Page`/`PageSize`, defaults from `PageRequest`) and carries its filters as
-  optional members, a free-text search as a `SearchText?`; its own `ToFilter()` method builds the
-  `<Entity>ListFilter` (a `PageRequest` with the list's filters), and the validator writes the three `Paging.*`
-  rules (ADR 0064).
+1. Choose command or query from whether the operation changes state. Keep the input record and
+   nested inputs with the operation; consult the wire rules for shared value objects and enums.
+2. Compare
+   [CreateClientCommandValidator](../../../../backend/services/services-service/ServicesService.Application/Clients/CreateClient/CreateClientCommandValidator.cs)
+   for synchronous input rules with stable codes, field ownership and domain limits.
+   Existence/uniqueness require current state and belong in the handler through a port.
+3. Bound collection size before validating every item; attach cross-field failures to the field the
+   person must fix. Shared value-object binding owns its format rules; retain rules involving the
+   aggregate or several fields. Use a fixed today from TimeProvider when the rule needs it.
+4. For paging, inspect
+   [ListClientsQuery](../../../../backend/services/services-service/ServicesService.Application/Clients/ListClients/ListClientsQuery.cs)
+   and its validator: normalize filters before the repository and keep request validation explicit.
+   Do not add a shared rule abstraction for two validators; reuse codes/constants as specified by
+   [ADR 0061](../../../../docs/adr/0061-validators-write-their-own-rules.md).
 
-## 2. The validator — simple and clean
+## Mapping and orchestration
 
-One `AbstractValidator<T>` per request that carries input, queries included. Write it as a list of
-facts about the input, one `RuleFor` per property:
+Follow [CreateClientCommandExtensions](../../../../backend/services/services-service/ServicesService.Application/Clients/CreateClient/CreateClientCommandExtensions.cs)
+for a request-to-data mapping and
+[CreateClientCommandHandler](../../../../backend/services/services-service/ServicesService.Application/Clients/CreateClient/CreateClientCommandHandler.cs)
+for the handler-owned domain call. Mapping adds neither I/O nor a new business rule.
+The relevant factory can instead be reached through ToModel/ApplyTo in the simpler shape.
 
-- Every rule ends in `.WithErrorCode(…)` and `.WithMessage("…")`. The code is the domain's
-  (`Client.TooManyGuardians.Code`); a rule with no domain counterpart — an empty route id, a missing list
-  item — still gets a `<Type>.<Rule>` code, as a literal in the validator. The message is pt-BR, names
-  the field, and interpolates limits from the domain's constants.
-- `.Cascade(CascadeMode.Stop)` when a later rule assumes an earlier one held (the length check after
-  the not-empty check).
-- An optional field's rule tolerates blank (`string.IsNullOrWhiteSpace(x) || …`) or sits under
-  `.When(…)`.
-- A rule across fields is attached to the property the user has to fix
-  (`.OverridePropertyName(…)`), or delegates to the value object's predicate.
-- A list: cap its count first; then `RuleForEach(…).NotNull().SetValidator(new <Thing>InputValidator())`
-  under `.When(count is within the cap)`, so an oversized list is not validated item by item. The item
-  validator is a `sealed class` in the same file.
-- Rules that need "today" inject `TimeProvider` and compute it in a local `Today()`.
-- A rule two validators share is written in both. There is no shared rule class or extension (ADR 0061);
-  the domain's constants and codes keep the copies aligned.
+For an edit, compare
+[UpdateClientCommandHandler](../../../../backend/services/services-service/ServicesService.Application/Clients/UpdateClient/UpdateClientCommandHandler.cs).
+Load or return NotFound; apply domain behavior; run current-state pre-checks before staging/saving.
+A uniqueness pre-check excludes the edited aggregate and can provide a field code and metadata,
+while the database remains authoritative under concurrent writes.
 
-Never in a validator: `async` rules, a repository, the `DbContext`, existence or uniqueness, a call to a
-value object's `Create` to decide (the validator restates the rule and reuses the code — ADR 0044), a
-base validator class.
+Preserve Result through expected failures. The unit of work owns persistence failure handling;
+the handler maps a failed save to the generic use-case error without exposing constraint names.
+Do not add a catch around business flow or introduce another orchestrator between handlers.
 
-## 3. The mapping — `ToModel` / `ApplyTo`
+## Read and response
 
-`<Operation>CommandExtensions`, a static class next to the command:
+Use [ListClientsQueryHandler](../../../../backend/services/services-service/ServicesService.Application/Clients/ListClients/ListClientsQueryHandler.cs)
+for a paged result mapped in the handler and
+[ClientResponse](../../../../backend/services/services-service/ServicesService.Application/Clients/ClientResponse.cs)
+for explicit output mapping. Collect referenced ids and read a set when another aggregate's
+display data is needed; avoid a repository call per row.
 
-- `ToModel(this <Command>, <context the handler resolved>)` → `DomainResult<<Entity>>`: build each
-  value object with `Create`, return on the first failure, mint the root's id, call the root's `Create`
-  with the value objects and the children's data records.
-- `ApplyTo(this <Command>, <Entity>, <context>)` → `DomainResult`: build the value objects, call the
-  behaviour.
-- `To<Entity>Data(this <Command>)` → `<Entity>Data`, for a root that takes a data record (ADR 0059): the
-  value objects as they are, the nested inputs turned into child data records. It adds no call to the
-  domain: the handler runs `<Entity>.Create(command.To<Entity>Data(), today)` or
-  `<entity>.Update(command.To<Entity>Data(), today)` itself.
-- Helpers named `To...` with a natural source object are extension methods and are called from that
-  object. Keep domain factories such as `Create` and `Restore` as static methods.
-- No rule, no I/O, no tenant. Each step is an explicit `if (x.IsFailure) return …` — no helper chains
-  them.
-
-## 4. The handler — one use case
-
-A `sealed class` implementing the handler contract. It depends only on ports from `Abstractions/`,
-`TimeProvider` and `ILogger<T>` — never the `DbContext`, `IDispatcher`, another handler, `HttpContext`
-or `ITenantAccessor`.
-
-`Handle` reads as these seven steps, which walk gates 3 to 5 of ARCHITECTURE §4 (binding and the
-validator already ran before the handler):
-
-1. Resolve context: `today` from `TimeProvider`.
-2. Get the aggregate: `ToModel` (or `<Entity>.Create(command.To<Entity>Data(), today)`) for a create; the
-   repository plus `NotFound` for anything else.
-3. A domain failure returns `error.ToApplicationError()`.
-4. Pre-checks against current state, cheapest first and before any side effect: each a private
-   `Find<Thing>ConflictAsync` returning `Error?`; a conflict a form can show is keyed by field, with
-   `meta`; one per answer.
-5. Behaviour, `Add`, or `UpdateAsync`.
-6. `SaveChangesAsync`; a failure returns `<Entity>.SaveFailed`. The unit of work has already logged its
-   kind and constraint at `Warning`, so the handler does not.
-7. Return `<Entity>Response.From<Entity>(…)`.
-
-An edit runs `ApplyTo` (or `<entity>.Update(command.To<Entity>Data(), today)`) at step 3, before the pre-checks, because they compare the values it just assigned
-(a uniqueness lookup excludes the aggregate itself); nothing is persisted until step 6, so a rejected
-pre-check discards the change.
-
-A query handler: read through the repository → `NotFound` or map. When the response shows another
-aggregate, collect its ids from the page, read them in one call through that aggregate's repository,
-and hand what you need to `From<Entity>`.
-
-Where shared logic goes:
-
-| Two handlers share… | It goes to |
-| --- | --- |
-| a rule | the domain |
-| a read | a repository method |
-| an input rule | stays repeated in each validator |
-| a mapping to the wire | `<Entity>Response.From<Entity>` |
-| a few lines of orchestration | stays repeated in each handler |
-
-No `try/catch`, no base class, no loader or service class between handlers.
-
-## 5. The response — the output DTO
-
-- `<Entity>Response`, a `sealed record`, born in the operation folder and moved to the feature root
-  when a second operation returns it.
-- `public static <Entity>Response From<Entity>(<Entity> entity, …)`: a value object becomes its
-  `.Value` (`?.Value` when optional), an enum stays the enum (the kernel's converter writes its camelCase name; no
-  `ToString()`), each child its own
-  `<Child>Response.From<Child>`, another aggregate an `<Other>Summary(Id, Name, …)` built from what the
-  handler read.
-- The DTO decides nothing. A derived value the interface needs is exposed by the domain and copied
-  here.
-- A paged read returns `PagedResult<<Entity>Response>`: `repository.ListAsync(…)` answers `PagedResult<Entity>` and the
-  handler `Map`s it.
-
-## 6. Red flags in a use case
-
-- a domain type (other than a shared string value object or a plain enum with a registered converter) in a command, an input or a response
-- `TenantId` anywhere in the request, the mapping or the handler
-- an async rule, a repository or a uniqueness check in a validator; a rule without `.WithErrorCode`
-- `try`/`catch` in a handler; a handler that injects the `DbContext` or calls another handler
-- a class named `…Loader`, `…Manager`, `…Service`, `…Helper` used by handlers
-- the mapping doing I/O or deciding a rule; a response computing business logic
-- several conflicts in one answer; a field conflict without the field key
+Select handler, validator and binding tests with [tests.md](tests.md). If a public endpoint contract
+changes, follow the existing regeneration workflow; a documentation edit does not require it.

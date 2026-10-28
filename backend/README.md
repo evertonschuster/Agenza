@@ -1,43 +1,36 @@
 # Backend — .NET services
 
-Solution: `AdminBackend.slnx` (the XML solution format). Toolchain and package versions are pinned in
-`global.json`, `Directory.Packages.props` and `.config/dotnet-tools.json`.
+Use the [solution](AdminBackend.slnx) and repository pins:
+[SDK](global.json), [packages](Directory.Packages.props) and
+[local tools](.config/dotnet-tools.json).
 
-| Read | For |
-| --- | --- |
-| [`AGENTS.md`](AGENTS.md) | the rules that break build or review, and where to start |
-| [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md) | how a service and a feature are built, and why; which code is the reference |
-| [`../docs/API.md`](../docs/API.md) | request/response conventions at the HTTP boundary, verified against the running service |
-| [`../docs/adr/README.md`](../docs/adr/README.md) | the decisions, current and superseded |
-
-## Layout
-
-```
-services/<service>/
-├── <Service>.Domain/            entities, value objects — → Admin.SharedKernel.ValueObjects only
-├── <Service>.Application/       use cases as vertical slices, ports — → Domain
-├── <Service>.Infrastructure/    EF Core, repositories, adapters — → Application
-├── <Service>.Api/               ASP.NET Core controllers — → Application + Infrastructure
-├── <Service>.Tests/             unit tests of Domain + Application
-└── <Service>.PersistenceTests/  EF InMemory tenant tests, where a service needs them
-shared/                          cross-cutting infrastructure (incl. Admin.Logging) — never business rules
-AppHost/                         .NET Aspire, local orchestration only
-ServiceDefaults/                 logging (via Admin.Logging), OpenTelemetry, health checks, service discovery
-```
-
-Each service is one business context with its own schema and database role. The project-reference
-rules and the shared packages are described in [ARCHITECTURE §1](docs/ARCHITECTURE.md#1-shape).
+| Reference                            | Purpose                                                                                |
+| ------------------------------------ | -------------------------------------------------------------------------------------- |
+| [AGENTS.md](AGENTS.md)               | Task routing and critical invariants                                                   |
+| [Architecture](docs/ARCHITECTURE.md) | Current rules, reference implementations and known limits                              |
+| [HTTP conventions](../docs/API.md)   | Boundary conventions; check the controller and OpenAPI for an endpoint's current shape |
+| [ADR index](../docs/adr/README.md)   | Decisions and their evolution                                                          |
+| [Quality gates](../docs/QUALITY.md)  | What the checks measure                                                                |
 
 ## Commands
 
-```bash
+Run from `backend/`:
+
+```powershell
 dotnet tool restore
-dotnet build AdminBackend.slnx
-dotnet test AdminBackend.slnx
+dotnet build AdminBackend.slnx -c Release
+dotnet test AdminBackend.slnx -c Release
 dotnet run --project AppHost --launch-profile http
 ```
 
-`dotnet test` runs the unit tests with the same coverage gate as CI, plus the EF InMemory persistence
-tests. The full stack (PostgreSQL, both services, the frontend, the AI service) starts through Aspire
-only — see [`../docs/MONOREPO.md`](../docs/MONOREPO.md). Gates and what each one measures:
-[`../docs/QUALITY.md`](../docs/QUALITY.md).
+The AppHost is the local stack entry point; preparation is in
+[MONOREPO](../docs/MONOREPO.md). It orchestrates the database, services and frontend through Aspire.
+
+Build and test settings are in [Directory.Build.props](Directory.Build.props),
+[Directory.Build.targets](Directory.Build.targets) and the
+[backend workflow](../.github/workflows/backend-ci.yml). The unit-test coverage gate also applies
+locally; EF InMemory persistence tests cover selected tenant behaviors, not PostgreSQL enforcement.
+Use [architecture §9](docs/ARCHITECTURE.md#9-tests) to select the appropriate verification tier.
+
+For an exclusively documentary change, compare the relevant source, check links and formatting,
+and review the diff. Do not treat a local command not executed as a passing result.

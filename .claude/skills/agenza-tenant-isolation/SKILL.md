@@ -1,90 +1,46 @@
 ---
 name: agenza-tenant-isolation
-description: Use when reviewing or writing anything that touches tenant scoping — a diff mentioning tenantId, X-Tenant-Id or the tenant_id claim; changes under admin-frontend's shared/session or shared/api; backend ITenantAccessor, TenantHeaderFilter, ITenantOwned, a global query filter or a save interceptor; assistant-service's require_tenant_context; a tenant appearing in a route param, query string, payload or storage; or a test that fabricates a tenant id.
+description: Trace tenant authority and isolation when changing authentication, tenant-scoped HTTP or persistence, session identity, or delegated AI-service calls.
 ---
 
-# Tenant isolation — review workflow
+# Review tenant isolation
 
-One sentence, and everything else is a consequence of it:
+The [root rule](../../../AGENTS.md) and
+[backend tenancy policy](../../../backend/docs/ARCHITECTURE.md#5-tenancy-and-persistence) own the
+invariant: server tenant scope comes from the validated token claim. A routing header or client
+value does not grant access.
 
-> **The tenant comes from the validated token claim. Always. Only.**
+Open only the affected path:
 
-Never from a URL, a query string, a route param, a form field, a request body, or `localStorage`.
-This is the repo's first non-negotiable — [root `AGENTS.md`](../../../AGENTS.md), constitution
-Principle II, [ADR 0006](../../../docs/adr/0006-tenant-header-base-entity-generic-repository.md).
+- .NET authentication, EF persistence, database roles or FastAPI delegation:
+  [backend.md](references/backend.md).
+- Browser session, API credentials, identity changes or client-side data:
+  [frontend.md](references/frontend.md).
 
-**`X-Tenant-Id` is a routing convenience, not a security boundary.** The header is the thing being
-*checked*, never the thing doing the checking: the boundary is the backend refusing any request
-whose header disagrees with its own validated claim, fail-closed, with a stable code
-(`Tenant.ContextMismatch` in .NET, `invalid_tenant_context` in the AI service). Anyone reasoning
-"the header proves the tenant" has the arrow backwards, and every bad review of this area starts
-there.
+## Trace authority before judging a pattern
 
-## 1. Grep the diff before you read it
+1. Follow the tenant value from its trusted boundary to the operation. Check authentication,
+   header/claim comparison, reads, writes and related records affected by the change.
+2. Distinguish client input from trusted infrastructure. A business request or repository call
+   must not let its caller choose another tenant. An accessor, validated context or test double
+   can carry a tenant internally; inspect its origin and lifetime rather than rejecting a
+   parameter name.
+3. Check missing, malformed and mismatched context. The operation must not fall back to an
+   unscoped read/write, a process default, or an alternate header.
+4. Inspect any bypass: `IgnoreTenant`, raw claims, `IgnoreQueryFilters`, preassigned entity tenants
+   or direct SQL. Determine the reachable behavior and what enforces the boundary before reporting.
+5. Select evidence for the layer changed. Tests of a fake provider or decoded token do not prove
+   HTTP authentication, and EF InMemory does not prove PostgreSQL constraints.
 
-Cheap, and it catches most of what matters. Each hit is a question to answer, not an automatic no.
+## Report the consequence
 
-| Pattern | Why it is a flag |
-| --- | --- |
-| `tenantId` / `tenant_id` in a **function, method, command, query or DTO signature** | The tenant is never threaded by hand ([ADR 0006](../../../docs/adr/0006-tenant-header-base-entity-generic-repository.md), [ADR 0008](../../../docs/adr/0008-automatic-tenant-assignment-on-save.md)). A parameter means someone can pass a different one. |
-| A tenant in a path, `useParams`, `searchParams`, `?tenant=`, a query key literal | Client-supplied. Display-only at best; authoritative never. |
-| A tenant in a request body, form field, or hidden input | Same, plus it now travels through validation as if it were data. |
-| `localStorage` / `sessionStorage` / a cookie holding a tenant | The session already carries it; a second copy is a second truth. |
-| `X-Tenant-Id` set anywhere but `shared/api/apiClient.ts` | Only one writer exists, on purpose. |
-| The `tenant_id` claim decoded outside `shared/session/tenant.ts`, `HttpContextTenantAccessor`, or `require_tenant_context` | Three decode sites in the whole repo. A fourth is the bug. |
-| `[IgnoreTenant]` | **Zero uses today.** A first one has to justify itself in the PR body. |
-| `IgnoreQueryFilters()` | Without keys it drops soft-delete *and* tenant scoping in one call: only legitimate in a persistence test asserting the soft delete. No repository ignores a filter; a read that truly needs deleted rows ignores the `SoftDelete` filter alone ([ADR 0046](../../../docs/adr/0046-separate-soft-delete-and-tenant-query-filters.md)). A key list naming `Tenant` is the bug. |
-| `Guid.NewGuid()` / a literal UUID next to the word tenant in a test | See §5. |
+Describe the caller, input or transition that can expose or change another tenant's data, with
+the code path and the protection that is absent. Separate a demonstrated failure, a reasoned
+risk and a convention. A grep hit, unchanged test file or additional decoding site alone is not
+a security finding.
 
-## 2. Route by what the diff touches
-
-| Touches | Read |
-| --- | --- |
-| `apps/admin-frontend/src/shared/session/`, `shared/api/`, anything rendering or caching per tenant | [`references/frontend.md`](references/frontend.md) |
-| `backend/**` or `ai-services/**` — accessor, filter, interceptor, entity, migration, FastAPI dependency | [`references/backend.md`](references/backend.md) |
-
-## 3. Order of checks
-
-Cheapest disqualifier first, but evaluate all five — a bad source doesn't excuse skipping the
-fail-closed or defense-in-depth checks, and each is an independent way for isolation to break.
-
-1. **Where does the value come from?** Trace it to a claim read at the boundary, or reject it. One
-   hop is enough — if the trail ends at a parameter, keep walking up until it ends at a claim.
-2. **Who can set it?** If a call site *can* pass a tenant, it will eventually pass the wrong one.
-   The fix is removing the parameter, not documenting it.
-3. **What happens with no tenant?** Every layer must fail closed: 403, `MissingSessionError`, an
-   empty result set — never "unscoped".
-4. **Is the header being trusted anywhere?** Only the filter/dependency may look at it, and only to
-   compare it with the claim.
-5. **Does the change weaken a layer of defence in depth?** A query filter, a composite FK and a
-   database role each exist because the layer above them can be wrong.
-
-## 4. Two things reviewers assume that are not true here
-
-**There is no roles/permissions model.** Every authenticated user of a tenant sees the entire panel
-([`specs/002-ui-foundation/spec.md`](../../../apps/admin-frontend/specs/002-ui-foundation/spec.md)).
-The only scope check anywhere is `identity-admin` on M2M tenant provisioning. So "tenant isolation"
-is the *whole* authorization story — do not review a change as though an authorization layer sat
-behind it, and do not approve a UI that hides a control and calls that a control.
-
-**Identity change on silent renewal requires explicit login.** ADR 0083 compares subject and tenant before replacing
-credentials, clears the session and cancels its request scope. Review that late events cannot release that state
-and that protected data unmounts. Details in [`references/frontend.md`](references/frontend.md).
-## 5. Tests
-
-A test may fabricate a tenant **only** by going through the same path production uses.
-
-- Frontend: mint a token with `makeAccessToken({ sub, tenant_id })` from `src/test/oidcUser.ts` and
-  let `resolveTenantContext` read it — see `src/shared/session/tenant.test.ts`. A test that reaches
-  past the claim and pokes a tenant into the store, a header, or a mocked credential getter is
-  asserting a shape the product does not have.
-- Backend: the two mechanisms with a real regression suite are the save-time assignment and the
-  query filter, in `ServicesService.PersistenceTests`
-  ([ADR 0019](../../../docs/adr/0019-narrow-tenant-isolation-persistence-tests.md)). Touching either
-  without touching those tests is a finding on its own.
-
-## 6. Writing the finding
-
-Name the exact failure, not the principle. "This adds a `tenantId` parameter to
-`serviceRepository.list`, so a call site can scope a read to a tenant the token never granted"
-beats "violates multi-tenancy". Then say which layer should have owned it instead.
+Tenant isolation is distinct from operation-level permission. Inspect the endpoint's actual
+authorization policy; neither a hidden UI control nor a valid tenant proves that every action
+is permitted. If a new machine/background operation needs tenant data, require an explicit
+tenant-scoped identity design rather than weakening the existing boundary
+([ADR 0022](../../../docs/adr/0022-ai-tenant-context-and-delegation.md)).

@@ -1,85 +1,61 @@
-# Frontend — the tenant path, end to end
+# Trace browser session and tenant data
 
-Five files, each with exactly one job. Everything in a review comes down to "did this change add a
-sixth?".
+The browser decodes tenant information for routing; server authentication and data scoping remain
+the authority. Use the live implementation below rather than inferring protection from a header
+or from the current number of tenant-related files.
 
-| File (`apps/admin-frontend/src/`) | Job |
-| --- | --- |
-| `shared/session/tenant.ts` | The **only** place the `tenant_id` claim is decoded |
-| `shared/session/sessionMachine.ts` | Pure reducer; a principal without the claim is not authenticated |
-| `shared/session/sessionStore.ts` | Holds the snapshot; `getAuthCredentials()` is the only reader |
-| `shared/api/apiClient.ts` | The **only** place `X-Tenant-Id` is written |
-| `scripts/generateApiTypes.mjs` | Strips the header parameter from the generated types |
+## Session to request
 
-## Decode, do not verify
+Follow [tenant.ts](../../../../apps/admin-frontend/src/shared/session/tenant.ts),
+[sessionMachine.ts](../../../../apps/admin-frontend/src/shared/session/sessionMachine.ts),
+[sessionStore.ts](../../../../apps/admin-frontend/src/shared/session/sessionStore.ts) and
+[apiClient.ts](../../../../apps/admin-frontend/src/shared/api/apiClient.ts).
 
-`resolveTenantContext` runs `atob` + `JSON.parse` over the payload segment and reads `tenant_id`.
-It does **not** verify the signature, and it is not supposed to: the browser holds no key and has no
-authority to grant itself one. Verification happens where the token is spent — JWT bearer validation
-in the .NET services, `require_valid_token` in the AI service.
+- Decoding a claim does not verify its signature or grant access. The session reducer refuses
+  authentication without the required subject/tenant, and the server validates the token.
+- Keep the routing tenant tied to the access token. Do not let a route, query, form field or an
+  independently stored tenant override it. OIDC library persistence of the token is not a separate
+  tenant authority.
+- The shared client reads credentials at request time and attaches the routing header. Missing
+  token/tenant causes `MissingSessionError`, normalized by the
+  [facade](../../../../apps/admin-frontend/src/shared/api/servicesFacade.ts).
+  Features must not choose a different header to recover from a 403.
+- The [generator](../../../../apps/admin-frontend/scripts/generateApiTypes.mjs) omits the tenant
+  header from call-site types. This discourages accidental override; the backend still performs
+  the security check.
 
-The reviewable consequence: **a decoded claim may drive routing and display, never a guarantee.**
-Rendering a tenant name from it is fine. Deciding that a record is safe to show because the decoded
-tenant matches is not — that decision belongs to the query filter on the server.
+## Identity changes and stale data
 
-`resolveTenantContext` returns `null` on a missing claim, a malformed token, or a null token — one
-funnel, and `resolveAuthenticated` turns that `null` into `failureReason: 'missing_tenant_claim'`,
-which `isBlockingFailure` classifies as blocking. **A session with a token but no tenant is not a
-degraded session; it is not a session.** Any change that lets it reach `authenticated` is a finding.
+For [ADR 0083](../../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md), inspect
+the reducer/store above, [sessionDriver](../../../../apps/admin-frontend/src/features/auth/model/sessionDriver.ts)
+and [ProtectedRoute](../../../../apps/admin-frontend/src/features/auth/ui/ProtectedRoute.tsx).
 
-## The header has exactly one writer
+Trace ordinary renewal separately from a change of subject or token-derived tenant. The changed
+identity must latch the blocked state until explicit login, clear credentials, cancel the previous
+request scope and unmount protected data. Inspect late initial reads, renewal events and replies.
+The OIDC adapter stops renewal and attempts persisted-user removal; cleanup failure is logged,
+not proof that the identity gate was released.
 
-`createApiClient`'s `onRequest` middleware reads `{ accessToken, tenantId }` fresh per request — a
-getter, not a snapshot, so renewal and any future tenant change are picked up — and throws
-`MissingSessionError` if either is absent. The facade turns that into `SESSION_PROBLEM`, which the UI
-renders as "entre novamente", not as a network error.
+Transport cancellation does not undo a write already accepted by the server. Preserve lifecycle
+guards for page-local navigation/effects and inspect any cache/store retaining protected data.
+A cache key derived from the authenticated session can partition data but cannot authorize a
+request. Reset or segregate stale data at the same identity boundary.
 
-Two rules follow, and both are grep-checkable:
+Do not assume an HTTP 401 updates the OIDC snapshot: trace the actual handler. An API error surface
+and a session transition are different mechanisms.
 
-- **Nothing else sets the header.** `X-Tenant-Id` is stripped from `services-api.d.ts` by
-  `generateApiTypes.mjs` precisely so no call site *can*. A diff that re-adds it to the generated
-  types, or sets it through `headers` on a `servicesApi` call, is removing that guarantee.
-- **Never "fix" a 403 by sending a different tenant.** A `Tenant.ContextMismatch` means the header
-  and the claim disagreed; the only correct response is to stop sending a hand-made header.
+## Tests and logging
 
-## Silent renewal and identity change
+For the decoding or identity boundary, construct principals with
+[oidcUser.ts](../../../../apps/admin-frontend/src/test/oidcUser.ts) and use the real reducer/store
+path. Compare with [tenant.test.ts](../../../../apps/admin-frontend/src/shared/session/tenant.test.ts)
+and the relevant session tests.
 
-[ADR 0083](../../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md) closes the original gap.
-The adapter carries the OIDC subject; the reducer compares the previous subject and token-derived tenant before
-replacing credentials. A changed identity clears the session and latches `identity_changed` until explicit login.
-The store aborts the outgoing request scope, the API middleware joins it with caller cancellation and ProtectedRoute
-unmounts feature state. The OIDC adapter stops renewal, removes the stored user and ignores late initial reads/events.
-Review both subject and tenant changes, normal renewal, cleanup failures and late replies. Any external cache added
-later must be cleared on this same boundary; a header alone cannot protect already rendered state.
+For the request middleware seam, a credential getter double is legitimate:
+[apiClient.test.ts](../../../../apps/admin-frontend/src/shared/api/apiClient.test.ts) checks header
+attachment, fresh credentials and cancellation. It does not prove that those credentials came from
+a validated token. Choose the seam for the property being tested, and describe its limits.
 
-## Caching and keys
-
-There is no server-state library yet
-([ADR 0035](../../../../docs/adr/0035-admin-frontend-no-server-state-library.md)); the router's
-`loader` + revalidation is the plan. When one lands:
-
-- A cache key derived **from the claim** is fine and desirable. A key derived from a route param or
-  a query string is the exact thing constitution Principle II forbids — it makes a client-supplied
-  value decide which rows a user sees out of the cache, entirely client-side, where no server check
-  is reachable.
-- Clearing the cache on identity change is part of the renewal fix above, not separate from it.
-
-## Logging
-
-`shared/logger.ts` carries `tenantId` and nothing else identifying — `sessionStore`'s auth events log
-`{ tenantId, timestamp }`. That is the accepted PII boundary
-([`docs/ARCHITECTURE.md` §5](../../../../apps/admin-frontend/docs/ARCHITECTURE.md)). Adding an email,
-a name, or a raw token to a log line is a finding independent of tenancy.
-
-## Tests
-
-`makeAccessToken({ sub, tenant_id })` in `src/test/oidcUser.ts` mints a token that the real
-`resolveTenantContext` then decodes — that is the sanctioned way to get a tenant into a test, and
-`src/shared/session/tenant.test.ts` is the worked example.
-
-What is not sanctioned, because it asserts a shape production does not have:
-
-- Writing a tenant straight into the store snapshot, bypassing the claim.
-- Mocking `getAuthCredentials` to return a tenant that no token ever contained.
-- Asserting on a hand-set `X-Tenant-Id` instead of on the middleware attaching one
-  (`src/shared/api/apiClient.test.ts` is the existing shape).
+Inspect changed log fields and avoid raw tokens, claims payloads or identifying data that the
+operation does not require. Existing auth logging is in the store; do not infer a repository-wide
+PII policy from a file inventory or an old implementation diary.

@@ -1,92 +1,44 @@
-# Persistence — repository, configuration, migration
+# Persistence
 
-Rules: [ARCHITECTURE §5](../../../../backend/docs/ARCHITECTURE.md#5-tenancy-and-persistence). Tenant
-review: skill `agenza-tenant-isolation`. Code to copy: §10 row "Aggregate with children…". This file
-is how to write each piece.
+The architecture owns [tenancy and persistence rules](../../../../backend/docs/ARCHITECTURE.md#5-tenancy-and-persistence).
+Use [tenant isolation](../../agenza-tenant-isolation/SKILL.md) when the changed path affects scoping.
 
-## 1. The port — `I<Entity>Repository`
+## Repository and update path
 
-One per aggregate root, in `Application/Abstractions/`, declaring only what a handler calls **now** —
-no `Remove` until a delete exists, no `ListAsync` until a list exists.
+Inspect [IClientRepository](../../../../backend/services/services-service/ServicesService.Application/Abstractions/IClientRepository.cs)
+and [ClientRepository](../../../../backend/services/services-service/ServicesService.Infrastructure/Repositories/ClientRepository.cs)
+for the port/adapter seam. Add only the operation the handler needs, returning the domain aggregate
+or its page rather than exposing EF queries or projecting an HTTP DTO.
 
-| Method family | Returns | Use |
-| --- | --- | --- |
-| `GetByIdAsync(id)` | `T?`, no tracking | load the aggregate's current state |
-| `Find<Criterion>Async(valueObject)` | `T?`, `AsNoTracking` | pre-check lookups (`FindByCpfAsync`) |
-| `<Thing>ExistsAsync(…)` | `bool` | a pre-check that needs no record back |
-| `CountBy<Thing>Async(id)` | `int` | an "in use" rule |
-| `GetByIdsAsync(ids)` | `IReadOnlyList<T>` | one query for a set — never one per row |
-| `ListAsync(filters)` | `IReadOnlyList<T>` | an unpaged list, ordered |
-| `ListAsync(<Entity>ListFilter)` | `PagedResult<T>` | a paged list, ordered: the filter extends `PageRequest` and carries the list's plain filters; the adapter calls `ListPagedAsync(filter, filterAndOrder, ct)` with the root's `Include`s, and `filterAndOrder` returns an `IOrderedQueryable` |
-| `Add(entity)`, `UpdateAsync(entity)`, `Remove(entity)` | `void` / `Task` | stage; the handler commits |
+Trace tracking from the DbContext default to the eventual save. The command can change a detached
+aggregate and then call UpdateAsync; the adapter owns attaching/staging its state. Do not add a
+second port method whose only distinction is EF tracking.
 
-Parameters are ids, value objects for value-object columns and plain filter values — a list with several of them takes
-one record of them (`<Entity>ListFilter`) — never a tenant, an expression, an `IQueryable` or a specification. Results are the root with its own children — never a
-DTO, a projection or another aggregate.
+Check which children the operation requires before narrowing a read. An update that synchronizes
+the stored composition from the in-memory aggregate can remove children missing from a partial
+read. Query filters already provide tenant and soft-delete scope; do not replace them with manual
+predicates, drop the tenant filter or save inside a repository.
 
-`GetByIdAsync` returns an aggregate without tracking. In a service with a global no-tracking default,
-it inherits that default; shared helpers may also state it explicitly when they serve another context.
-A command applies domain behaviour to that aggregate, then calls `UpdateAsync`; the adapter makes any
-state transition needed by its persistence technology explicitly. Do not expose a second port method
-that differs only by tracking (ARCHITECTURE, rules of thumb).
+For listing, keep an explicit stable order ending in a unique key. Compare value-object columns as
+values. For text search/order, inspect ClientRepository together with
+[ClientConfiguration](../../../../backend/services/services-service/ServicesService.Infrastructure/Persistence/Configurations/ClientConfiguration.cs):
+generated string columns handle operations that cannot translate through a value-object converter.
+A pre-check helps the caller recover; the unique index decides races.
 
-## 2. The adapter — `<Entity>Repository`
+## Configuration and migration
 
-- `public class <Entity>Repository : RepositoryBase<<Entity>>, I<Entity>Repository`, constructed from
-  the service's `DbContext`; registered in Infrastructure's `DependencyInjection.cs`.
-- Use the base helpers (`FindAsync`, `ListAsync`, `ListPagedAsync`, `AnyAsync`) and `Set` for the
-  rest. An update adapter can query the persisted children and stage only the difference by id: remove
-  the ones the aggregate no longer holds, add the ones the database does not have yet. `Include` only the root's own children.
-- Order every list and page explicitly, on a key that is unique or ends in one — otherwise rows repeat
-  or vanish between pages.
-- A value-object column is compared as a whole (`c.Cpf == cpf`). A query cannot reach `.Value` through a
-  converter, and `EF.Property<string>` over such a column throws, so text search or a case-insensitive order on it
-  needs a stored generated `string` column (`HasComputedColumnSql("lower(\"FullName\")", stored: true)`, read with
-  `EF.Property<string>(e, "<Column>")`); see `ClientConfiguration` and ADR 0063.
-- The `DbContext` already scopes every query to the tenant and hides soft-deleted rows. A repository
-  never writes a `TenantId` or `DeletedAt` predicate, never calls `IgnoreQueryFilters()`, never calls
-  `SaveChanges`.
+1. Start from the aggregate's actual relationships and the architecture's configuration checklist.
+   Verify tenant-qualified keys/FKs, value conversions, lengths, uniqueness filters and enum CHECKs.
+2. For children, inspect identity generation and access mode. The domain creates their ids; the
+   adapter must not interpret a new child as an existing modified row.
+3. Generate the migration through the service's existing tooling. Review both Up and Down for
+   destructive operations, key/filter changes and changes to stored data. Keep committed migrations
+   immutable; use a subsequent migration for an evolution.
+4. Check pending model changes using the command in
+   [the architecture](../../../../backend/docs/ARCHITECTURE.md#5-tenancy-and-persistence).
+   Inspect the generated SQL when PostgreSQL behavior is material.
 
-## 3. The configuration — `<Entity>Configuration`
-
-Check each line of ARCHITECTURE §5 "Entity configuration" against your entity: composite alternate key,
-composite foreign keys between tenant-owned entities, value objects with lengths from their constants
-(a service's own through `HasConversion(v => v.Value, s => <Vo>.Restore(s))`; a shared one needs only
-`HasMaxLength` — the `DbContext`'s `ConfigureConventions` already calls `AddValueObjectConversions()`),
-enums as text with a `CHECK`, unique indexes with `TenantId` and `"DeletedAt" IS NULL`, children through
-the backing field, and a child's key `ValueGeneratedNever()` (its internal factory mints it; otherwise a child added
-to a loaded root is tracked as `Modified` and the save fails). Never add a soft-delete or tenant filter by
-hand.
-
-A set of ids of another aggregate is a child entity of the owner — its own configuration, keyed
-`(TenantId, OwnerId, OtherId)`, with composite foreign keys to both roots.
-
-## 4. Case-insensitive uniqueness — pick the column
-
-| The interface shows… | Store | Unique index on | Pre-check compares |
-| --- | --- | --- | --- |
-| the normalized value (an e-mail in lowercase, CPF digits) | the value object's normalized value | the column | the value object |
-| what the user typed (a name with its casing) | the typed value | a generated lowercase column | the generated column, through `EF.Property<string>` |
-
-The index decides under concurrency. The pre-check exists only to answer with the field and `meta`.
-
-## 5. The migration
-
-1. `dotnet ef migrations add <Name>` from the Api folder (command in ARCHITECTURE §5).
-2. Read the generated `Up` and `Down`: no drop, rename or type change of existing data unless the PR
-   is about that; index filters and `CHECK`s exactly as configured; composite keys present.
-3. `dotnet ef migrations has-pending-model-changes` reports nothing.
-4. Never edit a migration that is already committed — write the next one.
-
-## 6. Red flags in persistence
-
-- a repository for a child, or a `DbSet` for one
-- `TenantId`, `DeletedAt` or `IgnoreQueryFilters` in a repository
-- a method returning a DTO, a projection (`Select(… new …Response`), an `IQueryable` or another root
-- `Include` of another aggregate root
-- `SqlQuery`, `FromSql`, `ExecuteSql`, `BeginTransaction`, a cache — without evidence in the PR
-- an `Id`-only foreign key between two tenant-owned entities
-- a list or page without an explicit order
-- a list or page whose roots come without their children: `UpdateAsync` on one deletes them
-- a literal length in a configuration where a constant exists
-- an edited migration that was already committed
+Use [tests.md](tests.md) to distinguish model metadata/EF behavior from relational enforcement.
+A composite FK, filtered uniqueness race or CHECK needs evidence from disposable PostgreSQL under
+the current verification policy; do not use the persistent development volume or claim InMemory
+proves the constraint. Report the actual scenario and result in the PR.
