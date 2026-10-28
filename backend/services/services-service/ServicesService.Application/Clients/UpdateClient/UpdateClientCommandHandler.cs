@@ -74,10 +74,11 @@ public sealed class UpdateClientCommandHandler(
     private static Error TagNotFound()
     {
         const string message = "Uma ou mais etiquetas informadas não foram encontradas.";
-        var fieldError = new FieldError("Tag.NotFound", message);
-        var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>> { ["TagIds"] = [fieldError] };
 
-        return Error.Validation("Tag.NotFound", message, fieldErrors);
+        return Error.Validation(
+            "Tag.NotFound",
+            message,
+            new Dictionary<string, IReadOnlyList<FieldError>> { ["TagIds"] = [new FieldError("Tag.NotFound", message)] });
     }
 
     private async Task<Error?> FindCpfConflictAsync(Client client, CancellationToken cancellationToken)
