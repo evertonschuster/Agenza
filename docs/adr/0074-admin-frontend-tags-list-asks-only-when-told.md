@@ -8,6 +8,16 @@ consumer); retires the collection adapter of [ADR 0069](0069-tags-collection-com
 retirement trigger said; amended by [ADR 0076](0076-admin-frontend-clients-list-filter-bar.md) (point 10: the search is
 a React Hook Form filter bar with `SearchField`, Buscar outside the field and Limpar filtros)
 
+> **2026-10-28 evolution:** [fa07d965](https://github.com/evertonschuster/Agenza/commit/fa07d965a4a2e0f029518a791389812dca54cc25)
+> returned applied filters, page and size to the URL for both Pessoas and Etiquetas.
+> The page hooks supply controlled state to the Router-independent `usePaginatedList`; the URL
+> is read on mount and written with `replace` on the owning route. Point 1's initial-state
+> input, point 4, the ignored-URL expectations in point 5, and the URL-related consequences and
+> rejected alternatives below record the earlier implementation.
+> Requests still leave from actions, mount or correction of a page past the end. `refetch`
+> sends the last requested query, preserving the displayed rows while it waits; it does not
+> change the query or URL. See the [current list convention](../../apps/admin-frontend/docs/ARCHITECTURE.md#1-shape).
+
 ## Context
 
 ADR 0073 left Etiquetas as the last list fetching from an effect keyed on state: `useTagListPage` read `?q=` with
