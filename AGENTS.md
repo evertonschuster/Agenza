@@ -1,6 +1,6 @@
 # Agenza — instruções para agentes
 
-Ponto de entrada independente de ferramenta. Claude Code, Codex e Copilot leem este arquivo (ver
+Ponto de entrada compartilhado. O carregamento depende da ferramenta e da superfície usada (ver
 [Como cada ferramenta chega aqui](#como-cada-ferramenta-chega-aqui)).
 
 > **Este arquivo aponta; não copia.** A [ADR 0016](docs/adr/0016-ai-agent-governance-framework.md)
@@ -18,25 +18,40 @@ que marca horários e responde dúvidas. Persona v1: o dono-operador. Um usuári
 **Textos visíveis são pt-BR. Identificadores de código são inglês.** Teclas (`Ctrl`, `Esc`, `Enter`)
 não se traduzem.
 
-## Estrutura
+## Consulta por tarefa
 
-| Caminho | Stack | Leia primeiro |
-| --- | --- | --- |
-| `apps/admin-frontend` | Vite + React + TypeScript estrito | [AGENTS.md local](apps/admin-frontend/AGENTS.md) |
-| `backend` | .NET / ASP.NET Core, Clean Architecture por serviço | [AGENTS.md local](backend/AGENTS.md) |
-| `ai-services` | Python + FastAPI | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md) |
-| `infra` | Scripts de init do PostgreSQL | — |
-| `docs/adr` | 38+ decisões arquiteturais | [índice](docs/adr/README.md) |
+Leia o guia da área afetada e somente as referências ligadas à mudança.
+
+| Caminho               | Stack                                               | Leia primeiro                                                                      |
+| --------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
+| `apps/admin-frontend` | Vite + React + TypeScript estrito                   | [AGENTS.md local](apps/admin-frontend/AGENTS.md)                                   |
+| `backend`             | .NET / ASP.NET Core, Clean Architecture por serviço | [AGENTS.md local](backend/AGENTS.md)                                               |
+| `ai-services`         | Python + FastAPI                                    | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md) |
+| `infra`               | Scripts de init do PostgreSQL                       | —                                                                                  |
+| `docs/adr`            | Decisões e sua evolução                             | [índice](docs/adr/README.md)                                                       |
 
 Convenções do monorepo: [docs/MONOREPO.md](docs/MONOREPO.md).
 Portões de qualidade: [docs/QUALITY.md](docs/QUALITY.md).
 Direção do produto: [docs/VISION.md](docs/VISION.md).
 
+## Fontes de orientação
+
+Código, configuração, pins e checks demonstram a implementação e as garantias executadas.
+Guias de arquitetura descrevem a forma vigente e identificam padrões antigos ainda presentes;
+ADRs registram decisões e sua evolução. Uma divergência exige investigação, sem mudar código correto
+apenas para satisfazer uma passagem histórica.
+
+Este arquivo e os AGENTS locais guardam invariantes e roteamento; skills descrevem procedimentos;
+specs definem comportamento e aceite. A política está na
+[ADR 0087](docs/adr/0087-ai-instruction-sources-and-proportional-documentation.md).
+
 ## Regras que valem em todo o repositório
 
-**Decisões viram ADR.** `docs/adr/NNNN-titulo-em-kebab.md`, numeração sequencial. Uma ADR registra
-também o que foi **tentado e revertido**, para ninguém re-litigar. Ao substituir uma decisão, marque a
-antiga como superseded e aponte para a nova — nunca edite a antiga como se nunca tivesse existido.
+**Decisões duradouras viram ADR.** Use `docs/adr/NNNN-titulo-em-kebab.md`, com a próxima numeração
+livre, para mudanças de fronteira, segurança, contrato compartilhado, persistência, operação,
+dependência relevante ou custo significativo de reversão. Ajustes locais reversíveis e iterações de
+review ficam no PR. Registre alternativas relevantes, inclusive tentadas e revertidas; ao substituir
+uma decisão, identifique as partes superadas e ligue à evolução, preservando o histórico.
 
 **Multi-tenancy é fronteira de servidor.** O tenant vem sempre da claim do token validado. O header
 `X-Tenant-Id` é conveniência de roteamento, não fronteira de segurança; o backend recusa qualquer
@@ -62,8 +77,15 @@ executáveis. [ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibilit
 
 ## Fluxo de trabalho
 
-Features começam pelo Spec Kit: `/speckit-specify` → `/speckit-plan` → `/speckit-tasks` →
-`/speckit-implement`. As specs vivem em `apps/admin-frontend/specs/NNN-nome/`.
+O Spec Kit está instalado no frontend. Para planejar suas features, execute o fluxo
+`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement` a partir de
+`apps/admin-frontend`, usando a sintaxe da integração instalada.
+Confira a [instalação](apps/admin-frontend/.specify/integration.json),
+o [produtor de planos](apps/admin-frontend/.agents/skills/speckit-plan/SKILL.md) e os
+[pré-requisitos](apps/admin-frontend/.specify/scripts/powershell/check-prerequisites.ps1).
+Uma correção pequena não exige esse fluxo por si só. Escolha artefatos pelo conhecimento necessário;
+não omita um arquivo exigido pelo tooling sem adaptar seus consumidores. A instalação no frontend
+não estabelece um fluxo automático para backend ou serviços de IA.
 
 Trabalho por PR. Não faça commit na `main` diretamente.
 
@@ -73,18 +95,27 @@ seus portões.
 
 ## Skills
 
-Fluxos de trabalho específicos deste repositório vivem em `.claude/skills/agenza-*/`. Elas usam
-divulgação progressiva: o `SKILL.md` é curto e roteia para referências apenas quando a tarefa toca
-aquele assunto.
+Skills Agenza têm uma fonte canônica em `.claude/skills/agenza-*/`. Os AGENTS de cada área apontam
+para o arquivo da tarefa. Quando o host não o descobrir, abra esse caminho explicitamente e somente
+as referências necessárias; leitura por caminho não é descoberta nativa.
 
-**Não existe espelho de skills nem script de sincronização.** Foi exatamente o mecanismo que falhou na
-ADR 0016. As skills moram num lugar só; este `AGENTS.md` carrega o que é independente de ferramenta.
-[ADR 0041](docs/adr/0041-ai-instruction-files-reinstated.md).
+Não crie espelhos editáveis ou sincronização caseira dessas skills. As distribuições do Spec Kit
+seguem sua instalação e upstream; sua presença não prova que todas as integrações estejam ativas.
 
 ## Como cada ferramenta chega aqui
 
-| Ferramenta | Caminho |
-| --- | --- |
-| Codex | lê `AGENTS.md` nativamente |
-| Claude Code | `CLAUDE.md` importa este arquivo; skills em `.claude/skills/` |
-| GitHub Copilot | `.github/copilot-instructions.md` aponta para cá |
+| Ferramenta     | Caminho                                                                                                             |
+| -------------- | ------------------------------------------------------------------------------------------------------------------- |
+| Codex          | Descobre AGENTS pela hierarquia do diretório da sessão; abra o da área quando necessário                            |
+| Claude Code    | `CLAUDE.md` importa este arquivo; o carregamento adicional depende da configuração                                  |
+| GitHub Copilot | A ponte em `.github/copilot-instructions.md` pede leitura da raiz e da área afetada; o suporte varia por superfície |
+
+Links de consulta não são imports nativos. Registre a superfície realmente verificada antes de
+declarar compatibilidade de um fluxo.
+
+## Validação e entrega
+
+Escolha testes pelo comportamento e risco alterados, mantendo os gates aplicáveis em
+[QUALITY](docs/QUALITY.md). Em alteração exclusivamente documental, confira fontes, referências,
+âncoras, formatação e diff; não crie testes de aplicação para validar redação.
+Registre execuções e limitações no PR, sem acrescentar um relatório permanente por tarefa.

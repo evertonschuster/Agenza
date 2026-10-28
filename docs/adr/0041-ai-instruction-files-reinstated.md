@@ -2,6 +2,14 @@
 
 Status: accepted (2026-09); extended to `backend/` (2026-10)
 
+> **2026-10-28 evolution:** [ADR 0087](0087-ai-instruction-sources-and-proportional-documentation.md)
+> supersedes the discovery-path account and the accepted lack of skill access outside Claude below,
+> and replaces the blanket dismissal of mechanical checks with a distinction between objective
+> properties and semantic review. Agenza skills keep one source; hosts without native discovery
+> read the routed path explicitly. The no-mirror/no-hand-rolled-sync decision remains. The older
+> discovery claims, integration-manifest inference and consequences below record this decision's
+> context; they are not a current host compatibility matrix.
+
 Replaces the open concern left by [ADR 0016](0016-ai-agent-governance-framework.md)
 (abandoned).
 
@@ -18,8 +26,8 @@ ADR 0016 established a cross-tool agent governance framework: `AGENTS.md` at roo
 `.agents/skills/` as the single editable skill source, a `sync_agent_skills.py` script copying it
 to `.claude/skills/`, import-only `CLAUDE.md` files, a Copilot bridge, and governance checks in
 CI. It was **abandoned** in 2026-08 and removed wholesale — 391 files in commit `bfd16b8` — with
-no replacement. The ADR index has since read: *"There is currently no repository decision on this
-concern."*
+no replacement. The ADR index has since read: _"There is currently no repository decision on this
+concern."_
 
 The abandonment was correct about the failure, and the failure is worth restating precisely,
 because it is the thing this ADR must not repeat:
@@ -74,6 +82,7 @@ Reinstate the instruction files. Do **not** reinstate the machinery.
   So the constraint is environmental and current, not architectural and permanent. Worth noting:
   `.agents/skills/` is the path ADR 0016 chose and commit `bfd16b8` deleted. Its location was
   right; what failed was the drifting content and the checks that compared copies.
+
 - **No governance CI job.** There is nothing mechanical left to check that would be checking
   semantics rather than string equality.
 
@@ -89,7 +98,7 @@ file that wants to convey one of them carries a link instead.
 
 ## Consequences
 
-- The files can go stale only in their *pointers*, not in their *facts*. A dead link is visible;
+- The files can go stale only in their _pointers_, not in their _facts_. A dead link is visible;
   a silently wrong version number is not. This is the whole trade.
 - Nothing enforces the no-restating rule but review. That is deliberate: the enforceable version of
   this rule is what failed last time. A reviewer's question — "is this fact also stated somewhere
