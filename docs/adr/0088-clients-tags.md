@@ -57,11 +57,12 @@ code does not change; the pt-BR message names only the non-zero parts ("2 serviÃ
 - Wire: `services-api.d.ts` is regenerated in this change with `tagIds: null | string[]` on both commands and `tags` on
   both client responses; nothing in services or tags changes.
 - `tagIds` is **required** in the generated schema, as `guardians` and `referenceContacts` already are: ASP.NET's
-  OpenAPI marks every positional record parameter without a default as required. The current
-  `clientsRepository.ts` does not send it, so the admin-frontend typecheck fails on create and update until the
-  frontend change. Making the parameter optional with a default was considered and turned down by product choice.
+  OpenAPI marks every positional record parameter without a default as required. Making the parameter optional
+  with a default was considered and turned down by product choice.
+- Stopgap so the required frontend check stays green: `clientsRepository.ts` sends `tagIds: []` on create and update
+  until the frontend change replaces it with the form's tags. It is the only frontend line this change touches.
 - Until the frontend change ships, any edit made through the current person form **clears that person's tags**, since
-  the form sends no `tagIds`. No screen sets tags before then, so nothing is lost today, but the effect is real.
+  the form sends an empty `tagIds`. No screen sets tags before then, so nothing is lost today, but the effect is real.
 - ARCHITECTURE Â§10 points to `ClientTag` and `ClientTagConfiguration` as the example of a many-to-many between
   aggregates kept by id.
 

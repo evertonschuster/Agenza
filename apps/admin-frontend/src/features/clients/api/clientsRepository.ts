@@ -24,13 +24,13 @@ function get(id: string, signal?: AbortSignal): Promise<ApiResult<Client>> {
 }
 
 function create(input: ClientInput): Promise<ApiResult<Client>> {
-  return servicesApi.post('/api/v{version}/clients', { body: input });
+  return servicesApi.post('/api/v{version}/clients', { body: { ...input, tagIds: [] } });
 }
 
 function update(id: string, input: ClientInput): Promise<ApiResult<Client>> {
   return servicesApi.put('/api/v{version}/clients/{id}', {
     path: { id },
-    body: { clientId: id, ...input },
+    body: { clientId: id, ...input, tagIds: [] },
   });
 }
 
