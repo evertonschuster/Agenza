@@ -12,7 +12,9 @@ public sealed class ListClientsQueryHandler(IClientRepository clientRepository, 
 
         var tagsById = await GetTagsByIdAsync(clients.Items, cancellationToken);
 
-        return Result.Success(clients.Map(client => ClientListItemResponse.FromClient(client, tagsById)));
+        var clientItems = clients.Map(client => ClientListItemResponse.FromClient(client, tagsById));
+
+        return Result.Success(clientItems);
     }
 
     private async Task<Dictionary<Guid, Tag>> GetTagsByIdAsync(IReadOnlyList<Client> clients, CancellationToken cancellationToken)
