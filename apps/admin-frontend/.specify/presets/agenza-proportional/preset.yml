@@ -1,0 +1,58 @@
+schema_version: '1.0'
+preset:
+  id: 'agenza-proportional'
+  name: 'Agenza — fluxo proporcional'
+  version: '1.0.0'
+  description: 'Especificações e validação proporcionais ao comportamento e risco da mudança.'
+requires:
+  speckit_version: '>=0.16.5.dev0'
+provides:
+  templates:
+    - type: template
+      name: spec-template
+      file: templates/spec-template.md
+      strategy: replace
+    - type: template
+      name: plan-template
+      file: templates/plan-template.md
+      strategy: replace
+    - type: template
+      name: tasks-template
+      file: templates/tasks-template.md
+      strategy: replace
+    - type: template
+      name: checklist-template
+      file: templates/checklist-template.md
+      strategy: replace
+    - type: command
+      name: speckit.specify
+      file: commands/specify.md
+      strategy: replace
+    - type: command
+      name: speckit.plan
+      file: commands/plan.md
+      strategy: replace
+    - type: command
+      name: speckit.tasks
+      file: commands/tasks.md
+      strategy: replace
+    - type: command
+      name: speckit.implement
+      file: commands/implement.md
+      strategy: replace
+    - type: command
+      name: speckit.analyze
+      file: commands/analyze.md
+      strategy: replace
+    - type: command
+      name: speckit.checklist
+      file: commands/checklist.md
+      strategy: replace
+    - type: command
+      name: speckit.clarify
+      file: commands/clarify.md
+      strategy: replace
+    - type: command
+      name: speckit.converge
+      file: commands/converge.md
+      strategy: replace

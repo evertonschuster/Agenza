@@ -22,6 +22,7 @@ superseded is historical evidence, not current implementation guidance.
 | admin-frontend UI foundation | 0039, 0040, 0043 |
 | admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076, 0077 as amended by 0078, 0078, 0082, 0084 as narrowed by 0085 and amended by 0086, 0085, 0086 |
 | AI agent instruction files | 0041 |
+| Feature planning and Spec Kit | 0087 |
 
 ## Superseded decisions
 
@@ -112,3 +113,4 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0084 admin-frontend opens the existing person from a CPF conflict in another tab.
 0085 admin-frontend derives the CPF recovery link directly from its form field error.
 0086 admin-frontend shares new-tab link presentation and keeps its label caller-owned.
+0087 Spec Kit uses a local proportional preset; auxiliary artifacts require a reason and tests follow behavior and risk.
