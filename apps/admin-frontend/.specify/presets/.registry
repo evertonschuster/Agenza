@@ -1,0 +1,67 @@
+{
+  "schema_version": "1.0",
+  "presets": {
+    "agenza-proportional": {
+      "version": "1.0.0",
+      "source": "local",
+      "manifest_hash": "sha256:49e0e52d619e89b6618096cce60d089164308a4317917315505d49149a73d882",
+      "enabled": true,
+      "priority": 10,
+      "registered_commands": {
+        "codex": [
+          "speckit.specify",
+          "speckit.plan",
+          "speckit.tasks",
+          "speckit.implement",
+          "speckit.analyze",
+          "speckit.checklist",
+          "speckit.clarify",
+          "speckit.converge"
+        ],
+        "claude": [
+          "speckit.specify",
+          "speckit.plan",
+          "speckit.tasks",
+          "speckit.implement",
+          "speckit.analyze",
+          "speckit.checklist",
+          "speckit.clarify",
+          "speckit.converge"
+        ]
+      },
+      "registered_skills": {
+        "codex": [
+          "speckit-specify",
+          "speckit-plan",
+          "speckit-tasks",
+          "speckit-implement",
+          "speckit-analyze",
+          "speckit-checklist",
+          "speckit-clarify",
+          "speckit-converge"
+        ],
+        "claude": [
+          "speckit-specify",
+          "speckit-plan",
+          "speckit-tasks",
+          "speckit-implement",
+          "speckit-analyze",
+          "speckit-checklist",
+          "speckit-clarify",
+          "speckit-converge"
+        ],
+        "copilot": [
+          "speckit-specify",
+          "speckit-plan",
+          "speckit-tasks",
+          "speckit-implement",
+          "speckit-analyze",
+          "speckit-checklist",
+          "speckit-clarify",
+          "speckit-converge"
+        ]
+      },
+      "installed_at": "2026-10-28T12:18:43.637184+00:00"
+    }
+  }
+}
