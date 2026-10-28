@@ -7,22 +7,12 @@ problem component so its stable code remains available for support. A retry inst
 working retry action; “contacte o administrador” alone does not help. When support is the only
 option, say which code/time to include and never request a password.
 
-The live message boundary is
-[servicesFacade.ts](../../../../apps/admin-frontend/src/shared/api/servicesFacade.ts),
-[formErrors.ts](../../../../apps/admin-frontend/src/shared/api/formErrors.ts) and
-[applyApiProblem.ts](../../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts).
-The facade supplies curated fallback problems. For non-2xx responses other than 429, its current
-`isProblem` guard accepts any non-null object with a string `title`; it does not validate the
-problem's full schema, origin or suitability for display. A title alone is not evidence that a
-message belongs to the service's user-facing contract. Some valid API problems have only a title,
-so requiring a code would also reject supported responses.
-
-The copy guidance here applies to the service's contracted user-facing messages and the local
-fallbacks. It is not a guarantee enforced by the current guard. Form mapping preserves field
-messages and uses the first unmatched message for the form; the title is a fallback when errors
-supply no usable message. Screens branch on codes/typed metadata, never on wording. Do not add
-exception text, OIDC-provider descriptions, `detail`, `type` or diagnostic ids as explanatory copy.
-Changes to response validation belong at the shared API boundary, not in per-page text filters.
+The [HTTP message policy](../../../../docs/API.md#7-consumo-no-frontend-e-política-de-mensagens)
+owns normalization, preserved messages and form mapping, including their current limits.
+Use those existing surfaces; branch on codes and typed metadata, never on wording.
+Do not add exception text, OIDC-provider descriptions, `detail`, `type` or diagnostic ids as
+explanatory copy. Changes to response validation belong at the shared API boundary, not in
+per-page text filters.
 
 | Surface                         | Existing path                                                                   |
 | ------------------------------- | ------------------------------------------------------------------------------- |

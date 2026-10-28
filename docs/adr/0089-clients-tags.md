@@ -1,4 +1,4 @@
-# ADR 0088 — Clients: tags
+# ADR 0089 — Clients: tags
 
 Status: accepted (2026-10); extends [ADR 0056](0056-clients-edit-replaces-contact-composition.md) (the edit replaces
 the whole record) and [ADR 0049](0049-conventions-for-new-backend-slices.md) §2 (a many-to-many between aggregates is

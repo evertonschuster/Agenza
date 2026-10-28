@@ -1,8 +1,9 @@
 # Copilot — instruções
 
-As regras deste repositório vivem em [`AGENTS.md`](../AGENTS.md) na raiz, em
-[`apps/admin-frontend/AGENTS.md`](../apps/admin-frontend/AGENTS.md) para o frontend e em
-[`backend/AGENTS.md`](../backend/AGENTS.md) para o backend.
+Leia o [AGENTS da raiz](../AGENTS.md) e somente o guia da área afetada:
+[frontend](../apps/admin-frontend/AGENTS.md), [backend](../backend/AGENTS.md) ou
+[serviço de IA](../ai-services/assistant-service/README.md).
 
-Leia-os antes de sugerir código. Este arquivo é apenas uma ponte e não repete nenhuma regra — se algo
-aqui divergir do `AGENTS.md`, o `AGENTS.md` vence.
+Esta ponte encaminha a leitura; os links não são imports nativos. O suporte depende da superfície
+do Copilot e de seu acesso a arquivos. Quando houver acesso, abra os caminhos indicados para a
+tarefa; não declare que uma skill foi carregada sem verificar. As regras ficam no AGENTS aplicável.

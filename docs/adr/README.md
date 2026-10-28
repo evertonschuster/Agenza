@@ -5,54 +5,59 @@ superseded is historical evidence, not current implementation guidance.
 
 ## Current decisions by concern
 
-| Concern | Current ADRs |
-| --- | --- |
-| Service and data topology | 0001, 0002, 0003, 0024, 0029 |
-| Backend CQRS, validation, Result flow | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049 as narrowed by 0061, 0051, 0057 |
-| Tenant assignment and persistence | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046, 0081 |
-| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059, 0060, 0062, 0063, 0064, 0065, 0066, 0068, 0080, 0088 |
-| Dates, times and time zones | 0045 as amended by 0078, 0078 |
-| Testing and runtime smokes | 0004, 0015 as narrowed by 0019/0026, 0026, 0050 |
-| Authentication UX and AI delegation | 0020, 0022, 0083 |
-| Database bootstrap | 0025 as narrowed by 0027, plus 0027/0028 |
-| Git workflow | 0021 as amended by 0030/0031 |
-| Toolchain compatibility | 0032, 0050 |
-| Logging and telemetry | 0054 |
-| admin-frontend architecture | 0033 as narrowed by 0083, 0034, 0035, 0036, 0037 as amended by 0083, 0038, 0075 |
-| admin-frontend UI foundation | 0039, 0040, 0043 |
-| admin-frontend screens | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076, 0077 as amended by 0078, 0078, 0082, 0084 as narrowed by 0085 and amended by 0086, 0085, 0086 |
-| AI agent instruction files | 0041 |
-| Feature planning and Spec Kit | 0087 |
+| Concern                                                                    | Current ADRs                                                                                                                                                          |
+| -------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Service and data topology                                                  | 0001, 0002, 0003, 0024, 0029                                                                                                                                          |
+| Backend CQRS, validation, Result flow                                      | 0005, 0006, 0007, 0009, 0012 as narrowed by 0049, 0014, 0018, 0048, 0049 as narrowed by 0061, 0051, 0057                                                              |
+| Tenant assignment and persistence                                          | 0006, 0008, 0009, 0017, 0019, 0024, 0028, 0046, 0081                                                                                                                  |
+| Aggregates, value objects, factories, DTOs, uniqueness and field conflicts | 0044 as narrowed by 0051 and 0058, 0046, 0048, 0049, 0055, 0056, 0058, 0059, 0060, 0062, 0063, 0064, 0065, 0066, 0068, 0080, 0089                                     |
+| Dates, times and time zones                                                | 0045 as amended by 0078, 0078                                                                                                                                         |
+| Testing and runtime smokes                                                 | 0004, 0015 as narrowed by 0019/0026, 0026, 0050                                                                                                                       |
+| Authentication UX and AI delegation                                        | 0020, 0022, 0083                                                                                                                                                      |
+| Database bootstrap                                                         | 0025 as narrowed by 0027, plus 0027/0028                                                                                                                              |
+| Git workflow                                                               | 0021 as amended by 0030/0031                                                                                                                                          |
+| Toolchain compatibility                                                    | 0032, 0050                                                                                                                                                            |
+| Logging and telemetry                                                      | 0054                                                                                                                                                                  |
+| admin-frontend architecture                                                | 0033 as narrowed by 0083, 0034, 0035, 0036, 0037 as amended by 0083, 0038, 0075                                                                                       |
+| admin-frontend UI foundation                                               | 0039, 0040                                                                                                                                                            |
+| admin-frontend screens                                                     | 0067, 0070 as amended by 0071/0072/0073, 0074 as amended by 0076, 0076, 0077 as amended by 0078, 0078, 0082, 0084 as narrowed by 0085 and amended by 0086, 0085, 0086 |
+| AI agent instruction files and documentation scope                         | 0088, retaining the single-source constraints of 0041                                                                                                                 |
+| Feature planning and Spec Kit                                              | 0087                                                                                                                                                                  |
+
+[0042](0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md) records an implemented lint
+rule but remains proposed: its rationale and naming question have not been ratified.
 
 ## Superseded decisions
 
-| ADR | Superseded by | Do not follow |
-| --- | --- | --- |
-| 0010 | 0012 | Repository-backed FluentValidation rules |
-| 0011 | 0012 and 0014 | Validator-only/anemic domain model |
-| 0013 | 0024 | Application-only tenant relationship enforcement |
-| 0023 | 0026 | Dedicated runtime-test project |
-| 0030 local-hook portion | 0031 | Repository-owned local Git hooks |
-| 0044 key-casing portion | 0051 | PascalCase keys in the conflict contract (`errors.Cpf`, `errors.Email`) |
-| 0044 contact-purposes portion | 0058 | The `ContactPurposes` value object, `ContactPurposeNames` and purposes as strings translated in Application |
-| 0049 shared-input-rule portion | 0061 | `<Feature>RuleBuilderExtensions` as the home of a rule two validators share |
-| 0053 | 0056 | Synchronizing client contacts by id |
-| 0069 | 0074 | The tags collection adapter that walks every page of the API |
+| ADR                                                       | Superseded by                                                                                                            | Do not follow                                                                                               |
+| --------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------- |
+| 0010                                                      | 0012                                                                                                                     | Repository-backed FluentValidation rules                                                                    |
+| 0011                                                      | 0012 and 0014                                                                                                            | Validator-only/anemic domain model                                                                          |
+| 0013                                                      | 0024                                                                                                                     | Application-only tenant relationship enforcement                                                            |
+| 0023                                                      | 0026                                                                                                                     | Dedicated runtime-test project                                                                              |
+| 0030 local-hook portion                                   | 0031                                                                                                                     | Repository-owned local Git hooks                                                                            |
+| 0044 key-casing portion                                   | 0051                                                                                                                     | PascalCase keys in the conflict contract (`errors.Cpf`, `errors.Email`)                                     |
+| 0044 contact-purposes portion                             | 0058                                                                                                                     | The `ContactPurposes` value object, `ContactPurposeNames` and purposes as strings translated in Application |
+| 0049 shared-input-rule portion                            | 0061                                                                                                                     | `<Feature>RuleBuilderExtensions` as the home of a rule two validators share                                 |
+| 0053                                                      | 0056                                                                                                                     | Synchronizing client contacts by id                                                                         |
+| 0069                                                      | 0074                                                                                                                     | The tags collection adapter that walks every page of the API                                                |
+| 0072 internal-state and URL-removal portions              | [fa07d965](https://github.com/evertonschuster/Agenza/commit/fa07d965a4a2e0f029518a791389812dca54cc25), annotated in 0072 | Keeping list state exclusively in memory and ignoring URL parameters                                        |
+| 0074 initial-state and URL-related portions               | The same change, annotated in 0074                                                                                       | Etiquetas keeping filters, page and size out of the URL; explicit requests and refetch remain               |
+| 0041 discovery, skill-access and mechanical-check account | 0088                                                                                                                     | Assuming one discovery path for all hosts, or that routed files cannot be read without native discovery     |
 
 ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, 0030, and 0044
 contain explicitly marked historical passages. Their status header and the
 newer ADR named there win over the historical body.
 
-0016 is abandoned: the formal AI-agent AGENTS.md/skills governance framework it
-established was removed. [ADR 0041](0041-ai-instruction-files-reinstated.md) now
-decides this concern — it reinstates the instruction files but deliberately not
-the `.agents/skills/` mirror, the sync script, or the governance CI job, which
-are the parts 0016 identified as the failure. Read 0016 for the failure analysis;
-follow 0041 for what to do.
+0016 is abandoned: its formal AGENTS.md/skills governance framework was removed.
+[0041](0041-ai-instruction-files-reinstated.md) reinstated the instruction files without mirrors
+or synchronization. [0088](0088-ai-instruction-sources-and-proportional-documentation.md) now
+defines source ownership, proportional documentation, explicit skill reading and the limits of
+mechanical checks, retaining that single-source decision. Read 0016 for the failure analysis.
 
 Pointers that died with that removal (`bfd16b8`): ADRs 0005, 0006, 0007 and 0012
 send the reader to `backend/CLAUDE.md` and to `backend-use-case` /
-`backend-new-microservice` skills, and ADRs 0024, 0026 and 0028 list an
+`backend-new-microservice` skills, and ADRs 0022, 0024, 0026 and 0028 list an
 "architecture guard" among their fitness functions. Those skills and the guard
 no longer exist, and the guard was not replaced, so the rules it checked are
 enforced by review. `backend/CLAUDE.md` exists again, but only as an import of
@@ -78,7 +83,7 @@ cancellation layer · 0034 custom Result type · 0035 no server-state library ·
 0036 OIDC session in localStorage · 0037 session core in shared · 0038 categories
 harness removed · 0039 Base UI primitives · 0040 three-state theme · 0041 AI
 instruction files reinstated · 0042 widgets layer and layer-boundaries lint rule
-(proposed) · 0044 clients aggregate, uniqueness rules and conflict contract · 0045 backend works in UTC only ·
+(implemented rule; ADR proposed) · 0044 clients aggregate, uniqueness rules and conflict contract · 0045 backend works in UTC only ·
 0046 separate soft-delete and tenant query filters · 0048 database failures are generic to the user ·
 0049 conventions for new backend slices · 0050 xUnit v3 on VSTest and the Aspire CLI bundle ·
 0051 camelCase error keys on the wire · 0053 superseded client-contact synchronization ·
@@ -98,9 +103,9 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0069 tags frontend: collection compatibility over bounded API pages during the paging rollout (retired by 0074) ·
 0070 admin-frontend paged lists: page and size in the URL, one footer shared through PaginatedListSection ·
 0071 admin-frontend paged lists share one hook: filters read by each list, the total kept per filters ·
-0072 admin-frontend paged lists keep their state in the hook, not in the URL ·
+0072 admin-frontend paged lists kept their state in the hook; URL-removal portions historical since fa07d965 ·
 0073 admin-frontend paged lists ask the backend only when an action tells them to ·
-0074 admin-frontend Etiquetas pages on usePaginatedList, asks only when told to, with its state out of the URL ·
+0074 admin-frontend Etiquetas pages on usePaginatedList and asks only when told to; out-of-URL portions historical since fa07d965 ·
 0075 admin-frontend a 429 is a transient problem of its own, shown with its own message ·
 0076 admin-frontend Pessoas and Etiquetas filter bars on React Hook Form with reusable SelectField and SearchField: Pessoas opens on Ativas, one Buscar applies every filter ·
 0077 admin-frontend editing a person on the registration form at /pessoas/:id/editar, with Desativar/Reativar beside the title ·
@@ -114,4 +119,5 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0085 admin-frontend derives the CPF recovery link directly from its form field error.
 0086 admin-frontend shares new-tab link presentation and keeps its label caller-owned.
 0087 Spec Kit uses a local proportional preset; auxiliary artifacts require a reason and tests follow behavior and risk.
-0088 clients tags: a ClientTag child keeps the tag id, `null` on the PUT clears, an unknown tag is 400 on TagIds, a tag in use by people cannot be deleted.
+0088 instruction sources, proportional documentation and explicit skill access across hosts.
+0089 clients tags: a ClientTag child keeps the tag id, `null` on the PUT clears, an unknown tag is 400 on TagIds, a tag in use by people cannot be deleted.
