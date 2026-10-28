@@ -178,7 +178,7 @@ public class GetClientByIdQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ForAClientWithoutTags_DoesNotReadTags()
+    public async Task Handle_ForAClientWithoutTags_ReturnsNoTags()
     {
         var client = CompleteClient();
         Stores(client);
@@ -186,6 +186,5 @@ public class GetClientByIdQueryHandlerTests
         var result = await _handler.Handle(new GetClientByIdQuery(client.Id), CancellationToken.None);
 
         result.Value.Tags.Should().BeEmpty();
-        await _tagRepository.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 }

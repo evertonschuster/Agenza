@@ -26,7 +26,7 @@ public sealed class UpdateClientCommandHandler(
             return Result.Failure<ClientResponse>(ToError(updateResult.Error));
         }
 
-        var tags = await tagRepository.GetTagsOfAsync([client], cancellationToken);
+        var tags = await tagRepository.GetByIdsAsync(client.Tags.Select(clientTag => clientTag.TagId).ToList(), cancellationToken);
         if (tags.Count != client.Tags.Count)
         {
             return Result.Failure<ClientResponse>(TagNotFound());

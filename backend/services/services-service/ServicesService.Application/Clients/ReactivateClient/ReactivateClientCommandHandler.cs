@@ -16,7 +16,7 @@ public sealed class ReactivateClientCommandHandler(
             return Result.Failure<ClientResponse>(Error.NotFound("Client.NotFound", "A pessoa não foi encontrada."));
         }
 
-        var tags = await tagRepository.GetTagsOfAsync([client], cancellationToken);
+        var tags = await tagRepository.GetByIdsAsync(client.Tags.Select(clientTag => clientTag.TagId).ToList(), cancellationToken);
 
         if (client.Status == ClientStatus.Active)
         {

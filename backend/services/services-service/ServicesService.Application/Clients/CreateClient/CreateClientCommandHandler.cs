@@ -22,7 +22,7 @@ public sealed class CreateClientCommandHandler(
 
         var client = clientResult!.Value!;
 
-        var tags = await tagRepository.GetTagsOfAsync([client], cancellationToken);
+        var tags = await tagRepository.GetByIdsAsync(client.Tags.Select(clientTag => clientTag.TagId).ToList(), cancellationToken);
         if (tags.Count != client.Tags.Count)
         {
             return Result.Failure<ClientResponse>(TagNotFound());

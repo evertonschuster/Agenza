@@ -379,7 +379,7 @@ public class UpdateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithNullTagIds_ClearsTheTagsWithoutReadingTags()
+    public async Task Handle_WithNullTagIds_ClearsTheTags()
     {
         var vip = ClientTestData.Tag();
         _client.Update(ClientTestData.Data(ClientTestData.Name("Paula Rocha"), tagIds: [vip.Id]), ClientTestData.Today);
@@ -389,6 +389,5 @@ public class UpdateClientCommandHandlerTests
         result.IsSuccess.Should().BeTrue();
         result.Value.Tags.Should().BeEmpty();
         _client.Tags.Should().BeEmpty();
-        await _tagRepository.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 }

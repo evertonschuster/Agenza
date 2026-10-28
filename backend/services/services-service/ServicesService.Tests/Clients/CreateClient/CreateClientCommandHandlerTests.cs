@@ -291,11 +291,10 @@ public class CreateClientCommandHandlerTests
     }
 
     [Fact]
-    public async Task Handle_WithoutTags_DoesNotReadTags()
+    public async Task Handle_WithoutTags_ReturnsNoTags()
     {
         var result = await Handler().Handle(Command(), CancellationToken.None);
 
         result.Value.Tags.Should().BeEmpty();
-        await _tagRepository.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 }

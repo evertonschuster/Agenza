@@ -14,7 +14,7 @@ public sealed class GetClientByIdQueryHandler(IClientRepository clientRepository
             return Result.Failure<ClientResponse>(Error.NotFound("Client.NotFound", "A pessoa não foi encontrada."));
         }
 
-        var tags = await tagRepository.GetTagsOfAsync([client], cancellationToken);
+        var tags = await tagRepository.GetByIdsAsync(client.Tags.Select(clientTag => clientTag.TagId).ToList(), cancellationToken);
 
         return ClientResponse.FromClient(client, tags);
     }

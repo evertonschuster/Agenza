@@ -232,13 +232,12 @@ public class ListClientsQueryHandlerTests
     }
 
     [Fact]
-    public async Task Handle_ForAPageWithoutTags_DoesNotReadTags()
+    public async Task Handle_ForAPageWithoutTags_ReturnsNoTags()
     {
         Returns([MinimalClient("Ana")], 1);
 
         var result = await _handler.Handle(new ListClientsQuery(), CancellationToken.None);
 
         result.Value.Items.Should().ContainSingle().Which.Tags.Should().BeEmpty();
-        await _tagRepository.DidNotReceive().GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>());
     }
 }

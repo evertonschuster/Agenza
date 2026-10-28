@@ -43,8 +43,9 @@ Services answer `404` in the same case; the difference is intentional.
 
 **Output.** `ClientResponse` (GET by id, create, update, deactivate, reactivate) and `ClientListItemResponse` carry
 `tags: [{ id, name, color }]`, ordered by name then id. `TagSummary`, which services already returned, moves to
-`Application/Tags` with a `FromTag` factory; its schema id is unchanged. The list reads the tags of the whole page with
-one `GetByIdsAsync`, never one per row, and no read happens when nobody has tags.
+`Application/Tags` with a `FromTag` factory; its schema id is unchanged. The handlers pass the tag ids straight to
+`GetByIdsAsync`; the list reads the tags of the whole page with one call, never one per row. `TagRepository.GetByIdsAsync`
+returns an empty list without a query when it gets no ids, so nothing is read when nobody has tags.
 
 **Deleting a tag in use.** `DeleteTag` counts services and people (`IClientRepository.CountByTagIdAsync`, through the
 filters; an inactive person counts, a deleted one does not) and answers `409 Tag.InUse` when either is above zero. The

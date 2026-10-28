@@ -48,6 +48,13 @@ public class TagRepository : RepositoryBase<Tag>, ITagRepository
             cancellationToken);
     }
 
-    public Task<IReadOnlyList<Tag>> GetByIdsAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken) =>
-        ListAsync(t => tagIds.Contains(t.Id), order: null, cancellationToken);
+    public async Task<IReadOnlyList<Tag>> GetByIdsAsync(IReadOnlyCollection<Guid> tagIds, CancellationToken cancellationToken)
+    {
+        if (tagIds.Count == 0)
+        {
+            return [];
+        }
+
+        return await ListAsync(t => tagIds.Contains(t.Id), order: null, cancellationToken);
+    }
 }
