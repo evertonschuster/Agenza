@@ -96,6 +96,9 @@ tenant's tag, and `409 Tag.InUse` for a tag used by an inactive person.
 
 - **Copying `ServiceTags`, a skip navigation from `Client` to `Tag`.** It loads another root into the aggregate and
   is the older generation ADR 0049 replaced.
+- **A primitive collection, `TagIds` as a `uuid[]` column on `Clients`.** EF Core 10 and Npgsql support it, and it
+  would drop `ClientTag`, its table and its sync. PostgreSQL has no foreign key on array elements, so the tenant
+  ownership of each link (ADR 0024) and the one-link-per-tag rule would hold only in application code.
 - **`null` on the `PUT` keeps the current tags.** The `PUT` replaces the whole record (ADR 0056); a field that means
   "unchanged" when absent would be the only one of its kind.
 - **`404` for an unknown tag, as services do.** The URL's resource exists; the problem is a value in the form.
