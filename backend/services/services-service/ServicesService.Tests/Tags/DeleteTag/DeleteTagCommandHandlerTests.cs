@@ -1,6 +1,7 @@
 using Admin.SharedKernel;
 using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
+using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.DeleteTag;
 
 namespace ServicesService.Tests.Tags.DeleteTag;
@@ -83,5 +84,46 @@ public class DeleteTagCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
+    }
+
+    [Fact]
+    public async Task Handle_WithTagInUse_ListsUpToTenServicesAndClientsWithTheirIdAndName()
+    {
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
+        var haircut = new TagUsage(Guid.NewGuid(), "Corte");
+        var ana = new TagUsage(Guid.NewGuid(), "Ana Lima");
+        var bia = new TagUsage(Guid.NewGuid(), "Bia Souza");
+        _tagRepository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _serviceRepository.CountByTagIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(1);
+        _clientRepository.CountByTagIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(12);
+        _serviceRepository.ListByTagIdAsync(tag.Id, 10, Arg.Any<CancellationToken>()).Returns([haircut]);
+        _clientRepository.ListByTagIdAsync(tag.Id, 10, Arg.Any<CancellationToken>()).Returns([ana, bia]);
+
+        var result = await _handler.Handle(new DeleteTagCommand(tag.Id), CancellationToken.None);
+
+        var fieldErrors = result.Error.FieldErrors!;
+        var service = fieldErrors["Services"].Should().ContainSingle().Subject;
+        service.Code.Should().Be("Tag.InUse");
+        service.Message.Should().Be("Serviço que usa esta etiqueta: Corte.");
+        service.Meta.Should().Equal(new Dictionary<string, string> { ["id"] = haircut.Id.ToString(), ["name"] = "Corte" });
+        var clientNames = fieldErrors["Clients"].Select(error => error.Meta!["name"]);
+        clientNames.Should().Equal("Ana Lima", "Bia Souza");
+        fieldErrors["Clients"][1].Message.Should().Be("Pessoa que usa esta etiqueta: Bia Souza.");
+        result.Error.Message.Should().Be("Esta etiqueta está em uso por 1 serviço(s) e 12 pessoa(s) e não pode ser excluída.");
+    }
+
+    [Fact]
+    public async Task Handle_WithTagUsedOnlyByServices_DoesNotReadNorListClients()
+    {
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
+        _tagRepository.GetForUpdateAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(tag);
+        _serviceRepository.CountByTagIdAsync(tag.Id, Arg.Any<CancellationToken>()).Returns(2);
+        _serviceRepository.ListByTagIdAsync(tag.Id, 10, Arg.Any<CancellationToken>())
+            .Returns([new TagUsage(Guid.NewGuid(), "Corte"), new TagUsage(Guid.NewGuid(), "Barba")]);
+
+        var result = await _handler.Handle(new DeleteTagCommand(tag.Id), CancellationToken.None);
+
+        result.Error.FieldErrors.Should().ContainKey("Services").And.NotContainKey("Clients");
+        await _clientRepository.DidNotReceive().ListByTagIdAsync(Arg.Any<Guid>(), Arg.Any<int>(), Arg.Any<CancellationToken>());
     }
 }

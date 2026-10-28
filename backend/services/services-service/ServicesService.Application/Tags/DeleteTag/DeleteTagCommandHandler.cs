@@ -6,6 +6,8 @@ namespace ServicesService.Application.Tags.DeleteTag;
 
 public sealed class DeleteTagCommandHandler : ICommandHandler<DeleteTagCommand>
 {
+    private const int UsageListLimit = 10;
+
     private readonly ITagRepository _tagRepository;
     private readonly IServiceRepository _serviceRepository;
     private readonly IClientRepository _clientRepository;
@@ -39,9 +41,9 @@ public sealed class DeleteTagCommandHandler : ICommandHandler<DeleteTagCommand>
         var clientCount = await _clientRepository.CountByTagIdAsync(command.TagId, cancellationToken);
         if (serviceCount + clientCount > 0)
         {
-            var message = InUseMessage(serviceCount, clientCount);
+            var inUseError = await InUseErrorAsync(command.TagId, serviceCount, clientCount, cancellationToken);
 
-            return Result.Failure(Error.Conflict("Tag.InUse", message));
+            return Result.Failure(inUseError);
         }
 
         _tagRepository.Remove(tag);
@@ -53,6 +55,42 @@ public sealed class DeleteTagCommandHandler : ICommandHandler<DeleteTagCommand>
         }
 
         return Result.Success();
+    }
+
+    private async Task<Error> InUseErrorAsync(Guid tagId, int serviceCount, int clientCount, CancellationToken cancellationToken)
+    {
+        var fieldErrors = new Dictionary<string, IReadOnlyList<FieldError>>();
+
+        if (serviceCount > 0)
+        {
+            var services = await _serviceRepository.ListByTagIdAsync(tagId, UsageListLimit, cancellationToken);
+            fieldErrors["Services"] = services
+                .Select(service => UsageFieldError($"Serviço que usa esta etiqueta: {service.Name}.", service))
+                .ToList();
+        }
+
+        if (clientCount > 0)
+        {
+            var clients = await _clientRepository.ListByTagIdAsync(tagId, UsageListLimit, cancellationToken);
+            fieldErrors["Clients"] = clients
+                .Select(client => UsageFieldError($"Pessoa que usa esta etiqueta: {client.Name}.", client))
+                .ToList();
+        }
+
+        var message = InUseMessage(serviceCount, clientCount);
+
+        return new Error("Tag.InUse", message, ErrorType.Conflict, fieldErrors);
+    }
+
+    private static FieldError UsageFieldError(string message, TagUsage usage)
+    {
+        var meta = new Dictionary<string, string>
+        {
+            ["id"] = usage.Id.ToString(),
+            ["name"] = usage.Name,
+        };
+
+        return new FieldError("Tag.InUse", message, meta);
     }
 
     private static string InUseMessage(int serviceCount, int clientCount)

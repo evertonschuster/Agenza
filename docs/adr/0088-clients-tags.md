@@ -50,6 +50,11 @@ returns an empty list without a query when it gets no ids, so nothing is read wh
 **Deleting a tag in use.** `DeleteTag` counts services and people (`IClientRepository.CountByTagIdAsync`, through the
 filters; an inactive person counts, a deleted one does not) and answers `409 Tag.InUse` when either is above zero. The
 code does not change; the pt-BR message names only the non-zero parts ("2 serviço(s)", "3 pessoa(s)", or both).
+The error also lists who uses the tag, so the user can open them: under `services` and `clients`, one field error per
+item with code `Tag.InUse` and `meta: { id, name }` (the field-error meta of ADR 0044, so the shared `Error` does not
+change). `ListByTagIdAsync` on each repository returns at most 10 per kind, ordered by name then id, and runs only
+when that kind's count is above zero; the message keeps the full totals. A structured `meta` on the error itself was
+considered and turned down: it would change the shared library and every service's problem payload.
 
 **No tag filter on the list.** `ListClientsQuery` gets no `tagId`; it is a later decision.
 

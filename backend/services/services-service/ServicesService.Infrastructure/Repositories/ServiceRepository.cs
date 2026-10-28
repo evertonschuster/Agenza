@@ -3,6 +3,7 @@ using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services;
+using ServicesService.Application.Tags;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.Infrastructure.Repositories;
@@ -82,4 +83,15 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
 
     public Task<int> CountByTagIdAsync(Guid tagId, CancellationToken cancellationToken) =>
         Set.CountAsync(s => s.Tags.Any(t => t.Id == tagId), cancellationToken);
+
+    public async Task<IReadOnlyList<TagUsage>> ListByTagIdAsync(Guid tagId, int limit, CancellationToken cancellationToken)
+    {
+        return await Set
+            .Where(service => service.Tags.Any(tag => tag.Id == tagId))
+            .OrderBy(service => service.Name)
+            .ThenBy(service => service.Id)
+            .Take(limit)
+            .Select(service => new TagUsage(service.Id, service.Name))
+            .ToListAsync(cancellationToken);
+    }
 }

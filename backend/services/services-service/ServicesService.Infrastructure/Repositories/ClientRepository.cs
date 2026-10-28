@@ -3,6 +3,7 @@ using Admin.SharedKernel.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Clients;
+using ServicesService.Application.Tags;
 using ServicesService.Infrastructure.Persistence;
 
 namespace ServicesService.Infrastructure.Repositories;
@@ -111,6 +112,20 @@ public class ClientRepository : RepositoryBase<Client>, IClientRepository
         return Set
             .Where(client => client.Tags.Any(tag => tag.TagId == tagId))
             .CountAsync(cancellationToken);
+    }
+
+    public async Task<IReadOnlyList<TagUsage>> ListByTagIdAsync(Guid tagId, int limit, CancellationToken cancellationToken)
+    {
+        var clients = await Set
+            .Where(client => client.Tags.Any(tag => tag.TagId == tagId))
+            .OrderBy(client => EF.Property<string>(client, "NameNormalized"))
+            .ThenBy(client => client.Id)
+            .Take(limit)
+            .ToListAsync(cancellationToken);
+
+        return clients
+            .Select(client => new TagUsage(client.Id, client.FullName.Value))
+            .ToList();
     }
 
     public Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken)

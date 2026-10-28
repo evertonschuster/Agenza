@@ -1,5 +1,6 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Clients;
+using ServicesService.Application.Tags;
 
 namespace ServicesService.Application.Abstractions;
 
@@ -12,6 +13,8 @@ public interface IClientRepository
     Task UpdateAsync(Client client, CancellationToken cancellationToken);
 
     Task<int> CountByTagIdAsync(Guid tagId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<TagUsage>> ListByTagIdAsync(Guid tagId, int limit, CancellationToken cancellationToken);
 
     // excludeClientId ignores the client being edited, so saving a client without changing its CPF isn't a self-conflict.
     Task<Client?> FindByCpfAsync(CpfNumber cpf, Guid? excludeClientId, CancellationToken cancellationToken);

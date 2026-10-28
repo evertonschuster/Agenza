@@ -1,5 +1,6 @@
 using Admin.SharedKernel;
 using ServicesService.Application.Services;
+using ServicesService.Application.Tags;
 
 namespace ServicesService.Application.Abstractions;
 
@@ -16,6 +17,8 @@ public interface IServiceRepository
     Task<int> CountByCategoryIdAsync(Guid categoryId, CancellationToken cancellationToken);
 
     Task<int> CountByTagIdAsync(Guid tagId, CancellationToken cancellationToken);
+
+    Task<IReadOnlyList<TagUsage>> ListByTagIdAsync(Guid tagId, int limit, CancellationToken cancellationToken);
 
     void Add(Service service);
 
