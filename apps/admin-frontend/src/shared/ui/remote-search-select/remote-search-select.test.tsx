@@ -2,10 +2,8 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import type { ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult } from '@/shared/pagination/paging';
-import type { SearchSelectCreateLink } from '@/shared/ui/search-select';
 import { RemoteSearchSelect, type LoadRemoteItems } from '.';
 
 interface Tag {
@@ -35,7 +33,6 @@ interface MultipleProps {
   initial?: Tag[];
   maxSelected?: number;
   pageSize?: number;
-  createLink?: SearchSelectCreateLink;
 }
 
 function Multiple({
@@ -43,11 +40,10 @@ function Multiple({
   initial = [],
   maxSelected,
   pageSize,
-  createLink,
 }: MultipleProps) {
   const [value, setValue] = useState<Tag[]>(initial);
   return (
-    <MemoryRouter>
+    <>
       <label htmlFor="tags">Etiquetas</label>
       <RemoteSearchSelect<Tag>
         id="tags"
@@ -58,10 +54,9 @@ function Multiple({
         maxSelected={maxSelected}
         pageSize={pageSize}
         emptyMessage="Nenhuma etiqueta cadastrada."
-        createLink={createLink}
       />
       <output aria-label="escolhidas">{value.map((tag) => tag.name).join(', ')}</output>
-    </MemoryRouter>
+    </>
   );
 }
 
@@ -141,22 +136,13 @@ describe('RemoteSearchSelect with several choices', () => {
     expect(await screen.findByText('Nenhum resultado para “xyz”.')).toBeInTheDocument();
   });
 
-  it('says there is nothing to choose and offers to create one in a new tab', async () => {
+  it('says there is nothing to choose when the loader returns no items', async () => {
     const user = userEvent.setup();
-    render(
-      <Multiple
-        loadItems={loaderOf([])}
-        createLink={{ label: 'Criar etiqueta', to: '/tags/new' }}
-      />,
-    );
+    render(<Multiple loadItems={loaderOf([])} />);
 
     await user.click(screen.getByRole('combobox', { name: 'Etiquetas' }));
 
     expect(await screen.findByText('Nenhuma etiqueta cadastrada.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'Criar etiqueta' })).toHaveAttribute(
-      'target',
-      '_blank',
-    );
   });
 
   it('loads the next page below the current one', async () => {

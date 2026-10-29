@@ -15,8 +15,9 @@ A seleção é feita em duas camadas compartilhadas, que não conhecem etiquetas
 sem backend. `RemoteSearchSelect` o envolve e recebe a função que lista os itens no backend, com busca e
 página.
 
-Fora do escopo: coluna ou filtro de etiquetas na listagem de pessoas (o backend ainda não filtra), criação de
-etiqueta dentro do seletor e uso do modo de uma seleção em alguma tela.
+Fora do escopo: coluna ou filtro de etiquetas na listagem de pessoas (o backend ainda não filtra), qualquer
+criação de etiqueta a partir do seletor, inclusive um link para a tela de etiquetas, e uso do modo de uma
+seleção em alguma tela. Esta entrega só seleciona.
 
 Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 
@@ -36,7 +37,9 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
   das listagens ([ADR 0074](../../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md)),
   que continua valendo para páginas de listagem.
 - As próximas páginas vêm pelo botão "Carregar mais", sem rolagem infinita.
-- A lista é carregada de novo cada vez que é aberta, para mostrar etiquetas criadas em outra aba.
+- A lista é carregada de novo cada vez que é aberta, para mostrar etiquetas criadas ou renomeadas em outro
+  lugar desde a última abertura.
+- Somente seleção: o link "Criar etiqueta" da lista vazia, desenhado no protótipo, foi removido pelo dono.
 - Com várias seleções, escolher um resultado de busca fecha a lista e limpa a busca; sem texto digitado,
   a lista continua aberta. É a convenção do Combobox do Base UI, mantida sem customização.
 - A decisão está na [ADR 0090](../../../../docs/adr/0090-admin-frontend-search-select-and-client-tags.md).
@@ -56,8 +59,7 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 5. Dado 20 etiquetas marcadas, quando abro a lista, então as não marcadas ficam indisponíveis e um aviso
    diz que o limite foi atingido.
 6. Dado que a lista não carrega, então vejo "Não foi possível carregar as etiquetas." e posso tentar de novo.
-7. Dado um negócio sem etiquetas, então a lista diz que não há etiquetas cadastradas e oferece criar uma
-   em nova aba.
+7. Dado um negócio sem etiquetas, então a lista diz que não há etiquetas cadastradas, sem oferecer criação.
 8. Dado que o servidor recusa as etiquetas (uma excluída nesse meio-tempo, por exemplo), então a mensagem
    do servidor aparece sob o campo e o restante do formulário permanece preenchido.
 

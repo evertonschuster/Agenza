@@ -3,4 +3,3 @@ export { TagDeletePage } from './ui/pages/TagDeletePage/TagDeletePage';
 export { TagFormPage } from './ui/pages/TagFormPage/TagFormPage';
 export { tagDeleted, tagSaved } from './model/tagEvents';
 export { tagsRepository } from './api/tagsRepository';
-export { NEW_TAG_PATH } from './ui/tagsPaths';

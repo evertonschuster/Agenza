@@ -30,7 +30,7 @@ nome do campo no formulário não é o do comando. O paliativo `tagIds: []` sai 
 ## Referências e restrições aplicáveis
 
 - [Arquitetura §1](../../docs/ARCHITECTURE.md#1-shape): o primitivo não importa features; pessoas acessa
-  etiquetas pelo barril `@/features/tags`, que passa a exportar `tagsRepository` e `NEW_TAG_PATH`.
+  etiquetas pelo barril `@/features/tags`, que passa a exportar `tagsRepository`.
 - [ADR 0089](../../../../docs/adr/0089-clients-tags.md): limite de 20, `Tag.NotFound`/`Client.TooManyTags` em
   `TagIds`, PUT substitui as etiquetas.
 - [ADR 0074](../../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md): a busca ao digitar
@@ -43,7 +43,7 @@ nome do campo no formulário não é o do comando. O paliativo `tagIds: []` sai 
 1. `src/shared/ui/search-select/`: tipos, componente sobre lista fixa e partes; testes.
 2. `src/shared/ui/remote-search-select/`: tipos, hook de carregamento e componente remoto; testes.
 3. `src/shared/form/fields/`: `SearchSelectField`, `RemoteSearchSelectField`, tipos e exportação; testes.
-4. `src/features/tags/`: `NEW_TAG_PATH` e exportações do barril.
+4. `src/features/tags/`: exportação de `tagsRepository` no barril.
 5. `src/features/clients/`: modelo (`ClientTag`, `tags`, `tagIds`, `CLIENT_MAX_TAGS`), repositório, schema e
    valores do formulário, troca da chave do problema, campo em `ClientPersonSection`; testes.
 6. `e2e/clients.spec.ts`: criar uma pessoa com etiqueta e conferir que a edição a mostra.

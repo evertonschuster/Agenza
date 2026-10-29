@@ -23,9 +23,12 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
   e `RemoteSearchSelect` com `use-remote-items.ts` em `src/shared/ui/remote-search-select/`;
   `SearchSelectField` e `RemoteSearchSelectField`; testes de cada camada.
 
+- [x] T014 [US2] Remover o link de criação da lista vazia (`createLink`, `NEW_TAG_PATH`) e seus testes:
+  esta entrega só seleciona.
+
 ## US1 — Marcar etiquetas numa pessoa
 
-- [x] T006 [US1] Exportar `tagsRepository` e `NEW_TAG_PATH` em `src/features/tags/index.ts` e `ui/tagsPaths.ts`.
+- [x] T006 [US1] Exportar `tagsRepository` em `src/features/tags/index.ts`.
 - [x] T007 [US1] Modelo `ClientTag`, `tags`, `tagIds` e `CLIENT_MAX_TAGS` em `src/features/clients/model/`;
   remover o paliativo em `api/clientsRepository.ts` e cobrir o corpo em `clientsRepository.test.ts`.
 - [x] T008 [US1] Schema, valores iniciais e troca da chave `TagIds` em `ClientFormPage/clientForm.ts` e

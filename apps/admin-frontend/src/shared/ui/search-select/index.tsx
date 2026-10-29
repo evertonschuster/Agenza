@@ -17,7 +17,6 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
     placeholder = 'Selecione ou busque',
     emptyMessage = 'Nenhuma opção disponível.',
     errorMessage = 'Não foi possível carregar as opções.',
-    createLink,
     loading = false,
     failure,
     more,
@@ -90,7 +89,6 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
         more={more}
         emptyMessage={emptyMessage}
         errorMessage={errorMessage}
-        createLink={createLink}
         onClear={onClear}
       />
     </ComboboxPrimitive.Root>
@@ -99,7 +97,6 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
 
 export { SearchSelect };
 export type {
-  SearchSelectCreateLink,
   SearchSelectFailure,
   SearchSelectItem,
   SearchSelectMore,

@@ -2,7 +2,6 @@ import { useState } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { MemoryRouter } from 'react-router';
 import { SearchSelect, type SearchSelectMultipleProps, type SearchSelectSingleProps } from '.';
 
 interface Option {
@@ -21,7 +20,7 @@ type MultipleExtras = Partial<Omit<SearchSelectMultipleProps<Option>, 'multiple'
 function Multiple({ initial = [], ...props }: MultipleExtras & { initial?: Option[] }) {
   const [value, setValue] = useState<Option[]>(initial);
   return (
-    <MemoryRouter>
+    <>
       <label htmlFor="tags">Etiquetas</label>
       <SearchSelect<Option>
         id="tags"
@@ -33,7 +32,7 @@ function Multiple({ initial = [], ...props }: MultipleExtras & { initial?: Optio
         onValueChange={setValue}
       />
       <output aria-label="escolhidas">{value.map((option) => option.name).join(', ')}</output>
-    </MemoryRouter>
+    </>
   );
 }
 
@@ -94,17 +93,14 @@ describe('SearchSelect with a fixed list and several choices', () => {
     expect(await screen.findByText('Nenhum resultado para “xyz”.')).toBeInTheDocument();
   });
 
-  it('says there is nothing to choose and offers to create one in a new tab', async () => {
+  it('says there is nothing to choose, offering only selection', async () => {
     const user = userEvent.setup();
-    render(<Multiple items={[]} createLink={{ label: 'Criar etiqueta', to: '/tags/new' }} />);
+    render(<Multiple items={[]} />);
 
     await user.click(screen.getByRole('combobox', { name: 'Etiquetas' }));
 
     expect(await screen.findByText('Nenhuma etiqueta cadastrada.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: /^Criar etiqueta/ })).toHaveAttribute(
-      'target',
-      '_blank',
-    );
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('shows each choice with a named remove button that takes it out', async () => {

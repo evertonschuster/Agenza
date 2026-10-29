@@ -33,11 +33,11 @@ being on a loaded page, and the form converts them to ids when it submits.
 
 **The caller supplies the call.** `RemoteSearchSelect` takes `loadItems({ search, page, pageSize },
 signal)`, which returns the facade's `ApiResult<PagedResult<T>>`, the same shape as
-`usePaginatedList`'s `fetchPage`; `tagsRepository.list` fits as is and the tags barrel exports it with
-`NEW_TAG_PATH`. Neither component knows an endpoint.
+`usePaginatedList`'s `fetchPage`; `tagsRepository.list` fits as is and the tags barrel exports it.
+Neither component knows an endpoint.
 
-**How the remote one asks.** The first page loads every time the list opens, so a tag created in another tab
-through the empty state's link shows on reopening. Typing searches 300 ms after the last keystroke;
+**How the remote one asks.** The first page loads every time the list opens, so tags created or renamed
+elsewhere since the last opening show without reloading the page. Typing searches 300 ms after the last keystroke;
 only typed changes search, so choosing an item does not search for its own name. "Carregar mais"
 appends the next page on a click, dropping an id that shifted pages. One `AbortController`
 per request, as in `usePaginatedList`: a new search, closing or unmounting cancels the pending one and
@@ -71,7 +71,10 @@ field before `applyApiProblem`, because the form field is not named after the co
 - **One component that always takes `loadItems`.** The first version; a fixed list would need a fake
   loader shaped like a backend answer. Replaced by the two layers before merge.
 - **Infinite scroll.** More state (an observer) for no gain over an explicit click.
-- **Loading the first page once per mount.** Would hide tags created in another tab until the page
-  reloads.
+- **Loading the first page once per mount.** Would hide tags created or renamed elsewhere until the
+  page reloads.
+- **A link to create a tag from the empty list.** Drawn in the prototype and shipped in the first
+  commit, then removed by the owner: this change only selects; creating tags stays on the Etiquetas
+  page.
 - **Naming the form field `tagIds` so the error lands without a rename.** It would hold objects under
   an id name.

@@ -6,11 +6,6 @@ interface SearchSelectItem {
   color?: string | undefined;
 }
 
-interface SearchSelectCreateLink {
-  label: string;
-  to: string;
-}
-
 interface SearchSelectFailure {
   detail: string | undefined;
   onRetry: () => void;
@@ -27,7 +22,6 @@ interface SearchSelectBaseProps<T extends SearchSelectItem> {
   placeholder?: string | undefined;
   emptyMessage?: string | undefined;
   errorMessage?: string | undefined;
-  createLink?: SearchSelectCreateLink | undefined;
   loading?: boolean | undefined;
   failure?: SearchSelectFailure | undefined;
   more?: SearchSelectMore | undefined;
@@ -63,7 +57,6 @@ type SearchSelectSourceProps =
   'items' | 'loading' | 'failure' | 'more' | 'onOpenChange' | 'onSearchChange';
 
 export type {
-  SearchSelectCreateLink,
   SearchSelectFailure,
   SearchSelectItem,
   SearchSelectMore,

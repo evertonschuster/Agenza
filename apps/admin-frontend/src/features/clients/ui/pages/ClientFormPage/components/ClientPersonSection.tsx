@@ -1,6 +1,6 @@
 import { useFormContext, useFormState } from 'react-hook-form';
 import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
-import { NEW_TAG_PATH, tagsRepository } from '@/features/tags';
+import { tagsRepository } from '@/features/tags';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
 import {
   BirthDateField,
@@ -75,7 +75,6 @@ function ClientPersonSection() {
             placeholder="Selecione ou busque etiquetas"
             emptyMessage="Nenhuma etiqueta cadastrada."
             errorMessage="Não foi possível carregar as etiquetas."
-            createLink={{ label: 'Criar etiqueta', to: NEW_TAG_PATH }}
           />
         </div>
 

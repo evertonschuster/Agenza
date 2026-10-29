@@ -4,10 +4,8 @@ import { CheckIcon } from 'lucide-react';
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import { ComboboxItem, ComboboxList } from '@/shared/ui/combobox';
-import { NewTabLink } from '@/shared/ui/new-tab-link';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type {
-  SearchSelectCreateLink,
   SearchSelectFailure,
   SearchSelectItem,
   SearchSelectMore,
@@ -25,7 +23,6 @@ interface SearchSelectPopupProps<T extends SearchSelectItem> {
   more: SearchSelectMore | undefined;
   emptyMessage: string;
   errorMessage: string;
-  createLink: SearchSelectCreateLink | undefined;
   onClear: () => void;
 }
 
@@ -41,7 +38,6 @@ function SearchSelectPopup<T extends SearchSelectItem>({
   more,
   emptyMessage,
   errorMessage,
-  createLink,
   onClear,
 }: SearchSelectPopupProps<T>) {
   const selectedIds = new Set(selected.map((item) => item.id));
@@ -86,14 +82,9 @@ function SearchSelectPopup<T extends SearchSelectItem>({
             </div>
           )}
 
-          <ComboboxPrimitive.Empty className="empty:hidden flex flex-col items-center gap-2 px-3 py-4 text-center text-muted-foreground">
+          <ComboboxPrimitive.Empty className="px-3 py-4 text-center text-muted-foreground empty:hidden">
             {!loading && !failure && (
-              <>
-                <p>{searched ? `Nenhum resultado para “${searched}”.` : emptyMessage}</p>
-                {!searched && createLink && (
-                  <NewTabLink to={createLink.to}>{createLink.label}</NewTabLink>
-                )}
-              </>
+              <p>{searched ? `Nenhum resultado para “${searched}”.` : emptyMessage}</p>
             )}
           </ComboboxPrimitive.Empty>
 
