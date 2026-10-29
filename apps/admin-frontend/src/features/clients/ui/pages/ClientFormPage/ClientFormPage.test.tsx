@@ -20,16 +20,20 @@ import type { ClientListQuery } from '../../../model/clientListFilters';
 import { ClientListPage } from '../ClientListPage/ClientListPage';
 import { ClientFormPage } from './ClientFormPage';
 
-const { mockList, mockCreate, mockGet, mockUpdate, mockDeactivate, mockReactivate } = vi.hoisted(
-  () => ({
+const { mockList, mockCreate, mockGet, mockUpdate, mockDeactivate, mockReactivate, mockListTags } =
+  vi.hoisted(() => ({
+    mockListTags: vi.fn(),
     mockList: vi.fn(),
     mockCreate: vi.fn(),
     mockGet: vi.fn(),
     mockUpdate: vi.fn(),
     mockDeactivate: vi.fn(),
     mockReactivate: vi.fn(),
-  }),
-);
+  }));
+
+vi.mock('@/features/tags/api/tagsRepository', () => ({
+  tagsRepository: { list: mockListTags },
+}));
 
 vi.mock('../../../api/clientsRepository', () => ({
   clientsRepository: {
@@ -53,7 +57,11 @@ const CREATED: Client = {
   status: 'active',
   guardians: [],
   referenceContacts: [],
+  tags: [],
 };
+
+const VIP_TAG = { id: 't1', name: 'VIP', color: '#8b5cf6', description: null };
+const RETURN_TAG = { id: 't2', name: 'Retorno', color: '#0d9488', description: null };
 
 function LocationProbe() {
   const location = useLocation();
@@ -110,6 +118,10 @@ describe('ClientFormPage', () => {
     vi.clearAllMocks();
     vi.useFakeTimers({ now: new Date('2026-10-02T12:00:00Z'), toFake: ['Date'] });
     mockCreate.mockResolvedValue({ ok: true, data: CREATED });
+    mockListTags.mockResolvedValue({
+      ok: true,
+      data: { items: [VIP_TAG, RETURN_TAG], totalCount: 2, page: 1, pageSize: 20 },
+    });
   });
 
   afterEach(() => {
@@ -198,6 +210,7 @@ describe('ClientFormPage', () => {
         administrativeNotes: null,
         guardians: [],
         referenceContacts: [],
+        tagIds: [],
       });
       expect(toastAdd).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -234,6 +247,7 @@ describe('ClientFormPage', () => {
         administrativeNotes: 'Prefere contato pela manhã.',
         guardians: [],
         referenceContacts: [],
+        tagIds: [],
       });
     });
 
@@ -578,6 +592,50 @@ describe('ClientFormPage', () => {
       expect(
         screen.queryByRole('group', { name: 'Pessoa de referência 1' }),
       ).not.toBeInTheDocument();
+    });
+  });
+
+  describe('tags', () => {
+    it('lists the business tags and sends the ids of the chosen ones', async () => {
+      const user = userEvent.setup();
+      renderPage();
+
+      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+      await user.click(screen.getByRole('combobox', { name: 'Etiquetas' }));
+      const list = await screen.findByRole('listbox');
+      await user.click(within(list).getByRole('option', { name: 'Retorno' }));
+      await user.click(within(list).getByRole('option', { name: 'VIP' }));
+      await user.keyboard('{Escape}');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+      expect(lastPayload()).toMatchObject({ tagIds: ['t2', 't1'] });
+      expect(mockListTags).toHaveBeenCalledWith(
+        { search: '', page: 1, pageSize: 20 },
+        expect.any(AbortSignal),
+      );
+    });
+
+    it('shows the tag the server refused under the field and keeps the draft', async () => {
+      const user = userEvent.setup();
+      mockCreate.mockResolvedValue(
+        problem({
+          code: 'Tag.NotFound',
+          errors: {
+            TagIds: [{ code: 'Tag.NotFound', message: 'Uma das etiquetas não existe mais.' }],
+          },
+        }),
+      );
+      renderPage();
+
+      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      const control = screen.getByRole('combobox', { name: 'Etiquetas' });
+      expect(await screen.findByText('Uma das etiquetas não existe mais.')).toBeInTheDocument();
+      expect(control).toHaveAttribute('aria-invalid', 'true');
+      expect(control).toHaveFocus();
+      expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
     });
   });
 
@@ -932,6 +990,7 @@ const EXISTING: Client = {
   referenceContacts: [
     { id: 'r1', name: 'Carlos Lima', relationship: 'Tio', phone: null, purposes: ['emergency'] },
   ],
+  tags: [{ id: 't1', name: 'VIP', color: '#8b5cf6' }],
 };
 
 function renderEditPage() {
@@ -987,6 +1046,8 @@ describe('ClientFormPage, editing a person', () => {
       const reference = screen.getByRole('group', { name: 'Pessoa de referência 1' });
       expect(within(reference).getByLabelText('Nome')).toHaveValue('Carlos Lima');
       expect(within(reference).getByRole('checkbox', { name: 'Emergência' })).toBeChecked();
+      expect(person.getByRole('button', { name: 'Remover VIP' })).toBeInTheDocument();
+      expect(mockListTags).not.toHaveBeenCalled();
       expect(screen.getByRole('button', { name: 'Salvar' })).toBeEnabled();
       expect(screen.getByRole('button', { name: 'Cancelar' })).toBeEnabled();
     });
@@ -1050,6 +1111,7 @@ describe('ClientFormPage, editing a person', () => {
         referenceContacts: [
           { name: 'Carlos Lima', relationship: 'Tio', phone: null, purposes: ['emergency'] },
         ],
+        tagIds: ['t1'],
       });
       expect(toastAdd).toHaveBeenCalledWith({
         title: 'Pessoa atualizada',

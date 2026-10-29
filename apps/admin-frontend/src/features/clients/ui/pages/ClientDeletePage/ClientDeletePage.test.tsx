@@ -32,6 +32,7 @@ const ANA: Client = {
   status: 'active',
   guardians: [],
   referenceContacts: [],
+  tags: [],
 };
 
 const BRUNO: Client = {

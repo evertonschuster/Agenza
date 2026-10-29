@@ -13,6 +13,7 @@ import {
   clientFormSchema,
   emptyClientFormFieldValues,
   toClientFormFieldValues,
+  toClientFormProblem,
   type ClientFormFieldValues,
   type ClientFormValues,
 } from './clientForm';
@@ -81,7 +82,7 @@ export function useClientFormPage(): UseClientFormPageResult {
       return;
     }
 
-    applyApiProblem(result.error, methods);
+    applyApiProblem(toClientFormProblem(result.error), methods);
   }
 
   function submit(event: SubmitEvent<HTMLFormElement>) {

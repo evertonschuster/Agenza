@@ -4,6 +4,13 @@ import type { ColorSwatchPickerOption } from '@/shared/ui/color-swatch-picker';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
 import type { Input } from '@/shared/ui/input';
 import type { InputGroupInput } from '@/shared/ui/input-group';
+import type {
+  SearchSelectItem,
+  SearchSelectMultipleProps,
+  SearchSelectSingleProps,
+  SearchSelectSourceProps,
+} from '@/shared/ui/search-select';
+import type { LoadRemoteItems } from '@/shared/ui/remote-search-select';
 import type { Textarea } from '@/shared/ui/textarea';
 
 interface BaseFieldProps<T extends FieldValues> {
@@ -94,6 +101,38 @@ export type SelectFieldProps<
   T extends FieldValues,
   N extends Path<T> = Path<T>,
 > = SelectFieldBaseProps<T, N> & FieldLabelPlacement;
+
+type SearchSelectOwnedProps =
+  | 'value'
+  | 'onValueChange'
+  | 'inputRef'
+  | 'onBlur'
+  | 'disabled'
+  | SearchSelectSourceProps
+  | FormFieldOwnedProps;
+
+type SearchSelectFieldControlProps<I extends SearchSelectItem> =
+  | Omit<SearchSelectSingleProps<I>, SearchSelectOwnedProps>
+  | Omit<SearchSelectMultipleProps<I>, SearchSelectOwnedProps>;
+
+interface SearchSelectFieldFrame<T extends FieldValues> {
+  name: Path<T>;
+  label: string;
+  hint?: string | undefined;
+}
+
+export type SearchSelectFieldProps<
+  T extends FieldValues,
+  I extends SearchSelectItem,
+> = SearchSelectFieldFrame<T> & { items: readonly I[] } & SearchSelectFieldControlProps<I>;
+
+export type RemoteSearchSelectFieldProps<
+  T extends FieldValues,
+  I extends SearchSelectItem,
+> = SearchSelectFieldFrame<T> & {
+  loadItems: LoadRemoteItems<I>;
+  pageSize?: number | undefined;
+} & SearchSelectFieldControlProps<I>;
 
 export type SearchFieldProps<T extends FieldValues> = {
   name: Path<T>;
