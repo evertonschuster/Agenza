@@ -1,132 +1,51 @@
-# Implementation Plan: Diálogo de Confirmação Reutilizável
+# Plano histórico: diálogo de confirmação reutilizável
 
-> **Status (2026-09-28)**: o desenho abaixo (primitivo apresentacional + adaptador com `useFetcher`)
-> foi substituído depois da implementação: o `ConfirmDialog`, hoje em `src/widgets/confirm-dialog/`,
-> passou a ser dono do envio (`onConfirm` devolve o `ApiResult`) e do toast de sucesso. Ver a nota de
-> status em `contracts/confirm-dialog-contract.md`.
+**Status**: entrega integrada no [PR #125](https://github.com/evertonschuster/Agenza/pull/125);
+parte do desenho inicialmente planejado foi substituída durante sua evolução.
+**Escopo e aceite**: [spec.md](spec.md). **Execução encerrada**: [tasks.md](tasks.md).
 
-**Branch**: `004-shared-confirm-dialog` | **Date**: 2026-09-14 | **Spec**: [spec.md](./spec.md)
+## Desenho inicial e razões preservadas
 
-**Input**: Feature specification from `/specs/004-shared-confirm-dialog/spec.md`
+1. O plano escolhia um primitivo apresentacional em `shared/ui`, alimentado por estado derivado pelo
+   consumidor. `useFetcher<typeof action>()` dependia da rota e o resultado chegava em renderização
+   posterior, não como retorno de `fetcher.submit()`. Fazer o componente controlar o envio naquele
+   desenho exigiria uma ponte fetcher/Promise sem necessidade demonstrada. Render props e componentes
+   compostos foram descartados por ampliar a API para um único consumidor real.
+2. A classificação passageira/bloqueante seria uma função pura em `servicesFacade.ts`, junto dos
+   problemas compartilhados que consultava. Evitava tanto regra duplicada em cada rotina quanto um
+   arquivo separado apenas para essa função pequena.
+3. O botão aceitava `LucideIcon`, seguindo a convenção existente em vez de inventar um tipo de ícone.
+4. O componente teria cobertura real: comportamento de estados e consumidor efetivo não justificavam
+   copiar a isenção de primitivas com partes de scaffold sem uso. Não foram introduzidos limiares novos.
+5. O plano mantinha toast e envio no adaptador da rotina, acompanhando o desenho com `useFetcher`.
+6. Título, descrição, ação/ícone e título de bloqueio eram configuração explícita; somente rótulos
+   auxiliares genéricos tinham defaults pt-BR. Um título padrão sobre excluir seria inadequado para
+   desativar ou remover. Não havia entidade de dados ou contrato HTTP novo.
 
-## Summary
+## Evolução posterior
 
-Extrai o diálogo de confirmação hoje embutido em
-`src/features/tags/ui/pages/TagsPage/DeleteTagDialog.tsx` para um primitivo apresentacional em
-`src/shared/ui/confirm-dialog.tsx` — configurável (título, descrição, rótulo e ícone do botão,
-título/mensagem do estado bloqueado), mas sem lógica de rede embutida: ele recebe estado já derivado
-(`isSubmitting`, uma falha classificada como bloqueante ou passageira) em vez de chamar
-`useFetcher` internamente, porque a tipagem de `useFetcher<typeof action>()` do React Router é por
-rota e não pode ser genérica dentro de um componente compartilhado (research.md Decision 1). A
-classificação de falha (rede/sessão/servidor = passageira; qualquer outra = bloqueante) — já genérica
-hoje, apesar de morar dentro de `DeleteTagDialog.tsx` — migra para uma função pura em
-`shared/api/servicesFacade.ts`, ao lado dos sentinels que ela já lê. `DeleteTagDialog.tsx` continua
-existindo, mas encolhe para um adaptador fino: liga `useFetcher<typeof tagsAction>()` + a classificação
-compartilhada à configuração específica de Etiquetas. Nenhuma segunda rotina é construída (spec
-FR-007); nenhuma dependência nova entra.
+O registro de implementação do PR #125 já substituiu as escolhas 1 e 5: ao abandonar `useFetcher`,
+`ConfirmDialog` passou a controlar o envio assíncrono, consumir `ApiResult` e emitir o toast de sucesso.
+A composição com comportamento ficou em `widgets/`, conforme a
+[ADR 0042](../../../../docs/adr/0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md).
+O componente deixou de ser o primitivo apresentacional descrito no plano inicial.
 
-## Technical Context
+Outras diferenças que impedem usar os requisitos históricos como receita da API atual:
 
-**Language/Version**: TypeScript ~6.0.3, modo `strict` (constitution Princípio I). React ^19.2.7.
+- O widget é montado aberto, tem estado interno e bloqueia fechar/cancelar durante o envio. A escolha
+  inicial de permitir fechamento nessa etapa não descreve o comportamento implementado.
+- A configuração agrupada tem defaults também para textos de ação e bloqueio. A obrigatoriedade de
+  todas as props descrita no contrato inicial foi substituída; os tipos são a fonte atual.
+- [PR #185](https://github.com/evertonschuster/Agenza/pull/185) e
+  [ADR 0075](../../../../docs/adr/0075-admin-frontend-rate-limit-is-a-transient-problem.md) incluem
+  rate limit no tratamento passageiro, sem repetição automática ou temporizador que retenha o botão.
+- [PR #192](https://github.com/evertonschuster/Agenza/pull/192) e
+  [ADR 0077](../../../../docs/adr/0077-admin-frontend-client-edit.md) acrescentam a confirmação de
+  mudança de situação de Pessoas, incluindo variante comum para reativar. Portanto, o escopo
+  exclusivamente destrutivo da FR-008 registra a entrega original, não uma proibição vigente.
 
-**Primary Dependencies**: Nenhuma nova. Reaproveita `@base-ui/react` ^1.8.0 (via
-`shared/ui/dialog.tsx`, já usado por `DeleteTagDialog`/`TagFormDialog`), `lucide-react` ^1.41.0 (tipo
-`LucideIcon`, já convenção em `app/shell/navigation.ts` e `app/pages/ComingSoon.tsx` para props de
-ícone configurável) e `react-router` ^8.3.0 (o `useFetcher<typeof tagsAction>()` existente,
-inalterado).
-
-**Storage**: N/A — sem estado persistido; o componente é controlado inteiramente por props.
-
-**Testing**: Vitest + React Testing Library. `shared/ui/confirm-dialog.test.tsx` novo, cobrindo os
-três estados observáveis diretamente por props (sem fetcher/rede) — exercita o componente por
-configuração, prova a US2 sem precisar de uma segunda rotina real. `DeleteTagDialog.test.tsx` (já
-existe, 5 casos) é adaptado, não reescrito: mesmos cenários, agora sobre um componente mais fino por
-baixo. `servicesFacade.test.ts` ganha os casos da função de classificação extraída.
-
-**Target Platform**: Browser SPA, inalterado.
-
-**Project Type**: Frontend único dentro do monorepo; este plano cobre só `apps/admin-frontend`.
-
-**Performance Goals**: N/A — sem meta nova; é um diálogo, não uma tela com dado em volume.
-
-**Constraints**: Direção de dependência FSD (`app → features → shared`), imposta por
-`eslint.config.js` — `confirm-dialog.tsx` fica em `shared/ui/` e **não** pode importar nada de
-`features/tags/` (constitution + `AGENTS.md`; ver NFR-002 da spec). Textos visíveis em pt-BR (spec
-FR-010). Cobertura real obrigatória para o novo arquivo — **não** entra em `coverage.exclude` (spec
-NFR-003, research.md Decision 4).
-
-**Scale/Scope**: Um primitivo novo (`confirm-dialog.tsx`), uma função pura extraída
-(`servicesFacade.ts`), um consumidor migrado (`DeleteTagDialog.tsx`). Nenhuma rota, nenhuma tela,
-nenhum dado novo.
-
-## Constitution Check
-
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
-| Princípio | Status | Notas |
-|---|---|---|
-| I. Strict TypeScript | PASS | Sem `any`; `confirmIcon: LucideIcon` reaproveita um tipo já convencionado no repo, não um novo padrão. |
-| II. Multi-Tenant Safety Enforced Server-Side | PASS | Nenhum código novo lê ou grava tenant; o componente não sabe o que está confirmando. |
-| III. Authentication via identity-service (Fixed Ports) | PASS | Não tocado. |
-| IV. Generated OpenAPI Client Only | PASS | Nenhuma chamada de API nova; `DeleteTagDialog` continua usando o mesmo `tagsAction`/`servicesApi` de hoje. |
-| V. CI Quality Gates Are Non-Negotiable From Scaffold | PASS | Reforçado, não apenas mantido: NFR-003 exige cobertura real para o novo arquivo em vez da isenção que outros primitivos de `shared/ui` recebem. |
-| VI. No Frontend Docker | PASS | Não tocado. |
-
-Nenhuma violação. Complexity Tracking não é necessário.
-
-*Re-checked pós-Phase 1: `contracts/confirm-dialog-contract.md` (um contrato de props, sem entidade de
-dados — por isso não há `data-model.md`, mesmo critério de `specs/002-ui-foundation`) não introduz
-nada além do que esta tabela já cobre. Continua tudo PASS.*
-
-## Project Structure
-
-### Documentation (this feature)
-
-```text
-specs/004-shared-confirm-dialog/
-├── plan.md                              # This file (/speckit-plan command output)
-├── research.md                          # Phase 0 output (/speckit-plan command)
-├── quickstart.md                        # Phase 1 output (/speckit-plan command)
-├── contracts/
-│   └── confirm-dialog-contract.md       # Phase 1 output (/speckit-plan command) — contrato de UI, não de API
-├── checklists/requirements.md
-└── tasks.md                             # Phase 2 output (/speckit-tasks command — NOT created by /speckit-plan)
-```
-
-Sem `data-model.md`: a feature não introduz nenhuma entidade de dados (mesmo critério já usado em
-`specs/002-ui-foundation`, também uma feature de infraestrutura de UI). O que existe em vez disso é um
-contrato de props — cabe em `contracts/`, não numa entidade.
-
-### Source Code (repository root)
-
-```text
-apps/admin-frontend/src/
-├── shared/
-│   ├── ui/
-│   │   ├── confirm-dialog.tsx           # NOVO — primitivo apresentacional (research.md Decision 1)
-│   │   └── confirm-dialog.test.tsx      # NOVO — cobre os 3 estados por configuração (spec NFR-003)
-│   └── api/
-│       ├── servicesFacade.ts            # + função pura de classificação (research.md Decision 2)
-│       └── servicesFacade.test.ts       # + casos da classificação extraída
-└── features/
-    └── tags/
-        └── ui/pages/TagsPage/
-            ├── DeleteTagDialog.tsx      # ENCOLHE — adaptador fino sobre confirm-dialog.tsx
-            └── DeleteTagDialog.test.tsx # ADAPTADO — mesmos 5 cenários, não reescritos
-```
-
-`vitest.config.ts` **não** ganha uma nova entrada em `coverage.exclude` para `confirm-dialog.tsx`
-(spec NFR-003) — é a ausência de uma mudança, não uma mudança, mas vale registrar para quem for
-revisar o diff não adicionar por reflexo, copiando os vizinhos (`dialog.tsx`, `sheet.tsx`, `toast.tsx`)
-que estão na lista por um motivo que não se aplica aqui (research.md Decision 4).
-
-**Structure Decision**: Um primitivo apresentacional novo em `shared/ui/`, uma função pura extraída
-para `shared/api/servicesFacade.ts` (fica ao lado dos sentinels `NETWORK_PROBLEM`/`SESSION_PROBLEM`/
-`SERVER_PROBLEM` que ela lê, em vez de um arquivo novo só para ~5 linhas), e um consumidor existente
-adaptado. Nada novo em `features/tags/` além do próprio `DeleteTagDialog.tsx` ficar mais fino — a
-direção de dependência (`shared/` nunca importa `features/`) continua intacta (NFR-002). Nenhum
-`pages/` de topo nem `entities/` — não se aplicam a este tipo de mudança.
-
-## Complexity Tracking
-
-Não aplicável — nenhuma violação da Constitution Check.
+Para manutenção, consulte o [guia atual](../../docs/ARCHITECTURE.md#1-shape), os
+[tipos do widget](../../src/widgets/confirm-dialog/confirm-dialog.types.ts) e a
+[classificação efetiva](../../src/shared/api/servicesFacade.ts).
+O [snapshot anterior dos artefatos](https://github.com/evertonschuster/Agenza/tree/38d2dbd99ddb7a28aba39bf1e7434518cf78c391/apps/admin-frontend/specs/004-shared-confirm-dialog)
+preserva as tabelas de props e o roteiro detalhado do desenho abandonado; não são um contrato vigente.
