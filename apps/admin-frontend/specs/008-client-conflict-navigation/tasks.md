@@ -1,11 +1,12 @@
-# Tasks: CPF conflict navigation
+# Tarefas encerradas: acesso ao cadastro em conflito
 
-- [x] T001 Specify the confirmed navigation behavior and record research/contracts.
-- [x] T002 [US1] Preserve error code and metadata in `formErrors.ts` and `applyApiProblem.ts`.
-- [x] T003 [US1] Render the safe new-tab link in `ClientPersonSection.tsx`.
-- [x] T004 [US1] Test create/edit, stale conflicts and missing/unrelated metadata in `ClientFormPage.test.tsx`.
-- [x] T005 [US1] Extend `e2e/clients.spec.ts` to open and verify both tabs.
-- [x] T006 Document ADR 0084 and update the architecture history.
-- [x] T007 Run quality gates and leave a separate local commit.
+**Status**: entrega integrada no [PR #200](https://github.com/evertonschuster/Agenza/pull/200),
+commit [8e964525](https://github.com/evertonschuster/Agenza/commit/8e9645259932894f0b9aa6cc9b4737659f3d3097).
+Registro histórico; estas tarefas não são instruções de reexecução.
 
-T001 precedes implementation; T002 precedes T003; T004–T005 verify behavior; T006–T007 finish it. The tests and documentation have no dependency on each other once navigation is fixed. One agent executes the work. Owner review replaced the original page state with a CPF field-error subscription (ADR 0085).
+| IDs originais | Entrega                                                                                          |
+| ------------- | ------------------------------------------------------------------------------------------------ |
+| T001          | [Requisitos](spec.md) e [abordagem final](plan.md), com os auxiliares redundantes consolidados.  |
+| T002, T003    | Metadados preservados no erro do formulário e acesso pela seção da pessoa.                       |
+| T004, T005    | Regressões no formulário e cenários de navegador indicados no plano.                             |
+| T006, T007    | Evolução nas ADRs 0084–0086, ligadas no plano, e integração no commit acima; execuções no PR/CI. |

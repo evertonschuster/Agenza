@@ -1,11 +1,14 @@
 # Feature Specification: proteção da identidade na renovação
 
-**Branch**: `codex/fix-session-identity-and-client-conflict` | **Created**: 2026-10-26
-**Status**: Approved for implementation by the owner in this chat.
+**Status**: implementada em 26/10/2026 no [PR #200](https://github.com/evertonschuster/Agenza/pull/200).
+
+Registro histórico dos requisitos da entrega; não é uma fila de trabalho pendente nem substitui a
+[arquitetura vigente](../../docs/ARCHITECTURE.md). Os IDs de requisitos são preservados para rastreabilidade.
 
 ## User Scenarios & Testing
 
 ### US1 — Renovar sem misturar identidades (P1)
+
 Como usuário autenticado, quero continuar trabalhando após uma renovação da mesma identidade e entrar novamente se o usuário ou negócio mudar.
 
 1. Mesma pessoa e negócio, token renovado: os dados e o formulário continuam abertos.

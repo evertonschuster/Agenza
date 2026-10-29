@@ -1,150 +1,97 @@
-# Feature Specification: OIDC-Authenticated Admin Shell Scaffold
+# Spec 001 — shell administrativo autenticado por OIDC
 
-Renewal identity changes are amended by [ADR 0083](../../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md): a changed subject or tenant requires a fresh login rather than replacing the live identity.
+**Identificador**: `001-oidc-shell-scaffold` · **Criada em**: 18/08/2026.
+**Status**: implementada; registro histórico do scaffold, com evoluções posteriores identificadas abaixo.
 
-**Feature Branch**: `001-oidc-shell-scaffold`
+A entrega e os refinamentos de autenticação estão em
+[c3479635](https://github.com/evertonschuster/Agenza/commit/c34796354856a150dc805d65bfe125cf822f3859)
+e [PR #108](https://github.com/evertonschuster/Agenza/pull/108).
+Este documento preserva comportamento e aceite; [plan.md](plan.md) registra decisões e
+[tasks.md](tasks.md) distingue entregas de verificações históricas sem comprovação própria.
+Não é um roteiro para recriar o app nem uma descrição de todas as features atuais.
 
-**Created**: 2026-08-18
+## Escopo e decisões de produto
 
-**Status**: Draft
+Construir o frontend a partir de uma pasta sem código de aplicação, aproveitando backend e CI já
+existentes. Entregar login, logout, renovação de sessão, tenant extraído do token e shell vazio,
+com execução pelo Aspire. Funcionalidades de negócio e gestão de perfis/papéis não faziam parte
+deste scaffold.
 
-**Input**: User description: "Outcome: scaffold funcional do admin-frontend (Vite + React + TypeScript) em apps/admin-frontend, partindo de pasta vazia, rodando via Aspire, com shell autenticado via OIDC contra o identity-service.
+O planejamento fixou a organização por feature como requisito explícito, embora a escolha de
+pastas normalmente fosse diferida ao plano. Também exigiu logs locais de autenticação, sem
+contratar telemetria externa. OIDC, identity-service e tenant são parte do problema descrito;
+nenhum identificador informado pelo cliente substitui a fronteira de segurança do servidor.
 
-Escopo: setup do projeto e tooling (ESLint, Prettier, Vitest, Playwright, tsconfig strict); fluxo de login/logout/renovação silenciosa via OIDC; shell autenticado vazio (layout + navegação básica); resolução de tenant a partir do token.
+## Histórias e critérios de aceite
 
-Fora de escopo: features de negócio (Categories/Services/Clients/etc.), escolha de biblioteca de UI além do mínimo pro shell renderizar, geração do cliente OpenAPI completo (pode ser stub inicial).
+### US1 — impedir acesso sem sessão válida (P1)
 
-Regras de negócio: nenhuma rota autenticada é alcançável sem sessão válida; tenant é sempre resolvido no claim do token validado, nunca aceito de input do cliente.
+- Sem sessão, uma rota protegida encaminha ao login do identity-service sem exibir antes seu conteúdo.
+- Sessão expirada que não possa ser renovada não libera a área autenticada.
+- Falha de conexão com o provedor apresenta recuperação, sem conteúdo protegido ou loop de redirects.
 
-Auth/tenant: OIDC contra identity-service; access token carrega claim de tenant; app nunca confia em tenant id vindo de query/param/localStorage.
+### US2 — abrir o shell no contexto do tenant autenticado (P1)
 
-Critérios de aceite: `npm run dev` serve o app na porta 5173 via Aspire; usuário não autenticado é redirecionado pro login do identity-service; após login, o shell autenticado renderiza; ESLint/Prettier/tsc/Vitest passam localmente; gate de cobertura configurado (mesmo que trivial nesse estágio)."
+- Login real conclui o callback e abre o shell sem uma segunda ação do usuário.
+- O tenant usado pelo cliente corresponde à claim do access token; URL, query e um valor avulso
+  em storage não o substituem. A extração no navegador não verifica a assinatura: o backend valida
+  token e escopo em cada requisição.
+- Uma segunda aba reconhece a sessão persistida pela biblioteca OIDC.
 
-## Clarifications
+### US3 — renovar a sessão e encerrar o acesso ao sair (P2)
 
-### Session 2026-08-18
+- Renovação normal conserva a tela enquanto a identidade permanece a mesma.
+- Falha de renovação deixa a pessoa sem acesso protegido; Sair encerra a sessão local e inicia
+  o encerramento da sessão no identity-service.
+- Após sair, voltar à área protegida exige autenticação.
 
-- Q: Should the spec explicitly state, as a hard constraint, that this feature builds the admin-frontend from a completely empty directory — with no pre-existing app code, configuration, or tooling to migrate or preserve? → A: Yes — add an explicit Assumption/constraint that this is a from-scratch build: no pre-existing app code, tooling config, or CI wiring for admin-frontend exists yet.
-- Q: Should the spec explicitly note that folder/module structure is deferred to `/speckit-plan`, or does this feature need to pin down a specific folder layout now? → A: Pin it down now, as a testable Functional Requirement in this spec (knowingly diverges from the constitution's "Explicitly Deferred Decisions" and will regress the "No implementation details" checklist item).
-- Q: Given that tradeoff, which folder/module convention should this spec require? → A: Feature-based / vertical-slice layout (e.g., `src/features/<name>/{components,hooks,api}`, `src/app/` for shell, `src/shared/` for cross-cutting) — mirrors the vertical-slice style already used in the backend services.
-- Q: Should this scaffold log authentication and session lifecycle events (login outcome, silent-renewal failure, logout), or is logging fully deferred to a later feature? → A: Minimal local logging — log login outcome, renewal failures, and logout to a basic in-app logger (e.g., console/structured log), no external service.
-- Q: Does this scaffold's session model need to carry role or permission claims, even if no route uses them yet, or is "authenticated with a valid tenant" the only authorization signal for now? → A: No roles/permissions modeled yet — any authenticated principal with a valid tenant claim is treated identically; role differentiation is deferred until a feature actually needs it.
+### US4 — executar o scaffold e seus gates (P3)
 
-## User Scenarios & Testing *(mandatory)*
+- Com os pré-requisitos instalados, o Aspire inicia o frontend com a configuração necessária.
+- Os comandos de lint, formato, tipos, testes e cobertura existem e verificam o scaffold;
+  contrato OpenAPI e login real também pertencem à validação da entrega.
 
-### User Story 1 - Unauthenticated visitor is redirected to identity-service login (Priority: P1)
+## Requisitos preservados
 
-Any visitor who opens the admin-frontend without a valid session is sent to the identity-service's OIDC login instead of seeing any application content.
+- **FR-001**: bloquear conteúdo autenticado enquanto não houver sessão válida emitida pelo identity-service.
+- **FR-002**: encaminhar a tentativa de acesso sem sessão ao login OIDC.
+- **FR-003**: concluir login e callback, retornando ao frontend.
+- **FR-004**: renderizar o shell com layout e navegação básica após autenticar.
+- **FR-005**: obter o contexto de tenant somente da claim do access token; a autorização é do servidor.
+- **FR-006**: não aceitar tenant de query, rota, corpo ou valor independente no storage como autoridade.
+- **FR-007**: renovar silenciosamente quando o identity-service permitir, sem interromper a tela.
+- **FR-008**: oferecer logout local e encerramento da sessão OIDC.
+- **FR-009**: negar acesso diante de token ausente, inválido, expirado ou renovação malsucedida.
+- **FR-010**: iniciar o frontend pelo orquestrador local, sem configuração manual além dos pré-requisitos.
+- **FR-011**: fornecer comandos executáveis de lint, formato, tipos e testes para o scaffold.
+- **FR-012**: incluir gate automatizado de cobertura na validação; comandos e limiares são configuração.
+- **FR-013**: entregar inicialmente um shell vazio, sem features de negócio. Este limite era desta entrega.
+- **FR-014**: organizar capacidades por feature, shell em `app/` e código transversal em `shared/`,
+  sem criar buckets globais de componentes/páginas fora dessas responsabilidades.
+- **FR-015**: registrar resultado do login, falha de renovação e logout em logger local, sem tokens
+  ou credenciais, sem dados pessoais de perfil e sem obrigar serviço externo de observabilidade.
 
-**Why this priority**: This is the core security guarantee of the feature — without it, "authenticated shell" is a meaningless label. It is also fully verifiable before any shell UI is built, making it the right first slice.
+## Critérios de sucesso preservados
 
-**Independent Test**: Open the admin-frontend with no existing session (fresh browser/incognito) and confirm the browser ends up on the identity-service login screen, with no admin-frontend authenticated content ever rendered.
+- **SC-001**: o ambiente orquestrado disponibiliza o frontend após a preparação documentada.
+- **SC-002**: acessos sem sessão não exibem conteúdo protegido antes do login.
+- **SC-003**: login bem-sucedido abre o shell com tenant correspondente ao token.
+- **SC-004**: expiração do access token, por si só, não força novo login quando a renovação é permitida.
+- **SC-005**: os gates da entrega executam sem correções manuais no scaffold inalterado.
+- **SC-006**: nenhum tenant avulso fornecido pelo cliente muda o contexto utilizado.
 
-**Acceptance Scenarios**:
+São critérios da entrega, não resultados de testes executados nesta manutenção documental. O índice
+[quickstart.md](quickstart.md) conserva os números de cenário citados pelos testes de autenticação.
 
-1. **Given** a visitor with no active session, **When** they navigate to any admin-frontend URL, **Then** they are redirected to the identity-service OIDC login screen.
-2. **Given** a visitor whose session token has expired and cannot be silently renewed, **When** they attempt to interact with an authenticated route, **Then** they are redirected to the identity-service OIDC login screen.
+## Limites e evolução
 
----
-
-### User Story 2 - Logged-in user sees the authenticated shell scoped to their tenant (Priority: P1)
-
-After completing login at identity-service, the user is returned to the admin-frontend and sees the authenticated shell (layout + basic navigation), with the tenant resolved from their token.
-
-**Why this priority**: This is the actual deliverable of the scaffold — proof that the OIDC round-trip and tenant resolution work end-to-end, not just that access is blocked.
-
-**Independent Test**: Complete a real login against identity-service and confirm the shell renders, with the tenant used by the app matching the token's tenant claim, without configuring anything else by hand.
-
-**Acceptance Scenarios**:
-
-1. **Given** a visitor completes login successfully at identity-service, **When** they are redirected back to the admin-frontend, **Then** the authenticated shell (layout + navigation) renders.
-2. **Given** an authenticated session whose token carries tenant claim T, **When** the shell renders, **Then** the tenant context used by the app is T, regardless of any tenant value present in the URL, query string, or local storage.
-
----
-
-### User Story 3 - Active session renews silently; logout fully ends it (Priority: P2)
-
-While a user is active, their session renews without forcing a fresh login; when they choose to log out, both the local and identity-service sessions end.
-
-**Why this priority**: Important for usability and correctness, but the shell is already meaningfully demonstrable from the P1 stories — this hardens the auth lifecycle rather than establishing it.
-
-**Independent Test**: Stay active in the shell past the access token's expiry and confirm no forced re-login occurs; separately, trigger logout and confirm the next navigation redirects to the identity-service login.
-
-**Acceptance Scenarios**:
-
-1. **Given** an authenticated session nearing token expiry, **When** the user remains active in the app, **Then** the token is renewed silently and the user stays on their current screen.
-2. **Given** an authenticated user, **When** they trigger logout, **Then** their local session is cleared and any subsequent navigation to an authenticated route redirects to the identity-service login.
-
----
-
-### User Story 4 - Contributor can lint, format, type-check, and test the scaffold locally (Priority: P3)
-
-A developer cloning the scaffold can run the standard quality commands (lint, format check, type-check, unit tests with a coverage gate) and they pass, and can run the app locally through the project's orchestrator.
-
-**Why this priority**: Necessary for the codebase to stay maintainable going forward, but it doesn't block demonstrating the auth/shell behavior to a stakeholder, so it ranks below the user-facing stories.
-
-**Independent Test**: On a clean checkout, run each quality command independently and confirm each completes with a pass (not a crash or missing-script error), then start the app via the orchestrator and confirm it serves on the expected port.
-
-**Acceptance Scenarios**:
-
-1. **Given** a clean checkout of the scaffold, **When** a contributor runs the lint, format, type-check, and unit test commands, **Then** each completes and reports a pass against the untouched scaffold.
-2. **Given** a clean checkout, **When** a contributor starts the local orchestrator, **Then** the admin-frontend dev server becomes reachable on its designated port with no extra manual setup.
-
----
-
-### Edge Cases
-
-- What happens when identity-service is unreachable at login time? The visitor sees a failure state; no authenticated content is ever exposed.
-- What happens when a token is renewed and the tenant claim's value changes? The app re-resolves the tenant context from the new token rather than keeping the stale value.
-- What happens when a user manually edits the URL, query string, or local storage to inject a different tenant id? It has no effect on which tenant's context the app uses — the token claim always wins.
-- What happens when silent renewal fails (e.g., the identity-service session itself has ended)? The user is treated as unauthenticated and sent back to login.
-- What happens when a user opens the admin-frontend in a second tab while already logged in? The second tab recognizes the existing session rather than forcing a redundant login.
-- What happens when the access token is well-formed but missing a tenant claim entirely? The session is treated as invalid (fail closed) rather than granting untenanted/global access.
-
-## Requirements *(mandatory)*
-
-### Functional Requirements
-
-- **FR-001**: The system MUST block rendering of any authenticated-area content unless the current session holds a valid, unexpired token issued by the identity-service.
-- **FR-002**: The system MUST redirect a visitor to the identity-service's OIDC login whenever they attempt to reach an authenticated route without a valid session.
-- **FR-003**: The system MUST complete the OIDC login round-trip and return the visitor to the admin-frontend after a successful login at the identity-service.
-- **FR-004**: The system MUST render an authenticated shell (layout and basic navigation) immediately once a valid session is established, without requiring any additional user action.
-- **FR-005**: The system MUST resolve the active tenant exclusively from the tenant claim present in the validated access token.
-- **FR-006**: The system MUST ignore any tenant identifier originating from a query parameter, route parameter, request body, or client-side storage for authorization or data-scoping purposes, even when one is present.
-- **FR-007**: The system MUST silently renew the session before the access token expires whenever the identity-service allows renewal, without interrupting the user's current screen.
-- **FR-008**: The system MUST provide a way for an authenticated user to log out, ending both the local session and the identity-service session.
-- **FR-009**: The system MUST treat a missing, invalid, expired, or renewal-failed token as unauthenticated and deny access to authenticated routes (fail closed).
-- **FR-010**: The system MUST be startable through the project's local orchestrator such that the admin-frontend becomes reachable on its designated port without manual configuration steps beyond starting the orchestrator.
-- **FR-011**: The codebase MUST provide linting, formatting, type-checking, and unit-testing commands that each run and report a pass against the unmodified scaffold.
-- **FR-012**: The codebase MUST include an automated test coverage gate that runs as part of the test command, even if its passing threshold is minimal at this stage.
-- **FR-013**: The initial scaffold MUST NOT expose any business-domain feature (e.g., Categories, Services, Clients); the authenticated shell's navigation is limited to structural/placeholder elements.
-- **FR-014**: The codebase MUST organize source code using a feature-based (vertical-slice) layout: each capability lives under its own directory with its own components, hooks, and API access (e.g., `src/features/<name>/`); the authenticated shell/layout lives under a dedicated app-level directory (e.g., `src/app/`); code shared across features lives under a dedicated shared directory (e.g., `src/shared/`). Legacy flat/global directories such as a top-level `src/components/` or `src/pages/` MUST NOT be created — cross-cutting UI primitives and utilities belong under `src/shared/` (e.g., `src/shared/ui/`), not a bare top-level bucket.
-- **FR-015**: The system MUST log authentication and session lifecycle events — login outcome, silent-renewal failure, and logout — to a basic in-app logger (e.g., console/structured log); sending these events to an external observability or telemetry service is not required by this feature.
-
-### Key Entities
-
-- **Session**: The visitor's current authentication state — whether a valid, unexpired token exists, and when it needs renewal. Determines whether authenticated routes are reachable.
-- **Tenant Context**: The organization scope resolved from the access token's tenant claim; used to identify the current tenant within the shell. Never derived from client-supplied input.
-- **Authenticated User**: The principal identity returned by identity-service after login (e.g., a display name), shown minimally in the shell layout; profile management is not part of this feature. The session model carries no role or permission claims in this feature — any authenticated principal with a valid tenant claim is treated identically for authorization purposes.
-
-## Success Criteria *(mandatory)*
-
-### Measurable Outcomes
-
-- **SC-001**: A person starting the local environment with the project's single orchestrator command can reach a running admin-frontend without any additional manual setup step.
-- **SC-002**: 100% of attempts to open the admin-frontend without a valid session land on the identity-service login screen, with zero authenticated content ever visible first.
-- **SC-003**: 100% of successful logins result in the authenticated shell rendering in the same session, showing the tenant that matches the token's tenant claim.
-- **SC-004**: A user who remains active experiences zero forced re-logins caused by token expiry alone, until they either log out or their identity-service session itself ends.
-- **SC-005**: 100% of the project's automated quality checks (lint, formatting, type-check, unit tests, coverage gate) complete and pass on a clean checkout with zero manual fix-up.
-- **SC-006**: Verification finds zero cases where a client-supplied tenant value (URL, storage, parameters) changes which tenant's context the application displays or uses.
-
-## Assumptions
-
-- This feature builds the admin-frontend application from a completely empty directory: no pre-existing frontend application code or tooling configuration exists before this feature begins. `.github/workflows/frontend-ci.yml` already existed (added ahead of the frontend it checks) and is extended, not created, by this feature.
-- Business-domain features (Categories, Services, Clients, etc.) are intentionally excluded from this scaffold; only the empty authenticated shell (layout + basic navigation) is delivered.
-- The UI component library is Shadcn/ui on Tailwind CSS, settled during planning per the project constitution's "Explicitly Deferred Decisions" (see plan.md Technical Context and research.md); any state/data-fetching library beyond that remains deferred, since this feature makes no business API calls.
-- The generated OpenAPI client may be a minimal/stub client at this stage; generating a full client for every backend endpoint is out of scope.
-- identity-service already exists and exposes a working OIDC endpoint; this feature makes no changes to its authentication/authorization logic — the one exception is an unrelated pre-existing bug fix to its login page's theme-query-parameter parsing (`Login.cshtml.cs`), found during integration testing.
-- "Logout" ends the identity-service (OIDC) session, not just local application state, consistent with standard OIDC RP-initiated logout.
-- The coverage gate's passing threshold starts minimal/trivial, as stated in the acceptance criteria, and is expected to rise in later features rather than being fixed by this one.
-- The admin-frontend and identity-service run on the fixed local ports already set by the project constitution.
+- O protótipo inicial não tinha persistência de negócio, papéis/permissões ou gestão de perfil.
+  Os tipos de Session, Tenant Context e Authenticated User descreviam somente o ciclo de autenticação.
+- Tokens sem tenant falham fechados. Falhas de descoberta/conexão não autorizam fallback de identidade.
+- O texto inicial permitia atualizar o contexto se o tenant mudasse na renovação. Essa regra foi
+  **superada** pela [ADR 0083](../../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md)
+  e pelo [PR #200](https://github.com/evertonschuster/Agenza/pull/200): troca de subject ou tenant
+  bloqueia a sessão e exige login explícito, em vez de reutilizar o estado protegido de outra identidade.
+- A fundação visual posterior é a [spec 002](../002-ui-foundation/spec.md); features de negócio
+  posteriores não violam o antigo FR-013. O desenho atual está no
+  [guia de arquitetura](../../docs/ARCHITECTURE.md#3-auth--tenancy).
