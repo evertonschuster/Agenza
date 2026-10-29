@@ -1,16 +1,23 @@
 import { useFormContext, useFormState } from 'react-hook-form';
 import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
+import { NEW_TAG_PATH, tagsRepository } from '@/features/tags';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
 import {
   BirthDateField,
   CpfField,
   EmailField,
   PhoneField,
+  RemoteSearchSelectField,
   TextField,
   TextareaField,
 } from '@/shared/form/fields';
 import { PageSection } from '@/widgets/page-section';
-import { CLIENT_FULL_NAME_MAX_LENGTH, CLIENT_NOTES_MAX_LENGTH } from '../../../../model/client';
+import {
+  CLIENT_FULL_NAME_MAX_LENGTH,
+  CLIENT_MAX_TAGS,
+  CLIENT_NOTES_MAX_LENGTH,
+} from '../../../../model/client';
+import type { ClientTag } from '../../../../model/clientTag';
 import type { ClientFormFieldValues } from '../clientForm';
 import { editClientPath } from '../../../clientsPaths';
 
@@ -55,6 +62,21 @@ function ClientPersonSection() {
               Abrir cadastro existente
             </NewTabLink>
           )}
+        </div>
+
+        <div className="md:col-span-2">
+          <RemoteSearchSelectField<ClientFormFieldValues, ClientTag>
+            name="tags"
+            label="Etiquetas"
+            hint={`opcional · até ${CLIENT_MAX_TAGS}`}
+            loadItems={tagsRepository.list}
+            multiple
+            maxSelected={CLIENT_MAX_TAGS}
+            placeholder="Selecione ou busque etiquetas"
+            emptyMessage="Nenhuma etiqueta cadastrada."
+            errorMessage="Não foi possível carregar as etiquetas."
+            createLink={{ label: 'Criar etiqueta', to: NEW_TAG_PATH }}
+          />
         </div>
 
         <div className="space-y-1.5 md:col-span-2">
