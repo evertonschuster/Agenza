@@ -23,6 +23,7 @@ const INPUT: ClientInput = {
   administrativeNotes: null,
   guardians: [],
   referenceContacts: [],
+  tagIds: [],
 };
 
 const CLIENT: Client = {
@@ -31,6 +32,7 @@ const CLIENT: Client = {
   status: 'active',
   guardians: [],
   referenceContacts: [],
+  tags: [],
 };
 
 const CONFLICT = {

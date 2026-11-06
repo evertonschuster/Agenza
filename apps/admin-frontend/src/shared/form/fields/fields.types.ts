@@ -4,6 +4,7 @@ import type { ColorSwatchPickerOption } from '@/shared/ui/color-swatch-picker';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
 import type { Input } from '@/shared/ui/input';
 import type { InputGroupInput } from '@/shared/ui/input-group';
+import type { SearchSelectItem, SearchSelectProps } from '@/shared/ui/search-select';
 import type { Textarea } from '@/shared/ui/textarea';
 
 interface BaseFieldProps<T extends FieldValues> {
@@ -94,6 +95,32 @@ export type SelectFieldProps<
   T extends FieldValues,
   N extends Path<T> = Path<T>,
 > = SelectFieldBaseProps<T, N> & FieldLabelPlacement;
+
+type SearchSelectOwnedProps =
+  | 'value'
+  | 'onValueChange'
+  | 'inputRef'
+  | 'onBlur'
+  | 'disabled'
+  | 'aria-label'
+  | FormFieldOwnedProps;
+
+type PathHolding<T extends FieldValues, V> = Extract<
+  {
+    [K in Path<T>]: [PathValue<T, K>] extends [V]
+      ? [V] extends [PathValue<T, K>]
+        ? K
+        : never
+      : never;
+  }[Path<T>],
+  Path<T>
+>;
+
+export type SearchSelectFieldProps<T extends FieldValues, I extends SearchSelectItem> = {
+  name: PathHolding<T, I[]>;
+  label: string;
+  hint?: string | undefined;
+} & Omit<SearchSelectProps<I>, SearchSelectOwnedProps>;
 
 export type SearchFieldProps<T extends FieldValues> = {
   name: Path<T>;

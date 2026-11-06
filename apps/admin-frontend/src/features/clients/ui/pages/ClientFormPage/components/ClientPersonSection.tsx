@@ -1,16 +1,23 @@
 import { useFormContext, useFormState } from 'react-hook-form';
 import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
+import { TAG_SEARCH_MAX_LENGTH, tagsRepository } from '@/features/tags';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
 import {
   BirthDateField,
   CpfField,
   EmailField,
   PhoneField,
+  SearchSelectField,
   TextField,
   TextareaField,
 } from '@/shared/form/fields';
 import { PageSection } from '@/widgets/page-section';
-import { CLIENT_FULL_NAME_MAX_LENGTH, CLIENT_NOTES_MAX_LENGTH } from '../../../../model/client';
+import {
+  CLIENT_FULL_NAME_MAX_LENGTH,
+  CLIENT_MAX_TAGS,
+  CLIENT_NOTES_MAX_LENGTH,
+} from '../../../../model/client';
+import type { ClientTag } from '../../../../model/clientTag';
 import type { ClientFormFieldValues } from '../clientForm';
 import { editClientPath } from '../../../clientsPaths';
 
@@ -55,6 +62,20 @@ function ClientPersonSection() {
               Abrir cadastro existente
             </NewTabLink>
           )}
+        </div>
+
+        <div className="md:col-span-2">
+          <SearchSelectField<ClientFormFieldValues, ClientTag>
+            name="tags"
+            label="Etiquetas"
+            hint={`opcional · até ${CLIENT_MAX_TAGS}`}
+            loadItems={tagsRepository.list}
+            maxSelected={CLIENT_MAX_TAGS}
+            maxLength={TAG_SEARCH_MAX_LENGTH}
+            placeholder="Selecione ou busque etiquetas"
+            emptyMessage="Nenhuma etiqueta cadastrada."
+            errorMessage="Não foi possível carregar as etiquetas."
+          />
         </div>
 
         <div className="space-y-1.5 md:col-span-2">
