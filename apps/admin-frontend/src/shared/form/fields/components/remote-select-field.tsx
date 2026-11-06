@@ -1,18 +1,17 @@
 import type { FieldValues } from 'react-hook-form';
-import { RemoteSearchSelect } from '@/shared/ui/remote-search-select';
-import type { SearchSelectItem } from '@/shared/ui/search-select';
-import type { RemoteSearchSelectFieldProps } from '../fields.types';
+import { RemoteSelect, type RemoteSelectItem } from '@/shared/ui/remote-select';
+import type { RemoteSelectFieldProps } from '../fields.types';
 import { ControlledField } from './controlled-field';
 
-export function RemoteSearchSelectField<T extends FieldValues, I extends SearchSelectItem>(
-  props: RemoteSearchSelectFieldProps<T, I>,
+export function RemoteSelectField<T extends FieldValues, I extends RemoteSelectItem>(
+  props: RemoteSelectFieldProps<T, I>,
 ) {
   const { name, label, hint, ...selectProps } = props;
 
   return (
     <ControlledField<T> name={name} label={label} hint={hint}>
       {(field, controlProps) => (
-        <RemoteSearchSelect<I>
+        <RemoteSelect<I>
           {...selectProps}
           {...controlProps}
           value={field.value}

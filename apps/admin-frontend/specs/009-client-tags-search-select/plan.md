@@ -1,64 +1,77 @@
-# Plano: etiquetas no cadastro de pessoa com SearchSelect
+# Plano: etiquetas no cadastro de pessoa com RemoteSelect
 
-**Branch**: `claude/multi-select-component-d9018b` | **Data**: 2026-10-29 | **Spec**: [spec.md](spec.md)
+**Branch**: `claude/multi-select-component-d9018b` | **Data**: 2026-10-29, redesenho em 2026-11-06 | **Spec**: [spec.md](spec.md)
 
 ## Abordagem
 
-`SearchSelect` é um primitivo em `src/shared/ui/search-select/`, composto sobre o `Combobox` do Base UI já
-instalado e genérico em `T extends { id: string; name: string }`. Recebe `items`; `multiple` decide o modo,
-`Chips`/`Chip`/`ChipRemove` desenham as seleções e o Base UI filtra a lista pelo texto digitado. Não faz
-requisições. Uma fonte que carrega itens se conecta por props opcionais: `onSearchChange` recebe o texto e
-desliga o filtro local (`filter={null}`), `onOpenChange` avisa abertura e fechamento, e `loading`, `failure`
-e `more` mostram o estado da fonte.
+O seletor é reescrito do zero; nenhum arquivo da versão em duas camadas (`SearchSelect`,
+`RemoteSearchSelect` e os seus Fields) é aproveitado. Ficam só os contratos já aprovados: a função de
+listagem com a forma do `tagsRepository.list`, o valor com os itens inteiros e o uso no cadastro de pessoa.
 
-`RemoteSearchSelect`, em `src/shared/ui/remote-search-select/`, é essa fonte para o backend: envolve o
-`SearchSelect` com `use-remote-items.ts` e recebe `loadItems(query, signal)`, com a mesma assinatura do
-`fetchPage` de `usePaginatedList`; `tagsRepository.list` já a satisfaz, sem adaptador. O hook usa um
-`AbortController` por requisição, como `usePaginatedList`; busca 300 ms depois da última tecla, somente para
-mudanças digitadas (motivo `input-change` do Base UI); carrega a primeira página ao abrir, exceto quando a
-abertura veio de uma busca digitada pendente; a rolagem perto do fim acrescenta a próxima, uma por vez e
-nunca durante uma busca digitada pendente (o popup decide pela posição do `ComboboxList`, o hook ignora o
-pedido enquanto houver outro); fechar ou desmontar
-cancela. A falha mostra o título do problema como recebido, com "Tentar novamente".
+Os primitivos do Combobox voltam a `src/shared/ui/combobox/` como o registry do shadcn (`base-nova`) os
+gera, adaptados ao projeto: conteúdo do popup com a âncora, chips, chip com cor e remover nomeado, input dos
+chips, trigger, indicador da opção e a região de status. A paleta de comandos só divide com eles a classe
+do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
 
-`SearchSelectField` e `RemoteSearchSelectField` em `src/shared/form/fields/` ligam cada primitivo ao React
-Hook Form por `ControlledField`, como o `SelectField`.
+`src/shared/ui/remote-select/` tem quatro arquivos:
+
+- `use-remote-options.ts`: o que mostrar e quando pedir, sem conhecer o Base UI. O estado guarda a busca da
+  lista exibida, os itens, o total, o que está carregando (`first` ou `next`), o pedido pronto da próxima
+  página e o problema. Abrir pede a primeira página, exceto com uma busca digitada esperando os 300 ms;
+  digitar reinicia os 300 ms; `loadMore` pede a próxima só sem pedido em andamento, sem busca esperando e
+  sem falha; `retry` repete a próxima página ou, sem ela, a primeira da busca; fechar cancela, e a lista é
+  descartada só quando a animação de fechar termina. A última página vem do tamanho de página que o
+  servidor respondeu. Cada pedido cancela o anterior por `AbortController` e uma resposta cancelada é
+  ignorada. As buscas partem de ações, nunca de um efeito sobre o texto.
+- `index.tsx`: `RemoteSelect` monta o Combobox com `multiple`, `filter={null}`, igualdade e valor por `id`,
+  e tem três regras próprias: o teclado, lido do estado que o Base UI põe no input (`aria-expanded` e
+  `aria-activedescendant`), sem estado espelhado, com Enter que não envia o formulário da lista aberta e
+  Esc que não apaga as escolhas da lista fechada; a rolagem, que avisa o hook a 40 px do fim e depois de
+  cada página; e o limite, que desabilita as opções não marcadas e avisa. Uma única região de status
+  anuncia carregando, carregando mais e o limite.
+- `components/remote-select-states.tsx`: o estado abaixo da lista (carregando, falha com nova tentativa,
+  vazio e sem resultado) e o rodapé.
+- `remote-select.types.ts`: o item `{ id, name, color? }`, `RemoteItemsQuery`, `LoadRemoteItems` e as
+  props. O nome acessível é obrigatório: `aria-label` ou um `id` ligado a um rótulo.
+
+`RemoteSelectField`, em `src/shared/form/fields/`, liga o componente ao React Hook Form por
+`ControlledField`, como o `SelectField`, sem comportamento próprio. O tipo de `name` só aceita um campo do
+formulário que guarde uma lista dos itens.
 
 No cadastro de pessoa, o formulário guarda as etiquetas inteiras (`tags`) e o schema converte a saída em
 `tagIds`, de modo que `createClient`/`updateClient` recebem o `ClientInput` sem mudança no hook da página. A
 falha do servidor no campo `TagIds` tem sua chave trocada para `tags` antes de `applyApiProblem`, porque o
-nome do campo no formulário não é o do comando. O paliativo `tagIds: []` sai do repositório.
+nome do campo no formulário não é o do comando. O paliativo `tagIds: []` sai do repositório. Nada disso
+muda no redesenho; `ClientPersonSection` só troca o campo.
 
 ## Referências e restrições aplicáveis
 
-- [Arquitetura §1](../../docs/ARCHITECTURE.md#1-shape): o primitivo não importa features; pessoas acessa
-  etiquetas pelo barril `@/features/tags`, que passa a exportar `tagsRepository`.
+- [Arquitetura §1](../../docs/ARCHITECTURE.md#1-shape): o componente não importa features; pessoas acessa
+  etiquetas pelo barril `@/features/tags`. O componente e o Field ficam em `shared`, como os demais
+  controles de formulário; a requisição continua sendo da feature, que passa `loadItems`.
 - [ADR 0089](../../../../docs/adr/0089-clients-tags.md): limite de 20, `Tag.NotFound`/`Client.TooManyTags` em
   `TagIds`, PUT substitui as etiquetas.
 - [ADR 0074](../../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md): a busca ao digitar
-  é uma exceção de seletor, registrada na ADR 0090 desta mudança; páginas de listagem não mudam.
+  e a rolagem são exceções de seletor, registradas na ADR 0090; páginas de listagem não mudam.
 - [ADR 0039](../../../../docs/adr/0039-admin-frontend-base-ui-primitives.md): Base UI, sem dependência nova.
 - Constituição: tipos gerados e fachada (IV) inalterados; o tenant continua no servidor (II).
 
 ## Arquivos e dependências
 
-1. `src/shared/ui/search-select/`: tipos, componente sobre lista fixa e partes; testes.
-2. `src/shared/ui/remote-search-select/`: tipos, hook de carregamento e componente remoto; testes.
-3. `src/shared/form/fields/`: `SearchSelectField`, `RemoteSearchSelectField`, tipos e exportação; testes.
-4. `src/features/tags/`: exportação de `tagsRepository` no barril.
-5. `src/features/clients/`: modelo (`ClientTag`, `tags`, `tagIds`, `CLIENT_MAX_TAGS`), repositório, schema e
-   valores do formulário, troca da chave do problema, campo em `ClientPersonSection`; testes.
-6. `e2e/clients.spec.ts`: criar uma pessoa com etiqueta e conferir que a edição a mostra.
-7. `docs/adr/0090-...` e o índice; `docs/ARCHITECTURE.md` se citar os primitivos de seleção.
+1. `src/shared/ui/search-select/`, `src/shared/ui/remote-search-select/` e os dois Fields com seus testes e
+   tipos: removidos.
+2. `src/shared/ui/combobox/`: primitivos gerados e adaptados.
+3. `src/shared/ui/remote-select/`: hook, componente, tipos e testes. Depende de 2.
+4. `src/shared/form/fields/`: `RemoteSelectField`, tipos, exportação e teste. Depende de 3.
+5. `src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx`: troca do campo.
+6. `docs/adr/0090-...`, o índice e `docs/ARCHITECTURE.md`.
 
 ## Riscos e validação
 
-- Corrida de respostas: teste com timers falsos prova que uma busca nova cancela a anterior e que a resposta
-  cancelada não aparece.
-- As duas camadas e os dois modos: testes da base cobrem lista fixa, filtro local e as props de fonte;
-  testes do remoto cobrem a chamada, a busca e a paginação; ambos cobrem marcar, desmarcar, remover pela pílula, limite, uma seleção com
-  limpar, teclado e nomes acessíveis.
-- Envio: testes do formulário e do repositório provam `tagIds` na criação e na edição e a etiqueta inicial na
-  edição; `Tag.NotFound` aparece sob o campo.
-- Gates: ESLint, Prettier, `tsc`/build, cobertura do Vitest e drift do OpenAPI; e2e contra o stack real quando
-  disponível, e conferência no navegador.
+- Corrida de respostas e travas da paginação: testes do hook com timers falsos.
+- Enter lido do input: os testes dentro de um `<form>` provam a opção destacada, a lista aberta sem
+  destaque, o texto digitado com a lista fechada e o campo vazio, que envia.
+- Aceite sem mudança: os testes de etiquetas do `ClientFormPage` e o `e2e/clients.spec.ts` acham o campo
+  por papel e nome.
+- Gates: ESLint, Prettier, `tsc`/build e cobertura do Vitest; e2e contra o stack real quando disponível, e
+  conferência no navegador nos dois temas.

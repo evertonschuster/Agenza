@@ -1,8 +1,8 @@
-# Especificação: etiquetas no cadastro de pessoa com SearchSelect
+# Especificação: etiquetas no cadastro de pessoa com RemoteSelect
 
 **Branch**: `claude/multi-select-component-d9018b` | **Criada em**: 2026-10-29 | **Status**: Aprovada pelo dono nesta conversa
-**Pedido**: componente de seleção reutilizável, de uma ou várias opções, que recebe a chamada que lista os itens
-do backend com busca e paginação; primeiro uso na seleção de etiquetas do cadastro de pessoa.
+**Pedido**: componente de seleção reutilizável que recebe a chamada que lista os itens do backend com busca e
+paginação; primeiro uso na seleção de etiquetas do cadastro de pessoa.
 
 ## Objetivo e escopo
 
@@ -10,14 +10,13 @@ O dono-operador marca etiquetas numa pessoa ao criá-la ou editá-la. O backend 
 etiquetas da pessoa ([ADR 0089](../../../../docs/adr/0089-clients-tags.md)); o formulário ainda envia uma
 lista vazia, apagando as etiquetas a cada edição.
 
-A seleção é feita em duas camadas compartilhadas, que não conhecem etiquetas e aceitam qualquer item com
-`id` e `name`, numa seleção ou em várias, por configuração. `SearchSelect` trabalha sobre uma lista fixa,
-sem backend. `RemoteSearchSelect` o envolve e recebe a função que lista os itens no backend, com busca e
-página.
+A seleção é um componente compartilhado, `RemoteSelect`, que não conhece etiquetas e aceita qualquer item
+com `id` e `name`, em várias seleções. Ele recebe a função que lista os itens no backend, com busca e
+página, e funciona sozinho, controlado por valor e callback. `RemoteSelectField` só o liga ao formulário.
 
 Fora do escopo: coluna ou filtro de etiquetas na listagem de pessoas (o backend ainda não filtra), qualquer
-criação de etiqueta a partir do seletor, inclusive um link para a tela de etiquetas, e uso do modo de uma
-seleção em alguma tela. Esta entrega só seleciona.
+criação de etiqueta a partir do seletor, inclusive um link para a tela de etiquetas, uma seleção sobre uma
+lista fixa do front-end e o modo de uma seleção. Esta entrega só seleciona.
 
 Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 
@@ -26,10 +25,9 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 ### Sessão 2026-10-29
 
 - Nome: `SearchSelect` (e `SearchSelectField` no formulário), escolhido pelo dono entre RemoteSelect,
-  LookupSelect e EntityPicker.
-- Duas camadas, pedidas pelo dono depois da primeira versão: `SearchSelect` funciona com uma lista fixa e
-  um estado simples, para seleções estáticas de outras telas; `RemoteSearchSelect` (e
-  `RemoteSearchSelectField`) o envolve e carrega do backend.
+  LookupSelect e EntityPicker. Substituído no redesenho de 2026-11-06.
+- Duas camadas, pedidas pelo dono depois da primeira versão: `SearchSelect` sobre uma lista fixa e
+  `RemoteSearchSelect` em volta dele, carregando do backend. Substituído no redesenho de 2026-11-06.
 - Contrato do item: qualquer objeto com `id` e `name`; não há tipo de opção nem conversão por feature. Uma
   `color` presente no item colore a etiqueta selecionada e a opção.
 - O campo fica em "Dados da pessoa", em largura total, entre CPF e Observações administrativas.
@@ -40,9 +38,9 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 - A lista é carregada de novo cada vez que é aberta, para mostrar etiquetas criadas ou renomeadas em outro
   lugar desde a última abertura.
 - Somente seleção: o link "Criar etiqueta" da lista vazia, desenhado no protótipo, foi removido pelo dono.
-- Com várias seleções, escolher um resultado de busca fecha a lista e limpa a busca; sem texto digitado,
-  a lista continua aberta. É a convenção do Combobox do Base UI, mantida sem customização.
-- A decisão está na [ADR 0090](../../../../docs/adr/0090-admin-frontend-search-select-and-client-tags.md).
+- Escolher um resultado de busca fecha a lista e limpa a busca; sem texto digitado, a lista continua
+  aberta. É a convenção do Combobox do Base UI, mantida sem customização.
+- A decisão está na [ADR 0090](../../../../docs/adr/0090-admin-frontend-remote-select-and-client-tags.md).
 
 ### Sessão 2026-11-06
 
@@ -52,11 +50,29 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 - Uma página por vez: nada é pedido enquanto uma página ou uma busca digitada estiver pendente.
 - Depois de uma falha, a rolagem não pede de novo; só "Tentar novamente".
 - Abaixo da lista, "Mostrando X de Y" enquanto houver mais e "Carregando mais…" durante o pedido.
-- Enter dentro do campo não envia o formulário enquanto houver texto digitado ou a lista estiver aberta.
-  Com uma opção destacada, marca ou desmarca; sem destaque, na busca remota, faz na hora a busca que ainda
-  esperava os 300 ms e mantém a lista aberta. Com o campo vazio e a lista fechada, Enter envia o formulário.
-- Sem destaque automático na busca remota, escolha do dono: o resultado não vem com a primeira opção
-  destacada, e escolher pede seta ou clique. A lista fixa continua destacando a primeira opção filtrada.
+- Enter dentro do campo não envia o formulário enquanto a lista estiver aberta; digitar abre a lista, e
+  fechá-la limpa o texto. Com uma opção destacada, marca ou desmarca; com a lista fechada, envia o
+  formulário.
+- Sem destaque automático, escolha do dono: o resultado não vem com a primeira opção destacada, e
+  escolher pede seta ou clique.
+
+### Sessão 2026-11-06, redesenho
+
+- O dono pediu o componente reescrito do zero, mais simples: a versão em duas camadas deixava a lista fixa
+  carregando os estados da remota (carregando, falha, página, rolagem) e trocando de modo pela presença de
+  um callback.
+- Só o seletor dinâmico: a seleção sobre uma lista fixa do front-end sai e volta, se for preciso, como um
+  componente próprio, sem ser a base do remoto.
+- Nome: `RemoteSelect` e `RemoteSelectField`, escolhidos pelo dono.
+- Só várias seleções: o modo de uma seleção não tinha tela e entra com a primeira que o pedir.
+- Lugar: `shared/ui/remote-select/` e `shared/form/fields/`, como os demais controles de formulário; a
+  chamada ao backend continua sendo da feature, que passa a função de listagem.
+- Enter sem destaque não faz mais a busca na hora: a busca espera os 300 ms, e Enter só não envia o
+  formulário. Enter com Shift, Ctrl, Alt ou Meta sobre uma opção destacada também não envia nem marca.
+- Revisão crítica do redesenho: Esc com a lista fechada apagava todas as escolhas (comportamento padrão do
+  Base UI); agora não apaga e a tecla segue adiante, para fechar um diálogo, por exemplo.
+- Carregando, carregando mais e o limite são anunciados por uma única região de status; o rodapé e o aviso
+  de limite são texto comum. A falha da próxima página aparece abaixo da lista, onde a rolagem parou.
 
 ## Jornadas e critérios de aceite
 
@@ -80,28 +96,26 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 ### US2 — Reutilizar a seleção em outra tela (P2)
 
 1. Dado um endpoint paginado com busca cujos itens têm `id` e `name`, quando uma feature passa sua função de
-   listagem ao `RemoteSearchSelectField`, então obtém busca, paginação, estados e teclado sem código próprio.
-2. Dado o modo de uma seleção, quando escolho um item, então ele aparece no campo, a lista fecha e posso
-   limpar a escolha.
-3. Dado uma lista fixa de opções, quando uma tela a passa ao `SearchSelectField`, então a busca filtra a
-   lista localmente, sem acento, e nada é pedido ao backend.
+   listagem ao `RemoteSelectField`, então obtém busca, paginação, estados e teclado sem código próprio.
+2. Dado uma tela sem formulário, quando ela usa o `RemoteSelect` com valor e callback, então ele funciona
+   igual, nomeado por `aria-label` ou por um rótulo ligado ao seu `id`.
 
 ## Requisitos
 
-- **FR-001**: `SearchSelect` recebe a lista de itens e filtra pelo texto digitado; não faz requisições.
-  `RemoteSearchSelect` recebe a função de listagem, que recebe busca, página, tamanho da página e um sinal
-  de cancelamento e devolve o resultado da fachada HTTP.
-- **FR-002**: O modo é configurável: uma seleção (valor: um item ou nenhum) ou várias (valor: lista de
-  itens), com limite opcional de quantidade somente no modo de várias.
+- **FR-001**: `RemoteSelect` recebe a função de listagem, que recebe busca, página, tamanho da página e um
+  sinal de cancelamento e devolve o resultado da fachada HTTP. Funciona controlado por valor e callback, sem
+  formulário; `RemoteSelectField` o liga ao React Hook Form sem acrescentar comportamento.
+- **FR-002**: Várias seleções (valor: lista de itens), com limite opcional de quantidade.
 - **FR-003**: O valor guarda os itens inteiros, de modo que os selecionados aparecem sem que estejam na
   página carregada.
 - **FR-004**: Uma nova busca, o fechamento da lista ou a saída da tela cancelam a requisição pendente; uma
   resposta antiga nunca substitui a mais recente.
 - **FR-005**: Carregando, falha com nova tentativa, sem resultado da busca e sem nenhum item são estados
-  distintos; textos padrão em pt-BR podem ser trocados por quem usa.
-- **FR-006**: Teclado: setas navegam, Enter marca ou desmarca, Esc fecha, Backspace com a busca vazia remove
-  a última seleção; cada etiqueta selecionada tem um botão de remover com nome acessível. Enter sem opção
-  destacada nunca envia o formulário com texto digitado ou lista aberta; na busca remota, busca na hora.
+  distintos; o placeholder e os textos de lista vazia e de falha podem ser trocados por quem usa.
+- **FR-006**: Teclado: setas navegam, Enter marca ou desmarca, Esc fecha a lista e, com ela fechada, não
+  apaga as escolhas; Backspace com a busca vazia remove a última seleção; cada etiqueta selecionada tem um
+  botão de remover com nome acessível. Com a lista aberta, Enter sem opção destacada ou com modificador
+  nunca envia o formulário.
 - **FR-007**: O cadastro de pessoa envia os ids das etiquetas marcadas na criação e na edição, e valida o
   limite de 20 antes de enviar.
 - **FR-008**: Erros do servidor sobre as etiquetas são mostrados sob o campo com a mensagem recebida.
@@ -109,7 +123,8 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 ## Critério de sucesso
 
 - **SC-001**: Criar e editar uma pessoa preserva as etiquetas escolhidas, conferido contra o backend real.
-- **SC-002**: As duas camadas não importam nada de features e são cobertas nos dois modos.
+- **SC-002**: O componente e o seu Field não importam nada de features e são cobertos no carregamento, na
+  interação e no formulário.
 
 ## Riscos, limites e dúvidas
 

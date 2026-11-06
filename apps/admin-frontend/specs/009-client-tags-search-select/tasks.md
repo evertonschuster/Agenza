@@ -2,37 +2,27 @@
 description: 'Tarefas da mudança, ordenadas por dependências e validadas conforme o risco.'
 ---
 
-# Tarefas: etiquetas no cadastro de pessoa com SearchSelect
+# Tarefas: etiquetas no cadastro de pessoa com RemoteSelect
 
 **Entradas**: [spec.md](spec.md) e [plan.md](plan.md).
 
-## US2 — SearchSelect reutilizável nos dois modos
+A versão em duas camadas (T001–T005, T013–T016) foi substituída pelo redesenho de 2026-11-06; o histórico
+está no Git e na ADR 0090.
 
-- [x] T001 [US2] Tipos e carregamento em `src/shared/ui/search-select/search-select.types.ts` e
-  `use-search-select-items.ts`: primeira página ao abrir, busca após 300 ms, "Carregar mais", cancelamento.
-- [x] T002 [US2] Testar em `use-search-select-items.test.tsx` que uma busca nova cancela a anterior e a resposta
-  cancelada não aparece, que a próxima página se acrescenta e que a falha permite nova tentativa.
-- [x] T003 [US2] Componente em `src/shared/ui/search-select/index.tsx` e `components/`: pílulas, lista, estados,
-  limite, modo de uma seleção com limpar.
-- [x] T004 [US2] Testar em `search-select.test.tsx` marcar, desmarcar, remover pela pílula, limite, uma seleção,
-  estados vazios e nomes acessíveis.
-- [x] T005 [US2] `SearchSelectField` em `src/shared/form/fields/components/search-select-field.tsx`, tipos em
-  `fields.types.ts` e exportação; testar valor e erro do formulário em `search-select-field.test.tsx`.
+## US2 — RemoteSelect reutilizável
 
-- [x] T013 [US2] Separar em duas camadas: `SearchSelect` sobre lista fixa em `src/shared/ui/search-select/`
-  e `RemoteSearchSelect` com `use-remote-items.ts` em `src/shared/ui/remote-search-select/`;
-  `SearchSelectField` e `RemoteSearchSelectField`; testes de cada camada.
-
-- [x] T014 [US2] Remover o link de criação da lista vazia (`createLink`, `NEW_TAG_PATH`) e seus testes:
-  esta entrega só seleciona.
-
-- [x] T015 [US2] Trocar "Carregar mais" pela rolagem no `ComboboxList` de `search-select-popup.tsx` (40 px do
-  fim, ou lista mais curta que a altura), sem pedir com falha; `loadMore` em `use-remote-items.ts` ignora o
-  pedido com outro pendente. Testar rolagem, lista curta, pendente/falha e a trava do hook.
-
-- [x] T016 [US2] Enter sem destaque não envia o formulário: `onKeyDown` no `ComboboxPrimitive.Input` com
-  `preventDefault` e `preventBaseUIHandler`; `searchNow` em `use-remote-items.ts`; `autoHighlight` só na
-  lista fixa. Testar dentro de um `<form>` a busca sem destaque, a opção destacada e o campo vazio.
+- [x] T017 [US2] Remover `src/shared/ui/search-select/`, `src/shared/ui/remote-search-select/`,
+  `SearchSelectField`, `RemoteSearchSelectField`, seus tipos em `fields.types.ts`, exportações e testes.
+- [x] T018 [US2] Primitivos em `src/shared/ui/combobox/`: conteúdo com âncora, chips, chip com cor e remover
+  nomeado, input dos chips, trigger e indicador da opção, a partir do registry `base-nova`.
+- [x] T019 [US2] `use-remote-options.ts` em `src/shared/ui/remote-select/` e testes com timers falsos:
+  abrir, busca após 300 ms com o último texto, abrir com busca esperando, corrida de respostas, próxima
+  página sem repetir item, travas do `loadMore`, `retry` da primeira e da próxima página, fechar e desmontar.
+- [x] T020 [US2] `RemoteSelect` em `index.tsx` e testes: lista ao abrir, chips e remoção, limite, limpar,
+  carregando, falha com nova tentativa, sem itens, sem resultado, rolagem, lista curta, rodapé e o Enter
+  dentro de um `<form>`.
+- [x] T021 [US2] `RemoteSelectField` em `src/shared/form/fields/`, tipos e exportação; testar nome, dica,
+  valor no formulário e erro com foco.
 
 ## US1 — Marcar etiquetas numa pessoa
 
@@ -43,15 +33,18 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
   `useClientFormPage.ts`; campo em `components/ClientPersonSection.tsx`.
 - [x] T009 [US1] Testar em `clientForm.test.ts` e `ClientFormPage.test.tsx` o envio de `tagIds`, as etiquetas na
   edição, o limite e `Tag.NotFound` sob o campo.
+- [x] T022 [US1] Trocar o campo de `ClientPersonSection.tsx` por `RemoteSelectField`; os testes de T009
+  passam sem mudança.
 - [ ] T010 [US1] Estender `e2e/clients.spec.ts`: criar pessoa com etiqueta e vê-la na edição. Cenário escrito;
   falta executá-lo contra o stack real.
 
 ## Transversais
 
-- [x] T011 ADR 0090 em `docs/adr/` e índice; atualizar `docs/ARCHITECTURE.md` se necessário.
-- [ ] T012 Rodar lint, Prettier, build, cobertura e drift do OpenAPI; conferir no navegador.
+- [x] T023 Reescrever a ADR 0090 para o `RemoteSelect`, com a versão em duas camadas entre as alternativas
+  substituídas; índice das ADRs e `docs/ARCHITECTURE.md`.
+- [x] T012 Rodar lint, Prettier, build e cobertura; conferir no navegador nos dois temas.
 
 ## Dependências e validação final
 
-T001 antecede T003; T003 antecede T005; T005 e T006 antecedem T008. T007 e T011 não dependem do componente.
-Os gates de T012 encerram a mudança.
+T017 e T018 antecedem T019; T019 antecede T020; T020 antecede T021; T021 antecede T022. T023 não depende do
+código. Os gates de T012 e o e2e de T010 encerram a mudança.

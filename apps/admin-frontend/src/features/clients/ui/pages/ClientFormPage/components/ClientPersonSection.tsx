@@ -7,7 +7,7 @@ import {
   CpfField,
   EmailField,
   PhoneField,
-  RemoteSearchSelectField,
+  RemoteSelectField,
   TextField,
   TextareaField,
 } from '@/shared/form/fields';
@@ -65,12 +65,11 @@ function ClientPersonSection() {
         </div>
 
         <div className="md:col-span-2">
-          <RemoteSearchSelectField<ClientFormFieldValues, ClientTag>
+          <RemoteSelectField<ClientFormFieldValues, ClientTag>
             name="tags"
             label="Etiquetas"
             hint={`opcional · até ${CLIENT_MAX_TAGS}`}
             loadItems={tagsRepository.list}
-            multiple
             maxSelected={CLIENT_MAX_TAGS}
             placeholder="Selecione ou busque etiquetas"
             emptyMessage="Nenhuma etiqueta cadastrada."

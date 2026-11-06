@@ -4,13 +4,7 @@ import type { ColorSwatchPickerOption } from '@/shared/ui/color-swatch-picker';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
 import type { Input } from '@/shared/ui/input';
 import type { InputGroupInput } from '@/shared/ui/input-group';
-import type {
-  SearchSelectItem,
-  SearchSelectMultipleProps,
-  SearchSelectSingleProps,
-  SearchSelectSourceProps,
-} from '@/shared/ui/search-select';
-import type { LoadRemoteItems } from '@/shared/ui/remote-search-select';
+import type { RemoteSelectItem, RemoteSelectProps } from '@/shared/ui/remote-select';
 import type { Textarea } from '@/shared/ui/textarea';
 
 interface BaseFieldProps<T extends FieldValues> {
@@ -102,37 +96,25 @@ export type SelectFieldProps<
   N extends Path<T> = Path<T>,
 > = SelectFieldBaseProps<T, N> & FieldLabelPlacement;
 
-type SearchSelectOwnedProps =
+type RemoteSelectOwnedProps =
   | 'value'
   | 'onValueChange'
   | 'inputRef'
   | 'onBlur'
   | 'disabled'
-  | SearchSelectSourceProps
+  | 'aria-label'
   | FormFieldOwnedProps;
 
-type SearchSelectFieldControlProps<I extends SearchSelectItem> =
-  | Omit<SearchSelectSingleProps<I>, SearchSelectOwnedProps>
-  | Omit<SearchSelectMultipleProps<I>, SearchSelectOwnedProps>;
+type PathHolding<T extends FieldValues, V> = Extract<
+  { [K in Path<T>]: PathValue<T, K> extends V ? K : never }[Path<T>],
+  Path<T>
+>;
 
-interface SearchSelectFieldFrame<T extends FieldValues> {
-  name: Path<T>;
+export type RemoteSelectFieldProps<T extends FieldValues, I extends RemoteSelectItem> = {
+  name: PathHolding<T, I[]>;
   label: string;
   hint?: string | undefined;
-}
-
-export type SearchSelectFieldProps<
-  T extends FieldValues,
-  I extends SearchSelectItem,
-> = SearchSelectFieldFrame<T> & { items: readonly I[] } & SearchSelectFieldControlProps<I>;
-
-export type RemoteSearchSelectFieldProps<
-  T extends FieldValues,
-  I extends SearchSelectItem,
-> = SearchSelectFieldFrame<T> & {
-  loadItems: LoadRemoteItems<I>;
-  pageSize?: number | undefined;
-} & SearchSelectFieldControlProps<I>;
+} & Omit<RemoteSelectProps<I>, RemoteSelectOwnedProps>;
 
 export type SearchFieldProps<T extends FieldValues> = {
   name: Path<T>;
