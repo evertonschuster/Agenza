@@ -15,10 +15,11 @@ vi.mock('@/shared/api/apiClient', () => ({ createApiClient: createApiClientMock 
 vi.mock('@/shared/api/servicesFacade', () => ({ createServicesFacade: createServicesFacadeMock }));
 
 import { getAuthCredentials } from '@/shared/session/sessionStore';
-import { servicesApi } from './servicesApi';
 
 describe('servicesApi', () => {
-  it('wraps a credentials-bound API client in the services facade', () => {
+  it('wraps a credentials-bound API client in the services facade', async () => {
+    const { servicesApi } = await import('./servicesApi');
+
     expect(createApiClientMock).toHaveBeenCalledWith(getAuthCredentials);
     expect(createServicesFacadeMock).toHaveBeenCalledWith(fakeClient);
     expect(servicesApi).toBe(fakeFacade);
