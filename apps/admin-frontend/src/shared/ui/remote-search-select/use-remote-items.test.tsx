@@ -176,6 +176,31 @@ describe('useRemoteItems', () => {
     );
   });
 
+  it('sends a typed search at once when asked, and nothing when none is waiting', async () => {
+    const { loadItems, pending } = deferredLoader();
+    const { result } = renderHook(() => useRemoteItems({ loadItems, pageSize: 2 }));
+
+    act(() => result.current.open());
+    await answer(pending[0], page([item('a'), item('b')], 4));
+    act(() => result.current.searchNow('vi'));
+
+    expect(loadItems).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.search('vi'));
+    act(() => result.current.searchNow('vi'));
+
+    expect(loadItems).toHaveBeenLastCalledWith(
+      { search: 'vi', page: 1, pageSize: 2 },
+      expect.any(AbortSignal),
+    );
+
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DELAY_MS);
+    });
+
+    expect(loadItems).toHaveBeenCalledTimes(2);
+  });
+
   it('keeps the failure and retries the page that failed', async () => {
     const { loadItems, pending } = deferredLoader();
     const { result } = renderHook(() => useRemoteItems({ loadItems, pageSize: 2 }));

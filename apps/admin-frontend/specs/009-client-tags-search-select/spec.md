@@ -52,6 +52,11 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 - Uma página por vez: nada é pedido enquanto uma página ou uma busca digitada estiver pendente.
 - Depois de uma falha, a rolagem não pede de novo; só "Tentar novamente".
 - Abaixo da lista, "Mostrando X de Y" enquanto houver mais e "Carregando mais…" durante o pedido.
+- Enter dentro do campo não envia o formulário enquanto houver texto digitado ou a lista estiver aberta.
+  Com uma opção destacada, marca ou desmarca; sem destaque, na busca remota, faz na hora a busca que ainda
+  esperava os 300 ms e mantém a lista aberta. Com o campo vazio e a lista fechada, Enter envia o formulário.
+- Sem destaque automático na busca remota, escolha do dono: o resultado não vem com a primeira opção
+  destacada, e escolher pede seta ou clique. A lista fixa continua destacando a primeira opção filtrada.
 
 ## Jornadas e critérios de aceite
 
@@ -95,7 +100,8 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 - **FR-005**: Carregando, falha com nova tentativa, sem resultado da busca e sem nenhum item são estados
   distintos; textos padrão em pt-BR podem ser trocados por quem usa.
 - **FR-006**: Teclado: setas navegam, Enter marca ou desmarca, Esc fecha, Backspace com a busca vazia remove
-  a última seleção; cada etiqueta selecionada tem um botão de remover com nome acessível.
+  a última seleção; cada etiqueta selecionada tem um botão de remover com nome acessível. Enter sem opção
+  destacada nunca envia o formulário com texto digitado ou lista aberta; na busca remota, busca na hora.
 - **FR-007**: O cadastro de pessoa envia os ids das etiquetas marcadas na criação e na edição, e valida o
   limite de 20 antes de enviar.
 - **FR-008**: Erros do servidor sobre as etiquetas são mostrados sob o campo com a mensagem recebida.

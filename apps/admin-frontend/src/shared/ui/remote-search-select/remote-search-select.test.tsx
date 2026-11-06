@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -243,5 +243,34 @@ describe('RemoteSearchSelect with one choice', () => {
       { search: '', page: 1, pageSize: 20 },
       expect.any(AbortSignal),
     );
+  });
+});
+
+describe('RemoteSearchSelect inside a form', () => {
+  it('searches at once on Enter instead of submitting, and never picks an option by itself', async () => {
+    const user = userEvent.setup();
+    const submit = vi.fn((event: FormEvent) => event.preventDefault());
+    const loadItems = loaderOf(ALL);
+    render(
+      <form onSubmit={submit}>
+        <Multiple loadItems={loadItems} />
+        <button type="submit">Salvar</button>
+      </form>,
+    );
+
+    await openList(user, 'Etiquetas');
+    await user.keyboard('vi{Enter}');
+
+    expect(loadItems).toHaveBeenLastCalledWith(
+      { search: 'vi', page: 1, pageSize: 20 },
+      expect.any(AbortSignal),
+    );
+    expect(await screen.findByRole('option', { name: 'VIP' })).toBeInTheDocument();
+
+    await user.keyboard('{Enter}');
+
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByLabelText('escolhidas')).toBeEmptyDOMElement();
+    expect(loadItems).toHaveBeenCalledTimes(2);
   });
 });

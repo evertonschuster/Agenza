@@ -17,6 +17,7 @@ interface SearchSelectControlProps<T extends SearchSelectItem> {
   anchorRef: Ref<HTMLDivElement>;
   inputRef?: Ref<HTMLInputElement> | undefined;
   onBlur?: (() => void) | undefined;
+  onKeyDown: ComboboxPrimitive.Input.Props['onKeyDown'];
   id?: string | undefined;
   'aria-invalid'?: boolean | undefined;
   'aria-describedby'?: string | undefined;
@@ -30,6 +31,7 @@ function SearchSelectControl<T extends SearchSelectItem>({
   anchorRef,
   inputRef,
   onBlur,
+  onKeyDown,
   className,
   ...inputProps
 }: SearchSelectControlProps<T>) {
@@ -39,6 +41,7 @@ function SearchSelectControl<T extends SearchSelectItem>({
         <ComboboxPrimitive.Input
           ref={inputRef}
           onBlur={onBlur}
+          onKeyDown={onKeyDown}
           placeholder={placeholder}
           render={<InputGroupInput />}
           {...inputProps}
@@ -93,6 +96,7 @@ function SearchSelectControl<T extends SearchSelectItem>({
       <ComboboxPrimitive.Input
         ref={inputRef}
         onBlur={onBlur}
+        onKeyDown={onKeyDown}
         placeholder={placeholder}
         className="h-6 min-w-24 flex-1 bg-transparent px-1 text-base outline-none placeholder:text-muted-foreground disabled:cursor-not-allowed md:text-sm"
         {...inputProps}

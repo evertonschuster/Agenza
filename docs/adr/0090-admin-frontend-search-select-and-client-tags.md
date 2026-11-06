@@ -53,6 +53,17 @@ a 429 gets no automatic retry.
 clears the search, while picking with an empty search keeps it open. The limit (`maxSelected`) disables
 the other options and says so.
 
+**Enter does not submit the form from the search.** Base UI lets Enter through to the form when no option
+is highlighted, and the remote search rarely had one: typing highlighted the first item of the list still
+on screen, the reload emptied it, and the results came without one. So Enter while typing picked an
+unrelated tag or saved the person. The input now takes `onKeyDown`, which `mergeProps` runs before Base
+UI's: with no highlighted option (tracked through `onItemHighlighted`) and text typed or the list open, it
+calls `preventDefault()`, which cancels the browser's implicit submission, and `preventBaseUIHandler()`,
+so the list stays open. The remote one then sends the search still waiting for its 300 ms. A highlighted
+option is left to Base UI, and an empty closed field still submits. Only the fixed list keeps
+`autoHighlight`: the owner chose no automatic highlight for the remote results, so choosing there takes
+an arrow key or a click.
+
 **On the person form.** `tags` sits in "Dados da pessoa" between CPF and the notes, limited to 20 as
 the backend. The schema outputs `tagIds`, so the use cases and the page hook keep receiving a
 `ClientInput`. A server error on `TagIds` (`Tag.NotFound`, `Client.TooManyTags`) is moved to the `tags`
@@ -69,6 +80,13 @@ field before `applyApiProblem`, because the form field is not named after the co
 
 ## Considered and rejected
 
+- **Blocking Enter on the `<form>` or cancelling in `onSubmit`.** Either would touch every field of the
+  form and need to tell which input or button started the submission; the picker owns its own key.
+- **Highlighting the first remote result.** Would make Enter after a search pick that result, as the
+  fixed list does. Declined by the owner.
+- **Emptying the list as soon as the user types.** Proposed to stop Enter from picking a stale item;
+  without `autoHighlight` on the remote one nothing stale is highlighted, and with it Base UI would
+  highlight the first result once it arrived.
 - **A `TagOption` with `value`/`label` and a mapper per feature.** Rejected by the owner: the
   domain object already has an id and a name.
 - **Search only on Enter, to keep ADR 0073 literally.** Enter already toggles the highlighted item in a

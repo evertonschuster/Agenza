@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -277,5 +277,49 @@ describe('SearchSelect fed by a source that loads its items', () => {
 
     expect(await screen.findByText('Mostrando 3 de 10')).toBeInTheDocument();
     expect(onLoadMore).not.toHaveBeenCalled();
+  });
+});
+
+describe('SearchSelect inside a form', () => {
+  function renderInForm() {
+    const submit = vi.fn((event: FormEvent) => event.preventDefault());
+    render(
+      <form onSubmit={submit}>
+        <Multiple />
+        <button type="submit">Salvar</button>
+      </form>,
+    );
+    return submit;
+  }
+
+  it('keeps the form and the list when Enter finds no highlighted option', async () => {
+    const user = userEvent.setup();
+    const submit = renderInForm();
+
+    await user.type(screen.getByRole('combobox', { name: 'Etiquetas' }), 'xyz{Enter}');
+
+    expect(submit).not.toHaveBeenCalled();
+    expect(screen.getByText('Nenhum resultado para “xyz”.')).toBeInTheDocument();
+  });
+
+  it('chooses the highlighted option on Enter without submitting', async () => {
+    const user = userEvent.setup();
+    const submit = renderInForm();
+
+    await user.type(screen.getByRole('combobox', { name: 'Etiquetas' }), 'conv{Enter}');
+
+    expect(screen.getByLabelText('escolhidas')).toHaveTextContent('Convênio');
+    expect(submit).not.toHaveBeenCalled();
+  });
+
+  it('submits on Enter when the field is closed and empty', async () => {
+    const user = userEvent.setup();
+    const submit = renderInForm();
+
+    await user.tab();
+    expect(screen.getByRole('combobox', { name: 'Etiquetas' })).toHaveFocus();
+    await user.keyboard('{Enter}');
+
+    expect(submit).toHaveBeenCalledOnce();
   });
 });

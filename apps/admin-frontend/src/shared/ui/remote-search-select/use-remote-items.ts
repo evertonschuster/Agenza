@@ -94,6 +94,11 @@ export function useRemoteItems<T extends SearchSelectItem>({
     searchTimer.current = setTimeout(() => send(text, FIRST_PAGE), SEARCH_DELAY_MS);
   }
 
+  function searchNow(text: string) {
+    if (searchTimer.current === undefined) return;
+    send(text, FIRST_PAGE);
+  }
+
   function close() {
     cancel();
     setState(IDLE);
@@ -114,5 +119,5 @@ export function useRemoteItems<T extends SearchSelectItem>({
     state.items.length > 0 &&
     state.page < getLastPage(state.totalCount, pageSize);
 
-  return { state, hasMore, open, search, close, loadMore, retry };
+  return { state, hasMore, open, search, searchNow, close, loadMore, retry };
 }

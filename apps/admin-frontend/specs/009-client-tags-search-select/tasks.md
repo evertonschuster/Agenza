@@ -30,6 +30,10 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
   fim, ou lista mais curta que a altura), sem pedir com falha; `loadMore` em `use-remote-items.ts` ignora o
   pedido com outro pendente. Testar rolagem, lista curta, pendente/falha e a trava do hook.
 
+- [x] T016 [US2] Enter sem destaque não envia o formulário: `onKeyDown` no `ComboboxPrimitive.Input` com
+  `preventDefault` e `preventBaseUIHandler`; `searchNow` em `use-remote-items.ts`; `autoHighlight` só na
+  lista fixa. Testar dentro de um `<form>` a busca sem destaque, a opção destacada e o campo vazio.
+
 ## US1 — Marcar etiquetas numa pessoa
 
 - [x] T006 [US1] Exportar `tagsRepository` em `src/features/tags/index.ts`.

@@ -27,6 +27,7 @@ interface SearchSelectBaseProps<T extends SearchSelectItem> {
   more?: SearchSelectMore | undefined;
   onOpenChange?: ((open: boolean) => void) | undefined;
   onSearchChange?: ((search: string) => void) | undefined;
+  onSearchSubmit?: ((search: string) => void) | undefined;
   disabled?: boolean | undefined;
   inputRef?: Ref<HTMLInputElement> | undefined;
   onBlur?: (() => void) | undefined;
@@ -54,7 +55,7 @@ type SearchSelectProps<T extends SearchSelectItem> =
   SearchSelectSingleProps<T> | SearchSelectMultipleProps<T>;
 
 type SearchSelectSourceProps =
-  'items' | 'loading' | 'failure' | 'more' | 'onOpenChange' | 'onSearchChange';
+  'items' | 'loading' | 'failure' | 'more' | 'onOpenChange' | 'onSearchChange' | 'onSearchSubmit';
 
 export type {
   SearchSelectFailure,

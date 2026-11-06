@@ -29,6 +29,7 @@ function RemoteSearchSelect<T extends SearchSelectItem>(props: RemoteSearchSelec
       }
       onOpenChange={(open) => (open ? remote.open() : remote.close())}
       onSearchChange={remote.search}
+      onSearchSubmit={remote.searchNow}
     />
   );
 }

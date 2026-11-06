@@ -5,6 +5,7 @@ import { SearchSelectPopup } from './components/search-select-popup';
 import type { SearchSelectItem, SearchSelectProps } from './search-select.types';
 
 type ChangeDetails = ComboboxPrimitive.Root.ChangeEventDetails;
+type InputKeyDown = NonNullable<ComboboxPrimitive.Input.Props['onKeyDown']>;
 
 function selectionOf<T extends SearchSelectItem>(props: SearchSelectProps<T>): T[] {
   if (props.multiple) return props.value;
@@ -22,6 +23,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
     more,
     onOpenChange,
     onSearchChange,
+    onSearchSubmit,
     disabled,
     inputRef,
     onBlur,
@@ -29,9 +31,25 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
     className,
   } = props;
   const [query, setQuery] = useState('');
+  const [open, setOpen] = useState(false);
   const anchorRef = useRef<HTMLDivElement | null>(null);
+  const highlighted = useRef<T | undefined>(undefined);
   const multiple = props.multiple ?? false;
   const selected = selectionOf(props);
+
+  function onOpenStateChange(next: boolean) {
+    setOpen(next);
+    onOpenChange?.(next);
+  }
+
+  const onInputKeyDown: InputKeyDown = (event) => {
+    if (event.key !== 'Enter' || event.nativeEvent.isComposing) return;
+    if (open && highlighted.current !== undefined) return;
+    if (!open && query.trim() === '') return;
+    event.preventDefault();
+    event.preventBaseUIHandler();
+    onSearchSubmit?.(query);
+  };
 
   function onInputValueChange(value: string, details: ChangeDetails) {
     setQuery(value);
@@ -60,9 +78,12 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
       isItemEqualToValue={(item, value) => item.id === value.id}
       itemToStringLabel={(item) => item.name}
       itemToStringValue={(item) => item.id}
-      onOpenChange={(open) => onOpenChange?.(open)}
+      onOpenChange={onOpenStateChange}
       onInputValueChange={onInputValueChange}
-      autoHighlight
+      onItemHighlighted={(item) => {
+        highlighted.current = item;
+      }}
+      autoHighlight={!onSearchChange}
       disabled={disabled ?? false}
     >
       <SearchSelectControl
@@ -72,6 +93,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
         anchorRef={anchorRef}
         inputRef={inputRef}
         onBlur={onBlur}
+        onKeyDown={onInputKeyDown}
         id={id}
         aria-invalid={props['aria-invalid']}
         aria-describedby={props['aria-describedby']}
