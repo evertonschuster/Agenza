@@ -45,7 +45,7 @@ Keep a stored tag hex unchanged. Supply it as a custom property and let the shar
 it with theme surface and foreground variables:
 
 ```tsx
-<span className="tag" style={{ "--tag": tag.color } as CSSProperties}>
+<span className="tag" style={{ '--tag': tag.color } as CSSProperties}>
   {tag.name}
 </span>
 ```
