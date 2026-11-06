@@ -1,164 +1,56 @@
-# Implementation Plan: Admin Panel UI Foundation
+# Plano histórico — 002-ui-foundation
 
-**Feature**: `002-ui-foundation` · **Spec**: [spec.md](./spec.md) · **Created**: 2026-09-04
+**Status**: entrega implementada; decisões da [spec.md](spec.md), sem roteiro de instalação atual.
+A forma vigente está no [guia de arquitetura](../../docs/ARCHITECTURE.md); o plano original completo
+permanece no
+[Git](https://github.com/evertonschuster/Agenza/blob/38d2dbd99ddb7a28aba39bf1e7434518cf78c391/apps/admin-frontend/specs/002-ui-foundation/plan.md).
 
-## Summary
+## Decisões da entrega
 
-Substitui o shell provisório (`AppLayout` + `HomePage`) por uma fundação de UI completa: sistema de
-tokens em dois temas, tema de três estados com handoff para o identity-service, camada de primitivos
-sobre Base UI, shell responsivo com barra lateral e barra inferior, seis destinos de navegação, e uma
-paleta de comandos. Nenhuma tela de negócio é construída aqui.
+- **D1 — Base UI no lugar de Radix**: a troca aproveitava a reconstrução do shell, mantendo os
+  primitivos como código de propriedade do app e a composição por `render`. Não era uma alegação
+  de depreciação do Radix. Motivação e alternativas na
+  [ADR 0039](../../../../docs/adr/0039-admin-frontend-base-ui-primitives.md).
+- **D2 — tema próprio em `shared/theme/`**: uma store com snapshot/assinatura e integração ao
+  documento atendia a SPA sem adicionar dependência voltada a SSR. A semelhança com a store de sessão
+  era de forma; o tema tem efeitos no documento deliberadamente. Chave, atributo e precedência do
+  handoff estão na [ADR 0040](../../../../docs/adr/0040-admin-frontend-three-state-theme.md).
+- **D3 — transições em CSS**: usar os estados dos primitivos, respeitando redução de movimento.
+  Uma biblioteca de animação só seria reavaliada diante de necessidade concreta de layout.
+- **D5 — cobertura pelo comportamento e consumidor**: o plano excluía scaffolds sem uso e alguns
+  renderizadores. Essa era uma decisão da configuração daquele momento, não isenção permanente
+  de `shared/ui/`. A revisão exigia testar comportamento novo mesmo fora do agregado. Para trabalhar
+  hoje, conferir [vitest.config.ts](../../vitest.config.ts) e consumidores reais.
+- **D6 — placeholders em `app/`**: telas sem domínio e acesso a dados não constituíam uma feature.
+  Cada placeholder cedia lugar à capacidade real quando implementada, sem camadas antecipadas.
 
-## Constitution Check
+O shell era composto em `app/`, usando os recursos transversais de `shared/` e a integração existente
+com auth. Dependências, versões, árvore de arquivos e comandos não são repetidos aqui: pertencem
+ao lockfile, ao código e ao [README](../../README.md).
 
-| Princípio | Impacto |
-| --- | --- |
-| I — Strict TypeScript | Mantido. `exactOptionalPropertyTypes` exige passe de tipagem em cada primitivo adicionado. |
-| II — Multi-tenant server-side | Não tocado. Nenhuma tela nova consome API. |
-| III — identity-service, portas fixas | Tocado de forma restrita: `login.css` e o parâmetro de tema da ADR 0020. Portas inalteradas. |
-| IV — Cliente OpenAPI gerado | Não tocado. `generate:api-types:check` segue no CI. |
-| V — Portões de CI | Mantidos. Uma alteração deliberada em `coverage.exclude`, registrada abaixo. |
-| VI — Sem Docker no frontend | Mantido. |
-| Deferred: "UI component library" | **Encerrado** por esta feature — ADR 0039. |
+## Restrições confirmadas na revisão
 
-## Key Decisions
+- Tema é enviado ao iniciar o redirect, para refletir a escolha corrente. O script anterior ao React
+  evita o primeiro quadro no tema errado; a preferência já armazenada na origem de login prevalece lá.
+- Navegação e indicador de indisponibilidade precisam funcionar no trilho compacto, sem depender
+  somente de tooltip ou texto oculto. A rolagem volta ao topo do `main`, que é o contêiner rolável,
+  e não de uma janela que não está rolando.
+- Um scrim preto estável nos dois temas não pode virar automaticamente `foreground`: no escuro,
+  a cor de texto seria clara e inverteria o efeito de escurecer o fundo.
+- O tratamento visual de tags precisava de contraste nos dois temas; um scaffold sem consumidor
+  não justifica criar dados ou tela falsos para passar um checkbox.
+- Não foi entregue uma garantia global de densidade touch por tokens: os tokens sem consumidor
+  foram retirados. O tamanho efetivo deve ser conferido no controle/layout que o aplica.
 
-### D1 — Base UI substitui Radix (ADR 0039)
+## Evidência e evolução
 
-`@base-ui/react@^1.8.0` no lugar de `radix-ui@1.6.7`. Motivos: é o padrão do shadcn/ui desde julho de
-2026, então `npx shadcn add` permanece no caminho suportado; um pacote único cobre Toast e Combobox,
-eliminando `sonner` e `cmdk`; e o custo de migração é hoje **um arquivo** — `button.tsx` é o único
-consumidor de Radix e será reescrito de qualquer forma.
+[PR #117](https://github.com/evertonschuster/Agenza/pull/117) entrega tema, shell, rotas e testes.
+[PR #143](https://github.com/evertonschuster/Agenza/pull/143) retira os atalhos personalizados;
+a paleta mantém seu botão. O [PR #174](https://github.com/evertonschuster/Agenza/pull/174) introduz
+a capacidade de cadastro em Pessoas. O
+[PR #186](https://github.com/evertonschuster/Agenza/pull/186) remove `card` e `separator` sem consumidor.
+Essas mudanças impedem usar inventários e perguntas de revisão da fundação como backlog atual.
 
-Radix não foi depreciado. A troca é oportunista, não corretiva, e o momento é o mais barato que
-existirá.
-
-**Diferença de API que quebra código copiado**: Base UI usa a prop `render`; Radix usa `asChild` +
-`Slot`. Snippets de tutoriais Radix não compilam. Usar sempre a aba Base UI da documentação.
-
-### D2 — Tema escrito à mão em `shared/theme/` (ADR 0040)
-
-`next-themes` carrega maquinário de SSR que este SPA não tem e possui incompatibilidades abertas com
-React 19. A alternativa é ~60 linhas espelhando `shared/session/sessionStore.ts`, que já implementa
-exatamente o padrão snapshot/subscribe/`useSyncExternalStore` necessário.
-
-Fica em `shared/` e não em `features/`, porque `features/auth` precisa ler o tema para enviá-lo ao
-identity-service, e `features → shared` é a única direção permitida.
-
-Chave de armazenamento `admin-theme` e atributo `data-theme`, **idênticos** aos que
-`identity-service/wwwroot/js/theme-init.js` já usa — é o que torna o handoff possível.
-
-### D3 — Sem biblioteca de animação (`docs/ARCHITECTURE.md` §5)
-
-CSS `transition` + `@starting-style` + os atributos `data-*` de estado do Base UI. `motion` custa
-~31 KB gzip no build React, e a persona usa Android intermediário. Reavaliar apenas se uma animação
-de layout específica exigir.
-
-### D5 — Cobertura mede lógica, não marcação (`docs/ARCHITECTURE.md` §5, ADR 0039)
-
-Primitivos apresentativos com `cva` e sem comportamento próprio (`avatar`, `badge`, `button`, `card`,
-`input`, `label`, `separator`, `skeleton`, `textarea`, `visually-hidden`, `FullScreenMessage`)
-entram em `coverage.exclude` — não têm lógica a testar e derrubariam o percentual, empurrando o time a
-escrever testes cerimoniais. `dialog.tsx` entra pelo mesmo mecanismo, mas por um motivo diferente e
-temporário: não tem consumidor (T160 em `tasks.md`), então cobrança de cobertura ali seria ruído de
-código morto, não lacuna real — sai da lista quando o T160 resolver.
-
-`dropdown-menu`, `combobox`, `sheet` e `toast` também entram — não pela falta de comportamento (têm
-bastante), mas porque cada arquivo é um scaffold do shadcn com vários subcomponentes e só um subconjunto
-tem consumidor hoje: `dropdown-menu.tsx` carrega submenu e checkbox-item que nada usa; `combobox.tsx`
-carrega chips e groups que nada usa; idem partes de `sheet.tsx`/`toast.tsx`. O subconjunto realmente
-consumido **é** exercitado de verdade por quem o usa (`ThemeToggle.test.tsx`, `CommandPalette.test.tsx`),
-mas cobertura por arquivo não separa "export usado, ramo sem teste" de
-"export sem nenhum uso" — forçar o percentual aqui só compraria teste cerimonial para o scaffold morto.
-O gate para esses cinco arquivos é o review, não o agregado: uma linha de comportamento nova num export
-já consumido precisa de teste na revisão, mesmo sem contar para o número.
-
-`tooltip.tsx` **não** entra no exclude — `SidebarNav.test.tsx` e `AppShell.test.tsx` já exercitam o
-arquivo inteiro de verdade, então excluí-lo esconderia cobertura real em vez de contar uma lacuna.
-`input-group.tsx` também não entra: `InputGroupAddon` tem teste próprio
-(`input-group.test.tsx`, cobrindo o bug de composição do `onClick` corrigido nesta rodada);
-`InputGroupText`/`InputGroupTextarea` seguem sem consumidor, mesma categoria do parágrafo acima, mas o
-arquivo é pequeno o bastante para não derrubar o agregado sozinho.
-
-`shared/theme/**` e a lógica de navegação são testados de verdade — não há
-scaffold não-usado nesses módulos, então a cobertura de arquivo inteiro é honesta ali.
-
-**Esta alteração é feita antes de qualquer primitivo ser adicionado**, ou o CI fica vermelho e parece
-regressão.
-
-### D6 — Telas "Em breve" moram em `app/`, não em `features/` (`docs/ARCHITECTURE.md` §6)
-
-Não têm `model` nem `api`, portanto não atendem à definição de fatia do `ARCHITECTURE.md` §1 — o mesmo
-critério pelo qual `HomePage` mora em `app/` hoje. Cada uma é substituída por uma fatia real quando o
-backend existir.
-
-## Dependencies
-
-### Adicionar
-
-| Pacote | Versão | Para quê |
-| --- | --- | --- |
-| `@base-ui/react` | `^1.8.0` | Dialog, Popover, Select, Menu, Tooltip, Tabs, Switch, Toast, Combobox |
-| `lucide-react` | latest | Ícones; melhor relação bundle/fonte da categoria (~1.0–1.2x contra 16–18x do Phosphor) |
-| `@fontsource-variable/inter` | latest | Inter self-hosted; a tela de login já usa Inter |
-
-### Remover
-
-`radix-ui` — após `button.tsx` ser reescrito.
-
-### Deliberadamente não adotar
-
-`sonner` (Base UI Toast) · `cmdk` (Base UI Combobox) · `next-themes` (D2) · `motion` (D3) ·
-`vaul` (Base UI Dialog como sheet) ·
-`@tanstack/react-table` (sem tela de tabela ainda) · `react-hook-form` + `zod` (entram com o primeiro
-formulário real, não com a fundação).
-
-## Structure
-
-```
-src/
-├── app/
-│   ├── globals.css                  reescrito
-│   ├── routes.tsx                   seis rotas
-│   ├── shell/                       NOVO — composition root do layout
-│   │   ├── AppShell.tsx  SidebarNav.tsx  BottomNav.tsx  AppHeader.tsx
-│   │   ├── ThemeToggle.tsx  CommandPalette.tsx
-│   │   └── navigation.ts            destinos como dado
-│   └── pages/                       NOVO — telas sem fatia
-│       ├── ComingSoon.tsx
-│       └── Home.tsx  Schedule.tsx  Clients.tsx  Conversations.tsx  Services.tsx  Settings.tsx
-└── shared/
-    ├── theme/                       NOVO — theme.ts  themeStore.ts  useTheme.ts
-    ├── hooks/                       NOVO — declarado em components.json, nunca criado
-    └── ui/                          conjunto de fundação
-```
-
-Direção de dependência inalterada: `app → features → shared`. `app/shell/` usa `useAuth` de
-`@/features/auth` e os stores de `@/shared/*`; nada em `shared/` importa `app/` ou `features/`.
-
-## Phasing
-
-Cada fase termina com CI verde. Ordem é dependência real, não preferência.
-
-| Fase | Entrega | Bloqueia |
-| --- | --- | --- |
-| 1 | Tokens, tema, tipografia, handoff com identity-service | tudo |
-| 2 | Camada de primitivos (Base UI in, Radix out) + ajuste de cobertura | 3, 4, 5 |
-| 3 | Shell responsivo | 4, 5 |
-| 4 | Seis rotas + telas "Em breve" | 5 |
-| 5 | Paleta de comandos | — |
-| 6 | Documentação + ADRs | — |
-
-## Risks
-
-| Risco | Mitigação |
-| --- | --- |
-| `npm ci` quebra no CI após adicionar dependências | Regerar o lockfile em container Linux — comando completo (imagem pinada por digest, `npm@12.0.2`, `--allow-remote=all`) na seção "Portões de CI" de [`AGENTS.md`](../../AGENTS.md), não repetido aqui para não virar uma terceira cópia para desalinhar |
-| `exactOptionalPropertyTypes` atrita com componentes gerados pelo shadcn | Passe de tipagem por componente; esperado, não eventual |
-| Gate de cobertura fica vermelho ao adicionar primitivos | D5 é feito **antes** de qualquer primitivo |
-| Snippet Radix copiado não compila com Base UI | Skill `agenza-ui-primitive` documenta a diferença `render` vs `asChild` |
-
-## Verification
-
-Ver [`checklists/acceptance.md`](./checklists/acceptance.md) e a seção de verificação de
-[`tasks.md`](./tasks.md).
+As medições antigas feitas no servidor de desenvolvimento não estabelecem desempenho do build de
+produção. As observações de uma sessão e os valores medidos permanecem no Git, sem virar SLO ou
+resultado de validação deste checkout.

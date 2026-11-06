@@ -1,183 +1,96 @@
-# Feature Specification: Admin Panel UI Foundation
+# Spec 002 — fundação visual do painel administrativo
 
-**Feature Branch**: `002-ui-foundation`
+**Identificador**: `002-ui-foundation` · **Criada em**: 04/09/2026.
+**Status**: implementada; registro histórico de comportamento e aceite, com limites de verificação.
 
-**Created**: 2026-09-04
+A documentação foi integrada no [PR #116](https://github.com/evertonschuster/Agenza/pull/116), e o
+código no [PR #117](https://github.com/evertonschuster/Agenza/pull/117).
+[plan.md](plan.md) registra escolhas; [tasks.md](tasks.md) identifica entregas, revisões e lacunas
+históricas. Critérios visuais abaixo não representam testes executados nesta limpeza documental.
 
-**Status**: Draft
+## Escopo e evolução
 
-**Input**: User description (pt-BR, transcrito de voz): montar o plano de instalação e configuração do
-layout da aplicação. Tema claro/escuro **e** automático conforme o sistema operacional. Visual moderno, suave, muito clean —
-sem excesso de opções ou usabilidade complicada; interface fluida como Mercado Livre e Nubank,
-totalmente intuitiva. Responsivo para mobile. Respeitar a arquitetura existente sem pedir demais dela.
-A interface atual pode ser inteiramente descartada, mantendo apenas o esqueleto do projeto.
+Substituir o shell provisório da [spec 001](../001-oidc-shell-scaffold/spec.md) por uma interface
+com identidade própria, tema claro/escuro/automático, navegação responsiva e paleta de comandos.
+O protótipo aprovado definiu a direção violeta e uma experiência simples para o dono-operador;
+não autorizou construir telas de negócio falsas para preencher os destinos.
 
-## Clarifications
+Na entrega, os destinos eram Início, Agenda, Clientes, Conversas, Serviços e Ajustes. A mudança
+posterior para Pessoas e `/pessoas`, seguida de cadastro, está no
+[PR #174](https://github.com/evertonschuster/Agenza/pull/174). Destinos atuais são dados de
+[navigation.ts](../../src/app/shell/navigation.ts), não um inventário a manter nesta spec.
 
-### Session 2026-09-04
+O sistema de atalhos personalizados e suas dicas foi **removido** no
+[PR #143](https://github.com/evertonschuster/Agenza/pull/143). A paleta continua acessível pelo botão
+Buscar. IDs antigos não são renumerados nem justificam reintroduzir atalhos; a navegação padrão
+por teclado e o foco acessível dos controles permanecem necessários.
 
-- Q: A tela de login do identity-service já tem identidade visual (Inter, neutro `#1b1d22`, foco
-  `#5b68df`, dark via `data-theme`). O painel segue essa linguagem ou ganha marca própria? →
-  A: **Marca própria**, com personalidade mais quente (registro Nubank / Mercado Livre). Implica
-  atualizar `login.css` do identity-service para não haver quebra visual no redirect OIDC.
-- Q: Qual o hue de marca? → A: **Violeta.** `oklch(0.525 0.155 288)` no claro; `oklch(0.72 0.145 288)`
-  no escuro. Decidido a partir do protótipo clicável da Fase 0, com três candidatas alternáveis ao vivo.
-- Q: Só Serviços/Categorias/Tags têm backend. O que a navegação mostra no dia 1? →
-  A: **Navegação completa** com os 6 destinos desde o início; os 4 sem backend abrem uma tela
-  "Em breve" honesta.
-- Q: Aprovar o visual antes de escrever código? → A: **Sim**, protótipo clicável primeiro. Concluído.
+## Histórias e aceite
 
-### Session 2026-10-02
+### US1 — escolher como o painel se apresenta (P1)
 
-- Q: O destino "Clientes" mantém o nome quando o cadastro de pessoas atendidas chega (issues #139 e
-  #154)? → A: **Não.** O destino passa a se chamar **"Pessoas"**, na rota `/pessoas`, e deixa de ser
-  "Em breve" porque já tem backend (`POST /api/v1/clients`) e o formulário de cadastro em
-  `/pessoas/nova`. O identificador de código continua em inglês (`clients`). A lista e o detalhe
-  chegam com a issue #155.
+- Oferecer claro, escuro e automático; sem preferência salva, seguir o sistema operacional.
+- Aplicar a preferência antes da primeira pintura e persistir a escolha após recarregar.
+- No automático, reagir à mudança do sistema sem reload.
+- Enviar o tema resolvido ao login do identity-service no momento do redirect. Preferência já
+  salva na origem do identity-service prevalece ali, conforme a ADR 0040.
+- Manter `lang="pt-BR"` e metadados visuais coerentes com o tema.
 
-## User Scenarios & Testing *(mandatory)*
+### US2 — usar o painel no celular (P1)
 
-### User Story 1 — A pessoa escolhe como o painel se apresenta, e o painel obedece (Priority: P1)
+- Em 375 px, exibir barra inferior e acesso a Mais, sem overflow horizontal; funcionar desde 320 px.
+- Entre 768 e 1023 px, usar trilho de ícones com nomes acessíveis; a partir de 1024 px, barra lateral.
+- Preservar indicação do destino ativo, nomes dos controles e alvos de toque da navegação de pelo
+  menos 44 px. Indisponibilidade deve ser perceptível também no trilho compacto.
+- Respeitar safe area e manter o campo em foco visível quando o teclado móvel abre, sem zoom
+  indevido. Layout, contraste e teclado móvel exigem verificação real; jsdom não prova esses efeitos.
 
-A dona do negócio escolhe entre tema claro, escuro ou automático. Em automático, o painel segue a
-preferência do sistema operacional e reage quando ela muda, sem recarregar. A escolha sobrevive ao
-recarregamento sem nenhum lampejo do tema errado, e atravessa o redirect de login sem que a tela de
-credenciais apareça no tema oposto.
+### US4 — encontrar comandos do painel (P2)
 
-**Why this priority**: É o requisito explicitamente pedido, é pré-requisito de toda decisão visual
-subsequente (nenhum componente pode ser construído antes dos tokens existirem nos dois temas), e é o
-único que atravessa a fronteira entre duas aplicações.
+- O botão Buscar abre a paleta em desktop e celular.
+- Selecionar um destino abre a rota correspondente; o acesso não depende de atalho personalizado.
 
-**Independent Test**: Alternar os três estados; mudar o tema do sistema operacional com "automático"
-ativo; recarregar; ir para `/login` e conferir que a página de credenciais abre no mesmo tema.
+### US5 — entender o que ainda não está disponível (P3)
 
-**Acceptance Scenarios**:
+- Um destino indisponível explica seu próprio escopo em pt-BR e oferece um caminho funcional de volta.
+- A navegação identifica a indisponibilidade antes do clique; não simula funcionamento com dados falsos.
+- A existência de backend para uma capacidade não transforma, por si só, um placeholder em tela funcional.
 
-1. **Given** a preferência salva é "escuro", **When** a pessoa recarrega a página, **Then** o painel
-   pinta em escuro no primeiro quadro, sem lampejo claro.
-2. **Given** a preferência é "automático" e o sistema está em claro, **When** o sistema operacional
-   muda para escuro, **Then** o painel acompanha imediatamente, sem recarregar.
-3. **Given** a preferência é "escuro", **When** a sessão expira e a pessoa é redirecionada ao
-   identity-service, **Then** a página de credenciais abre em escuro.
-4. **Given** nenhuma preferência foi salva, **When** a pessoa abre o painel pela primeira vez,
-   **Then** o tema resolvido segue o sistema operacional.
+## Requisitos preservados
 
----
+- **FR-001**: oferecer claro, escuro e automático, com automático como padrão sem preferência.
+- **FR-002**: aplicar o tema resolvido antes da primeira pintura, sem lampejo do tema oposto.
+- **FR-003**: acompanhar mudanças do sistema enquanto a escolha for automática.
+- **FR-004**: transmitir a preferência resolvida ao identity-service para continuidade visual no login.
+- **FR-005**: expor os seis destinos definidos para a entrega inicial. A evolução dos nomes e rotas
+  está registrada acima; este requisito histórico não congela a navegação do produto.
+- **FR-006**: explicar destinos indisponíveis sem apresentá-los como funcionais.
+- **FR-007**: adaptar navegação entre telas largas e estreitas, sem overflow horizontal desde 320 px.
+- **FR-011**: abrir a paleta pelo botão Buscar. Substitui a versão antiga que exigia atalhos próprios.
+- **FR-015**: manter textos e nomes acessíveis em pt-BR, com identificadores de código em inglês.
+- **FR-016**: exibir cores de etiqueta legíveis nos dois temas, sem alterar o valor recebido da API.
+  Não exige fabricar um consumidor na fundação para demonstrar dados de negócio.
+- **FR-017**: substituir o `AppLayout`/`HomePage` provisório, em vez de estendê-lo.
 
-### User Story 2 — O painel é utilizável no celular, entre um atendimento e outro (Priority: P1)
+**Referências legadas**: US3 e os requisitos de atalhos FR-012/FR-013/FR-014 não integram este
+recorte. SC-005 foi retirado com os atalhos no PR #143. O teste `SidebarNav.test.tsx` ainda cita
+“spec FR-009 area”, embora esse requisito não conste do documento de base: sua asserção de
+`aria-current="page"` está preservada no aceite de US2, sem inventar um novo requisito numerado.
 
-A dona do negócio abre o painel no celular. A navegação fica ao alcance do polegar, os alvos de toque
-são confortáveis, nada escapa horizontalmente, e o teclado do sistema não encobre o campo em foco.
+## Requisitos não funcionais e sucesso
 
-**Why this priority**: A persona é majoritariamente móvel. Um shell que só funciona no desktop falha
-para a maior parte dos usos reais, e refazer o shell depois é a refatoração mais cara desta feature.
+- **NFR-001**: manter os gates de tipos, lint, formato, cobertura, contrato e e2e. Limiares,
+  exclusões e comandos são os da configuração e de [QUALITY](../../../../docs/QUALITY.md).
+- **NFR-002**: permanecer utilizável em hardware modesto, sem biblioteca de animação no runtime da fundação.
+- **NFR-003**: registrar a biblioteca de primitivos em ADR; a decisão está na ADR 0039.
+- **SC-002**: em 375 px, não haver overflow e os alvos de navegação terem a dimensão mínima indicada.
+- **SC-003**: recarregar com tema escuro salvo sem um quadro intermediário claro.
+- **SC-006**: executar os gates aplicáveis da entrega.
 
-**Independent Test**: Abrir a 375 px de largura; percorrer os destinos pela barra inferior; abrir a
-folha "Mais"; focar um campo de formulário e confirmar que não há zoom automático nem que o campo fica
-encoberto.
+## Fora do escopo da entrega
 
-**Acceptance Scenarios**:
-
-1. **Given** uma largura de 375 px, **When** a pessoa abre qualquer rota, **Then** a navegação
-   principal aparece como barra inferior e a página não rola horizontalmente.
-2. **Given** uma largura de 375 px, **When** a pessoa toca um campo de texto, **Then** o navegador não
-   aplica zoom e o campo permanece visível.
-3. **Given** uma largura ≥ 1024 px, **When** a pessoa abre qualquer rota, **Then** a navegação aparece
-   como barra lateral persistente.
-
-> Uma quarta cena testava a lista de Serviços virando cartões abaixo de 768 px — removida daqui:
-> CRUD de Serviços está fora do escopo desta fundação (nenhuma tela nova consome API), e `Services.tsx`
-> é propositalmente um esqueleto sem dado nenhum para paginar. Pertence à spec da feature de Serviços,
-> quando ela existir.
-
----
-
-### User Story 4 — A pessoa encontra comandos do painel (Priority: P2)
-
-A paleta de comandos reúne navegação e ações do painel. O botão Buscar no cabeçalho abre a paleta,
-inclusive em dispositivos de toque.
-
-**Independent Test**: Clicar em Buscar, selecionar um destino e confirmar a navegação.
-
-**Acceptance Scenarios**:
-
-1. **Given** qualquer tela do painel, **When** a pessoa clica em Buscar, **Then** a paleta abre.
-2. **Given** a paleta aberta, **When** a pessoa seleciona um destino, **Then** navega até ele.
-
----
-
-### User Story 5 — A pessoa entende o que ainda não existe, sem se sentir enganada (Priority: P3)
-
-Os destinos sem backend aparecem na navegação e, ao serem abertos, explicam em português claro o que
-virá e por que ainda não está lá, com um caminho de volta.
-
-**Why this priority**: Torna a estrutura de navegação real e validável desde já, mas não bloqueia
-nenhuma outra história.
-
-**Independent Test**: Abrir Agenda, Clientes, Conversas e Ajustes e confirmar que cada uma explica seu
-próprio escopo, sem texto genérico repetido.
-
-**Acceptance Scenarios**:
-
-1. **Given** um destino sem backend, **When** a pessoa o abre, **Then** vê uma explicação específica
-   daquele destino e uma ação de retorno.
-2. **Given** a navegação, **When** a pessoa a percorre, **Then** os destinos indisponíveis são
-   identificáveis antes do clique.
-
-## Requirements *(mandatory)*
-
-### Functional Requirements
-
-- **FR-001**: O painel **DEVE** oferecer três estados de tema — claro, escuro e automático — sendo
-  automático o padrão quando nenhuma preferência existir.
-- **FR-002**: O tema resolvido **DEVE** ser aplicado antes da primeira pintura, sem lampejo.
-- **FR-003**: Com o tema em automático, uma mudança na preferência do sistema operacional **DEVE**
-  alterar o painel sem recarregamento.
-- **FR-004**: A preferência de tema **DEVE** ser compartilhada com o identity-service, de modo que a
-  página de credenciais abra no mesmo tema (fecha a lacuna da ADR 0020).
-- **FR-005**: A navegação **DEVE** expor seis destinos — Início, Agenda, Clientes, Conversas,
-  Serviços, Ajustes — desde a primeira entrega. _(Desde 2026-10-02 o destino "Clientes" chama-se
-  "Pessoas"; ver Clarifications.)_
-- **FR-006**: Destinos sem backend **DEVEM** renderizar uma explicação específica do destino, e
-  **NÃO DEVEM** ser apresentados como funcionais.
-- **FR-007**: O shell **DEVE** apresentar barra lateral em telas largas e barra inferior em telas
-  estreitas, sem rolagem horizontal em nenhuma largura a partir de 320 px.
-- **FR-011**: O painel **DEVE** abrir a paleta de comandos pelo botão Buscar no cabeçalho.
-- **FR-015**: Os textos visíveis **DEVEM** estar em pt-BR; identificadores de código permanecem em inglês.
-- **FR-016**: As cores de etiqueta vindas do backend **DEVEM** ser renderizadas de forma legível nos
-  dois temas, sem alterar o valor recebido da API.
-- **FR-017**: A interface anterior (`AppLayout`, `HomePage`) **DEVE** ser removida, não estendida.
-
-### Non-Functional Requirements
-
-- **NFR-001**: Nenhuma regressão nos portões de CI existentes: `tsc`, ESLint, Prettier, cobertura
-  (85% linhas/funções/statements, 80% branches), `generate:api-types:check`, Playwright.
-- **NFR-002**: O painel **DEVE** permanecer utilizável em hardware modesto; a fundação não introduz
-  bibliotecas de animação em tempo de execução.
-- **NFR-003**: A escolha de biblioteca de componentes **DEVE** ser registrada em ADR, encerrando o
-  item correspondente em "Explicitly Deferred Decisions" da constitution.
-
-## Success Criteria *(mandatory)*
-
-- **SC-002**: Em 375 px, nenhuma rota apresenta rolagem horizontal e todos os alvos de toque da
-  navegação têm ao menos 44 px na menor dimensão.
-- **SC-003**: Recarregar com tema escuro salvo não produz nenhum quadro em tema claro.
-- **SC-006**: Todos os portões de CI passam.
-
-## Assumptions
-
-- O protótipo aprovado na Fase 0 é a referência visual; divergências dele são intencionais e
-  registradas.
-- Nenhum modelo de papéis ou permissões existe; toda pessoa autenticada de um tenant vê o mesmo painel.
-- Apenas Serviços, Categorias e Etiquetas possuem backend; nenhuma tela nova consome API nesta feature.
-- O identity-service pode ser alterado nesta feature, restrito ao CSS e ao tratamento do parâmetro de
-  tema já previsto pela ADR 0020.
-
-## Out of Scope
-
-- Qualquer tela de negócio funcional: o CRUD de Serviços, a Agenda real, Clientes, Conversas, Ajustes.
-- Backend para Agenda, Clientes, Conversas e Ajustes.
-- Biblioteca de formulários e de validação — entram com a primeira tela de formulário real.
-- Biblioteca de estado de servidor: a ADR 0035 segue valendo.
-- Internacionalização além de pt-BR.
-- Storybook ou regressão visual automatizada.
+CRUD e backend de negócio, gestão de papéis/permissões, internacionalização além de pt-BR e
+Storybook/regressão visual automatizada. A biblioteca de formulários ficava para a primeira tela
+real, e server state seguia a ADR 0035. Mudanças no identity-service eram limitadas à continuidade
+visual e ao tratamento do parâmetro de tema. A existência posterior dessas capacidades não altera
+o escopo histórico desta fundação.

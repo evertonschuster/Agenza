@@ -1,166 +1,62 @@
-# Implementation Plan: OIDC-Authenticated Admin Shell Scaffold
+# Plano histórico — 001-oidc-shell-scaffold
 
-**Branch**: `001-oidc-shell-scaffold` | **Date**: 2026-08-18 | **Spec**: [spec.md](./spec.md)
+**Status**: implementação encerrada; decisões e limites da entrega de [spec.md](spec.md).
+As fontes do desenho atual são o [guia de arquitetura](../../docs/ARCHITECTURE.md), o código e as
+ADRs indicadas abaixo. Os caminhos antigos e as saídas de uma execução permanecem no Git.
 
-**Input**: Feature specification from `/specs/001-oidc-shell-scaffold/spec.md`
+## Decisões que explicam a entrega
 
-## Summary
+| Escolha                                                          | Razão e alternativa descartada                                                                                                                                                                                                                                                 |
+| ---------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `oidc-client-ts`, Authorization Code + PKCE                      | Reutilizar o protocolo e a biblioteca previstos na [ADR 0003](../../../../docs/adr/0003-openiddict-identity-service.md); não implementar PKCE manualmente nem acrescentar um wrapper React sem necessidade.                                                                    |
+| Contexto React sobre store e reducer                             | Separar transições de sessão da renderização e adaptar eventos externos; um container de DI ou uma interface de provedor adicional não se justificavam para uma integração OIDC. O custo aceito era usar mocks de módulo nos testes.                                           |
+| React Router                                                     | Prover navegação, callback e proteção de rotas sem implementar history/redirects manualmente. A versão pertence aos pins, não a este plano.                                                                                                                                    |
+| Sessão OIDC compartilhada entre abas                             | A biblioteca persiste seu usuário em localStorage; sessionStorage isolaria as abas. O risco de XSS e alternativas estão na [ADR 0036](../../../../docs/adr/0036-admin-frontend-oidc-session-in-localstorage.md). Isso não autoriza obter tenant de um valor avulso no storage. |
+| Tipos OpenAPI com `openapi-typescript` e runtime `openapi-fetch` | A geração de tipos não gera a fachada de aplicação. Evitar DTOs de transporte duplicados e concentrar headers, versão, envelope e falhas fora das features. O contrato vigente está em [docs/API.md](../../../../docs/API.md).                                                 |
+| Primitivos como código de propriedade do frontend                | Configurar a geração em `shared/ui/`, sem criar o `src/components/` padrão. A escolha inicial sobre Radix foi sucedida pela [ADR 0039](../../../../docs/adr/0039-admin-frontend-base-ui-primitives.md).                                                                        |
+| Sem biblioteca de server state ou telemetria externa             | O shell não fazia chamadas de negócio nem tinha necessidade operacional que justificasse essas dependências. Evolução na [ADR 0035](../../../../docs/adr/0035-admin-frontend-no-server-state-library.md).                                                                      |
 
-Scaffold a new Vite + React + TypeScript SPA at `apps/admin-frontend`, orchestrated locally through the already-wired Aspire `AddViteApp` resource (`backend/AppHost/AppHost.cs`), that authenticates against `identity-service` using OIDC Authorization Code + PKCE (`oidc-client-ts`, per ADR 0003) and resolves the tenant exclusively from the validated access token's `tenant_id` claim. Once logged in, it renders an empty authenticated shell (layout + placeholder navigation) organized as a feature-based/vertical-slice tree (per spec FR-014). No business features or full OpenAPI client are built. The shell's layout and navigation use Shadcn/ui components on Tailwind CSS (research.md Decision 4) — the one exception to an otherwise minimal scaffold, needed to satisfy the constitution's fixed CI quality gates (ESLint, Prettier, `tsc` strict, Vitest + coverage, Playwright with a real interactive OIDC login) and its auth/tenant/orchestration constraints.
+## Fronteiras e corridas relevantes
 
-This plan builds exclusively from currently-live sources of truth — `.specify/memory/constitution.md`, the repo's ADRs, `backend/AppHost/AppHost.cs`, `.github/workflows/frontend-ci.yml`, and `identity-service`/`services-service` source — and does not consult the admin-frontend implementation deleted in commit `f7fb154` (per explicit decision during planning).
+`/login` e `/callback` são públicos: protegê-los com a mesma guarda causaria um loop antes de
+concluir o protocolo. O shell e o catch-all protegido passam pela guarda; tenant não faz parte da URL.
+O AppHost fornece a configuração descrita no [contrato de ambiente](contracts/env-contract.md).
+O cliente usa discovery OIDC; não é necessário gerar cliente REST do identity-service.
 
-## Technical Context
+Na inicialização, aguardar a leitura da sessão evita enviar ao login uma pessoa que já estava
+conectada. No logout, o evento que remove o usuário local pode chegar antes do redirect de saída;
+a guarda não deve iniciar um login concorrente. Esses estados transitórios e as proteções contra
+eventos tardios são parte do motivo para separar store, reducer e adaptador. O modelo antigo de
+estados/tipos não deve ser copiado: consulte
+[sessionMachine.ts](../../src/shared/session/sessionMachine.ts),
+[sessionDriver.ts](../../src/features/auth/model/sessionDriver.ts) e a evolução da
+[ADR 0083](../../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md).
 
-**Language/Version**: TypeScript ~5.9.3 (pinned repo-wide via root `package.json` `overrides`; ADR 0032 documents TS 7.x as currently incompatible with the typed ESLint gate), strict mode. React 19 (root `package.json` already carries `@types/react`/`@types/react-dom` `^19.x`).
+Credenciais são lidas a cada chamada HTTP, em vez de capturadas na criação do cliente. A interface
+estreita de credenciais evita importar tipos de `features/auth` em `shared/`. O tenant só é extraído
+no navegador para encaminhamento; validação criptográfica e isolamento continuam no backend.
 
-**Primary Dependencies**: React 19 + Vite (current stable); `react-router` v7 for routing/protected-route redirects; `oidc-client-ts` for OIDC Authorization Code + PKCE (per ADR 0003 — this is a repo-wide, currently-accepted decision, not specific to any prior frontend); `openapi-typescript` for generating types from `services-service`'s OpenAPI contract (already present in the root lockfile and expected by `frontend-ci.yml`'s `generate:api-types`/`generate:api-types:check` scripts) plus `openapi-fetch` for a typed runtime client parameterized by those generated types (closes the "generated client" gap — see [research.md](./research.md) Decision 6); Tailwind CSS + Shadcn/ui (Radix UI primitives, installed as owned source via the Shadcn CLI, remapped to `src/shared/ui/`) for the shell's layout/navigation UI (research.md Decision 4); MSW for HTTP mocking in unit/component tests (root `package.json`'s `allowScripts.msw: true` pre-authorizes its install script).
+## Validação planejada e limites do registro
 
-**Storage**: N/A for app-level persistence. `oidc-client-ts`'s `UserManager` is configured with `userStore: new WebStorageStateStore({ store: window.localStorage })` — **not** the library's `sessionStorage` default. `sessionStorage` is isolated per browser tab by web-platform design and would silently break the spec's multi-tab edge case (a second tab must recognize an existing session rather than forcing a redundant login); `localStorage` is shared across same-origin tabs, satisfying it. `localStorage`'s wider XSS exposure surface relative to `sessionStorage` is accepted here since token handling is already fully delegated to `oidc-client-ts` and this scaffold executes no other first- or third-party script.
+Unidade/componente cobrem transições e proteção de rotas; Playwright usa login real contra o stack
+Aspire. O tenant do seed é obtido do token, sem fixar um GUID de demonstração. A preparação e os
+comandos reutilizáveis estão no [README](../../README.md) e os gates em
+[QUALITY](../../../../docs/QUALITY.md), sem versões ou resultados duplicados aqui.
 
-**Testing**: Vitest + React Testing Library + MSW for unit/component tests (with a coverage gate, per constitution Principle V); Playwright for end-to-end tests, including a real (non-mocked) interactive OIDC login against the locally Aspire-orchestrated `identity-service`, using the seeded `DemoTenant` account (`owner@demo.local` / tenant `019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120`) — see [research.md](./research.md) Decision 12 for why this is new (no such test exists in the repo today) and how it stays reliable.
+A pesquisa original citava MSW como opção para mocks HTTP; isso não era um requisito de produto.
+Os testes atuais usam as técnicas indicadas no guia e não exigem instalar uma dependência citada
+naquele planejamento. O backend já permitia a origem local no CORS; unificar a forma das duas
+configurações não fazia parte do scaffold.
 
-**Target Platform**: Web SPA, evergreen desktop browsers; served by Vite's dev server in local development, orchestrated by .NET Aspire (`AddViteApp`, already wired to port 5173).
+## Evolução comprovada
 
-**Project Type**: Single frontend application inside an existing multi-service monorepo (backend services already exist independently under `backend/`; this plan only concerns `apps/admin-frontend`).
-
-**Performance Goals**: Not applicable at this stage — the shell has no data-heavy views yet (spec has no performance-related Success Criteria); revisit once business features add real data volume.
-
-**Constraints**: Admin-frontend fixed at port 5173, identity-service at 5081, services-service at 5080 (all already wired in `backend/AppHost/AppHost.cs`, non-negotiable per constitution Principle III); Node.js `>=26.5.1` / npm `12.0.2` (root `.nvmrc` / `package.json`); npm workspace member (no independent package manager choice); no Docker — Aspire is the only local orchestrator (constitution Principle VI, ADR 0029); `tsconfig` strict, no implicit `any` (constitution Principle I); all backend calls MUST go through the generated OpenAPI-derived client, no hand-written `fetch`/DTOs (constitution Principle IV); tenant MUST be resolved only from the validated token's `tenant_id` claim, never from client-supplied input (constitution Principle II, spec FR-005/FR-006).
-
-**Scale/Scope**: One SPA, one route group for this feature (`/`, `/callback`, `/login`, and an authenticated catch-all rendering the empty shell) — no business screens yet.
-
-## Constitution Check
-
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
-| Principle | Status | Notes |
-|---|---|---|
-| I. Strict TypeScript | PASS | `tsconfig.json` ships with `strict: true`; no suppressions planned. |
-| II. Multi-Tenant Safety Enforced Server-Side | PASS | Tenant resolved only from the validated token's `tenant_id` claim (`features/auth/model/tenant.ts`); the `X-Tenant-Id` header `createApiClient`'s middleware attaches mirrors that claim automatically (per ADR 0006) and is never populated from URL/query/localStorage (spec FR-005/FR-006). |
-| III. Authentication via identity-service (Fixed Ports) | PASS | Uses the already-wired `admin-panel` OIDC client (port 5081) and admin-frontend's own fixed port 5173; no port renegotiation. |
-| IV. Generated OpenAPI Client Only | PASS | `openapi-typescript` generates types from `services-service`'s live OpenAPI contract; `openapi-fetch` provides the runtime client parameterized by those types — no hand-written `fetch` calls or backend DTOs. See research.md Decision 6 for why a types-only generator alone would not fully satisfy this principle. |
-| V. CI Quality Gates Non-Negotiable From Scaffold | PASS | ESLint, Prettier, `tsc` strict, Vitest + coverage, Playwright (incl. a real interactive OIDC login — new, see Decision 12), and the existing `frontend-ci.yml` drift check (`generate:api-types:check`) and `scripts/smoke_oidc_contract.py` are all targeted by this scaffold's npm scripts. |
-| VI. No Frontend Docker | PASS | No Dockerfile planned; local orchestration is exclusively the existing Aspire `AddViteApp` resource. |
-
-No violations. Complexity Tracking is not needed.
-
-*Re-checked post-Phase 1: `data-model.md` and `contracts/*.md` introduce no new dependency, pattern, or data flow beyond what this table already covers — all six principles still PASS against the final design.*
-
-*Re-checked post-`/speckit-analyze` remediation (2026-08-22): switching to `localStorage` (I1 fix, below) touches only Principle II's storage mechanism, not tenant-trust logic — the tenant id is still resolved exclusively from the validated token claim regardless of which Web Storage backend holds the session. Still PASS.*
-
-## Project Structure
-
-### Documentation (this feature)
-
-```text
-specs/001-oidc-shell-scaffold/
-├── plan.md              # This file (/speckit-plan command output)
-├── research.md          # Phase 0 output (/speckit-plan command)
-├── data-model.md         # Phase 1 output (/speckit-plan command)
-├── quickstart.md        # Phase 1 output (/speckit-plan command)
-├── contracts/           # Phase 1 output (/speckit-plan command)
-│   ├── env-contract.md
-│   ├── routes-contract.md
-│   └── api-client-contract.md
-└── tasks.md             # Phase 2 output (/speckit-tasks command - NOT created by /speckit-plan)
-```
-
-### Source Code (repository root)
-
-```text
-apps/admin-frontend/
-├── src/
-│   ├── app/                          # Shell: root layout, providers, route table
-│   │   ├── App.tsx
-│   │   ├── AppLayout.tsx             # Layout + basic navigation (spec FR-004), built from src/shared/ui
-│   │   ├── AppProviders.tsx          # Composes AuthProvider, router, etc.
-│   │   ├── routes.tsx
-│   │   └── globals.css               # Tailwind directives + Shadcn/ui CSS variables
-│   ├── features/
-│   │   └── auth/                     # Login/logout/silent-renewal/tenant resolution — Feature-Sliced Design segments
-│   │       ├── model/                # Data model + rules (no React)
-│   │       │   ├── session.ts        # Session/SessionStatus/SessionFailureReason, AuthenticatedUser, AuthEvent
-│   │       │   ├── tenant.ts         # TenantContext + resolveTenantContext (spec FR-005, FR-006)
-│   │       │   ├── sessionMachine.ts # reduceSession state machine + isBlockingFailure/isTransientStatus
-│   │       │   └── sessionStore.ts   # SessionStore (oidc events → reduceSession, side effects) + getAuthCredentials
-│   │       ├── api/
-│   │       │   └── authClient.ts     # oidc-client-ts UserManager configuration (incl. localStorage store)
-│   │       ├── ui/
-│   │       │   ├── AuthContext.ts / AuthProvider.tsx  # UserManager state → React Context (useSyncExternalStore)
-│   │       │   ├── useAuth.ts                         # Context accessor — the only shared hook
-│   │       │   ├── ProtectedRoute.tsx                 # Fail-closed route guard (spec FR-001, FR-009)
-│   │       │   └── pages/
-│   │       │       ├── LoginPage/         # /login — LoginPage.tsx + useLoginRedirect.ts
-│   │       │       └── AuthCallbackPage/  # /callback — AuthCallbackPage.tsx + useAuthCallback.ts
-│   │       └── index.ts              # Barrel — the feature's only public surface (no-restricted-imports)
-│   ├── shared/
-│   │   ├── api/
-│   │   │   ├── generated/
-│   │   │   │   └── services-api.d.ts # openapi-typescript output — generated, not hand-edited
-│   │   │   └── apiClient.ts          # openapi-fetch client factory (attaches bearer + X-Tenant-Id)
-│   │   ├── ui/                       # Shadcn/ui primitives (CLI-generated, owned source — not hand-styled)
-│   │   ├── lib/
-│   │   │   └── utils.ts              # Shadcn's cn() class-merging helper
-│   │   ├── env.ts                    # Fail-fast loader/validator for the six VITE_* vars
-│   │   └── logger.ts                 # Minimal in-app logger (spec FR-015)
-│   ├── main.tsx
-│   └── vite-env.d.ts
-├── e2e/                               # Playwright specs (full-flow, not unit-scoped)
-│   └── auth.spec.ts
-├── scripts/
-│   ├── generateApiTypes.mjs
-│   └── checkGeneratedApiTypes.mjs
-├── public/
-├── index.html
-├── package.json
-├── tsconfig.json
-├── tsconfig.node.json
-├── vite.config.ts
-├── vitest.config.ts
-├── playwright.config.ts
-├── eslint.config.js
-├── .prettierrc.json
-├── .prettierignore
-├── .env.example
-└── components.json           # Shadcn CLI config — aliases remapped to src/shared/ui and src/shared/lib
-```
-
-Unit/component test files (`*.test.tsx` / `*.test.ts`) are colocated next to the source they cover (e.g., `src/features/auth/hooks/useAuth.test.ts`), consistent with Vitest + React Testing Library convention — no separate parallel `tests/` tree, so the vertical-slice layout (spec FR-014) isn't duplicated.
-
-**Structure Decision**: Feature-based/vertical-slice layout as pinned by spec FR-014: `src/app/` for the shell itself, `src/features/auth/` for everything OIDC/session/tenant-related, `src/shared/` for the generated API client, Shadcn/ui primitives, and other cross-cutting code. Shadcn's CLI defaults to installing into a top-level `src/components/` and `src/lib/`, which FR-014 forbids as a legacy flat/global directory — `components.json` remaps both to `src/shared/ui/` and `src/shared/lib/` so every cross-cutting concern, UI included, stays under the one `src/shared/` bucket. `auth` is the only business-relevant "feature" in this scaffold; future business features (Categories, Services, Clients, etc.) will each get their own `src/features/<name>/` directory alongside it.
-
-## Remediation Log (post-`/speckit-analyze`, 2026-08-22)
-
-The following fixes were applied after the Specification Analysis Report; each is also reflected inline above.
-
-- **I1 (Storage inconsistency)**: The Technical Context "Storage" entry now specifies `WebStorageStateStore({ store: window.localStorage })` instead of the `oidc-client-ts` `sessionStorage` default, so the spec's multi-tab edge case (second tab recognizes an existing session) is actually satisfiable rather than silently contradicted.
-- **I2 (Tree completeness)**: The Project Structure tree now lists `src/shared/env.ts`, `src/features/auth/types.ts`, and `src/features/auth/components/SignInRedirect.tsx` — three files tasks.md always required but this tree previously omitted.
-
-**Implementation-time correction (2026-08-23)**: Tailwind CSS was actually set up as v4 using its official `@tailwindcss/vite` plugin, not the PostCSS + `tailwind.config.ts` route this plan originally described — v4's Vite integration needs neither file (content is auto-detected; theme customization lives in `src/app/globals.css` via `@import 'tailwindcss'`). The tree above and Technical Context reflect the as-built state; `tailwind.config.ts`/`postcss.config.js` are correctly absent, not missing.
-
-## Post-Implementation Architecture Refinement (2026-08-23)
-
-After the scaffold was built and all tests were passing, a review against Clean Architecture / vertical-slice / modern-React conventions surfaced five gaps. All were fixed in place (no FR/task renumbering needed — the underlying tasks were already `[x]`; this is a quality pass on their implementation, not new scope):
-
-1. **Extracted the session state machine out of `AuthProvider.tsx`.** The transition rules (what "authenticated" means, when a missing tenant claim fails closed, etc.) were previously inline inside a `useEffect`, mixing application logic with React wiring — a direct violation of Clean Architecture's Dependency Rule. They now live in `src/features/auth/sessionStore.ts` as a pure `reduceSession(event): AuthSnapshot` function with zero React or `oidc-client-ts` imports, tested directly in `sessionStore.test.ts` with no mocking required. `AuthProvider.tsx` shrank from ~145 lines to ~28.
-2. **Adopted `useSyncExternalStore`** for subscribing to `oidc-client-ts`'s event emitter — the textbook-correct React 18+ primitive for external mutable state, replacing the previous manual `useState`/`useEffect`/ref-to-dodge-stale-closures pattern. `sessionStore` is the external store; `AuthProvider` just reads it.
-3. **Added a barrel (`src/features/auth/index.ts`)** as the feature's only public surface, and a `no-restricted-imports` ESLint rule (`eslint.config.js`) that mechanically blocks any `@/features/*/*` deep import from outside the feature — enforcing FR-014's layering by tooling, not just convention. This immediately caught a real violation: `shared/api/apiClient.ts` was importing `Session`/`TenantContext` from `features/auth` (the reverse of the intended dependency direction). Fixed by having `createApiClient` accept a narrow `{ accessToken, tenantId }` shape instead of the feature's own types (contracts/api-client-contract.md updated to match).
-4. **Added an `ErrorBoundary`** (`src/app/ErrorBoundary.tsx`) wrapping the app shell — previously an unexpected throw anywhere in the tree would white-screen with no fallback.
-5. **Not changed, deliberately**: `AuthProvider`/`sessionStore` still import the `authClient` singleton directly rather than depending on an injected interface (research.md Decision 2's "no DI container" call). This trade-off was re-examined, not reversed — introducing a full ports-and-adapters seam for a single OIDC integration was judged premature for this scaffold's size; the cost (module-level mocking in tests, harder to swap the OIDC library later) is accepted, not overlooked.
-
-Net effect at the time: 27/27 tests passing (up from 17 — the pure reducer made exhaustive edge-case coverage cheap), 87.04% statement coverage (up from 82.84%), lint/build/format all still clean. Since superseded by further work (a `loggingOut` status, an `AuthContext`/`AuthProvider` split, i18n, Tailwind theme tokens, and their tests) — see tasks.md T050 for the current totals.
-
-## Auth Module Restructure (2026-08-27)
-
-`src/features/auth/` was reorganized twice this day. First from a flat directory into four Clean Architecture layers (`domain`/`application`/`infrastructure`/`presentation`); then — after a review against the Feature-Sliced Design community standard — collapsed into FSD's flatter segments. No behavior change at any step; tests green throughout.
-
-Final layout (FSD segments):
-
-1. **`model/`** — data model + rules, no React: `session.ts` (Session/status/failure types + `AuthenticatedUser` + `AuthEvent`), `tenant.ts` (`TenantContext` + `resolveTenantContext`), `sessionMachine.ts` (`reduceSession` + `isBlockingFailure`/`isTransientStatus`), `sessionStore.ts` (`SessionStore` orchestrator + `logAuthEvent` + `getAuthCredentials`). The one tolerated coupling is `import type { User }` from `oidc-client-ts` (erased at build).
-2. **`api/`** — `authClient.ts` (the `UserManager` config), isolated.
-3. **`ui/`** — `AuthContext`/`AuthProvider`, `useAuth.ts` (the only *shared* hook), `ProtectedRoute.tsx`, and `pages/`. Each route component is its own folder — **`LoginPage/`** (was `SignInRedirect`) and **`AuthCallbackPage/`** (was `LoginRedirect`) — a thin component (no `useEffect`/`useState`/`useRef`) plus its own hook (`useLoginRedirect` / `useAuthCallback`) holding the effect/StrictMode-guard logic. Sub-components, when a page grows them, go in a `components/` subfolder (not pre-created).
-
-Why FSD over the 4-layer Clean Arch folders: FSD is the practice-oriented reading of the same principles — `model` = domain + application, `api` = infrastructure-for-backend, `ui` = presentation — with less nesting and names any dev reads immediately. `domain`'s purity is now guaranteed by its mock-free tests, not by a folder name.
-
-`index.ts` stays the single public surface. `src/app/routes.tsx` updated for the two renamed pages. Also this day: JSDoc/`what`-comments stripped across today's files (senior team, self-documenting code); `X-Tenant-Id` dropped from the generated types via a `transform()` in `generateApiTypes.mjs` so `createApiClient`'s middleware is the sole source of that header. `tasks.md` left as-is (historical log).
+- [c3479635](https://github.com/evertonschuster/Agenza/commit/c34796354856a150dc805d65bfe125cf822f3859)
+  refinou a checagem inicial, as corridas de StrictMode/logout e uma falha preexistente da página de
+  login. Essa correção incidental não ampliou o escopo de autenticação do frontend.
+- [PR #108](https://github.com/evertonschuster/Agenza/pull/108) consolidou os segmentos FSD, barril
+  público e cliente de serviços. Uma tela de Categorias usada para exercitar o contrato foi removida
+  depois, conforme a [ADR 0038](../../../../docs/adr/0038-admin-frontend-remove-categories-harness.md).
+- O núcleo de sessão passou a `shared/session/` pela
+  [ADR 0037](../../../../docs/adr/0037-admin-frontend-session-core-in-shared.md); a identidade deixou
+  de poder mudar silenciosamente pela ADR 0083. Esses são refinamentos posteriores, não tarefas
+  restantes para reproduzir a árvore de pastas do plano inicial.

@@ -1,11 +1,14 @@
 # Feature Specification: abrir cadastro existente no conflito de CPF ou e-mail
 
-**Branch**: `codex/fix-session-identity-and-client-conflict` | **Created**: 2026-10-26
-**Status**: Approved for implementation by the owner in this chat.
+**Status**: implementada em 26/10/2026 no [PR #200](https://github.com/evertonschuster/Agenza/pull/200).
+
+Registro histórico dos requisitos da entrega; não é uma fila de trabalho pendente nem substitui a
+[arquitetura vigente](../../docs/ARCHITECTURE.md). Os IDs de requisitos são preservados para rastreabilidade.
 
 ## User Scenarios & Testing
 
 ### US1 — Recuperar um cadastro existente (P1)
+
 Como usuário cadastrando ou editando uma pessoa, quero abrir quem já possui o CPF ou o e-mail para consultar seus dados, preservando o preenchimento atual.
 
 1. CPF ou e-mail duplicado com cadastro identificado: mostrar o erro no respectivo campo e um acesso ao cadastro existente.

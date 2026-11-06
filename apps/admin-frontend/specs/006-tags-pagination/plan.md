@@ -1,66 +1,57 @@
-# Implementation Plan: Paginação de etiquetas
+# Plano histórico: paginação de etiquetas
 
-**Branch**: codex/tags-pagination | **Date**: 2026-10-20 | **Spec**: [spec.md](spec.md)
+**Status**: backend e compatibilidade inicial integrados no
+[PR #180](https://github.com/evertonschuster/Agenza/pull/180).
+[spec.md](spec.md) mantém os requisitos; [tasks.md](tasks.md) registra o encerramento.
 
-## Summary
+## Escolhas de implementação e razões
 
-Converter a fatia ListTags para a forma de ListClients: query paginada, filtro de Application,
-validação síncrona, leitura paginada no repositório e mapeamento dos itens no handler.
-O endpoint passa a retornar uma página sempre, inclusive sem parâmetros.
+- Aplicar o contrato compartilhado já usado por clientes: `PagedQuery`, `PageRequest`, `PagedResult`
+  e `RepositoryBase.ListPagedAsync`. Offset/count manuais, tupla própria e modo opcional sem paginação
+  foram descartados por duplicarem o padrão ou contrariarem a escolha de paginar sempre.
+- Converter a busca tocada para `SearchText` e `Contains` na coluna existente `NameNormalized`.
+  Isso reutiliza normalização/limite de entrada e trata `%`/`_` literalmente, sem wildcard implícito
+  de `ILike`; não exige alteração de schema.
+- Preservar a ordem por `Name` e acrescentar `Id` como desempate único. Mudar a ordem para
+  `NameNormalized` ou introduzir índice sem evidência não era necessário para a paginação.
+- Receber filtro na porta, aplicar filtros globais de tenant/soft delete à contagem e aos itens e
+  mapear a página para `TagResponse` no handler. A leitura não pode produzir gravações.
+- Regenerar os tipos OpenAPI no rollout do backend. A proposta inicial deixava a adaptação do
+  consumidor para um PR frontend; a falha de compilação demonstrou que essa separação deixava o
+  contrato sem integração independente. A correção foi registrada na ADR 0069.
 
-## Technical Context
+A decisão backend está na
+[ADR 0068](../../../../docs/adr/0068-tags-paginated-list.md), com limites do contrato e dos testes de
+persistência. Implementação consultável:
+[ListTags](../../../../backend/services/services-service/ServicesService.Application/Tags/ListTags),
+[TagRepository](../../../../backend/services/services-service/ServicesService.Infrastructure/Repositories/TagRepository.cs)
+e [PageRequest](../../../../backend/shared/Admin.SharedKernel/PageRequest.cs).
 
-Stack e versões: backend/global.json e backend/Directory.Packages.props.
-Application usa Admin.SharedKernel; Infrastructure usa EF Core/Npgsql e RepositoryBase.
-Testes: xUnit, AwesomeAssertions, NSubstitute e EF InMemory, nas versões dos pins existentes.
-Armazenamento: tabela services.Tags e coluna gerada NameNormalized existentes; sem migração.
+## Evolução do consumidor
 
-## Constitution Check
+1. **Rollout, PR #180 / ADR 0069:** `tagsRepository.list` preservou temporariamente o retorno de
+   coleção, consultando páginas limitadas em sequência. Mantinha ordem, busca e cancelamento;
+   uma falha descartava o acumulado parcial. Entregar só a primeira página silenciosamente, um cast
+   ou uma supressão de tipo não preservaria o catálogo existente.
+2. **Paginação explícita, [PR #184, commit a3c1f47e](https://github.com/evertonschuster/Agenza/pull/184):**
+   a [ADR 0074](../../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md) retirou esse
+   adaptador. O repositório passou a devolver uma página por chamada; a tela adotou o widget de
+   paginação e buscas disparadas por ações, montagem ou correção da página além do fim.
+3. **Estado na URL, [PR #190, commit fa07d965](https://github.com/evertonschuster/Agenza/pull/190):**
+   filtros aplicados, página e tamanho voltaram à URL por estado controlado da página. Isso substitui
+   a etapa sem URL descrita no corpo histórico da ADR 0074; não reintroduz fetch por efeito da query.
 
-- Tenant continua vindo do token validado e dos filtros globais do contexto.
-- Nenhuma dependência ou abstração compartilhada nova.
-- Contrato documentado e tipos gerados pelo script existente, nunca editados à mão.
-- Portões de build e testes obrigatórios; integração visual pertence ao frontend separado.
-- Aspire permanece o orquestrador local.
+Para modificar o frontend, consulte o
+[guia vigente](../../docs/ARCHITECTURE.md#1-shape),
+[tagsRepository](../../src/features/tags/api/tagsRepository.ts) e
+[useTagListPage](../../src/features/tags/ui/pages/TagListPage/useTagListPage.ts).
+Este plano não recomenda restaurar o adaptador nem a versão histórica sem estado na URL.
 
-## Phase 0 — Research
+## Alcance da validação
 
-[research.md](research.md) registra os padrões encontrados e as alternativas descartadas.
-Não há tecnologia nova ou questão de pesquisa em aberto.
-
-## Phase 1 — Design
-
-- ListTagsQuery : PagedQuery; SearchText opcional; ToFilter() produz TagListFilter.
-- TagListFilter : PageRequest, com Text como string opcional.
-- ListTagsQueryValidator escreve as três regras Paging.* com os limites de PageRequest.
-- ITagRepository.ListAsync recebe TagListFilter e retorna PagedResult<Tag>.
-- TagRepository usa ListPagedAsync, filtro literal em NameNormalized e ordem Name/Id.
-- ListTagsQueryHandler usa PagedResult.Map(TagResponse.FromTag).
-- TagsController anuncia ApiResponse<PagedResult<TagResponse>>.
-- Testes unitários de query, validator e handler; persistência de paginação, busca e isolamento.
-- Regenerar services-api.d.ts a partir do OpenAPI servido pela API final.
-
-## Project Structure
-
-Arquivos alterados ficam em backend/services/services-service, backend/docs/ARCHITECTURE.md,
-docs/adr e apps/admin-frontend/src/shared/api/generated/services-api.d.ts.
-Os artefatos desta feature ficam nesta pasta de specs.
-
-## Integration Boundary
-
-A tela existente e tagsRepository.list esperam Tag[]. O novo contrato exige adaptação
-no PR de frontend antes do uso conjunto. Este trabalho registra o impacto sem criar uma UI
-ou esconder o limite da primeira página. Não afirmar que o frontend passa sem essa adaptação.
-
-## Validation
-
-Executar build e test de backend/AdminBackend.slnx em Release e o gerador de tipos.
-Registrar os resultados em quickstart.md. A conversão usa somente colunas e filtros existentes.
-
-## CI integration correction
-
-ADR 0069 supersedes the original Integration Boundary above: the contract rollout now includes
-a collection adapter in tagsRepository.list so the existing screen continues to compile and
-display all filtered tags. A separate frontend feature will replace the adapter with explicit
-page navigation. MessagePack is pinned to its corrected patch release for the AppHost so the
-normal audited restore can run in Backend CI, CodeQL and API contract checks.
+A entrega registrou testes de query, validator, handler e persistência, além da geração OpenAPI e
+checagens de compilação do consumidor. Os testes de persistência com InMemory não provam collation
+nem tradução SQL PostgreSQL; não houve smoke autenticado PostgreSQL registrado naquela execução.
+Resultados transitórios de restore, pins de correção, contagens e comandos ficam no PR e no
+[snapshot anterior dos artefatos](https://github.com/evertonschuster/Agenza/tree/38d2dbd99ddb7a28aba39bf1e7434518cf78c391/apps/admin-frontend/specs/006-tags-pagination).
+Este registro não declara aprovação de uma execução atual dos gates.

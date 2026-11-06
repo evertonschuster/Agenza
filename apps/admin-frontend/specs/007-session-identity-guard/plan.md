@@ -1,30 +1,36 @@
-# Implementation Plan: identity guard
+# Abordagem entregue: proteção da identidade
 
-**Branch**: `codex/fix-session-identity-and-client-conflict` | **Date**: 2026-10-26 | **Spec**: [spec.md](spec.md)
+**Status**: implementada; registro histórico do [PR #200](https://github.com/evertonschuster/Agenza/pull/200).
+O comportamento e o aceite estão em [spec.md](spec.md); as decisões e alternativas permanecem na
+[ADR 0083](../../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md).
 
-## Summary
+## Estado e fronteiras
 
-Keep the accepted OIDC subject with the session. Compare subject and token-derived tenant in the pure reducer before replacing credentials. Latch identity changes until explicit login, abort the session request scope in the API middleware, and let ProtectedRoute unmount all loaded feature state. Clean persisted OIDC credentials in the existing auth adapter.
+O reducer compara o subject OIDC e o tenant derivado do token com a identidade aceita antes de
+substituir credenciais. Renovar a mesma identidade preserva o escopo de requisições e a interface.
+Uma mudança ou desaparecimento de identificação durante a sessão autenticada limpa usuário, tenant
+e credenciais e mantém identity_changed até LOGIN_STARTED. A autenticação inicial sem identificação
+continua informando a falha específica da claim ausente.
 
-## Technical Context
+O store interrompe o escopo de requisições ao sair da autenticação; o middleware combina esse sinal
+com o cancelamento do chamador. ProtectedRoute desmonta o conteúdo protegido. O adapter OIDC para a
+renovação, remove as credenciais persistidas e espera essa limpeza antes de pedir login explícito.
+Falha de limpeza não libera a sessão em memória. Eventos antigos, respostas iniciais superadas e
+callbacks após desmontagem não restauram a identidade anterior.
 
-TypeScript, React, React Router and oidc-client-ts: repository pins and lockfile remain authoritative. Browser SPA; existing local OIDC storage only. No added package, server endpoint or data model migration. Vitest/RTL for state, event races and protected UI; Playwright against Aspire for real login.
+A validação e autorização continuam no servidor. Cancelar uma requisição não desfaz uma escrita já
+processada. A entrega não criou claim decoder, registro global de requisições, cache por tenant,
+endpoint, dependência ou alteração de OpenAPI.
 
-## Constitution Check
+## Fontes da implementação e verificação
 
-- Strict types; no any or generated DTO edits.
-- Tenant still comes from the token; the backend remains the authorization boundary.
-- Existing OIDC provider and ports remain.
-- Existing generated client and Result pipeline remain.
-- All quality gates run; environment failures are reported.
-- Aspire remains the local orchestrator.
+- [Reducer e testes](../../src/shared/session/sessionMachine.test.ts): renovação, troca ou ausência de
+  identificação e bloqueio até novo login.
+- [Store e testes](../../src/shared/session/sessionStore.test.ts) e
+  [middleware e testes](../../src/shared/api/apiClient.test.ts): duração e cancelamento das requisições.
+- [Adapter OIDC e testes](../../src/features/auth/model/sessionDriver.test.ts): eventos tardios,
+  limpeza e login explícito.
+- [Proteção de rota e testes](../../src/features/auth/ui/ProtectedRoute.test.tsx): retirada da UI protegida.
 
-All gates remain satisfied after design. No exception or delegation is needed.
-
-## Project Structure
-
-Change `src/shared/session/{session,sessionMachine,sessionStore}.ts`, `src/shared/api/apiClient.ts`, the auth session driver and ProtectedRoute. Extend their colocated tests and token fixtures. Record ADR 0083 and update the auth architecture and tenant review guidance. Research, state model and contract are in the sibling documents.
-
-## Validation
-
-Prove normal renewal, changed tenant/subject, absent identity, late initial/event completion, cancellation and explicit re-login. Run typecheck, lint, format, full coverage, production build, OpenAPI drift and real-stack browser checks.
+Os links identificam evidência no código, sem declarar uma nova execução da suíte. Comandos e gates
+pertencem ao [README](../../README.md#comandos) e à [QUALITY](../../../../docs/QUALITY.md).

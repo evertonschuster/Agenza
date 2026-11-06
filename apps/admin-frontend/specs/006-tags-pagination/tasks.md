@@ -1,42 +1,40 @@
-# Tasks: Paginação de etiquetas
+# Tarefas encerradas: paginação de etiquetas
 
-## Phase 1 — Setup
+**Status**: registro histórico integrado no
+[PR #180, commit fcfe2210](https://github.com/evertonschuster/Agenza/pull/180); nenhuma tarefa abaixo
+representa trabalho pendente. [spec.md](spec.md) preserva o aceite e [plan.md](plan.md) a evolução.
+Os IDs e a conclusão histórica foram preservados, sem repetir diário de execução ou comandos atuais.
 
-- [x] T001 Analisar ListClients, ListTags, ARCHITECTURE e ADRs aplicáveis.
-- [x] T002 Registrar spec.md, plan.md, research.md, data-model.md e contracts/tags-list.md.
+| ID   | Trabalho registrado                                                            |
+| ---- | ------------------------------------------------------------------------------ |
+| T001 | Comparação de ListClients, ListTags e decisões aplicáveis.                     |
+| T002 | Especificação, plano e auxiliares de desenho, agora consolidados em spec/plan. |
+| T003 | Filtro paginado de etiquetas e query.                                          |
+| T004 | Regras de validação `Paging.*`.                                                |
+| T005 | Porta paginada e handler de mapeamento.                                        |
+| T006 | Repositório e anúncio do contrato no controller.                               |
+| T007 | Testes de query, validator e handler.                                          |
+| T008 | Busca com `SearchText`, `NameNormalized` e semântica literal.                  |
+| T009 | Testes de paginação, busca e isolamento na persistência.                       |
+| T010 | ADR 0068 e índice.                                                             |
+| T011 | Atualização da referência de repositório no guia backend.                      |
+| T012 | Tipos OpenAPI regenerados a partir da API final.                               |
+| T013 | Verificação de backend e geração sem drift na entrega.                         |
+| T014 | Revisão backend e registro dos resultados no PR.                               |
+| T015 | Separação de mapeamento, preparação de query e fixtures em variáveis locais.   |
+| T016 | Pin corrigido de MessagePack no AppHost para restabelecer o restore auditado.  |
+| T017 | Adaptador temporário de coleção e testes de travessia/falha.                   |
+| T018 | ADR 0069 e correção da fronteira de integração.                                |
+| T019 | Verificação local e publicação para os checks do PR.                           |
 
-## Phase 2 — US1: Consultar páginas
+## Evidências consultáveis
 
-- [x] T003 [US1] Adicionar Tags/TagListFilter.cs e mudar Tags/ListTags/ListTagsQuery.cs.
-- [x] T004 [US1] Adicionar Tags/ListTags/ListTagsQueryValidator.cs com as regras Paging.*.
-- [x] T005 [US1] Alterar Abstractions/ITagRepository.cs e Tags/ListTags/ListTagsQueryHandler.cs.
-- [x] T006 [US1] Alterar Infrastructure/Repositories/TagRepository.cs e Api/Controllers/TagsController.cs.
-- [x] T007 [US1] Cobrir query, validator e handler em ServicesService.Tests/Tags/ListTags.
+- [ListTags](../../../../backend/services/services-service/ServicesService.Tests/Tags/ListTags):
+  filtro, validação, mapeamento e metadados.
+- [TagListPersistenceTests](../../../../backend/services/services-service/ServicesService.PersistenceTests/TagListPersistenceTests.cs):
+  contagem filtrada, busca literal, travessia e isolamento com os limites descritos no plano.
+- [Histórico do rollout](https://github.com/evertonschuster/Agenza/commit/fcfe2210): inclui a geração
+  de tipos e o adaptador de compatibilidade; o adaptador foi retirado no PR #184, não está pendente.
 
-## Phase 3 — US2: Busca com paginação e isolamento
-
-- [x] T008 [US2] Usar SearchText, NameNormalized e busca literal na fatia ListTags.
-- [x] T009 [US2] Adicionar ServicesService.PersistenceTests/TagListPersistenceTests.cs.
-
-## Phase 4 — Contract and verification
-
-- [x] T010 Registrar docs/adr/0068-tags-paginated-list.md e atualizar docs/adr/README.md.
-- [x] T011 Atualizar backend/docs/ARCHITECTURE.md §10 para retirar a referência antiga de TagRepository.
-- [x] T012 Regenerar apps/admin-frontend/src/shared/api/generated/services-api.d.ts pela API final.
-- [x] T013 Executar os portões do backend e conferir geração sem drift.
-- [x] T014 Revisar o diff com agenza-backend-review e registrar resultados em quickstart.md.
-
-## Dependencies and strategy
-
-T001–T002 precedem US1; T003–T006 estabelecem o contrato antes dos testes e do gerador.
-US2 depende do filtro de US1. T010–T014 concluem a entrega.
-Testes de Application e persistência são independentes após os contratos estarem definidos;
-a implementação desta execução será sequencial.
-
-## CI repair and readability follow-up
-
-- [x] T015 Separate mapping, query setup and test fixture construction into named local variables.
-- [x] T016 Pin corrected MessagePack in backend/Directory.Packages.props and backend/AppHost/AppHost.csproj.
-- [x] T017 Adapt tagsRepository.list to collect bounded pages and test collection completeness and failures.
-- [x] T018 Record ADR 0069 and update the superseded compatibility decision and architecture reference.
-- [x] T019 Complete local gates; publish the fixes and verify the final PR checks in GitHub.
+Nenhum teste de aplicação foi executado novamente nesta consolidação documental. Os comandos de
+validação pertencem aos guias [backend](../../../../backend/README.md) e [frontend](../../README.md).

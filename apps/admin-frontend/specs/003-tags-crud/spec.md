@@ -1,275 +1,112 @@
-# Feature Specification: Service Tags CRUD
+# Spec 003 — CRUD de Etiquetas
 
-**Feature Branch**: `003-tags-crud`
+**Estado:** implementada; registro histórico dos requisitos e das revisões desta entrega.
+**Criada em:** 13/09/2026. **Identificador:** `003-tags-crud`.
 
-**Created**: 2026-09-13
+O CRUD entrou em `84a54da3` (PR #125); a paginação e a busca por ação evoluíram em
+`a3c1f47e` (PR #184). A presença de `TagListPage`, `TagFormPage`, `TagDeletePage` e dos respectivos
+hooks e testes confirma essas capacidades na base `38d2dbd9`. Este saneamento não executou os testes.
+O [plano](plan.md) distingue decisões superadas da implementação consultada; as
+[tarefas](tasks.md) são um registro encerrado, não uma fila a retomar.
 
-**Status**: Draft — all four user stories are implemented. User Stories 2–4 (create, edit, delete)
-were built, pulled back out of the app on an explicit scope decision, and later reintroduced: delete
-first on its own, then create and edit. `docs/ARCHITECTURE.md` §5 has the full history and current
-reality; this file records the requirements that still apply.
+## Escopo e revisões históricas
 
-**Input**: User description: "Creating CRUD for maintainer tags in my frontend app. The CRUD needs to
-have, following the backend contract: `string Name, string Color, string? Description`."
+O pedido foi gerenciar nome, cor e descrição de etiquetas já suportadas pelo backend, sem criar o
+CRUD de Serviços ou Categorias, atribuir etiquetas a serviços ou introduzir papéis/permissões.
+Qualquer pessoa autenticada do tenant podia gerenciar seu catálogo.
 
-## Clarifications
+- **13/09:** rota própria `/tags`, inicialmente só pela paleta de comandos; cabeçalho apenas com
+  título e ação, sem rota ou subtítulo. O acesso foi revisto no dia seguinte.
+- **14/09:** destino também na navegação principal; busca no backend após Enter ou Buscar, em lugar
+  de filtrar a lista carregada a cada tecla.
+- **25/09:** fechar o diálogo durante uma mutação foi bloqueado, pois Cancelar não cancelava a operação.
+- **20/10:** paginação passou a fazer parte do escopo. A busca, página e tamanho ficaram fora da URL,
+  conforme a etapa registrada na ADR 0074. Essa escolha de armazenamento foi posteriormente superada:
+  a forma controlada com URL aparece no código e no PR #190, sem tornar esta spec um manual desse hook.
 
-### Session 2026-09-13
+## Histórias e cenários de aceite
 
-- Q: Como a pessoa chega até a tela de gestão de Etiquetas a partir do resto do painel? → A: Pela
-  paleta de comandos do painel (menu de ações do sistema), numa rota própria em `/tags` — não
-  aninhada em `/servicos`, sem link na tela de Serviços, sem novo ícone na navegação principal fixa.
-- Q: Revisando o protótipo clicável, alguma correção? → A: Sim, uma. O cabeçalho da tela não deve
-  exibir a rota (`/tags`) nem um subtítulo descritivo — só o título "Etiquetas" e a ação "Nova
-  etiqueta". O protótipo corrigido é a referência visual desta feature.
+### US1 — Ver e localizar etiquetas (P1)
 
-### Session 2026-09-14
+1. Havendo etiquetas, abrir a tela mostra nome, cor e descrição quando houver.
+2. Digitar parte do nome e confirmar com Enter ou Buscar consulta o backend e restringe os resultados;
+   digitar sem confirmar não busca.
+3. Catálogo vazio mostra um estado explicativo, sem parecer uma falha.
+4. A paleta de comandos ou o acesso direto a `/tags` abre a gestão de Etiquetas.
+5. Havendo mais registros do que cabem na página, abrir mostra a primeira página, o total e os
+   controles; trocar página ou tamanho mantém a busca aplicada.
 
-- Q: A tela de Etiquetas deve continuar acessível somente pela paleta de comandos, como decidido na
-  sessão anterior? → A: Não, essa decisão foi revertida. A tela **DEVE** também aparecer como destino
-  fixo na navegação principal (barra lateral em telas largas, item "Mais" na navegação inferior em
-  telas estreitas), com ícone próprio, para um acesso mais direto e intuitivo; a paleta de comandos
-  continua funcionando como via adicional.
-- Q: A busca por nome (US1, FR-002) deve continuar filtrando a lista já carregada no frontend a cada
-  tecla digitada? → A: Não. Com um catálogo que pode crescer bastante, filtrar no frontend obriga a
-  carregar e reprocessar a lista inteira no navegador a cada tecla. A busca **DEVE** ser executada no
-  backend, disparada apenas quando a pessoa confirma explicitamente (tecla Enter ou um botão de
-  busca) — nunca a cada tecla digitada.
+### US2 — Criar etiqueta (P1)
 
-### Session 2026-09-25
+1. Nome novo e cor válida permitem salvar; a etiqueta passa a integrar o catálogo mostrado.
+2. Nome ou cor ausentes bloqueiam a criação e identificam o campo pendente.
+3. Nome já utilizado, ignorando caixa e espaços nas pontas, produz conflito sem criar duplicata.
+4. Descrição informada fica associada à etiqueta e aparece na listagem.
 
-- Q: Enquanto o backend processa o salvamento, a pessoa pode clicar em Cancelar — mas a operação
-  termina do mesmo jeito. Cancelar deve continuar disponível? → A: Não. Um Cancelar que não cancela
-  engana; durante o salvamento (e, pelo mesmo motivo, durante a exclusão) nenhuma saída do diálogo
-  fica disponível — Cancelar desabilitado, ✕ oculto, `Esc` e clique fora ignorados — até a
-  resposta chegar.
+### US3 — Corrigir etiqueta (P2)
 
-### Session 2026-10-20
+1. Alterar o nome para outro disponível e salvar atualiza a listagem.
+2. Alterar para o nome de outra etiqueta produz conflito sem substituir o registro existente.
+3. Alterar apenas a cor atualiza sua apresentação sem excluir e recriar a etiqueta.
 
-- Q: A busca continua na URL (`/tags?q=...`), sobrevivendo a recarregar a página, a um link
-  compartilhado e ao Voltar/Avançar? → A: Não. A lista só busca no backend quando uma ação manda (a
-  busca, "Limpar busca", "Tentar novamente", a troca de página ou de tamanho, uma etiqueta salva ou
-  excluída) e uma vez ao abrir, e o Voltar trocando `?q=` seria uma busca disparada por reação. A
-  busca, a página e o tamanho ficam só na tela: continuam ao abrir e fechar os diálogos de nova
-  etiqueta, edição e exclusão, e recomeçam (busca vazia, página 1, 20 por página) ao recarregar, ao
-  abrir um link ou ao voltar de outra tela, como em Pessoas (ADR 0074).
-- Q: A listagem continua trazendo o catálogo inteiro de uma vez? → A: Não. O backend pagina a
-  listagem de etiquetas (ADR 0068), e a tela passa a paginar como a de Pessoas, com o mesmo rodapé:
-  "Exibindo 21–40 de 87 etiquetas", "Itens por página" (10, 20, 50 ou 100; padrão 20) e o
-  paginador. A paginação deixa de estar fora do escopo e o adaptador que percorria todas as páginas
-  (ADR 0069) sai. Salvar ou excluir uma etiqueta recarrega a página que está na tela, com a mesma
-  busca e o mesmo tamanho; se ela deixar de existir (a última etiqueta da última página foi
-  excluída), a lista vai para a última página que existe (ADR 0074).
+### US4 — Excluir etiqueta (P2)
 
-## User Scenarios & Testing *(mandatory)*
+1. Etiqueta sem uso desaparece da listagem após pedido e confirmação de exclusão.
+2. Etiqueta associada a serviços permanece intacta; o bloqueio explica quantos serviços a utilizam.
+3. Antes da confirmação, inclusive ao cancelar, a etiqueta permanece intacta.
 
-### User Story 1 — A pessoa vê e localiza as etiquetas existentes (Priority: P1)
+## Requisitos registrados
 
-Quem administra o catálogo de serviços abre a área de Etiquetas e vê todas as etiquetas já
-cadastradas, com nome, cor e descrição visíveis de relance. Digitando parte de um nome e confirmando
-a busca (Enter ou botão de busca), a lista passa a mostrar apenas as etiquetas correspondentes,
-buscadas no backend.
+Os identificadores foram preservados para os consumidores e testes existentes. A numeração original
+não contém FR-016.
 
-**Why this priority**: Sem enxergar o que já existe, a pessoa não sabe se uma etiqueta já foi
-criada, arrisca duplicar nomes e não consegue decidir o que editar ou excluir. É a base sobre a qual
-as outras histórias se apoiam.
+- **FR-001:** listar etiquetas do tenant, página a página, com nome, cor e descrição.
+- **FR-002:** buscar por nome no backend somente após confirmação explícita, sem filtro local por tecla.
+- **FR-003:** criar com nome e cor obrigatórios, paleta fixa de oito cores e descrição opcional.
+- **FR-004:** impedir nome duplicado no tenant, sem distinguir caixa ou espaços nas pontas, com conflito claro.
+- **FR-005:** recusar nome vazio ou acima de 40 caracteres e descrição acima de 200 caracteres.
+- **FR-006:** editar nome, cor e descrição com as mesmas regras de criação.
+- **FR-007:** excluir somente etiqueta sem uso por serviços.
+- **FR-008:** impedir exclusão em uso e informar a quantidade de serviços relacionados.
+- **FR-009:** exigir confirmação antes de excluir.
+- **FR-010:** apresentar a cor legivelmente nos dois temas, preservando o valor recebido da API.
+- **FR-011:** restringir escolha à paleta validada pelo backend, sem seletor de cor livre.
+- **FR-012:** exibir mensagens gerais ou por campo do backend sem reescrita; decidir sua posição pela
+  estrutura do erro, nunca pela interpretação de seu texto. A política vigente de normalização e
+  mensagens utilizáveis está no [guia HTTP](../../../../docs/API.md).
+- **FR-013:** manter os textos visíveis em pt-BR.
+- **FR-014:** disponibilizar `/tags` pela paleta e navegação principal com ícone próprio: barra lateral
+  em tela larga e Mais na navegação inferior em tela estreita, sem passagem obrigatória por Serviços.
+- **FR-015:** cabeçalho com Etiquetas e Nova etiqueta, sem exibir rota ou subtítulo.
+- **FR-017:** iniciar exclusão na linha e abrir confirmação com foco em Cancelar.
+- **FR-018:** durante salvar ou excluir, desabilitar Cancelar, ocultar o fechamento e ignorar Esc e
+  clique fora; após resposta, fechar no sucesso ou reabilitar saídas no erro.
+- **FR-019:** usar resumo, paginador e Itens por página, com opções 10, 20, 50 e 100 e padrão 20.
+  Buscar ou trocar tamanho volta à página 1; a busca mantém o tamanho, e a troca de tamanho mantém a
+  busca. Salvar/excluir atualiza a página exibida; uma página que deixou de existir cede lugar à
+  última existente, sem falso catálogo vazio.
 
-**Independent Test**: Com etiquetas já cadastradas (via seed/API), abrir a tela e conferir que todas
-aparecem corretamente; digitar um trecho de nome, confirmar a busca (Enter ou botão) e conferir que a
-lista passa a mostrar apenas as etiquetas correspondentes, buscadas no backend.
+### Casos de fronteira
 
-**Acceptance Scenarios**:
+- Descrição só com espaços equivale à ausência de descrição.
+- Concorrência com o mesmo nome não pode sobrescrever nem criar uma segunda etiqueta.
+- Registro removido entre abrir e confirmar produz a mensagem de não encontrado.
+- Falha de conexão ao criar/editar preserva o preenchimento e permite nova tentativa.
+- Bloqueio de negócio na exclusão difere de falha transitória com recuperação; ambos mantêm a etiqueta.
 
-1. **Given** existem etiquetas cadastradas, **When** a pessoa abre a tela de Etiquetas, **Then**
-   cada etiqueta aparece com nome, cor e descrição (quando houver).
-2. **Given** a lista de etiquetas, **When** a pessoa digita parte de um nome na busca e confirma
-   (tecla Enter ou botão de busca), **Then** o sistema busca no backend e somente as etiquetas cujo
-   nome contém o texto buscado permanecem visíveis.
-3. **Given** nenhuma etiqueta foi cadastrada ainda, **When** a pessoa abre a tela, **Then** vê uma
-   indicação clara de que o catálogo está vazio, não uma lista quebrada ou um erro.
-4. **Given** o painel autenticado em qualquer tela, **When** a pessoa abre a paleta de comandos e
-   seleciona "Etiquetas" — ou acessa `/tags` diretamente —, **Then** a tela de gestão de Etiquetas é
-   exibida.
-5. **Given** existem mais etiquetas do que cabem numa página, **When** a pessoa abre a tela, **Then**
-   vê as 20 primeiras, quantas existem no total e o paginador; **When** troca de página ou de
-   tamanho, **Then** a lista mostra aquela página, mantendo a busca.
+## Critérios de sucesso históricos
 
----
+São metas do aceite original, sem medição nova neste saneamento:
 
-### User Story 2 — A pessoa cria uma nova etiqueta (Priority: P1)
+- **SC-001:** criar uma etiqueta válida em menos de 30 segundos a partir da listagem.
+- **SC-002:** bloquear todas as tentativas de criação/edição com nome duplicado no tenant.
+- **SC-003:** bloquear todas as exclusões de etiquetas em uso.
+- **SC-004:** localizar pelo nome uma etiqueta entre 50 em menos de cinco segundos.
+- **SC-005:** após criar, editar, excluir e recarregar, refletir o estado esperado sem perda ou duplicação.
 
-Quem administra o catálogo cria uma etiqueta informando um nome, escolhendo uma cor entre as opções
-disponíveis e, opcionalmente, descrevendo seu uso. A etiqueta criada passa a existir no catálogo e
-pode futuramente ser aplicada a serviços.
+## Modelo e limites da entrega
 
-**Why this priority**: É o motivo de a tela existir — sem conseguir criar etiquetas, o catálogo
-nunca cresce e as demais histórias (editar, excluir) não têm sobre o que atuar.
-
-**Independent Test**: Preencher nome e cor válidos (sem descrição), confirmar, e ver a etiqueta
-aparecer na lista imediatamente.
-
-**Acceptance Scenarios**:
-
-1. **Given** a tela de criação de etiqueta, **When** a pessoa informa um nome novo, escolhe uma cor
-   e confirma, **Then** a etiqueta passa a aparecer na listagem.
-2. **Given** a tela de criação, **When** a pessoa tenta confirmar sem informar nome ou sem escolher
-   cor, **Then** a criação é bloqueada e o campo pendente é indicado.
-3. **Given** já existe uma etiqueta chamada "Promoção", **When** a pessoa tenta criar outra com o
-   mesmo nome (ignorando maiúsculas/minúsculas e espaços), **Then** a criação é bloqueada com uma
-   mensagem de nome já em uso.
-4. **Given** a tela de criação, **When** a pessoa informa uma descrição, **Then** a descrição fica
-   associada à etiqueta e aparece na listagem.
-
----
-
-### User Story 3 — A pessoa corrige uma etiqueta existente (Priority: P2)
-
-Quem administra o catálogo percebe um nome errado, uma cor mal escolhida ou uma descrição
-desatualizada e a corrige, sem precisar excluir e recriar a etiqueta.
-
-**Why this priority**: Importante para manter o catálogo correto ao longo do tempo, mas o catálogo
-já é útil apenas com criação e listagem (US1/US2); editar é uma melhoria, não um bloqueio inicial.
-
-**Independent Test**: Abrir uma etiqueta existente, alterar o nome e a cor, salvar, e conferir que a
-listagem reflete os novos valores.
-
-**Acceptance Scenarios**:
-
-1. **Given** uma etiqueta existente, **When** a pessoa altera seu nome para um valor não usado por
-   nenhuma outra etiqueta e salva, **Then** a listagem passa a mostrar o novo nome.
-2. **Given** uma etiqueta existente, **When** a pessoa tenta salvar com o nome de outra etiqueta já
-   cadastrada, **Then** a alteração é bloqueada com uma mensagem de nome já em uso.
-3. **Given** uma etiqueta existente, **When** a pessoa troca apenas a cor, **Then** a nova cor
-   aparece imediatamente na listagem.
-
----
-
-### User Story 4 — A pessoa remove uma etiqueta que não usa mais (Priority: P2)
-
-Quem administra o catálogo exclui uma etiqueta obsoleta. Se a etiqueta ainda estiver aplicada a
-algum serviço, a exclusão é impedida e a pessoa entende o motivo.
-
-**Why this priority**: Mantém o catálogo enxuto, mas não bloqueia o valor central (criar e listar);
-depende de já existir ao menos uma etiqueta (US2).
-
-**Independent Test**: Excluir uma etiqueta sem uso e confirmar que ela some da lista; tentar excluir
-uma etiqueta em uso (associada a um serviço) e confirmar que a exclusão é impedida com uma
-explicação.
-
-**Acceptance Scenarios**:
-
-1. **Given** uma etiqueta que não está associada a nenhum serviço, **When** a pessoa pede para
-   excluí-la e confirma, **Then** ela desaparece da listagem.
-2. **Given** uma etiqueta associada a um ou mais serviços, **When** a pessoa tenta excluí-la,
-   **Then** a exclusão é impedida e a pessoa vê quantos serviços a utilizam.
-3. **Given** o pedido de exclusão, **When** a pessoa ainda não confirmou, **Then** a etiqueta
-   permanece intacta até a confirmação explícita.
-
-### Edge Cases
-
-- O que acontece se a pessoa tentar salvar uma etiqueta com nome de 41+ caracteres ou descrição de
-  201+ caracteres? Bloqueado antes de concluir, com o limite indicado.
-- O que acontece se duas pessoas tentarem criar/editar etiquetas com o mesmo nome ao mesmo tempo?
-  Apenas a primeira confirmação é aceita; a segunda recebe o erro de nome duplicado, sem sobrescrever
-  a primeira.
-- O que acontece se a etiqueta que a pessoa está editando ou excluindo for removida por outra pessoa
-  entre abrir a tela e confirmar a ação? A ação falha com uma mensagem de "não encontrada", sem
-  quebrar a tela.
-- O que acontece se a conexão falhar durante a criação/edição? O formulário preenchido pela pessoa
-  não é perdido; ela pode tentar novamente.
-- O que acontece com uma descrição preenchida só com espaços? É tratada como se estivesse vazia.
-
-## Requirements *(mandatory)*
-
-### Functional Requirements
-
-- **FR-001**: O sistema **DEVE** listar as etiquetas do tenant atual, página a página, mostrando
-  nome, cor e descrição de cada uma.
-- **FR-002**: O sistema **DEVE** permitir localizar etiquetas por nome através de um campo de busca
-  que filtra no backend, disparando a busca apenas quando a pessoa confirma explicitamente (tecla
-  Enter ou botão de busca); **NÃO DEVE** filtrar a listagem já carregada no frontend a cada tecla
-  digitada.
-- **FR-003**: O sistema **DEVE** permitir criar uma nova etiqueta informando nome (obrigatório), cor
-  (obrigatória, escolhida entre uma paleta fixa de 8 cores) e descrição (opcional).
-- **FR-004**: O sistema **DEVE** impedir a criação de uma etiqueta com nome já usado por outra
-  etiqueta do mesmo tenant (comparação sem diferenciar maiúsculas/minúsculas ou espaços nas pontas),
-  exibindo uma mensagem de conflito clara.
-- **FR-005**: O sistema **DEVE** rejeitar nome vazio ou com mais de 40 caracteres, e descrição com
-  mais de 200 caracteres, antes de considerar a operação concluída.
-- **FR-006**: O sistema **DEVE** permitir editar nome, cor e descrição de uma etiqueta existente,
-  aplicando as mesmas regras de validação e unicidade da criação.
-- **FR-007**: O sistema **DEVE** permitir excluir uma etiqueta que não esteja em uso por nenhum
-  serviço.
-- **FR-008**: O sistema **DEVE** impedir a exclusão de uma etiqueta em uso por um ou mais serviços,
-  informando quantos serviços a utilizam.
-- **FR-009**: O sistema **DEVE** pedir confirmação da pessoa antes de excluir uma etiqueta.
-- **FR-010**: O sistema **DEVE** exibir a cor de cada etiqueta de forma legível nos temas claro e
-  escuro, sem alterar o valor recebido da API.
-- **FR-011**: O sistema **NÃO DEVE** oferecer um seletor de cor livre; a escolha **DEVE** ficar
-  restrita à paleta fixa validada pelo backend.
-- **FR-012**: O sistema **DEVE** exibir à pessoa usuária a mensagem devolvida pelo backend para cada
-  erro — geral ou por campo (campo obrigatório ou inválido, nome duplicado, etiqueta em uso, etiqueta
-  não encontrada) — sem reescrevê-la. A escolha de **onde** exibir cada mensagem (junto a um campo
-  específico do formulário ou como aviso geral) **DEVE** se basear na estrutura do erro devolvido (o
-  campo indicado, ou a ausência de um), nunca em interpretar o texto da mensagem.
-- **FR-013**: Os textos visíveis **DEVEM** estar em pt-BR.
-- **FR-014**: A tela de gestão de Etiquetas **DEVE** estar disponível na URL `/tags` e **DEVE** ser
-  alcançável tanto pela paleta de comandos do painel quanto por um destino próprio, com ícone
-  dedicado, na navegação principal fixa (barra lateral em telas largas, item "Mais" da navegação
-  inferior em telas estreitas); **NÃO DEVE** exigir passar pela tela de Serviços.
-- **FR-015**: O cabeçalho da tela **NÃO DEVE** exibir a rota nem um subtítulo descritivo; **DEVE**
-  mostrar apenas o título "Etiquetas" e a ação primária "Nova etiqueta".
-- **FR-017**: A exclusão começa pelo botão da linha. A confirmação **DEVE** abrir com o foco em Cancelar.
-- **FR-018**: Enquanto um salvamento (criação/edição) ou uma exclusão estiver em andamento, o
-  diálogo **NÃO DEVE** poder ser fechado: Cancelar **DEVE** ficar desabilitado, o ✕ **DEVE** ficar
-  oculto e `Esc` e o clique fora **DEVEM** ser ignorados. Quando a resposta chegar, com sucesso o diálogo fecha sozinho;
-  com erro, as saídas voltam a funcionar.
-- **FR-019**: A listagem **DEVE** paginar com o mesmo rodapé da lista de Pessoas: o resumo do que
-  está na tela e do total, o seletor "Itens por página" (10, 20, 50 ou 100; padrão 20) e o
-  paginador. Uma busca volta à página 1 mantendo o tamanho; trocar o tamanho volta à página 1
-  mantendo a busca. Salvar ou excluir uma etiqueta **DEVE** recarregar a página na tela, e uma página
-  que deixou de existir **DEVE** dar lugar à última que existe, nunca a "Nenhuma etiqueta ainda".
-### Key Entities
-
-- **Etiqueta (Tag)**: representa um rótulo reutilizável aplicável a Serviços, usado para
-  categorizá-los. Atributos: nome (texto curto, único por tenant), cor (uma entre 8 opções fixas),
-  descrição (texto opcional, mais longo que o nome). Pertence a exatamente um tenant; pode estar
-  associada a zero ou mais Serviços.
-
-## Success Criteria *(mandatory)*
-
-### Measurable Outcomes
-
-- **SC-001**: Uma pessoa cria uma etiqueta válida (nome + cor) em menos de 30 segundos a partir da
-  tela de listagem.
-- **SC-002**: 100% das tentativas de criar ou editar uma etiqueta com nome duplicado são bloqueadas,
-  sem nunca resultar em duas etiquetas com o mesmo nome no mesmo tenant.
-- **SC-003**: 100% das tentativas de excluir uma etiqueta em uso são bloqueadas, sem exceção.
-- **SC-004**: Entre 50 etiquetas cadastradas, a pessoa localiza uma etiqueta específica pelo nome em
-  menos de 5 segundos usando a busca.
-- **SC-005**: Após criar, editar ou excluir uma etiqueta e recarregar a página, a listagem reflete
-  exatamente o estado esperado — nenhuma etiqueta perdida, duplicada ou desatualizada.
-
-## Assumptions
-
-- Sem modelo de papéis ou permissões: qualquer pessoa autenticada do tenant pode gerenciar etiquetas
-  (mesma premissa da Fundação de UI).
-- O catálogo de etiquetas é pequeno (dezenas a poucas centenas). Ainda assim o backend pagina a
-  listagem desde a ADR 0068, e a tela pagina com ele (Clarification de 2026-10-20, FR-019).
-- A tela tem rota própria (`/tags`), fora da área de Serviços, alcançável tanto pela paleta de
-  comandos quanto por um destino próprio na navegação principal fixa — a navegação passa a ter sete
-  destinos.
-- Os únicos atributos de etiqueta são nome, cor e descrição — sem ícone, ordenação manual ou
-  arquivamento.
-- A paleta de 8 cores é fixa e definida pelo backend; o frontend não introduz cores adicionais.
-- O protótipo clicável revisado e corrigido nesta sessão
-  (https://claude.ai/code/artifact/b7bc520f-3e32-4c2d-9692-734e88a7452f) é a referência visual desta
-  feature — mesmo princípio adotado em `specs/002-ui-foundation`. Qualquer divergência dele durante o
-  `/speckit-plan` ou a implementação deve ser intencional e registrada aqui.
-
-## Out of Scope
-
-- CRUD de Serviços e de Categorias.
-- Atribuir ou remover etiquetas de um Serviço específico (pertence à tela de Serviço).
-- Qualquer modelo de papéis/permissões para restringir quem gerencia etiquetas.
-- Cores personalizadas além da paleta fixa.
+Etiqueta é um rótulo reutilizável do tenant: id atribuído pelo servidor, nome, cor e descrição
+opcional. O vínculo com Serviços aparece nesta gestão apenas como impedimento de exclusão; não se
+modelou uma lista de serviços associados na tela. Não foram incluídos ícone, ordenação manual,
+arquivamento ou cores personalizadas.

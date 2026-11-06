@@ -1,204 +1,60 @@
-# Implementation Plan: Pastas por Componente Composto em shared/ui
+# Plano histórico — spec 005
 
-**Branch**: `005-shared-ui-component-folders` | **Date**: 2026-09-16 | **Spec**: [spec.md](./spec.md)
+**Estado:** executado e revisado; descreve a migração, não um inventário atual de componentes.
+O aceite está na [spec](spec.md); o resultado e as tarefas superadas estão em [tasks](tasks.md).
 
-**Input**: Feature specification from `/specs/005-shared-ui-component-folders/spec.md`
+## Abordagem retida
 
-## Summary
+A migração foi local ao frontend, por componente, mantendo o import `@/shared/ui/<nome>` resolvido pelo
+novo `index.tsx`. Raiz, tipos puros e subpartes passaram a ter responsabilidades distintas, sem criar
+pacote novo nem alterar a API pública. Os imports relativos precisavam acompanhar a nova profundidade;
+os aliases absolutos preservavam os consumidores.
 
-Dar a **todos os 19 componentes** de `src/shared/ui/` uma pasta própria no lugar do arquivo único de
-hoje, para que a pasta siga o mesmo padrão de pasta-por-unidade já usado em
-`features/*/ui/pages/<Page>/`, sem parte de `shared/ui/` em pasta e parte em arquivo solto. Toda pasta
-tem um `index.tsx` como ponto de entrada público (reexportando tudo que o arquivo já exporta hoje,
-preservando `@/shared/ui/<nome>` sem mudança para nenhum consumidor). Os outros dois arquivos são
-condicionais, não automáticos:
+Os testes colocados junto foram movidos com o componente e continuaram importando seu ponto público,
+com import relativo `.` quando aplicável. A lista de exclusão de cobertura passou de arquivos para
+pastas somente nos caminhos já excluídos, preservando seu significado. Um valor agregado de cobertura
+não substitui conferir esse mapeamento.
 
-- `<nome>.types.ts` só existe quando há um tipo próprio real para extrair. 8 dos 19 ganham esse
-  arquivo: `combobox`, `confirm-dialog`, `dialog`, `dropdown-menu`, `sheet`, `toast`,
-  `color-swatch-picker` e `FullScreenMessage`. Os demais (`avatar`, `card`, `input-group`,
-  `tooltip` e os 7 atômicos `badge`, `button`, `input`, `label`, `separator`, `skeleton`, `textarea`)
-  não têm tipo próprio real, só `React.ComponentProps`, variantes `cva` ou um alias inline que fica com
-  o componente (research.md D10).
-- `components/` só existe para os 8 componentes com sub-parte de peso real (`combobox`,
-  `confirm-dialog`, `dialog`, `dropdown-menu`, `input-group`, `sheet`, `toast`, `tooltip`) — critério
-  do FR-004. Dentro dela, sub-parte com peso real ganha arquivo próprio; as triviais ficam juntas em
-  `<nome>-primitives.tsx`. `avatar` e `card` só têm sub-partes triviais e ficam só com
-  `index.tsx` (D10).
+O limite de import de subpartes dependia de revisão: a configuração de lint da migração não adicionou
+uma regra dedicada a FR-006. Essa limitação não deve ser recontada como garantia automática.
 
-A migração é puramente mecânica — mover JSX/lógica para o novo local, sem alterar comportamento — mas
-três coisas precisam de atenção real: (1) os 4 imports relativos hoje existentes dentro de `shared/ui/`
-mudam de profundidade quando o arquivo que os contém passa a viver uma pasta mais fundo; (2) a lista de
-exclusão de cobertura em `vitest.config.ts` referencia as 15 entradas de `shared/ui/` por caminho de
-arquivo exato e todas precisam virar glob de pasta; (3) `FullScreenMessage/` mantém a grafia PascalCase
-de hoje — não normalizada para kebab-case, para não quebrar FR-005.
+## Decisões e alternativas preservadas
 
-> **Revisão pós-implementação (mesmo dia, research.md D10)**: depois de implementar o parágrafo acima
-> (110 arquivos), uma revisão encontrou segregação exagerada em dois pontos — sub-parte trivial ganhando
-> arquivo próprio mesmo sem peso real (19 arquivos de ≤10 linhas), e as 7 pastas atômicas sem nenhum
-> `types.ts`/`components/` dentro (ceremônia sem organização). Os números acima já foram atualizados
-> para essa revisão: **a regra final é pasta só quando o componente se qualifica** (critério de
-> `components/` **ou** de `types.ts`), e dentro da pasta, sub-parte só ganha arquivo próprio quando tem
-> peso real — as triviais vão para um `<nome>-primitives.tsx` único. Resultado: `avatar`/`card`
-> perdem `components/` e `types.ts` (dissolvem em `index.tsx`); os 7 atômicos sem tipo voltam a ser
-> arquivo único; `color-swatch-picker`/`FullScreenMessage` continuam pasta (têm tipo real). Total: 59
-> arquivos. Ver `data-model.md` (reescrito) para o mapeamento final e `research.md` D10 para o porquê.
->
-> **Segunda revisão (mesmo dia, research.md D11)**: o usuário apontou que os 7 atômicos revertidos para
-> arquivo único (`badge.tsx`, `button.tsx`, `input.tsx`, `label.tsx`, `separator.tsx`, `skeleton.tsx`,
-> `textarea.tsx`) ficavam visivelmente fora do padrão dos outros 13, que são pasta. Reverte só esse
-> ponto de D10: os 7 voltam a ser pasta com `index.tsx` único (mesma forma de `avatar`/`card`) —
-> a regra de sub-parte trivial em `<nome>-primitives.tsx` (o outro ponto de D10) não muda. Resultado: a
-> forma descrita no restante desta seção (`## Project Structure` abaixo) — pasta universal para os 19 —
-> volta a ser exata; total continua **59 arquivos** (os 7 só mudam de `<nome>.tsx` para
-> `<nome>/index.tsx`, nenhum arquivo novo). Ver `research.md` D11 para o porquê.
+Os IDs abaixo identificam as decisões do antigo arquivo de pesquisa, conservadas para permitir
+consultar sua evolução no Git.
 
-## Technical Context
+| Decisão | Escolha histórica e motivo                                                                                                                                                                                           |
+| ------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| D1      | O ponto público mantém a raiz e reexporta a superfície existente; `Toast` e `Toaster` podiam coexistir como raízes sem quebrar consumidores. A proposta inicial de um arquivo por dependente foi restringida em D10. |
+| D2      | `cva()` e `VariantProps` derivados ficam com a peça usuária. O arquivo de tipos conserva declarações puras; não força ciclo nem tipos mais fracos para cumprir um formato.                                           |
+| D3      | `ConfirmDialog` justificava divisão mesmo com exportação única: estado/orquestração na raiz e views de bloqueio versus confirmação/falha transitória separadas. As views não ganhavam fetch ou estado de negócio.    |
+| D4      | O auxiliar curto `useComboboxAnchor` ficava junto da raiz; arquivo próprio sem ganho de leitura foi rejeitado. Sua existência não é exigência para versões posteriores do combobox.                                  |
+| D5–D7   | Mover testes públicos e ajustar imports relativos e exclusões preservava o contrato da reorganização, sem revisão funcional incidental.                                                                              |
+| D8      | A skill procurada no subprojeto foi localizada em `.claude/skills/agenza-ui-primitive/` da raiz do monorepo. O impedimento de localização foi resolvido, não era tarefa ainda pendente.                              |
+| D9      | A pasta de nível superior passou a cobrir também componentes atômicos, por previsibilidade; tipos e subpartes continuaram condicionados a conteúdo real.                                                             |
+| D10     | Revisão reduziu segregação excessiva: wrappers triviais juntos em `<nome>-primitives.tsx`, partes relevantes isoladas por julgamento qualitativo. Foi também tentada a volta dos atômicos a arquivos planos.         |
+| D11     | A tentativa de arquivos planos para atômicos foi revertida por escolha de uniformidade. Mantiveram-se pastas universais e o agrupamento de triviais de D10; isso não reabriu a divisão interna já corrigida.         |
 
-**Language/Version**: TypeScript ~6.0.3 (`strict` mode, ver Constitution Principle I), React 19.2.7
+Foram rejeitados arquivo de tipos vazio, arquivo individual para cada wrapper e um limiar numérico de
+linhas para decidir separação. O custo considerado era navegação e legibilidade, e não reduzir ou
+maximizar a contagem de arquivos.
 
-**Primary Dependencies**: `@base-ui/react` 1.8.0 (primitivos sem estilo por trás de todos os 11
-componentes), `class-variance-authority` 0.7.1 (variantes de estilo em `input-group`), `clsx` +
-`tailwind-merge` (via `cn()` em `shared/lib/utils`), `lucide-react` 1.41.0 (ícones), Tailwind CSS 4.1.0
+## Evidência e evolução posterior
 
-**Storage**: N/A — sem dado persistido; a feature não toca `shared/api`, `shared/session` nem nenhum
-repositório
+- O checkpoint `5099b388` contém os artefatos desta spec e a estrutura já migrada. Ele comprova sua
+  presença naquele estado; não foi identificado no histórico disponível um PR isolado da migração.
+- Na base `38d2dbd9`, [button](../../src/shared/ui/button/index.tsx),
+  [dialog](../../src/shared/ui/dialog/index.tsx),
+  [input-group](../../src/shared/ui/input-group/index.tsx) e suas subpartes exemplificam a organização.
+  O [teste do input-group](../../src/shared/ui/input-group/input-group.test.tsx) continua junto da peça.
+- `ConfirmDialog` passou a [widgets](../../src/widgets/confirm-dialog/index.tsx); `card` e `separator`
+  foram removidos por falta de consumidor em `6a8e5fb6` (PR #186). Partes do combobox e tipos foram
+  alterados depois. Essas evoluções não tornam a migração uma pendência nem exigem restaurar o antigo
+  inventário de símbolos.
+- O [Vitest](../../vitest.config.ts) demonstra as exclusões atuais; os caminhos e motivos não devem
+  ser inferidos de tabelas históricas. O [guia vigente](../../docs/ARCHITECTURE.md) e a
+  [skill](../../../../.claude/skills/agenza-ui-primitive/SKILL.md) possuem a orientação de manutenção.
 
-**Testing**: Vitest 4.1.11 + `@testing-library/react` 16.3.0 (unit/component), Playwright 1.56.0 (e2e,
-via `npx playwright test`). Cobertura via `@vitest/coverage-v8`, limiares em `vitest.config.ts`
-
-**Target Platform**: SPA React servida por Vite 8, mesmo alvo de hoje — a feature não introduz nem
-remove nenhuma superfície de execução
-
-**Project Type**: Aplicação web single-page existente (`apps/admin-frontend` no monorepo) — a feature
-reorganiza um único diretório (`src/shared/ui/`) dentro dela; nenhum novo projeto/pacote é criado
-
-**Performance Goals**: N/A — reorganização de arquivo em tempo de build/desenvolvimento, sem efeito em
-runtime (FR-009); nenhum orçamento de performance novo se aplica
-
-**Constraints**: Preservar todo caminho de import externo (FR-005); preservar o status de
-inclusão/exclusão de cobertura de cada componente (FR-008); zero mudança de comportamento/saída visual
-(FR-009); todos os portões de CI hoje verdes continuam verdes (NFR-001)
-
-**Scale/Scope**: 19 componentes ganham pasta (11 compostos com `components/`, 9 atômicos só com
-`index.tsx` — 2 desses 9 também ganham `<nome>.types.ts`), ~61 sub-partes internas ao todo dentro dos 11
-compostos (contagem exata em [data-model.md](./data-model.md)), 2 arquivos de teste colocalizados
-migrados, ~15 arquivos consumidores fora de `shared/ui/` que não precisam de nenhuma alteração, 16
-entradas de `vitest.config.ts` atualizadas (todas as que hoje existem para `shared/ui/`), 1 entrada nova
-na tabela de decisões de `docs/ARCHITECTURE.md`. Escopo fica inteiro dentro de `apps/admin-frontend` —
-nenhum outro app do monorepo nem o backend são tocados.
-
-## Constitution Check
-
-*GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
-
-| Princípio | Aplica? | Avaliação |
-|---|---|---|
-| I. Strict TypeScript | Sim | PASS — mover/extrair tipos para `<nome>.types.ts` não afrouxa `strict`; nenhum `any` implícito pode ser introduzido pela extração (ver research.md, regra de que tipos derivados de `cva`/`VariantProps` ficam com o componente, não no arquivo de tipos, para não forçar um tipo mais fraco só para "caber" no arquivo de tipos). |
-| II. Multi-Tenant Safety Server-Side | Não | N/A — nenhum dos 19 componentes lê tenant, token ou dado de cliente; são primitivos de apresentação. |
-| III. Auth via identity-service | Não | N/A — não tocado. |
-| IV. Generated OpenAPI Client Only | Não | N/A — `confirm-dialog` importa tipos de `shared/api/servicesFacade` hoje e continua importando exatamente os mesmos, só ajustando a profundidade do caminho relativo (ver research.md); nenhuma chamada nova a backend. |
-| V. CI Quality Gates Non-Negotiable | Sim | PASS, com obrigação explícita — `tsc`, ESLint, Prettier, limiares de cobertura do Vitest e Playwright precisam continuar verdes. É o gate central desta feature; ver FR-008/NFR-001 e o mapeamento exato de `vitest.config.ts` em data-model.md. |
-| VI. No Frontend Docker | Não | N/A — não tocado. |
-
-Nenhuma violação. Nenhuma entrada de Complexity Tracking necessária.
-
-**Re-check pós-Phase 1**: O desenho em [data-model.md](./data-model.md) não introduziu nada novo que
-mude a tabela acima — nenhum dado de tenant, autenticação ou chamada a backend nova surgiu ao detalhar
-o mapeamento arquivo-a-arquivo. O único ponto que toca um princípio diretamente (V, gates de CI) ganhou
-tratamento concreto em data-model.md (mapeamento de `vitest.config.ts`) e em
-[quickstart.md](./quickstart.md) (roteiro para provar que os gates continuam verdes). Gate continua
-PASS.
-
-## Project Structure
-
-### Documentation (this feature)
-
-```text
-specs/005-shared-ui-component-folders/
-├── plan.md              # This file
-├── research.md          # Phase 0 output
-├── data-model.md         # Phase 1 output — mapeamento arquivo-a-arquivo de cada componente
-├── quickstart.md         # Phase 1 output — roteiro de validação manual/CI
-└── tasks.md              # Phase 2 output (/speckit-tasks — ainda não criado)
-```
-
-Sem `contracts/`: os 19 componentes são consumidos só dentro do próprio `apps/admin-frontend` (nenhum
-outro serviço ou app do monorepo os importa); o contrato relevante é a própria assinatura TypeScript,
-já verificada por `tsc --noEmit` (Constitution Principle I) — não há um formato de contrato adicional
-(endpoint, schema de CLI, etc.) para documentar à parte.
-
-### Source Code (repository root)
-
-Estrutura atual (achatada) e estrutura alvo, restritas a `src/shared/ui/` — nenhum outro diretório do
-repositório muda de forma:
-
-```text
-# Antes (19 arquivos achatados + 2 testes colocalizados)
-src/shared/ui/
-├── avatar.tsx
-├── badge.tsx
-├── button.tsx
-├── card.tsx
-├── color-swatch-picker.tsx
-├── combobox.tsx
-├── confirm-dialog.tsx
-├── confirm-dialog.test.tsx
-├── dialog.tsx
-├── dropdown-menu.tsx
-├── FullScreenMessage.tsx
-├── input.tsx
-├── input-group.tsx
-├── input-group.test.tsx
-├── label.tsx
-├── separator.tsx
-├── sheet.tsx
-├── skeleton.tsx
-├── textarea.tsx
-├── toast.tsx
-└── tooltip.tsx
-
-# Depois — todo componente vira pasta; forma completa varia por conteúdo real (ver data-model.md)
-src/shared/ui/
-├── combobox/                          # composto — exemplo mais rico
-│   ├── index.tsx                    # ponto de entrada público: Combobox (raiz) + reexporta components/* + useComboboxAnchor
-│   ├── combobox.types.ts            # só tipos: ComboboxInputProps, ComboboxChipProps, etc.
-│   └── components/                  # arquivo próprio só para sub-parte com peso real (D10)
-│       ├── combobox-chip.tsx
-│       ├── combobox-clear.tsx
-│       ├── combobox-content.tsx
-│       ├── combobox-input.tsx
-│       ├── combobox-item.tsx
-│       ├── combobox-palette-content.tsx
-│       ├── combobox-trigger.tsx
-│       └── combobox-primitives.tsx  # as triviais juntas: Value, List, Group, Label, Collection, Empty, Separator, Chips, ChipsInput
-├── confirm-dialog/                    # composto — exportação única, mas complexo (FR-004, cláusula qualitativa)
-│   ├── index.tsx                    # ConfirmDialog<T> — mantém useState/handleConfirm, escolhe a view
-│   ├── confirm-dialog.types.ts      # ConfirmDialogProps, ConfirmDialogFailure, ConfirmDialogConfirmation, ConfirmDialogError, ConfirmDialogSuccess
-│   ├── confirm-dialog.test.tsx      # migrado de shared/ui/confirm-dialog.test.tsx, import ajustado para '.'
-│   └── components/
-│       ├── confirm-dialog-blocked-view.tsx
-│       └── confirm-dialog-confirm-view.tsx
-├── color-swatch-picker/               # atômico, mas com tipo próprio real — ganha types.ts, sem components/
-│   ├── index.tsx                    # ColorSwatchPicker
-│   └── color-swatch-picker.types.ts # ColorSwatchOption, ColorSwatchPickerProps
-├── button/                            # atômico, sem tipo próprio (buttonVariants fica com o componente)
-│   └── index.tsx                    # Button + buttonVariants — sem types.ts, sem components/
-└── … (avatar/, card/, dialog/, dropdown-menu/, input-group/, sheet/, toast/, tooltip/,
-      FullScreenMessage/, badge/, input/, label/, separator/, skeleton/, textarea/ — mesma lógica,
-      detalhe completo em data-model.md)
-```
-
-**Structure Decision**: Migração no lugar dentro do mesmo app (`apps/admin-frontend`), sem novo
-projeto/pacote. **Todos os 19** componentes ganham pasta própria (FR-001, ampliado em 2026-09-17 a
-pedido do usuário para cobrir também os atômicos, seguindo o mesmo padrão de pasta-por-unidade de
-`features/*/ui/pages/<Page>/`). Dentro disso, dois arquivos continuam condicionais, no mesmo espírito
-que já valia para `components/`: o componente qualificado pelo FR-004 (8, lista em `spec.md`
-§Assumptions) também ganha `components/`; qualquer componente com tipo próprio real (6 dos 8 — todos
-menos `input-group` e `tooltip` — mais `color-swatch-picker` e `FullScreenMessage`, 8 no total) também
-ganha `<nome>.types.ts`. O mapeamento completo
-arquivo-a-arquivo, incluindo os 4 imports relativos que mudam de profundidade e as 15 entradas de
-`vitest.config.ts` a atualizar, está em [data-model.md](./data-model.md).
-
-## Complexity Tracking
-
-*Sem violações de constituição — seção não se aplica.*
+Não há modelo de domínio ou contrato HTTP próprio desta migração. O antigo mapeamento arquivo por
+arquivo, checklists e roteiro de execução duplicavam a fonte e o aceite; as decisões exclusivas ficam
+acima. Preparação e comandos de verificação estão no [README](../../README.md).
