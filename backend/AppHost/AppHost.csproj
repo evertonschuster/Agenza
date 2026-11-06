@@ -1,4 +1,4 @@
-﻿<Project Sdk="Aspire.AppHost.Sdk/13.6.1">
+﻿<Project Sdk="Aspire.AppHost.Sdk/13.6.4">
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
@@ -13,7 +13,6 @@
     <PackageReference Include="Aspire.Hosting.JavaScript" />
     <PackageReference Include="Aspire.Hosting.PostgreSQL" />
     <PackageReference Include="Aspire.Hosting.Python" />
-    <PackageReference Include="MessagePack" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" />
     <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
     <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
