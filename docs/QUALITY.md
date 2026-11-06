@@ -31,8 +31,14 @@ links and reference definitions, standalone `@path` imports in CLAUDE wrappers, 
 Targets may be files or directories; a file fragment checks the file's existence only.
 
 This is a small reference checker, not a complete Markdown or YAML parser. It supports bracket
-links with bare or angle-delimited destinations and flat quoted/plain or indented block scalars
-for the required frontmatter fields. It ignores fenced code, inline code, HTML comments, URI
+links with balanced labels, bare or angle-delimited destinations, and reference definitions whose
+destination is on the same or immediately following line. Escaped opening brackets stay literal;
+escaped table pipes do not shift the current ADR column. Destination escapes, the named entities
+amp/lt/gt/quot/apos and decimal/hexadecimal character references decode once, before URL decoding.
+Other named entities produce an explicit unsupported-format error; use Unicode or percent-encoding.
+Required frontmatter fields accept flat quoted/plain or indented block scalars; single-line
+double-quoted values support YAML character escapes, including x/u/U hexadecimal forms.
+It ignores fenced code (including blockquotes), paragraph-bounded inline code, HTML comments, URI
 schemes, isolated fragments/queries and template placeholders. It does not validate anchors,
 HTML links, indented code blocks, symbols, external URLs, shell commands, semantic agreement or
 tool discovery. Historical ADR bodies/specs and generated Spec Kit adapters are outside the scan;

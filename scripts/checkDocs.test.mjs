@@ -257,3 +257,163 @@ test('CLI exits nonzero for broken references and leaves its checkout unchanged'
     before,
   );
 });
+
+test('ignores blockquote fences while checking prose after the blockquote', async (t) => {
+  const cases = [
+    '> ~~~md\n> [Example](missing-example.md)\n> ~~~\n\n[Broken](missing.md)\n',
+    '> ~~~md\n> [Example](missing-example.md)\n\n[Broken](missing.md)\n',
+  ];
+  for (const [index, text] of cases.entries()) {
+    await t.test(`blockquote case ${index + 1}`, (context) => {
+      const root = fixture(context, { 'AGENTS.md': text });
+      assert.deepEqual(checkDocumentation(root).errors, [
+        {
+          file: 'AGENTS.md',
+          line: text.slice(0, text.indexOf('[Broken]')).split('\n').length,
+          message: 'Destino local ausente.',
+          target: 'missing.md',
+        },
+      ]);
+    });
+  }
+});
+
+test('does not close an inline code span across a paragraph boundary', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md': 'A stray ` marker.\n\n[Broken](missing.md)\n\nA later ` marker.\n',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 3,
+      message: 'Destino local ausente.',
+      target: 'missing.md',
+    },
+  ]);
+});
+
+test('distinguishes an escaped opening bracket from a link after an escaped backslash', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md': '\\[Escaped](missing-escaped.md)\n\\\\[Broken](missing.md)\n',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 2,
+      message: 'Destino local ausente.',
+      target: 'missing.md',
+    },
+  ]);
+});
+
+test('checks destinations after balanced nested brackets in link labels', (t) => {
+  const root = fixture(t, { 'AGENTS.md': '[Guide [draft]](missing.md)\n' });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 1,
+      message: 'Destino local ausente.',
+      target: 'missing.md',
+    },
+  ]);
+});
+
+test('checks a reference definition destination on the next line', (t) => {
+  const root = fixture(t, { 'AGENTS.md': '[Guide][ref]\n[ref]:\n  docs/missing.md\n' });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 2,
+      message: 'Destino local ausente.',
+      target: 'docs/missing.md',
+    },
+  ]);
+});
+
+test('does not read a reference destination across a blank line', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md': '[ref]:\n\n  missing-example.md\n[Broken](missing.md)\n',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 4,
+      message: 'Destino local ausente.',
+      target: 'missing.md',
+    },
+  ]);
+});
+
+test('decodes YAML hexadecimal and Unicode escapes in required metadata', (t) => {
+  const root = fixture(t, {
+    [skill]: '---\nname: "\\x61genza-example"\ndescription: "\\x41ction checks \\U0001F600"\n---\n',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, []);
+  write(root, skill, '---\nname: "\\x41genza-example"\ndescription: Check links.\n---\n');
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: skill,
+      line: 2,
+      message: 'Nome de skill inválido; use letras minúsculas, números e hífens.',
+      target: 'Agenza-example',
+    },
+  ]);
+});
+
+test('keeps an escaped table pipe inside the concern cell', (t) => {
+  const root = fixture(t, { [adrIndex]: currentAdrs + '| Rendering \\| navigation | 9999 |\n' });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: adrIndex,
+      line: 6,
+      message: 'ADR vigente deve corresponder a um único arquivo.',
+      target: '9999',
+    },
+  ]);
+});
+
+test('decodes HTML entities once in bare and angle-delimited destinations', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md':
+      '[Bare](docs/b&amp;c.md)\n' +
+      '[Angle](<docs/b&amp;c.md>)\n' +
+      '[Decimal](docs/b&#38;c.md)\n' +
+      '[Hexadecimal](docs/b&#x26;c.md)\n' +
+      '[Uppercase hexadecimal](docs/b&#X26;c.md)\n' +
+      '[Escaped](docs/a\\&amp;b.md)\n' +
+      '[Percent encoded](docs/a%26amp%3Bb.md)\n' +
+      '[Once](docs/a&amp;amp;b.md)\n',
+    'docs/b&c.md': '# Guide\n',
+    'docs/a&amp;b.md': '# Encoded name\n',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, []);
+});
+
+test('reports invalid YAML escapes without calling the required field empty', (t) => {
+  const root = fixture(t);
+  for (const escape of ['\\q', '\\x4', '\\U00110000']) {
+    write(root, skill, '---\nname: agenza-example\ndescription: "' + escape + '"\n---\n');
+    assert.deepEqual(checkDocumentation(root).errors, [
+      {
+        file: skill,
+        line: 3,
+        message: 'Escape YAML inválido em valor entre aspas.',
+        target: 'description',
+      },
+    ]);
+  }
+});
+
+test('diagnoses unsupported named entities locally while ignoring external URLs', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md': '[Local](docs/caf&eacute;.md)\n[Web](https://example.invalid/?q=&eacute;)\n',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 1,
+      message: 'Entidade HTML nomeada não suportada; use Unicode literal ou percent-encoding.',
+      target: 'docs/caf&eacute;.md',
+    },
+  ]);
+});
