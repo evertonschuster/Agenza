@@ -292,7 +292,7 @@ test.describe('Tag a person', () => {
     const tagName = uniqueName('Etiqueta E2E');
     await page.goto('/tags/new');
     await page.getByLabel('Nome', { exact: true }).fill(tagName);
-    await page.getByRole('radio', { name: 'Azul' }).click();
+    await page.getByRole('radio', { name: 'Azul', exact: true }).click();
     await page.getByRole('button', { name: 'Salvar' }).click();
     await expect(page).toHaveURL(/\/tags$/);
 
@@ -301,8 +301,10 @@ test.describe('Tag a person', () => {
     const section = page.getByRole('region', { name: 'Dados da pessoa' });
     await section.getByLabel('Nome completo').fill(name);
     await section.getByRole('combobox', { name: 'Etiquetas' }).fill(tagName);
-    await page.getByRole('option', { name: tagName }).click();
-    await expect(section.getByRole('button', { name: `Remover ${tagName}` })).toBeVisible();
+    await page.getByRole('option', { name: tagName, exact: true }).click();
+    await expect(
+      section.getByRole('button', { name: `Remover ${tagName}`, exact: true }),
+    ).toBeVisible();
     await page.getByRole('button', { name: 'Salvar' }).click();
     await expect(page).toHaveURL(/\/pessoas$/);
 
@@ -310,7 +312,7 @@ test.describe('Tag a person', () => {
     await expect(
       page
         .getByRole('region', { name: 'Dados da pessoa' })
-        .getByRole('button', { name: `Remover ${tagName}` }),
+        .getByRole('button', { name: `Remover ${tagName}`, exact: true }),
     ).toBeVisible();
   });
 });
