@@ -77,6 +77,9 @@ function prose(text, { preserveInlineCode = false } = {}) {
       const close = text.indexOf('-->', start);
       end = close < 0 ? text.length : close + 3;
     } else {
+      if (isEscaped(text, match.index)) {
+        continue;
+      }
       const closing = new RegExp('(?<!`)`{' + match[0].length + '}(?!`)', 'g');
       closing.lastIndex = start;
       const close = closing.exec(text);

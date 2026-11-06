@@ -41,7 +41,9 @@ double-quoted values support YAML character escapes, including x/u/U hexadecimal
 It ignores fenced code (including blockquotes), paragraph-bounded inline code, HTML comments, URI
 schemes, isolated fragments/queries and template placeholders. It does not validate anchors,
 HTML links, indented code blocks, symbols, external URLs, shell commands, semantic agreement or
-tool discovery. Historical ADR bodies/specs and generated Spec Kit adapters are outside the scan;
+tool discovery. Fences inside list containers, indentation of four or more spaces, and
+over-indented closing fences are outside the supported subset; use top-level or blockquote
+examples in checked guides. Historical ADR bodies/specs and generated Spec Kit adapters are outside the scan;
 their linked destinations are still checked when referenced from the active corpus.
 
 The stable `docs-checks` job runs on every PR and push to main, including changes that remove a

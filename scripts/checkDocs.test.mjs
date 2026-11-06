@@ -292,6 +292,29 @@ test('does not close an inline code span across a paragraph boundary', (t) => {
   ]);
 });
 
+test('ignores escaped opening backticks and keeps backslashes literal inside code spans', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md': '\\` [Broken](missing.md) `\n',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 1,
+      message: 'Destino local ausente.',
+      target: 'missing.md',
+    },
+  ]);
+  write(root, 'AGENTS.md', '`Example\\` [Broken](missing.md)\n');
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 1,
+      message: 'Destino local ausente.',
+      target: 'missing.md',
+    },
+  ]);
+});
+
 test('distinguishes an escaped opening bracket from a link after an escaped backslash', (t) => {
   const root = fixture(t, {
     'AGENTS.md': '\\[Escaped](missing-escaped.md)\n\\\\[Broken](missing.md)\n',
