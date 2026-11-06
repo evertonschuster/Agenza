@@ -145,17 +145,20 @@ describe('RemoteSearchSelect with several choices', () => {
     expect(await screen.findByText('Nenhuma etiqueta cadastrada.')).toBeInTheDocument();
   });
 
-  it('loads the next page below the current one', async () => {
+  it('loads the next page below the current one while the list does not fill its height', async () => {
     const user = userEvent.setup();
-    render(<Multiple pageSize={2} />);
+    const loadItems = loaderOf(ALL);
+    render(<Multiple loadItems={loadItems} pageSize={2} />);
 
     await openList(user, 'Etiquetas');
-    expect(await screen.findByText('Mostrando 2 de 3')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
 
     expect(await screen.findByRole('option', { name: 'VIP' })).toBeInTheDocument();
     expect(screen.getAllByRole('option')).toHaveLength(3);
-    expect(screen.queryByRole('button', { name: 'Carregar mais' })).not.toBeInTheDocument();
+    expect(loadItems).toHaveBeenLastCalledWith(
+      { search: '', page: 2, pageSize: 2 },
+      expect.any(AbortSignal),
+    );
+    expect(screen.queryByText(/Mostrando/)).not.toBeInTheDocument();
   });
 
   it('makes the other options unavailable once the limit is reached', async () => {

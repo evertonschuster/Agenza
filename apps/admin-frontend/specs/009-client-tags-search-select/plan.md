@@ -16,7 +16,9 @@ e `more` mostram o estado da fonte.
 `fetchPage` de `usePaginatedList`; `tagsRepository.list` já a satisfaz, sem adaptador. O hook usa um
 `AbortController` por requisição, como `usePaginatedList`; busca 300 ms depois da última tecla, somente para
 mudanças digitadas (motivo `input-change` do Base UI); carrega a primeira página ao abrir, exceto quando a
-abertura veio de uma busca digitada pendente; "Carregar mais" acrescenta a próxima; fechar ou desmontar
+abertura veio de uma busca digitada pendente; a rolagem perto do fim acrescenta a próxima, uma por vez e
+nunca durante uma busca digitada pendente (o popup decide pela posição do `ComboboxList`, o hook ignora o
+pedido enquanto houver outro); fechar ou desmontar
 cancela. A falha mostra o título do problema como recebido, com "Tentar novamente".
 
 `SearchSelectField` e `RemoteSearchSelectField` em `src/shared/form/fields/` ligam cada primitivo ao React

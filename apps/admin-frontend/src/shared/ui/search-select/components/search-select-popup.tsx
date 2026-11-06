@@ -1,7 +1,6 @@
-import type { RefObject } from 'react';
+import { useEffect, useEffectEvent, useState, type RefObject } from 'react';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { CheckIcon } from 'lucide-react';
-import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import { ComboboxItem, ComboboxList } from '@/shared/ui/combobox';
 import { Skeleton } from '@/shared/ui/skeleton';
@@ -10,6 +9,12 @@ import type {
   SearchSelectItem,
   SearchSelectMore,
 } from '../search-select.types';
+
+const LOAD_MORE_DISTANCE_PX = 40;
+
+function isNearEnd(list: HTMLElement) {
+  return list.scrollHeight - list.scrollTop - list.clientHeight <= LOAD_MORE_DISTANCE_PX;
+}
 
 interface SearchSelectPopupProps<T extends SearchSelectItem> {
   anchorRef: RefObject<HTMLDivElement | null>;
@@ -43,6 +48,19 @@ function SearchSelectPopup<T extends SearchSelectItem>({
   const selectedIds = new Set(selected.map((item) => item.id));
   const limitReached = maxSelected !== undefined && selected.length >= maxSelected;
   const searched = query.trim();
+  const [list, setList] = useState<HTMLDivElement | null>(null);
+  const canLoadMore = more !== undefined && !more.pending && failure === undefined;
+
+  function loadMoreNearEnd() {
+    if (!canLoadMore || !list || !isNearEnd(list)) return;
+    more.onLoadMore();
+  }
+
+  const loadMoreIfShort = useEffectEvent(loadMoreNearEnd);
+
+  useEffect(() => {
+    loadMoreIfShort();
+  }, [list, shown, canLoadMore]);
 
   return (
     <ComboboxPrimitive.Portal>
@@ -88,7 +106,7 @@ function SearchSelectPopup<T extends SearchSelectItem>({
             )}
           </ComboboxPrimitive.Empty>
 
-          <ComboboxList>
+          <ComboboxList ref={setList} onScroll={loadMoreNearEnd}>
             {(item: T) => (
               <ComboboxItem
                 key={item.id}
@@ -123,20 +141,9 @@ function SearchSelectPopup<T extends SearchSelectItem>({
           </ComboboxList>
 
           {more && (
-            <div className="flex items-center justify-between gap-2 px-2.5 pb-1 text-xs text-muted-foreground">
-              <span>
-                Mostrando {shown} de {more.total}
-              </span>
-              <ActionButton
-                variant="ghost"
-                size="sm"
-                className="text-foreground"
-                pending={more.pending}
-                onClick={more.onLoadMore}
-              >
-                Carregar mais
-              </ActionButton>
-            </div>
+            <p role="status" className="px-2.5 py-1 text-xs text-muted-foreground">
+              {more.pending ? 'Carregando mais…' : `Mostrando ${shown} de ${more.total}`}
+            </p>
           )}
 
           {multiple && (

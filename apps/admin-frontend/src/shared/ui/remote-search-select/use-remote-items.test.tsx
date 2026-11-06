@@ -148,6 +148,34 @@ describe('useRemoteItems', () => {
     expect(result.current.hasMore).toBe(false);
   });
 
+  it('ignores the next page while a page or a typed search is pending', async () => {
+    const { loadItems, pending } = deferredLoader();
+    const { result } = renderHook(() => useRemoteItems({ loadItems, pageSize: 2 }));
+
+    act(() => result.current.open());
+    act(() => result.current.loadMore());
+    await answer(pending[0], page([item('a'), item('b')], 6));
+    act(() => result.current.loadMore());
+    act(() => result.current.loadMore());
+
+    expect(loadItems).toHaveBeenCalledTimes(2);
+
+    await answer(pending[1], page([item('c'), item('d')], 6, 2));
+    act(() => result.current.search('vi'));
+    act(() => result.current.loadMore());
+
+    expect(loadItems).toHaveBeenCalledTimes(2);
+
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DELAY_MS);
+    });
+
+    expect(loadItems).toHaveBeenLastCalledWith(
+      { search: 'vi', page: 1, pageSize: 2 },
+      expect.any(AbortSignal),
+    );
+  });
+
   it('keeps the failure and retries the page that failed', async () => {
     const { loadItems, pending } = deferredLoader();
     const { result } = renderHook(() => useRemoteItems({ loadItems, pageSize: 2 }));

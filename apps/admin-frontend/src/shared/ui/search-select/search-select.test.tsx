@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor, within } from '@testing-library/react';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { SearchSelect, type SearchSelectMultipleProps, type SearchSelectSingleProps } from '.';
 
@@ -54,6 +54,19 @@ function Single(props: SingleExtras) {
     </>
   );
 }
+
+function layOutTallList() {
+  vi.spyOn(Element.prototype, 'scrollHeight', 'get').mockReturnValue(600);
+  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(250);
+  return (list: HTMLElement, scrollTop: number) => {
+    Object.defineProperty(list, 'scrollTop', { configurable: true, value: scrollTop });
+    fireEvent.scroll(list);
+  };
+}
+
+afterEach(() => {
+  vi.restoreAllMocks();
+});
 
 async function openList(user: ReturnType<typeof userEvent.setup>, name: string) {
   await user.click(screen.getByRole('combobox', { name }));
@@ -219,15 +232,50 @@ describe('SearchSelect fed by a source that loads its items', () => {
     expect(onRetry).toHaveBeenCalledOnce();
   });
 
-  it('offers the next page when the source has more', async () => {
+  it('asks for the next page while the list does not fill its height', async () => {
     const user = userEvent.setup();
     const onLoadMore = vi.fn();
     render(<Single more={{ total: 10, pending: false, onLoadMore }} />);
 
     await openList(user, 'Situação');
-    await user.click(screen.getByRole('button', { name: 'Carregar mais' }));
 
     expect(screen.getByText('Mostrando 3 de 10')).toBeInTheDocument();
     expect(onLoadMore).toHaveBeenCalledOnce();
+  });
+
+  it('asks for the next page once scrolled near the end of the list', async () => {
+    const user = userEvent.setup();
+    const onLoadMore = vi.fn();
+    const scroll = layOutTallList();
+    render(<Single more={{ total: 10, pending: false, onLoadMore }} />);
+
+    const list = await openList(user, 'Situação');
+    scroll(list, 300);
+
+    expect(onLoadMore).not.toHaveBeenCalled();
+
+    scroll(list, 320);
+
+    expect(onLoadMore).toHaveBeenCalledOnce();
+  });
+
+  it('does not ask for the next page while one is pending or after a failure', async () => {
+    const user = userEvent.setup();
+    const onLoadMore = vi.fn();
+    const { rerender } = render(<Single more={{ total: 10, pending: true, onLoadMore }} />);
+
+    await openList(user, 'Situação');
+
+    expect(screen.getByText('Carregando mais…')).toBeInTheDocument();
+
+    rerender(
+      <Single
+        more={{ total: 10, pending: false, onLoadMore }}
+        failure={{ detail: undefined, onRetry: vi.fn() }}
+      />,
+    );
+
+    expect(await screen.findByText('Mostrando 3 de 10')).toBeInTheDocument();
+    expect(onLoadMore).not.toHaveBeenCalled();
   });
 });

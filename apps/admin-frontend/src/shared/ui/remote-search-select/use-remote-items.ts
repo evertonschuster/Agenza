@@ -62,6 +62,7 @@ export function useRemoteItems<T extends SearchSelectItem>({
 
     void loadItems({ search, page, pageSize }, controller.signal).then((result) => {
       if (controller.signal.aborted) return;
+      inFlight.current = null;
       if (!result.ok) {
         setState((current) => ({
           ...current,
@@ -99,6 +100,7 @@ export function useRemoteItems<T extends SearchSelectItem>({
   }
 
   function loadMore() {
+    if (inFlight.current || searchTimer.current !== undefined) return;
     send(state.search, state.page + 1);
   }
 

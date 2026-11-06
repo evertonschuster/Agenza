@@ -26,6 +26,10 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
 - [x] T014 [US2] Remover o link de criação da lista vazia (`createLink`, `NEW_TAG_PATH`) e seus testes:
   esta entrega só seleciona.
 
+- [x] T015 [US2] Trocar "Carregar mais" pela rolagem no `ComboboxList` de `search-select-popup.tsx` (40 px do
+  fim, ou lista mais curta que a altura), sem pedir com falha; `loadMore` em `use-remote-items.ts` ignora o
+  pedido com outro pendente. Testar rolagem, lista curta, pendente/falha e a trava do hook.
+
 ## US1 — Marcar etiquetas numa pessoa
 
 - [x] T006 [US1] Exportar `tagsRepository` em `src/features/tags/index.ts`.

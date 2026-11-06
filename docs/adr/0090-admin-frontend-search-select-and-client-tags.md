@@ -38,8 +38,13 @@ Neither component knows an endpoint.
 
 **How the remote one asks.** The first page loads every time the list opens, so tags created or renamed
 elsewhere since the last opening show without reloading the page. Typing searches 300 ms after the last keystroke;
-only typed changes search, so choosing an item does not search for its own name. "Carregar mais"
-appends the next page on a click, dropping an id that shifted pages. One `AbortController`
+only typed changes search, so choosing an item does not search for its own name. Scrolling to 40 px from
+the end of the list appends the next page, dropping an id that shifted pages; so does a list still
+shorter than its height after a page arrives. Reaching the last item by keyboard scrolls it into view
+and loads the same way. One page at a time: `loadMore` does nothing while a page or a typed search is
+pending, because scroll events arrive faster than the pending state renders. After a failure scrolling
+asks nothing; only "Tentar novamente" does. Under the list, "Mostrando X de Y" turns into "Carregando
+mais…" while a page loads. One `AbortController`
 per request, as in `usePaginatedList`: a new search, closing or unmounting cancels the pending one and
 a cancelled answer is ignored. A failure shows the problem's title as received with "Tentar novamente";
 a 429 gets no automatic retry.
@@ -56,8 +61,8 @@ field before `applyApiProblem`, because the form field is not named after the co
 
 ## Consequences
 
-- Searching as the user types is the one place the frontend asks without an explicit action; list
-  pages keep asking only when told.
+- Searching as the user types and loading the next page on scroll are the places where the frontend
+  asks without an explicit action, both inside this picker; list pages keep asking only when told.
 - A tag deleted after it was listed is refused only on save, under the field.
 - The single-choice mode and the fixed-list `SearchSelect` ship tested without a screen using them.
 - The people list shows no tags and has no tag filter yet (ADR 0089).
@@ -70,7 +75,13 @@ field before `applyApiProblem`, because the form field is not named after the co
   combobox; a picker that does not filter while typing would feel broken.
 - **One component that always takes `loadItems`.** The first version; a fixed list would need a fake
   loader shaped like a backend answer. Replaced by the two layers before merge.
-- **Infinite scroll.** More state (an observer) for no gain over an explicit click.
+- **"Carregar mais" on a click.** The first version, which turned infinite scroll down as more state (an
+  observer) for no gain. Replaced before merge at the owner's request: an `onScroll` on the
+  `ComboboxList`, which already scrolls, needs no observer, and Base UI keeps the highlighted item and
+  the scroll position when items are appended at the end.
+- **An `IntersectionObserver` on a sentinel after the last item.** It reports only changes of
+  intersection, so a sentinel that stays visible after a short page never fires again; it would need
+  the same check after each page that the scroll handler already does.
 - **Loading the first page once per mount.** Would hide tags created or renamed elsewhere until the
   page reloads.
 - **A link to create a tag from the empty list.** Drawn in the prototype and shipped in the first

@@ -36,13 +36,22 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 - A busca consulta o backend ao digitar, 300 ms depois da última tecla. É uma exceção de seletor à regra
   das listagens ([ADR 0074](../../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md)),
   que continua valendo para páginas de listagem.
-- As próximas páginas vêm pelo botão "Carregar mais", sem rolagem infinita.
+- As próximas páginas vinham pelo botão "Carregar mais"; substituído pela rolagem na sessão de 2026-11-06.
 - A lista é carregada de novo cada vez que é aberta, para mostrar etiquetas criadas ou renomeadas em outro
   lugar desde a última abertura.
 - Somente seleção: o link "Criar etiqueta" da lista vazia, desenhado no protótipo, foi removido pelo dono.
 - Com várias seleções, escolher um resultado de busca fecha a lista e limpa a busca; sem texto digitado,
   a lista continua aberta. É a convenção do Combobox do Base UI, mantida sem customização.
 - A decisão está na [ADR 0090](../../../../docs/adr/0090-admin-frontend-search-select-and-client-tags.md).
+
+### Sessão 2026-11-06
+
+- Rolagem infinita, pedida pelo dono no lugar do botão "Carregar mais": a próxima página é pedida quando a
+  rolagem chega a 40 px do fim da lista, ou logo depois de uma página quando a lista ainda não ocupa a sua
+  altura. Com teclado, descer até o último item rola a lista e carrega a próxima página.
+- Uma página por vez: nada é pedido enquanto uma página ou uma busca digitada estiver pendente.
+- Depois de uma falha, a rolagem não pede de novo; só "Tentar novamente".
+- Abaixo da lista, "Mostrando X de Y" enquanto houver mais e "Carregando mais…" durante o pedido.
 
 ## Jornadas e critérios de aceite
 
@@ -52,7 +61,7 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
    nome, cada uma com sua cor, e posso marcar várias sem a lista fechar enquanto não houver busca digitada.
 2. Dado que digito parte de um nome, quando paro de digitar, então a lista mostra somente as etiquetas
    encontradas pelo backend; sem resultado, "Nenhum resultado para “texto”."
-3. Dado que há mais etiquetas do que as mostradas, quando clico em "Carregar mais", então as próximas
+3. Dado que há mais etiquetas do que as mostradas, quando rolo até o fim da lista, então as próximas
    aparecem abaixo das atuais.
 4. Dado que salvo, então a pessoa fica com exatamente as etiquetas marcadas; ao editar de novo, elas já
    aparecem selecionadas, sem esperar a lista.
