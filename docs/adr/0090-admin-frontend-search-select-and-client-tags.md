@@ -1,4 +1,4 @@
-# ADR 0090 — admin-frontend: RemoteSelect and tags on the person form
+# ADR 0090 — admin-frontend: SearchSelect and tags on the person form
 
 Status: accepted (2026-11, redesigned before merge); frontend side of [ADR 0089](0089-clients-tags.md);
 a picker exception to [ADR 0073](0073-admin-frontend-paged-list-asks-only-when-told.md) and
@@ -18,19 +18,21 @@ the component to be rewritten from scratch, focused on the backend case.
 
 ## Decision
 
-**One component, `RemoteSelect`, in `shared/ui/remote-select/`.** It picks several items from a list it
+**One component, `SearchSelect`, in `shared/ui/search-select/`.** It picks several items from a list it
 loads through the caller's function, and works on its own, controlled by `value` and `onValueChange`,
-named by `aria-label` or by a label bound to its `id`, one of which its props require. `RemoteSelectField`
+named by `aria-label` or by a label bound to its `id`, one of which its props require. `SearchSelectField`
 in `shared/form/fields/` binds it to React Hook Form through `ControlledField`, like `SelectField`, and adds
 no behavior; its `name` only accepts a form path holding a list of the items. Both stay in
 `shared` with the other form controls; the request itself belongs to the feature, which passes the call.
-The owner chose the name over keeping `SearchSelect`/`RemoteSearchSelect`, and chose to leave out both a
+The redesign first called it `RemoteSelect`; the owner renamed it `SearchSelect` before merge, since the
+name should say what the field does rather than where its data comes from, and with the fixed-list picker
+gone the name no longer clashes with another component. The owner also chose to leave out both a
 fixed-list picker and the single-choice mode until a screen needs them.
 
 **Built on the generated Combobox parts.** `shared/ui/combobox/` takes back from the shadcn `base-nova`
 registry the parts removed when only the command palette used it: popup content with an anchor, chips,
 chip, chips input, trigger and item indicator, adapted to the project's focus ring, the `.tag` colours and
-a required name for each chip's remove button, plus Base UI's `Combobox.Status`. `RemoteSelect` composes
+a required name for each chip's remove button, plus Base UI's `Combobox.Status`. `SearchSelect` composes
 them and owns three rules.
 
 **Items are domain objects.** The component is generic over `{ id, name }`; an optional `color` paints the
@@ -42,7 +44,7 @@ without being on a loaded page, and the form converts them to ids when it submit
 `ApiResult<PagedResult<T>>`, the same shape as `usePaginatedList`'s `fetchPage`; `tagsRepository.list`
 fits as is and the tags barrel exports it. The component knows no endpoint.
 
-**How it asks.** `useRemoteOptions` decides what to show and when to ask, without knowing Base UI, and
+**How it asks.** `useSearchOptions` decides what to show and when to ask, without knowing Base UI, and
 asks only from events, never from an effect on the typed text:
 
 - The first page loads every time the list opens, so tags created or renamed elsewhere show without
@@ -62,9 +64,13 @@ asks only from events, never from an effect on the typed text:
   turn into a skeleton while it fades out.
 
 Under the list, "Mostrando X de Y" turns into "Carregando mais…" while a page loads; below it, the count of
-choices and "Limpar seleção". The limit (`maxSelected`) disables the other options and says so. One
-always-mounted `Combobox.Status` announces loading, loading more and the limit; the footer and the limit
-notice are plain text, so a screen reader hears each change once.
+choices and "Limpar seleção". The limit (`maxSelected`) disables the other options and says so. Inside the
+popup, one `Combobox.Status` announces "Carregando opções…", "Carregando mais opções…" and the limit, and
+Base UI announces it even when it mounts already holding text; the footer and the limit notice are plain
+text, so a screen reader hears each change once. `Combobox.Empty`, also a live region, stays mounted with
+only its text switched, as Base UI requires: removed while loading, it let Escape leak to a parent dialog.
+A failure is an alert. The list carries `aria-busy` while a page loads. The search field takes the
+caller's `maxLength`; the person form passes the tags search limit.
 
 **The keyboard keeps the form and the choices.** The input's `onKeyDown`, which Base UI runs before its
 own, reads the state Base UI already puts on the input:
@@ -76,7 +82,8 @@ own, reads the state Base UI already puts on the input:
   list stays open. An unmodified Enter on a highlighted option is left to Base UI. Closing the list clears
   the typed text in this mode, so a closed field is empty and Enter there submits.
 - With the list closed, Base UI's Escape clears every choice and stops the key. The handler skips Base
-  UI's handler there, so the choices stay and the key reaches whatever is around, such as a dialog.
+  UI's handler there, so the choices stay and the key reaches whatever is around, such as a dialog. With
+  the list open, Escape is left to Base UI, which closes only the list.
 
 **Base UI's own conventions stay.** Picking a search result closes the list and clears the search, while
 picking with an empty search keeps it open.
@@ -93,13 +100,13 @@ server error on `TagIds` (`Tag.NotFound`, `Client.TooManyTags`) is moved to the 
   without an explicit action, both inside this picker; list pages keep asking only when told.
 - A tag deleted after it was listed is refused only on save, under the field.
 - A fixed list of options or a single choice needs a new component or mode, decided with the screen that
-  asks for it; `RemoteSelect` is not meant to grow into a base for them.
+  asks for it; `SearchSelect` is not meant to grow into a base for them.
 - The people list shows no tags and has no tag filter yet (ADR 0089).
 
 ## Considered and rejected
 
 - **Two layers: a fixed-list `SearchSelect` with `RemoteSearchSelect` around it.** The version first
-  built on this branch, replaced before merge. The fixed list carried the remote one's states (loading,
+  built on this branch, replaced before merge; its base's name was later reused for the new component. The fixed list carried the remote one's states (loading,
   failure, more pages, scrolling), switched its filter and highlight off when it received `onSearchChange`,
   and the single/multiple union was restated in three type files.
 - **Neutral extension points on a fixed-list base.** Renaming those props (`status`, `footer`,

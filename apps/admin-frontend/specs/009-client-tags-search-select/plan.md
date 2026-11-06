@@ -1,4 +1,4 @@
-# Plano: etiquetas no cadastro de pessoa com RemoteSelect
+# Plano: etiquetas no cadastro de pessoa com SearchSelect
 
 **Branch**: `claude/multi-select-component-d9018b` | **Data**: 2026-10-29, redesenho em 2026-11-06 | **Spec**: [spec.md](spec.md)
 
@@ -13,9 +13,9 @@ gera, adaptados ao projeto: conteúdo do popup com a âncora, chips, chip com co
 chips, trigger, indicador da opção e a região de status. A paleta de comandos só divide com eles a classe
 do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
 
-`src/shared/ui/remote-select/` tem quatro arquivos:
+`src/shared/ui/search-select/` tem quatro arquivos:
 
-- `use-remote-options.ts`: o que mostrar e quando pedir, sem conhecer o Base UI. O estado guarda a busca da
+- `use-search-options.ts`: o que mostrar e quando pedir, sem conhecer o Base UI. O estado guarda a busca da
   lista exibida, os itens, o total, o que está carregando (`first` ou `next`), o pedido pronto da próxima
   página e o problema. Abrir pede a primeira página, exceto com uma busca digitada esperando os 300 ms;
   digitar reinicia os 300 ms; `loadMore` pede a próxima só sem pedido em andamento, sem busca esperando e
@@ -23,18 +23,20 @@ do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
   descartada só quando a animação de fechar termina. A última página vem do tamanho de página que o
   servidor respondeu. Cada pedido cancela o anterior por `AbortController` e uma resposta cancelada é
   ignorada. As buscas partem de ações, nunca de um efeito sobre o texto.
-- `index.tsx`: `RemoteSelect` monta o Combobox com `multiple`, `filter={null}`, igualdade e valor por `id`,
+- `index.tsx`: `SearchSelect` monta o Combobox com `multiple`, `filter={null}`, igualdade e valor por `id`,
   e tem três regras próprias: o teclado, lido do estado que o Base UI põe no input (`aria-expanded` e
   `aria-activedescendant`), sem estado espelhado, com Enter que não envia o formulário da lista aberta e
   Esc que não apaga as escolhas da lista fechada; a rolagem, que avisa o hook a 40 px do fim e depois de
-  cada página; e o limite, que desabilita as opções não marcadas e avisa. Uma única região de status
-  anuncia carregando, carregando mais e o limite.
-- `components/remote-select-states.tsx`: o estado abaixo da lista (carregando, falha com nova tentativa,
-  vazio e sem resultado) e o rodapé.
-- `remote-select.types.ts`: o item `{ id, name, color? }`, `RemoteItemsQuery`, `LoadRemoteItems` e as
+  cada página; e o limite, que desabilita as opções não marcadas e avisa. Uma região de status no popup
+  anuncia carregando, carregando mais e o limite; a lista fica com `aria-busy` durante um pedido, e o campo
+  de busca aceita o `maxLength` de quem usa.
+- `components/search-select-states.tsx`: o estado abaixo da lista (carregando, falha com nova tentativa,
+  vazio e sem resultado) e o rodapé. O `ComboboxEmpty` fica sempre montado, só com o texto trocado, como o
+  Base UI exige.
+- `search-select.types.ts`: o item `{ id, name, color? }`, `SearchItemsQuery`, `LoadSearchItems` e as
   props. O nome acessível é obrigatório: `aria-label` ou um `id` ligado a um rótulo.
 
-`RemoteSelectField`, em `src/shared/form/fields/`, liga o componente ao React Hook Form por
+`SearchSelectField`, em `src/shared/form/fields/`, liga o componente ao React Hook Form por
 `ControlledField`, como o `SelectField`, sem comportamento próprio. O tipo de `name` só aceita um campo do
 formulário que guarde uma lista dos itens.
 
@@ -61,8 +63,8 @@ muda no redesenho; `ClientPersonSection` só troca o campo.
 1. `src/shared/ui/search-select/`, `src/shared/ui/remote-search-select/` e os dois Fields com seus testes e
    tipos: removidos.
 2. `src/shared/ui/combobox/`: primitivos gerados e adaptados.
-3. `src/shared/ui/remote-select/`: hook, componente, tipos e testes. Depende de 2.
-4. `src/shared/form/fields/`: `RemoteSelectField`, tipos, exportação e teste. Depende de 3.
+3. `src/shared/ui/search-select/`: hook, componente, tipos e testes. Depende de 2.
+4. `src/shared/form/fields/`: `SearchSelectField`, tipos, exportação e teste. Depende de 3.
 5. `src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx`: troca do campo.
 6. `docs/adr/0090-...`, o índice e `docs/ARCHITECTURE.md`.
 

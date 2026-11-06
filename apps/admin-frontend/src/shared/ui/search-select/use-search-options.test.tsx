@@ -3,17 +3,17 @@ import { act, renderHook } from '@testing-library/react';
 import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult } from '@/shared/pagination/paging';
 import { fail, ok } from '@/shared/result';
-import type { RemoteItemsQuery, RemoteSelectItem } from './remote-select.types';
-import { SEARCH_DELAY_MS, useRemoteOptions } from './use-remote-options';
+import type { SearchItemsQuery, SearchSelectItem } from './search-select.types';
+import { SEARCH_DELAY_MS, useSearchOptions } from './use-search-options';
 
-type Answer = ApiResult<PagedResult<RemoteSelectItem>>;
+type Answer = ApiResult<PagedResult<SearchSelectItem>>;
 
 const PAGE_SIZE = 2;
 const PROBLEM: ApiProblem = { status: 500, code: 'Server', title: 'O servidor falhou.' };
 
-const item = (n: number): RemoteSelectItem => ({ id: `t${n}`, name: `Etiqueta ${n}` });
+const item = (n: number): SearchSelectItem => ({ id: `t${n}`, name: `Etiqueta ${n}` });
 
-function pageOf(items: RemoteSelectItem[], totalCount: number, page = 1): Answer {
+function pageOf(items: SearchSelectItem[], totalCount: number, page = 1): Answer {
   return ok({ items, totalCount, page, pageSize: PAGE_SIZE });
 }
 
@@ -26,8 +26,8 @@ function deferred() {
 }
 
 function setup() {
-  const loadItems = vi.fn<(query: RemoteItemsQuery, signal: AbortSignal) => Promise<Answer>>();
-  const hook = renderHook(() => useRemoteOptions({ loadItems, pageSize: PAGE_SIZE }));
+  const loadItems = vi.fn<(query: SearchItemsQuery, signal: AbortSignal) => Promise<Answer>>();
+  const hook = renderHook(() => useSearchOptions({ loadItems, pageSize: PAGE_SIZE }));
   return { loadItems, hook, current: () => hook.result.current };
 }
 
@@ -37,7 +37,7 @@ async function settled() {
 
 const query = (search: string, page = 1) => ({ search, page, pageSize: PAGE_SIZE });
 
-describe('useRemoteOptions', () => {
+describe('useSearchOptions', () => {
   beforeEach(() => {
     vi.useFakeTimers();
   });

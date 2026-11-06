@@ -7,7 +7,7 @@ Pessoas' did) and [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.m
 consumer); retires the collection adapter of [ADR 0069](0069-tags-collection-compatibility-adapter.md), as that ADR's
 retirement trigger said; amended by [ADR 0076](0076-admin-frontend-clients-list-filter-bar.md) (point 10: the search is
 a React Hook Form filter bar with `SearchField`, Buscar outside the field and Limpar filtros); narrowed by
-[ADR 0090](0090-admin-frontend-remote-select-and-client-tags.md) (the `RemoteSelect` picker searches tags while typing
+[ADR 0090](0090-admin-frontend-search-select-and-client-tags.md) (the `SearchSelect` picker searches tags while typing
 and loads the next page on scroll; the Etiquetas page still asks only when told)
 
 > **2026-10-28 evolution:** [fa07d965](https://github.com/evertonschuster/Agenza/commit/fa07d965a4a2e0f029518a791389812dca54cc25)

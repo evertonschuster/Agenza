@@ -4,7 +4,7 @@ import { Button } from '@/shared/ui/button';
 import { ComboboxEmpty } from '@/shared/ui/combobox';
 import { Skeleton } from '@/shared/ui/skeleton';
 
-interface RemoteSelectStatusProps {
+interface SearchSelectStatusProps {
   loading: boolean;
   problem: ApiProblem | null;
   searched: string;
@@ -13,40 +13,42 @@ interface RemoteSelectStatusProps {
   onRetry: () => void;
 }
 
-function RemoteSelectStatus(props: RemoteSelectStatusProps) {
-  const { loading, problem, searched, emptyMessage, errorMessage, onRetry } = props;
-
-  if (problem) {
-    return (
-      <div role="alert" className="flex flex-col items-center gap-1 px-3 py-4 text-center">
-        <p className="font-medium">{errorMessage}</p>
-        {problem.title && <p className="text-muted-foreground">{problem.title}</p>}
-        <Button variant="outline" size="sm" className="mt-2" onClick={onRetry}>
-          Tentar novamente
-        </Button>
-      </div>
-    );
-  }
-
-  if (loading) {
-    return (
-      <div aria-hidden="true" className="space-y-1 p-1">
-        <Skeleton className="h-7 w-full" />
-        <Skeleton className="h-7 w-4/5" />
-        <Skeleton className="h-7 w-3/5" />
-      </div>
-    );
-  }
-
+function emptyTextOf(searched: string, emptyMessage: string) {
   const text = searched.trim();
+  if (text) return `Nenhum resultado para «${text}».`;
+  return emptyMessage;
+}
+
+function SearchSelectStatus(props: SearchSelectStatusProps) {
+  const { loading, problem, searched, emptyMessage, errorMessage, onRetry } = props;
+  const settled = !loading && !problem;
+
   return (
-    <ComboboxEmpty className="px-3 py-4">
-      {text ? `Nenhum resultado para «${text}».` : emptyMessage}
-    </ComboboxEmpty>
+    <>
+      <ComboboxEmpty className="px-3 py-4 empty:hidden">
+        {settled ? emptyTextOf(searched, emptyMessage) : null}
+      </ComboboxEmpty>
+      {loading && !problem && (
+        <div aria-hidden="true" className="space-y-1 p-1">
+          <Skeleton className="h-7 w-full" />
+          <Skeleton className="h-7 w-4/5" />
+          <Skeleton className="h-7 w-3/5" />
+        </div>
+      )}
+      {problem && (
+        <div role="alert" className="flex flex-col items-center gap-1 px-3 py-4 text-center">
+          <p className="font-medium">{errorMessage}</p>
+          {problem.title && <p className="text-muted-foreground">{problem.title}</p>}
+          <Button variant="outline" size="sm" className="mt-2" onClick={onRetry}>
+            Tentar novamente
+          </Button>
+        </div>
+      )}
+    </>
   );
 }
 
-interface RemoteSelectFooterProps {
+interface SearchSelectFooterProps {
   shown: number;
   totalCount: number;
   hasMore: boolean;
@@ -56,7 +58,7 @@ interface RemoteSelectFooterProps {
   onClear: () => void;
 }
 
-function RemoteSelectFooter(props: RemoteSelectFooterProps) {
+function SearchSelectFooter(props: SearchSelectFooterProps) {
   const { shown, totalCount, hasMore, loadingMore, selected, maxSelected, onClear } = props;
   const chosen =
     maxSelected === undefined
@@ -89,4 +91,4 @@ function RemoteSelectFooter(props: RemoteSelectFooterProps) {
   );
 }
 
-export { RemoteSelectFooter, RemoteSelectStatus };
+export { SearchSelectFooter, SearchSelectStatus };

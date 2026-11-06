@@ -4,8 +4,8 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm, useFormState, useWatch } from 'react-hook-form';
 import { ok } from '@/shared/result';
-import type { RemoteSelectFieldProps } from '../fields.types';
-import { RemoteSelectField } from './remote-select-field';
+import type { SearchSelectFieldProps } from '../fields.types';
+import { SearchSelectField } from './search-select-field';
 
 interface Tag {
   id: string;
@@ -44,7 +44,7 @@ function Harness({ initial = [], error }: { initial?: Tag[]; error?: string }) {
 
   return (
     <FormProvider {...methods}>
-      <RemoteSelectField<DummyValues, Tag>
+      <SearchSelectField<DummyValues, Tag>
         name="tags"
         label="Etiquetas"
         hint="opcional"
@@ -55,7 +55,7 @@ function Harness({ initial = [], error }: { initial?: Tag[]; error?: string }) {
   );
 }
 
-describe('RemoteSelectField', () => {
+describe('SearchSelectField', () => {
   it('names the control by its label, describes it by the hint and shows the current value', () => {
     render(<Harness initial={[VIP]} />);
 
@@ -97,13 +97,13 @@ describe('RemoteSelectField', () => {
   });
 
   it('accepts only a form path that holds a list of the items', () => {
-    const tags: RemoteSelectFieldProps<DummyValues, Tag> = {
+    const tags: SearchSelectFieldProps<DummyValues, Tag> = {
       name: 'tags',
       label: 'Etiquetas',
       loadItems,
     };
     // @ts-expect-error -- "cpf" holds text, and the field would map over it as a list of items
-    const cpf: RemoteSelectFieldProps<DummyValues, Tag> = { name: 'cpf', label: 'CPF', loadItems };
+    const cpf: SearchSelectFieldProps<DummyValues, Tag> = { name: 'cpf', label: 'CPF', loadItems };
 
     expect([tags.name, cpf.name]).toEqual(['tags', 'cpf']);
   });

@@ -2,20 +2,20 @@ import type { Ref } from 'react';
 import type { ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult, Paging } from '@/shared/pagination/paging';
 
-interface RemoteSelectItem {
+interface SearchSelectItem {
   id: string;
   name: string;
   color?: string | undefined;
 }
 
-type RemoteItemsQuery = { search: string } & Paging;
+type SearchItemsQuery = { search: string } & Paging;
 
-interface LoadRemoteItems<T> {
-  (query: RemoteItemsQuery, signal: AbortSignal): Promise<ApiResult<PagedResult<T>>>;
+interface LoadSearchItems<T> {
+  (query: SearchItemsQuery, signal: AbortSignal): Promise<ApiResult<PagedResult<T>>>;
 }
 
-interface RemoteSelectOwnProps<T extends RemoteSelectItem> {
-  loadItems: LoadRemoteItems<T>;
+interface SearchSelectOwnProps<T extends SearchSelectItem> {
+  loadItems: LoadSearchItems<T>;
   value: T[];
   onValueChange: (value: T[]) => void;
   maxSelected?: number | undefined;
@@ -32,9 +32,9 @@ interface RemoteSelectOwnProps<T extends RemoteSelectItem> {
   className?: string | undefined;
 }
 
-type RemoteSelectName =
+type SearchSelectName =
   { 'aria-label': string; id?: string | undefined } | { id: string; 'aria-label'?: undefined };
 
-type RemoteSelectProps<T extends RemoteSelectItem> = RemoteSelectOwnProps<T> & RemoteSelectName;
+type SearchSelectProps<T extends SearchSelectItem> = SearchSelectOwnProps<T> & SearchSelectName;
 
-export type { LoadRemoteItems, RemoteItemsQuery, RemoteSelectItem, RemoteSelectProps };
+export type { LoadSearchItems, SearchItemsQuery, SearchSelectItem, SearchSelectProps };

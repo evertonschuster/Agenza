@@ -1,20 +1,20 @@
 import { useEffect, useRef, useState } from 'react';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { FIRST_PAGE, getLastPage } from '@/shared/pagination/paging';
-import type { LoadRemoteItems, RemoteItemsQuery, RemoteSelectItem } from './remote-select.types';
+import type { LoadSearchItems, SearchItemsQuery, SearchSelectItem } from './search-select.types';
 
 export const SEARCH_DELAY_MS = 300;
 
-interface RemoteOptionsState<T> {
+interface SearchOptionsState<T> {
   searched: string;
   items: readonly T[];
   totalCount: number;
   loading: 'first' | 'next' | null;
-  next: RemoteItemsQuery | null;
+  next: SearchItemsQuery | null;
   problem: ApiProblem | null;
 }
 
-const UNLOADED: RemoteOptionsState<never> = {
+const UNLOADED: SearchOptionsState<never> = {
   searched: '',
   items: [],
   totalCount: 0,
@@ -23,19 +23,19 @@ const UNLOADED: RemoteOptionsState<never> = {
   problem: null,
 };
 
-function appendNew<T extends RemoteSelectItem>(current: readonly T[], page: readonly T[]): T[] {
+function appendNew<T extends SearchSelectItem>(current: readonly T[], page: readonly T[]): T[] {
   const known = new Set(current.map((item) => item.id));
   return [...current, ...page.filter((item) => !known.has(item.id))];
 }
 
-interface UseRemoteOptionsArgs<T> {
-  loadItems: LoadRemoteItems<T>;
+interface UseSearchOptionsArgs<T> {
+  loadItems: LoadSearchItems<T>;
   pageSize: number;
 }
 
-export function useRemoteOptions<T extends RemoteSelectItem>(args: UseRemoteOptionsArgs<T>) {
+export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOptionsArgs<T>) {
   const { loadItems, pageSize } = args;
-  const [state, setState] = useState<RemoteOptionsState<T>>(UNLOADED);
+  const [state, setState] = useState<SearchOptionsState<T>>(UNLOADED);
   const inFlight = useRef<AbortController | null>(null);
   const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
@@ -55,11 +55,11 @@ export function useRemoteOptions<T extends RemoteSelectItem>(args: UseRemoteOpti
     };
   }, []);
 
-  function firstPage(search: string): RemoteItemsQuery {
+  function firstPage(search: string): SearchItemsQuery {
     return { search, page: FIRST_PAGE, pageSize };
   }
 
-  function send(query: RemoteItemsQuery) {
+  function send(query: SearchItemsQuery) {
     cancel();
     const controller = new AbortController();
     inFlight.current = controller;

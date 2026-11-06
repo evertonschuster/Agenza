@@ -5,7 +5,8 @@ import userEvent from '@testing-library/user-event';
 import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult } from '@/shared/pagination/paging';
 import { fail, ok } from '@/shared/result';
-import { RemoteSelect, type RemoteItemsQuery, type RemoteSelectProps } from '.';
+import { Dialog, DialogContent, DialogTitle } from '@/shared/ui/dialog';
+import { SearchSelect, type SearchItemsQuery, type SearchSelectProps } from '.';
 
 interface Tag {
   id: string;
@@ -14,7 +15,7 @@ interface Tag {
 }
 
 type Answer = ApiResult<PagedResult<Tag>>;
-type Loader = (query: RemoteItemsQuery, signal: AbortSignal) => Promise<Answer>;
+type Loader = (query: SearchItemsQuery, signal: AbortSignal) => Promise<Answer>;
 
 const VIP: Tag = { id: 't1', name: 'VIP', color: '#8b5cf6' };
 const RETORNO: Tag = { id: 't2', name: 'Retorno', color: '#0d9488' };
@@ -37,7 +38,7 @@ function loaderOf(...answers: Answer[]) {
 }
 
 type Extras = Partial<
-  Omit<RemoteSelectProps<Tag>, 'value' | 'onValueChange' | 'id' | 'aria-label' | 'loadItems'>
+  Omit<SearchSelectProps<Tag>, 'value' | 'onValueChange' | 'id' | 'aria-label' | 'loadItems'>
 >;
 
 function Harness(props: Extras & { initial?: Tag[]; loadItems: Loader }) {
@@ -45,7 +46,7 @@ function Harness(props: Extras & { initial?: Tag[]; loadItems: Loader }) {
   const [value, setValue] = useState<Tag[]>(initial);
   return (
     <>
-      <RemoteSelect<Tag>
+      <SearchSelect<Tag>
         aria-label="Etiquetas"
         loadItems={loadItems}
         emptyMessage="Nenhuma etiqueta cadastrada."
@@ -84,7 +85,7 @@ afterEach(() => {
   vi.restoreAllMocks();
 });
 
-describe('RemoteSelect', () => {
+describe('SearchSelect', () => {
   it('lists what the loader returns when opened and keeps the list open while choosing', async () => {
     const user = userEvent.setup();
     const loadItems = loaderOf(answer([CONVENIO, RETORNO, VIP]));
@@ -175,8 +176,62 @@ describe('RemoteSelect', () => {
 
     await openList(user);
 
-    expect(await screen.findByRole('status', { name: '' })).toHaveTextContent('Carregando…');
+    expect(await screen.findByText('Carregando opções…')).toBeInTheDocument();
+    expect(screen.getByRole('listbox')).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText('Nenhuma etiqueta cadastrada.')).not.toBeInTheDocument();
+  });
+
+  it('marks a chosen item as selected even when the loaded copy is another object', async () => {
+    const user = userEvent.setup();
+    render(<Harness loadItems={loaderOf(answer([CONVENIO, VIP]))} initial={[{ ...VIP }]} />);
+
+    const list = await openList(user);
+    const vip = await within(list).findByRole('option', { name: 'VIP' });
+    expect(vip).toHaveAttribute('aria-selected', 'true');
+
+    await user.click(vip);
+
+    expect(chosen()).toHaveTextContent('');
+  });
+
+  it('asks nothing more after a search result is chosen and the search is cleared', async () => {
+    const user = userEvent.setup();
+    const loadItems = loaderOf(answer([CONVENIO, RETORNO, VIP]), answer([VIP]));
+    render(<Harness loadItems={loadItems} />);
+
+    const list = await openList(user);
+    await within(list).findByRole('option', { name: 'Convênio' });
+    await user.type(control(), 'vi');
+    await waitFor(() => expect(loadItems).toHaveBeenCalledTimes(2));
+    await user.click(await within(list).findByRole('option', { name: 'VIP' }));
+    await new Promise((resolve) => setTimeout(resolve, 400));
+
+    expect(chosen()).toHaveTextContent('VIP');
+    expect(loadItems).toHaveBeenCalledTimes(2);
+  });
+
+  it('drops the closed list, so a search that reopens it shows no old options', async () => {
+    const user = userEvent.setup();
+    const loadItems = vi.fn<Loader>();
+    loadItems
+      .mockResolvedValueOnce(answer([CONVENIO, RETORNO, VIP]))
+      .mockReturnValue(new Promise<Answer>(() => {}));
+    render(<Harness loadItems={loadItems} />);
+
+    const list = await openList(user);
+    await within(list).findByRole('option', { name: 'Convênio' });
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    await user.keyboard('v');
+
+    expect(await screen.findByRole('listbox')).toBeInTheDocument();
+    expect(screen.queryByRole('option', { name: 'Convênio' })).not.toBeInTheDocument();
+  });
+
+  it('limits the typed search to the given length', () => {
+    render(<Harness loadItems={loaderOf(answer([]))} maxLength={254} />);
+
+    expect(control()).toHaveAttribute('maxlength', '254');
   });
 
   it('shows the failure with the server message and tries again', async () => {
@@ -324,7 +379,7 @@ describe('RemoteSelect', () => {
   });
 });
 
-describe('RemoteSelect inside a form', () => {
+describe('SearchSelect inside a form', () => {
   function FormHarness(
     props: Extras & { loadItems: Loader; onSubmit: () => void; initial?: Tag[] },
   ) {
@@ -440,5 +495,53 @@ describe('RemoteSelect inside a form', () => {
     await user.keyboard('{Enter}');
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('SearchSelect inside a dialog', () => {
+  function DialogHarness({ loadItems, initial }: { loadItems: Loader; initial: Tag[] }) {
+    const [open, setOpen] = useState(true);
+    const [value, setValue] = useState<Tag[]>(initial);
+    return (
+      <>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent showCloseButton={false}>
+            <DialogTitle>Etiquetas da pessoa</DialogTitle>
+            <SearchSelect<Tag>
+              aria-label="Etiquetas"
+              loadItems={loadItems}
+              value={value}
+              onValueChange={setValue}
+            />
+          </DialogContent>
+        </Dialog>
+        <output aria-label="escolhidas">{value.map((tag) => tag.name).join(', ')}</output>
+      </>
+    );
+  }
+
+  it('closes only the list on Escape while the list is open', async () => {
+    const user = userEvent.setup();
+    render(<DialogHarness loadItems={loaderOf(answer([VIP]))} initial={[]} />);
+
+    const list = await openList(user);
+    await within(list).findByRole('option', { name: 'VIP' });
+    await user.keyboard('{Escape}');
+
+    await waitFor(() => expect(screen.queryByRole('listbox')).not.toBeInTheDocument());
+    expect(screen.getByRole('dialog', { name: 'Etiquetas da pessoa' })).toBeInTheDocument();
+  });
+
+  it('lets Escape close the dialog when the list is closed, keeping the choices', async () => {
+    const user = userEvent.setup();
+    render(<DialogHarness loadItems={loaderOf(answer([VIP]))} initial={[VIP, CONVENIO]} />);
+
+    control().focus();
+    await user.keyboard('{Escape}');
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog', { name: 'Etiquetas da pessoa' })).not.toBeInTheDocument(),
+    );
+    expect(chosen()).toHaveTextContent('VIP, Convênio');
   });
 });

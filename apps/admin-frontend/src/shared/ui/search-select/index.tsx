@@ -16,9 +16,9 @@ import {
   ComboboxStatus,
   ComboboxTrigger,
 } from '@/shared/ui/combobox';
-import { RemoteSelectFooter, RemoteSelectStatus } from './components/remote-select-states';
-import type { RemoteSelectItem, RemoteSelectProps } from './remote-select.types';
-import { useRemoteOptions } from './use-remote-options';
+import { SearchSelectFooter, SearchSelectStatus } from './components/search-select-states';
+import type { SearchSelectItem, SearchSelectProps } from './search-select.types';
+import { useSearchOptions } from './use-search-options';
 
 const LOAD_MORE_DISTANCE_PX = 40;
 const SELECTION_NOUN = { singular: 'seleção', plural: 'seleções' };
@@ -41,12 +41,12 @@ const keepKeysInPicker: InputKeyDown = (event) => {
 };
 
 function announcementOf(loading: 'first' | 'next' | null, limitNotice: string | null) {
-  if (loading === 'first') return 'Carregando…';
-  if (loading === 'next') return 'Carregando mais…';
+  if (loading === 'first') return 'Carregando opções…';
+  if (loading === 'next') return 'Carregando mais opções…';
   return limitNotice ?? '';
 }
 
-function RemoteSelect<T extends RemoteSelectItem>(props: RemoteSelectProps<T>) {
+function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
   const {
     loadItems,
     value,
@@ -62,7 +62,7 @@ function RemoteSelect<T extends RemoteSelectItem>(props: RemoteSelectProps<T>) {
     className,
     ...inputProps
   } = props;
-  const options = useRemoteOptions({ loadItems, pageSize });
+  const options = useSearchOptions({ loadItems, pageSize });
   const anchor = useRef<HTMLDivElement | null>(null);
   const list = useRef<HTMLDivElement | null>(null);
   const selectedIds = new Set(value.map((item) => item.id));
@@ -131,7 +131,12 @@ function RemoteSelect<T extends RemoteSelectItem>(props: RemoteSelectProps<T>) {
           {announcementOf(options.loading, limitNotice)}
         </ComboboxStatus>
         {limitNotice && <p className="m-1 mb-0 rounded-md bg-muted px-2.5 py-2">{limitNotice}</p>}
-        <ComboboxList ref={list} onScroll={loadMoreNearEnd} className="min-h-0 flex-1">
+        <ComboboxList
+          ref={list}
+          onScroll={loadMoreNearEnd}
+          aria-busy={options.loading !== null}
+          className="min-h-0 flex-1"
+        >
           {(item: T) => (
             <ComboboxItem
               key={item.id}
@@ -149,7 +154,7 @@ function RemoteSelect<T extends RemoteSelectItem>(props: RemoteSelectProps<T>) {
             </ComboboxItem>
           )}
         </ComboboxList>
-        <RemoteSelectStatus
+        <SearchSelectStatus
           loading={options.loading === 'first'}
           problem={options.problem}
           searched={options.searched}
@@ -157,7 +162,7 @@ function RemoteSelect<T extends RemoteSelectItem>(props: RemoteSelectProps<T>) {
           errorMessage={errorMessage}
           onRetry={options.retry}
         />
-        <RemoteSelectFooter
+        <SearchSelectFooter
           shown={options.items.length}
           totalCount={options.totalCount}
           hasMore={options.hasMore}
@@ -171,10 +176,10 @@ function RemoteSelect<T extends RemoteSelectItem>(props: RemoteSelectProps<T>) {
   );
 }
 
-export { RemoteSelect };
+export { SearchSelect };
 export type {
-  LoadRemoteItems,
-  RemoteItemsQuery,
-  RemoteSelectItem,
-  RemoteSelectProps,
-} from './remote-select.types';
+  LoadSearchItems,
+  SearchItemsQuery,
+  SearchSelectItem,
+  SearchSelectProps,
+} from './search-select.types';
