@@ -51,5 +51,6 @@ está no Git e na ADR 0090.
 
 ## Dependências e validação final
 
-T017 e T018 antecedem T019; T019 antecede T020; T020 antecede T021; T021 antecede T022. T023 não depende do
-código. Os gates de T012 e o e2e de T010 encerram a mudança.
+T006 e T007 antecedem T008, e T008 antecede T009. T017 e T018 antecedem T019; T019 antecede T020; T020
+antecede T021; T021 antecede T022. T023 não depende do código. Os gates de T012 e o e2e de T010 encerram a
+mudança.
