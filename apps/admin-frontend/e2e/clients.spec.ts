@@ -292,6 +292,7 @@ test.describe('Tag a person', () => {
     const tagName = uniqueName('Etiqueta E2E');
     await page.goto('/tags/new');
     await page.getByLabel('Nome', { exact: true }).fill(tagName);
+    await page.getByRole('radio', { name: 'Azul' }).click();
     await page.getByRole('button', { name: 'Salvar' }).click();
     await expect(page).toHaveURL(/\/tags$/);
 
