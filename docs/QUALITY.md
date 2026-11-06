@@ -13,9 +13,33 @@ independently of repository correctness.
 | `ai-services-ci.yml` | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke                |
 | `codeql.yml`         | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
 | `sonar.yml`          | all PRs/pushes                | SonarQube Cloud analysis for all three stacks (skips until `SONAR_TOKEN` exists)                        |
+| `docs-ci.yml`        | all PRs/pushes to main        | Documentation checker tests, local destinations, current ADR references and Agenza skill metadata       |
 
 Dependabot (`.github/dependabot.yml`) opens weekly grouped PRs for npm,
 NuGet, pip, and the workflows' actions.
+
+## Documentation references
+
+Run `npm run check:docs` from the repository root; the checker uses only Node built-ins.
+Its tests run with `node --test scripts/checkDocs.test.mjs`.
+
+The checked corpus is declared in [checkDocs.mjs](../scripts/checkDocs.mjs): root and area entries,
+current README/architecture/API/quality/product guides, the frontend constitution, the ADR index,
+and Markdown under canonical `.claude/skills/agenza-*` directories. It verifies local inline/image
+links and reference definitions, standalone `@path` imports in CLAUDE wrappers, required skill
+`name`/`description` text, and ADR IDs in the index's current-decision column.
+Targets may be files or directories; a file fragment checks the file's existence only.
+
+This is a small reference checker, not a complete Markdown or YAML parser. It supports bracket
+links with bare or angle-delimited destinations and flat quoted/plain or indented block scalars
+for the required frontmatter fields. It ignores fenced code, inline code, HTML comments, URI
+schemes, isolated fragments/queries and template placeholders. It does not validate anchors,
+HTML links, indented code blocks, symbols, external URLs, shell commands, semantic agreement or
+tool discovery. Historical ADR bodies/specs and generated Spec Kit adapters are outside the scan;
+their linked destinations are still checked when referenced from the active corpus.
+
+The stable `docs-checks` job runs on every PR and push to main, including changes that remove a
+code file referenced by a guide. It installs no packages and starts no application or database.
 
 ## What each coverage gate actually measures — read before trusting a number
 
