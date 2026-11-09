@@ -10,10 +10,10 @@ import { createClient, updateClient } from '../../../application/clientUseCases'
 import type { ClientStatus } from '../../../model/clientStatus';
 import { CLIENTS_PATH } from '../../clientsPaths';
 import {
+  CLIENT_FORM_FIELD_ALIASES,
   clientFormSchema,
   emptyClientFormFieldValues,
   toClientFormFieldValues,
-  toClientFormProblem,
   type ClientFormFieldValues,
   type ClientFormValues,
 } from './clientForm';
@@ -82,7 +82,7 @@ export function useClientFormPage(): UseClientFormPageResult {
       return;
     }
 
-    applyApiProblem(toClientFormProblem(result.error), methods);
+    applyApiProblem({ problem: result.error, methods, aliases: CLIENT_FORM_FIELD_ALIASES });
   }
 
   function submit(event: SubmitEvent<HTMLFormElement>) {

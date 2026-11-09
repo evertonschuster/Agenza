@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ApiProblem } from '@/shared/api/servicesFacade';
+import type { FieldAliases } from '@/shared/form/applyApiProblem';
 import { ADULT_AGE_IN_YEARS, birthDateSchema } from '@/shared/values/birthDate';
 import { cpfSchema } from '@/shared/values/cpf';
 import { emailSchema } from '@/shared/values/email';
@@ -61,8 +61,6 @@ const referenceContactSchema = z.object({
 
 const clientTagSchema = z.object({ id: z.string(), name: z.string(), color: z.string() });
 
-const TAG_IDS_FIELD = /^tagids(\[\d+\])?$/i;
-
 const clientFormObject = z.object({
   fullName: nameField('completo', CLIENT_FULL_NAME_MIN_LENGTH, CLIENT_FULL_NAME_MAX_LENGTH),
   birthDate: birthDateSchema,
@@ -105,6 +103,8 @@ export type ClientFormFieldValues = z.input<typeof clientFormSchema> & { status?
 export type ClientFormValues = z.output<typeof clientFormSchema>;
 export type GuardianFormFieldValues = ClientFormFieldValues['guardians'][number];
 export type ReferenceContactFormFieldValues = ClientFormFieldValues['referenceContacts'][number];
+
+export const CLIENT_FORM_FIELD_ALIASES: FieldAliases<ClientFormFieldValues> = { tagIds: 'tags' };
 
 export function emptyClientFormFieldValues(): ClientFormFieldValues {
   return {
@@ -151,14 +151,4 @@ export function emptyGuardian(): GuardianFormFieldValues {
 
 export function emptyReferenceContact(): ReferenceContactFormFieldValues {
   return { name: '', relationship: '', phone: '', purposes: [] };
-}
-
-export function toClientFormProblem(problem: ApiProblem): ApiProblem {
-  if (!problem.errors) return problem;
-  const errors: NonNullable<ApiProblem['errors']> = {};
-  for (const [key, entries] of Object.entries(problem.errors)) {
-    const field = TAG_IDS_FIELD.test(key) ? 'tags' : key;
-    errors[field] = [...(errors[field] ?? []), ...entries];
-  }
-  return { ...problem, errors };
 }

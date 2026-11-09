@@ -75,7 +75,7 @@ export function useTagFormPage(): UseTagFormPageResult {
       return;
     }
 
-    applyApiProblem(result.error, methods);
+    applyApiProblem({ problem: result.error, methods });
   }
 
   function submit(event: SubmitEvent<HTMLFormElement>) {

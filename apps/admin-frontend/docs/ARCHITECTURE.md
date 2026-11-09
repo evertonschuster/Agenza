@@ -121,6 +121,10 @@ metadados; [applyApiProblem.ts](../src/shared/form/applyApiProblem.ts) faz a pon
 Os paths vêm dos valores atuais, incluindo arrays e objetos aninhados; campos ausentes dos valores
 não são reconhecidos como campos do formulário. Paths desconhecidos e mensagens gerais chegam à
 raiz. Foco depende de uma referência registrada e focável; uma coleção pode ter erro sem recebê-lo.
+Um campo enviado com outro nome, como registros escolhidos que viajam como IDs, declara a troca em
+`FieldAliases` ao lado da transformação do schema e a passa em `aliases` ao `applyApiProblem`, que
+leva a esse campo os erros do campo do comando e de cada item dele
+([ADR 0091](../../../docs/adr/0091-admin-frontend-form-fields-submitted-under-another-name.md)).
 
 As superfícies usam mensagens e códigos do `ApiProblem` normalizado; ramificações dependem de
 `code`/status, nunca do texto da mensagem. Preserve a representação do problema em erros de lista,

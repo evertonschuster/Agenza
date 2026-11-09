@@ -18,7 +18,7 @@ per-page text filters.
 | ------------------------------- | ------------------------------------------------------------------------------- |
 | A list region fails             | The list's error state through `ListSection`, with its retry                    |
 | A confirmation action fails     | `ConfirmDialog`'s failure view and recovery                                     |
-| Submission validation fails     | `applyApiProblem(problem, methods)` and `FormErrorBanner`                       |
+| Submission validation fails     | `applyApiProblem({ problem, methods })` and `FormErrorBanner`                   |
 | A mutation needs an error toast | `toast.serverError(screenTitle, problem)`; the description uses `problem.title` |
 
 Keep local schema messages specific to the field. Server-only validation, such as uniqueness, uses

@@ -6,7 +6,6 @@ import {
   emptyReferenceContact,
   emptyClientFormFieldValues,
   toClientFormFieldValues,
-  toClientFormProblem,
   type ClientFormFieldValues,
 } from './clientForm';
 
@@ -338,35 +337,6 @@ describe('clientFormSchema', () => {
         tags: 'Escolha no máximo 20 etiquetas.',
       });
     });
-  });
-});
-
-describe('toClientFormProblem', () => {
-  it('moves the server errors about TagIds to the tags field, the whole list first', () => {
-    const problem = toClientFormProblem({
-      status: 400,
-      code: 'Validation',
-      errors: {
-        TagIds: [{ code: 'Tag.NotFound', message: 'Etiqueta não encontrada.' }],
-        'TagIds[0]': [{ code: 'Client.TagIdRequired', message: 'Informe a etiqueta.' }],
-        FullName: [{ code: 'Client.FullNameRequired', message: 'Informe o nome.' }],
-      },
-    });
-
-    expect(problem.errors).toEqual({
-      tags: [
-        { code: 'Tag.NotFound', message: 'Etiqueta não encontrada.' },
-        { code: 'Client.TagIdRequired', message: 'Informe a etiqueta.' },
-      ],
-      FullName: [{ code: 'Client.FullNameRequired', message: 'Informe o nome.' }],
-    });
-    expect(problem.status).toBe(400);
-  });
-
-  it('returns a problem without field errors as is', () => {
-    const problem = { status: 500, code: 'Server', title: 'Falhou.' };
-
-    expect(toClientFormProblem(problem)).toBe(problem);
   });
 });
 
