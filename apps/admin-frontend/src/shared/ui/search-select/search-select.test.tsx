@@ -377,6 +377,20 @@ describe('SearchSelect', () => {
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     expect(loadItems).not.toHaveBeenCalled();
   });
+
+  it('keeps the choices when the field is disabled while the list is open', async () => {
+    const user = userEvent.setup();
+    const loadItems = loaderOf(answer([VIP]));
+    const { rerender } = render(<Harness loadItems={loadItems} initial={[VIP, RETORNO]} />);
+
+    await openList(user);
+    rerender(<Harness loadItems={loadItems} initial={[VIP, RETORNO]} disabled />);
+    const clear = screen.getByRole('button', { name: 'Limpar seleção' });
+    expect(clear).toHaveAttribute('aria-disabled', 'true');
+    await user.click(clear);
+
+    expect(chosen()).toHaveTextContent('VIP, Retorno');
+  });
 });
 
 describe('SearchSelect inside a form', () => {

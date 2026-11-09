@@ -55,11 +55,13 @@ interface SearchSelectFooterProps {
   loadingMore: boolean;
   selected: number;
   maxSelected: number | undefined;
+  disabled: boolean;
   onClear: () => void;
 }
 
 function SearchSelectFooter(props: SearchSelectFooterProps) {
-  const { shown, totalCount, hasMore, loadingMore, selected, maxSelected, onClear } = props;
+  const { shown, totalCount, hasMore, loadingMore, selected, maxSelected, disabled, onClear } =
+    props;
   const chosen =
     maxSelected === undefined
       ? `Selecionadas: ${formatNumber(selected)}`
@@ -80,7 +82,7 @@ function SearchSelectFooter(props: SearchSelectFooterProps) {
           variant="ghost"
           size="sm"
           className="text-foreground"
-          disabled={selected === 0}
+          disabled={disabled || selected === 0}
           focusableWhenDisabled
           onClick={onClear}
         >

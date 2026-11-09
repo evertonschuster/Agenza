@@ -169,6 +169,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
           loadingMore={options.loading === 'next'}
           selected={value.length}
           maxSelected={maxSelected}
+          disabled={disabled}
           onClear={() => onValueChange([])}
         />
       </ComboboxContent>
