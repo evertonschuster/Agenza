@@ -15,10 +15,14 @@ const { OwnerEmail: DEMO_EMAIL, OwnerPassword: DEMO_PASSWORD } = (
 export const LOGIN_URL_RE = /localhost:5081\/Account\/Login/;
 
 export async function loginAsDemoUser(page: Page): Promise<void> {
+  await loginAsUser(page, DEMO_EMAIL, DEMO_PASSWORD);
+}
+
+export async function loginAsUser(page: Page, email: string, password: string): Promise<void> {
   await page.goto('/');
   await page.waitForURL(LOGIN_URL_RE);
-  await page.locator('#Email').fill(DEMO_EMAIL);
-  await page.locator('#Password').fill(DEMO_PASSWORD);
+  await page.locator('#Email').fill(email);
+  await page.locator('#Password').fill(password);
   await page.locator('button[type="submit"]').click();
   await page.waitForURL('http://localhost:5173/');
 }
