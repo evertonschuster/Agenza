@@ -179,6 +179,7 @@ jobs:
           exit 1
 
       - name: Exercise the PostgreSQL tenant foreign keys
+        shell: bash
         timeout-minutes: 1
         run: |
           postgres_container="$(docker ps --no-trunc --filter volume=agenza-postgres-data --format '{{.ID}}')"
