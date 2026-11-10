@@ -22,11 +22,12 @@ Use the database and browser already started by
 checks:
 
 - [HTTP isolation](../../apps/admin-frontend/e2e/tenant-isolation.spec.ts).
-  Sign in as two real owners. The second owner can list their own tenant's
-  people. Their GET, PUT and DELETE against the first owner's person return
-  `404 Client.NotFound`. Substituting the first owner's tenant header
-  returns `403 Tenant.ContextMismatch`. The first owner can still read the
-  person with the original name.
+  Sign in as two real owners and create one person in each tenant with a
+  shared search term. The second owner's matching page contains only their
+  own person and reports a total of one. Their GET, PUT and DELETE against
+  the first owner's person return `404 Client.NotFound`. Using the first
+  owner's tenant header returns `403 Tenant.ContextMismatch`. The first
+  owner can still read the person with the original name.
 - [Relational isolation](../../scripts/smoke_tenant_foreign_keys.sql).
   As `services_app`, insert a valid client-tag link and try a link crossing
   each foreign key in turn. Each attempt must fail with a foreign-key

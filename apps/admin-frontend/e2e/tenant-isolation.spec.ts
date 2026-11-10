@@ -89,6 +89,25 @@ function tenantHeaders(session: TenantSession, tenantId = session.tenantId) {
   return { Authorization: `Bearer ${session.accessToken}`, 'X-Tenant-Id': tenantId };
 }
 
+async function createClient(
+  request: APIRequestContext,
+  session: TenantSession,
+  fullName: string,
+): Promise<string> {
+  const created = await send(request, CLIENTS_URL, {
+    method: 'POST',
+    headers: tenantHeaders(session),
+    data: { fullName },
+  });
+  expect(created.status(), 'Create a tenant client fixture').toBe(201);
+  const creation = await readJson<{ data?: { id?: string } }>(created, 'Create client');
+  const id = creation.data?.id;
+  if (!id) {
+    throw new Error('Client creation did not return an ID.');
+  }
+  return id;
+}
+
 async function expectProblem(
   response: APIResponse,
   status: number,
@@ -151,21 +170,25 @@ test('isolates client reads and writes between authenticated tenants', async ({
 
   const ownerHeaders = tenantHeaders(owner);
   const otherHeaders = tenantHeaders(otherTenant);
-  const list = await send(request, CLIENTS_URL, { headers: otherHeaders });
-  expect(list.status(), 'Second tenant can list its clients').toBe(200);
+  const fullName = `Pessoa isolamento A ${nonce}`;
+  const clientId = await createClient(request, owner, fullName);
+  const otherClientId = await createClient(request, otherTenant, `Pessoa isolamento B ${nonce}`);
 
-  const fullName = `Pessoa isolamento ${nonce}`;
-  const created = await send(request, CLIENTS_URL, {
-    method: 'POST',
-    headers: ownerHeaders,
-    data: { fullName },
+  const list = await send(request, CLIENTS_URL, {
+    headers: otherHeaders,
+    params: { Search: nonce, Page: 1, PageSize: 10 },
   });
-  expect(created.status(), 'Create a client in the first tenant').toBe(201);
-  const creation = await readJson<{ data?: { id?: string } }>(created, 'Create client');
-  const clientId = creation.data?.id;
-  if (!clientId) {
-    throw new Error('Client creation did not return an ID.');
-  }
+  expect(list.status(), 'Second tenant can list its clients').toBe(200);
+  const listed = await readJson<{ data?: { items: { id: string }[]; totalCount: number } }>(
+    list,
+    'List clients as the second tenant',
+  );
+  expect(
+    listed.data?.items.map((item) => item.id),
+    'List contains only the second tenant client',
+  ).toEqual([otherClientId]);
+  expect(listed.data?.totalCount, 'List counts only the second tenant client').toBe(1);
+
   const clientUrl = `${CLIENTS_URL}/${clientId}`;
   const before = await send(request, clientUrl, { headers: ownerHeaders });
   expect(before.status(), 'First tenant can read its client').toBe(200);
@@ -203,4 +226,9 @@ test('isolates client reads and writes between authenticated tenants', async ({
 
   const deleted = await send(request, clientUrl, { method: 'DELETE', headers: ownerHeaders });
   expect(deleted.status(), 'First tenant deletes its own client').toBe(204);
+  const otherDeleted = await send(request, `${CLIENTS_URL}/${otherClientId}`, {
+    method: 'DELETE',
+    headers: otherHeaders,
+  });
+  expect(otherDeleted.status(), 'Second tenant deletes its own client').toBe(204);
 });
