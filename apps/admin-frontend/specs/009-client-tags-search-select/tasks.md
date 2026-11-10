@@ -7,7 +7,7 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
 **Entradas**: [spec.md](spec.md) e [plan.md](plan.md).
 
 A versão em duas camadas (T001–T005, T013–T016) foi substituída pelo redesenho de 2026-11-06; o histórico
-está no Git e na ADR 0090.
+está no Git e na ADR 0091.
 
 ## US2 — SearchSelect reutilizável
 
@@ -42,7 +42,7 @@ está no Git e na ADR 0090.
 
 ## Transversais
 
-- [x] T023 Reescrever a ADR 0090 para o `SearchSelect`, com a versão em duas camadas entre as alternativas
+- [x] T023 Reescrever a ADR 0091 para o `SearchSelect`, com a versão em duas camadas entre as alternativas
   substituídas; índice das ADRs e `docs/ARCHITECTURE.md`.
 - [x] T012 Rodar lint, Prettier, build e cobertura; conferir no navegador nos dois temas.
 - [x] T024 Renomear `RemoteSelect`/`RemoteSelectField` para `SearchSelect`/`SearchSelectField`, a pedido do

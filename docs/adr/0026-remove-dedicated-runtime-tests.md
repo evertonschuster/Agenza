@@ -2,6 +2,10 @@
 
 Status: accepted (2026-07); supersedes ADR 0023
 
+[ADR 0090](0090-tenant-isolation-smokes-in-aspire.md) automates two of the
+manual-only scenarios listed below in the existing API-contract job. The
+decision to remove the dedicated runtime-test project still applies.
+
 ## Context
 
 ADR 0023 added `ServicesService.RuntimeTests` to verify selected PostgreSQL

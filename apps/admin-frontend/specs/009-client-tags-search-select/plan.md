@@ -54,7 +54,7 @@ muda no redesenho; `ClientPersonSection` só troca o campo.
 - [ADR 0089](../../../../docs/adr/0089-clients-tags.md): limite de 20, `Tag.NotFound`/`Client.TooManyTags` em
   `TagIds`, PUT substitui as etiquetas.
 - [ADR 0074](../../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md): a busca ao digitar
-  e a rolagem são exceções de seletor, registradas na ADR 0090; páginas de listagem não mudam.
+  e a rolagem são exceções de seletor, registradas na ADR 0091; páginas de listagem não mudam.
 - [ADR 0039](../../../../docs/adr/0039-admin-frontend-base-ui-primitives.md): Base UI, sem dependência nova.
 - Constituição: tipos gerados e fachada (IV) inalterados; o tenant continua no servidor (II).
 
@@ -66,7 +66,7 @@ muda no redesenho; `ClientPersonSection` só troca o campo.
 3. `src/shared/ui/search-select/`: hook, componente, tipos e testes. Depende de 2.
 4. `src/shared/form/fields/`: `SearchSelectField`, tipos, exportação e teste. Depende de 3.
 5. `src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx`: troca do campo.
-6. `docs/adr/0090-...`, o índice e `docs/ARCHITECTURE.md`.
+6. `docs/adr/0091-...`, o índice e `docs/ARCHITECTURE.md`.
 
 ## Riscos e validação
 

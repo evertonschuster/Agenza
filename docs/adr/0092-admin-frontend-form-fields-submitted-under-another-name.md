@@ -1,18 +1,18 @@
-# ADR 0091 — admin-frontend: form fields submitted under another name
+# ADR 0092 — admin-frontend: form fields submitted under another name
 
 Status: accepted (2026-11-06); amends the `TagIds` error handling of
-[ADR 0090](0090-admin-frontend-search-select-and-client-tags.md)
+[ADR 0091](0091-admin-frontend-search-select-and-client-tags.md)
 
 ## Context
 
 A picker field holds the records it shows, while the command takes their ids under another name: the
-person form's `tags` (`{ id, name, color }[]`) are sent as `tagIds` (ADR 0090), and the services commands
+person form's `tags` (`{ id, name, color }[]`) are sent as `tagIds` (ADR 0091), and the services commands
 already take `categoryId` and `tagIds`. The backend reports a failure under the command's name, so an
 error on `TagIds` matches no path of the form and falls to the form banner, away from the picker. An error
 on one item, `TagIds[0]`, has a second problem: once renamed, `tags.0` is a path of the current values, so
 `setError` accepts it, but no control renders it and the message is never seen.
 
-ADR 0090 solved both inside the person form with a `toClientFormProblem` that matched `TagIds` and
+ADR 0091 solved both inside the person form with a `toClientFormProblem` that matched `TagIds` and
 `TagIds[n]` with a regex. The owner asked for an approach that every form with such a field can reuse,
 owned by `applyApiProblem` itself rather than a step each page has to remember.
 
@@ -60,7 +60,7 @@ would need the indices before the aliased segment kept; that waits for a form th
 - **The form holds ids and the picker resolves the records.** The error would land by name, with nothing
   to alias, but the picker would need its own `id → record` cache, fed by the search results and by the
   record on edit: a second source of truth, and a `reset` with ids it has not seen draws chips without
-  names. It also reverses the `value: T[]` of ADR 0090.
+  names. It also reverses the `value: T[]` of ADR 0091.
 - **Renaming on the backend**, a `tags` property or `OverridePropertyName("Tags")`. It shapes the contract
   after one screen while other consumers expect the `xIds` convention, and the per-item problem remains.
 - **Inferring the alias by convention** (`fooIds` → `foos`, `fooId` → `foo`). It breaks on plurals

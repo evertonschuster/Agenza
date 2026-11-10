@@ -8,7 +8,7 @@ independently of repository correctness.
 
 | Workflow             | Triggers on                   | What it gates                                                                                           |
 | -------------------- | ----------------------------- | ------------------------------------------------------------------------------------------------------- |
-| `frontend-ci.yml`    | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC scope smoke |
+| `frontend-ci.yml`    | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC and tenant isolation |
 | `backend-ci.yml`     | `backend/**`                  | warning-free build, unit coverage, and Docker-free EF tenant persistence tests                          |
 | `ai-services-ci.yml` | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage, and Aspire-equivalent Uvicorn `/health` smoke                |
 | `codeql.yml`         | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                            |
@@ -69,8 +69,10 @@ code file referenced by a guide. It installs no packages and starts no applicati
   Testcontainers/`WebApplicationFactory` project. The frontend
   API-contract workflow starts the AppHost resource graph, applies the
   migration chain to Aspire's PostgreSQL resource, and runs the real OIDC
-  smoke defined in `scripts/smoke_oidc_contract.py` (docs/adr/0026,
-  docs/adr/0029).
+  and tenant-isolation checks ([ADR 0090](adr/0090-tenant-isolation-smokes-in-aspire.md)).
+  The HTTP scenario provisions a synthetic tenant and requires
+  `AGENZA_DISPOSABLE_TEST_DB=1` and `AGENZA_TENANT_PROVISIONING_SECRET`.
+  The PostgreSQL check runs as `services_app` and rolls back its fixtures.
 - **AI services**: `--cov=app` in `pyproject.toml` measures the whole
   package, gate at 80% (`--cov-fail-under=80`).
 

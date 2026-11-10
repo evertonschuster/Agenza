@@ -4,6 +4,8 @@ Status: accepted (2026-07); narrowed by ADR 0019's Docker-free EF
 InMemory project. ADR 0023 temporarily restored a bounded PostgreSQL/HTTP
 tier, which ADR 0026 removed. The former broad endpoint suites and the
 dedicated runtime-test tier are not part of the solution.
+[ADR 0090](0090-tenant-isolation-smokes-in-aspire.md) adds targeted checks
+to the existing Aspire API-contract job.
 
 ## Context
 

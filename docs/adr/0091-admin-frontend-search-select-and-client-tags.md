@@ -1,9 +1,9 @@
-# ADR 0090 — admin-frontend: SearchSelect and tags on the person form
+# ADR 0091 — admin-frontend: SearchSelect and tags on the person form
 
 Status: accepted (2026-11, redesigned before merge); frontend side of [ADR 0089](0089-clients-tags.md);
 a picker exception to [ADR 0073](0073-admin-frontend-paged-list-asks-only-when-told.md) and
 [ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md), which still govern list pages; the move
-of `TagIds` errors to `tags` amended by [ADR 0091](0091-admin-frontend-form-fields-submitted-under-another-name.md)
+of `TagIds` errors to `tags` amended by [ADR 0092](0092-admin-frontend-form-fields-submitted-under-another-name.md)
 
 ## Context
 
@@ -95,7 +95,7 @@ picking with an empty search keeps it open.
 **On the person form.** `tags` sits in "Dados da pessoa" between CPF and the notes, limited to 20 as the
 backend. The schema outputs `tagIds`, so the use cases and the page hook keep receiving a `ClientInput`. A
 server error on `TagIds` (`Tag.NotFound`, `Client.TooManyTags`) is moved to the `tags` field before
-`applyApiProblem`, because the form field is not named after the command field (since ADR 0091 through the
+`applyApiProblem`, because the form field is not named after the command field (since ADR 0092 through the
 `aliases` of `applyApiProblem`, which replaced the form's own `toClientFormProblem`). The `tagIds: []` stopgap in
 `clientsRepository` is gone.
 

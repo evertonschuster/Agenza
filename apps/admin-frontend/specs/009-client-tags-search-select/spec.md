@@ -40,7 +40,7 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 - Somente seleção: o link "Criar etiqueta" da lista vazia, desenhado no protótipo, foi removido pelo dono.
 - Escolher um resultado de busca fecha a lista e limpa a busca; sem texto digitado, a lista continua
   aberta. É a convenção do Combobox do Base UI, mantida sem customização.
-- A decisão está na [ADR 0090](../../../../docs/adr/0090-admin-frontend-search-select-and-client-tags.md).
+- A decisão está na [ADR 0091](../../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md).
 
 ### Sessão 2026-11-06
 

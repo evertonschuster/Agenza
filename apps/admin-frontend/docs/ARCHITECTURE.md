@@ -86,7 +86,7 @@ fica em `shared/ui/form-field/`. As receitas específicas pertencem à
 Seleção de várias opções `{ id, name }` carregadas do backend, com busca e páginas, usa
 [SearchSelect](../src/shared/ui/search-select/index.tsx) com a chamada paginada da feature; no
 formulário, `SearchSelectField`
-([ADR 0090](../../../docs/adr/0090-admin-frontend-search-select-and-client-tags.md)).
+([ADR 0091](../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md)).
 `SelectField` continua para o `Select` simples.
 Texto e rotas de produto são pt-BR; identificadores são inglês. A rota `/tags` é uma exceção
 existente: renomear uma URL requer uma mudança própria de produto.
@@ -124,7 +124,7 @@ raiz. Foco depende de uma referência registrada e focável; uma coleção pode 
 Um campo enviado com outro nome, como registros escolhidos que viajam como IDs, declara a troca em
 `FieldAliases` ao lado da transformação do schema e a passa em `aliases` ao `applyApiProblem`, que
 leva a esse campo os erros do campo do comando e de cada item dele
-([ADR 0091](../../../docs/adr/0091-admin-frontend-form-fields-submitted-under-another-name.md)).
+([ADR 0092](../../../docs/adr/0092-admin-frontend-form-fields-submitted-under-another-name.md)).
 
 As superfícies usam mensagens e códigos do `ApiProblem` normalizado; ramificações dependem de
 `code`/status, nunca do texto da mensagem. Preserve a representação do problema em erros de lista,

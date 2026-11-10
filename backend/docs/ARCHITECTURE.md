@@ -472,7 +472,7 @@ strip control characters first (CWE-117), as `GenericExceptionHandler` and the r
 | -------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
 | Unit           | `<Service>.Tests`                         | Rule/handler/validator/binding behavior through the cases actually asserted; mocks do not prove the database or JWT boundary                     | xUnit, AwesomeAssertions, NSubstitute, fixed `TimeProvider` |
 | Persistence    | `<Service>.PersistenceTests`              | EF tenant assignment, query filters and conversions through existing cases; relational metadata assertions do not execute PostgreSQL constraints | EF InMemory                                                 |
-| Contract smoke | the API-contract job in `frontend-ci.yml` | Fresh migration chain, selected real OIDC requests and generated type drift; not every HTTP/SQL invariant                                        | Aspire AppHost                                              |
+| Contract smoke | the API-contract job in `frontend-ci.yml` | Fresh migrations, selected OIDC and tenant-isolation requests, both `ClientTags` tenant foreign keys, and generated type drift                 | Aspire AppHost                                              |
 
 Line coverage of Domain + Application has a gate in `Directory.Build.props`; local `dotnet test`
 uses the same coverage configuration as CI ([`docs/QUALITY.md`](../../docs/QUALITY.md)). Warnings are errors.
@@ -480,13 +480,13 @@ Line coverage is not evidence that every rule or branch has been tested. Select 
 behavior and risk, including rejection paths and absence of unintended persistence. For input
 rules, assert the code; use a fixed clock when the day matters.
 
-There is no Testcontainers or in-process HTTP test project
-([0026](../../docs/adr/0026-remove-dedicated-runtime-tests.md)). What only PostgreSQL can prove — a
-filtered unique index under concurrent writes, a composite FK, a `CHECK` — is verified by hand
-against a **disposable** PostgreSQL initialised from `infra/postgres/init/`, never against the
-`agenza-postgres-data` volume that Aspire keeps for development, and the PR says what was run.
-This is the current verification policy, not an automated guarantee of those properties.
-Revisiting it is separate work; documentation cleanup does not add a test tier or relax a gate.
+The API-contract job runs the real HTTP and PostgreSQL tenant checks defined in
+[ADR 0090](../../docs/adr/0090-tenant-isolation-smokes-in-aspire.md).
+[ADR 0026](../../docs/adr/0026-remove-dedicated-runtime-tests.md) keeps the backend test project
+free of Testcontainers and in-process HTTP hosting. Verify changed PostgreSQL properties outside
+the smoke's scope by hand in a **disposable** database initialised from `infra/postgres/init/`.
+Use a fresh volume separate from the persistent local development volume and record what ran in
+the PR.
 For Markdown-only changes, check references, formatting and the diff rather than start the stack.
 
 ## 10. Reference code and the older generation
@@ -539,7 +539,9 @@ Update an example when it stops demonstrating its concern.
 | Unit line coverage                                          | Coverlet configuration in [Directory.Build.props](../Directory.Build.props) and [Directory.Build.targets](../Directory.Build.targets); not semantic or relational coverage |
 | Token/header correspondence                                 | JWT validation and the registered `TenantHeaderFilter`; not proof of ownership for an arbitrary attached graph                                                             |
 | Tenant query scope and empty-tenant assignment on insertion | Context filters and interceptor; [PersistenceTests](../services/services-service/ServicesService.PersistenceTests/) exercise their cases with EF InMemory                  |
-| Relationships, unique indexes, CHECKs and schema privileges | Defined in configuration/migrations/init scripts; actual PostgreSQL enforcement and concurrency need the verification in §9                                                |
+| Tenant isolation over HTTP                                  | [Browser smoke](../../apps/admin-frontend/e2e/tenant-isolation.spec.ts) exercises GET, PUT and DELETE for another tenant's person                                           |
+| Tenant foreign keys on `ClientTags`                         | [SQL smoke](../../scripts/smoke_tenant_foreign_keys.sql) checks that PostgreSQL rejects a cross-tenant link at either end                                                    |
+| Other relationships, unique indexes, CHECKs and privileges  | Defined in configuration, migrations and init scripts. PostgreSQL verification follows §9                                                                                  |
 | Frontend type contract                                      | `generate:api-types:check` in [frontend CI](../../.github/workflows/frontend-ci.yml); no proof of all HTTP behavior                                                        |
 | Fresh migration chain and selected OIDC flow                | The API-contract job and [smoke script](../../scripts/smoke_oidc_contract.py)                                                                                              |
 | Remaining conventions                                       | Review of the affected rule and its observable consequence; no general architecture guard                                                                                  |
