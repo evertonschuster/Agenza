@@ -1,17 +1,15 @@
 import type { FieldValues } from 'react-hook-form';
-import { SearchSelect, type SearchSelectItem } from '@/shared/ui/search-select';
+import { SearchSelect } from '@/shared/ui/search-select';
 import type { SearchSelectFieldProps } from '../fields.types';
 import { ControlledField } from './controlled-field';
 
-export function SearchSelectField<T extends FieldValues, I extends SearchSelectItem>(
-  props: SearchSelectFieldProps<T, I>,
-) {
+export function SearchSelectField<T extends FieldValues>(props: SearchSelectFieldProps<T>) {
   const { name, label, hint, ...selectProps } = props;
 
   return (
     <ControlledField<T> name={name} label={label} hint={hint}>
       {(field, controlProps) => (
-        <SearchSelect<I>
+        <SearchSelect
           {...selectProps}
           {...controlProps}
           value={field.value}

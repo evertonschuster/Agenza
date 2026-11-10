@@ -4,7 +4,6 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm, useFormState, useWatch } from 'react-hook-form';
 import { ok } from '@/shared/result';
-import type { SearchSelectFieldProps } from '../fields.types';
 import { SearchSelectField } from './search-select-field';
 
 interface Tag {
@@ -13,7 +12,6 @@ interface Tag {
 }
 
 interface DummyValues {
-  cpf: string;
   tags: Tag[];
 }
 
@@ -36,7 +34,7 @@ function ValueProbe() {
 }
 
 function Harness({ initial = [], error }: { initial?: Tag[]; error?: string }) {
-  const methods = useForm<DummyValues>({ defaultValues: { cpf: '', tags: initial } });
+  const methods = useForm<DummyValues>({ defaultValues: { tags: initial } });
 
   useEffect(() => {
     if (error) methods.setError('tags', { type: 'test', message: error }, { shouldFocus: true });
@@ -44,7 +42,7 @@ function Harness({ initial = [], error }: { initial?: Tag[]; error?: string }) {
 
   return (
     <FormProvider {...methods}>
-      <SearchSelectField<DummyValues, Tag>
+      <SearchSelectField<DummyValues>
         name="tags"
         label="Etiquetas"
         hint="opcional"
@@ -94,17 +92,5 @@ describe('SearchSelectField', () => {
     expect(screen.getByText('Escolha no máximo 20 etiquetas.')).toBeInTheDocument();
     expect(control).toHaveAttribute('aria-invalid', 'true');
     expect(control).toHaveFocus();
-  });
-
-  it('accepts only a form path that holds a list of the items', () => {
-    const tags: SearchSelectFieldProps<DummyValues, Tag> = {
-      name: 'tags',
-      label: 'Etiquetas',
-      loadItems,
-    };
-    // @ts-expect-error -- "cpf" holds text, and the field would map over it as a list of items
-    const cpf: SearchSelectFieldProps<DummyValues, Tag> = { name: 'cpf', label: 'CPF', loadItems };
-
-    expect([tags.name, cpf.name]).toEqual(['tags', 'cpf']);
   });
 });

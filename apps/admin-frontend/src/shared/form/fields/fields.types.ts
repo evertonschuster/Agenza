@@ -105,22 +105,8 @@ type SearchSelectOwnedProps =
   | 'aria-label'
   | FormFieldOwnedProps;
 
-type PathHolding<T extends FieldValues, V> = Extract<
-  {
-    [K in Path<T>]: [PathValue<T, K>] extends [V]
-      ? [V] extends [PathValue<T, K>]
-        ? K
-        : never
-      : never;
-  }[Path<T>],
-  Path<T>
->;
-
-export type SearchSelectFieldProps<T extends FieldValues, I extends SearchSelectItem> = {
-  name: PathHolding<T, I[]>;
-  label: string;
-  hint?: string | undefined;
-} & Omit<SearchSelectProps<I>, SearchSelectOwnedProps>;
+export type SearchSelectFieldProps<T extends FieldValues> = BaseFieldProps<T> &
+  Omit<SearchSelectProps<SearchSelectItem>, SearchSelectOwnedProps>;
 
 export type SearchFieldProps<T extends FieldValues> = {
   name: Path<T>;

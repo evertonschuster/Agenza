@@ -17,7 +17,6 @@ import {
   CLIENT_MAX_TAGS,
   CLIENT_NOTES_MAX_LENGTH,
 } from '../../../../model/client';
-import type { ClientTag } from '../../../../model/clientTag';
 import type { ClientFormFieldValues } from '../clientForm';
 import { editClientPath } from '../../../clientsPaths';
 
@@ -65,7 +64,7 @@ function ClientPersonSection() {
         </div>
 
         <div className="md:col-span-2">
-          <SearchSelectField<ClientFormFieldValues, ClientTag>
+          <SearchSelectField<ClientFormFieldValues>
             name="tags"
             label="Etiquetas"
             hint={`opcional · até ${CLIENT_MAX_TAGS}`}

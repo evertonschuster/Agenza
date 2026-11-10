@@ -81,6 +81,12 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
   já escolhida aparece marcada mesmo quando a lista traz outra cópia dela; escolher um resultado de busca não
   dispara outra busca; a busca do cadastro de pessoa respeita o limite de tamanho da busca de etiquetas.
 
+### Sessão 2026-11-09
+
+- Os tipos do `SearchSelectField` seguem os dos demais campos, a pedido do dono: `name` é qualquer caminho
+  do formulário e o único genérico é o do formulário. Saiu o tipo próprio que só aceitava um caminho com
+  uma lista de itens, junto com o segundo genérico, o tipo do item, que só servia a ele.
+
 ## Jornadas e critérios de aceite
 
 ### US1 — Marcar etiquetas numa pessoa (P1)

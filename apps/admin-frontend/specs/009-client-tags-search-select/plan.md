@@ -37,8 +37,8 @@ do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
   props. O nome acessível é obrigatório: `aria-label` ou um `id` ligado a um rótulo.
 
 `SearchSelectField`, em `src/shared/form/fields/`, liga o componente ao React Hook Form por
-`ControlledField`, como o `SelectField`, sem comportamento próprio. O tipo de `name` só aceita um campo do
-formulário que guarde uma lista dos itens.
+`ControlledField`, como o `SelectField`, sem comportamento próprio. Os tipos seguem os demais campos:
+`name` é um caminho do formulário (`Path<T>`) e o único genérico é o do formulário.
 
 No cadastro de pessoa, o formulário guarda as etiquetas inteiras (`tags`) e o schema converte a saída em
 `tagIds`, de modo que `createClient`/`updateClient` recebem o `ClientInput` sem mudança no hook da página. A

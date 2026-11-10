@@ -23,7 +23,10 @@ the component to be rewritten from scratch, focused on the backend case.
 loads through the caller's function, and works on its own, controlled by `value` and `onValueChange`,
 named by `aria-label` or by a label bound to its `id`, one of which its props require. `SearchSelectField`
 in `shared/form/fields/` binds it to React Hook Form through `ControlledField`, like `SelectField`, and adds
-no behavior; its `name` only accepts a form path holding a list of the items. Both stay in
+no behavior; its props follow the other fields, a form path for `name` and the form as the only type
+parameter. A first version narrowed `name` to paths holding a list of the items, through a type of its own
+and a second type parameter; the owner had it removed so the field keeps the contract shared by every
+field in `shared/form/fields`. Both stay in
 `shared` with the other form controls; the request itself belongs to the feature, which passes the call.
 The redesign first called it `RemoteSelect`; the owner renamed it `SearchSelect` before merge, since the
 name should say what the field does rather than where its data comes from, and with the fixed-list picker
