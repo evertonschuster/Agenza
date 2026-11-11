@@ -52,6 +52,11 @@ also pass the specific path to `ControlledField<T, N>` or `SelectField<T, N>`.
   mode for a field that needs inline validation feedback.
 - Use `ControlledField` for another custom control; add a specialization when concrete repeated
   configuration or control behavior justifies it.
+- Declare a new field's props type and its omitted-props list in the field's own file under
+  `components/`, derived from the primitive it renders, and re-export the type from that file in
+  the barrel. `fields.types.ts` holds only the pieces several fields share (`BaseFieldProps`, the
+  props RHF and `FormField` supply, `WithOptionalLabel`, `FieldLabelPlacement`) and imports nothing
+  from `shared/ui`. A field built on another imports the base type from that field's file.
 - Forward RHF's `ref` and `onBlur` to the actual focus target, and preserve the supplied
   `aria-invalid`/`aria-describedby`. A composite control without a labelable input needs
   `labelHtmlFor={false}` and an accessible name, as in `ColorField`; an `htmlFor` pointing at

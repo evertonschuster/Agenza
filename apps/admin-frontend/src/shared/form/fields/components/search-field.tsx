@@ -1,9 +1,20 @@
+import type { ComponentProps } from 'react';
 import { SearchIcon } from 'lucide-react';
-import { useFormContext, type FieldValues } from 'react-hook-form';
+import { useFormContext, type FieldValues, type Path } from 'react-hook-form';
 import { cn } from '@/shared/lib/utils';
 import { FormField } from '@/shared/ui/form-field';
 import { InputGroup, InputGroupAddon, InputGroupInput } from '@/shared/ui/input-group';
-import type { SearchFieldProps } from '../fields.types';
+import type { FieldLabelPlacement, FormFieldOwnedProps, RegisterOwnedProps } from '../fields.types';
+
+export type SearchFieldProps<T extends FieldValues> = {
+  name: Path<T>;
+  label: string;
+  className?: string | undefined;
+} & Omit<
+  ComponentProps<typeof InputGroupInput>,
+  RegisterOwnedProps | FormFieldOwnedProps | 'aria-label' | 'className' | 'type'
+> &
+  FieldLabelPlacement;
 
 export function SearchField<T extends FieldValues>({
   name,
