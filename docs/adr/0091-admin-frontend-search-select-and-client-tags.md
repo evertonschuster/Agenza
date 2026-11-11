@@ -26,7 +26,9 @@ in `shared/form/fields/` binds it to React Hook Form through `ControlledField`, 
 no behavior; its props follow the other fields, a form path for `name` and the form as the only type
 parameter. A first version narrowed `name` to paths holding a list of the items, through a type of its own
 and a second type parameter; the owner had it removed so the field keeps the contract shared by every
-field in `shared/form/fields`. Both stay in
+field in `shared/form/fields`. Its props type is declared in the field's own file, deriving from
+`SearchSelectProps` minus what the form provides, so `fields.types.ts` keeps only the generic pieces and
+does not know the `SearchSelect`. Both stay in
 `shared` with the other form controls; the request itself belongs to the feature, which passes the call.
 The redesign first called it `RemoteSelect`; the owner renamed it `SearchSelect` before merge, since the
 name should say what the field does rather than where its data comes from, and with the fixed-list picker

@@ -38,7 +38,9 @@ do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
 
 `SearchSelectField`, em `src/shared/form/fields/`, liga o componente ao React Hook Form por
 `ControlledField`, como o `SelectField`, sem comportamento próprio. Os tipos seguem os demais campos:
-`name` é um caminho do formulário (`Path<T>`) e o único genérico é o do formulário.
+`name` é um caminho do formulário (`Path<T>`) e o único genérico é o do formulário. O tipo das props fica
+em `search-select-field.tsx`, derivado das props do `SearchSelect` sem as que o formulário fornece; o
+`fields.types.ts` só guarda as peças genéricas, como `BaseFieldProps` e `FormFieldOwnedProps`.
 
 No cadastro de pessoa, o formulário guarda as etiquetas inteiras (`tags`) e o schema converte a saída em
 `tagIds`, de modo que `createClient`/`updateClient` recebem o `ClientInput` sem mudança no hook da página. A

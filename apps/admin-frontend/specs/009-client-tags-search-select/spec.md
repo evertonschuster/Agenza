@@ -87,6 +87,11 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
   do formulário e o único genérico é o do formulário. Saiu o tipo próprio que só aceitava um caminho com
   uma lista de itens, junto com o segundo genérico, o tipo do item, que só servia a ele.
 
+### Sessão 2026-11-11
+
+- O `fields.types.ts` é genérico e não conhece o `SearchSelect`, a pedido do dono: o tipo das props do
+  `SearchSelectField` e a lista das props que o formulário fornece ficam no arquivo do próprio campo.
+
 ## Jornadas e critérios de aceite
 
 ### US1 — Marcar etiquetas numa pessoa (P1)

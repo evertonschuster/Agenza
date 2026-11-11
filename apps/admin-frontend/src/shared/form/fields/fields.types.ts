@@ -4,10 +4,9 @@ import type { ColorSwatchPickerOption } from '@/shared/ui/color-swatch-picker';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
 import type { Input } from '@/shared/ui/input';
 import type { InputGroupInput } from '@/shared/ui/input-group';
-import type { SearchSelectItem, SearchSelectProps } from '@/shared/ui/search-select';
 import type { Textarea } from '@/shared/ui/textarea';
 
-interface BaseFieldProps<T extends FieldValues> {
+export interface BaseFieldProps<T extends FieldValues> {
   name: Path<T>;
   label: string;
   hint?: string | undefined;
@@ -18,7 +17,7 @@ export interface FieldErrorProps<T extends FieldValues> {
 }
 
 type RegisterOwnedProps = 'name' | 'onChange' | 'onBlur' | 'ref';
-type FormFieldOwnedProps = 'id' | 'aria-invalid' | 'aria-describedby';
+export type FormFieldOwnedProps = 'id' | 'aria-invalid' | 'aria-describedby';
 
 export type TextFieldProps<T extends FieldValues> = BaseFieldProps<T> &
   Omit<ComponentProps<typeof Input>, RegisterOwnedProps | FormFieldOwnedProps>;
@@ -95,18 +94,6 @@ export type SelectFieldProps<
   T extends FieldValues,
   N extends Path<T> = Path<T>,
 > = SelectFieldBaseProps<T, N> & FieldLabelPlacement;
-
-type SearchSelectOwnedProps =
-  | 'value'
-  | 'onValueChange'
-  | 'inputRef'
-  | 'onBlur'
-  | 'disabled'
-  | 'aria-label'
-  | FormFieldOwnedProps;
-
-export type SearchSelectFieldProps<T extends FieldValues> = BaseFieldProps<T> &
-  Omit<SearchSelectProps<SearchSelectItem>, SearchSelectOwnedProps>;
 
 export type SearchFieldProps<T extends FieldValues> = {
   name: Path<T>;
