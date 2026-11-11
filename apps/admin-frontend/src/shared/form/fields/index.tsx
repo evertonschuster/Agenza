@@ -11,19 +11,14 @@ export { SelectField } from './components/select-field';
 export { SearchField } from './components/search-field';
 export { FormErrorBanner } from './components/form-error-banner';
 export { FieldError } from './components/field-error';
-export type {
-  FieldErrorProps,
-  TextFieldProps,
-  TextareaFieldProps,
-  MaskedFieldProps,
-  DateFieldProps,
-  CpfFieldProps,
-  PhoneFieldProps,
-  EmailFieldProps,
-  BirthDateFieldProps,
-  ControlledFieldProps,
-  ColorFieldProps,
-  SelectFieldOption,
-  SelectFieldProps,
-  SearchFieldProps,
-} from './fields.types';
+export type { ControlledFieldProps, FieldErrorProps } from './fields.types';
+export type { TextFieldProps, TextareaFieldProps } from './components/text-fields';
+export type { MaskedFieldProps } from './components/masked-field';
+export type { DateFieldProps } from './components/date-field';
+export type { CpfFieldProps } from './components/cpf-field';
+export type { PhoneFieldProps } from './components/phone-field';
+export type { EmailFieldProps } from './components/email-field';
+export type { BirthDateFieldProps } from './components/birth-date-field';
+export type { ColorFieldProps } from './components/color-field';
+export type { SelectFieldOption, SelectFieldProps } from './components/select-field';
+export type { SearchFieldProps } from './components/search-field';

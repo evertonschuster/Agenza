@@ -1,7 +1,14 @@
-import type { FieldValues } from 'react-hook-form';
-import { ColorSwatchPicker } from '@/shared/ui/color-swatch-picker';
-import type { ColorFieldProps } from '../fields.types';
+import type { FieldValues, Path } from 'react-hook-form';
+import { ColorSwatchPicker, type ColorSwatchPickerOption } from '@/shared/ui/color-swatch-picker';
 import { ControlledField } from './controlled-field';
+
+export interface ColorFieldProps<T extends FieldValues> {
+  name: Path<T>;
+  label: string;
+  'aria-label'?: string | undefined;
+  options: readonly ColorSwatchPickerOption[];
+  hint?: string | undefined;
+}
 
 export function ColorField<T extends FieldValues>({
   name,
