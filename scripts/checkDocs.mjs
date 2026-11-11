@@ -62,7 +62,7 @@ function fenceEnd(text, start, marker, depth) {
 }
 
 function prose(text, { preserveInlineCode = false } = {}) {
-  const tokens = /(?:^ {0,3}((?:> {0,3})*)(`{3,}|~{3,})[^\n]*$)|<!--|`+/gm;
+  const tokens = /^ {0,3}((?:> {0,3})*)(`{3,}(?=[^`\n]*$)|~{3,})[^\n]*$|<!--|`+/gm;
   const parts = [];
   let cursor = 0;
   for (const match of text.matchAll(tokens)) {
@@ -130,8 +130,13 @@ function destinationAt(text, start) {
 
 function linkTargets(text) {
   const targets = [];
+  let linkLabelEnd = 0;
   for (let index = 0; index < text.length; index++) {
     if (text[index] !== '[' || isEscaped(text, index)) {
+      continue;
+    }
+    const isImage = text[index - 1] === '!' && !isEscaped(text, index - 1);
+    if (index < linkLabelEnd && !isImage) {
       continue;
     }
     let depth = 1;
@@ -156,7 +161,11 @@ function linkTargets(text) {
     if (target) {
       targets.push({ target, line: text.slice(0, index).split('\n').length });
     }
-    index = end;
+    if (isImage) {
+      index = end;
+    } else {
+      linkLabelEnd = end;
+    }
   }
   return targets;
 }

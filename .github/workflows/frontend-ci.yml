@@ -40,7 +40,7 @@ jobs:
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(apps/admin-frontend/|package\.json$|package-lock\.json$|\.editorconfig$|\.github/workflows/frontend-ci\.yml$)'; then
+          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(apps/admin-frontend/|package\.json$|package-lock\.json$|\.npmrc$|\.nvmrc$|\.editorconfig$|\.github/workflows/frontend-ci\.yml$)'; then
             echo "relevant=true" >> "$GITHUB_OUTPUT"
           else
             echo "relevant=false" >> "$GITHUB_OUTPUT"
@@ -121,10 +121,19 @@ jobs:
             echo "relevant=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
-          if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(apps/admin-frontend/|backend/AppHost/|backend/services/(identity-service|services-service)/|backend/shared/|backend/(Directory\.Packages\.props|global\.json)$|infra/postgres/init/|scripts/(smoke_oidc_contract\.py|smoke_tenant_foreign_keys\.sql)$|\.github/workflows/frontend-ci\.yml$)'; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          else
+          if git diff --quiet "$BASE" "${{ github.sha }}" -- \
+            apps/admin-frontend/ package.json package-lock.json .npmrc .nvmrc .editorconfig \
+            backend/AppHost/ backend/ServiceDefaults/ backend/shared/ \
+            backend/services/identity-service/ backend/services/services-service/ \
+            backend/AdminBackend.slnx backend/Directory.Build.props backend/Directory.Build.targets \
+            backend/Directory.Packages.props backend/NuGet.Config backend/global.json \
+            ai-services/assistant-service/app/ ai-services/assistant-service/pyproject.toml \
+            ai-services/assistant-service/uv.lock ai-services/assistant-service/.python-version \
+            infra/postgres/init/ scripts/smoke_oidc_contract.py scripts/smoke_tenant_foreign_keys.sql \
+            .github/workflows/frontend-ci.yml; then
             echo "relevant=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "relevant=true" >> "$GITHUB_OUTPUT"
           fi
 
   api-contract-check:

@@ -292,6 +292,20 @@ test('does not close an inline code span across a paragraph boundary', (t) => {
   ]);
 });
 
+test('checks prose after a line beginning with a triple-backtick code span', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md': '```[Example](ignored.md)```\n\n[Broken](missing.md)\n',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 3,
+      message: 'Destino local ausente.',
+      target: 'missing.md',
+    },
+  ]);
+});
+
 test('ignores escaped opening backticks and keeps backslashes literal inside code spans', (t) => {
   const root = fixture(t, {
     'AGENTS.md': '\\` [Broken](missing.md) `\n',
@@ -339,6 +353,27 @@ test('checks destinations after balanced nested brackets in link labels', (t) =>
       target: 'missing.md',
     },
   ]);
+});
+
+test('checks a missing image inside a link label', (t) => {
+  const root = fixture(t, { 'AGENTS.md': '[![Preview](missing.png)](README.md)\n' });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 1,
+      message: 'Destino local ausente.',
+      target: 'missing.png',
+    },
+  ]);
+});
+
+test('ignores image destinations inside image alt text', (t) => {
+  const image = '![Screen ![detail](unused.png)](screen.png)';
+  const root = fixture(t, {
+    'AGENTS.md': `${image}\n[${image}](README.md)\n`,
+    'screen.png': 'fixture',
+  });
+  assert.deepEqual(checkDocumentation(root).errors, []);
 });
 
 test('checks a reference definition destination on the next line', (t) => {
