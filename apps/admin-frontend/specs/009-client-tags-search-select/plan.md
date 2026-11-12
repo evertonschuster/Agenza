@@ -23,16 +23,17 @@ do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
   descartada só quando a animação de fechar termina. A última página vem do tamanho de página que o
   servidor respondeu. Cada pedido cancela o anterior por `AbortController` e uma resposta cancelada é
   ignorada. As buscas partem de ações, nunca de um efeito sobre o texto.
-- `index.tsx`: `SearchSelect` monta o Combobox com `multiple`, `filter={null}`, igualdade e valor por `id`,
-  e tem três regras próprias: o teclado, lido do estado que o Base UI põe no input (`aria-expanded` e
-  `aria-activedescendant`), sem estado espelhado, com Enter que não envia o formulário da lista aberta e
-  Esc que não apaga as escolhas da lista fechada; a rolagem, que avisa o hook a 40 px do fim e depois de
+- `search-select.tsx`: `SearchSelect` monta o Combobox com `multiple`, `filter={null}`, igualdade e valor
+  por `id`, e tem três regras próprias: o teclado, em `keep-keys-in-picker.ts`, lido do estado que o Base UI
+  põe no input (`aria-expanded` e `aria-activedescendant`), sem estado espelhado, com Enter que não envia o
+  formulário da lista aberta e Esc que não apaga as escolhas da lista fechada; a rolagem, que avisa o hook a 40 px do fim e depois de
   cada página; e o limite, que desabilita as opções não marcadas e avisa. Uma região de status no popup
   anuncia carregando, carregando mais e o limite; a lista fica com `aria-busy` durante um pedido, e o campo
-  de busca aceita o `maxLength` de quem usa.
-- `components/search-select-states.tsx`: o estado abaixo da lista (carregando, falha com nova tentativa,
-  vazio e sem resultado) e o rodapé. O `ComboboxEmpty` fica sempre montado, só com o texto trocado, como o
-  Base UI exige.
+  de busca aceita o `maxLength` de quem usa. O `index.tsx` só reexporta o componente e os tipos.
+- `components/search-select-states.tsx`: os textos e as partes de estado do popup: o aviso de limite, o
+  anúncio, o estado abaixo da lista (carregando, falha com nova tentativa, vazio e sem resultado), o
+  progresso da paginação e o resumo da seleção com "Limpar seleção". O `ComboboxEmpty` fica sempre montado,
+  só com o texto trocado, como o Base UI exige.
 - `search-select.types.ts`: o item `{ id, name, color? }`, `SearchItemsQuery`, `LoadSearchItems` e as
   props. O nome acessível é obrigatório: `aria-label` ou um `id` ligado a um rótulo.
 
@@ -44,8 +45,8 @@ em `search-select-field.tsx`, derivado das props do `SearchSelect` sem as que o 
 
 No cadastro de pessoa, o formulário guarda as etiquetas inteiras (`tags`) e o schema converte a saída em
 `tagIds`, de modo que `createClient`/`updateClient` recebem o `ClientInput` sem mudança no hook da página. A
-falha do servidor no campo `TagIds` tem sua chave trocada para `tags` antes de `applyApiProblem`, porque o
-nome do campo no formulário não é o do comando. O paliativo `tagIds: []` sai do repositório. Nada disso
+falha do servidor no campo `TagIds` chega a `tags` pelos `aliases` do `applyApiProblem` (ADR 0092), porque
+o nome do campo no formulário não é o do comando. O paliativo `tagIds: []` sai do repositório. Nada disso
 muda no redesenho; `ClientPersonSection` só troca o campo.
 
 ## Referências e restrições aplicáveis

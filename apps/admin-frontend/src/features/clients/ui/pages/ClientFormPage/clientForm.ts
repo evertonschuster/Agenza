@@ -20,6 +20,7 @@ import {
   CONTACT_RELATIONSHIP_MAX_LENGTH,
 } from '../../../model/clientContact';
 import type { ClientStatus } from '../../../model/clientStatus';
+import type { ClientTag } from '../../../model/clientTag';
 import { CONTACT_PURPOSES } from '../../../model/contactPurpose';
 
 const nameField = (subject: string, minLength: number, maxLength: number) =>
@@ -59,8 +60,6 @@ const referenceContactSchema = z.object({
     .min(1, 'Informe ao menos uma finalidade para a pessoa de referência.'),
 });
 
-const clientTagSchema = z.object({ id: z.string(), name: z.string(), color: z.string() });
-
 const clientFormObject = z.object({
   fullName: nameField('completo', CLIENT_FULL_NAME_MIN_LENGTH, CLIENT_FULL_NAME_MAX_LENGTH),
   birthDate: birthDateSchema,
@@ -85,7 +84,7 @@ const clientFormObject = z.object({
       `Informe no máximo ${MAX_REFERENCE_CONTACTS} pessoas de referência.`,
     ),
   tags: z
-    .array(clientTagSchema)
+    .array(z.custom<ClientTag>())
     .max(CLIENT_MAX_TAGS, `Escolha no máximo ${CLIENT_MAX_TAGS} etiquetas.`),
 });
 

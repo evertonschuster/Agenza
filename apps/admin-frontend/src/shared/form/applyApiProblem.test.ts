@@ -205,38 +205,13 @@ describe('applyApiProblem', () => {
           fullName: '',
           category: null,
           tags: [{ id: 't1', name: 'VIP' }],
-          guardians: [{ tagIds: '' }],
-          tagIdsArchived: '',
         }),
         setError: vi.fn(),
         setFocus: vi.fn(),
       };
     }
 
-    it('shows the errors of an aliased command field and of its items on the form field, the first from the server', () => {
-      const methods = pickerForm();
-
-      applyApiProblem({
-        problem: {
-          status: 400,
-          errors: {
-            TagIds: [{ code: 'Client.DuplicateTag', message: 'Etiqueta repetida.' }],
-            'TagIds[0]': [{ code: 'Client.TagIdRequired', message: 'Informe a etiqueta.' }],
-            'TagIds[0].Value': [{ code: 'Other', message: 'Outro erro da etiqueta.' }],
-          },
-        },
-        methods,
-        aliases: { tagIds: 'tags' },
-      });
-
-      expect(methods.setError).toHaveBeenCalledExactlyOnceWith('tags', {
-        type: 'Client.DuplicateTag',
-        message: 'Etiqueta repetida.',
-      });
-      expect(methods.setFocus).toHaveBeenCalledExactlyOnceWith('tags');
-    });
-
-    it('shows an item error on the form field when the server sends no error on the list', () => {
+    it('sets the error of an aliased command field on the form field and focuses it', () => {
       const methods = pickerForm();
 
       applyApiProblem({
@@ -254,6 +229,7 @@ describe('applyApiProblem', () => {
         type: 'Client.TagIdRequired',
         message: 'Informe a etiqueta.',
       });
+      expect(methods.setFocus).toHaveBeenCalledExactlyOnceWith('tags');
     });
 
     it('takes each alias to its own form field, an empty single pick included, in form order', () => {
@@ -280,32 +256,6 @@ describe('applyApiProblem', () => {
         message: 'Etiqueta não encontrada.',
       });
       expect(methods.setFocus).toHaveBeenCalledExactlyOnceWith('category');
-    });
-
-    it('leaves a key that only starts with the alias and a nested key of another field on their own paths', () => {
-      const methods = pickerForm();
-
-      applyApiProblem({
-        problem: {
-          status: 400,
-          errors: {
-            TagIdsArchived: [{ message: 'Outro campo.' }],
-            'Guardians[0].TagIds': [{ message: 'Campo de outro item.' }],
-          },
-        },
-        methods,
-        aliases: { tagIds: 'tags' },
-      });
-
-      expect(methods.setError).toHaveBeenCalledWith('guardians.0.tagIds', {
-        type: 'server',
-        message: 'Campo de outro item.',
-      });
-      expect(methods.setError).toHaveBeenCalledWith('tagIdsArchived', {
-        type: 'server',
-        message: 'Outro campo.',
-      });
-      expect(methods.setError).toHaveBeenCalledTimes(2);
     });
   });
 });

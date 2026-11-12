@@ -84,7 +84,7 @@ Formulários usam React Hook Form e Zod com os controles de `shared/form/fields/
 fica em `shared/ui/form-field/`. As receitas específicas pertencem à
 [skill de formulário](../../../.claude/skills/agenza-form-field/SKILL.md).
 Seleção de várias opções `{ id, name }` carregadas do backend, com busca e páginas, usa
-[SearchSelect](../src/shared/ui/search-select/index.tsx) com a chamada paginada da feature; no
+[SearchSelect](../src/shared/ui/search-select/search-select.tsx) com a chamada paginada da feature; no
 formulário, `SearchSelectField`
 ([ADR 0091](../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md)).
 `SelectField` continua para o `Select` simples.

@@ -1,8 +1,38 @@
 import type { ApiProblem } from '@/shared/api/servicesFacade';
-import { formatNumber } from '@/shared/format/count';
+import { formatCount, formatNumber } from '@/shared/format/count';
 import { Button } from '@/shared/ui/button';
-import { ComboboxEmpty } from '@/shared/ui/combobox';
+import { ComboboxEmpty, ComboboxStatus } from '@/shared/ui/combobox';
 import { Skeleton } from '@/shared/ui/skeleton';
+
+const SELECTION_NOUN = { singular: 'seleção', plural: 'seleções' };
+
+function limitNoticeOf(reachedLimit: number | null) {
+  if (reachedLimit === null) return null;
+  return `Limite de ${formatCount(reachedLimit, SELECTION_NOUN)} atingido. Remova uma para escolher outra.`;
+}
+
+function announcementOf(loading: 'first' | 'next' | null, reachedLimit: number | null) {
+  if (loading === 'first') return 'Carregando opções…';
+  if (loading === 'next') return 'Carregando mais opções…';
+  return limitNoticeOf(reachedLimit) ?? '';
+}
+
+interface SearchSelectAnnouncementProps {
+  loading: 'first' | 'next' | null;
+  reachedLimit: number | null;
+}
+
+function SearchSelectAnnouncement({ loading, reachedLimit }: SearchSelectAnnouncementProps) {
+  return (
+    <ComboboxStatus className="sr-only">{announcementOf(loading, reachedLimit)}</ComboboxStatus>
+  );
+}
+
+function SearchSelectLimitNotice({ reachedLimit }: { reachedLimit: number | null }) {
+  const notice = limitNoticeOf(reachedLimit);
+  if (!notice) return null;
+  return <p className="m-1 mb-0 rounded-md bg-muted px-2.5 py-2">{notice}</p>;
+}
 
 interface SearchSelectStatusProps {
   loading: boolean;
@@ -48,49 +78,61 @@ function SearchSelectStatus(props: SearchSelectStatusProps) {
   );
 }
 
-interface SearchSelectFooterProps {
+interface SearchSelectProgressProps {
   shown: number;
   totalCount: number;
   hasMore: boolean;
   loadingMore: boolean;
+}
+
+function SearchSelectProgress(props: SearchSelectProgressProps) {
+  const { shown, totalCount, hasMore, loadingMore } = props;
+  if (!hasMore && !loadingMore) return null;
+
+  return (
+    <p className="px-2.5 py-1 text-xs text-muted-foreground">
+      {loadingMore
+        ? 'Carregando mais…'
+        : `Mostrando ${formatNumber(shown)} de ${formatNumber(totalCount)}`}
+    </p>
+  );
+}
+
+interface SearchSelectSelectionProps {
   selected: number;
   maxSelected: number | undefined;
   disabled: boolean;
   onClear: () => void;
 }
 
-function SearchSelectFooter(props: SearchSelectFooterProps) {
-  const { shown, totalCount, hasMore, loadingMore, selected, maxSelected, disabled, onClear } =
-    props;
+function SearchSelectSelection(props: SearchSelectSelectionProps) {
+  const { selected, maxSelected, disabled, onClear } = props;
   const chosen =
     maxSelected === undefined
       ? `Selecionadas: ${formatNumber(selected)}`
       : `Selecionadas: ${formatNumber(selected)} de ${formatNumber(maxSelected)}`;
 
   return (
-    <>
-      {(hasMore || loadingMore) && (
-        <p className="px-2.5 py-1 text-xs text-muted-foreground">
-          {loadingMore
-            ? 'Carregando mais…'
-            : `Mostrando ${formatNumber(shown)} de ${formatNumber(totalCount)}`}
-        </p>
-      )}
-      <div className="flex items-center justify-between gap-2 border-t border-border py-1 pr-1 pl-2.5 text-xs text-muted-foreground">
-        <span>{chosen}</span>
-        <Button
-          variant="ghost"
-          size="sm"
-          className="text-foreground"
-          disabled={disabled || selected === 0}
-          focusableWhenDisabled
-          onClick={onClear}
-        >
-          Limpar seleção
-        </Button>
-      </div>
-    </>
+    <div className="flex items-center justify-between gap-2 border-t border-border py-1 pr-1 pl-2.5 text-xs text-muted-foreground">
+      <span>{chosen}</span>
+      <Button
+        variant="ghost"
+        size="sm"
+        className="text-foreground"
+        disabled={disabled || selected === 0}
+        focusableWhenDisabled
+        onClick={onClear}
+      >
+        Limpar seleção
+      </Button>
+    </div>
   );
 }
 
-export { SearchSelectFooter, SearchSelectStatus };
+export {
+  SearchSelectAnnouncement,
+  SearchSelectLimitNotice,
+  SearchSelectProgress,
+  SearchSelectSelection,
+  SearchSelectStatus,
+};

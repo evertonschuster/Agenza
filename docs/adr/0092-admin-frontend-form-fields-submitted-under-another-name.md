@@ -23,8 +23,9 @@ the person and tag forms both call it that way. `aliases` maps a command field t
 it, `{ tagIds: 'tags' }`, typed as `FieldAliases<FormFieldValues>`, so a target that is not a path of the
 form does not compile. A key matches an alias by its top-level name, ignoring case, and every key under it
 (`TagIds[0]`, `TagIds[1].Value`) lands on the form field itself: a picker is one control, without an input
-per item. Entries from several keys are joined in the order the server sent them, and the field shows the
-first one, as any field does. Forms without such a field leave `aliases` out.
+per item. `applyApiProblem` hands the aliases to `toFormErrors`, which resolves them where a key becomes a
+field; when several keys land on the same field, the first entry the server sent is kept, as any field
+shows only its first message. Forms without such a field leave `aliases` out.
 
 The form module declares its aliases beside the schema transform that renames the field on the way out.
 The person form declares `CLIENT_FORM_FIELD_ALIASES = { tagIds: 'tags' }` and its page hook calls
@@ -36,11 +37,13 @@ would need the indices before the aliased segment kept; that waits for a form th
 
 ## Consequences
 
-- A new form with a picker writes its transform and one alias entry; matching, collapsing and joining are
-  tested once, in `applyApiProblem.test.ts`.
+- A new form with a picker writes its transform and one alias entry; matching and collapsing are tested
+  once, in `formErrors.test.ts`, and `applyApiProblem.test.ts` covers the error and focus on the aliased
+  field.
 - The rename is still declared twice, in the transform and in the aliases, side by side in the form
   module. The page test of a server error on the field catches a divergence.
-- `toFormErrors` is unchanged; the aliases are resolved before it matches keys to paths.
+- `toFormErrors` takes the aliases as an optional argument; the `ApiProblem` is not rewritten, so keys are
+  normalized in one place.
 - A key that only starts with the alias (`TagIdsArchived`) or a nested key of another field
   (`Guardians[0].TagIds`) keeps its own path.
 
