@@ -122,8 +122,8 @@ Os paths vêm dos valores atuais, incluindo arrays e objetos aninhados; campos a
 não são reconhecidos como campos do formulário. Paths desconhecidos e mensagens gerais chegam à
 raiz. Foco depende de uma referência registrada e focável; uma coleção pode ter erro sem recebê-lo.
 Um campo enviado com outro nome, como registros escolhidos que viajam como IDs, declara a troca em
-`FieldAliases` ao lado da transformação do schema e a passa em `aliases` ao `applyApiProblem`, que
-leva a esse campo os erros do campo do comando e de cada item dele
+`FieldAliases` ao lado da transformação do schema e a passa em `aliases` ao `applyApiProblem`; o
+`formErrors.ts` leva a esse campo o primeiro erro do campo do comando ou de um item dele
 ([ADR 0092](../../../docs/adr/0092-admin-frontend-form-fields-submitted-under-another-name.md)).
 
 As superfícies usam mensagens e códigos do `ApiProblem` normalizado; ramificações dependem de

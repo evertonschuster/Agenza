@@ -6,10 +6,10 @@ export type ApiFormFieldError = FieldError & Pick<FormFieldError, 'meta'>;
 
 export type FieldAliases<T extends FieldValues> = Readonly<Record<string, Path<T>>>;
 
-export interface ApiProblemTarget<T extends FieldValues> {
+interface ApiProblemTarget<T extends FieldValues> {
   problem: ApiProblem;
   methods: Pick<UseFormReturn<T>, 'setError' | 'setFocus'> & { getValues: () => T };
-  aliases?: FieldAliases<T> | undefined;
+  aliases?: FieldAliases<T>;
 }
 
 function fieldPathsOf(values: unknown, prefix = ''): string[] {
@@ -27,25 +27,10 @@ function fieldPathsOf(values: unknown, prefix = ''): string[] {
   });
 }
 
-function aliasedField(key: string, aliases: Readonly<Record<string, string>>): string | undefined {
-  const submitted = key.replace(/[.[].*/, '').toLowerCase();
-  return Object.entries(aliases).find(([name]) => name.toLowerCase() === submitted)?.[1];
-}
-
-function withAliases(problem: ApiProblem, aliases: Readonly<Record<string, string>>): ApiProblem {
-  if (!problem.errors) return problem;
-  const errors: NonNullable<ApiProblem['errors']> = {};
-  for (const [key, entries] of Object.entries(problem.errors)) {
-    const field = aliasedField(key, aliases) ?? key;
-    errors[field] = [...(errors[field] ?? []), ...entries];
-  }
-  return { ...problem, errors };
-}
-
 export function applyApiProblem<T extends FieldValues>(target: ApiProblemTarget<T>): void {
-  const { problem, methods, aliases = {} } = target;
+  const { problem, methods, aliases } = target;
   const fields = fieldPathsOf(methods.getValues()) as Path<T>[];
-  const { fieldErrors, formError } = toFormErrors(withAliases(problem, aliases), fields);
+  const { fieldErrors, formError } = toFormErrors(problem, fields, aliases);
 
   for (const field of fields) {
     const fieldError = fieldErrors[field];
