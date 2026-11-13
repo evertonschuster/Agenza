@@ -48,6 +48,10 @@ está no Git e na ADR 0091.
 - [x] T024 Renomear `RemoteSelect`/`RemoteSelectField` para `SearchSelect`/`SearchSelectField`, a pedido do
   dono, e aplicar os achados da segunda revisão crítica (Esc dentro de um diálogo, igualdade por id,
   busca só por texto digitado, `ComboboxEmpty` sempre montado, limite da busca, textos de carregamento).
+- [x] T025 Tirar a cor do `SearchSelect` e do `ComboboxChip`, a pedido do dono: `renderItem` do chamador,
+  `TagBadge` exportado pela feature de etiquetas e usado no formulário de pessoas e na lista de etiquetas,
+  o tipo do item de volta como segundo genérico do `SearchSelectField`; conferir no navegador nos dois
+  temas e no celular.
 
 ## Dependências e validação final
 

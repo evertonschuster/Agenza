@@ -118,6 +118,24 @@ describe('SearchSelect', () => {
     expect(chosen()).toHaveTextContent('Convênio');
   });
 
+  it('draws each choice and each option with the caller renderItem', async () => {
+    const user = userEvent.setup();
+    render(
+      <Harness
+        loadItems={loaderOf(answer([CONVENIO, VIP]))}
+        initial={[VIP]}
+        renderItem={(tag) => <mark>{`${tag.name} ${tag.color ?? 'sem cor'}`}</mark>}
+      />,
+    );
+
+    expect(screen.getByText('VIP #8b5cf6')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Remover VIP' })).toBeInTheDocument();
+    const list = await openList(user);
+    expect(
+      await within(list).findByRole('option', { name: 'Convênio sem cor' }),
+    ).toBeInTheDocument();
+  });
+
   it('removes the last choice with Backspace on an empty search', async () => {
     const user = userEvent.setup();
     render(<Harness loadItems={loaderOf(answer([]))} initial={[VIP, CONVENIO]} />);

@@ -1,7 +1,7 @@
-import type { CSSProperties } from 'react';
 import { OptionalText } from '@/shared/ui/optional-text';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
+import { TagBadge } from '../../../components/TagBadge';
 import { TagDeleteLink } from './TagDeleteLink';
 import { TagEditLink } from './TagEditLink';
 import type { Tag } from '../../../../model/tag';
@@ -12,11 +12,7 @@ export function tagColumns(): ListSectionColumn<Tag>[] {
       key: 'name',
       header: 'Nome',
       skeleton: <Skeleton className="h-6 w-24" />,
-      cell: (tag) => (
-        <span className="tag" style={{ '--tag': tag.color } as CSSProperties}>
-          {tag.name}
-        </span>
-      ),
+      cell: (tag) => <TagBadge tag={tag} />,
     },
     {
       key: 'description',

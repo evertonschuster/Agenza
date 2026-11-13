@@ -1,11 +1,10 @@
-import type { Ref } from 'react';
+import type { ReactNode, Ref } from 'react';
 import type { ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult, Paging } from '@/shared/pagination/paging';
 
 interface SearchSelectItem {
   id: string;
   name: string;
-  color?: string | undefined;
 }
 
 type SearchItemsQuery = { search: string } & Paging;
@@ -18,6 +17,7 @@ interface SearchSelectOwnProps<T extends SearchSelectItem> {
   loadItems: LoadSearchItems<T>;
   value: T[];
   onValueChange: (value: T[]) => void;
+  renderItem?: ((item: T) => ReactNode) | undefined;
   maxSelected?: number | undefined;
   pageSize?: number | undefined;
   maxLength?: number | undefined;

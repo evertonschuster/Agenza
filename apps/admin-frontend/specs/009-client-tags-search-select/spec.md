@@ -29,7 +29,8 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 - Duas camadas, pedidas pelo dono depois da primeira versão: `SearchSelect` sobre uma lista fixa e
   `RemoteSearchSelect` em volta dele, carregando do backend. Substituído no redesenho de 2026-11-06.
 - Contrato do item: qualquer objeto com `id` e `name`; não há tipo de opção nem conversão por feature. Uma
-  `color` presente no item colore a etiqueta selecionada e a opção.
+  `color` presente no item colore a etiqueta selecionada e a opção. Substituído em 2026-11-13 pelo
+  `renderItem` do chamador.
 - O campo fica em "Dados da pessoa", em largura total, entre CPF e Observações administrativas.
 - A busca consulta o backend ao digitar, 300 ms depois da última tecla. É uma exceção de seletor à regra
   das listagens ([ADR 0074](../../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md)),
@@ -91,6 +92,16 @@ Protótipo aprovado: https://claude.ai/artifact/4Vpz6PReZSpWi37nEaW3RP
 
 - O `fields.types.ts` é genérico e não conhece o `SearchSelect`, a pedido do dono: o tipo das props do
   `SearchSelectField` e a lista das props que o formulário fornece ficam no arquivo do próprio campo.
+
+### Sessão 2026-11-13
+
+- O `SearchSelect` não sabe como um item aparece, a pedido do dono: o item volta a ser `{ id, name }` e
+  quem usa o seletor passa `renderItem(item)`, desenhado na opção e dentro do chip. Sem ele, aparece o
+  nome. O chip mantém o fundo neutro e o botão de remover; a etiqueta colorida fica dentro dele, com o
+  remover ao lado. O formulário de pessoas desenha cada etiqueta com o `TagBadge` da feature de etiquetas,
+  o mesmo da lista de etiquetas.
+- O `SearchSelectField` volta a ter o tipo do item como segundo genérico, escolhido pelo dono, para o
+  TypeScript conferir que o `loadItems` devolve o que o `renderItem` lê.
 
 ## Jornadas e critérios de aceite
 

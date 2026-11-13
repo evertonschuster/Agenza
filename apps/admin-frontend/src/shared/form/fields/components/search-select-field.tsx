@@ -16,10 +16,10 @@ type SearchSelectOwnedProps =
   | 'aria-label'
   | FormFieldOwnedProps;
 
-export type SearchSelectFieldProps<T extends FieldValues> = BaseFieldProps<T> &
-  Omit<SearchSelectProps<SearchSelectItem>, SearchSelectOwnedProps>;
+export type SearchSelectFieldProps<T extends FieldValues, I> = BaseFieldProps<T> &
+  Omit<SearchSelectProps<I & SearchSelectItem>, SearchSelectOwnedProps>;
 
-export function SearchSelectField<T extends FieldValues>(props: SearchSelectFieldProps<T>) {
+export function SearchSelectField<T extends FieldValues, I>(props: SearchSelectFieldProps<T, I>) {
   const { name, label, hint, ...selectProps } = props;
 
   return (

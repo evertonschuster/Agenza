@@ -9,7 +9,7 @@ O seletor é reescrito do zero; nenhum arquivo da versão em duas camadas (`Sear
 listagem com a forma do `tagsRepository.list`, o valor com os itens inteiros e o uso no cadastro de pessoa.
 
 Os primitivos do Combobox voltam a `src/shared/ui/combobox/` como o registry do shadcn (`base-nova`) os
-gera, adaptados ao projeto: conteúdo do popup com a âncora, chips, chip com cor e remover nomeado, input dos
+gera, adaptados ao projeto: conteúdo do popup com a âncora, chips, chip com remover nomeado, input dos
 chips, trigger, indicador da opção e a região de status. A paleta de comandos só divide com eles a classe
 do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
 
@@ -34,12 +34,15 @@ do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
   anúncio, o estado abaixo da lista (carregando, falha com nova tentativa, vazio e sem resultado), o
   progresso da paginação e o resumo da seleção com "Limpar seleção". O `ComboboxEmpty` fica sempre montado,
   só com o texto trocado, como o Base UI exige.
-- `search-select.types.ts`: o item `{ id, name, color? }`, `SearchItemsQuery`, `LoadSearchItems` e as
-  props. O nome acessível é obrigatório: `aria-label` ou um `id` ligado a um rótulo.
+- `search-select.types.ts`: o item `{ id, name }`, `SearchItemsQuery`, `LoadSearchItems` e as props, com o
+  `renderItem` opcional que desenha o item na opção e no chip. O nome acessível é obrigatório:
+  `aria-label` ou um `id` ligado a um rótulo.
 
 `SearchSelectField`, em `src/shared/form/fields/`, liga o componente ao React Hook Form por
 `ControlledField`, como o `SelectField`, sem comportamento próprio. Os tipos seguem os demais campos:
-`name` é um caminho do formulário (`Path<T>`) e o único genérico é o do formulário. O tipo das props fica
+`name` é um caminho do formulário (`Path<T>`), o primeiro genérico é o do formulário e o segundo é o do
+item, que tipa o `renderItem`. O formulário de pessoas desenha cada etiqueta com o `TagBadge`, exportado
+pelo barril da feature de etiquetas e usado também na lista de etiquetas. O tipo das props fica
 em `search-select-field.tsx`, derivado das props do `SearchSelect` sem as que o formulário fornece; o
 `fields.types.ts` só guarda as peças genéricas, como `BaseFieldProps` e `FormFieldOwnedProps`.
 

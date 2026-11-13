@@ -42,7 +42,7 @@ function Harness({ initial = [], error }: { initial?: Tag[]; error?: string }) {
 
   return (
     <FormProvider {...methods}>
-      <SearchSelectField<DummyValues>
+      <SearchSelectField<DummyValues, Tag>
         name="tags"
         label="Etiquetas"
         hint="opcional"

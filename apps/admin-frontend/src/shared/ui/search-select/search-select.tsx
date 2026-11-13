@@ -1,4 +1,4 @@
-import { useEffect, useEffectEvent, useRef, type CSSProperties } from 'react';
+import { useEffect, useEffectEvent, useRef } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { DEFAULT_PAGE_SIZE } from '@/shared/pagination/paging';
 import { Button } from '@/shared/ui/button';
@@ -31,6 +31,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
     loadItems,
     value,
     onValueChange,
+    renderItem,
     maxSelected,
     pageSize = DEFAULT_PAGE_SIZE,
     placeholder = 'Selecione ou busque',
@@ -54,6 +55,11 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
     if (!node) return;
     if (node.scrollHeight - node.scrollTop - node.clientHeight > LOAD_MORE_DISTANCE_PX) return;
     options.loadMore();
+  }
+
+  function labelOf(item: T) {
+    if (renderItem) return renderItem(item);
+    return <span className="min-w-0 truncate">{item.name}</span>;
   }
 
   const loadMoreIfShort = useEffectEvent(loadMoreNearEnd);
@@ -88,8 +94,8 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
     >
       <ComboboxChips ref={anchor} className={cn('w-full pointer-coarse:min-h-11', className)}>
         {value.map((item) => (
-          <ComboboxChip key={item.id} color={item.color} removeLabel={`Remover ${item.name}`}>
-            {item.name}
+          <ComboboxChip key={item.id} removeLabel={`Remover ${item.name}`}>
+            {labelOf(item)}
           </ComboboxChip>
         ))}
         <ComboboxChipsInput
@@ -120,12 +126,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
               disabled={limitReached && !selectedIds.has(item.id)}
               className="pr-8 pointer-coarse:min-h-10"
             >
-              <span
-                className={cn('inline-flex max-w-full min-w-0', item.color && 'tag')}
-                style={item.color ? ({ '--tag': item.color } as CSSProperties) : undefined}
-              >
-                <span className="min-w-0 truncate">{item.name}</span>
-              </span>
+              {labelOf(item)}
               <ComboboxItemIndicator />
             </ComboboxItem>
           )}

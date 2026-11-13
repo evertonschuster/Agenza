@@ -23,10 +23,11 @@ the component to be rewritten from scratch, focused on the backend case.
 loads through the caller's function, and works on its own, controlled by `value` and `onValueChange`,
 named by `aria-label` or by a label bound to its `id`, one of which its props require. `SearchSelectField`
 in `shared/form/fields/` binds it to React Hook Form through `ControlledField`, like `SelectField`, and adds
-no behavior; its props follow the other fields, a form path for `name` and the form as the only type
-parameter. A first version narrowed `name` to paths holding a list of the items, through a type of its own
-and a second type parameter; the owner had it removed so the field keeps the contract shared by every
-field in `shared/form/fields`. Its props type is declared in the field's own file, deriving from
+no behavior; its props follow the other fields, a form path for `name` and the form as the first type
+parameter, with the item as the second, which types the `renderItem` the caller passes. A first version
+narrowed `name` to paths holding a list of the items, through a type of its own; the owner had it removed
+so the field keeps the contract shared by every field in `shared/form/fields`, and the item parameter left
+with it, then came back with `renderItem`. Its props type is declared in the field's own file, deriving from
 `SearchSelectProps` minus what the form provides, so `fields.types.ts` keeps only the generic pieces and
 does not know the `SearchSelect`. Both stay in
 `shared` with the other form controls; the request itself belongs to the feature, which passes the call.
@@ -37,14 +38,18 @@ fixed-list picker and the single-choice mode until a screen needs them.
 
 **Built on the generated Combobox parts.** `shared/ui/combobox/` takes back from the shadcn `base-nova`
 registry the parts removed when only the command palette used it: popup content with an anchor, chips,
-chip, chips input, trigger and item indicator, adapted to the project's focus ring, the `.tag` colours and
-a required name for each chip's remove button, plus Base UI's `Combobox.Status`. `SearchSelect` composes
+chip, chips input, trigger and item indicator, adapted to the project's focus ring and a required name for
+each chip's remove button, plus Base UI's `Combobox.Status`. `SearchSelect` composes
 them and owns three rules.
 
-**Items are domain objects.** The component is generic over `{ id, name }`; an optional `color` paints the
-chip and the option with the shared `.tag` class. There is no option type or per-feature mapper: the owner
-turned down a `TagOption { value, label, color }`. The value holds whole items, so the chosen ones show
-without being on a loaded page, and the form converts them to ids when it submits.
+**Items are domain objects.** The component is generic over `{ id, name }` and shows the name. A caller
+that wants more passes `renderItem(item)`, drawn in the option and inside the chip, which keeps its neutral
+frame and its remove button; the component knows nothing about how an item looks. The person form draws
+each tag with the tags feature's `TagBadge`, the badge of the tags list. `SearchSelectField` takes the item
+type as its second generic, so the loader and the renderer agree on it. There is no option type or
+per-feature mapper: the owner turned down a `TagOption { value, label, color }`. The value holds whole
+items, so the chosen ones show without being on a loaded page, and the form converts them to ids when it
+submits.
 
 **The caller supplies the call.** `loadItems({ search, page, pageSize }, signal)` returns the facade's
 `ApiResult<PagedResult<T>>`, the same shape as `usePaginatedList`'s `fetchPage`; `tagsRepository.list`
@@ -145,5 +150,15 @@ server error on `TagIds` (`Tag.NotFound`, `Client.TooManyTags`) is moved to the 
   feature's.
 - **A `TagOption` with `value`/`label` and a mapper per feature.** Rejected by the owner: the domain object
   already has an id and a name.
+- **An optional `color` on the item, painting the chip and the option with `.tag`.** Shipped on the branch
+  and replaced by `renderItem` at the owner's request: the generic picker and the generated `ComboboxChip`
+  drew the look of a tag, and each new picker with its own look (a phone, a price, an avatar) would have
+  added another optional field.
+- **Letting the caller style the chip itself, so the colored tag keeps the remove button inside.** It
+  would need a class and a style per item on top of `renderItem`, and the chip's neutral `bg-muted`
+  utility wins over the `.tag` component layer, so the chip would also have to drop its own fill.
+- **`renderItem` declared as a method so `SearchSelectField` keeps a single generic.** Method parameters
+  are bivariant, so the caller could type the item without TypeScript checking that the loader returns
+  it. The owner chose the second generic.
 - **Naming the form field `tagIds` so the error lands without a rename.** It would hold objects under an
   id name.

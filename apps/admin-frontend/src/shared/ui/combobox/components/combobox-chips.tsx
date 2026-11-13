@@ -22,17 +22,14 @@ function ComboboxChips({ className, ...props }: ComboboxChipsProps) {
 
 interface ComboboxChipProps extends ComboboxPrimitive.Chip.Props {
   removeLabel: string;
-  color?: string | undefined;
 }
 
-function ComboboxChip({ className, children, removeLabel, color, ...props }: ComboboxChipProps) {
+function ComboboxChip({ className, children, removeLabel, ...props }: ComboboxChipProps) {
   return (
     <ComboboxPrimitive.Chip
       data-slot="combobox-chip"
-      style={color ? ({ '--tag': color } as React.CSSProperties) : undefined}
       className={cn(
-        'flex h-[calc(--spacing(5.25))] w-fit items-center justify-center gap-1 rounded-sm px-1.5 text-xs font-medium whitespace-nowrap has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pr-0',
-        color ? 'tag' : 'bg-muted text-foreground',
+        'flex min-h-[calc(--spacing(5.25))] w-fit items-center justify-center gap-1 rounded-sm bg-muted px-1.5 text-xs font-medium whitespace-nowrap text-foreground has-disabled:pointer-events-none has-disabled:cursor-not-allowed has-disabled:opacity-50 has-data-[slot=combobox-chip-remove]:pr-0',
         className,
       )}
       {...props}

@@ -1,6 +1,6 @@
 import { useFormContext, useFormState } from 'react-hook-form';
 import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
-import { TAG_SEARCH_MAX_LENGTH, tagsRepository } from '@/features/tags';
+import { TAG_SEARCH_MAX_LENGTH, TagBadge, tagsRepository } from '@/features/tags';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
 import {
   BirthDateField,
@@ -17,6 +17,7 @@ import {
   CLIENT_MAX_TAGS,
   CLIENT_NOTES_MAX_LENGTH,
 } from '../../../../model/client';
+import type { ClientTag } from '../../../../model/clientTag';
 import type { ClientFormFieldValues } from '../clientForm';
 import { editClientPath } from '../../../clientsPaths';
 
@@ -64,11 +65,12 @@ function ClientPersonSection() {
         </div>
 
         <div className="md:col-span-2">
-          <SearchSelectField<ClientFormFieldValues>
+          <SearchSelectField<ClientFormFieldValues, ClientTag>
             name="tags"
             label="Etiquetas"
             hint={`opcional · até ${CLIENT_MAX_TAGS}`}
             loadItems={tagsRepository.list}
+            renderItem={(tag) => <TagBadge tag={tag} />}
             maxSelected={CLIENT_MAX_TAGS}
             maxLength={TAG_SEARCH_MAX_LENGTH}
             placeholder="Selecione ou busque etiquetas"
