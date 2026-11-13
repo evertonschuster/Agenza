@@ -1,7 +1,14 @@
+import type { ComponentProps } from 'react';
 import type { FieldValues } from 'react-hook-form';
 import { Input } from '@/shared/ui/input';
-import type { MaskedFieldProps } from '../fields.types';
+import type { BaseFieldProps, FormFieldOwnedProps, RegisterOwnedProps } from '../fields.types';
 import { ControlledField } from './controlled-field';
+
+export type MaskedFieldProps<T extends FieldValues> = BaseFieldProps<T> &
+  Omit<ComponentProps<typeof Input>, RegisterOwnedProps | FormFieldOwnedProps | 'value'> & {
+    mask: (value: string) => string;
+    unmask: (typed: string) => string;
+  };
 
 export function MaskedField<T extends FieldValues>({
   name,

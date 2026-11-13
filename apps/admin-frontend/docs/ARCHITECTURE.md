@@ -81,7 +81,9 @@ contraste. Primitivos podem ter comportamento de interação e acessibilidade; c
 reutilizáveis ficam em widgets. Cobertura e exclusões vêm da configuração, não da pasta.
 
 Formulários usam React Hook Form e Zod com os controles de `shared/form/fields/`; a moldura visual
-fica em `shared/ui/form-field/`. As receitas específicas pertencem à
+fica em `shared/ui/form-field/`. O tipo das props de um campo fica no arquivo do campo em
+`components/`, derivado do primitivo que ele renderiza; `fields.types.ts` guarda só as peças que
+vários campos compartilham e não importa nada de `shared/ui`. As receitas específicas pertencem à
 [skill de formulário](../../../.claude/skills/agenza-form-field/SKILL.md).
 Seleção de várias opções `{ id, name }` carregadas do backend, com busca e páginas, usa
 [SearchSelect](../src/shared/ui/search-select/search-select.tsx) com a chamada paginada da feature; no
