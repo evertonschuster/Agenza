@@ -1,12 +1,7 @@
-import { useEffect, useEffectEvent, type RefObject } from 'react';
+import { useEffect, useEffectEvent } from 'react';
+import type { UseLoadMoreNearEndArgs } from './search-select.types';
 
 const LOAD_MORE_DISTANCE_PX = 40;
-
-interface UseLoadMoreNearEndArgs {
-  list: RefObject<HTMLElement | null>;
-  items: readonly unknown[];
-  loadMore: () => void;
-}
 
 export function useLoadMoreNearEnd(args: UseLoadMoreNearEndArgs) {
   const { list, items, loadMore } = args;

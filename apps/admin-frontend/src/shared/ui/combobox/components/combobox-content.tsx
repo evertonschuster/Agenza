@@ -1,11 +1,6 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { cn } from '@/shared/lib/utils';
-
-type ComboboxContentProps = ComboboxPrimitive.Popup.Props &
-  Pick<
-    ComboboxPrimitive.Positioner.Props,
-    'side' | 'align' | 'sideOffset' | 'alignOffset' | 'anchor'
-  >;
+import type { ComboboxContentProps } from '../combobox.types';
 
 function ComboboxContent(props: ComboboxContentProps) {
   const {

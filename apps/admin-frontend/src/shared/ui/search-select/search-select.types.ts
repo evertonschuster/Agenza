@@ -1,5 +1,6 @@
-import type { ReactNode, Ref } from 'react';
-import type { ApiResult } from '@/shared/api/servicesFacade';
+import type { ReactNode, Ref, RefObject } from 'react';
+import type { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import type { ApiProblem, ApiResult } from '@/shared/api/servicesFacade';
 import type { PagedResult, Paging } from '@/shared/pagination/paging';
 
 interface SearchSelectItem {
@@ -37,4 +38,85 @@ type SearchSelectName =
 
 type SearchSelectProps<T extends SearchSelectItem> = SearchSelectOwnProps<T> & SearchSelectName;
 
-export type { LoadSearchItems, SearchItemsQuery, SearchSelectItem, SearchSelectProps };
+type SearchPhase =
+  | { kind: 'loadingFirst' }
+  | { kind: 'loadingNext' }
+  | { kind: 'failed'; problem: ApiProblem; retry: SearchItemsQuery }
+  | { kind: 'ready' };
+
+interface SearchOptionsState<T> {
+  searched: string;
+  items: readonly T[];
+  totalCount: number;
+  next: SearchItemsQuery | null;
+  phase: SearchPhase;
+}
+
+type SearchTimer = ReturnType<typeof setTimeout> | undefined;
+
+interface UseSearchOptionsArgs<T> {
+  loadItems: LoadSearchItems<T>;
+  pageSize: number;
+}
+
+interface UseLoadMoreNearEndArgs {
+  list: RefObject<HTMLElement | null>;
+  items: readonly unknown[];
+  loadMore: () => void;
+}
+
+type SearchInputKeyDown = NonNullable<ComboboxPrimitive.Input.Props['onKeyDown']>;
+
+interface SearchSelectAnnouncementProps {
+  phase: SearchPhase;
+  reachedLimit: number | null;
+}
+
+interface SearchSelectLimitNoticeProps {
+  reachedLimit: number | null;
+}
+
+interface SearchSelectEmptyProps {
+  settled: boolean;
+  searched: string;
+  emptyMessage: string;
+}
+
+interface SearchSelectErrorProps {
+  problem: ApiProblem;
+  errorMessage: string;
+  onRetry: () => void;
+}
+
+interface SearchSelectProgressProps {
+  shown: number;
+  totalCount: number;
+  hasMore: boolean;
+  loadingMore: boolean;
+}
+
+interface SearchSelectSelectionProps {
+  selected: number;
+  maxSelected: number | undefined;
+  disabled: boolean;
+  onClear: () => void;
+}
+
+export type {
+  LoadSearchItems,
+  SearchInputKeyDown,
+  SearchItemsQuery,
+  SearchOptionsState,
+  SearchPhase,
+  SearchSelectAnnouncementProps,
+  SearchSelectEmptyProps,
+  SearchSelectErrorProps,
+  SearchSelectItem,
+  SearchSelectLimitNoticeProps,
+  SearchSelectProgressProps,
+  SearchSelectProps,
+  SearchSelectSelectionProps,
+  SearchTimer,
+  UseLoadMoreNearEndArgs,
+  UseSearchOptionsArgs,
+};

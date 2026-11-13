@@ -1,23 +1,14 @@
 import { useEffect, useRef, useState, type RefObject } from 'react';
-import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { FIRST_PAGE, getLastPage } from '@/shared/pagination/paging';
-import type { LoadSearchItems, SearchItemsQuery, SearchSelectItem } from './search-select.types';
+import type {
+  SearchItemsQuery,
+  SearchOptionsState,
+  SearchSelectItem,
+  SearchTimer,
+  UseSearchOptionsArgs,
+} from './search-select.types';
 
 export const SEARCH_DELAY_MS = 300;
-
-export type SearchPhase =
-  | { kind: 'loadingFirst' }
-  | { kind: 'loadingNext' }
-  | { kind: 'failed'; problem: ApiProblem; retry: SearchItemsQuery }
-  | { kind: 'ready' };
-
-interface SearchOptionsState<T> {
-  searched: string;
-  items: readonly T[];
-  totalCount: number;
-  next: SearchItemsQuery | null;
-  phase: SearchPhase;
-}
 
 const UNLOADED: SearchOptionsState<never> = {
   searched: '',
@@ -26,8 +17,6 @@ const UNLOADED: SearchOptionsState<never> = {
   next: null,
   phase: { kind: 'loadingFirst' },
 };
-
-type SearchTimer = ReturnType<typeof setTimeout> | undefined;
 
 function cancelPending(timer: RefObject<SearchTimer>, inFlight: RefObject<AbortController | null>) {
   clearTimeout(timer.current);
@@ -39,11 +28,6 @@ function cancelPending(timer: RefObject<SearchTimer>, inFlight: RefObject<AbortC
 function appendNew<T extends SearchSelectItem>(current: readonly T[], page: readonly T[]): T[] {
   const known = new Set(current.map((item) => item.id));
   return [...current, ...page.filter((item) => !known.has(item.id))];
-}
-
-interface UseSearchOptionsArgs<T> {
-  loadItems: LoadSearchItems<T>;
-  pageSize: number;
 }
 
 export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOptionsArgs<T>) {

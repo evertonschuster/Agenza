@@ -1,8 +1,6 @@
-import type { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import type { SearchInputKeyDown } from './search-select.types';
 
-type InputKeyDown = NonNullable<ComboboxPrimitive.Input.Props['onKeyDown']>;
-
-export const keepKeysInPicker: InputKeyDown = (event) => {
+export const keepKeysInPicker: SearchInputKeyDown = (event) => {
   const input = event.currentTarget;
   const open = input.getAttribute('aria-expanded') === 'true';
   if (event.key === 'Escape') {

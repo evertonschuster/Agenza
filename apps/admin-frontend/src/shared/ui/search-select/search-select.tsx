@@ -13,14 +13,13 @@ import {
   ComboboxList,
   ComboboxTrigger,
 } from '@/shared/ui/combobox';
-import { SearchSelectProgress, SearchSelectSelection } from './components/search-select-footer';
-import {
-  SearchSelectAnnouncement,
-  SearchSelectEmpty,
-  SearchSelectFailure,
-  SearchSelectLimitNotice,
-  SearchSelectLoading,
-} from './components/search-select-status';
+import { SearchSelectAnnouncement } from './components/search-select-announcement';
+import { SearchSelectEmpty } from './components/search-select-empty';
+import { SearchSelectError } from './components/search-select-error';
+import { SearchSelectLimitNotice } from './components/search-select-limit-notice';
+import { SearchSelectProgress } from './components/search-select-progress';
+import { SearchSelectSelection } from './components/search-select-selection';
+import { SearchSelectSkeleton } from './components/search-select-skeleton';
 import { keepKeysInPicker } from './keep-keys-in-picker';
 import type { SearchSelectItem, SearchSelectProps } from './search-select.types';
 import { useLoadMoreNearEnd } from './use-load-more-near-end';
@@ -129,9 +128,9 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
           searched={options.searched}
           emptyMessage={emptyMessage}
         />
-        {phase.kind === 'loadingFirst' && <SearchSelectLoading />}
+        {phase.kind === 'loadingFirst' && <SearchSelectSkeleton />}
         {phase.kind === 'failed' && (
-          <SearchSelectFailure
+          <SearchSelectError
             problem={phase.problem}
             errorMessage={errorMessage}
             onRetry={options.retry}

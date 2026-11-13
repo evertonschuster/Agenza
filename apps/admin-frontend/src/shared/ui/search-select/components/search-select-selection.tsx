@@ -1,32 +1,6 @@
 import { formatNumber } from '@/shared/format/count';
 import { Button } from '@/shared/ui/button';
-
-interface SearchSelectProgressProps {
-  shown: number;
-  totalCount: number;
-  hasMore: boolean;
-  loadingMore: boolean;
-}
-
-function SearchSelectProgress(props: SearchSelectProgressProps) {
-  const { shown, totalCount, hasMore, loadingMore } = props;
-  if (!hasMore && !loadingMore) return null;
-
-  return (
-    <p className="px-2.5 py-1 text-xs text-muted-foreground">
-      {loadingMore
-        ? 'Carregando mais…'
-        : `Mostrando ${formatNumber(shown)} de ${formatNumber(totalCount)}`}
-    </p>
-  );
-}
-
-interface SearchSelectSelectionProps {
-  selected: number;
-  maxSelected: number | undefined;
-  disabled: boolean;
-  onClear: () => void;
-}
+import type { SearchSelectSelectionProps } from '../search-select.types';
 
 function SearchSelectSelection(props: SearchSelectSelectionProps) {
   const { selected, maxSelected, disabled, onClear } = props;
@@ -52,4 +26,4 @@ function SearchSelectSelection(props: SearchSelectSelectionProps) {
   );
 }
 
-export { SearchSelectProgress, SearchSelectSelection };
+export { SearchSelectSelection };

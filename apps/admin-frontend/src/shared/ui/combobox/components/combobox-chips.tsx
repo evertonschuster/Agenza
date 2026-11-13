@@ -1,11 +1,8 @@
-import type * as React from 'react';
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { XIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-
-type ComboboxChipsProps = React.ComponentPropsWithRef<typeof ComboboxPrimitive.Chips> &
-  ComboboxPrimitive.Chips.Props;
+import type { ComboboxChipProps, ComboboxChipsProps } from '../combobox.types';
 
 function ComboboxChips({ className, ...props }: ComboboxChipsProps) {
   return (
@@ -18,10 +15,6 @@ function ComboboxChips({ className, ...props }: ComboboxChipsProps) {
       {...props}
     />
   );
-}
-
-interface ComboboxChipProps extends ComboboxPrimitive.Chip.Props {
-  removeLabel: string;
 }
 
 function ComboboxChip({ className, children, removeLabel, ...props }: ComboboxChipProps) {

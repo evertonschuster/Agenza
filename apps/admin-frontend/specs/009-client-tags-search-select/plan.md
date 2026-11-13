@@ -31,16 +31,18 @@ do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
   `use-load-more-near-end.ts`, que avisa o hook a 40 px do fim e depois de cada página; e o limite, que
   desabilita as opções não marcadas e avisa. O componente escolhe pela fase o que mostrar abaixo da lista.
   Uma região de status no popup anuncia carregando, carregando mais e o limite; a lista fica com
-  `aria-busy` durante um pedido, e o campo de busca aceita o `maxLength` de quem usa. O `index.tsx` só
+  `aria-busy` durante um pedido, e o campo de busca aceita o `maxLength` de quem usa. O `index.ts` só
   reexporta o componente e os tipos.
-- `components/search-select-status.tsx`: o anúncio, o aviso de limite, o vazio e sem resultado, o
-  carregando e a falha com nova tentativa. O `ComboboxEmpty` fica sempre montado, só com o texto trocado,
-  como o Base UI exige.
-- `components/search-select-footer.tsx`: o progresso da paginação e o resumo da seleção com "Limpar
-  seleção".
+- `components/`, uma parte por arquivo, como em `list-section` e `pagination`:
+  `search-select-announcement`, `-limit-notice`, `-empty`, `-skeleton`, `-error` (falha com nova
+  tentativa), `-progress` (progresso da paginação) e `-selection` (resumo da seleção com "Limpar
+  seleção"). O `ComboboxEmpty` fica sempre montado, só com o texto trocado, como o Base UI exige. O texto
+  do limite, usado pelo anúncio e pelo aviso, fica em `limit-notice.ts`.
 - `search-select.types.ts`: o item `{ id, name }`, `SearchItemsQuery`, `LoadSearchItems` e as props, com o
-  `renderItem` opcional que desenha o item na opção e no chip. O nome acessível é obrigatório:
-  `aria-label` ou um `id` ligado a um rótulo.
+  `renderItem` opcional que desenha o item na opção e no chip, mais os tipos dos hooks, da regra de teclado
+  e das partes. O nome acessível é obrigatório: `aria-label` ou um `id` ligado a um rótulo.
+
+Os tipos das partes do Combobox acrescentadas para o seletor ficam em `combobox.types.ts`.
 
 `SearchSelectField`, em `src/shared/form/fields/`, liga o componente ao React Hook Form por
 `ControlledField`, como o `SelectField`, sem comportamento próprio. Os tipos seguem os demais campos:
