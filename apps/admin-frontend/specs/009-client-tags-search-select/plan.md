@@ -18,9 +18,10 @@ do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
 - `use-search-options.ts`: o que mostrar e quando pedir, sem conhecer o Base UI. O estado guarda a busca da
   lista exibida, os itens, o total, o pedido pronto da próxima página e uma fase: carregando a primeira
   página, carregando a próxima, pronta ou com falha, que guarda o problema e o pedido a repetir. Abrir pede
-  a primeira página, exceto com uma busca digitada esperando os 300 ms; digitar reinicia os 300 ms;
-  `loadMore` pede a próxima só na fase pronta, sem pedido em andamento e sem busca esperando; `retry`
-  repete o pedido que falhou; `cancel`, chamado ao fechar, cancela, e a lista é descartada só quando a
+  a primeira página, exceto com uma busca digitada esperando os 300 ms; digitar reinicia os 300 ms e
+  cancela na hora o pedido em andamento; `loadMore` pede a próxima só na fase pronta, sem pedido em
+  andamento e sem busca esperando; `retry` repete o pedido que falhou, a não ser que uma busca digitada
+  esteja esperando; `cancel`, chamado ao fechar, cancela, e a lista é descartada só quando a
   animação de fechar termina. A última página vem do tamanho de página que o
   servidor respondeu. Cada pedido cancela o anterior por `AbortController` e uma resposta cancelada é
   ignorada. As buscas partem de ações, nunca de um efeito sobre o texto.

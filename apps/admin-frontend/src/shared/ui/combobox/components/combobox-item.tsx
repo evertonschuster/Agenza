@@ -1,6 +1,7 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { CheckIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import type { ComboboxItemIndicatorProps } from '../combobox.types';
 
 function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
   return (
@@ -17,7 +18,7 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
   );
 }
 
-function ComboboxItemIndicator({ className, ...props }: ComboboxPrimitive.ItemIndicator.Props) {
+function ComboboxItemIndicator({ className, ...props }: ComboboxItemIndicatorProps) {
   return (
     <ComboboxPrimitive.ItemIndicator
       data-slot="combobox-item-indicator"

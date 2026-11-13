@@ -62,16 +62,17 @@ loading list cannot also hold a failure. The scroll measure lives in `useLoadMor
 
 - The first page loads every time the list opens, so tags created or renamed elsewhere show without
   reloading the page, unless a typed search is waiting, which then loads alone.
-- Typing searches 300 ms after the last keystroke; only typed changes search, so choosing an item does
-  not search for its own name.
+- Typing searches 300 ms after the last keystroke and cancels at once the request still running, so the
+  answer of the previous search never shows under the new text; only typed changes search, so choosing
+  an item does not search for its own name.
 - The answer for a page that has a successor stores that successor's query, ready to send. Scrolling to
   40 px from the end of the list sends it, and so does a list still shorter than its height after a page
   arrives; an id that shifted pages is dropped. The last page comes from the page size the server
   answered. One page at a time: nothing more is asked while a request runs, while a typed search waits,
   from a render older than the page that just arrived, or after a failure.
 - A failure shows the problem's title as received with "Tentar novamente", below the list, where a failed
-  next page was asked; it repeats the failed page or, with none, the first page of the same search. A 429
-  gets no automatic retry.
+  next page was asked; it repeats the failed request, unless a typed search is waiting, which then runs
+  instead. A 429 gets no automatic retry.
 - One `AbortController` per request: a new request, closing or unmounting cancels the pending one, and a
   cancelled answer is ignored. The list is dropped once the closing animation ends, so the popup does not
   turn into a skeleton while it fades out.

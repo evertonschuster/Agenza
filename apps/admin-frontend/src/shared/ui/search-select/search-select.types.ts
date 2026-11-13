@@ -10,9 +10,9 @@ interface SearchSelectItem {
 
 type SearchItemsQuery = { search: string } & Paging;
 
-interface LoadSearchItems<T> {
-  (query: SearchItemsQuery, signal: AbortSignal): Promise<ApiResult<PagedResult<T>>>;
-}
+type SearchPage<T> = ApiResult<PagedResult<T>>;
+
+type LoadSearchItems<T> = (query: SearchItemsQuery, signal: AbortSignal) => Promise<SearchPage<T>>;
 
 interface SearchSelectOwnProps<T extends SearchSelectItem> {
   loadItems: LoadSearchItems<T>;
@@ -68,38 +68,38 @@ interface UseLoadMoreNearEndArgs {
 type SearchInputKeyDown = NonNullable<ComboboxPrimitive.Input.Props['onKeyDown']>;
 
 interface SearchSelectAnnouncementProps {
-  phase: SearchPhase;
-  reachedLimit: number | null;
+  readonly phase: SearchPhase;
+  readonly reachedLimit: number | null;
 }
 
 interface SearchSelectLimitNoticeProps {
-  reachedLimit: number | null;
+  readonly reachedLimit: number | null;
 }
 
 interface SearchSelectEmptyProps {
-  settled: boolean;
-  searched: string;
-  emptyMessage: string;
+  readonly settled: boolean;
+  readonly searched: string;
+  readonly emptyMessage: string;
 }
 
 interface SearchSelectErrorProps {
-  problem: ApiProblem;
-  errorMessage: string;
-  onRetry: () => void;
+  readonly problem: ApiProblem;
+  readonly errorMessage: string;
+  readonly onRetry: () => void;
 }
 
 interface SearchSelectProgressProps {
-  shown: number;
-  totalCount: number;
-  hasMore: boolean;
-  loadingMore: boolean;
+  readonly shown: number;
+  readonly totalCount: number;
+  readonly hasMore: boolean;
+  readonly loadingMore: boolean;
 }
 
 interface SearchSelectSelectionProps {
-  selected: number;
-  maxSelected: number | undefined;
-  disabled: boolean;
-  onClear: () => void;
+  readonly selected: number;
+  readonly maxSelected: number | undefined;
+  readonly disabled: boolean;
+  readonly onClear: () => void;
 }
 
 export type {

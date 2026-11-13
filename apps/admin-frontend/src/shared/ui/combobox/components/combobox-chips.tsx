@@ -2,7 +2,11 @@ import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { XIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
 import { Button } from '@/shared/ui/button';
-import type { ComboboxChipProps, ComboboxChipsProps } from '../combobox.types';
+import type {
+  ComboboxChipProps,
+  ComboboxChipsInputProps,
+  ComboboxChipsProps,
+} from '../combobox.types';
 
 function ComboboxChips({ className, ...props }: ComboboxChipsProps) {
   return (
@@ -40,7 +44,7 @@ function ComboboxChip({ className, children, removeLabel, ...props }: ComboboxCh
   );
 }
 
-function ComboboxChipsInput({ className, ...props }: ComboboxPrimitive.Input.Props) {
+function ComboboxChipsInput({ className, ...props }: ComboboxChipsInputProps) {
   return (
     <ComboboxPrimitive.Input
       data-slot="combobox-chip-input"

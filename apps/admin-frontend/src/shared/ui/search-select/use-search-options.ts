@@ -87,7 +87,7 @@ export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOpti
   }
 
   function search(text: string) {
-    clearTimeout(searchTimer.current);
+    cancel();
     searchTimer.current = setTimeout(() => send(firstPage(text)), SEARCH_DELAY_MS);
   }
 
@@ -98,6 +98,7 @@ export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOpti
   }
 
   function retry() {
+    if (searchTimer.current !== undefined) return;
     if (state.phase.kind !== 'failed') return;
     send(state.phase.retry);
   }

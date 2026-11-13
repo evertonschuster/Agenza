@@ -1,8 +1,9 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 import { ChevronDownIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import type { ComboboxStatusProps, ComboboxTriggerProps } from '../combobox.types';
 
-function ComboboxTrigger({ className, children, ...props }: ComboboxPrimitive.Trigger.Props) {
+function ComboboxTrigger({ className, children, ...props }: ComboboxTriggerProps) {
   return (
     <ComboboxPrimitive.Trigger
       data-slot="combobox-trigger"
@@ -60,7 +61,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
   );
 }
 
-function ComboboxStatus(props: ComboboxPrimitive.Status.Props) {
+function ComboboxStatus(props: ComboboxStatusProps) {
   return <ComboboxPrimitive.Status data-slot="combobox-status" {...props} />;
 }
 

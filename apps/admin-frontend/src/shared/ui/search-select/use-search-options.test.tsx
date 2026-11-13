@@ -118,6 +118,38 @@ describe('useSearchOptions', () => {
     expect(current()).toMatchObject({ searched: 'nove', items: [item(9)] });
   });
 
+  it('drops the request of the previous search as soon as typing starts, so its answer never shows', async () => {
+    const { loadItems, current } = setup();
+    const previous = deferred();
+    loadItems.mockReturnValueOnce(previous.promise);
+
+    act(() => current().open());
+    act(() => current().search('nove'));
+    previous.settle(pageOf([item(1)], 1));
+    await settled();
+
+    expect(loadItems.mock.calls[0]?.[1].aborted).toBe(true);
+    expect(current()).toMatchObject({ items: [], phase: { kind: 'loadingFirst' } });
+  });
+
+  it('lets a typed search that is still waiting run instead of retrying the failed one', async () => {
+    const { loadItems, current } = setup();
+    loadItems.mockResolvedValueOnce(fail(PROBLEM)).mockResolvedValueOnce(pageOf([item(2)], 1));
+
+    act(() => current().open());
+    await settled();
+    act(() => current().search('dois'));
+    act(() => current().retry());
+    act(() => {
+      vi.advanceTimersByTime(SEARCH_DELAY_MS);
+    });
+    await settled();
+
+    expect(loadItems).toHaveBeenCalledTimes(2);
+    expect(loadItems).toHaveBeenLastCalledWith(query('dois'), expect.any(AbortSignal));
+    expect(current()).toMatchObject({ searched: 'dois', items: [item(2)] });
+  });
+
   it('appends the next page without repeating an item that shifted pages, up to the last one', async () => {
     const { loadItems, current } = setup();
     loadItems
