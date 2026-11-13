@@ -82,8 +82,14 @@ Keep these responsibilities separate:
   entry's message, code and metadata. Unknown paths become form-level errors.
 - [applyApiProblem.ts](../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts) bridges to
   RHF: it sets the code as the field error's `type`, preserves `meta`, sets `root.serverError` when
-  needed and focuses the first invalid field in form order. Call it for an unsuccessful submission;
-  render `FormErrorBanner` for the form-level message.
+  needed and focuses the first invalid field in form order. Call it as
+  `applyApiProblem({ problem, methods })` for an unsuccessful submission; render `FormErrorBanner` for
+  the form-level message.
+- A field submitted under another name, such as picked records sent as ids, needs `aliases`. Declare a
+  `FieldAliases<FormFieldValues>` beside the schema transform (`{ tagIds: 'tags' }`) and pass it to
+  `applyApiProblem`; errors on the command field and on each of its items land on the form field. Only
+  top-level command fields take an alias
+  ([ADR 0092](../../../docs/adr/0092-admin-frontend-form-fields-submitted-under-another-name.md)).
 - Feature UI interprets feature-specific codes/metadata. Shared fields and the bridge do not parse
   client conflicts. In
   [ClientPersonSection](../../../apps/admin-frontend/src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx),

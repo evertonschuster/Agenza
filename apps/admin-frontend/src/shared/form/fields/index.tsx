@@ -18,5 +18,6 @@ export {
   type SelectFieldProps,
 } from './components/select-field';
 export { SearchField, type SearchFieldProps } from './components/search-field';
+export { SearchSelectField, type SearchSelectFieldProps } from './components/search-select-field';
 export { FormErrorBanner } from './components/form-error-banner';
 export { FieldError, type FieldErrorProps } from './components/field-error';

@@ -1,5 +1,23 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import { ChevronDownIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import type { ComboboxStatusProps, ComboboxTriggerProps } from '../combobox.types';
+
+function ComboboxTrigger({ className, children, ...props }: ComboboxTriggerProps) {
+  return (
+    <ComboboxPrimitive.Trigger
+      data-slot="combobox-trigger"
+      className={cn("[&_svg:not([class*='size-'])]:size-4", className)}
+      {...props}
+    >
+      {children}
+      <ChevronDownIcon
+        aria-hidden="true"
+        className="pointer-events-none size-4 text-muted-foreground"
+      />
+    </ComboboxPrimitive.Trigger>
+  );
+}
 
 function ComboboxList({ className, ...props }: ComboboxPrimitive.List.Props) {
   return (
@@ -35,7 +53,7 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
     <ComboboxPrimitive.Empty
       data-slot="combobox-empty"
       className={cn(
-        'hidden w-full justify-center py-2 text-center text-sm text-muted-foreground group-data-empty/combobox-palette-content:flex',
+        'hidden w-full justify-center py-2 text-center text-sm text-muted-foreground group-data-empty/combobox-content:flex group-data-empty/combobox-palette-content:flex',
         className,
       )}
       {...props}
@@ -43,4 +61,15 @@ function ComboboxEmpty({ className, ...props }: ComboboxPrimitive.Empty.Props) {
   );
 }
 
-export { ComboboxList, ComboboxGroup, ComboboxLabel, ComboboxEmpty };
+function ComboboxStatus(props: ComboboxStatusProps) {
+  return <ComboboxPrimitive.Status data-slot="combobox-status" {...props} />;
+}
+
+export {
+  ComboboxTrigger,
+  ComboboxList,
+  ComboboxGroup,
+  ComboboxLabel,
+  ComboboxEmpty,
+  ComboboxStatus,
+};

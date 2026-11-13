@@ -6,7 +6,9 @@ no effect keyed on the state, and the correction of a page past the end leaves t
 [ADR 0033](0033-admin-frontend-no-request-cancellation-layer.md) (cancellation stays with the consumer) and
 [ADR 0035](0035-admin-frontend-no-server-state-library.md); extended by
 [ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md) (Etiquetas pages on the same hook, which gains `refetch`
-for the tag topics, with its state out of the URL)
+for the tag topics, with its state out of the URL); narrowed by
+[ADR 0091](0091-admin-frontend-search-select-and-client-tags.md) (the `SearchSelect` picker searches while typing and
+loads the next page on scroll; list pages still ask only when told)
 
 ## Context
 

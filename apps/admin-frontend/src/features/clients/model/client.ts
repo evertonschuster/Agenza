@@ -3,6 +3,7 @@ import { isMinorOn } from '@/shared/values/birthDate';
 import type { ClientGuardian } from './clientGuardian';
 import type { ClientReferenceContact } from './clientReferenceContact';
 import type { ClientStatus } from './clientStatus';
+import type { ClientTag } from './clientTag';
 
 export const CLIENT_FULL_NAME_MIN_LENGTH = 2;
 export const CLIENT_FULL_NAME_MAX_LENGTH = 150;
@@ -10,6 +11,7 @@ export const CLIENT_NOTES_MAX_LENGTH = 500;
 export const CLIENT_SEARCH_MAX_LENGTH = 254;
 export const MAX_GUARDIANS = 10;
 export const MAX_REFERENCE_CONTACTS = 10;
+export const CLIENT_MAX_TAGS = 20;
 
 export interface Client {
   id: string;
@@ -22,6 +24,7 @@ export interface Client {
   status: ClientStatus;
   guardians: ClientGuardian[];
   referenceContacts: ClientReferenceContact[];
+  tags: ClientTag[];
 }
 
 export interface ClientInput {
@@ -33,6 +36,7 @@ export interface ClientInput {
   administrativeNotes: string | null;
   guardians: Omit<ClientGuardian, 'id'>[];
   referenceContacts: Omit<ClientReferenceContact, 'id'>[];
+  tagIds: string[];
 }
 
 export function needsGuardian(
