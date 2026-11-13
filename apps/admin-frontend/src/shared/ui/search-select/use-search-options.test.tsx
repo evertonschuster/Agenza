@@ -51,16 +51,15 @@ describe('useSearchOptions', () => {
     loadItems.mockResolvedValue(pageOf([item(1), item(2)], 5));
 
     act(() => current().open());
-    expect(current().loading).toBe('first');
+    expect(current().phase).toEqual({ kind: 'loadingFirst' });
     await settled();
 
     expect(loadItems).toHaveBeenCalledWith(query(''), expect.any(AbortSignal));
     expect(current()).toMatchObject({
-      loading: null,
+      phase: { kind: 'ready' },
       items: [item(1), item(2)],
       totalCount: 5,
       hasMore: true,
-      problem: null,
     });
   });
 
@@ -91,7 +90,7 @@ describe('useSearchOptions', () => {
 
     act(() => current().search('vi'));
     act(() => current().open());
-    expect(current().loading).toBe('first');
+    expect(current().phase).toEqual({ kind: 'loadingFirst' });
     act(() => {
       vi.advanceTimersByTime(SEARCH_DELAY_MS);
     });
@@ -128,7 +127,7 @@ describe('useSearchOptions', () => {
     act(() => current().open());
     await settled();
     act(() => current().loadMore());
-    expect(current().loading).toBe('next');
+    expect(current().phase).toEqual({ kind: 'loadingNext' });
     await settled();
 
     expect(loadItems).toHaveBeenLastCalledWith(query('', 2), expect.any(AbortSignal));
@@ -188,10 +187,21 @@ describe('useSearchOptions', () => {
     await settled();
     act(() => current().loadMore());
     await settled();
-    expect(current()).toMatchObject({ problem: PROBLEM, hasMore: true });
+    expect(current()).toMatchObject({ phase: { kind: 'failed', problem: PROBLEM }, hasMore: true });
 
     act(() => current().loadMore());
     expect(loadItems).toHaveBeenCalledTimes(2);
+  });
+
+  it('has nothing to retry while no request has failed', async () => {
+    const { loadItems, current } = setup();
+    loadItems.mockResolvedValueOnce(pageOf([item(1)], 1));
+
+    act(() => current().open());
+    await settled();
+    act(() => current().retry());
+
+    expect(loadItems).toHaveBeenCalledTimes(1);
   });
 
   it('stops at the last page the server reports, even when it pages by less than asked', async () => {
@@ -213,13 +223,16 @@ describe('useSearchOptions', () => {
       vi.advanceTimersByTime(SEARCH_DELAY_MS);
     });
     await settled();
-    expect(current()).toMatchObject({ loading: null, items: [], problem: PROBLEM });
+    expect(current()).toMatchObject({
+      items: [],
+      phase: { kind: 'failed', problem: PROBLEM, retry: query('um') },
+    });
 
     act(() => current().retry());
     await settled();
 
     expect(loadItems).toHaveBeenLastCalledWith(query('um'), expect.any(AbortSignal));
-    expect(current()).toMatchObject({ items: [item(1)], problem: null });
+    expect(current()).toMatchObject({ items: [item(1)], phase: { kind: 'ready' } });
   });
 
   it('keeps the items when the next page fails and retries that page', async () => {
@@ -233,23 +246,30 @@ describe('useSearchOptions', () => {
     await settled();
     act(() => current().loadMore());
     await settled();
-    expect(current()).toMatchObject({ items: [item(1), item(2)], problem: PROBLEM, hasMore: true });
+    expect(current()).toMatchObject({
+      items: [item(1), item(2)],
+      phase: { kind: 'failed', problem: PROBLEM, retry: query('', 2) },
+      hasMore: true,
+    });
 
     act(() => current().retry());
     await settled();
 
     expect(loadItems).toHaveBeenLastCalledWith(query('', 2), expect.any(AbortSignal));
-    expect(current()).toMatchObject({ items: [item(1), item(2), item(3)], problem: null });
+    expect(current()).toMatchObject({
+      items: [item(1), item(2), item(3)],
+      phase: { kind: 'ready' },
+    });
   });
 
-  it('cancels the pending work when closed, drops the list once reset, and cancels on unmount', async () => {
+  it('cancels the pending work, drops the list once reset, and cancels on unmount', async () => {
     const { loadItems, hook, current } = setup();
     loadItems.mockResolvedValueOnce(pageOf([item(1)], 1)).mockReturnValue(deferred().promise);
 
     act(() => current().open());
     await settled();
     act(() => current().search('a'));
-    act(() => current().close());
+    act(() => current().cancel());
     act(() => {
       vi.advanceTimersByTime(SEARCH_DELAY_MS);
     });
@@ -258,7 +278,7 @@ describe('useSearchOptions', () => {
     expect(current().items).toEqual([item(1)]);
 
     act(() => current().reset());
-    expect(current()).toMatchObject({ items: [], loading: 'first', searched: '' });
+    expect(current()).toMatchObject({ items: [], phase: { kind: 'loadingFirst' }, searched: '' });
 
     act(() => current().open());
     const signal = loadItems.mock.calls[1]?.[1];

@@ -56,7 +56,9 @@ submits.
 fits as is and the tags barrel exports it. The component knows no endpoint.
 
 **How it asks.** `useSearchOptions` decides what to show and when to ask, without knowing Base UI, and
-asks only from events, never from an effect on the typed text:
+asks only from events, never from an effect on the typed text. Its state carries one phase, loading the
+first page, loading the next one, ready, or failed with the problem and the request to repeat, so a
+loading list cannot also hold a failure. The scroll measure lives in `useLoadMoreNearEnd`, beside it:
 
 - The first page loads every time the list opens, so tags created or renamed elsewhere show without
   reloading the page, unless a typed search is waiting, which then loads alone.

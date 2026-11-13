@@ -1,27 +1,40 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, type RefObject } from 'react';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { FIRST_PAGE, getLastPage } from '@/shared/pagination/paging';
 import type { LoadSearchItems, SearchItemsQuery, SearchSelectItem } from './search-select.types';
 
 export const SEARCH_DELAY_MS = 300;
 
+export type SearchPhase =
+  | { kind: 'loadingFirst' }
+  | { kind: 'loadingNext' }
+  | { kind: 'failed'; problem: ApiProblem; retry: SearchItemsQuery }
+  | { kind: 'ready' };
+
 interface SearchOptionsState<T> {
   searched: string;
   items: readonly T[];
   totalCount: number;
-  loading: 'first' | 'next' | null;
   next: SearchItemsQuery | null;
-  problem: ApiProblem | null;
+  phase: SearchPhase;
 }
 
 const UNLOADED: SearchOptionsState<never> = {
   searched: '',
   items: [],
   totalCount: 0,
-  loading: 'first',
   next: null,
-  problem: null,
+  phase: { kind: 'loadingFirst' },
 };
+
+type SearchTimer = ReturnType<typeof setTimeout> | undefined;
+
+function cancelPending(timer: RefObject<SearchTimer>, inFlight: RefObject<AbortController | null>) {
+  clearTimeout(timer.current);
+  timer.current = undefined;
+  inFlight.current?.abort();
+  inFlight.current = null;
+}
 
 function appendNew<T extends SearchSelectItem>(current: readonly T[], page: readonly T[]): T[] {
   const known = new Set(current.map((item) => item.id));
@@ -37,23 +50,15 @@ export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOpti
   const { loadItems, pageSize } = args;
   const [state, setState] = useState<SearchOptionsState<T>>(UNLOADED);
   const inFlight = useRef<AbortController | null>(null);
-  const searchTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
-
-  function cancel() {
-    clearTimeout(searchTimer.current);
-    searchTimer.current = undefined;
-    inFlight.current?.abort();
-    inFlight.current = null;
-  }
+  const searchTimer = useRef<SearchTimer>(undefined);
 
   useEffect(() => {
-    return () => {
-      clearTimeout(searchTimer.current);
-      searchTimer.current = undefined;
-      inFlight.current?.abort();
-      inFlight.current = null;
-    };
+    return () => cancelPending(searchTimer, inFlight);
   }, []);
+
+  function cancel() {
+    cancelPending(searchTimer, inFlight);
+  }
 
   function firstPage(search: string): SearchItemsQuery {
     return { search, page: FIRST_PAGE, pageSize };
@@ -66,14 +71,17 @@ export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOpti
     const isFirstPage = query.page === FIRST_PAGE;
     setState((current) => {
       if (isFirstPage) return { ...UNLOADED, searched: query.search };
-      return { ...current, loading: 'next', problem: null };
+      return { ...current, phase: { kind: 'loadingNext' } };
     });
 
     void loadItems(query, controller.signal).then((result) => {
       if (controller.signal.aborted) return;
       inFlight.current = null;
       if (!result.ok) {
-        setState((current) => ({ ...current, loading: null, problem: result.error }));
+        setState((current) => ({
+          ...current,
+          phase: { kind: 'failed', problem: result.error, retry: query },
+        }));
         return;
       }
 
@@ -83,9 +91,8 @@ export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOpti
         searched: query.search,
         items: isFirstPage ? items : appendNew(current.items, items),
         totalCount,
-        loading: null,
         next: hasNext ? { ...query, page: query.page + 1 } : null,
-        problem: null,
+        phase: { kind: 'ready' },
       }));
     });
   }
@@ -102,21 +109,18 @@ export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOpti
 
   function loadMore() {
     if (inFlight.current || searchTimer.current !== undefined) return;
-    if (!state.next || state.loading || state.problem) return;
+    if (!state.next || state.phase.kind !== 'ready') return;
     send(state.next);
   }
 
   function retry() {
-    send(state.next ?? firstPage(state.searched));
-  }
-
-  function close() {
-    cancel();
+    if (state.phase.kind !== 'failed') return;
+    send(state.phase.retry);
   }
 
   function reset() {
     setState(UNLOADED);
   }
 
-  return { ...state, hasMore: state.next !== null, open, search, loadMore, retry, close, reset };
+  return { ...state, hasMore: state.next !== null, open, search, loadMore, retry, cancel, reset };
 }

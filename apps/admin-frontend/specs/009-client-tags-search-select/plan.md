@@ -13,27 +13,31 @@ gera, adaptados ao projeto: conteúdo do popup com a âncora, chips, chip com re
 chips, trigger, indicador da opção e a região de status. A paleta de comandos só divide com eles a classe
 do `ComboboxEmpty`, que passa a valer também no novo conteúdo.
 
-`src/shared/ui/search-select/` tem quatro arquivos:
+`src/shared/ui/search-select/` tem estes arquivos:
 
 - `use-search-options.ts`: o que mostrar e quando pedir, sem conhecer o Base UI. O estado guarda a busca da
-  lista exibida, os itens, o total, o que está carregando (`first` ou `next`), o pedido pronto da próxima
-  página e o problema. Abrir pede a primeira página, exceto com uma busca digitada esperando os 300 ms;
-  digitar reinicia os 300 ms; `loadMore` pede a próxima só sem pedido em andamento, sem busca esperando e
-  sem falha; `retry` repete a próxima página ou, sem ela, a primeira da busca; fechar cancela, e a lista é
-  descartada só quando a animação de fechar termina. A última página vem do tamanho de página que o
+  lista exibida, os itens, o total, o pedido pronto da próxima página e uma fase: carregando a primeira
+  página, carregando a próxima, pronta ou com falha, que guarda o problema e o pedido a repetir. Abrir pede
+  a primeira página, exceto com uma busca digitada esperando os 300 ms; digitar reinicia os 300 ms;
+  `loadMore` pede a próxima só na fase pronta, sem pedido em andamento e sem busca esperando; `retry`
+  repete o pedido que falhou; `cancel`, chamado ao fechar, cancela, e a lista é descartada só quando a
+  animação de fechar termina. A última página vem do tamanho de página que o
   servidor respondeu. Cada pedido cancela o anterior por `AbortController` e uma resposta cancelada é
   ignorada. As buscas partem de ações, nunca de um efeito sobre o texto.
 - `search-select.tsx`: `SearchSelect` monta o Combobox com `multiple`, `filter={null}`, igualdade e valor
   por `id`, e tem três regras próprias: o teclado, em `keep-keys-in-picker.ts`, lido do estado que o Base UI
   põe no input (`aria-expanded` e `aria-activedescendant`), sem estado espelhado, com Enter que não envia o
-  formulário da lista aberta e Esc que não apaga as escolhas da lista fechada; a rolagem, que avisa o hook a 40 px do fim e depois de
-  cada página; e o limite, que desabilita as opções não marcadas e avisa. Uma região de status no popup
-  anuncia carregando, carregando mais e o limite; a lista fica com `aria-busy` durante um pedido, e o campo
-  de busca aceita o `maxLength` de quem usa. O `index.tsx` só reexporta o componente e os tipos.
-- `components/search-select-states.tsx`: os textos e as partes de estado do popup: o aviso de limite, o
-  anúncio, o estado abaixo da lista (carregando, falha com nova tentativa, vazio e sem resultado), o
-  progresso da paginação e o resumo da seleção com "Limpar seleção". O `ComboboxEmpty` fica sempre montado,
-  só com o texto trocado, como o Base UI exige.
+  formulário da lista aberta e Esc que não apaga as escolhas da lista fechada; a rolagem, em
+  `use-load-more-near-end.ts`, que avisa o hook a 40 px do fim e depois de cada página; e o limite, que
+  desabilita as opções não marcadas e avisa. O componente escolhe pela fase o que mostrar abaixo da lista.
+  Uma região de status no popup anuncia carregando, carregando mais e o limite; a lista fica com
+  `aria-busy` durante um pedido, e o campo de busca aceita o `maxLength` de quem usa. O `index.tsx` só
+  reexporta o componente e os tipos.
+- `components/search-select-status.tsx`: o anúncio, o aviso de limite, o vazio e sem resultado, o
+  carregando e a falha com nova tentativa. O `ComboboxEmpty` fica sempre montado, só com o texto trocado,
+  como o Base UI exige.
+- `components/search-select-footer.tsx`: o progresso da paginação e o resumo da seleção com "Limpar
+  seleção".
 - `search-select.types.ts`: o item `{ id, name }`, `SearchItemsQuery`, `LoadSearchItems` e as props, com o
   `renderItem` opcional que desenha o item na opção e no chip. O nome acessível é obrigatório:
   `aria-label` ou um `id` ligado a um rótulo.
