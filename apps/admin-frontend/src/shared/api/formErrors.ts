@@ -9,8 +9,12 @@ const toFieldPath = (key: string) => key.replace(/\[(\d+)\]/g, '.$1').toLowerCas
 export function toFormErrors<F extends string>(
   problem: ApiProblem,
   fields: readonly F[],
+  aliases: Readonly<Record<string, F>> = {},
 ): { fieldErrors: Partial<Record<F, FormFieldError>>; formError: string | null } {
   const byField = new Map(fields.map((field) => [field.toLowerCase(), field]));
+  const byAlias = new Map(
+    Object.entries(aliases).map(([name, field]) => [name.toLowerCase(), field.toLowerCase()]),
+  );
   const fieldErrors: Partial<Record<F, FormFieldError>> = {};
   const formLevel: string[] = [];
 
@@ -18,8 +22,9 @@ export function toFormErrors<F extends string>(
     const entry = entries[0];
     const message = entry?.message;
     if (!message) continue;
-    const field = byField.get(toFieldPath(key));
-    if (field) fieldErrors[field] = { ...entry, message };
+    const path = toFieldPath(key);
+    const field = byField.get(byAlias.get(path.split(/[.[]/)[0] ?? path) ?? path);
+    if (field) fieldErrors[field] ??= { ...entry, message };
     else formLevel.push(message);
   }
 

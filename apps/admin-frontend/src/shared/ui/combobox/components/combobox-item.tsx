@@ -1,5 +1,7 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
+import { CheckIcon } from 'lucide-react';
 import { cn } from '@/shared/lib/utils';
+import type { ComboboxItemIndicatorProps } from '../combobox.types';
 
 function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.Props) {
   return (
@@ -16,4 +18,19 @@ function ComboboxItem({ className, children, ...props }: ComboboxPrimitive.Item.
   );
 }
 
-export { ComboboxItem };
+function ComboboxItemIndicator({ className, ...props }: ComboboxItemIndicatorProps) {
+  return (
+    <ComboboxPrimitive.ItemIndicator
+      data-slot="combobox-item-indicator"
+      className={cn(
+        'pointer-events-none absolute right-2 flex size-4 items-center justify-center',
+        className,
+      )}
+      {...props}
+    >
+      <CheckIcon aria-hidden="true" className="pointer-events-none" />
+    </ComboboxPrimitive.ItemIndicator>
+  );
+}
+
+export { ComboboxItem, ComboboxItemIndicator };

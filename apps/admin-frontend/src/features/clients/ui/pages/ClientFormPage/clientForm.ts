@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import type { FieldAliases } from '@/shared/form/applyApiProblem';
 import { ADULT_AGE_IN_YEARS, birthDateSchema } from '@/shared/values/birthDate';
 import { cpfSchema } from '@/shared/values/cpf';
 import { emailSchema } from '@/shared/values/email';
@@ -6,6 +7,7 @@ import { phoneSchema } from '@/shared/values/phone';
 import {
   CLIENT_FULL_NAME_MAX_LENGTH,
   CLIENT_FULL_NAME_MIN_LENGTH,
+  CLIENT_MAX_TAGS,
   CLIENT_NOTES_MAX_LENGTH,
   MAX_GUARDIANS,
   MAX_REFERENCE_CONTACTS,
@@ -18,6 +20,7 @@ import {
   CONTACT_RELATIONSHIP_MAX_LENGTH,
 } from '../../../model/clientContact';
 import type { ClientStatus } from '../../../model/clientStatus';
+import type { ClientTag } from '../../../model/clientTag';
 import { CONTACT_PURPOSES } from '../../../model/contactPurpose';
 
 const nameField = (subject: string, minLength: number, maxLength: number) =>
@@ -80,23 +83,27 @@ const clientFormObject = z.object({
       MAX_REFERENCE_CONTACTS,
       `Informe no máximo ${MAX_REFERENCE_CONTACTS} pessoas de referência.`,
     ),
+  tags: z
+    .array(z.custom<ClientTag>())
+    .max(CLIENT_MAX_TAGS, `Escolha no máximo ${CLIENT_MAX_TAGS} etiquetas.`),
 });
 
-export const clientFormSchema = clientFormObject.refine(
-  (value) => !needsGuardian(value.birthDate, value.guardians.length),
-  {
+export const clientFormSchema = clientFormObject
+  .refine((value) => !needsGuardian(value.birthDate, value.guardians.length), {
     path: ['guardians'],
     message: `Informe ao menos um responsável para pessoas menores de ${ADULT_AGE_IN_YEARS} anos.`,
     // Zod skips object refinements once any field fails; the person would only learn about the
     // missing guardian on a second submit. Only an invalid birth date makes the rule meaningless.
     when: (payload) => payload.issues.every((issue) => issue.path?.[0] !== 'birthDate'),
-  },
-);
+  })
+  .transform(({ tags, ...values }) => ({ ...values, tagIds: tags.map((tag) => tag.id) }));
 
 export type ClientFormFieldValues = z.input<typeof clientFormSchema> & { status?: ClientStatus };
 export type ClientFormValues = z.output<typeof clientFormSchema>;
 export type GuardianFormFieldValues = ClientFormFieldValues['guardians'][number];
 export type ReferenceContactFormFieldValues = ClientFormFieldValues['referenceContacts'][number];
+
+export const CLIENT_FORM_FIELD_ALIASES: FieldAliases<ClientFormFieldValues> = { tagIds: 'tags' };
 
 export function emptyClientFormFieldValues(): ClientFormFieldValues {
   return {
@@ -108,6 +115,7 @@ export function emptyClientFormFieldValues(): ClientFormFieldValues {
     administrativeNotes: '',
     guardians: [],
     referenceContacts: [],
+    tags: [],
   };
 }
 
@@ -132,6 +140,7 @@ export function toClientFormFieldValues(client: Client): ClientFormFieldValues {
       phone: contact.phone ?? '',
       purposes: contact.purposes,
     })),
+    tags: client.tags,
   };
 }
 

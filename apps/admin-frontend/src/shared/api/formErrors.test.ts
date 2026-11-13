@@ -116,4 +116,85 @@ describe('toFormErrors', () => {
     expect(fieldErrors).toEqual({});
     expect(formError).toBe('Ocorreram erros de validação.');
   });
+
+  describe('aliases', () => {
+    const PICKER_FIELDS = [
+      'category',
+      'tags',
+      'tags.0',
+      'tags.0.id',
+      'guardians',
+      'guardians.0',
+      'guardians.0.tagIds',
+      'tagIdsArchived',
+    ] as const;
+    const ALIASES = { categoryId: 'category', tagIds: 'tags' } as const;
+
+    it('keeps on the form field the first error of the aliased command field and of its items', () => {
+      const problem: ApiProblem = {
+        status: 400,
+        errors: {
+          TagIds: [{ code: 'Client.DuplicateTag', message: 'Etiqueta repetida.' }],
+          'TagIds[0]': [{ code: 'Client.TagIdRequired', message: 'Informe a etiqueta.' }],
+          'TagIds[0].Value': [{ code: 'Other', message: 'Outro erro da etiqueta.' }],
+        },
+      };
+
+      const { fieldErrors, formError } = toFormErrors(problem, PICKER_FIELDS, ALIASES);
+
+      expect(fieldErrors).toEqual({
+        tags: { code: 'Client.DuplicateTag', message: 'Etiqueta repetida.' },
+      });
+      expect(formError).toBeNull();
+    });
+
+    it('takes an item error to the form field when the server sends none on the list', () => {
+      const problem: ApiProblem = {
+        status: 400,
+        errors: {
+          'TagIds[0]': [{ code: 'Client.TagIdRequired', message: 'Informe a etiqueta.' }],
+        },
+      };
+
+      const { fieldErrors } = toFormErrors(problem, PICKER_FIELDS, ALIASES);
+
+      expect(fieldErrors).toEqual({
+        tags: { code: 'Client.TagIdRequired', message: 'Informe a etiqueta.' },
+      });
+    });
+
+    it('takes each alias to its own form field, ignoring case', () => {
+      const problem: ApiProblem = {
+        status: 400,
+        errors: {
+          tagids: [{ code: 'Tag.NotFound', message: 'Etiqueta não encontrada.' }],
+          CategoryId: [{ code: 'Category.NotFound', message: 'Categoria não encontrada.' }],
+        },
+      };
+
+      const { fieldErrors } = toFormErrors(problem, PICKER_FIELDS, ALIASES);
+
+      expect(fieldErrors).toEqual({
+        tags: { code: 'Tag.NotFound', message: 'Etiqueta não encontrada.' },
+        category: { code: 'Category.NotFound', message: 'Categoria não encontrada.' },
+      });
+    });
+
+    it('leaves a key that only starts with the alias and a nested key of another field on their own paths', () => {
+      const problem: ApiProblem = {
+        status: 400,
+        errors: {
+          TagIdsArchived: [{ message: 'Outro campo.' }],
+          'Guardians[0].TagIds': [{ message: 'Campo de outro item.' }],
+        },
+      };
+
+      const { fieldErrors } = toFormErrors(problem, PICKER_FIELDS, ALIASES);
+
+      expect(fieldErrors).toEqual({
+        tagIdsArchived: { message: 'Outro campo.' },
+        'guardians.0.tagIds': { message: 'Campo de outro item.' },
+      });
+    });
+  });
 });

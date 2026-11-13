@@ -1,24 +1,17 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 
-import {
-  ComboboxList,
-  ComboboxGroup,
-  ComboboxLabel,
-  ComboboxEmpty,
-} from './components/combobox-primitives';
-import { ComboboxInput } from './components/combobox-input';
-import { ComboboxPaletteContent } from './components/combobox-palette-content';
-import { ComboboxItem } from './components/combobox-item';
-
-const Combobox = ComboboxPrimitive.Root;
+export const Combobox = ComboboxPrimitive.Root;
 
 export {
-  Combobox,
-  ComboboxInput,
-  ComboboxPaletteContent,
+  ComboboxTrigger,
   ComboboxList,
-  ComboboxItem,
   ComboboxGroup,
   ComboboxLabel,
   ComboboxEmpty,
-};
+  ComboboxStatus,
+} from './components/combobox-primitives';
+export { ComboboxChip, ComboboxChips, ComboboxChipsInput } from './components/combobox-chips';
+export { ComboboxContent } from './components/combobox-content';
+export { ComboboxInput } from './components/combobox-input';
+export { ComboboxPaletteContent } from './components/combobox-palette-content';
+export { ComboboxItem, ComboboxItemIndicator } from './components/combobox-item';

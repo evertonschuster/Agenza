@@ -64,6 +64,7 @@ describe('clientFormSchema', () => {
       administrativeNotes: null,
       guardians: [],
       referenceContacts: [],
+      tagIds: [],
     });
   });
 
@@ -78,6 +79,7 @@ describe('clientFormSchema', () => {
         administrativeNotes: '  Prefere contato pela manhã.  ',
         guardians: [guardian({ name: ' Ana Souza ', phone: ' 11 98888-0000', cpf: '12345678909' })],
         referenceContacts: [reference({ purposes: ['emergency', 'dailyCommunication'] })],
+        tags: [{ id: 't1', name: 'VIP', color: '#8b5cf6' }],
       }),
     );
 
@@ -100,6 +102,7 @@ describe('clientFormSchema', () => {
           purposes: ['emergency', 'dailyCommunication'],
         },
       ],
+      tagIds: ['t1'],
     });
   });
 
@@ -313,6 +316,28 @@ describe('clientFormSchema', () => {
       expect(issues['referenceContacts']).toBe('Informe no máximo 10 pessoas de referência.');
     });
   });
+
+  describe('tags', () => {
+    const tag = (index: number) => ({
+      id: `t${index}`,
+      name: `Etiqueta ${index}`,
+      color: '#0d9488',
+    });
+
+    it('sends the ids of the chosen tags, in the order they were chosen', () => {
+      const parsed = clientFormSchema.parse(values({ tags: [tag(2), tag(1)] }));
+
+      expect(parsed.tagIds).toEqual(['t2', 't1']);
+      expect(parsed).not.toHaveProperty('tags');
+    });
+
+    it('accepts up to 20 tags and refuses the 21st', () => {
+      expect(issuesOf(values({ tags: Array.from({ length: 20 }, (_, i) => tag(i)) }))).toEqual({});
+      expect(issuesOf(values({ tags: Array.from({ length: 21 }, (_, i) => tag(i)) }))).toEqual({
+        tags: 'Escolha no máximo 20 etiquetas.',
+      });
+    });
+  });
 });
 
 describe('emptyClientFormFieldValues', () => {
@@ -326,6 +351,7 @@ describe('emptyClientFormFieldValues', () => {
       administrativeNotes: '',
       guardians: [],
       referenceContacts: [],
+      tags: [],
     });
   });
 });
@@ -354,6 +380,7 @@ describe('toClientFormFieldValues', () => {
             purposes: ['emergency', 'dailyCommunication'],
           },
         ],
+        tags: [{ id: 't1', name: 'VIP', color: '#8b5cf6' }],
       }),
     ).toEqual({
       fullName: 'Maria Souza',
@@ -372,6 +399,7 @@ describe('toClientFormFieldValues', () => {
           purposes: ['emergency', 'dailyCommunication'],
         },
       ],
+      tags: [{ id: 't1', name: 'VIP', color: '#8b5cf6' }],
     });
   });
 
@@ -387,6 +415,7 @@ describe('toClientFormFieldValues', () => {
       status: 'inactive',
       guardians: [{ id: 'g1', name: 'Ana Souza', relationship: 'Mãe', phone: null, cpf: null }],
       referenceContacts: [],
+      tags: [],
     });
 
     expect(values).toMatchObject({
@@ -412,11 +441,13 @@ describe('toClientFormFieldValues', () => {
         status: 'active',
         guardians: [],
         referenceContacts: [],
+        tags: [{ id: 't1', name: 'VIP', color: '#8b5cf6' }],
       }),
     );
     vi.useRealTimers();
 
     expect(parsed.birthDate).toEqual(utcDate(1990, 12, 31));
     expect(parsed.cpf).toBe('52998224725');
+    expect(parsed.tagIds).toEqual(['t1']);
   });
 });

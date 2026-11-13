@@ -6,7 +6,7 @@ import type { Input } from '@/shared/ui/input';
 import type { InputGroupInput } from '@/shared/ui/input-group';
 import type { Textarea } from '@/shared/ui/textarea';
 
-interface BaseFieldProps<T extends FieldValues> {
+export interface BaseFieldProps<T extends FieldValues> {
   name: Path<T>;
   label: string;
   hint?: string | undefined;
@@ -17,7 +17,7 @@ export interface FieldErrorProps<T extends FieldValues> {
 }
 
 type RegisterOwnedProps = 'name' | 'onChange' | 'onBlur' | 'ref';
-type FormFieldOwnedProps = 'id' | 'aria-invalid' | 'aria-describedby';
+export type FormFieldOwnedProps = 'id' | 'aria-invalid' | 'aria-describedby';
 
 export type TextFieldProps<T extends FieldValues> = BaseFieldProps<T> &
   Omit<ComponentProps<typeof Input>, RegisterOwnedProps | FormFieldOwnedProps>;

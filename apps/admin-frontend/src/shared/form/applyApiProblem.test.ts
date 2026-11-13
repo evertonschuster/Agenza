@@ -22,8 +22,8 @@ describe('applyApiProblem', () => {
       setError: vi.fn(),
       setFocus: vi.fn(),
     };
-    applyApiProblem(
-      {
+    applyApiProblem({
+      problem: {
         errors: {
           Cpf: [
             {
@@ -35,7 +35,7 @@ describe('applyApiProblem', () => {
         },
       },
       methods,
-    );
+    });
     expect(methods.setError).toHaveBeenCalledWith('cpf', {
       type: 'Client.DuplicateCpf',
       message: 'CPF em uso.',
@@ -53,7 +53,7 @@ describe('applyApiProblem', () => {
       },
     };
 
-    applyApiProblem<DummyValues>(problem, methods);
+    applyApiProblem<DummyValues>({ problem, methods });
 
     expect(methods.setError).toHaveBeenCalledWith('name', {
       type: 'server',
@@ -73,7 +73,7 @@ describe('applyApiProblem', () => {
       },
     };
 
-    applyApiProblem<DummyValues>(problem, methods);
+    applyApiProblem<DummyValues>({ problem, methods });
 
     expect(methods.setError).toHaveBeenCalledWith('root.serverError', {
       type: 'server',
@@ -91,7 +91,7 @@ describe('applyApiProblem', () => {
       title: 'Muitas solicitações em pouco tempo.',
     };
 
-    applyApiProblem<DummyValues>(problem, methods);
+    applyApiProblem<DummyValues>({ problem, methods });
 
     expect(methods.setError).toHaveBeenCalledExactlyOnceWith('root.serverError', {
       type: 'RateLimit.Exceeded',
@@ -103,7 +103,7 @@ describe('applyApiProblem', () => {
     const methods = formMethods();
     const problem: ApiProblem = { status: 400, title: '', errors: {} };
 
-    applyApiProblem<DummyValues>(problem, methods);
+    applyApiProblem<DummyValues>({ problem, methods });
 
     expect(methods.setError).not.toHaveBeenCalled();
     expect(methods.setFocus).not.toHaveBeenCalled();
@@ -126,7 +126,7 @@ describe('applyApiProblem', () => {
       },
     };
 
-    applyApiProblem(problem, methods);
+    applyApiProblem({ problem, methods });
 
     expect(methods.setError).toHaveBeenCalledWith('guardians.1.name', {
       type: 'server',
@@ -147,10 +147,10 @@ describe('applyApiProblem', () => {
       setFocus: vi.fn(),
     };
 
-    applyApiProblem(
-      { status: 400, errors: { Guardians: [{ message: 'Informe um responsável.' }] } },
+    applyApiProblem({
+      problem: { status: 400, errors: { Guardians: [{ message: 'Informe um responsável.' }] } },
       methods,
-    );
+    });
 
     expect(methods.setError).toHaveBeenCalledExactlyOnceWith('guardians', {
       type: 'server',
@@ -165,8 +165,8 @@ describe('applyApiProblem', () => {
       setFocus: vi.fn(),
     };
 
-    applyApiProblem(
-      {
+    applyApiProblem({
+      problem: {
         status: 400,
         errors: {
           Name: [{ message: 'Nome obrigatório.' }],
@@ -176,7 +176,7 @@ describe('applyApiProblem', () => {
         },
       },
       methods,
-    );
+    });
 
     expect(methods.setError).toHaveBeenNthCalledWith(1, 'name', {
       type: 'server',
@@ -196,5 +196,66 @@ describe('applyApiProblem', () => {
     });
     expect(methods.setError).toHaveBeenCalledTimes(4);
     expect(methods.setFocus).toHaveBeenCalledExactlyOnceWith('name');
+  });
+
+  describe('aliases', () => {
+    function pickerForm() {
+      return {
+        getValues: () => ({
+          fullName: '',
+          category: null,
+          tags: [{ id: 't1', name: 'VIP' }],
+        }),
+        setError: vi.fn(),
+        setFocus: vi.fn(),
+      };
+    }
+
+    it('sets the error of an aliased command field on the form field and focuses it', () => {
+      const methods = pickerForm();
+
+      applyApiProblem({
+        problem: {
+          status: 400,
+          errors: {
+            'TagIds[0]': [{ code: 'Client.TagIdRequired', message: 'Informe a etiqueta.' }],
+          },
+        },
+        methods,
+        aliases: { tagIds: 'tags' },
+      });
+
+      expect(methods.setError).toHaveBeenCalledExactlyOnceWith('tags', {
+        type: 'Client.TagIdRequired',
+        message: 'Informe a etiqueta.',
+      });
+      expect(methods.setFocus).toHaveBeenCalledExactlyOnceWith('tags');
+    });
+
+    it('takes each alias to its own form field, an empty single pick included, in form order', () => {
+      const methods = pickerForm();
+
+      applyApiProblem({
+        problem: {
+          status: 400,
+          errors: {
+            TagIds: [{ code: 'Tag.NotFound', message: 'Etiqueta não encontrada.' }],
+            CategoryId: [{ code: 'Category.NotFound', message: 'Categoria não encontrada.' }],
+          },
+        },
+        methods,
+        aliases: { categoryId: 'category', tagIds: 'tags' },
+      });
+
+      expect(methods.setError).toHaveBeenNthCalledWith(1, 'category', {
+        type: 'Category.NotFound',
+        message: 'Categoria não encontrada.',
+      });
+      expect(methods.setError).toHaveBeenNthCalledWith(2, 'tags', {
+        type: 'Tag.NotFound',
+        message: 'Etiqueta não encontrada.',
+      });
+      expect(methods.setFocus).toHaveBeenCalledExactlyOnceWith('category');
+    });
   });
 });

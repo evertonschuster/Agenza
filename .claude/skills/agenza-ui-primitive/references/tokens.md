@@ -50,6 +50,9 @@ it with theme surface and foreground variables:
 </span>
 ```
 
+The tags feature wraps it in `TagBadge`, exported by its barrel; reuse it to draw a tag elsewhere, such as
+in a `SearchSelect` `renderItem`. Shared controls do not take a colour for this: the caller draws the item.
+
 The `CSSProperties` type comes from React; the cast permits a custom property under strict typing.
 The mix percentages belong only in `globals.css`. Avoid painting the raw hex directly onto an
 unknown surface, and verify the resulting contrast in both themes when changing these styles.

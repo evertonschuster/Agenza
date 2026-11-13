@@ -9,6 +9,7 @@ export { ControlledField } from './components/controlled-field';
 export { ColorField } from './components/color-field';
 export { SelectField } from './components/select-field';
 export { SearchField } from './components/search-field';
+export { SearchSelectField, type SearchSelectFieldProps } from './components/search-select-field';
 export { FormErrorBanner } from './components/form-error-banner';
 export { FieldError } from './components/field-error';
 export type {
