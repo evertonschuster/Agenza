@@ -59,12 +59,6 @@ export const router = createBrowserRouter([
                 lazy: () =>
                   import('@/features/clients').then((m) => ({ Component: m.ClientFormPage })),
               },
-              {
-                path: ':id',
-                handle: crumb('Detalhes da pessoa'),
-                lazy: () =>
-                  import('./pages/ClientDetails').then((m) => ({ Component: m.ClientDetails })),
-              },
             ],
           },
           {

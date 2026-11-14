@@ -23,7 +23,9 @@ into its form. Three forks were put to the owner on 2026-10-22 before writing co
    whose paths predate the pt-BR convention. A first version kept the name on `/pessoas/:id`, the "Em breve" Detalhes
    screen; the owner asked on the same day, after trying it, for the name to open the edit page. The `/pessoas/:id`
    route and its placeholder stay, with no link to them, until Detalhes is built; `clientDetailPath` went away with
-   its last caller.
+   its last caller. On 2026-11-14 the owner reversed the placeholder decision in #222: the route and
+   placeholder were removed because the screen had no link in the app and editing serves consultation.
+   The base address is not reassigned to editing; it falls through to the existing catch-all.
 2. **One page, one hook, two modes.** `ClientFormPage` and `useClientFormPage` serve both routes: with no `:id` the
    form starts empty and saves through `clientsRepository.create`; with one it loads `clientsRepository.get(id)`,
    fills the form with `toClientFormFieldValues(client)` (birth date and CPFs as they come, a missing value

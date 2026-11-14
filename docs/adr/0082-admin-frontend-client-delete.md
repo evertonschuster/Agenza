@@ -8,8 +8,8 @@ Status: accepted (2026-10); the frontend half of #159, over the endpoint of
 The backend answers `DELETE /api/v1/clients/{id}` since #197: `204`, `404 Client.NotFound` for an unknown, foreign or
 already deleted id, `409 Client.HasAppointments` when any appointment exists and `409 Client.SaveFailed`. #159 asks for
 an **Excluir** action "nos detalhes" with an explicit confirmation, the person gone from the list afterwards and the
-blocking reason shown in Portuguese. Detalhes (`/pessoas/:id`) is still the "Em breve" screen, and the edit page stands
-in for it ([ADR 0077](0077-admin-frontend-client-edit.md)).
+blocking reason shown in Portuguese. At the time, Detalhes (`/pessoas/:id`) was the "Em breve" screen, and the edit page stood
+in for it ([ADR 0077](0077-admin-frontend-client-edit.md)). The placeholder route was subsequently removed in #222.
 
 A first refinement put the action beside **Desativar pessoa** on the edit page, opened by state in the page hook. The
 owner turned it down on 2026-10-25: deleting a person must work like deleting a tag.
