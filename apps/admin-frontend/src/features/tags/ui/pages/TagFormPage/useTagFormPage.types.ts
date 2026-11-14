@@ -1,6 +1,6 @@
 import type { SubmitEvent } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import type { TagFormFieldValues, TagFormValues } from './tagForm';
+import type { TagFormFieldValues, TagFormValues } from '../../components/TagForm/tagForm';
 
 export const TagFormStatus = {
   Loading: 'loading',

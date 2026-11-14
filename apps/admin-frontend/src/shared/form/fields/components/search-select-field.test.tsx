@@ -4,6 +4,7 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm, useFormState, useWatch } from 'react-hook-form';
 import { ok } from '@/shared/result';
+import type { SearchSelectCreation } from '@/shared/ui/search-select';
 import { SearchSelectField } from './search-select-field';
 
 interface Tag {
@@ -33,7 +34,23 @@ function ValueProbe() {
   );
 }
 
-function Harness({ initial = [], error }: { initial?: Tag[]; error?: string }) {
+const CREATION: SearchSelectCreation<Tag> = {
+  actionLabel: 'Nova etiqueta',
+  actionLabelFor: (text) => `Criar etiqueta «${text}»`,
+  render: (request) => (
+    <button type="button" onClick={() => request.complete({ id: 'n1', name: 'Nova' })}>
+      Concluir
+    </button>
+  ),
+};
+
+interface HarnessProps {
+  initial?: Tag[];
+  error?: string;
+  creation?: SearchSelectCreation<Tag>;
+}
+
+function Harness({ initial = [], error, creation }: HarnessProps) {
   const methods = useForm<DummyValues>({ defaultValues: { tags: initial } });
 
   useEffect(() => {
@@ -47,6 +64,7 @@ function Harness({ initial = [], error }: { initial?: Tag[]; error?: string }) {
         label="Etiquetas"
         hint="opcional"
         loadItems={loadItems}
+        creation={creation}
       />
       <ValueProbe />
     </FormProvider>
@@ -54,6 +72,16 @@ function Harness({ initial = [], error }: { initial?: Tag[]; error?: string }) {
 }
 
 describe('SearchSelectField', () => {
+  it('passes the creation through and keeps the created item in the form value', async () => {
+    const user = userEvent.setup();
+    render(<Harness initial={[VIP]} creation={CREATION} />);
+
+    await user.click(screen.getByRole('button', { name: 'Nova etiqueta' }));
+    await user.click(screen.getByRole('button', { name: 'Concluir' }));
+
+    expect(screen.getByLabelText('valor')).toHaveTextContent('t1,n1');
+  });
+
   it('names the control by its label, describes it by the hint and shows the current value', () => {
     render(<Harness initial={[VIP]} />);
 

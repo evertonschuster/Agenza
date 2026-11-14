@@ -86,7 +86,10 @@ fica em `shared/ui/form-field/`. As receitas específicas pertencem à
 Seleção de várias opções `{ id, name }` carregadas do backend, com busca e páginas, usa
 [SearchSelect](../src/shared/ui/search-select/search-select.tsx) com a chamada paginada da feature; no
 formulário, `SearchSelectField`
-([ADR 0091](../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md)).
+([ADR 0091](../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md)). A `creation` opcional
+oferece criar o item ali mesmo, por um botão no campo e uma linha no rodapé da lista; a feature desenha a
+criação, como o `TagCreateDialog` das etiquetas
+([ADR 0093](../../../docs/adr/0093-admin-frontend-search-select-creation.md)).
 `SelectField` continua para o `Select` simples.
 Texto e rotas de produto são pt-BR; identificadores são inglês. A rota `/tags` é uma exceção
 existente: renomear uma URL requer uma mudança própria de produto.

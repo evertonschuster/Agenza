@@ -3,7 +3,9 @@
 Status: accepted (2026-11, redesigned before merge); frontend side of [ADR 0089](0089-clients-tags.md);
 a picker exception to [ADR 0073](0073-admin-frontend-paged-list-asks-only-when-told.md) and
 [ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md), which still govern list pages; the move
-of `TagIds` errors to `tags` amended by [ADR 0092](0092-admin-frontend-form-fields-submitted-under-another-name.md)
+of `TagIds` errors to `tags` amended by [ADR 0092](0092-admin-frontend-form-fields-submitted-under-another-name.md);
+"this change only selects" superseded by [ADR 0093](0093-admin-frontend-search-select-creation.md), which
+adds creating the item from the picker
 
 ## Context
 
@@ -147,7 +149,8 @@ server error on `TagIds` (`Tag.NotFound`, `Client.TooManyTags`) is moved to the 
 - **Loading the first page once per mount.** Would hide tags created or renamed elsewhere until the page
   reloads.
 - **A link to create a tag from the empty list.** Drawn in the prototype, then removed by the owner: this
-  change only selects; creating tags stays on the Etiquetas page.
+  change only selects; creating tags stays on the Etiquetas page. Superseded by
+  [ADR 0093](0093-admin-frontend-search-select-creation.md).
 - **`widgets/` for the component and its Field.** Closer to `usePaginatedList`, but it would take the Field
   out of `shared/form/fields`, where every form control lives, for a component whose request is the
   feature's.

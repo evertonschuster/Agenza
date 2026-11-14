@@ -14,11 +14,25 @@ type SearchPage<T> = ApiResult<PagedResult<T>>;
 
 type LoadSearchItems<T> = (query: SearchItemsQuery, signal: AbortSignal) => Promise<SearchPage<T>>;
 
+interface SearchSelectCreationRequest<T> {
+  text: string;
+  finalFocus: () => HTMLElement | null;
+  complete: (created: T) => void;
+  cancel: () => void;
+}
+
+interface SearchSelectCreation<T extends SearchSelectItem> {
+  actionLabel: string;
+  actionLabelFor: (text: string) => string;
+  render: (request: SearchSelectCreationRequest<T>) => ReactNode;
+}
+
 interface SearchSelectOwnProps<T extends SearchSelectItem> {
   loadItems: LoadSearchItems<T>;
   value: T[];
   onValueChange: (value: T[]) => void;
   renderItem?: ((item: T) => ReactNode) | undefined;
+  creation?: SearchSelectCreation<T> | undefined;
   maxSelected?: number | undefined;
   pageSize?: number | undefined;
   maxLength?: number | undefined;
@@ -102,7 +116,39 @@ interface SearchSelectSelectionProps {
   readonly onClear: () => void;
 }
 
+interface CreationTextArgs {
+  readonly text: string;
+  readonly searched: string;
+  readonly phase: SearchPhase;
+  readonly items: readonly SearchSelectItem[];
+}
+
+interface SearchSelectCreateButtonProps {
+  readonly label: string;
+  readonly disabled: boolean;
+  readonly limitNoticeId: string | undefined;
+  readonly onCreate: () => void;
+}
+
+interface SearchSelectCreationSlotProps<T extends SearchSelectItem> {
+  readonly creation: SearchSelectCreation<T>;
+  readonly request: SearchSelectCreationRequest<T>;
+}
+
+interface SearchSelectCreateRowProps {
+  readonly label: string;
+  readonly emphasized: boolean;
+  readonly disabled: boolean;
+  readonly onCreate: () => void;
+}
+
 export type {
+  CreationTextArgs,
+  SearchSelectCreateButtonProps,
+  SearchSelectCreateRowProps,
+  SearchSelectCreation,
+  SearchSelectCreationRequest,
+  SearchSelectCreationSlotProps,
   LoadSearchItems,
   SearchInputKeyDown,
   SearchItemsQuery,

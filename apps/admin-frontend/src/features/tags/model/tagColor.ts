@@ -13,3 +13,17 @@ export const TAG_COLOR_PALETTE: readonly TagColorOption[] = [
   { value: '#22c55e', label: 'Verde' },
   { value: '#64748b', label: 'Cinza' },
 ];
+
+function foldName(name: string) {
+  return name.trim().normalize('NFD').replace(/\p{M}/gu, '').toLocaleLowerCase('pt-BR');
+}
+
+export function suggestTagColor(name: string): string {
+  let hash = 0;
+  for (const char of foldName(name)) {
+    hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  }
+  const option = TAG_COLOR_PALETTE[hash % TAG_COLOR_PALETTE.length];
+  if (!option) throw new Error('A paleta de etiquetas está vazia.');
+  return option.value;
+}

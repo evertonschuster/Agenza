@@ -1,6 +1,6 @@
 import { useFormContext, useFormState } from 'react-hook-form';
 import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
-import { TAG_SEARCH_MAX_LENGTH, TagBadge, tagsRepository } from '@/features/tags';
+import { TAG_SEARCH_MAX_LENGTH, TagBadge, TagCreateDialog, tagsRepository } from '@/features/tags';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
 import {
   BirthDateField,
@@ -76,6 +76,18 @@ function ClientPersonSection() {
             placeholder="Selecione ou busque etiquetas"
             emptyMessage="Nenhuma etiqueta cadastrada."
             errorMessage="Não foi possível carregar as etiquetas."
+            creation={{
+              actionLabel: 'Nova etiqueta',
+              actionLabelFor: (text) => `Criar etiqueta «${text}»`,
+              render: (request) => (
+                <TagCreateDialog
+                  name={request.text}
+                  onCreated={request.complete}
+                  onCancel={request.cancel}
+                  finalFocus={request.finalFocus}
+                />
+              ),
+            }}
           />
         </div>
 
