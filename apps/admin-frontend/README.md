@@ -8,7 +8,7 @@ O [guia de arquitetura](docs/ARCHITECTURE.md) descreve o desenho atual.
 Use as fontes executáveis de versão: [Node](../../.nvmrc), `packageManager` no
 [package.json da raiz](../../package.json) e [.NET SDK](../../backend/global.json).
 Docker é necessário para o PostgreSQL gerenciado pelo Aspire.
-Exceções de compatibilidade estão na [ADR 0032](../../docs/adr/0032-stable-runtime-and-toolchain-compatibility-pins.md).
+Pins de compatibilidade seguem a [ADR 0010](../../docs/decisions/0010-git-ci-and-toolchain.md).
 
 ## Subindo o ambiente
 
@@ -41,7 +41,8 @@ O caminho normal é o Aspire; um Vite iniciado isoladamente exige fornecer o mes
 | `VITE_OIDC_POST_LOGOUT_REDIRECT_URI` | destino após logout         |
 | `VITE_OIDC_SCOPE`                    | escopos solicitados         |
 
-Não acrescente defaults que escondam uma configuração ausente.
+Não acrescente defaults que escondam uma configuração ausente. Alterar endpoint, cliente, redirect
+ou escopo exige alinhar o AppHost, o `loadEnv` e o registro do cliente no identity-service.
 
 ## Comandos
 
@@ -93,8 +94,7 @@ Este contêiner de manutenção não altera a orquestração local pelo Aspire.
 ## Fluxo de trabalho
 
 As [instruções da raiz](../../AGENTS.md#fluxo-de-trabalho) definem o planejamento e o fluxo de PRs.
-As especificações em [specs](specs/) são histórico de entregas anteriores; o comportamento vigente
-está no código e nos testes.
+O comportamento vigente está no código e nos testes.
 [AGENTS do app](AGENTS.md) encaminha para a skill e a seção técnica necessárias à tarefa.
 [CLAUDE.md](CLAUDE.md) mantém os imports compartilhados. As integrações MCP opcionais estão em
 [.mcp.json](../../.mcp.json).

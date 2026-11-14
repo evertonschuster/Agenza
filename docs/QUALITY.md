@@ -64,12 +64,12 @@ code file referenced by a guide. It installs no packages and starts no applicati
   so does `Admin.Logging` (`Admin.Logging.Tests`, which never counts
   toward a service's gate because no service test project references it) —
   counting it twice would let one hide behind the other's number
-  (docs/adr/0005). `ServicesService.PersistenceTests` covers EF tenant
-  assignment and filtering in memory (docs/adr/0019). There is no
+  (docs/decisions/0003). `ServicesService.PersistenceTests` covers EF tenant
+  assignment and filtering in memory (docs/decisions/0007). There is no
   Testcontainers/`WebApplicationFactory` project. The frontend
   API-contract workflow starts the AppHost resource graph, applies the
   migration chain to Aspire's PostgreSQL resource, and runs the real OIDC
-  and tenant-isolation checks ([ADR 0090](adr/0090-tenant-isolation-smokes-in-aspire.md)).
+  and tenant-isolation checks ([ADR 0007](decisions/0007-testing-and-verification.md)).
   The HTTP scenario provisions a synthetic tenant and requires
   `AGENZA_DISPOSABLE_TEST_DB=1` and `AGENZA_TENANT_PROVISIONING_SECRET`.
   The PostgreSQL check runs as `services_app` and rolls back its fixtures.

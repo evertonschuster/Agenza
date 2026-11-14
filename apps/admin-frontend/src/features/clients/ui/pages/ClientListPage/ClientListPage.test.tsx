@@ -175,7 +175,7 @@ describe('ClientListPage', () => {
     expect(within(anaRow).getByText('Ativa')).toBeInTheDocument();
   });
 
-  it('shows the whole CPF, formatted, as the backend sends it (ADR 0067)', async () => {
+  it('shows the whole CPF, formatted, as the backend sends it (ADR 0005)', async () => {
     renderPage(CLIENTS);
 
     expect(await screen.findByText('529.982.247-25')).toBeInTheDocument();

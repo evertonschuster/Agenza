@@ -84,7 +84,7 @@ Keep these responsibilities separate:
   `FieldAliases<FormFieldValues>` beside the schema transform (`{ tagIds: 'tags' }`) and pass it to
   `applyApiProblem`; errors on the command field and on each of its items land on the form field. Only
   top-level command fields take an alias
-  ([ADR 0092](../../../docs/adr/0092-admin-frontend-form-fields-submitted-under-another-name.md)).
+  ([ADR 0012](../../../docs/decisions/0012-frontend-architecture-and-data.md)).
 - Feature UI interprets feature-specific codes/metadata. Shared fields and the bridge do not parse
   client conflicts. In
   [ClientPersonSection](../../../apps/admin-frontend/src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx),

@@ -1,123 +1,90 @@
 # Agenza — instruções para agentes
 
-Ponto de entrada compartilhado. O carregamento depende da ferramenta e da superfície usada (ver
-[Como cada ferramenta chega aqui](#como-cada-ferramenta-chega-aqui)).
-
-> **Este arquivo aponta; não copia.** A [ADR 0016](docs/adr/0016-ai-agent-governance-framework.md)
-> foi abandonada porque cópias divergiam da verdade e os checks validavam cópias, não semântica.
-> Números de versão, inventários de arquivo, contagens de teste e status de feature **não moram aqui**
-> — moram no código, nos lockfiles e nas ADRs. Se você sentir vontade de colar um trecho de código
-> neste arquivo, coloque um link.
+Ponto de entrada compartilhado. Guarda invariantes e roteamento; o resto mora no código, nos guias
+de cada área e nas [decisões](docs/decisions/README.md). Se der vontade de colar código ou uma lista
+de arquivos aqui, coloque um link.
 
 ## O produto
 
-Agenza é um SaaS multi-tenant para pequenos negócios de serviço no Brasil — clínicas odontológicas,
-estética, massoterapia, salões. O núcleo é agendamento, gestão de clientes e uma recepcionista de IA
-que marca horários e responde dúvidas. Persona v1: o dono-operador. Um usuário, um negócio.
+SaaS multi-tenant para pequenos negócios de serviço no Brasil (clínicas, estética, massoterapia,
+salões): agendamento, gestão de clientes e uma recepcionista de IA. Persona v1: o dono-operador.
 
-**Textos visíveis são pt-BR. Identificadores de código são inglês.** Teclas (`Ctrl`, `Esc`, `Enter`)
-não se traduzem.
+**Textos visíveis são pt-BR. Identificadores de código são inglês.** Nomes de teclas não se traduzem.
 
-## Consulta por tarefa
+## Onde está cada coisa
 
-Leia o guia da área afetada e somente as referências ligadas à mudança.
+| Caminho               | Stack                                | Leia primeiro                                                                      |
+| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
+| `apps/admin-frontend` | Vite + React + TypeScript estrito    | [AGENTS.md local](apps/admin-frontend/AGENTS.md)                                   |
+| `backend`             | .NET, Clean Architecture por serviço | [AGENTS.md local](backend/AGENTS.md)                                               |
+| `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md) |
+| `infra`               | Scripts de init do PostgreSQL        | —                                                                                  |
+| `docs/decisions`      | Decisões duráveis                    | [índice](docs/decisions/README.md)                                                 |
 
-| Caminho               | Stack                                               | Leia primeiro                                                                      |
-| --------------------- | --------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| `apps/admin-frontend` | Vite + React + TypeScript estrito                   | [AGENTS.md local](apps/admin-frontend/AGENTS.md)                                   |
-| `backend`             | .NET / ASP.NET Core, Clean Architecture por serviço | [AGENTS.md local](backend/AGENTS.md)                                               |
-| `ai-services`         | Python + FastAPI                                    | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md) |
-| `infra`               | Scripts de init do PostgreSQL                       | —                                                                                  |
-| `docs/adr`            | Decisões e sua evolução                             | [índice](docs/adr/README.md)                                                       |
-
-Convenções do monorepo: [docs/MONOREPO.md](docs/MONOREPO.md).
-Portões de qualidade: [docs/QUALITY.md](docs/QUALITY.md).
-Direção do produto: [docs/VISION.md](docs/VISION.md).
-
-## Fontes de orientação
-
-Código, configuração, pins e checks demonstram a implementação e as garantias executadas.
-Guias de arquitetura descrevem a forma vigente e identificam padrões antigos ainda presentes;
-ADRs registram decisões e sua evolução. Uma divergência exige investigação, sem mudar código correto
-apenas para satisfazer uma passagem histórica.
-
-Este arquivo e os AGENTS locais guardam invariantes e roteamento; skills descrevem procedimentos;
-testes fixam comportamento e aceite. A política está na
-[ADR 0088](docs/adr/0088-ai-instruction-sources-and-proportional-documentation.md).
+Convenções do monorepo: [docs/MONOREPO.md](docs/MONOREPO.md). Gates de qualidade:
+[docs/QUALITY.md](docs/QUALITY.md). Direção do produto: [docs/VISION.md](docs/VISION.md).
 
 ## Regras que valem em todo o repositório
 
-**Decisões duradouras viram ADR.** Use `docs/adr/NNNN-titulo-em-kebab.md` para mudanças de
-fronteira, segurança, contrato compartilhado, persistência, operação, dependência relevante ou custo
-significativo de reversão. Comportamento de uma tela ou componente, ajustes reversíveis e iterações
-de review ficam no código, nos testes e no PR. Registre alternativas relevantes, inclusive tentadas
-e revertidas. A ADR é proposta enquanto o PR está aberto e passa a aceita no último commit antes do
-merge, com o próximo número livre da `main`; aceita, só muda o status. Uma decisão nova substitui a
-anterior inteira ou nomeia a seção superada.
-[ADR 0093](docs/adr/0093-adr-lifecycle-and-review-commits.md).
+**Multi-tenancy é fronteira de servidor.** O tenant vem só da claim do token validado; o header
+`X-Tenant-Id` é roteamento e o backend recusa o que não bate. Nunca aceite tenant de URL, query ou
+`localStorage`. [ADR 0004](docs/decisions/0004-multi-tenancy.md).
 
-**Multi-tenancy é fronteira de servidor.** O tenant vem sempre da claim do token validado. O header
-`X-Tenant-Id` é conveniência de roteamento, não fronteira de segurança; o backend recusa qualquer
-requisição cuja claim não bata. Nunca aceite tenant de URL, query ou `localStorage`.
-[ADR 0006](docs/adr/0006-tenant-header-base-entity-generic-repository.md).
+**Erros são valores, não exceções.** Falha esperada volta como `Result`; só o excepcional lança.
+[ADR 0003](docs/decisions/0003-backend-use-cases-validation-and-results.md).
 
-**Erros são valores, não exceções.** O padrão `Result` atravessa backend e frontend. Uma falha de
-validação é fluxo esperado e volta como valor; só o excepcional vira exceção.
-[ADR 0005](docs/adr/0005-cqrs-vertical-slice-result-pattern.md),
-[ADR 0014](docs/adr/0014-result-pattern-domain-and-persistence-no-exceptions.md).
-
-**Sem comentários de "o quê", sem JSDoc.** O código se documenta. Um comentário curto de "por quê" é
-permitido apenas para uma corrida genuína ou uma restrição não óbvia.
+**Sem comentários de "o quê", sem JSDoc.** Um comentário curto de "por quê" só para uma corrida
+genuína ou uma restrição não óbvia.
 
 **Abstração proporcional ao problema.** Encanamento enxuto, estrutura de domínio investida.
 
-**Versões vêm dos pins do repositório**, nunca de documentação: `.nvmrc`, `packageManager`,
-`backend/global.json`, `.python-version`, `uv.lock` e as actions de setup do CI são as fontes
-executáveis. [ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibility-pins.md).
+**Versões vêm dos pins**, nunca de documentação: `.nvmrc`, `packageManager`, `backend/global.json`,
+`.python-version`, `uv.lock` e as actions de setup do CI.
 
 **Aspire é o único orquestrador local.** Não adicione Docker ao frontend.
-[ADR 0029](docs/adr/0029-aspire-only-local-orchestration.md).
+[ADR 0002](docs/decisions/0002-service-and-data-topology.md).
+
+## Documentação
+
+Cada informação tem uma casa e o resto aponta para ela; só se escreve o que o código não mostra.
+Comportamento e aceite ficam nos testes; forma vigente, no `docs/ARCHITECTURE.md` da área;
+procedimentos, nas skills; decisões duráveis e alternativas rejeitadas, em `docs/decisions/`.
+
+Uma ADR é para fronteira, segurança, contrato compartilhado, persistência, operação, dependência
+relevante ou escolha cara de reverter, nunca para comportamento de uma tela. Ela é proposta durante
+o PR e passa a aceita no último commit antes do merge, com o próximo número livre da `main`; depois
+só muda o status. Política completa: [ADR 0001](docs/decisions/0001-documentation-and-decisions.md).
 
 ## Fluxo de trabalho
 
 Antes de codar comportamento novo, esclareça as dúvidas materiais com o dono numa única rodada de
 perguntas em lote, cada uma com a opção recomendada; um protótipo aprovado é a referência visual.
 Critérios de aceite viram testes nomeados em pt-BR no mesmo PR, e uma correção de protótipo vira
-teste ou código. Plano e tarefas ficam na sessão; a conversa fica registrada no PR. Não há arquivo de
-spec por feature: as specs em `apps/admin-frontend/specs` são histórico.
-[ADR 0094](docs/adr/0094-remove-spec-kit.md).
+teste ou código. Plano e tarefas ficam na sessão; a conversa fica no PR.
 
-Trabalho por PR. Não faça commit na `main` diretamente.
+Trabalho por PR, em branch curta cortada da `main`; nunca commit direto na `main`. Uma feature que
+atravessa backend e frontend vira dois PRs: o do backend primeiro, com os tipos OpenAPI regenerados.
+[ADR 0010](docs/decisions/0010-git-ci-and-toolchain.md).
 
 Commit de refactor durante o review não altera Markdown; se o comportamento mudou, muda o teste.
 ADRs e guias tocados pelo PR são fechados no último commit antes do merge.
 
-Uma feature que atravessa backend e frontend vira dois PRs, ambos cortados da `main`: o do backend
-primeiro, levando os tipos do OpenAPI regenerados; o do frontend depois. Cada um passa sozinho nos
-seus portões.
-
 ## Skills
 
-Skills Agenza têm uma fonte canônica em `.claude/skills/agenza-*/`. Os AGENTS de cada área apontam
-para o arquivo da tarefa. Quando o host não o descobrir, abra esse caminho explicitamente e somente
-as referências necessárias; leitura por caminho não é descoberta nativa.
-
-Não crie espelhos editáveis ou sincronização caseira dessas skills.
+Skills Agenza têm fonte única em `.claude/skills/agenza-*/`; os AGENTS de cada área apontam para a da
+tarefa. Se o host não as descobrir, abra o arquivo pelo caminho. Não crie cópias por host nem
+sincronização.
 
 ## Como cada ferramenta chega aqui
 
-| Ferramenta     | Caminho                                                                                                             |
-| -------------- | ------------------------------------------------------------------------------------------------------------------- |
-| Codex          | Descobre AGENTS pela hierarquia do diretório da sessão; abra o da área quando necessário                            |
-| Claude Code    | `CLAUDE.md` importa este arquivo; o carregamento adicional depende da configuração                                  |
-| GitHub Copilot | A ponte em `.github/copilot-instructions.md` pede leitura da raiz e da área afetada; o suporte varia por superfície |
-
-Links de consulta não são imports nativos. Registre a superfície realmente verificada antes de
-declarar compatibilidade de um fluxo.
+| Ferramenta     | Caminho                                                                        |
+| -------------- | ------------------------------------------------------------------------------ |
+| Codex          | Descobre AGENTS pela hierarquia do diretório; abra o da área quando necessário |
+| Claude Code    | `CLAUDE.md` importa este arquivo                                               |
+| GitHub Copilot | A ponte em `.github/copilot-instructions.md` pede a leitura da raiz e da área  |
 
 ## Validação e entrega
 
-Escolha testes pelo comportamento e risco alterados, mantendo os gates aplicáveis em
-[QUALITY](docs/QUALITY.md). Em alteração exclusivamente documental, confira fontes, referências,
-âncoras, formatação e diff; não crie testes de aplicação para validar redação.
-Registre execuções e limitações no PR, sem acrescentar um relatório permanente por tarefa.
+Escolha testes pelo comportamento e risco alterados, mantendo os gates de
+[QUALITY](docs/QUALITY.md). Em mudança só de documentação, confira referências, formatação e diff;
+não crie testes de aplicação para validar redação. Registre execuções e limitações no PR.

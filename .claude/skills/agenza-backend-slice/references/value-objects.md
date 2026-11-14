@@ -1,7 +1,7 @@
 # Shared value objects
 
 The [architecture](../../../../backend/docs/ARCHITECTURE.md#3-domain) and
-[ADR 0055](../../../../docs/adr/0055-shared-string-value-objects.md) define the shared contracts.
+[ADR 0002](../../../../docs/decisions/0002-service-and-data-topology.md) define the shared contracts.
 A context-specific rule stays with its service; this procedure covers shared string/date formats.
 
 ## Check semantics and consumers

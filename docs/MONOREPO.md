@@ -42,7 +42,7 @@ The full stack has one local orchestration path:
   `dotnet run` hands the AppHost to the Aspire CLI, which launches the Debug
   build. The first build on a machine fetches the CLI, dashboard, and DCP
   through `dotnet dnx` into `~/.aspire`, so it needs network access but no
-  separate install ([ADR 0050](adr/0050-xunit-v3-on-vstest-and-aspire-cli-bundle.md)).
+  separate install ([ADR 0010](decisions/0010-git-ci-and-toolchain.md)).
 
   A single local-development password is shared by PostgreSQL, the restricted
   application roles, and the internal OAuth clients. Its safe demo default is
@@ -69,7 +69,7 @@ The full stack has one local orchestration path:
 Docker Compose and application Dockerfiles are intentionally absent. This
 repository is still a demo without a production deployment design; adding
 runtime images is a deployment decision, not a second local-development path
-(docs/adr/0029).
+(docs/decisions/0002).
 
 ### Connect a local database client
 
@@ -96,7 +96,7 @@ the OpenAPI/OIDC runtime smoke instead of maintaining a parallel Compose graph.
 ## Adding a new backend microservice
 
 Usually you don't: a capability that fits an existing business context is a
-new feature inside that service (docs/adr/0001). When a new context does
+new feature inside that service (docs/decisions/0002). When a new context does
 justify a service, record it in an ADR and follow
 [backend/docs/ARCHITECTURE.md §1](../backend/docs/ARCHITECTURE.md#1-shape).
 Use the live services, central package file, solution, and AppHost as
@@ -129,14 +129,14 @@ GitHub Actions checks remain the integration gate for `origin/main`. See
   multi-replica deployment must run the migration/seed chain as a one-shot
   bootstrap before starting replicas with startup bootstrap disabled; the
   repository intentionally has no production deployment design yet
-  (docs/adr/0025, docs/adr/0027).
-- ADR 0028 replaced both EF histories with clean initial baselines. Any local
+  (docs/decisions/0009).
+- ADR 0009 replaced both EF histories with clean initial baselines. Any local
   database created before that reset is intentionally incompatible. Stop
   AppHost, back up anything worth keeping, and recreate it once with
   `docker volume rm agenza-postgres-data`. The demo has no data migration
   path from the deleted histories.
 - `identity_app` owns only the `identity` schema and `services_app` owns only
-  the `services` schema. Existing local volumes created before docs/adr/0024
+  the `services` schema. Existing local volumes created before docs/decisions/0004
   must be recreated once so Aspire's init script can create the roles and
   grants. Changing either role password also requires recreating the local
   volume because PostgreSQL init files run only on first initialization.

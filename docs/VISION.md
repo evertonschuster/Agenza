@@ -21,7 +21,7 @@ need to share contracts with `admin-frontend`, rather than before.
 
 ## Backend — context-aggregated .NET services (`backend/services/*`)
 
-Not fine-grained microservices (ADR 0001): each service is a small,
+Not fine-grained microservices (ADR 0002): each service is a small,
 explicit-purpose monolith owning one business context end-to-end —
 its own domain model, its own schema, its own API.
 

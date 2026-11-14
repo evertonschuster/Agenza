@@ -47,7 +47,7 @@ Use os pins do repositório em vez de copiar versões da documentação:
 `.nvmrc`/`packageManager`, `backend/global.json`, `.python-version`/`uv.lock`
 e as actions de setup do CI são as fontes executáveis. Exceções de
 compatibilidade e condições de upgrade estão registradas na
-[ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibility-pins.md).
+[ADR 0010](docs/decisions/0010-git-ci-and-toolchain.md).
 
 ## Agentes de IA
 
@@ -56,11 +56,9 @@ o lê nativamente, `CLAUDE.md` o importa, e `.github/copilot-instructions.md` fa
 ponte para o Copilot. Fluxos de trabalho específicos deste repositório moram em
 `.claude/skills/agenza-*/`.
 
-Esses arquivos **apontam** para as fontes de verdade em vez de repeti-las — versões,
-inventário de arquivos e status de feature ficam em lockfiles, código e ADRs. Essa
-restrição é a lição da [ADR 0016](docs/adr/0016-ai-agent-governance-framework.md),
-abandonada e registrada na
-[ADR 0041](docs/adr/0041-ai-instruction-files-reinstated.md).
+Esses arquivos **apontam** para as fontes de verdade em vez de repeti-las: versões,
+inventário de arquivos e status de feature ficam em lockfiles, código e testes. A política
+de documentação está na [ADR 0001](docs/decisions/0001-documentation-and-decisions.md).
 
 [`.mcp.json`](.mcp.json) declara quatro servidores MCP opcionais (GitHub, shadcn,
 Playwright, Chrome DevTools). Nenhum é obrigatório para desenvolver; autorize-os
