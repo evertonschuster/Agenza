@@ -5,8 +5,8 @@ a picker exception to [ADR 0073](0073-admin-frontend-paged-list-asks-only-when-t
 [ADR 0074](0074-admin-frontend-tags-list-asks-only-when-told.md), which still govern list pages; the move
 of `TagIds` errors to `tags` amended by [ADR 0092](0092-admin-frontend-form-fields-submitted-under-another-name.md);
 "this change only selects" superseded by [ADR 0093](0093-admin-frontend-search-select-creation.md), which
-adds creating the item from the picker; the "Mostrando X de Y" count under the list removed at the owner's
-request (2026-11-14), keeping only "Carregando mais…"
+adds creating the item from the picker; the "Mostrando X de Y" count and the "Carregando mais…" line under the
+list replaced at the owner's request (2026-11-14) by skeleton rows at the end of the list
 
 ## Context
 
@@ -80,10 +80,12 @@ loading list cannot also hold a failure. The scroll measure lives in `useLoadMor
   cancelled answer is ignored. The list is dropped once the closing animation ends, so the popup does not
   turn into a skeleton while it fades out.
 
-Under the list, "Carregando mais…" shows only while a page loads; below it, the count of choices and
-"Limpar seleção". A first version also showed "Mostrando X de Y" while more pages remained; the owner had
-it removed, since how much of the list is loaded does not help anyone choose, and the picker stopped
-keeping the total. The limit (`maxSelected`) disables the other options and says so. Inside the
+While the next page loads, two skeleton rows follow the last option inside the scrolling list, where the
+new options will appear, like the three rows of the first load; below the list, the count of choices and
+"Limpar seleção". The list renders its items through an explicit `Combobox.Collection` so the skeleton can
+sit after them. A first version showed "Mostrando X de Y" under the list, turning into "Carregando mais…"
+while a page loaded; the owner had both removed, since how much of the list is loaded does not help
+anyone choose and the first load already speaks in skeletons, and the picker stopped keeping the total. The limit (`maxSelected`) disables the other options and says so. Inside the
 popup, one `Combobox.Status` announces "Carregando opções…", "Carregando mais opções…" and the limit, and
 Base UI announces it even when it mounts already holding text; the footer and the limit notice are plain
 text, so a screen reader hears each change once. `Combobox.Empty`, also a live region, stays mounted with

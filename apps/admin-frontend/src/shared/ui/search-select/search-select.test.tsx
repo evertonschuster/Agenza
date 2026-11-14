@@ -358,7 +358,7 @@ describe('SearchSelect', () => {
     const list = await openList(user);
     await within(list).findByRole('option', { name: 'Convênio' });
     expect(screen.queryByText(/Mostrando|de 3/)).not.toBeInTheDocument();
-    expect(screen.queryByText('Carregando mais…')).not.toBeInTheDocument();
+    expect(list.querySelector('[data-slot="skeleton"]')).toBeNull();
 
     scrollTo(list, 200);
     expect(loadItems).toHaveBeenCalledTimes(1);
@@ -368,20 +368,33 @@ describe('SearchSelect', () => {
     expect(loadItems).toHaveBeenCalledTimes(2);
   });
 
-  it('says it is loading more while the next page is on its way', async () => {
+  it('shows skeleton rows after the last option while the next page is on its way', async () => {
     const user = userEvent.setup();
     const scrollTo = layOutTallList();
+    let answerNext: (next: Answer) => void = () => undefined;
     const loadItems = vi.fn<Loader>();
     loadItems
       .mockResolvedValueOnce(pageOfTwo([CONVENIO, RETORNO], 3))
-      .mockReturnValue(new Promise<Answer>(() => {}));
+      .mockReturnValueOnce(new Promise<Answer>((resolve) => (answerNext = resolve)));
     render(<Harness loadItems={loadItems} pageSize={2} />);
 
     const list = await openList(user);
-    await within(list).findByRole('option', { name: 'Convênio' });
+    const last = await within(list).findByRole('option', { name: 'Retorno' });
     scrollTo(list, 350);
 
-    expect(await screen.findAllByText('Carregando mais…')).not.toHaveLength(0);
+    await waitFor(() => expect(list.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(2));
+    const skeleton = list.querySelector('[data-slot="skeleton"]');
+    expect(skeleton?.closest('[aria-hidden="true"]')).not.toBeNull();
+    expect(
+      skeleton && last.compareDocumentPosition(skeleton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+    expect(screen.getByText('Carregando mais opções…')).toBeInTheDocument();
+    expect(screen.queryByText('Carregando mais…')).not.toBeInTheDocument();
+
+    answerNext(pageOfTwo([VIP], 3, 2));
+
+    expect(await within(list).findByRole('option', { name: 'VIP' })).toBeInTheDocument();
+    expect(list.querySelector('[data-slot="skeleton"]')).toBeNull();
   });
 
   it('neither opens nor loads while disabled', async () => {

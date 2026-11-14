@@ -101,8 +101,8 @@ interface SearchSelectErrorProps {
   readonly onRetry: () => void;
 }
 
-interface SearchSelectLoadingMoreProps {
-  readonly loadingMore: boolean;
+interface SearchSelectSkeletonProps {
+  readonly rows: number;
 }
 
 interface SearchSelectSelectionProps {
@@ -155,7 +155,7 @@ export type {
   SearchSelectErrorProps,
   SearchSelectItem,
   SearchSelectLimitNoticeProps,
-  SearchSelectLoadingMoreProps,
+  SearchSelectSkeletonProps,
   SearchSelectProps,
   SearchSelectSelectionProps,
   SearchTimer,

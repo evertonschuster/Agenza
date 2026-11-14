@@ -8,6 +8,7 @@ import {
   ComboboxChip,
   ComboboxChips,
   ComboboxChipsInput,
+  ComboboxCollection,
   ComboboxContent,
   ComboboxItem,
   ComboboxItemIndicator,
@@ -21,7 +22,6 @@ import { SearchSelectCreationSlot } from './components/search-select-creation-sl
 import { SearchSelectEmpty } from './components/search-select-empty';
 import { SearchSelectError } from './components/search-select-error';
 import { SearchSelectLimitNotice } from './components/search-select-limit-notice';
-import { SearchSelectLoadingMore } from './components/search-select-loading-more';
 import { SearchSelectSelection } from './components/search-select-selection';
 import { SearchSelectSkeleton } from './components/search-select-skeleton';
 import { creationTextOf } from './creation-text';
@@ -174,24 +174,27 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
             aria-busy={loading}
             className="min-h-0 flex-1"
           >
-            {(item: T) => (
-              <ComboboxItem
-                key={item.id}
-                value={item}
-                disabled={reachedLimit !== null && !selectedIds.has(item.id)}
-                className="pr-8 pointer-coarse:min-h-10"
-              >
-                {renderItem(item)}
-                <ComboboxItemIndicator />
-              </ComboboxItem>
-            )}
+            <ComboboxCollection>
+              {(item: T) => (
+                <ComboboxItem
+                  key={item.id}
+                  value={item}
+                  disabled={reachedLimit !== null && !selectedIds.has(item.id)}
+                  className="pr-8 pointer-coarse:min-h-10"
+                >
+                  {renderItem(item)}
+                  <ComboboxItemIndicator />
+                </ComboboxItem>
+              )}
+            </ComboboxCollection>
+            {phase.kind === 'loadingNext' && <SearchSelectSkeleton rows={2} />}
           </ComboboxList>
           <SearchSelectEmpty
             settled={phase.kind === 'ready'}
             searched={options.searched}
             emptyMessage={emptyMessage}
           />
-          {phase.kind === 'loadingFirst' && <SearchSelectSkeleton />}
+          {phase.kind === 'loadingFirst' && <SearchSelectSkeleton rows={3} />}
           {phase.kind === 'failed' && (
             <SearchSelectError
               problem={phase.problem}
@@ -199,7 +202,6 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
               onRetry={options.retry}
             />
           )}
-          <SearchSelectLoadingMore loadingMore={phase.kind === 'loadingNext'} />
           {creation && (
             <SearchSelectCreateRow
               label={creationLabel()}
