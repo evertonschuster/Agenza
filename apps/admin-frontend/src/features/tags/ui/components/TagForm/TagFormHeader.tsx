@@ -1,8 +1,5 @@
 import { DialogHeader, DialogTitle } from '@/shared/ui/dialog';
-
-interface TagFormHeaderProps {
-  isEdit: boolean;
-}
+import type { TagFormHeaderProps } from './TagFormHeader.types';
 
 function TagFormHeader({ isEdit }: TagFormHeaderProps) {
   return (
