@@ -163,7 +163,7 @@ describe('TagFormPage', () => {
       );
     });
 
-    it('offers no way out while saving — Cancelar disabled, ✕ hidden, Esc ignored — because the save finishes anyway (spec FR-018)', async () => {
+    it('offers no way out while saving — Cancelar disabled, ✕ hidden, Esc ignored — because the save finishes anyway', async () => {
       const user = userEvent.setup();
       let resolveCreate!: (result: { ok: true; data: Tag }) => void;
       mockCreate.mockReturnValue(new Promise((resolve) => (resolveCreate = resolve)));
@@ -233,7 +233,7 @@ describe('TagFormPage', () => {
       );
     });
 
-    it(`caps typing at ${TAG_NAME_MAX_LENGTH} characters for the name and ${TAG_DESCRIPTION_MAX_LENGTH} for the description (spec FR-005)`, async () => {
+    it(`caps typing at ${TAG_NAME_MAX_LENGTH} characters for the name and ${TAG_DESCRIPTION_MAX_LENGTH} for the description`, async () => {
       const user = userEvent.setup();
       renderAt(['/tags/new']);
       await screen.findByRole('heading', { name: 'Nova etiqueta' });
@@ -278,7 +278,7 @@ describe('TagFormPage', () => {
       expect(screen.getByLabelText('Nome')).toHaveValue('Promoção');
     });
 
-    it('maps a backend field validation error to the matching input (spec FR-012)', async () => {
+    it('maps a backend field validation error to the matching input', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue({
         ok: false,

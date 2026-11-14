@@ -282,7 +282,7 @@ describe('TagListPage', () => {
     expect(container.querySelector('[aria-busy="true"]')).toBeNull();
   });
 
-  it('renders the title with no route indicator or subtitle (spec FR-015)', async () => {
+  it('renders the title with no route indicator or subtitle', async () => {
     renderPage(TAGS);
 
     expect(await screen.findByRole('heading', { name: 'Etiquetas' })).toBeInTheDocument();
@@ -362,7 +362,7 @@ describe('TagListPage', () => {
     await waitFor(() => expect(location()).toBe('location: /tags/new'));
   });
 
-  it('shows the failure with the backend message and its code, not the empty-catalog message, when the initial fetch fails (spec FR-012)', async () => {
+  it('shows the failure with the backend message and its code, not the empty-catalog message, when the initial fetch fails', async () => {
     mockList.mockResolvedValue({
       ok: false,
       error: {

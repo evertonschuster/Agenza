@@ -525,8 +525,8 @@ task into a migration of unrelated code.
 - Soft deletion:
   [DeleteClientCommandHandler](../services/services-service/ServicesService.Application/Clients/DeleteClient/DeleteClientCommandHandler.cs).
 
-Some older operations still use persistence-error mappers, uncoded validator rules or cross-aggregate
-navigations. Their presence is not a precedent for new code. Explain a conversion needed for the
+Some older operations still use persistence-error mappers, a relationship loader shared between
+handlers, uncoded validator rules or cross-aggregate navigations. Their presence is not a precedent for new code. Explain a conversion needed for the
 requested behavior or safety; a description fix does not rewrite tag relationships.
 Update an example when it stops demonstrating its concern.
 

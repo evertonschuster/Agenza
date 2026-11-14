@@ -33,7 +33,7 @@ describe('toFormErrors', () => {
     expect(formError).toBeNull();
   });
 
-  it('promotes the collapsed "" key of an application error to a form-level message (spec FR-012)', () => {
+  it('promotes the collapsed "" key of an application error to a form-level message', () => {
     const problem: ApiProblem = {
       status: 409,
       code: 'Tag.DuplicateName',

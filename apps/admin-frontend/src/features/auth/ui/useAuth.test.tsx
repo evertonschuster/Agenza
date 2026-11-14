@@ -66,7 +66,7 @@ describe('useAuth (integration: AuthProvider + sessionStore wiring)', () => {
     });
   });
 
-  it('clears the local session and invokes the identity-service end-session flow on logout (spec FR-008)', async () => {
+  it('clears the local session and invokes the identity-service end-session flow on logout', async () => {
     mockGetUser.mockResolvedValue(null);
     mockSignoutRedirect.mockResolvedValue(undefined);
 

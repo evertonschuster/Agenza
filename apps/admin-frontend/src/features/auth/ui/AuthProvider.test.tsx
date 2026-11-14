@@ -57,7 +57,7 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     mockGetUser.mockResolvedValue(makeOidcUser({ tenantId: TENANT_A }));
   });
 
-  it('re-renders consumers to authenticated when oidc-client-ts fires addUserLoaded (spec FR-007)', async () => {
+  it('re-renders consumers to authenticated when oidc-client-ts fires addUserLoaded', async () => {
     mockGetUser.mockResolvedValue(null);
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.session.status).toBe('unauthenticated'));
@@ -72,7 +72,7 @@ describe('AuthProvider (integration: oidc-client-ts events -> sessionStore -> us
     });
   });
 
-  it('re-renders consumers to unauthenticated/renewal_failed when oidc-client-ts fires addSilentRenewError (spec FR-009)', async () => {
+  it('re-renders consumers to unauthenticated/renewal_failed when oidc-client-ts fires addSilentRenewError', async () => {
     const { result } = renderHook(() => useAuth(), { wrapper });
     await waitFor(() => expect(result.current.session.status).toBe('authenticated'));
 

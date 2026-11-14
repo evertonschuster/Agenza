@@ -7,6 +7,3 @@ package-lock.json
 
 # Pre-existing tooling scaffolding, not application source
 .claude
-
-# Planning/design docs, not application source
-specs

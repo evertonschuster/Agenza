@@ -380,6 +380,9 @@ export function checkDocumentation(root) {
   } else {
     report(skillsDirectory, 1, 'Diretório de skills canônicas ausente.', skillsDirectory);
   }
+  if (existsSync(resolve(root, 'docs/decisions'))) {
+    collect('docs/decisions');
+  }
 
   for (const file of documents) {
     const absolute = resolve(root, file);

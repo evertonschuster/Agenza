@@ -158,7 +158,7 @@ describe('TagDeletePage', () => {
     expect(screen.queryByRole('heading', { name: 'Excluir etiqueta?' })).not.toBeInTheDocument();
   });
 
-  it('shows the backend error verbatim and keeps the tag when delete is blocked (spec FR-012, US4 scenario 2)', async () => {
+  it('shows the backend error verbatim and keeps the tag when delete is blocked', async () => {
     const user = userEvent.setup();
     mockDelete.mockResolvedValue({
       ok: false,
