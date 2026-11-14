@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
+import { createPortal } from 'react-dom';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
@@ -309,6 +310,33 @@ describe('SearchSelect creation result', () => {
 
     expect(screen.queryByRole('listbox')).not.toBeInTheDocument();
     expect(loadItems).not.toHaveBeenCalled();
+  });
+
+  it('keeps a form inside the creation from submitting the form around the field', async () => {
+    const user = userEvent.setup();
+    const outerSubmit = vi.fn((event: FormEvent) => event.preventDefault());
+    const innerSubmit = vi.fn((event: FormEvent) => event.preventDefault());
+    const creation: SearchSelectCreation<Tag> = {
+      ...CREATION,
+      render: () =>
+        createPortal(
+          <form onSubmit={innerSubmit}>
+            <button type="submit">Salvar criação</button>
+          </form>,
+          document.body,
+        ),
+    };
+    render(
+      <form onSubmit={outerSubmit}>
+        <Harness loadItems={loaderOf(answer([VIP]))} creation={creation} />
+      </form>,
+    );
+
+    await user.click(fieldButton());
+    await user.click(screen.getByRole('button', { name: 'Salvar criação' }));
+
+    expect(innerSubmit).toHaveBeenCalledTimes(1);
+    expect(outerSubmit).not.toHaveBeenCalled();
   });
 });
 

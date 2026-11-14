@@ -38,7 +38,6 @@ export function useTagCreateDialog(props: TagCreateDialogProps): UseTagCreateDia
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault();
-    event.stopPropagation();
     if (!isSaving) void methods.handleSubmit(onValid)(event);
   }
 

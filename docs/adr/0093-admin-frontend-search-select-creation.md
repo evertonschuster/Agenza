@@ -34,7 +34,10 @@ control the text. `render(request)` is a sibling of the `<Combobox>`: React even
 even out of a portal, and inside the Combobox they would reach the chips' press handler and the input's
 keys. It is drawn by a small slot component, so the request's callbacks, which read the field's DOM, reach
 the caller as props rather than through a call made during the picker's render, which the React Compiler
-rules reject. A button inside `Combobox.Chips` is safe: the chips' `mousedown` handler ignores interactive targets,
+rules reject. The slot also wraps the creation in an element that stops the `submit` event: the creation
+renders inside the field, so inside the caller's `<form>` in the React tree, and a form in the creation
+would otherwise submit the caller's form as well. Keeping this in the slot makes every future creation
+safe without remembering it; a generic test in the picker proves it. A button inside `Combobox.Chips` is safe: the chips' `mousedown` handler ignores interactive targets,
 and the outside-press check treats the chips as inside, so the button neither focuses the search nor opens
 or closes the list by itself. Completing or cancelling unmounts the creation synchronously and focuses the
 input, found inside the picker's own anchor so the form's `inputRef` is passed on untouched. A Base UI
@@ -47,8 +50,9 @@ footer) used by the route page and by a new `TagCreateDialog`. The page keeps it
 for edit, closing by navigation. `TagCreateDialog` has its own: the received name and otherwise the page's initial values, no color
 checked, the same
 `createTag` and `applyApiProblem`, the "Etiqueta criada" toast saying the tag was also selected, and
-`onCreated` / `onCancel` instead of navigation. Its submit stops propagation: in the React tree the dialog's
-`<form>` sits inside the person's, and saving the tag would otherwise submit the person.
+`onCreated` / `onCancel` instead of navigation. A first version stopped the submit from reaching the
+person's form inside this hook; the picker's slot now does it for any creation, so the tag dialog no longer
+needs to.
 
 ## Consequences
 

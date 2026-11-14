@@ -86,9 +86,9 @@ estrutura por fatia da feature:
   Recebe `name`, `onCreated(tag)` e `onCancel()`. O hook cria o `useForm` com o mesmo `tagFormSchema`, valores
   iniciais `toTagFormFieldValues()` com o nome recebido e sem cor, como a página (FR-008). Ao salvar, chama o mesmo
   `createTag`, mostra o toast "Etiqueta criada" com `"<nome>" foi criada e selecionada.` e chama
-  `onCreated`; na falha, `applyApiProblem`, como a página. O `onSubmit` chama `stopPropagation()` além de
-  `preventDefault()`: o `<form>` do diálogo está, na árvore do React, dentro do `<form>` da pessoa, e o envio
-  subiria até ele (FR-010). Fechar sem salvar chama `onCancel`.
+  `onCreated`; na falha, `applyApiProblem`, como a página. O `<form>` do diálogo fica, na árvore do React,
+  dentro do `<form>` da pessoa, e o envio subiria até ele (FR-010): quem impede é o slot do `SearchSelect`,
+  que para o evento `submit` de qualquer criação. Fechar sem salvar chama `onCancel`.
 - O barril `features/tags/index.ts` exporta `TagCreateDialog`.
 
 ### Cadastro de pessoa

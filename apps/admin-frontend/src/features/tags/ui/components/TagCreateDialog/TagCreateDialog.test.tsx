@@ -161,22 +161,4 @@ describe('TagCreateDialog', () => {
 
     expect(onCancel).toHaveBeenCalledTimes(1);
   });
-
-  it('does not submit an outer form when saving', async () => {
-    const user = userEvent.setup();
-    const outerSubmit = vi.fn((event: React.FormEvent) => event.preventDefault());
-    const onCreated = vi.fn();
-    render(
-      <form onSubmit={outerSubmit}>
-        <TagCreateDialog name="Pós-operatório" onCreated={onCreated} onCancel={vi.fn()} />
-      </form>,
-    );
-    await screen.findByLabelText('Nome');
-
-    await user.click(screen.getByRole('radio', { name: 'Azul' }));
-    await user.click(screen.getByRole('button', { name: 'Salvar' }));
-
-    await waitFor(() => expect(onCreated).toHaveBeenCalled());
-    expect(outerSubmit).not.toHaveBeenCalled();
-  });
 });
