@@ -42,7 +42,7 @@ ADRs registram decisões e sua evolução. Uma divergência exige investigação
 apenas para satisfazer uma passagem histórica.
 
 Este arquivo e os AGENTS locais guardam invariantes e roteamento; skills descrevem procedimentos;
-specs definem comportamento e aceite. A política está na
+testes fixam comportamento e aceite. A política está na
 [ADR 0088](docs/adr/0088-ai-instruction-sources-and-proportional-documentation.md).
 
 ## Regras que valem em todo o repositório
@@ -80,17 +80,12 @@ executáveis. [ADR 0032](docs/adr/0032-stable-runtime-and-toolchain-compatibilit
 
 ## Fluxo de trabalho
 
-O Spec Kit está instalado no frontend. Para planejar suas features, execute o fluxo
-`speckit-specify` → `speckit-plan` → `speckit-tasks` → `speckit-implement` a partir de
-`apps/admin-frontend`, usando a sintaxe da integração instalada.
-Confira a [instalação](apps/admin-frontend/.specify/integration.json),
-o [workflow do preset](apps/admin-frontend/.specify/presets/agenza-proportional/workflow.md),
-decidido na [ADR 0087](docs/adr/0087-speckit-proportional-preset.md), e os
-[pré-requisitos](apps/admin-frontend/.specify/scripts/powershell/check-prerequisites.ps1).
-Correções determinísticas de texto ou manutenção sem comportamento novo podem seguir diretamente.
-Mudanças de comportamento mantêm spec, plan e tasks separados; auxiliares precisam de uma razão.
-Não omita um arquivo exigido pelo tooling sem adaptar seus consumidores. A instalação no frontend
-não estabelece um fluxo automático para backend ou serviços de IA.
+Antes de codar comportamento novo, esclareça as dúvidas materiais com o dono numa única rodada de
+perguntas em lote, cada uma com a opção recomendada; um protótipo aprovado é a referência visual.
+Critérios de aceite viram testes nomeados em pt-BR no mesmo PR, e uma correção de protótipo vira
+teste ou código. Plano e tarefas ficam na sessão; a conversa fica registrada no PR. Não há arquivo de
+spec por feature: as specs em `apps/admin-frontend/specs` são histórico.
+[ADR 0094](docs/adr/0094-remove-spec-kit.md).
 
 Trabalho por PR. Não faça commit na `main` diretamente.
 
@@ -107,8 +102,7 @@ Skills Agenza têm uma fonte canônica em `.claude/skills/agenza-*/`. Os AGENTS 
 para o arquivo da tarefa. Quando o host não o descobrir, abra esse caminho explicitamente e somente
 as referências necessárias; leitura por caminho não é descoberta nativa.
 
-Não crie espelhos editáveis ou sincronização caseira dessas skills. As distribuições do Spec Kit
-seguem sua instalação e upstream; sua presença não prova que todas as integrações estejam ativas.
+Não crie espelhos editáveis ou sincronização caseira dessas skills.
 
 ## Como cada ferramenta chega aqui
 

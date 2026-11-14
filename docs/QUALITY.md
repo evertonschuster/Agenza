@@ -24,7 +24,7 @@ Run `npm run check:docs` from the repository root; the checker uses only Node bu
 Its tests run with `node --test scripts/checkDocs.test.mjs`.
 
 The checked corpus is declared in [checkDocs.mjs](../scripts/checkDocs.mjs): root and area entries,
-current README/architecture/API/quality/product guides, the frontend constitution, the ADR index,
+current README/architecture/API/quality/product guides, the ADR index,
 and Markdown under canonical `.claude/skills/agenza-*` directories. It verifies local inline/image
 links and reference definitions, standalone `@path` imports in CLAUDE wrappers, required skill
 `name`/`description` text, and ADR IDs in the index's current-decision column.
@@ -43,7 +43,7 @@ schemes, isolated fragments/queries and template placeholders. It does not valid
 HTML links, indented code blocks, symbols, external URLs, shell commands, semantic agreement or
 tool discovery. Fences inside list containers, indentation of four or more spaces, and
 over-indented closing fences are outside the supported subset; use top-level or blockquote
-examples in checked guides. Historical ADR bodies/specs and generated Spec Kit adapters are outside the scan;
+examples in checked guides. Historical ADR bodies and specs are outside the scan;
 their linked destinations are still checked when referenced from the active corpus.
 
 The stable `docs-checks` job runs on every PR and push to main, including changes that remove a

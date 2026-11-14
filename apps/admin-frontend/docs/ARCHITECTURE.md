@@ -228,6 +228,5 @@ Playwright e a checagem de contrato/OIDC usam o stack Aspire real. Consulte
 
 ## 8. Pointers
 
-- [Constituição](../.specify/memory/constitution.md): restrições do planejamento.
 - [AGENTS do frontend](../AGENTS.md): roteamento para skills e consulta por tarefa.
 - [README](../README.md): ambiente e manutenção de dependências.

@@ -3,7 +3,9 @@
 Status: accepted (2026-10-28); amends
 [ADR 0041](0041-ai-instruction-files-reinstated.md) on discovery, skill access and mechanical checks.
 The single-source and no-hand-rolled-sync constraints remain. Its paragraph on creating and
-evolving ADRs is superseded by [ADR 0093](0093-adr-lifecycle-and-review-commits.md).
+evolving ADRs is superseded by [ADR 0093](0093-adr-lifecycle-and-review-commits.md); its "Specs"
+row and its paragraph on the frontend Spec Kit flow are superseded by
+[ADR 0094](0094-remove-spec-kit.md).
 
 ## Context
 

@@ -12,7 +12,7 @@ Abra somente o que a mudança exigir:
 | Limites entre camadas, páginas ou listas | [Arquitetura §1](docs/ARCHITECTURE.md#1-shape)                                                    |
 | Consumo HTTP, erros ou tipos gerados     | [Arquitetura §2](docs/ARCHITECTURE.md#2-talking-to-the-backend) e código de contrato indicado ali |
 | Autenticação e tenant                    | [Arquitetura §3](docs/ARCHITECTURE.md#3-auth--tenancy)                                            |
-| Planejamento de feature                  | [Constituição](.specify/memory/constitution.md) e somente as ADRs da preocupação afetada          |
+| Planejamento de feature                  | [Fluxo da raiz](../../AGENTS.md#fluxo-de-trabalho) e somente as ADRs da preocupação afetada       |
 | Ambiente, comandos ou dependências       | [README](README.md), inclusive [lockfile](README.md#lockfile)                                     |
 
 Histórico fica nas ADRs e no Git, acessível pelo
@@ -20,6 +20,7 @@ Histórico fica nas ADRs e no Git, acessível pelo
 
 ## Invariantes do frontend
 
+- TypeScript estrito: não enfraqueça o [tsconfig](tsconfig.json) nem introduza `any` implícito.
 - `app → features → widgets → shared`; consumidores externos acessam uma feature pelo barril.
   O [ESLint](eslint.config.js) verifica direção entre camadas e esse limite público.
 - Páginas compõem e renderizam a UI; estado, efeitos e handlers ficam no hook da página.
@@ -28,6 +29,7 @@ Histórico fica nas ADRs e no Git, acessível pelo
   O formulário de filtros não dispara busca ao digitar; ações aplicam a consulta.
 - `servicesApi` devolve `ApiResult`; token, tenant, versão e envelope pertencem à camada HTTP.
   Mutação mantém falhas esperadas como valores; `unwrapOrThrow` existe na fronteira do framework.
+  Tipos de wire vêm do contrato gerado; não escreva `fetch` à mão nem duplique DTOs de wire.
 - Ramifique por código/status, nunca interpretando texto de erro.
 - Use controles existentes, tokens semânticos e o comportamento de teclado/foco do primitivo.
   Todo controle precisa de nome acessível; conteúdo visível segue pt-BR.
@@ -52,7 +54,8 @@ adicionais apenas quando a tarefa tocar no assunto.
 
 Use os [comandos do app](README.md#comandos) e confira os
 [gates aplicáveis](../../.github/workflows/frontend-ci.yml). Limiares e exclusões de cobertura
-estão no [Vitest](vitest.config.ts); uma pasta de UI não é isenta por definição.
+estão no [Vitest](vitest.config.ts); uma pasta de UI não é isenta por definição. Não rebaixe
+limiares nem dispense gates para a mudança passar.
 `exactOptionalPropertyTypes` exige atenção a props opcionais repassadas por spread.
 Alterou contrato? Regenere os tipos no PR backend correspondente e execute a checagem com o serviço.
 

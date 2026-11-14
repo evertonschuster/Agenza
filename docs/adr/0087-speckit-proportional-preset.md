@@ -1,6 +1,8 @@
 # ADR 0087 — Spec Kit proporcional por preset local
 
-Status: accepted (2026-10-28); effective on merge.
+Status: accepted (2026-10-28); effective on merge. Superseded by
+[ADR 0094](0094-remove-spec-kit.md): the Spec Kit was removed and the preset files linked below no
+longer exist.
 
 ## Context
 

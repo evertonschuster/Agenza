@@ -5,6 +5,7 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
 # Tarefas: etiquetas no cadastro de pessoa com SearchSelect
 
 **Entradas**: [spec.md](spec.md) e [plan.md](plan.md).
+**Status**: tarefas encerradas no PR #207; registro histórico.
 
 A versão em duas camadas (T001–T005, T013–T016) foi substituída pelo redesenho de 2026-11-06; o histórico
 está no Git e na ADR 0091.

@@ -15,7 +15,6 @@ export const entryDocuments = [
   'apps/admin-frontend/CLAUDE.md',
   'apps/admin-frontend/README.md',
   'apps/admin-frontend/docs/ARCHITECTURE.md',
-  'apps/admin-frontend/.specify/memory/constitution.md',
   'ai-services/assistant-service/README.md',
   'docs/API.md',
   'docs/MONOREPO.md',

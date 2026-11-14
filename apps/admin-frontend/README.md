@@ -92,12 +92,9 @@ Este contêiner de manutenção não altera a orquestração local pelo Aspire.
 
 ## Fluxo de trabalho
 
-O Spec Kit está instalado neste app. Seus arquivos de integração e templates ficam em
-[.specify](.specify/); as especificações ficam em [specs](specs/).
-Confira a integração configurada e o diretório de execução antes de invocar os comandos;
-não use este README como indicação de qual feature está em andamento.
-
-As [instruções da raiz](../../AGENTS.md) definem o fluxo de PRs.
+As [instruções da raiz](../../AGENTS.md#fluxo-de-trabalho) definem o planejamento e o fluxo de PRs.
+As especificações em [specs](specs/) são histórico de entregas anteriores; o comportamento vigente
+está no código e nos testes.
 [AGENTS do app](AGENTS.md) encaminha para a skill e a seção técnica necessárias à tarefa.
 [CLAUDE.md](CLAUDE.md) mantém os imports compartilhados. As integrações MCP opcionais estão em
 [.mcp.json](../../.mcp.json).

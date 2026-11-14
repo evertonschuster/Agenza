@@ -1,6 +1,6 @@
 # Especificação: etiquetas no cadastro de pessoa com SearchSelect
 
-**Branch**: `claude/multi-select-component-d9018b` | **Criada em**: 2026-10-29 | **Status**: Aprovada pelo dono nesta conversa
+**Branch**: `claude/multi-select-component-d9018b` | **Criada em**: 2026-10-29 | **Status**: implementada no [PR #207](https://github.com/evertonschuster/Agenza/pull/207); registro histórico, sem atualização. O comportamento vigente está no código e nos testes.
 **Pedido**: componente de seleção reutilizável que recebe a chamada que lista os itens do backend com busca e
 paginação; primeiro uso na seleção de etiquetas do cadastro de pessoa.
 

@@ -1,6 +1,7 @@
 # Plano: etiquetas no cadastro de pessoa com SearchSelect
 
 **Branch**: `claude/multi-select-component-d9018b` | **Data**: 2026-10-29, redesenho em 2026-11-06 | **Spec**: [spec.md](spec.md)
+**Status**: plano histórico do PR #207, sem atualização; a forma vigente está no código.
 
 ## Abordagem
 
