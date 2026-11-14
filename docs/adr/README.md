@@ -124,3 +124,4 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0090 tenant isolation: real client HTTP requests and both ClientTags foreign keys in the existing Aspire job.
 0091 admin-frontend SearchSelect picks several `{ id, name }` items from the caller's paged call, searching while typing and loading more on scroll; the person form picks its tags with it.
 0092 admin-frontend form fields submitted under another name: `applyApiProblem` takes `aliases` that move the errors of a command field such as `TagIds`, items included, to the form field holding the picked records.
+0093 tag deletion: EF model relationships require executable deletion scenarios, without changing the handler or the HTTP contract.

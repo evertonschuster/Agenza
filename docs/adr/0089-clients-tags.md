@@ -55,6 +55,7 @@ item with code `Tag.InUse` and `meta: { id, name }` (the field-error meta of ADR
 change). `ListByTagIdAsync` on each repository returns at most 10 per kind, ordered by name then id, and runs only
 when that kind's count is above zero; the message keeps the full totals. A structured `meta` on the error itself was
 considered and turned down: it would change the shared library and every service's problem payload.
+The local EF-model guard for future tag relationships is recorded in [ADR 0093](0093-tag-deletion-usage-coverage.md).
 
 **No tag filter on the list.** `ListClientsQuery` gets no `tagId`; it is a later decision.
 
