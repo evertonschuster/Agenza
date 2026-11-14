@@ -49,6 +49,10 @@ controlado e o repositório. Os hooks de
 tamanho são lidos da query string na montagem e suas mudanças são escritas com `replace` na rota
 dona da lista. O estado do formulário de filtros é separado; digitar não aplica a busca.
 
+Em Pessoas, o destaque de Buscar quando a situação escolhida ainda não foi aplicada é intencional:
+ele sinaliza a escolha pendente. O dono decidiu mantê-lo na [issue #219](https://github.com/evertonschuster/Agenza/issues/219);
+o comportamento é verificado no [teste da lista](../src/features/clients/ui/pages/ClientListPage/ClientListPage.test.tsx).
+
 O widget pede dados nas ações, na montagem e ao corrigir uma página além do fim. Um efeito
 dependente da query não dispara as buscas. Uma nova ação cancela a requisição anterior; respostas
 canceladas não substituem a atual. `refetch` atualiza a consulta solicitada sem limpar as linhas,
@@ -62,6 +66,11 @@ etapa fora da URL para o estado controlado atual. Os hooks acima demonstram a fo
 preserva a mudança implementada.
 
 ### Componentes e formulários
+
+No campo de data, o botão de limpar no campo e o botão Limpar no calendário são intencionais:
+cada um permite limpar a partir do contexto em que a pessoa está. O dono decidiu manter ambos na
+[issue #220](https://github.com/evertonschuster/Agenza/issues/220); as interações são verificadas
+nos [testes do campo](../src/shared/form/fields/components/date-field.test.tsx).
 
 Um primitivo em `shared/ui/<name>/` expõe seu `index.tsx`. Tipos próprios podem ficar em
 `<name>.types.ts`; tipos derivados de estilos ficam junto de quem define os estilos.
@@ -87,6 +96,10 @@ Seleção de várias opções `{ id, name }` carregadas do backend, com busca e 
 [SearchSelect](../src/shared/ui/search-select/search-select.tsx) com a chamada paginada da feature; no
 formulário, `SearchSelectField`
 ([ADR 0091](../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md)).
+O rodapé do seletor mantém a contagem e **Limpar seleção** por decisão do dono
+([issue #221](https://github.com/evertonschuster/Agenza/issues/221)): a contagem informa a
+proximidade do limite e a ação permite remover todas as escolhas de uma vez. Os
+[testes do seletor](../src/shared/ui/search-select/search-select.test.tsx) cobrem ambos.
 `SelectField` continua para o `Select` simples.
 Texto e rotas de produto são pt-BR; identificadores são inglês. A rota `/tags` é uma exceção
 existente: renomear uma URL requer uma mudança própria de produto.
