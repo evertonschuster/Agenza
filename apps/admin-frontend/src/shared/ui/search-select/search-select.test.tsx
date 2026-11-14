@@ -347,7 +347,6 @@ describe('SearchSelect', () => {
       expect.any(AbortSignal),
     );
     expect(within(list).getAllByRole('option')).toHaveLength(3);
-    expect(screen.queryByText(/Mostrando/)).not.toBeInTheDocument();
   });
 
   it('asks for the next page only once scrolled near the end of a tall list', async () => {
@@ -358,7 +357,8 @@ describe('SearchSelect', () => {
 
     const list = await openList(user);
     await within(list).findByRole('option', { name: 'Convênio' });
-    expect(screen.getByText('Mostrando 2 de 3')).toBeInTheDocument();
+    expect(screen.queryByText(/Mostrando|de 3/)).not.toBeInTheDocument();
+    expect(screen.queryByText('Carregando mais…')).not.toBeInTheDocument();
 
     scrollTo(list, 200);
     expect(loadItems).toHaveBeenCalledTimes(1);

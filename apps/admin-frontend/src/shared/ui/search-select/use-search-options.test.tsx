@@ -58,8 +58,7 @@ describe('useSearchOptions', () => {
     expect(current()).toMatchObject({
       phase: { kind: 'ready' },
       items: [item(1), item(2)],
-      totalCount: 5,
-      hasMore: true,
+      next: query('', 2),
     });
   });
 
@@ -81,7 +80,7 @@ describe('useSearchOptions', () => {
 
     expect(loadItems).toHaveBeenCalledTimes(1);
     expect(loadItems).toHaveBeenCalledWith(query('et'), expect.any(AbortSignal));
-    expect(current()).toMatchObject({ searched: 'et', items: [item(3)], hasMore: false });
+    expect(current()).toMatchObject({ searched: 'et', items: [item(3)], next: null });
   });
 
   it('opened by a typed search that is still waiting, asks only for that search', async () => {
@@ -163,7 +162,7 @@ describe('useSearchOptions', () => {
     await settled();
 
     expect(loadItems).toHaveBeenLastCalledWith(query('', 2), expect.any(AbortSignal));
-    expect(current()).toMatchObject({ items: [item(1), item(2), item(3)], hasMore: false });
+    expect(current()).toMatchObject({ items: [item(1), item(2), item(3)], next: null });
 
     act(() => current().loadMore());
     expect(loadItems).toHaveBeenCalledTimes(2);
@@ -219,7 +218,10 @@ describe('useSearchOptions', () => {
     await settled();
     act(() => current().loadMore());
     await settled();
-    expect(current()).toMatchObject({ phase: { kind: 'failed', problem: PROBLEM }, hasMore: true });
+    expect(current()).toMatchObject({
+      phase: { kind: 'failed', problem: PROBLEM },
+      next: query('', 2),
+    });
 
     act(() => current().loadMore());
     expect(loadItems).toHaveBeenCalledTimes(2);
@@ -243,7 +245,7 @@ describe('useSearchOptions', () => {
     act(() => current().open());
     await settled();
 
-    expect(current().hasMore).toBe(true);
+    expect(current().next).toEqual(query('', 2));
   });
 
   it('keeps a failed first page and retries it with the same search', async () => {
@@ -281,7 +283,7 @@ describe('useSearchOptions', () => {
     expect(current()).toMatchObject({
       items: [item(1), item(2)],
       phase: { kind: 'failed', problem: PROBLEM, retry: query('', 2) },
-      hasMore: true,
+      next: query('', 2),
     });
 
     act(() => current().retry());

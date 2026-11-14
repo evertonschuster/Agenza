@@ -21,7 +21,7 @@ import { SearchSelectCreationSlot } from './components/search-select-creation-sl
 import { SearchSelectEmpty } from './components/search-select-empty';
 import { SearchSelectError } from './components/search-select-error';
 import { SearchSelectLimitNotice } from './components/search-select-limit-notice';
-import { SearchSelectProgress } from './components/search-select-progress';
+import { SearchSelectLoadingMore } from './components/search-select-loading-more';
 import { SearchSelectSelection } from './components/search-select-selection';
 import { SearchSelectSkeleton } from './components/search-select-skeleton';
 import { creationTextOf } from './creation-text';
@@ -199,12 +199,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
               onRetry={options.retry}
             />
           )}
-          <SearchSelectProgress
-            shown={options.items.length}
-            totalCount={options.totalCount}
-            hasMore={options.hasMore}
-            loadingMore={phase.kind === 'loadingNext'}
-          />
+          <SearchSelectLoadingMore loadingMore={phase.kind === 'loadingNext'} />
           {creation && (
             <SearchSelectCreateRow
               label={creationLabel()}

@@ -61,7 +61,6 @@ type SearchPhase =
 interface SearchOptionsState<T> {
   searched: string;
   items: readonly T[];
-  totalCount: number;
   next: SearchItemsQuery | null;
   phase: SearchPhase;
 }
@@ -102,10 +101,7 @@ interface SearchSelectErrorProps {
   readonly onRetry: () => void;
 }
 
-interface SearchSelectProgressProps {
-  readonly shown: number;
-  readonly totalCount: number;
-  readonly hasMore: boolean;
+interface SearchSelectLoadingMoreProps {
   readonly loadingMore: boolean;
 }
 
@@ -159,7 +155,7 @@ export type {
   SearchSelectErrorProps,
   SearchSelectItem,
   SearchSelectLimitNoticeProps,
-  SearchSelectProgressProps,
+  SearchSelectLoadingMoreProps,
   SearchSelectProps,
   SearchSelectSelectionProps,
   SearchTimer,
