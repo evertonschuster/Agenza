@@ -99,7 +99,7 @@ describe('TagFormPage', () => {
       expect(screen.getByLabelText('Descrição')).toHaveValue('');
     });
 
-    it('blocks submission and shows inline errors when name and color are missing (spec US2 scenario 2)', async () => {
+    it('blocks submission and shows inline errors when name and color are missing', async () => {
       const user = userEvent.setup();
       renderAt(['/tags/new']);
       await screen.findByRole('heading', { name: 'Nova etiqueta' });
@@ -111,7 +111,7 @@ describe('TagFormPage', () => {
       expect(mockCreate).not.toHaveBeenCalled();
     });
 
-    it('creates the tag, refreshes the list and returns to /tags on success (spec US2 scenario 1)', async () => {
+    it('creates the tag, refreshes the list and returns to /tags on success', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue({
         ok: true,
@@ -249,7 +249,7 @@ describe('TagFormPage', () => {
       );
     });
 
-    it('shows a duplicate-name conflict verbatim as a form-level banner, without navigating away (spec US2 scenario 3)', async () => {
+    it('shows a duplicate-name conflict verbatim as a form-level banner, without navigating away', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue({
         ok: false,
@@ -304,7 +304,7 @@ describe('TagFormPage', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
-    it('closes without creating when Cancelar is clicked, with the search the list had still on screen and in the address (ADR 0074)', async () => {
+    it('closes without creating when Cancelar is clicked, with the search the list had still on screen and in the address (ADR 0012)', async () => {
       const user = userEvent.setup();
       mockList.mockImplementation(({ search }: TagListQuery) =>
         Promise.resolve(
@@ -458,7 +458,7 @@ describe('TagFormPage', () => {
       });
     });
 
-    it('saves the change, refreshes the list and returns to /tags on success (spec US3 scenario 1)', async () => {
+    it('saves the change, refreshes the list and returns to /tags on success', async () => {
       const user = userEvent.setup();
       mockUpdate.mockResolvedValue({
         ok: true,
@@ -502,7 +502,7 @@ describe('TagFormPage', () => {
       expect(await screen.findByText('Promo relâmpago')).toBeInTheDocument();
     });
 
-    it('shows a rename-to-duplicate conflict verbatim, without navigating away (spec US3 scenario 2)', async () => {
+    it('shows a rename-to-duplicate conflict verbatim, without navigating away', async () => {
       const user = userEvent.setup();
       mockUpdate.mockResolvedValue({
         ok: false,

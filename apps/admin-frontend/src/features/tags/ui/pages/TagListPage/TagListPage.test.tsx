@@ -128,7 +128,7 @@ describe('TagListPage', () => {
     vi.clearAllMocks();
   });
 
-  describe('when it asks the backend (ADR 0074)', () => {
+  describe('when it asks the backend (ADR 0012)', () => {
     it('asks once on mount, for the first page of 20 tags with no search', async () => {
       renderPage(TAGS);
 
@@ -289,7 +289,7 @@ describe('TagListPage', () => {
     expect(screen.queryByText('/tags')).not.toBeInTheDocument();
   });
 
-  it('lists each tag with its name, color chip and description (spec US1)', async () => {
+  it('lists each tag with its name, color chip and description', async () => {
     renderPage(TAGS);
 
     expect(await screen.findByText('Promoção')).toBeInTheDocument();
@@ -298,7 +298,7 @@ describe('TagListPage', () => {
     expect(screen.getByText('Sem descrição')).toBeInTheDocument();
   });
 
-  it('renders a delete link per row, pointing at that tag under /delete (spec US4)', async () => {
+  it('renders a delete link per row, pointing at that tag under /delete', async () => {
     renderAtTagsRoute(TAGS);
     await screen.findByText('Promoção');
 
@@ -310,7 +310,7 @@ describe('TagListPage', () => {
     );
   });
 
-  it('renders an edit link per row, pointing at that tag under /edit (spec US3)', async () => {
+  it('renders an edit link per row, pointing at that tag under /edit', async () => {
     renderAtTagsRoute(TAGS);
     await screen.findByText('Promoção');
 
@@ -322,7 +322,7 @@ describe('TagListPage', () => {
     );
   });
 
-  it('renders a "Nova etiqueta" link pointing at /tags/new (spec US2)', async () => {
+  it('renders a "Nova etiqueta" link pointing at /tags/new', async () => {
     renderAtTagsRoute(TAGS);
     await screen.findByText('Promoção');
 
@@ -350,7 +350,7 @@ describe('TagListPage', () => {
     );
   });
 
-  it('clicking Nova etiqueta navigates to /tags/new (spec US2)', async () => {
+  it('clicking Nova etiqueta navigates to /tags/new', async () => {
     const user = userEvent.setup();
     renderAtTagsRoute(TAGS);
     await screen.findByText('Promoção');
@@ -444,7 +444,7 @@ describe('TagListPage', () => {
     expect(screen.getByText('VIP')).toBeInTheDocument();
   });
 
-  it('narrows the list to tags whose name contains the search term after pressing Enter, writing it into the address (spec US1)', async () => {
+  it('narrows the list to tags whose name contains the search term after pressing Enter, writing it into the address', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
@@ -460,7 +460,7 @@ describe('TagListPage', () => {
     expect(location()).toBe('location: /tags?search=vip');
   });
 
-  it('narrows the list from the Buscar button too (spec US1)', async () => {
+  it('narrows the list from the Buscar button too', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
@@ -605,7 +605,7 @@ describe('TagListPage', () => {
     expect(searchInput).toHaveValue('vip!');
   });
 
-  it('says there are no tags yet, without a search action, when the catalog is empty (spec US1)', async () => {
+  it('says there are no tags yet, without a search action, when the catalog is empty', async () => {
     renderPage([]);
 
     expect(await screen.findByText('Nenhuma etiqueta ainda')).toBeInTheDocument();
@@ -613,7 +613,7 @@ describe('TagListPage', () => {
     expect(screen.queryByRole('button', { name: 'Limpar busca' })).not.toBeInTheDocument();
   });
 
-  it('names the searched term, and offers to clear it, when a submitted search finds nothing (spec US1)', async () => {
+  it('names the searched term, and offers to clear it, when a submitted search finds nothing', async () => {
     const user = userEvent.setup();
     renderPage(TAGS);
     await screen.findByText('Promoção');
