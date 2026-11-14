@@ -1,7 +1,7 @@
 import { OptionalText } from '@/shared/ui/optional-text';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
-import { TagBadge } from '../../../components/TagBadge';
+import { TagBadge } from '../../../components/TagBadge/TagBadge';
 import { TagDeleteLink } from './TagDeleteLink';
 import { TagEditLink } from './TagEditLink';
 import type { Tag } from '../../../../model/tag';
