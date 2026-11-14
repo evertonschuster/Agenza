@@ -2,7 +2,7 @@ import type { SubmitEvent } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
 import type { TagFormFieldValues, TagFormValues } from './tagForm';
 
-export interface TagFormDialogProps {
+export interface TagFormShellProps {
   readonly methods: UseFormReturn<TagFormFieldValues, unknown, TagFormValues>;
   readonly isEdit: boolean;
   readonly isLoading: boolean;

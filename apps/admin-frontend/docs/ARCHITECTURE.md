@@ -31,19 +31,27 @@ Esses limites continuam na revisão. O adaptador OIDC
 
 Uma página tem sua pasta `ui/pages/<Page>/`: componente de apresentação, hook próprio quando houver
 estado/efeitos e tipos do hook em arquivo irmão quando necessários. Subcomponentes ganham
-`components/` quando tiverem conteúdo que justifique a separação. Um componente usado por mais de
-uma página da fatia, ou exportado pelo barril, fica em `ui/components/<Componente>/` com seus tipos,
-hook e testes, como
-[ClientStatusBadge](../src/features/clients/ui/components/ClientStatusBadge/ClientStatusBadge.tsx).
-O que só existe por causa dele fica na mesma pasta, e as partes internas descem para `components/`:
-[TagForm](../src/features/tags/ui/components/TagForm/TagFormDialog.tsx) reúne a validação e a casca
-do formulário de etiqueta, com o cabeçalho e os campos em `components/`.
+`components/` quando tiverem conteúdo que justifique a separação.
 
-Um diálogo aberto pela rota é uma página e fica em `ui/pages/`. Um diálogo aberto pelo código, sem
-URL própria, tem sua pasta em `ui/dialogs/<Dialog>/`, com hook, tipos e testes, como uma página:
-[TagCreateDialog](../src/features/tags/ui/dialogs/TagCreateDialog/TagCreateDialog.tsx), aberto pelo
-seletor de etiquetas do cadastro de pessoa, usa a casca de `TagForm` como a rota de etiquetas. Um
-diálogo de uma página só fica nos `components/` dela.
+Para decidir onde fica uma peça da `ui/` da fatia, siga esta ordem e pare na primeira que servir:
+
+1. **Abre pela rota** (tem URL própria): `ui/pages/<Page>/`, mesmo quando aparece como diálogo.
+2. **Abre pelo código**, sem URL, e é usado fora de uma página só: `ui/dialogs/<Dialog>/`, com hook,
+   tipos e testes, como uma página.
+3. **Não abre sozinho** e é usado por mais de um consumidor da fatia (página ou diálogo) ou exportado
+   pelo barril: `ui/components/<Componente>/`, com seus tipos e testes. O que só existe por causa
+   dele fica na mesma pasta; partes internas descem para `components/`.
+4. **Serve a uma página só**: nos `components/` dela. Um formulário com uma entrada só fica na
+   página e sobe para `ui/components/` quando ganha a segunda.
+
+Exemplo, etiquetas: `pages/TagFormPage/` cria e edita pela rota;
+[TagQuickCreateDialog](../src/features/tags/ui/dialogs/TagQuickCreateDialog/TagQuickCreateDialog.tsx)
+cria pelo seletor do cadastro de pessoa; os dois usam
+[TagFormShell](../src/features/tags/ui/components/TagForm/TagFormShell.tsx), que fica em
+`components/TagForm/` com a validação e os campos. Contraexemplo, pessoas: o formulário tem uma
+entrada só e continua em `pages/ClientFormPage/`;
+[ClientStatusBadge](../src/features/clients/ui/components/ClientStatusBadge/ClientStatusBadge.tsx)
+fica em `components/` porque as duas páginas da fatia o usam.
 
 Hooks de página não são uma
 camada compartilhada de negócio; acessores de contexto, hooks genéricos de widgets e utilitários
@@ -102,7 +110,7 @@ Seleção de várias opções `{ id, name }` carregadas do backend, com busca e 
 formulário, `SearchSelectField`
 ([ADR 0091](../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md)). A `creation` opcional
 oferece criar o item ali mesmo, por um botão no campo e uma linha no rodapé da lista; a feature desenha a
-criação, como o `TagCreateDialog` das etiquetas
+criação, como o `TagQuickCreateDialog` das etiquetas
 ([ADR 0093](../../../docs/adr/0093-admin-frontend-search-select-creation.md)).
 `SelectField` continua para o `Select` simples.
 Texto e rotas de produto são pt-BR; identificadores são inglês. A rota `/tags` é uma exceção

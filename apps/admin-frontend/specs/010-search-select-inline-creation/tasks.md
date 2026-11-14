@@ -10,15 +10,15 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
 
 - [x] T001 Mover `tagForm.ts` (e `tagForm.test.ts`), `TagFormBody.tsx` e `TagFormHeader.tsx` de
   `src/features/tags/ui/pages/TagFormPage/` para `src/features/tags/ui/components/TagForm/`, criar a casca
-  `TagFormDialog.tsx` e fazer o `TagFormPage.tsx` renderizá-la. Os testes atuais de `TagFormPage.test.tsx`
+  `TagFormShell.tsx` e fazer o `TagFormPage.tsx` renderizá-la. Os testes atuais de `TagFormPage.test.tsx`
   passam sem mudança: detectam qualquer regressão na criação e edição pela tela de etiquetas (FR-007).
 - [x] T002 [P] `suggestTagColor(name)` em `src/features/tags/model/tagColor.ts` e `tagColor.test.ts`.
   Removido depois da implementação, a pedido do dono: o diálogo rápido abre sem cor, como a tela de etiquetas
   (FR-008 revista).
-- [x] T003 [US1] `TagCreateDialog.tsx`, `useTagCreateDialog.ts` e os tipos em
-  `src/features/tags/ui/dialogs/TagCreateDialog/`, usando a casca de T001, o `tagFormSchema`, o
-  `createTag` e o `applyApiProblem`; exportar `TagCreateDialog` em `src/features/tags/index.ts`.
-- [x] T004 [US1] `TagCreateDialog.test.tsx`: nome recebido e vazio; nenhuma cor marcada, a escolhida mantida
+- [x] T003 [US1] `TagQuickCreateDialog.tsx`, `useTagQuickCreateDialog.ts` e os tipos em
+  `src/features/tags/ui/dialogs/TagQuickCreateDialog/`, usando a casca de T001, o `tagFormSchema`, o
+  `createTag` e o `applyApiProblem`; exportar `TagQuickCreateDialog` em `src/features/tags/index.ts`.
+- [x] T004 [US1] `TagQuickCreateDialog.test.tsx`: nome recebido e vazio; nenhuma cor marcada, a escolhida mantida
   enquanto se digita e cor obrigatória antes de salvar; `Tag.DuplicateName` com campo sob o nome e sem campo no aviso do formulário;
   sucesso com o toast "Etiqueta criada", `tagSaved` publicado e `onCreated` com a etiqueta; Cancelar e Esc
   chamando `onCancel`; renderizado dentro de um `<form>` externo, salvar não dispara o envio dele (FR-009,
@@ -46,7 +46,7 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
   a busca vazia; um `mousedown` ou uma tecla dentro do conteúdo renderizado não abre a lista (FR-005). Se o
   foco não ficar no input, troque o efeito pelo `finalFocus` do diálogo com o ref do input no pedido, como
   diz o plano, antes de T011. Com um elemento simples o efeito bastou; com o `Dialog` real o foco voltou
-  ao botão do campo, então o pedido ganhou `finalFocus()`, passado pelo `TagCreateDialog` ao
+  ao botão do campo, então o pedido ganhou `finalFocus()`, passado pelo `TagQuickCreateDialog` ao
   `DialogContent`, e um teste com o diálogo real prova a volta ao campo. Depende de T006.
 - [x] T009 [US2] Limite em `search-select.tsx`: com o limite atingido, botão e linha desabilitados, o botão
   focável e com o texto do limite ligado por `aria-describedby`; sem `creation`, nem botão nem linha, e os
@@ -66,7 +66,7 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
 
 ## Cadastro de pessoa
 
-- [x] T012 [US1] [US2] Passar `creation` com o `TagCreateDialog` em
+- [x] T012 [US1] [US2] Passar `creation` com o `TagQuickCreateDialog` em
   `src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx`. Depende de T003, T009 e
   T010.
 - [x] T013 [US1] [US2] Em `ClientFormPage.test.tsx`: criar uma etiqueta pelo botão e outra pela linha com a

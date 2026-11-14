@@ -53,7 +53,7 @@ No `search-select.tsx`:
   formulário segue intocado: combinar refs atribuiria ao ref recebido, o que o React Compiler recusa.
   Concluir e cancelar desmontam o pedido com `flushSync` e focam o input. Como um diálogo do Base UI devolve
   o foco a quem o abriu, o pedido leva `finalFocus()`, que o diálogo passa ao `DialogContent`; o
-  `TagFormDialog` aceita esse `finalFocus` opcional. Esta foi a alternativa prevista: o teste com o diálogo
+  `TagFormShell` aceita esse `finalFocus` opcional. Esta foi a alternativa prevista: o teste com o diálogo
   real mostrou o foco voltando ao botão do campo.
 - **Limite.** Com `reachedLimit`, o botão e a linha ficam desabilitados com `focusableWhenDisabled`, como o
   "Limpar seleção"; o botão recebe `aria-describedby` apontando para o texto do limite (`limitNoticeOf`).
@@ -77,31 +77,31 @@ Duas partes novas em `components/`, uma por arquivo como as demais:
 A validação, os campos e o título saem da pasta da página porque passam a ter dois usuários, como pede a
 estrutura por fatia da feature:
 
-- `features/tags/ui/components/TagForm/`: `tagForm.ts` (+ teste), `TagFormBody.tsx`, `TagFormHeader.tsx` e
-  `TagFormDialog.tsx`, a casca comum `Dialog` → `DialogContent` → `FormProvider` → `form` → cabeçalho → corpo
+- `features/tags/ui/components/TagForm/`: `tagForm.ts` (+ teste), `TagFormBody.tsx` e
+  `TagFormShell.tsx`, a casca comum `Dialog` → `DialogContent` → `FormProvider` → `form` → cabeçalho → corpo
   (ou `FormFieldsSkeleton`) → `DialogFormFooter`. A casca recebe as props como objeto, sem lógica: `methods`,
   `onSubmit`, `onOpenChange`, `isEdit`, `isLoading`, `isSaving` e `canSubmit`.
 - `TagFormPage.tsx` passa a renderizar a casca; `useTagFormPage.ts` não muda de comportamento.
-- `features/tags/ui/dialogs/TagCreateDialog/`: `TagCreateDialog.tsx`, `useTagCreateDialog.ts` e os tipos.
+- `features/tags/ui/dialogs/TagQuickCreateDialog/`: `TagQuickCreateDialog.tsx`, `useTagQuickCreateDialog.ts` e os tipos.
   Recebe `name`, `onCreated(tag)` e `onCancel()`. O hook cria o `useForm` com o mesmo `tagFormSchema`, valores
   iniciais `toTagFormFieldValues()` com o nome recebido e sem cor, como a página (FR-008). Ao salvar, chama o mesmo
   `createTag`, mostra o toast "Etiqueta criada" com `"<nome>" foi criada e selecionada.` e chama
   `onCreated`; na falha, `applyApiProblem`, como a página. O `<form>` do diálogo fica, na árvore do React,
   dentro do `<form>` da pessoa, e o envio subiria até ele (FR-010): quem impede é o slot do `SearchSelect`,
   que para o evento `submit` de qualquer criação. Fechar sem salvar chama `onCancel`.
-- O barril `features/tags/index.ts` exporta `TagCreateDialog`.
+- O barril `features/tags/index.ts` exporta `TagQuickCreateDialog`.
 
 ### Cadastro de pessoa
 
 `ClientPersonSection.tsx` passa `creation` ao `SearchSelectField`: o rótulo "Nova etiqueta", o rótulo com o
-texto "Criar etiqueta «texto»" e o `render` com o `TagCreateDialog`. A `Tag` criada satisfaz o `ClientTag`
+texto "Criar etiqueta «texto»" e o `render` com o `TagQuickCreateDialog`. A `Tag` criada satisfaz o `ClientTag`
 do formulário; o schema da pessoa continua convertendo `tags` em `tagIds`.
 
 ## Referências e restrições aplicáveis
 
 - [Arquitetura §1](../../docs/ARCHITECTURE.md#1-shape): o `SearchSelect` não importa features; pessoas
   acessa etiquetas só pelo barril. A página compõe; estado e efeitos ficam nos hooks (`useTagFormPage`,
-  `useTagCreateDialog`).
+  `useTagQuickCreateDialog`).
 - [ADR 0091](../../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md): a exclusão "qualquer
   criação a partir do seletor" é revista por uma ADR nova; o restante da 0091 vale.
 - [ADR 0039](../../../../docs/adr/0039-admin-frontend-base-ui-primitives.md): Base UI, sem dependência nova;
@@ -115,7 +115,7 @@ do formulário; o schema da pessoa continua convertendo `tags` em `tagIds`.
 1. `src/features/tags/ui/components/TagForm/` com os arquivos movidos e a casca; `TagFormPage.tsx` usando a
    casca. Os testes atuais do `TagFormPage` provam que nada mudou para a tela de etiquetas.
 2. Removido depois da implementação: a sugestão de cor (`suggestTagColor`) saiu a pedido do dono.
-3. `src/features/tags/ui/dialogs/TagCreateDialog/` e teste; exportação no barril. Depende de 1 e 2.
+3. `src/features/tags/ui/dialogs/TagQuickCreateDialog/` e teste; exportação no barril. Depende de 1 e 2.
 4. `src/shared/ui/search-select/`: tipos, `creation-text.ts` e teste, as três partes (botão, linha e slot),
    o componente e `search-select-creation.test.tsx`. Independe de 1 a 3.
 5. `src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx`. Depende de 3 e 4.
@@ -130,7 +130,7 @@ do formulário; o schema da pessoa continua convertendo `tags` em `tagIds`.
   pedido de listagem novo e com o diálogo aberto.
 - **Envio subindo para o formulário da pessoa**: teste do `ClientFormPage` que salva o diálogo e confere que
   `createClient`/`updateClient` não foi chamado até a pessoa clicar em "Salvar pessoa", e teste do
-  `TagCreateDialog` dentro de um `<form>` externo.
+  `TagQuickCreateDialog` dentro de um `<form>` externo.
 - **Foco depois de fechar**: testes com `userEvent` real conferindo o foco no input depois de salvar e de
   cancelar, pelo botão e pela linha. Se a devolução de foco do diálogo vencer, o plano troca o efeito por
   `finalFocus` do `DialogContent` com o ref do input passado no pedido.

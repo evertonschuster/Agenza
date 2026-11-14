@@ -5,7 +5,7 @@ import * as toastModule from '@/shared/ui/toast';
 import type { Tag } from '../../../model/tag';
 import { TAG_COLOR_PALETTE } from '../../../model/tagColor';
 import { tagSaved } from '../../../model/tagEvents';
-import { TagCreateDialog } from './TagCreateDialog';
+import { TagQuickCreateDialog } from './TagQuickCreateDialog';
 
 const { mockCreate } = vi.hoisted(() => ({ mockCreate: vi.fn() }));
 
@@ -18,11 +18,11 @@ const CREATED: Tag = { id: '9', name: 'Pós-operatório', color: '#0ea5e9', desc
 function renderDialog(name = 'Pós-operatório') {
   const onCreated = vi.fn();
   const onCancel = vi.fn();
-  render(<TagCreateDialog name={name} onCreated={onCreated} onCancel={onCancel} />);
+  render(<TagQuickCreateDialog name={name} onCreated={onCreated} onCancel={onCancel} />);
   return { onCreated, onCancel };
 }
 
-describe('TagCreateDialog', () => {
+describe('TagQuickCreateDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockCreate.mockResolvedValue({ ok: true, data: CREATED });
@@ -171,7 +171,7 @@ describe('TagCreateDialog', () => {
     mockCreate.mockReturnValue(new Promise((resolve) => (answer = resolve)));
     const onCreated = vi.fn();
     const { unmount } = render(
-      <TagCreateDialog name="Pós-operatório" onCreated={onCreated} onCancel={vi.fn()} />,
+      <TagQuickCreateDialog name="Pós-operatório" onCreated={onCreated} onCancel={vi.fn()} />,
     );
     await screen.findByLabelText('Nome');
     await user.click(screen.getByRole('radio', { name: 'Azul' }));

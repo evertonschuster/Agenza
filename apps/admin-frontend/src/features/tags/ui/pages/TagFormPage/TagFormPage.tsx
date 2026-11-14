@@ -1,4 +1,4 @@
-import { TagFormDialog } from '../../components/TagForm/TagFormDialog';
+import { TagFormShell } from '../../components/TagForm/TagFormShell';
 import { useTagFormPage } from './useTagFormPage';
 import { TagFormStatus } from './useTagFormPage.types';
 
@@ -6,7 +6,7 @@ export function TagFormPage() {
   const { status, isEdit, isSaving, canSubmit, methods, onOpenChange, onSubmit } = useTagFormPage();
 
   return (
-    <TagFormDialog
+    <TagFormShell
       methods={methods}
       isEdit={isEdit}
       isLoading={status === TagFormStatus.Loading}

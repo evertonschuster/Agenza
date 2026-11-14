@@ -1,13 +1,12 @@
 import { FormProvider } from 'react-hook-form';
-import { Dialog, DialogContent } from '@/shared/ui/dialog';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
 import { FormFieldsSkeleton } from '@/shared/ui/form-field';
 import { DialogFormFooter } from '@/widgets/form-footer';
 import { TAG_FORM_FIELDS } from './tagForm';
 import { TagFormBody } from './components/TagFormBody';
-import type { TagFormDialogProps } from './TagFormDialog.types';
-import { TagFormHeader } from './components/TagFormHeader';
+import type { TagFormShellProps } from './TagFormShell.types';
 
-function TagFormDialog(props: TagFormDialogProps) {
+function TagFormShell(props: TagFormShellProps) {
   const { methods, isEdit, isLoading, isSaving, canSubmit, onOpenChange, onSubmit, finalFocus } =
     props;
 
@@ -16,7 +15,9 @@ function TagFormDialog(props: TagFormDialogProps) {
       <DialogContent showCloseButton={!isSaving} finalFocus={finalFocus}>
         <FormProvider {...methods}>
           <form onSubmit={onSubmit} className="contents">
-            <TagFormHeader isEdit={isEdit} />
+            <DialogHeader>
+              <DialogTitle>{isEdit ? 'Editar etiqueta' : 'Nova etiqueta'}</DialogTitle>
+            </DialogHeader>
             {isLoading ? (
               <FormFieldsSkeleton fieldCount={TAG_FORM_FIELDS.length} />
             ) : (
@@ -30,4 +31,4 @@ function TagFormDialog(props: TagFormDialogProps) {
   );
 }
 
-export { TagFormDialog };
+export { TagFormShell };

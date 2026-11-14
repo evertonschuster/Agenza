@@ -1,6 +1,11 @@
 import { useFormContext, useFormState } from 'react-hook-form';
 import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
-import { TAG_SEARCH_MAX_LENGTH, TagBadge, TagCreateDialog, tagsRepository } from '@/features/tags';
+import {
+  TAG_SEARCH_MAX_LENGTH,
+  TagBadge,
+  TagQuickCreateDialog,
+  tagsRepository,
+} from '@/features/tags';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
 import {
   BirthDateField,
@@ -80,7 +85,7 @@ function ClientPersonSection() {
               actionLabel: 'Nova etiqueta',
               actionLabelFor: (text) => `Criar etiqueta «${text}»`,
               render: (request) => (
-                <TagCreateDialog
+                <TagQuickCreateDialog
                   name={request.text}
                   onCreated={request.complete}
                   onCancel={request.cancel}

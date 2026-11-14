@@ -1,7 +1,8 @@
 # ADR 0093 — admin-frontend: creating an item from the SearchSelect
 
 Status: accepted (2026-11); amends [ADR 0091](0091-admin-frontend-search-select-and-client-tags.md), whose
-"this change only selects" no longer holds; the rest of 0091 stands
+"this change only selects" no longer holds; the rest of 0091 stands; names and folders revised before merge, see
+[Evolution](#evolution)
 
 ## Context
 
@@ -91,3 +92,28 @@ needs to.
   choice.
 - **An announcement of its own in the picker.** The toast already announces the creation; the picker would
   need one more caller label for it.
+
+## Evolution
+
+Before merge, after four rearrangements of the tag form's folders inside the same PR, the owner asked a
+council to review the layout. It kept every folder and changed what misled a reader:
+
+- **Names say the role.** The shared shell `TagFormDialog` became `TagFormShell`: three dialog-looking
+  names existed and the one called "Dialog" was the shell, so a reader looking for "the tag dialog"
+  landed on it. The picker's dialog `TagCreateDialog` became `TagQuickCreateDialog`, the owner's own
+  word for it, a name the next entity repeats (`ServiceQuickCreateDialog`). `TagFormPage` keeps its
+  name: "Page" already means "has a route". The 12-line `TagFormHeader` moved into the shell. The shell
+  was not named `TagForm`, which would differ from `tagForm.ts` only by case in the same folder.
+- **One order decides the folder.** The rule mixed two criteria (who uses a piece for `components/`, how
+  it opens for `pages/` and `dialogs/`) and named only pages as consumers, so one file fitted two
+  folders. The architecture guide now applies them in order: opened by a route goes to `pages/`;
+  opened by code and used beyond one page goes to `dialogs/`; a piece that does not open by itself and
+  serves more than one page or dialog of the slice, or the barrel, goes to `components/`; anything else
+  stays in its page. A form with a single entry stays in its page and moves up when it gets a second.
+- **The layout freezes** until a second entity creates from a picker; that one copies the pattern
+  (`components/<Entity>Form/`, `dialogs/<Entity>QuickCreateDialog/`, the barrel export). Only an ADR
+  reopens it.
+
+Declined in that review: a `components/<Entity>Form/` for every entity from day one, moving the person
+form now although it has one entry; a `ui/forms/` folder with a shared `useQuickCreate` hook; and one
+`useTagForm({ mode, onSaved })` for both entries, which repeats the configurable dialog declined above.
