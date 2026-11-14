@@ -36,8 +36,15 @@ uma página da fatia, ou exportado pelo barril, fica em `ui/components/<Componen
 hook e testes, como
 [ClientStatusBadge](../src/features/clients/ui/components/ClientStatusBadge/ClientStatusBadge.tsx).
 O que só existe por causa dele fica na mesma pasta, e as partes internas descem para `components/`:
-[TagForm](../src/features/tags/ui/components/TagForm/TagFormDialog.tsx) reúne a validação, a casca
-usada pela rota e o diálogo rápido aberto pelo seletor, com o cabeçalho e os campos em `components/`.
+[TagForm](../src/features/tags/ui/components/TagForm/TagFormDialog.tsx) reúne a validação e a casca
+do formulário de etiqueta, com o cabeçalho e os campos em `components/`.
+
+Um diálogo aberto pela rota é uma página e fica em `ui/pages/`. Um diálogo aberto pelo código, sem
+URL própria, tem sua pasta em `ui/dialogs/<Dialog>/`, com hook, tipos e testes, como uma página:
+[TagCreateDialog](../src/features/tags/ui/dialogs/TagCreateDialog/TagCreateDialog.tsx), aberto pelo
+seletor de etiquetas do cadastro de pessoa, usa a casca de `TagForm` como a rota de etiquetas. Um
+diálogo de uma página só fica nos `components/` dela.
+
 Hooks de página não são uma
 camada compartilhada de negócio; acessores de contexto, hooks genéricos de widgets e utilitários
 como [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) são reutilizáveis.
