@@ -47,11 +47,14 @@ specs definem comportamento e aceite. A política está na
 
 ## Regras que valem em todo o repositório
 
-**Decisões duradouras viram ADR.** Use `docs/adr/NNNN-titulo-em-kebab.md`, com a próxima numeração
-livre, para mudanças de fronteira, segurança, contrato compartilhado, persistência, operação,
-dependência relevante ou custo significativo de reversão. Ajustes locais reversíveis e iterações de
-review ficam no PR. Registre alternativas relevantes, inclusive tentadas e revertidas; ao substituir
-uma decisão, identifique as partes superadas e ligue à evolução, preservando o histórico.
+**Decisões duradouras viram ADR.** Use `docs/adr/NNNN-titulo-em-kebab.md` para mudanças de
+fronteira, segurança, contrato compartilhado, persistência, operação, dependência relevante ou custo
+significativo de reversão. Comportamento de uma tela ou componente, ajustes reversíveis e iterações
+de review ficam no código, nos testes e no PR. Registre alternativas relevantes, inclusive tentadas
+e revertidas. A ADR é proposta enquanto o PR está aberto e passa a aceita no último commit antes do
+merge, com o próximo número livre da `main`; aceita, só muda o status. Uma decisão nova substitui a
+anterior inteira ou nomeia a seção superada.
+[ADR 0093](docs/adr/0093-adr-lifecycle-and-review-commits.md).
 
 **Multi-tenancy é fronteira de servidor.** O tenant vem sempre da claim do token validado. O header
 `X-Tenant-Id` é conveniência de roteamento, não fronteira de segurança; o backend recusa qualquer
@@ -90,6 +93,9 @@ Não omita um arquivo exigido pelo tooling sem adaptar seus consumidores. A inst
 não estabelece um fluxo automático para backend ou serviços de IA.
 
 Trabalho por PR. Não faça commit na `main` diretamente.
+
+Commit de refactor durante o review não altera Markdown; se o comportamento mudou, muda o teste.
+ADRs e guias tocados pelo PR são fechados no último commit antes do merge.
 
 Uma feature que atravessa backend e frontend vira dois PRs, ambos cortados da `main`: o do backend
 primeiro, levando os tipos do OpenAPI regenerados; o do frontend depois. Cada um passa sozinho nos

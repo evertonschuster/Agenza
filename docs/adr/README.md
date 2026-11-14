@@ -3,6 +3,10 @@
 Read this index first and open only ADRs relevant to the task. An ADR marked
 superseded is historical evidence, not current implementation guidance.
 
+Rows list the ADRs in force without amendment qualifiers; a superseded part goes to the table of
+superseded decisions ([0093](0093-adr-lifecycle-and-review-commits.md)). Rows that still carry
+"as amended by" or "as narrowed by" are pending consolidation.
+
 ## Current decisions by concern
 
 | Concern                                                                    | Current ADRs                                                                                                                                                                                                                                |
@@ -23,6 +27,7 @@ superseded is historical evidence, not current implementation guidance.
 | admin-frontend screens                                                     | 0067, 0070 as amended by 0071/0072/0073 (0073 narrowed by 0091), 0074 as amended by 0076 and narrowed by 0091, 0076, 0077 as amended by 0078, 0078, 0082, 0084 as narrowed by 0085 and amended by 0086, 0085, 0086, 0091 as amended by 0092 |
 | AI agent instruction files and documentation scope                         | 0088, retaining the single-source constraints of 0041                                                                                                                                                                                       |
 | Feature planning and Spec Kit                                              | 0087                                                                                                                                                                                                                                        |
+| ADR lifecycle and review commits                                           | 0093                                                                                                                                                                                                                                        |
 
 [0042](0042-admin-frontend-widgets-layer-and-layer-boundaries-rule.md) records an implemented lint
 rule but remains proposed: its rationale and naming question have not been ratified.
@@ -44,6 +49,7 @@ rule but remains proposed: its rationale and naming question have not been ratif
 | 0072 internal-state and URL-removal portions              | [fa07d965](https://github.com/evertonschuster/Agenza/commit/fa07d965a4a2e0f029518a791389812dca54cc25), annotated in 0072 | Keeping list state exclusively in memory and ignoring URL parameters                                        |
 | 0074 initial-state and URL-related portions               | The same change, annotated in 0074                                                                                       | Etiquetas keeping filters, page and size out of the URL; explicit requests and refetch remain               |
 | 0041 discovery, skill-access and mechanical-check account | 0088                                                                                                                     | Assuming one discovery path for all hosts, or that routed files cannot be read without native discovery     |
+| 0088 ADR creation and evolution paragraph                 | 0093                                                                                                                     | Dated evolution notes in an accepted ADR, or editing it beyond its status line                              |
 
 ADRs 0005, 0006, 0008, 0009, 0012, 0015, 0017, 0021, 0025, 0030, and 0044
 contain explicitly marked historical passages. Their status header and the
@@ -124,3 +130,4 @@ instruction files reinstated · 0042 widgets layer and layer-boundaries lint rul
 0090 tenant isolation: real client HTTP requests and both ClientTags foreign keys in the existing Aspire job.
 0091 admin-frontend SearchSelect picks several `{ id, name }` items from the caller's paged call, searching while typing and loading more on scroll; the person form picks its tags with it.
 0092 admin-frontend form fields submitted under another name: `applyApiProblem` takes `aliases` that move the errors of a command field such as `TagIds`, items included, to the form field holding the picked records.
+0093 ADR lifecycle: proposed while the PR is open, accepted and numbered at merge, never edited afterwards; refactor commits during review leave Markdown alone.
