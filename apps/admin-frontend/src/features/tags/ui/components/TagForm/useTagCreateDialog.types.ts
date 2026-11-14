@@ -1,6 +1,6 @@
 import type { SubmitEvent } from 'react';
 import type { UseFormReturn } from 'react-hook-form';
-import type { TagFormFieldValues, TagFormValues } from '../TagForm/tagForm';
+import type { TagFormFieldValues, TagFormValues } from './tagForm';
 
 export interface UseTagCreateDialogResult {
   methods: UseFormReturn<TagFormFieldValues, unknown, TagFormValues>;

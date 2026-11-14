@@ -1,4 +1,4 @@
-import { TagFormDialog } from '../TagForm/TagFormDialog';
+import { TagFormDialog } from './TagFormDialog';
 import type { TagCreateDialogProps } from './TagCreateDialog.types';
 import { useTagCreateDialog } from './useTagCreateDialog';
 

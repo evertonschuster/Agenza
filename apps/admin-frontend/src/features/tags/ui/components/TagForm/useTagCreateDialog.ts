@@ -9,7 +9,7 @@ import {
   toTagFormFieldValues,
   type TagFormFieldValues,
   type TagFormValues,
-} from '../TagForm/tagForm';
+} from './tagForm';
 import type { TagCreateDialogProps } from './TagCreateDialog.types';
 import type { UseTagCreateDialogResult } from './useTagCreateDialog.types';
 

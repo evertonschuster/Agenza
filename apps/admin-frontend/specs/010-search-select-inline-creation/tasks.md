@@ -16,7 +16,7 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
   Removido depois da implementação, a pedido do dono: o diálogo rápido abre sem cor, como a tela de etiquetas
   (FR-008 revista).
 - [x] T003 [US1] `TagCreateDialog.tsx`, `useTagCreateDialog.ts` e os tipos em
-  `src/features/tags/ui/components/TagCreateDialog/`, usando a casca de T001, o `tagFormSchema`, o
+  `src/features/tags/ui/components/TagForm/`, usando a casca de T001, o `tagFormSchema`, o
   `createTag` e o `applyApiProblem`; exportar `TagCreateDialog` em `src/features/tags/index.ts`.
 - [x] T004 [US1] `TagCreateDialog.test.tsx`: nome recebido e vazio; nenhuma cor marcada, a escolhida mantida
   enquanto se digita e cor obrigatória antes de salvar; `Tag.DuplicateName` com campo sob o nome e sem campo no aviso do formulário;

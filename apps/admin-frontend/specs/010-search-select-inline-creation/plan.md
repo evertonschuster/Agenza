@@ -82,7 +82,7 @@ estrutura por fatia da feature:
   (ou `FormFieldsSkeleton`) → `DialogFormFooter`. A casca recebe as props como objeto, sem lógica: `methods`,
   `onSubmit`, `onOpenChange`, `isEdit`, `isLoading`, `isSaving` e `canSubmit`.
 - `TagFormPage.tsx` passa a renderizar a casca; `useTagFormPage.ts` não muda de comportamento.
-- `features/tags/ui/components/TagCreateDialog/`: `TagCreateDialog.tsx`, `useTagCreateDialog.ts` e os tipos.
+- `features/tags/ui/components/TagForm/`: `TagCreateDialog.tsx`, `useTagCreateDialog.ts` e os tipos.
   Recebe `name`, `onCreated(tag)` e `onCancel()`. O hook cria o `useForm` com o mesmo `tagFormSchema`, valores
   iniciais `toTagFormFieldValues()` com o nome recebido e sem cor, como a página (FR-008). Ao salvar, chama o mesmo
   `createTag`, mostra o toast "Etiqueta criada" com `"<nome>" foi criada e selecionada.` e chama
@@ -115,7 +115,7 @@ do formulário; o schema da pessoa continua convertendo `tags` em `tagIds`.
 1. `src/features/tags/ui/components/TagForm/` com os arquivos movidos e a casca; `TagFormPage.tsx` usando a
    casca. Os testes atuais do `TagFormPage` provam que nada mudou para a tela de etiquetas.
 2. Removido depois da implementação: a sugestão de cor (`suggestTagColor`) saiu a pedido do dono.
-3. `src/features/tags/ui/components/TagCreateDialog/` e teste; exportação no barril. Depende de 1 e 2.
+3. `src/features/tags/ui/components/TagForm/` e teste; exportação no barril. Depende de 1 e 2.
 4. `src/shared/ui/search-select/`: tipos, `creation-text.ts` e teste, as três partes (botão, linha e slot),
    o componente e `search-select-creation.test.tsx`. Independe de 1 a 3.
 5. `src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx`. Depende de 3 e 4.

@@ -32,10 +32,12 @@ Esses limites continuam na revisão. O adaptador OIDC
 Uma página tem sua pasta `ui/pages/<Page>/`: componente de apresentação, hook próprio quando houver
 estado/efeitos e tipos do hook em arquivo irmão quando necessários. Subcomponentes ganham
 `components/` quando tiverem conteúdo que justifique a separação. Um componente usado por mais de
-uma página da fatia, ou exportado pelo barril, fica em `ui/components/<Componente>/`, uma pasta por
-componente com seus tipos, hook e testes, como
-[TagCreateDialog](../src/features/tags/ui/components/TagCreateDialog/TagCreateDialog.tsx) e
+uma página da fatia, ou exportado pelo barril, fica em `ui/components/<Componente>/` com seus tipos,
+hook e testes, como
 [ClientStatusBadge](../src/features/clients/ui/components/ClientStatusBadge/ClientStatusBadge.tsx).
+O que só existe por causa dele fica na mesma pasta, e as partes internas descem para `components/`:
+[TagForm](../src/features/tags/ui/components/TagForm/TagFormDialog.tsx) reúne a validação, a casca
+usada pela rota e o diálogo rápido aberto pelo seletor, com o cabeçalho e os campos em `components/`.
 Hooks de página não são uma
 camada compartilhada de negócio; acessores de contexto, hooks genéricos de widgets e utilitários
 como [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) são reutilizáveis.
