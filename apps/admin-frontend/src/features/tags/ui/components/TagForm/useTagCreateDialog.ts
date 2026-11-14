@@ -1,4 +1,4 @@
-import type { SubmitEvent } from 'react';
+import { useEffect, useRef, type SubmitEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
@@ -20,9 +20,18 @@ export function useTagCreateDialog(props: TagCreateDialogProps): UseTagCreateDia
     defaultValues: { ...toTagFormFieldValues(), name },
   });
   const isSaving = methods.formState.isSubmitting;
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   async function onValid(values: TagFormValues) {
     const result = await createTag(values);
+    if (!isMountedRef.current) return;
     if (!result.ok) {
       applyApiProblem({ problem: result.error, methods });
       return;

@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as toastModule from '@/shared/ui/toast';
 import type { Tag } from '../../../model/tag';
@@ -160,5 +160,33 @@ describe('TagCreateDialog', () => {
     await user.keyboard('{Escape}');
 
     expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps the created tag published but touches nothing on screen once the dialog is gone', async () => {
+    const user = userEvent.setup();
+    const addToast = vi.spyOn(toastModule.toast, 'add');
+    const saved = vi.fn();
+    const unsubscribe = tagSaved.subscribe(saved);
+    let answer: (result: { ok: true; data: Tag }) => void = () => undefined;
+    mockCreate.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const onCreated = vi.fn();
+    const { unmount } = render(
+      <TagCreateDialog name="Pós-operatório" onCreated={onCreated} onCancel={vi.fn()} />,
+    );
+    await screen.findByLabelText('Nome');
+    await user.click(screen.getByRole('radio', { name: 'Azul' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+
+    unmount();
+    await act(async () => {
+      answer({ ok: true, data: CREATED });
+      await Promise.resolve();
+    });
+
+    expect(saved).toHaveBeenCalledWith({ id: '9' });
+    expect(onCreated).not.toHaveBeenCalled();
+    expect(addToast).not.toHaveBeenCalled();
+    unsubscribe();
   });
 });
