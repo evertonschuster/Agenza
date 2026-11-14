@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as toastModule from '@/shared/ui/toast';
 import type { Tag } from '../../../model/tag';
-import { TAG_COLOR_PALETTE, suggestTagColor } from '../../../model/tagColor';
+import { TAG_COLOR_PALETTE } from '../../../model/tagColor';
 import { tagSaved } from '../../../model/tagEvents';
 import { TagCreateDialog } from './TagCreateDialog';
 
@@ -14,16 +14,6 @@ vi.mock('../../../api/tagsRepository', () => ({
 }));
 
 const CREATED: Tag = { id: '9', name: 'Pós-operatório', color: '#0ea5e9', description: null };
-
-function colorLabelOf(value: string) {
-  return TAG_COLOR_PALETTE.find((option) => option.value === value)?.label ?? '';
-}
-
-function nameWithAnotherColorThan(name: string) {
-  const color = suggestTagColor(name);
-  const candidates = ['Retorno', 'Convênio', 'Indicação', 'Fidelidade', 'Ortodontia', 'VIP'];
-  return candidates.find((candidate) => suggestTagColor(candidate) !== color) ?? '';
-}
 
 function renderDialog(name = 'Pós-operatório') {
   const onCreated = vi.fn();
@@ -38,39 +28,44 @@ describe('TagCreateDialog', () => {
     mockCreate.mockResolvedValue({ ok: true, data: CREATED });
   });
 
-  it('opens titled "Nova etiqueta" with the received name and the suggested color checked', async () => {
+  it('opens titled "Nova etiqueta" with the received name and no color checked, like the Etiquetas page', async () => {
     renderDialog('Pós-operatório');
 
     expect(await screen.findByRole('heading', { name: 'Nova etiqueta' })).toBeInTheDocument();
     expect(screen.getByLabelText('Nome')).toHaveValue('Pós-operatório');
-    expect(
-      screen.getByRole('radio', { name: colorLabelOf(suggestTagColor('Pós-operatório')) }),
-    ).toBeChecked();
     expect(screen.getByLabelText('Descrição')).toHaveValue('');
+    for (const option of TAG_COLOR_PALETTE) {
+      expect(screen.getByRole('radio', { name: option.label })).not.toBeChecked();
+    }
   });
 
   it('opens without a name when it receives none', async () => {
     renderDialog('');
 
     expect(await screen.findByLabelText('Nome')).toHaveValue('');
-    expect(screen.getByRole('radio', { name: colorLabelOf(suggestTagColor('')) })).toBeChecked();
   });
 
-  it('follows the name with the suggested color until a color is chosen', async () => {
+  it('keeps the chosen color while the name is typed', async () => {
     const user = userEvent.setup();
-    const next = nameWithAnotherColorThan('Pós-operatório');
-    renderDialog('Pós-operatório');
+    renderDialog('');
     const nameInput = await screen.findByLabelText('Nome');
 
-    await user.clear(nameInput);
-    await user.type(nameInput, next);
-    expect(screen.getByRole('radio', { name: colorLabelOf(suggestTagColor(next)) })).toBeChecked();
+    await user.click(screen.getByRole('radio', { name: 'Rosa' }));
+    await user.type(nameInput, 'Pós-operatório');
 
-    const chosen = TAG_COLOR_PALETTE.find((option) => option.value !== suggestTagColor(next));
-    await user.click(screen.getByRole('radio', { name: chosen?.label ?? '' }));
-    await user.type(nameInput, ' de novo');
+    expect(screen.getByRole('radio', { name: 'Rosa' })).toBeChecked();
+  });
 
-    expect(screen.getByRole('radio', { name: chosen?.label ?? '' })).toBeChecked();
+  it('asks for a color before creating', async () => {
+    const user = userEvent.setup();
+    const { onCreated } = renderDialog('Pós-operatório');
+    await screen.findByLabelText('Nome');
+
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+    expect(await screen.findByText('A cor da etiqueta é obrigatória.')).toBeInTheDocument();
+    expect(mockCreate).not.toHaveBeenCalled();
+    expect(onCreated).not.toHaveBeenCalled();
   });
 
   it('creates the tag with the form values, announces it and hands it back', async () => {
@@ -81,12 +76,13 @@ describe('TagCreateDialog', () => {
     const { onCreated, onCancel } = renderDialog('Pós-operatório');
     await screen.findByLabelText('Nome');
 
+    await user.click(screen.getByRole('radio', { name: 'Azul' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith(CREATED));
     expect(mockCreate).toHaveBeenCalledWith({
       name: 'Pós-operatório',
-      color: suggestTagColor('Pós-operatório'),
+      color: '#0ea5e9',
       description: null,
     });
     expect(saved).toHaveBeenCalledWith({ id: '9' });
@@ -114,6 +110,7 @@ describe('TagCreateDialog', () => {
     const { onCreated } = renderDialog('Pós-operatório');
     await screen.findByLabelText('Nome');
 
+    await user.click(screen.getByRole('radio', { name: 'Azul' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByText(message)).toBeInTheDocument();
@@ -137,6 +134,7 @@ describe('TagCreateDialog', () => {
     renderDialog('VIP');
     await screen.findByLabelText('Nome');
 
+    await user.click(screen.getByRole('radio', { name: 'Azul' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     expect(await screen.findByRole('alert')).toHaveTextContent(message);
@@ -175,6 +173,7 @@ describe('TagCreateDialog', () => {
     );
     await screen.findByLabelText('Nome');
 
+    await user.click(screen.getByRole('radio', { name: 'Azul' }));
     await user.click(screen.getByRole('button', { name: 'Salvar' }));
 
     await waitFor(() => expect(onCreated).toHaveBeenCalled());

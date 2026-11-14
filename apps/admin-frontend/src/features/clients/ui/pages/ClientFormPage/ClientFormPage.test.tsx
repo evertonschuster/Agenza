@@ -93,6 +93,7 @@ async function createTagInDialog(user: ReturnType<typeof userEvent.setup>, name?
     await user.clear(nameInput);
     await user.type(nameInput, name);
   }
+  await user.click(within(dialog).getByRole('radio', { name: 'Azul' }));
   await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
   await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
 }

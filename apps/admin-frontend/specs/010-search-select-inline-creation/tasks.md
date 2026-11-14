@@ -12,14 +12,14 @@ description: 'Tarefas da mudança, ordenadas por dependências e validadas confo
   `src/features/tags/ui/pages/TagFormPage/` para `src/features/tags/ui/components/TagForm/`, criar a casca
   `TagFormDialog.tsx` e fazer o `TagFormPage.tsx` renderizá-la. Os testes atuais de `TagFormPage.test.tsx`
   passam sem mudança: detectam qualquer regressão na criação e edição pela tela de etiquetas (FR-007).
-- [x] T002 [P] `suggestTagColor(name)` em `src/features/tags/model/tagColor.ts` e `tagColor.test.ts`: sempre
-  uma cor de `TAG_COLOR_PALETTE`, a mesma para o mesmo nome e para nomes que só diferem em caixa, acento ou
-  espaços nas pontas (FR-008).
+- [x] T002 [P] `suggestTagColor(name)` em `src/features/tags/model/tagColor.ts` e `tagColor.test.ts`.
+  Removido depois da implementação, a pedido do dono: o diálogo rápido abre sem cor, como a tela de etiquetas
+  (FR-008 revista).
 - [x] T003 [US1] `TagCreateDialog.tsx`, `useTagCreateDialog.ts` e os tipos em
   `src/features/tags/ui/components/TagCreateDialog/`, usando a casca de T001, o `tagFormSchema`, o
   `createTag` e o `applyApiProblem`; exportar `TagCreateDialog` em `src/features/tags/index.ts`.
-- [x] T004 [US1] `TagCreateDialog.test.tsx`: nome recebido e vazio; cor sugerida marcada que acompanha o nome
-  até a pessoa escolher outra; `Tag.DuplicateName` com campo sob o nome e sem campo no aviso do formulário;
+- [x] T004 [US1] `TagCreateDialog.test.tsx`: nome recebido e vazio; nenhuma cor marcada, a escolhida mantida
+  enquanto se digita e cor obrigatória antes de salvar; `Tag.DuplicateName` com campo sob o nome e sem campo no aviso do formulário;
   sucesso com o toast "Etiqueta criada", `tagSaved` publicado e `onCreated` com a etiqueta; Cancelar e Esc
   chamando `onCancel`; renderizado dentro de um `<form>` externo, salvar não dispara o envio dele (FR-009,
   FR-010, FR-011).

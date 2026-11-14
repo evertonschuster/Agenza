@@ -48,7 +48,8 @@ Protótipo aprovado (v3): https://claude.ai/artifact/WFXAaFtDj7BDCnSHXiT7jB
 - Depois de criar, a lista fica fechada, a busca limpa e o foco volta ao campo, como ao escolher um resultado
   de busca.
 - Cor inicial no diálogo rápido: uma cor da paleta sugerida a partir do nome, que acompanha a digitação até a
-  pessoa escolher outra. Na tela de etiquetas continua sem cor marcada.
+  pessoa escolher outra. Na tela de etiquetas continua sem cor marcada. Revisto depois da implementação
+  (sessão abaixo).
 
 ### Sessão 2026-11-14, plano
 
@@ -59,13 +60,19 @@ Protótipo aprovado (v3): https://claude.ai/artifact/WFXAaFtDj7BDCnSHXiT7jB
 - A confirmação da criação é o aviso que a tela de etiquetas já mostra, com o texto de que a etiqueta também
   foi selecionada; o seletor não ganha um anúncio próprio.
 
+### Sessão 2026-11-14, depois da implementação
+
+- O dono testou o diálogo rápido e achou sem sentido a cor trocando a cada letra do nome, além de diferente da
+  tela de etiquetas. A sugestão de cor saiu: o diálogo rápido abre sem cor marcada, como a tela de etiquetas, e
+  a pessoa escolhe a cor antes de salvar.
+
 ## Jornadas e critérios de aceite
 
 ### US1 — Criar uma etiqueta que não encontrei (P1)
 
 1. Dado o cadastro de uma pessoa, quando busco "Pós-operatório" e não há resultado, então a linha
    "Criar etiqueta «Pós-operatório»" aparece em destaque no rodapé da lista; ao escolhê-la, a lista fecha e
-   abre o diálogo "Nova etiqueta" com o nome preenchido e uma cor já marcada.
+   abre o diálogo "Nova etiqueta" com o nome preenchido e nenhuma cor marcada, como na tela de etiquetas.
 2. Dado o diálogo aberto, quando salvo, então a etiqueta é criada, entra selecionada no campo, a busca fica
    limpa, o foco volta ao campo e o aviso "Etiqueta criada" diz que "Pós-operatório" foi criada e selecionada.
 3. Dado que busco "vip" e existe "VIP", então a linha mostra "Nova etiqueta" e abre o diálogo sem nome.
@@ -118,8 +125,8 @@ Protótipo aprovado (v3): https://claude.ai/artifact/WFXAaFtDj7BDCnSHXiT7jB
 - **FR-007**: O diálogo da tela de etiquetas e o diálogo rápido usam a mesma validação, os mesmos campos (nome,
   cor e descrição opcional), o mesmo título "Nova etiqueta" e o mesmo caso de uso de criação, que já anuncia a
   etiqueta criada às demais telas. A tela de etiquetas não muda de comportamento.
-- **FR-008**: O diálogo rápido abre com o nome recebido e uma cor da paleta sugerida a partir do nome; a
-  sugestão acompanha o nome até a pessoa escolher uma cor. O mesmo nome sugere sempre a mesma cor.
+- **FR-008**: O diálogo rápido abre com o nome recebido e os demais valores iniciais da tela de etiquetas:
+  nenhuma cor marcada e descrição vazia. A cor é obrigatória antes de salvar, com a mesma validação.
 - **FR-009**: Erros do servidor aparecem no diálogo rápido como na tela de etiquetas: ligados ao nome, sob o
   campo; os demais, no aviso do formulário, com a mensagem recebida e sem nova tentativa automática.
 - **FR-010**: Fechar o diálogo rápido, por cancelar, Esc ou fora dele, não altera o cadastro da pessoa nem o

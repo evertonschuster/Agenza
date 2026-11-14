@@ -1,10 +1,9 @@
-import { useEffect, type SubmitEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { toast } from '@/shared/ui/toast';
 import { createTag } from '../../../application/tagUseCases';
-import { suggestTagColor } from '../../../model/tagColor';
 import {
   tagFormSchema,
   toTagFormFieldValues,
@@ -18,20 +17,9 @@ export function useTagCreateDialog(props: TagCreateDialogProps): UseTagCreateDia
   const { name, onCreated, onCancel } = props;
   const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
     resolver: zodResolver(tagFormSchema),
-    defaultValues: { ...toTagFormFieldValues(), name, color: suggestTagColor(name) },
+    defaultValues: { ...toTagFormFieldValues(), name },
   });
   const isSaving = methods.formState.isSubmitting;
-
-  useEffect(() => {
-    const subscription = methods.watch((values, { name: field }) => {
-      if (field !== 'name') return;
-      if (methods.getFieldState('color').isDirty) return;
-      methods.setValue('color', suggestTagColor(values.name ?? ''));
-    });
-    return () => {
-      subscription.unsubscribe();
-    };
-  }, [methods]);
 
   async function onValid(values: TagFormValues) {
     const result = await createTag(values);

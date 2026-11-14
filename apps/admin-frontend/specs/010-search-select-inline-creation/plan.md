@@ -84,14 +84,11 @@ estrutura por fatia da feature:
 - `TagFormPage.tsx` passa a renderizar a casca; `useTagFormPage.ts` não muda de comportamento.
 - `features/tags/ui/components/TagCreateDialog/`: `TagCreateDialog.tsx`, `useTagCreateDialog.ts` e os tipos.
   Recebe `name`, `onCreated(tag)` e `onCancel()`. O hook cria o `useForm` com o mesmo `tagFormSchema`, valores
-  iniciais `toTagFormFieldValues()` com o nome recebido e a cor de `suggestTagColor(name)`, e assina o
-  `watch` do nome para trocar a cor enquanto o campo cor não estiver sujo (FR-008). Ao salvar, chama o mesmo
+  iniciais `toTagFormFieldValues()` com o nome recebido e sem cor, como a página (FR-008). Ao salvar, chama o mesmo
   `createTag`, mostra o toast "Etiqueta criada" com `"<nome>" foi criada e selecionada.` e chama
   `onCreated`; na falha, `applyApiProblem`, como a página. O `onSubmit` chama `stopPropagation()` além de
   `preventDefault()`: o `<form>` do diálogo está, na árvore do React, dentro do `<form>` da pessoa, e o envio
   subiria até ele (FR-010). Fechar sem salvar chama `onCancel`.
-- `features/tags/model/tagColor.ts`: `suggestTagColor(name)`, um hash simples do nome normalizado sobre
-  `TAG_COLOR_PALETTE`, determinístico.
 - O barril `features/tags/index.ts` exporta `TagCreateDialog`.
 
 ### Cadastro de pessoa
@@ -117,7 +114,7 @@ do formulário; o schema da pessoa continua convertendo `tags` em `tagIds`.
 
 1. `src/features/tags/ui/components/TagForm/` com os arquivos movidos e a casca; `TagFormPage.tsx` usando a
    casca. Os testes atuais do `TagFormPage` provam que nada mudou para a tela de etiquetas.
-2. `src/features/tags/model/tagColor.ts` (`suggestTagColor`) e teste.
+2. Removido depois da implementação: a sugestão de cor (`suggestTagColor`) saiu a pedido do dono.
 3. `src/features/tags/ui/components/TagCreateDialog/` e teste; exportação no barril. Depende de 1 e 2.
 4. `src/shared/ui/search-select/`: tipos, `creation-text.ts` e teste, as três partes (botão, linha e slot),
    o componente e `search-select-creation.test.tsx`. Independe de 1 a 3.
@@ -142,7 +139,7 @@ do formulário; o schema da pessoa continua convertendo `tags` em `tagIds`.
 - **Limite**: botão e linha desabilitados e focáveis, com o texto do limite ligado ao botão.
 - **Sem `creation`**: os testes atuais do `SearchSelect` continuam passando sem mudança, e um teste confere
   que nem o botão nem a linha aparecem.
-- **Diálogo rápido**: nome recebido, cor sugerida marcada e acompanhando o nome até ser escolhida,
+- **Diálogo rápido**: nome recebido, nenhuma cor marcada e cor obrigatória antes de salvar,
   `Tag.DuplicateName` sob o nome e sem campo no aviso, sucesso com toast, `tagSaved` e `onCreated`.
 - **Aceite real**: novo caso no `e2e/clients.spec.ts` criando uma etiqueta pelo botão e outra pela linha com
   a busca, salvando a pessoa e reabrindo a edição com as duas (SC-001), contra o stack real quando disponível.

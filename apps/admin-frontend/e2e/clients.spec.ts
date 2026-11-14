@@ -329,6 +329,7 @@ test.describe('Tag a person', () => {
     await section.getByRole('button', { name: 'Nova etiqueta', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Nova etiqueta' });
     await dialog.getByLabel('Nome', { exact: true }).fill(fromButton);
+    await dialog.getByRole('radio', { name: 'Azul', exact: true }).click();
     await dialog.getByRole('button', { name: 'Salvar' }).click();
     await expect(
       section.getByRole('button', { name: `Remover ${fromButton}`, exact: true }),
@@ -337,6 +338,7 @@ test.describe('Tag a person', () => {
     await section.getByRole('combobox', { name: 'Etiquetas' }).fill(fromSearch);
     await page.getByRole('button', { name: `Criar etiqueta «${fromSearch}»`, exact: true }).click();
     await expect(dialog.getByLabel('Nome', { exact: true })).toHaveValue(fromSearch);
+    await dialog.getByRole('radio', { name: 'Azul', exact: true }).click();
     await dialog.getByRole('button', { name: 'Salvar' }).click();
     await expect(
       section.getByRole('button', { name: `Remover ${fromSearch}`, exact: true }),

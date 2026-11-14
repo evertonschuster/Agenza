@@ -44,8 +44,8 @@ dialog then returns focus to the control that opened it, the field button, so a 
 **One tag form, two dialogs.** The tag schema, fields and title move out of the Etiquetas page folder to
 `features/tags/ui/components/TagForm/`, with a `TagFormDialog` shell (dialog, form provider, header, body,
 footer) used by the route page and by a new `TagCreateDialog`. The page keeps its hook: route id, loading
-for edit, closing by navigation. `TagCreateDialog` has its own: the received name, a palette color
-suggested from the name (`suggestTagColor`) that follows the name until a color is picked, the same
+for edit, closing by navigation. `TagCreateDialog` has its own: the received name and otherwise the page's initial values, no color
+checked, the same
 `createTag` and `applyApiProblem`, the "Etiqueta criada" toast saying the tag was also selected, and
 `onCreated` / `onCancel` instead of navigation. Its submit stops propagation: in the React tree the dialog's
 `<form>` sits inside the person's, and saving the tag would otherwise submit the person.
@@ -62,7 +62,7 @@ suggested from the name (`suggestTagColor`) that follows the name until a color 
   button.
 - A keyboard user reaches the button through Tab, which closes the list and clears the search, so the
   dialog opens without a name.
-- The Etiquetas page shows no suggested color; it still starts with none checked.
+- Both dialogs start with no color checked, so the quick creation takes one click on a color before saving.
 
 ## Alternatives
 
@@ -76,6 +76,9 @@ suggested from the name (`suggestTagColor`) that follows the name until a color 
 - **Opening the Etiquetas route dialog.** `/tags/new` would unmount the person form and lose what was typed.
 - **One configurable dialog for the route and the picker.** Mixes route concerns (loading by id, closing by
   navigation) with the picker's callbacks; two thin hooks over one shell keep each simple.
+- **A color suggested from the name.** Shipped on the branch: a palette color picked from the name, changing
+  with each typed letter until a color was chosen. Removed by the owner after trying it, since the colors kept
+  switching while typing and the quick dialog behaved unlike the Etiquetas page.
 - **Merging the form's `inputRef` with a ref of the picker.** Assigning to a received ref breaks the React
   Compiler rules; the anchor the picker already owns finds the input.
 - **Restoring the typed text after cancelling.** Would require controlling the input text that Base UI
