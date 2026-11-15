@@ -27,7 +27,7 @@ describe('tagFormSchema', () => {
     if (result.success) expect(result.data.description).toBeNull();
   });
 
-  it('requires a name (spec FR-003)', () => {
+  it('requires a name', () => {
     expect(fieldError({ name: '', color: '#f59e0b', description: '' }, 'name')).toBe(
       'O nome da etiqueta é obrigatório.',
     );
@@ -39,7 +39,7 @@ describe('tagFormSchema', () => {
     );
   });
 
-  it(`rejects a name over ${TAG_NAME_MAX_LENGTH} characters (spec FR-005)`, () => {
+  it(`rejects a name over ${TAG_NAME_MAX_LENGTH} characters`, () => {
     const name = 'a'.repeat(TAG_NAME_MAX_LENGTH + 1);
     expect(fieldError({ name, color: '#f59e0b', description: '' }, 'name')).toBe(
       `O nome da etiqueta deve ter no máximo ${TAG_NAME_MAX_LENGTH} caracteres.`,
@@ -51,20 +51,20 @@ describe('tagFormSchema', () => {
     expect(tagFormSchema.safeParse({ name, color: '#f59e0b', description: '' }).success).toBe(true);
   });
 
-  it('requires a color (spec FR-003)', () => {
+  it('requires a color', () => {
     expect(fieldError({ name: 'Promoção', color: null, description: '' }, 'color')).toBe(
       'A cor da etiqueta é obrigatória.',
     );
   });
 
-  it(`rejects a description over ${TAG_DESCRIPTION_MAX_LENGTH} characters (spec FR-005)`, () => {
+  it(`rejects a description over ${TAG_DESCRIPTION_MAX_LENGTH} characters`, () => {
     const description = 'a'.repeat(TAG_DESCRIPTION_MAX_LENGTH + 1);
     expect(fieldError({ name: 'Promoção', color: '#f59e0b', description }, 'description')).toBe(
       `A descrição da etiqueta deve ter no máximo ${TAG_DESCRIPTION_MAX_LENGTH} caracteres.`,
     );
   });
 
-  it('treats a whitespace-only description as empty, not over the limit, and normalizes it to null (spec Edge Cases)', () => {
+  it('treats a whitespace-only description as empty, not over the limit, and normalizes it to null', () => {
     const description = ' '.repeat(TAG_DESCRIPTION_MAX_LENGTH + 20);
     const result = tagFormSchema.safeParse({ name: 'Promoção', color: '#f59e0b', description });
 

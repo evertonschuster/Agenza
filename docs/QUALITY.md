@@ -24,7 +24,7 @@ Run `npm run check:docs` from the repository root; the checker uses only Node bu
 Its tests run with `node --test scripts/checkDocs.test.mjs`.
 
 The checked corpus is declared in [checkDocs.mjs](../scripts/checkDocs.mjs): root and area entries,
-current README/architecture/API/quality/product guides, the frontend constitution, the ADR index,
+current README/architecture/API/quality/product guides, the ADR index,
 and Markdown under canonical `.claude/skills/agenza-*` directories. It verifies local inline/image
 links and reference definitions, standalone `@path` imports in CLAUDE wrappers, required skill
 `name`/`description` text, and ADR IDs in the index's current-decision column.
@@ -43,8 +43,8 @@ schemes, isolated fragments/queries and template placeholders. It does not valid
 HTML links, indented code blocks, symbols, external URLs, shell commands, semantic agreement or
 tool discovery. Fences inside list containers, indentation of four or more spaces, and
 over-indented closing fences are outside the supported subset; use top-level or blockquote
-examples in checked guides. Historical ADR bodies/specs and generated Spec Kit adapters are outside the scan;
-their linked destinations are still checked when referenced from the active corpus.
+examples in checked guides. Decision records in `docs/decisions/` are scanned like the guides;
+other Markdown is checked only as a link destination from the active corpus.
 
 The stable `docs-checks` job runs on every PR and push to main, including changes that remove a
 code file referenced by a guide. It installs no packages and starts no application or database.
@@ -64,12 +64,12 @@ code file referenced by a guide. It installs no packages and starts no applicati
   so does `Admin.Logging` (`Admin.Logging.Tests`, which never counts
   toward a service's gate because no service test project references it) —
   counting it twice would let one hide behind the other's number
-  (docs/adr/0005). `ServicesService.PersistenceTests` covers EF tenant
-  assignment and filtering in memory (docs/adr/0019). There is no
+  (docs/decisions/0003). `ServicesService.PersistenceTests` covers EF tenant
+  assignment and filtering in memory (docs/decisions/0007). There is no
   Testcontainers/`WebApplicationFactory` project. The frontend
   API-contract workflow starts the AppHost resource graph, applies the
   migration chain to Aspire's PostgreSQL resource, and runs the real OIDC
-  and tenant-isolation checks ([ADR 0090](adr/0090-tenant-isolation-smokes-in-aspire.md)).
+  and tenant-isolation checks ([ADR 0007](decisions/0007-testing-and-verification.md)).
   The HTTP scenario provisions a synthetic tenant and requires
   `AGENZA_DISPOSABLE_TEST_DB=1` and `AGENZA_TENANT_PROVISIONING_SECRET`.
   The PostgreSQL check runs as `services_app` and rolls back its fixtures.

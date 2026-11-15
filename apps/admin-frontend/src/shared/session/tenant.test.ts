@@ -3,7 +3,7 @@ import { makeAccessToken } from '@/test/oidcUser';
 import { resolveTenantContext } from './tenant';
 
 describe('resolveTenantContext', () => {
-  it('resolves the tenant from the token tenant_id claim (spec FR-005)', () => {
+  it('resolves the tenant from the token tenant_id claim', () => {
     const token = makeAccessToken({
       sub: 'user-1',
       tenant_id: '019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120',
@@ -14,7 +14,7 @@ describe('resolveTenantContext', () => {
     });
   });
 
-  it('returns null when the claim is missing, regardless of any client-supplied tenant hint (spec FR-006)', () => {
+  it('returns null when the claim is missing, regardless of any client-supplied tenant hint', () => {
     const token = makeAccessToken({ sub: 'user-1' });
 
     expect(resolveTenantContext(token)).toBeNull();

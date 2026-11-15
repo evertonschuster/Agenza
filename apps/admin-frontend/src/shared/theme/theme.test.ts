@@ -22,7 +22,7 @@ describe('resolveTheme', () => {
 });
 
 describe('THEME_STORAGE_KEY', () => {
-  it('matches the key identity-service/wwwroot/js/theme-init.js already reads (ADR 0040)', () => {
+  it('matches the key identity-service/wwwroot/js/theme-init.js already reads (ADR 0013)', () => {
     expect(THEME_STORAGE_KEY).toBe('admin-theme');
   });
 });

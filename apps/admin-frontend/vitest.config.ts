@@ -30,7 +30,7 @@ export default defineConfig({
         'src/app/routes.tsx',
         'src/app/shell/ProtectedAppShell.tsx',
         'src/shared/api/generated/**',
-        // Presentational cva wrappers with no logic of their own — see D5 in plan.md.
+        // Presentational cva wrappers with no logic of their own — no state or effects to cover.
         'src/shared/ui/avatar/**',
         'src/shared/ui/badge/**',
         'src/shared/ui/button/**',
@@ -46,7 +46,7 @@ export default defineConfig({
         'src/shared/ui/form-field/**',
         'src/shared/form/fields/**',
         // Real behaviour, but these files still include unconsumed shadcn subcomponents
-        // (submenus, checkbox/radio items and extra sheet/toast parts — see D5 in plan.md).
+        // (submenus, checkbox/radio items and extra sheet/toast parts).
         // File coverage cannot separate those from the parts exercised by app callers.
         // Combobox and tooltip stay in the gate because their current code has real consumers.
         'src/shared/ui/dropdown-menu/**',

@@ -4,7 +4,7 @@ import { MemoryRouter } from 'react-router';
 import { SidebarNav } from './SidebarNav';
 
 describe('SidebarNav', () => {
-  it('marks the active destination with aria-current="page" (spec FR-009 area)', () => {
+  it('marks the active destination with aria-current="page"', () => {
     render(
       <MemoryRouter initialEntries={['/servicos']}>
         <SidebarNav compact={false} />

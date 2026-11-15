@@ -15,13 +15,12 @@ export const entryDocuments = [
   'apps/admin-frontend/CLAUDE.md',
   'apps/admin-frontend/README.md',
   'apps/admin-frontend/docs/ARCHITECTURE.md',
-  'apps/admin-frontend/.specify/memory/constitution.md',
   'ai-services/assistant-service/README.md',
   'docs/API.md',
   'docs/MONOREPO.md',
   'docs/QUALITY.md',
   'docs/VISION.md',
-  'docs/adr/README.md',
+  'docs/decisions/README.md',
 ];
 
 function blank(text) {
@@ -283,7 +282,7 @@ function checkAdrIndex(text, directory, report) {
   let column = -1;
   let tableFound = false;
   for (const [index, line] of text.split('\n').entries()) {
-    if (/^## Current decisions by concern\s*$/.test(line)) {
+    if (/^## Decisões vigentes por assunto\s*$/.test(line)) {
       inSection = true;
       continue;
     }
@@ -299,7 +298,7 @@ function checkAdrIndex(text, directory, report) {
       .split(/(?<!\\)\|/)
       .map((cell) => cell.trim());
     if (column < 0) {
-      column = cells.indexOf('Current ADRs');
+      column = cells.indexOf('ADRs vigentes');
       tableFound ||= column >= 0;
       continue;
     }
@@ -315,7 +314,7 @@ function checkAdrIndex(text, directory, report) {
     report(
       1,
       'Tabela de decisões vigentes não encontrada.',
-      'Current decisions by concern / Current ADRs',
+      'Decisões vigentes por assunto / ADRs vigentes',
     );
   }
 }
@@ -381,6 +380,9 @@ export function checkDocumentation(root) {
   } else {
     report(skillsDirectory, 1, 'Diretório de skills canônicas ausente.', skillsDirectory);
   }
+  if (existsSync(resolve(root, 'docs/decisions'))) {
+    collect('docs/decisions');
+  }
 
   for (const file of documents) {
     const absolute = resolve(root, file);
@@ -434,7 +436,7 @@ export function checkDocumentation(root) {
     if (skillFiles.has(file)) {
       checkFrontmatter(text, (line, message, target) => report(file, line, message, target));
     }
-    if (file === 'docs/adr/README.md') {
+    if (file === 'docs/decisions/README.md') {
       checkAdrIndex(
         prose(text, { preserveInlineCode: true }),
         dirname(absolute),
