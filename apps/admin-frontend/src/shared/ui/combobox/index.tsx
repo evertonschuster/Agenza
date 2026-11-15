@@ -1,6 +1,7 @@
 import { Combobox as ComboboxPrimitive } from '@base-ui/react';
 
 export const Combobox = ComboboxPrimitive.Root;
+export const ComboboxCollection = ComboboxPrimitive.Collection;
 
 export {
   ComboboxTrigger,

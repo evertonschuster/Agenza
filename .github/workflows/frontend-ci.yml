@@ -167,7 +167,7 @@ jobs:
 
       - name: Build the Aspire application
         # Default (Debug) configuration: `dotnet run` hands the AppHost to the Aspire CLI,
-        # which launches the Debug build whatever -c says (docs/adr/0050).
+        # which launches the Debug build whatever -c says (docs/decisions/0010).
         run: dotnet build backend/AdminBackend.slnx
 
       - name: Start the application through Aspire

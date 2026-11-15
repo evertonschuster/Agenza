@@ -21,7 +21,7 @@ public class ClientTagConfiguration : IEntityTypeConfiguration<ClientTag>
             .HasPrincipalKey(tag => new { tag.TenantId, tag.Id })
             .OnDelete(DeleteBehavior.Restrict);
 
-        // Filtered to live links so a tag removed from a client can be linked to it again (docs/adr/0089).
+        // Filtered to live links so a tag removed from a client can be linked to it again (docs/decisions/0005).
         builder.HasIndex(t => new { t.TenantId, t.ClientId, t.TagId })
             .IsUnique()
             .HasFilter("\"DeletedAt\" IS NULL");

@@ -20,19 +20,28 @@ import type { ClientListQuery } from '../../../model/clientListFilters';
 import { ClientListPage } from '../ClientListPage/ClientListPage';
 import { ClientFormPage } from './ClientFormPage';
 
-const { mockList, mockCreate, mockGet, mockUpdate, mockDeactivate, mockReactivate, mockListTags } =
-  vi.hoisted(() => ({
-    mockListTags: vi.fn(),
-    mockList: vi.fn(),
-    mockCreate: vi.fn(),
-    mockGet: vi.fn(),
-    mockUpdate: vi.fn(),
-    mockDeactivate: vi.fn(),
-    mockReactivate: vi.fn(),
-  }));
+const {
+  mockList,
+  mockCreate,
+  mockGet,
+  mockUpdate,
+  mockDeactivate,
+  mockReactivate,
+  mockListTags,
+  mockCreateTag,
+} = vi.hoisted(() => ({
+  mockListTags: vi.fn(),
+  mockCreateTag: vi.fn(),
+  mockList: vi.fn(),
+  mockCreate: vi.fn(),
+  mockGet: vi.fn(),
+  mockUpdate: vi.fn(),
+  mockDeactivate: vi.fn(),
+  mockReactivate: vi.fn(),
+}));
 
 vi.mock('@/features/tags/api/tagsRepository', () => ({
-  tagsRepository: { list: mockListTags },
+  tagsRepository: { list: mockListTags, create: mockCreateTag },
 }));
 
 vi.mock('../../../api/clientsRepository', () => ({
@@ -62,6 +71,32 @@ const CREATED: Client = {
 
 const VIP_TAG = { id: 't1', name: 'VIP', color: '#8b5cf6', description: null };
 const RETURN_TAG = { id: 't2', name: 'Retorno', color: '#0d9488', description: null };
+const BUSINESS_TAGS = [VIP_TAG, RETURN_TAG];
+
+function listTagsMatching({ search }: { search: string }) {
+  const items = BUSINESS_TAGS.filter((tag) => tag.name.includes(search));
+  return Promise.resolve({
+    ok: true,
+    data: { items, totalCount: items.length, page: 1, pageSize: 20 },
+  });
+}
+
+function createTagAs(id: string) {
+  return (input: { name: string; color: string; description: string | null }) =>
+    Promise.resolve({ ok: true, data: { id, ...input } });
+}
+
+async function createTagInDialog(user: ReturnType<typeof userEvent.setup>, name?: string) {
+  const dialog = await screen.findByRole('dialog', { name: 'Nova etiqueta' });
+  const nameInput = within(dialog).getByLabelText('Nome');
+  if (name !== undefined) {
+    await user.clear(nameInput);
+    await user.type(nameInput, name);
+  }
+  await user.click(within(dialog).getByRole('radio', { name: 'Azul' }));
+  await user.click(within(dialog).getByRole('button', { name: 'Salvar' }));
+  await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+}
 
 function LocationProbe() {
   const location = useLocation();
@@ -616,6 +651,61 @@ describe('ClientFormPage', () => {
       );
     });
 
+    it('creates a tag from the field button and another from a search with no result, saving both with the person', async () => {
+      const user = userEvent.setup();
+      mockListTags.mockImplementation(listTagsMatching);
+      mockCreateTag
+        .mockImplementationOnce(createTagAs('n1'))
+        .mockImplementationOnce(createTagAs('n2'));
+      renderPage();
+      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+
+      await user.click(screen.getByRole('button', { name: 'Nova etiqueta' }));
+      await createTagInDialog(user, 'Pós-operatório');
+
+      expect(screen.getByRole('button', { name: 'Remover Pós-operatório' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Etiquetas' })).toHaveFocus();
+      expect(mockCreate).not.toHaveBeenCalled();
+
+      await user.type(screen.getByRole('combobox', { name: 'Etiquetas' }), 'Clareamento');
+      await user.click(await screen.findByRole('button', { name: 'Criar etiqueta «Clareamento»' }));
+      expect(
+        within(screen.getByRole('dialog', { name: 'Nova etiqueta' })).getByLabelText('Nome'),
+      ).toHaveValue('Clareamento');
+      await createTagInDialog(user);
+
+      expect(screen.getByRole('button', { name: 'Remover Clareamento' })).toBeInTheDocument();
+      expect(mockCreate).not.toHaveBeenCalled();
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+      expect(lastPayload()).toMatchObject({ fullName: 'Maria Souza', tagIds: ['n1', 'n2'] });
+      expect(mockCreateTag).toHaveBeenNthCalledWith(
+        1,
+        expect.objectContaining({ name: 'Pós-operatório' }),
+      );
+      expect(mockCreateTag).toHaveBeenNthCalledWith(
+        2,
+        expect.objectContaining({ name: 'Clareamento' }),
+      );
+    });
+
+    it('keeps the person form as typed when the tag dialog is cancelled', async () => {
+      const user = userEvent.setup();
+      renderPage();
+      await user.type(screen.getByLabelText('Nome completo'), 'Maria Souza');
+
+      await user.click(screen.getByRole('button', { name: 'Nova etiqueta' }));
+      const dialog = await screen.findByRole('dialog', { name: 'Nova etiqueta' });
+      await user.click(within(dialog).getByRole('button', { name: 'Cancelar' }));
+
+      await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+      expect(screen.getByLabelText('Nome completo')).toHaveValue('Maria Souza');
+      expect(screen.getByRole('combobox', { name: 'Etiquetas' })).toHaveFocus();
+      expect(mockCreateTag).not.toHaveBeenCalled();
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+
     it('shows the tag the server refused under the field and keeps the draft', async () => {
       const user = userEvent.setup();
       mockCreate.mockResolvedValue(
@@ -1118,6 +1208,21 @@ describe('ClientFormPage, editing a person', () => {
         description: 'O cadastro de Lia Souza foi atualizado.',
         type: 'success',
       });
+    });
+
+    it('adds a tag created while editing beside the ones already chosen', async () => {
+      const user = userEvent.setup();
+      mockListTags.mockImplementation(listTagsMatching);
+      mockCreateTag.mockImplementation(createTagAs('n1'));
+      renderEditPage();
+      await screen.findByRole('button', { name: 'Remover VIP' });
+
+      await user.click(screen.getByRole('button', { name: 'Nova etiqueta' }));
+      await createTagInDialog(user, 'Pós-operatório');
+      await user.click(screen.getByRole('button', { name: 'Salvar' }));
+
+      await waitFor(() => expect(mockUpdate).toHaveBeenCalledTimes(1));
+      expect(mockUpdate.mock.calls[0]?.[1]).toMatchObject({ tagIds: ['t1', 'n1'] });
     });
 
     it('sends the contacts as they are left in the form, so a removed guardian is gone', async () => {

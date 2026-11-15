@@ -18,7 +18,7 @@ function renderPage(name: string, Component: ComponentType) {
   );
 }
 
-describe('"Em breve" destinations (spec FR-006, US5)', () => {
+describe('"Em breve" destinations', () => {
   it.each(PAGES)('$name renders its own heading', ({ name, Component }) => {
     const { getByRole } = renderPage(name, Component);
 

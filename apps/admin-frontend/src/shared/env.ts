@@ -12,7 +12,7 @@ function required(name: string, value: string | undefined): string {
     throw new Error(
       `Missing required environment variable: ${name}. This app expects to be started ` +
         `through the Aspire AppHost (backend/AppHost), which injects it automatically — ` +
-        `see specs/001-oidc-shell-scaffold/contracts/env-contract.md.`,
+        `see apps/admin-frontend/README.md (Variáveis de ambiente).`,
     );
   }
   return value;

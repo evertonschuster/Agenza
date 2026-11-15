@@ -6,9 +6,7 @@ test.describe('Tags listing', () => {
     await loginAsDemoUser(page);
   });
 
-  test('reaches the screen through the command palette, at /tags (spec FR-014)', async ({
-    page,
-  }) => {
+  test('reaches the screen through the command palette, at /tags', async ({ page }) => {
     await page.getByRole('button', { name: 'Buscar' }).click();
     await page.getByRole('option', { name: 'Etiquetas' }).click();
 

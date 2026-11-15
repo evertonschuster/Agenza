@@ -6,10 +6,4 @@ src/shared/api/generated
 package-lock.json
 
 # Pre-existing tooling scaffolding, not application source
-.agents
 .claude
-.github
-.specify
-
-# Planning/design docs, not application source
-specs

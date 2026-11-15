@@ -13,8 +13,8 @@ public enum ErrorType
 
 // One FluentValidation failure, kept intact instead of collapsed into a
 // joined string - lets the Api return a structured, per-field response
-// (docs/adr/0012) instead of one opaque message. Meta is machine-readable
-// context for the client (docs/adr/0044) and is omitted from the payload when null.
+// (docs/decisions/0003) instead of one opaque message. Meta is machine-readable
+// context for the client (docs/decisions/0005) and is omitted from the payload when null.
 public readonly record struct FieldError(
     string Code,
     string Message,

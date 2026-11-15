@@ -14,11 +14,25 @@ type SearchPage<T> = ApiResult<PagedResult<T>>;
 
 type LoadSearchItems<T> = (query: SearchItemsQuery, signal: AbortSignal) => Promise<SearchPage<T>>;
 
+interface SearchSelectCreationRequest<T> {
+  text: string;
+  finalFocus: () => HTMLElement | null;
+  complete: (created: T) => void;
+  cancel: () => void;
+}
+
+interface SearchSelectCreation<T extends SearchSelectItem> {
+  actionLabel: string;
+  actionLabelFor: (text: string) => string;
+  render: (request: SearchSelectCreationRequest<T>) => ReactNode;
+}
+
 interface SearchSelectOwnProps<T extends SearchSelectItem> {
   loadItems: LoadSearchItems<T>;
   value: T[];
   onValueChange: (value: T[]) => void;
   renderItem?: ((item: T) => ReactNode) | undefined;
+  creation?: SearchSelectCreation<T> | undefined;
   maxSelected?: number | undefined;
   pageSize?: number | undefined;
   maxLength?: number | undefined;
@@ -47,7 +61,6 @@ type SearchPhase =
 interface SearchOptionsState<T> {
   searched: string;
   items: readonly T[];
-  totalCount: number;
   next: SearchItemsQuery | null;
   phase: SearchPhase;
 }
@@ -88,11 +101,8 @@ interface SearchSelectErrorProps {
   readonly onRetry: () => void;
 }
 
-interface SearchSelectProgressProps {
-  readonly shown: number;
-  readonly totalCount: number;
-  readonly hasMore: boolean;
-  readonly loadingMore: boolean;
+interface SearchSelectSkeletonProps {
+  readonly rows: number;
 }
 
 interface SearchSelectSelectionProps {
@@ -102,7 +112,42 @@ interface SearchSelectSelectionProps {
   readonly onClear: () => void;
 }
 
+interface SearchSelectCreateButtonProps {
+  readonly label: string;
+  readonly disabled: boolean;
+  readonly reachedLimit: number | null;
+  readonly onCreate: () => void;
+  readonly onPress: () => void;
+  readonly onRelease: () => void;
+}
+
+interface UseSearchSelectCreationArgs<T extends SearchSelectItem> {
+  creation: SearchSelectCreation<T> | undefined;
+  value: T[];
+  onValueChange: (value: T[]) => void;
+  blocked: boolean;
+  closePicker: () => void;
+  anchor: RefObject<HTMLElement | null>;
+}
+
+interface SearchSelectCreationSlotProps<T extends SearchSelectItem> {
+  readonly creation: SearchSelectCreation<T>;
+  readonly request: SearchSelectCreationRequest<T>;
+}
+
+interface SearchSelectCreateRowProps {
+  readonly label: string;
+  readonly emphasized: boolean;
+  readonly disabled: boolean;
+  readonly onCreate: () => void;
+}
+
 export type {
+  SearchSelectCreateButtonProps,
+  SearchSelectCreateRowProps,
+  SearchSelectCreation,
+  SearchSelectCreationRequest,
+  SearchSelectCreationSlotProps,
   LoadSearchItems,
   SearchInputKeyDown,
   SearchItemsQuery,
@@ -113,10 +158,11 @@ export type {
   SearchSelectErrorProps,
   SearchSelectItem,
   SearchSelectLimitNoticeProps,
-  SearchSelectProgressProps,
+  SearchSelectSkeletonProps,
   SearchSelectProps,
   SearchSelectSelectionProps,
   SearchTimer,
   UseLoadMoreNearEndArgs,
   UseSearchOptionsArgs,
+  UseSearchSelectCreationArgs,
 };

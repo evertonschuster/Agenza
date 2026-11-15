@@ -29,7 +29,7 @@ describe('AuthCallbackPage', () => {
     vi.clearAllMocks();
   });
 
-  it('navigates to / after signinCallback resolves (spec FR-003)', async () => {
+  it('navigates to / after signinCallback resolves', async () => {
     mockSigninCallback.mockResolvedValue(undefined);
 
     renderCallback();
@@ -39,7 +39,7 @@ describe('AuthCallbackPage', () => {
     });
   });
 
-  it('takes the failure path (redirects to /login) when signinCallback rejects (spec FR-003)', async () => {
+  it('takes the failure path (redirects to /login) when signinCallback rejects', async () => {
     mockSigninCallback.mockRejectedValue(new Error('invalid state'));
 
     renderCallback();
