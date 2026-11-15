@@ -6,7 +6,7 @@ import { ActionLink } from '@/shared/ui/action-link';
 import type { ListSectionEmptyCopy } from '@/widgets/list-section';
 import { PageHeader } from '@/widgets/page-header';
 import { PaginatedListSection } from '@/widgets/paginated-list-section';
-import { NEW_CLIENT_PATH } from '../../clientsPaths';
+import { NEW_CLIENT_PATH } from '@/shared/routes/clientPaths';
 import { clientColumns } from './components/clientColumns';
 import { ClientListFilterBar } from './components/ClientListFilterBar';
 import { useClientListPage } from './useClientListPage';

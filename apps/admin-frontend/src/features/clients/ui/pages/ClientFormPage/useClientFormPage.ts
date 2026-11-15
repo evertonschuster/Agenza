@@ -8,7 +8,7 @@ import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
 import { createClient, updateClient } from '../../../application/clientUseCases';
 import type { ClientStatus } from '../../../model/clientStatus';
-import { CLIENTS_PATH } from '../../clientsPaths';
+import { CLIENTS_PATH } from '@/shared/routes/clientPaths';
 import {
   CLIENT_FORM_FIELD_ALIASES,
   clientFormSchema,
