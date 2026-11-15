@@ -10,12 +10,10 @@ import {
   type TagFormFieldValues,
   type TagFormValues,
 } from '../../components/TagForm/tagForm';
-import type { TagQuickCreateDialogProps } from './TagQuickCreateDialog.types';
-import type { UseTagQuickCreateDialogResult } from './useTagQuickCreateDialog.types';
+import type { TagCreationDialogProps } from './TagCreationDialog.types';
+import type { UseTagCreationDialogResult } from './useTagCreationDialog.types';
 
-export function useTagQuickCreateDialog(
-  props: TagQuickCreateDialogProps,
-): UseTagQuickCreateDialogResult {
+export function useTagCreationDialog(props: TagCreationDialogProps): UseTagCreationDialogResult {
   const { name, onCreated, onCancel } = props;
   const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
     resolver: zodResolver(tagFormSchema),

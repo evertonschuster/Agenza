@@ -3,7 +3,7 @@ import type { ApiFormFieldError } from '@/shared/form/applyApiProblem';
 import {
   TAG_SEARCH_MAX_LENGTH,
   TagBadge,
-  TagQuickCreateDialog,
+  TagCreationDialog,
   tagsRepository,
 } from '@/features/tags';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
@@ -85,7 +85,7 @@ function ClientPersonSection() {
               actionLabel: 'Nova etiqueta',
               actionLabelFor: (text) => `Criar etiqueta «${text}»`,
               render: (request) => (
-                <TagQuickCreateDialog
+                <TagCreationDialog
                   name={request.text}
                   onCreated={request.complete}
                   onCancel={request.cancel}

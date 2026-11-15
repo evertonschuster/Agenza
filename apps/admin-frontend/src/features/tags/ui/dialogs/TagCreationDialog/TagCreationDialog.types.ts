@@ -1,6 +1,6 @@
 import type { Tag } from '../../../model/tag';
 
-export interface TagQuickCreateDialogProps {
+export interface TagCreationDialogProps {
   readonly name: string;
   readonly onCreated: (tag: Tag) => void;
   readonly onCancel: () => void;

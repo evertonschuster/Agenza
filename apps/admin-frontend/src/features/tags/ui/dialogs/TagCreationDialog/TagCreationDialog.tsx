@@ -1,9 +1,9 @@
 import { TagFormDialog } from '../../components/TagForm/TagFormDialog';
-import type { TagQuickCreateDialogProps } from './TagQuickCreateDialog.types';
-import { useTagQuickCreateDialog } from './useTagQuickCreateDialog';
+import type { TagCreationDialogProps } from './TagCreationDialog.types';
+import { useTagCreationDialog } from './useTagCreationDialog';
 
-function TagQuickCreateDialog(props: TagQuickCreateDialogProps) {
-  const { methods, isSaving, onOpenChange, onSubmit } = useTagQuickCreateDialog(props);
+function TagCreationDialog(props: TagCreationDialogProps) {
+  const { methods, isSaving, onOpenChange, onSubmit } = useTagCreationDialog(props);
 
   return (
     <TagFormDialog
@@ -19,4 +19,4 @@ function TagQuickCreateDialog(props: TagQuickCreateDialogProps) {
   );
 }
 
-export { TagQuickCreateDialog };
+export { TagCreationDialog };
