@@ -49,7 +49,7 @@ function renderList(
 }
 
 describe('usePaginatedList', () => {
-  describe('when it asks the backend (ADR 0073)', () => {
+  describe('when it asks the backend (ADR 0012)', () => {
     it('asks once on mount, for the query its state starts with, with no router around it', async () => {
       const initialFilters: Filters = {
         search: 'ana',

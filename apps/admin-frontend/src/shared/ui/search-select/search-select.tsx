@@ -218,6 +218,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
           />
         </ComboboxContent>
       </Combobox>
+      {/* Outside the Combobox: React events climb out of portals and would reach the chips and input. */}
       {creation && creationRequest !== null && (
         <SearchSelectCreationSlot
           creation={creation}

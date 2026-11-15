@@ -84,7 +84,7 @@ export async function login(): Promise<void> {
   try {
     await pendingUserRemoval;
     // Read at call time, not baked into authClient's UserManager construction, so the
-    // extension parameter always reflects the theme choice active right now (ADR 0020, 0040).
+    // extension parameter always reflects the theme choice active right now (ADR 0008, 0013).
     await authClient.signinRedirect({
       ...(identityChanged ? { prompt: 'login' } : {}),
       extraQueryParams: { theme: themeStore.getSnapshot().resolved },

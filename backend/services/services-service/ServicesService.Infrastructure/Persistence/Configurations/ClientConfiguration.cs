@@ -25,13 +25,13 @@ public class ClientConfiguration : IEntityTypeConfiguration<Client>
         builder.Property(c => c.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
 
         // A query cannot read a value-object column as text, so the listing searches and sorts these generated
-        // string columns (docs/adr/0063).
+        // string columns (docs/decisions/0005).
         builder.Property<string>("NameNormalized").HasComputedColumnSql("lower(\"FullName\")", stored: true);
         builder.Property<string>("EmailNormalized").HasComputedColumnSql("lower(\"Email\")", stored: true);
         builder.Property<string>("CpfNormalized").HasComputedColumnSql("\"Cpf\"", stored: true);
 
         // CPF collides among live clients whatever their status, e-mail only among live active ones. The database
-        // decides concurrent writes (docs/adr/0044).
+        // decides concurrent writes (docs/decisions/0005).
         builder.HasIndex(c => new { c.TenantId, c.Cpf })
             .IsUnique()
             .HasFilter("\"Cpf\" IS NOT NULL AND \"DeletedAt\" IS NULL");

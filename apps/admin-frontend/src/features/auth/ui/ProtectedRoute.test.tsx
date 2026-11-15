@@ -41,7 +41,7 @@ function renderWithSession(session: Partial<Session> & { status: Session['status
 }
 
 describe('ProtectedRoute', () => {
-  it('redirects to /login when unauthenticated with no failure reason (spec FR-001, FR-002, FR-009)', () => {
+  it('redirects to /login when unauthenticated with no failure reason', () => {
     renderWithSession({ status: 'unauthenticated' });
 
     expect(screen.getByText('Login Screen')).toBeInTheDocument();
@@ -68,7 +68,7 @@ describe('ProtectedRoute', () => {
     expect(screen.queryByText('Protected Shell')).not.toBeInTheDocument();
   });
 
-  it('redirects to /login on a plain renewal failure (spec Edge Case: silent renewal fails -> sent back to login)', () => {
+  it('redirects to /login on a plain renewal failure', () => {
     renderWithSession({ status: 'unauthenticated', failureReason: 'renewal_failed' });
 
     expect(screen.getByText('Login Screen')).toBeInTheDocument();

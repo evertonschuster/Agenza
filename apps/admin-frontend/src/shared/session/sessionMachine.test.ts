@@ -12,7 +12,7 @@ describe('reduceSession (pure — no React, no identity-provider wiring)', () =>
     );
   });
 
-  it('INITIAL_USER / USER_LOADED with a valid tenant claim -> authenticated (spec FR-005)', () => {
+  it('INITIAL_USER / USER_LOADED with a valid tenant claim -> authenticated', () => {
     const result = reduceSession({
       type: 'USER_LOADED',
       principal: makePrincipal({ tenantId: TENANT_A }),
@@ -22,7 +22,7 @@ describe('reduceSession (pure — no React, no identity-provider wiring)', () =>
     expect(result.user).toEqual({ displayName: 'Demo Owner', email: 'owner@demo.local' });
   });
 
-  it('USER_LOADED with a token missing tenant_id -> unauthenticated, missing_tenant_claim (spec FR-009, G2)', () => {
+  it('USER_LOADED with a token missing tenant_id -> unauthenticated, missing_tenant_claim', () => {
     const result = reduceSession({ type: 'USER_LOADED', principal: makePrincipal() });
     expect(result.session.status).toBe('unauthenticated');
     expect(result.session.failureReason).toBe('missing_tenant_claim');
@@ -139,24 +139,24 @@ describe('reduceSession (pure — no React, no identity-provider wiring)', () =>
     );
   });
 
-  it('INITIAL_ERROR -> unauthenticated, identity_unreachable (spec Edge Case, G1)', () => {
+  it('INITIAL_ERROR -> unauthenticated, identity_unreachable', () => {
     const result = reduceSession({ type: 'INITIAL_ERROR' });
     expect(result.session.status).toBe('unauthenticated');
     expect(result.session.failureReason).toBe('identity_unreachable');
   });
 
-  it('LOGIN_ERROR -> unauthenticated, identity_unreachable (spec Edge Case, G1)', () => {
+  it('LOGIN_ERROR -> unauthenticated, identity_unreachable', () => {
     const result = reduceSession({ type: 'LOGIN_ERROR' });
     expect(result.session.failureReason).toBe('identity_unreachable');
   });
 
-  it('SILENT_RENEW_ERROR -> unauthenticated, renewal_failed (spec FR-009)', () => {
+  it('SILENT_RENEW_ERROR -> unauthenticated, renewal_failed', () => {
     const result = reduceSession({ type: 'SILENT_RENEW_ERROR' });
     expect(result.session.status).toBe('unauthenticated');
     expect(result.session.failureReason).toBe('renewal_failed');
   });
 
-  it('USER_UNLOADED -> unauthenticated, clears tenant and user (logout, spec FR-008)', () => {
+  it('USER_UNLOADED -> unauthenticated, clears tenant and user (logout)', () => {
     const result = reduceSession({ type: 'USER_UNLOADED' });
     expect(result.session.status).toBe('unauthenticated');
     expect(result.tenant).toBeNull();

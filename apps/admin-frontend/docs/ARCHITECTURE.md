@@ -1,7 +1,7 @@
 # admin-frontend — Architecture
 
-Desenho vigente do frontend. Consulte a seção relacionada à mudança; o histórico e as alternativas
-estão nas [ADRs](../../../docs/adr/README.md) e no Git (§5). Versões, arquivos existentes e gates
+Desenho vigente do frontend. Consulte a seção relacionada à mudança; o porquê e as alternativas
+rejeitadas estão nas [decisões](../../../docs/decisions/README.md) 0012 e 0013. Versões, arquivos e gates
 devem ser conferidos nos pins, no código e na configuração.
 
 ## 1. Shape
@@ -25,7 +25,7 @@ dentro da fatia, ciclos, `src/main.tsx`, testes de suporte fora dessas camadas o
 Esses limites continuam na revisão. O adaptador OIDC
 [sessionDriver](../src/features/auth/model/sessionDriver.ts) tem uma dependência intencional
 `model → api` dentro de auth; o núcleo compartilhado de sessão não conhece OIDC
-([ADR 0037](../../../docs/adr/0037-admin-frontend-session-core-in-shared.md)).
+([ADR 0008](../../../docs/decisions/0008-authentication-session-and-ai-delegation.md)).
 
 ### Páginas, rotas e listas
 
@@ -44,24 +44,23 @@ Para decidir onde fica uma peça da `ui/` da fatia, siga esta ordem e pare na pr
 4. **Serve a uma página só**: nos `components/` dela. Um formulário com uma entrada só fica na
    página e sobe para `ui/components/` quando ganha a segunda.
 
-Exemplo, etiquetas: `pages/TagFormPage/` cria e edita pela rota;
-[TagQuickCreateDialog](../src/features/tags/ui/dialogs/TagQuickCreateDialog/TagQuickCreateDialog.tsx)
-cria pelo seletor do cadastro de pessoa; os dois usam
-[TagFormShell](../src/features/tags/ui/components/TagForm/TagFormShell.tsx), que fica em
-`components/TagForm/` com a validação e os campos. Contraexemplo, pessoas: o formulário tem uma
-entrada só e continua em `pages/ClientFormPage/`;
-[ClientStatusBadge](../src/features/clients/ui/components/ClientStatusBadge/ClientStatusBadge.tsx)
-fica em `components/` porque as duas páginas da fatia o usam.
+Uma entidade que também se cria por um seletor repete o desenho de etiquetas: o diálogo rápido
+`<Entity>QuickCreateDialog` em `dialogs/`, exportado pelo barril, e a casca, a validação e os campos
+em `components/<Entity>Form/`, usados também pela página da rota. Cada entrada mantém seu hook: a
+rota carrega por id e fecha navegando; o diálogo recebe o texto digitado e devolve o item criado.
+Foram descartados um hook ou diálogo configurável para as duas entradas, que mistura rota e
+callbacks, uma pasta `ui/forms/` com um `useQuickCreate` comum e o formulário de toda entidade em
+`components/` desde o primeiro dia.
 
-Hooks de página não são uma
-camada compartilhada de negócio; acessores de contexto, hooks genéricos de widgets e utilitários
-como [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) são reutilizáveis.
+Hooks de página não são uma camada compartilhada de negócio; acessores de contexto, hooks genéricos
+de widgets e utilitários como [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) são
+reutilizáveis.
 
 Quando uma página usa `loader` ou `action`, eles ficam em `route.ts`, reexportados pelo barril para
 [app/routes.tsx](../src/app/routes.tsx). Isso não obriga toda página a buscar dados no loader:
 um loader bloqueante não permite que a própria página apresente seu carregamento. O cabeçalho
 deriva das rotas e seus `handle`, por
-[ADR 0079](../../../docs/adr/0079-admin-frontend-page-header-from-routes.md).
+[ADR 0012](../../../docs/decisions/0012-frontend-architecture-and-data.md).
 
 [usePaginatedList](../src/widgets/paginated-list-section/use-paginated-list.ts) recebe o estado
 controlado e o repositório. Os hooks de
@@ -77,11 +76,10 @@ canceladas não substituem a atual. `refetch` atualiza a consulta solicitada sem
 inclusive quando chamado pelos tópicos da feature. O hook deriva carregamento/erro/sucesso da
 resposta; uma lista vazia só é reconhecida depois de sucesso.
 
-As ADRs [0072](../../../docs/adr/0072-admin-frontend-paged-list-state-in-the-hook.md) e
-[0074](../../../docs/adr/0074-admin-frontend-tags-list-asks-only-when-told.md) anotam a evolução da
-etapa fora da URL para o estado controlado atual. Os hooks acima demonstram a forma vigente; o
-[commit de evolução](https://github.com/evertonschuster/Agenza/commit/fa07d965a4a2e0f029518a791389812dca54cc25)
-preserva a mudança implementada.
+Barras de filtro são formulários React Hook Form com `SearchField` e `SelectField`
+(`labelPlacement="inline"`); um botão Buscar aplica todos os filtros. Excluir é uma rota de diálogo
+sobre a lista, aberta pela lixeira da linha, e fecha com `useCloseRoute`. Um link de menu para uma
+lista vai ao caminho sem filtros; formulários e diálogos voltam com `navigate(-1)`.
 
 ### Componentes e formulários
 
@@ -108,10 +106,9 @@ fica em `shared/ui/form-field/`. As receitas específicas pertencem à
 Seleção de várias opções `{ id, name }` carregadas do backend, com busca e páginas, usa
 [SearchSelect](../src/shared/ui/search-select/search-select.tsx) com a chamada paginada da feature; no
 formulário, `SearchSelectField`
-([ADR 0091](../../../docs/adr/0091-admin-frontend-search-select-and-client-tags.md)). A `creation` opcional
-oferece criar o item ali mesmo, por um botão no campo e uma linha no rodapé da lista; a feature desenha a
-criação, como o `TagQuickCreateDialog` das etiquetas
-([ADR 0093](../../../docs/adr/0093-admin-frontend-search-select-creation.md)).
+([ADR 0013](../../../docs/decisions/0013-frontend-ui-and-interaction.md)). A `creation` opcional
+oferece criar o item ali mesmo; a feature desenha a criação e devolve o item, que entra selecionado.
+Um diálogo de criação passa o `finalFocus` recebido ao `DialogContent`, para o foco voltar à busca.
 `SelectField` continua para o `Select` simples.
 Texto e rotas de produto são pt-BR; identificadores são inglês. A rota `/tags` é uma exceção
 existente: renomear uma URL requer uma mudança própria de produto.
@@ -141,30 +138,15 @@ fronteira de um loader ou de um eventual `queryFn` que sinalize erro por rejeiç
 mantêm falhas esperadas como valores. Isso preserva a validação no formulário, sem convertê-la em
 uma tela de erro.
 
-[formErrors.ts](../src/shared/api/formErrors.ts) interpreta paths e preserva mensagem, código e
-metadados; [applyApiProblem.ts](../src/shared/form/applyApiProblem.ts) faz a ponte para React Hook Form.
-Os paths vêm dos valores atuais, incluindo arrays e objetos aninhados; campos ausentes dos valores
-não são reconhecidos como campos do formulário. Paths desconhecidos e mensagens gerais chegam à
-raiz. Foco depende de uma referência registrada e focável; uma coleção pode ter erro sem recebê-lo.
-Um campo enviado com outro nome, como registros escolhidos que viajam como IDs, declara a troca em
-`FieldAliases` ao lado da transformação do schema e a passa em `aliases` ao `applyApiProblem`; o
-`formErrors.ts` leva a esse campo o primeiro erro do campo do comando ou de um item dele
-([ADR 0092](../../../docs/adr/0092-admin-frontend-form-fields-submitted-under-another-name.md)).
+[formErrors.ts](../src/shared/api/formErrors.ts) e
+[applyApiProblem.ts](../src/shared/form/applyApiProblem.ts) levam os erros da API aos campos do
+formulário, inclusive campos enviados com outro nome (`aliases`) e o link para o cadastro existente
+num conflito de CPF; o procedimento está na
+[skill de formulário](../../../.claude/skills/agenza-form-field/SKILL.md).
 
 As superfícies usam mensagens e códigos do `ApiProblem` normalizado; ramificações dependem de
 `code`/status, nunca do texto da mensagem. Preserve a representação do problema em erros de lista,
-diálogos, banners e toasts. A política HTTP detalhada deve permanecer na fonte de contrato, sem
-tabelas concorrentes nas skills de frontend.
-
-### Existing person on a CPF conflict
-
-A seção de pessoa observa os erros atuais de CPF/e-mail. Código e `meta.clientId` determinam o
-link; o destino é uma rota interna construída pela feature, nunca uma URL recebida nos metadados.
-A duração do link acompanha o erro do campo, sem estado paralelo no hook da página.
-[NewTabLink](../src/shared/ui/new-tab-link/index.tsx) concentra a apresentação e os atributos de
-abertura; a feature mantém o domínio. Ver
-[ADR 0085](../../../docs/adr/0085-admin-frontend-cpf-link-from-field-error.md) e
-[ADR 0086](../../../docs/adr/0086-admin-frontend-reusable-new-tab-link.md).
+diálogos, banners e toasts. A política HTTP detalhada fica em [docs/API.md](../../../docs/API.md).
 
 ## 3. Auth & tenancy
 
@@ -178,13 +160,13 @@ O cliente decodifica `tenant_id` do access token para roteamento; não verifica 
 A segurança está no backend, que valida token e correspondência do header. Nunca resolver tenant
 de URL, query ou valor independente em localStorage. O usuário OIDC é persistido pela biblioteca
 em localStorage para reutilização entre abas
-([ADR 0036](../../../docs/adr/0036-admin-frontend-oidc-session-in-localstorage.md)); isso não o torna
+([ADR 0008](../../../docs/decisions/0008-authentication-session-and-ai-delegation.md)); isso não o torna
 uma fonte de autorização.
 
 O cliente HTTP lê credenciais a cada chamada e falha fechado quando falta token/tenant. O gerador
 remove o parâmetro de header de tenant dos tipos para que as features não o forneçam manualmente.
 Essas proteções do frontend complementam a
-[fronteira de servidor](../../../docs/adr/0006-tenant-header-base-entity-generic-repository.md).
+[fronteira de servidor](../../../docs/decisions/0004-multi-tenancy.md).
 
 ### Session identity changes
 
@@ -194,7 +176,7 @@ eventos tardios e tenta remover o usuário persistido; uma falha nessa limpeza �
 restaurar as credenciais da sessão bloqueada. O cliente HTTP combina cancelamento de sessão e do
 consumidor. A implementação está na
 [sessionStore](../src/shared/session/sessionStore.ts) e na
-[ADR 0083](../../../docs/adr/0083-admin-frontend-reject-session-identity-changes.md).
+[ADR 0008](../../../docs/decisions/0008-authentication-session-and-ai-delegation.md).
 
 ## 4. Principles
 
@@ -210,23 +192,13 @@ As [regras da raiz](../../../AGENTS.md) continuam valendo. Aqui, a aplicação d
 - Escolher verificação pelo comportamento alterado e pelo risco; exclusão de cobertura não
   dispensa testar interação, nome acessível ou tratamento de falha.
 
-## 5. Decisions log
-
-As decisões e suas substituições estão no [índice de ADRs](../../../docs/adr/README.md).
-Abra apenas as preocupações afetadas pela tarefa.
-
-A cronologia de tentativas e revisões que ocupava esta seção permanece na
-[versão anterior deste guia](https://github.com/evertonschuster/Agenza/blob/8e9645259932894f0b9aa6cc9b4737659f3d3097/apps/admin-frontend/docs/ARCHITECTURE.md#5-decisions-log)
-e no histórico Git. Referências antigas a uma linha desse log devem ser consultadas nessa versão;
-não são instrução para reproduzir uma implementação intermediária.
-
-## 6. Deferred, provisional & not-yet-built
+## 5. Deferred, provisional & not-yet-built
 
 - Placeholders em `app/pages/` são substituídos pela fatia correspondente quando a capacidade é
   implementada; a tabela de rotas mostra quais ainda existem.
 - Não há biblioteca de server state. Sua introdução exige uma necessidade concreta de cache,
   revalidação ou sincronização que justifique substituir a forma atual
-  ([ADR 0035](../../../docs/adr/0035-admin-frontend-no-server-state-library.md)).
+  ([ADR 0012](../../../docs/decisions/0012-frontend-architecture-and-data.md)).
 - O cancelamento de lista pertence ao widget que solicita dados; o cancelamento por perda da sessão
   pertence à store. A fachada ainda normaliza abort de transporte como falha de rede; o consumidor
   que cancela verifica seu próprio signal antes de aplicar a resposta.
@@ -237,9 +209,9 @@ não são instrução para reproduzir uma implementação intermediária.
   de necessidade operacional.
 
 Não são promessas de roadmap. Antes de propor uma abstração, conferir consumidores e evidência do
-problema; o código e as ADRs relevantes delimitam a decisão.
+problema; o código e as decisões relevantes delimitam a escolha.
 
-## 7. Toolchain & gates
+## 6. Toolchain & gates
 
 Os pins de runtime vêm da raiz. Os comandos estão no [README](../README.md#comandos); os gates
 efetivamente executados estão no [workflow](../../../.github/workflows/frontend-ci.yml).
@@ -251,8 +223,7 @@ Testes de unidade e componente ficam junto ao código, com Vitest, RTL e mocks d
 Playwright e a checagem de contrato/OIDC usam o stack Aspire real. Consulte
 [QUALITY](../../../docs/QUALITY.md) para o alcance e as limitações de cada gate.
 
-## 8. Pointers
+## 7. Pointers
 
-- [Constituição](../.specify/memory/constitution.md): restrições do planejamento.
 - [AGENTS do frontend](../AGENTS.md): roteamento para skills e consulta por tarefa.
 - [README](../README.md): ambiente e manutenção de dependências.

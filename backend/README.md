@@ -4,13 +4,13 @@ Use the [solution](AdminBackend.slnx) and repository pins:
 [SDK](global.json), [packages](Directory.Packages.props) and
 [local tools](.config/dotnet-tools.json).
 
-| Reference                            | Purpose                                                                                |
-| ------------------------------------ | -------------------------------------------------------------------------------------- |
-| [AGENTS.md](AGENTS.md)               | Task routing and critical invariants                                                   |
-| [Architecture](docs/ARCHITECTURE.md) | Current rules, reference implementations and known limits                              |
-| [HTTP conventions](../docs/API.md)   | Boundary conventions; check the controller and OpenAPI for an endpoint's current shape |
-| [ADR index](../docs/adr/README.md)   | Decisions and their evolution                                                          |
-| [Quality gates](../docs/QUALITY.md)  | What the checks measure                                                                |
+| Reference                                | Purpose                                                                                |
+| ---------------------------------------- | -------------------------------------------------------------------------------------- |
+| [AGENTS.md](AGENTS.md)                   | Task routing and critical invariants                                                   |
+| [Architecture](docs/ARCHITECTURE.md)     | Current rules, reference implementations and known limits                              |
+| [HTTP conventions](../docs/API.md)       | Boundary conventions; check the controller and OpenAPI for an endpoint's current shape |
+| [Decisions](../docs/decisions/README.md) | Durable decisions and rejected alternatives                                            |
+| [Quality gates](../docs/QUALITY.md)      | What the checks measure                                                                |
 
 ## Commands
 

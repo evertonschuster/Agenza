@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react';
 import type { SearchSelectCreationSlotProps, SearchSelectItem } from '../search-select.types';
 
+// In the React tree the creation sits inside the caller's <form>; a nested submit would send both.
 function keepSubmitInside(event: FormEvent) {
   event.stopPropagation();
 }
