@@ -112,13 +112,6 @@ interface SearchSelectSelectionProps {
   readonly onClear: () => void;
 }
 
-interface CreationTextArgs {
-  readonly text: string;
-  readonly searched: string;
-  readonly phase: SearchPhase;
-  readonly items: readonly SearchSelectItem[];
-}
-
 interface SearchSelectCreateButtonProps {
   readonly label: string;
   readonly disabled: boolean;
@@ -139,7 +132,6 @@ interface SearchSelectCreateRowProps {
 }
 
 export type {
-  CreationTextArgs,
   SearchSelectCreateButtonProps,
   SearchSelectCreateRowProps,
   SearchSelectCreation,

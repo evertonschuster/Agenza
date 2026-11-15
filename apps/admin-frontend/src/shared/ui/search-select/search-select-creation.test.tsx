@@ -228,17 +228,17 @@ describe('SearchSelect creation row', () => {
     expect(received()).toHaveTextContent('Pós-operatório');
   });
 
-  it('falls back to the plain action when a result has the typed name in another case', async () => {
+  it('still offers the typed text when a result has the same name, leaving duplicates to the server', async () => {
     const user = userEvent.setup();
     render(<Harness loadItems={loaderOf(answer([VIP]), answer([VIP]))} />);
 
     await searchFor(user, 'vip');
     await screen.findByRole('option', { name: 'VIP' });
-    const row = await screen.findByRole('button', { name: 'Nova etiqueta' });
+    const row = await screen.findByRole('button', { name: 'Criar etiqueta «vip»' });
     expect(row).not.toHaveClass('bg-accent');
     await user.click(row);
 
-    expect(received()).toHaveTextContent('');
+    expect(received()).toHaveTextContent('vip');
   });
 });
 

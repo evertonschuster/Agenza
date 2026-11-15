@@ -24,7 +24,6 @@ import { SearchSelectError } from './components/search-select-error';
 import { SearchSelectLimitNotice } from './components/search-select-limit-notice';
 import { SearchSelectSelection } from './components/search-select-selection';
 import { SearchSelectSkeleton } from './components/search-select-skeleton';
-import { creationTextOf } from './creation-text';
 import { keepKeysInPicker } from './keep-keys-in-picker';
 import { limitNoticeOf } from './limit-notice';
 import type { SearchSelectItem, SearchSelectProps } from './search-select.types';
@@ -70,12 +69,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
   const reachedLimit =
     maxSelected !== undefined && value.length >= maxSelected ? maxSelected : null;
   const loading = phase.kind === 'loadingFirst' || phase.kind === 'loadingNext';
-  const creationText = creationTextOf({
-    text,
-    searched: options.searched,
-    phase,
-    items: options.items,
-  });
+  const creationText = creation ? text.trim() : '';
   const creationDisabled = disabled || reachedLimit !== null;
 
   function changeOpen(next: boolean) {
