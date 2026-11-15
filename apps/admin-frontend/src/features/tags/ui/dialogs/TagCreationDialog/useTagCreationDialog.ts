@@ -1,9 +1,11 @@
-import { useEffect, useRef, type SubmitEvent } from 'react';
+import type { SubmitEvent } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
+import { useIsMounted } from '@/shared/hooks/useIsMounted';
 import { toast } from '@/shared/ui/toast';
 import { createTag } from '../../../application/tagUseCases';
+import { TAG_NAME_MAX_LENGTH } from '../../../model/tag';
 import {
   tagFormSchema,
   toTagFormFieldValues,
@@ -17,17 +19,10 @@ export function useTagCreationDialog(props: TagCreationDialogProps): UseTagCreat
   const { name, onCreated, onCancel } = props;
   const methods = useForm<TagFormFieldValues, unknown, TagFormValues>({
     resolver: zodResolver(tagFormSchema),
-    defaultValues: { ...toTagFormFieldValues(), name },
+    defaultValues: { ...toTagFormFieldValues(), name: name.slice(0, TAG_NAME_MAX_LENGTH) },
   });
   const isSaving = methods.formState.isSubmitting;
-  const isMountedRef = useRef(true);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
+  const isMountedRef = useIsMounted();
 
   async function onValid(values: TagFormValues) {
     const result = await createTag(values);

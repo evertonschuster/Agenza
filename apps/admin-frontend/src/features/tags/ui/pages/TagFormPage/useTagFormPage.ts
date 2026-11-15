@@ -1,8 +1,9 @@
-import { useEffect, useRef, useState, type SubmitEvent } from 'react';
+import { useEffect, useState, type SubmitEvent } from 'react';
 import { useParams } from 'react-router';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { useCloseRoute } from '@/shared/hooks/useCloseRoute';
+import { useIsMounted } from '@/shared/hooks/useIsMounted';
 import { toast } from '@/shared/ui/toast';
 import { applyApiProblem } from '@/shared/form/applyApiProblem';
 import { tagsRepository } from '../../../api/tagsRepository';
@@ -20,7 +21,7 @@ export function useTagFormPage(): UseTagFormPageResult {
   const { id } = useParams();
   const close = useCloseRoute(TAGS_PATH);
   const [loadedId, setLoadedId] = useState<string>();
-  const isMountedRef = useRef(true);
+  const isMountedRef = useIsMounted();
   const isEdit = id !== undefined;
   const isLoading = isEdit && loadedId !== id;
 
@@ -30,13 +31,6 @@ export function useTagFormPage(): UseTagFormPageResult {
   });
   const isSaving = methods.formState.isSubmitting;
   const canSubmit = !isLoading && !isSaving;
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (!id) return;

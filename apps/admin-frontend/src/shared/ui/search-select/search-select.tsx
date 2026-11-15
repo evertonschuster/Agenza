@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { cn } from '@/shared/lib/utils';
 import { DEFAULT_PAGE_SIZE } from '@/shared/pagination/paging';
 import { Button } from '@/shared/ui/button';
@@ -82,8 +82,19 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
     else options.cancel();
   }
 
+  useEffect(() => {
+    if (phase.kind !== 'loadingNext') return;
+    const node = list.current;
+    node?.scrollTo?.({ top: node.scrollHeight });
+  }, [phase.kind]);
+
   return (
     <>
+      {/* Outside the Combobox: React events climb out of portals and would reach the chips and
+          input. Before it: as the last sibling it would shift the field wrapper's spacing. */}
+      {creation && creating.request && (
+        <SearchSelectCreationSlot creation={creation} request={creating.request} />
+      )}
       <Combobox<T, true>
         multiple
         items={options.items}
@@ -98,7 +109,7 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
           if (!isOpen) options.reset();
         }}
         onInputValueChange={(typed, details) => {
-          creating.setTyped(typed);
+          if (creation) creating.setTyped(typed);
           if (details.reason === 'input-change') options.search(typed);
         }}
         disabled={disabled}
@@ -122,6 +133,8 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
               disabled={blocked}
               reachedLimit={reachedLimit}
               onCreate={creating.start}
+              onPress={creating.remember}
+              onRelease={creating.forget}
             />
           )}
           <ComboboxTrigger
@@ -182,10 +195,6 @@ function SearchSelect<T extends SearchSelectItem>(props: SearchSelectProps<T>) {
           />
         </ComboboxContent>
       </Combobox>
-      {/* Outside the Combobox: React events climb out of portals and would reach the chips and input. */}
-      {creation && creating.request && (
-        <SearchSelectCreationSlot creation={creation} request={creating.request} />
-      )}
     </>
   );
 }

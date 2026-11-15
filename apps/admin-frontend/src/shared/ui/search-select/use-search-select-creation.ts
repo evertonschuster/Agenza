@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { flushSync } from 'react-dom';
 import type {
   SearchSelectCreationRequest,
@@ -12,7 +12,13 @@ export function useSearchSelectCreation<T extends SearchSelectItem>(
   const { creation, value, onValueChange, blocked, closePicker, anchor } = args;
   const [typed, setTyped] = useState('');
   const [requestedText, setRequestedText] = useState<string | null>(null);
+  const pressedText = useRef<string | null>(null);
+  const valueRef = useRef(value);
   const text = typed.trim();
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
 
   function searchInput() {
     return anchor.current?.querySelector('input') ?? null;
@@ -23,10 +29,22 @@ export function useSearchSelectCreation<T extends SearchSelectItem>(
     searchInput()?.focus();
   }
 
+  // Pressing the field button moves focus off the input, which closes the list and clears the text
+  // before the click arrives; the press keeps what was typed.
+  function remember() {
+    pressedText.current = text;
+  }
+
+  function forget() {
+    pressedText.current = null;
+  }
+
   function start() {
     if (blocked) return;
+    const chosen = pressedText.current ?? text;
+    pressedText.current = null;
     closePicker();
-    setRequestedText(text);
+    setRequestedText(chosen);
   }
 
   const request: SearchSelectCreationRequest<T> | null =
@@ -36,7 +54,7 @@ export function useSearchSelectCreation<T extends SearchSelectItem>(
           text: requestedText,
           finalFocus: searchInput,
           complete(created) {
-            onValueChange([...value, created]);
+            onValueChange([...valueRef.current, created]);
             end();
           },
           cancel: end,
@@ -44,5 +62,5 @@ export function useSearchSelectCreation<T extends SearchSelectItem>(
 
   const label = text ? creation?.actionLabelFor(text) : creation?.actionLabel;
 
-  return { request, label: label ?? '', start, setTyped };
+  return { request, label: label ?? '', start, remember, forget, setTyped };
 }

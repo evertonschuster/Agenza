@@ -380,9 +380,12 @@ describe('SearchSelect', () => {
 
     const list = await openList(user);
     const last = await within(list).findByRole('option', { name: 'Retorno' });
+    const scrollToEnd = vi.fn();
+    list.scrollTo = scrollToEnd;
     scrollTo(list, 350);
 
     await waitFor(() => expect(list.querySelectorAll('[data-slot="skeleton"]')).toHaveLength(2));
+    expect(scrollToEnd).toHaveBeenCalledWith({ top: 600 });
     const skeleton = list.querySelector('[data-slot="skeleton"]');
     expect(skeleton?.closest('[aria-hidden="true"]')).not.toBeNull();
     expect(

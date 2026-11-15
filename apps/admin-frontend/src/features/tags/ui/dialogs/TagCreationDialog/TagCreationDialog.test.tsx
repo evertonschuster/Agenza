@@ -1,8 +1,8 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from 'vitest';
 import { act, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import * as toastModule from '@/shared/ui/toast';
-import type { Tag } from '../../../model/tag';
+import { TAG_NAME_MAX_LENGTH, type Tag } from '../../../model/tag';
 import { TAG_COLOR_PALETTE } from '../../../model/tagColor';
 import { tagSaved } from '../../../model/tagEvents';
 import { TagCreationDialog } from './TagCreationDialog';
@@ -28,6 +28,10 @@ describe('TagCreationDialog', () => {
     mockCreate.mockResolvedValue({ ok: true, data: CREATED });
   });
 
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   it('opens titled "Nova etiqueta" with the received name and no color checked, like the Etiquetas page', async () => {
     renderDialog('Pós-operatório');
 
@@ -37,6 +41,12 @@ describe('TagCreationDialog', () => {
     for (const option of TAG_COLOR_PALETTE) {
       expect(screen.getByRole('radio', { name: option.label })).not.toBeChecked();
     }
+  });
+
+  it('opens with the received name cut to the name limit', async () => {
+    renderDialog('x'.repeat(TAG_NAME_MAX_LENGTH + 20));
+
+    expect(await screen.findByLabelText('Nome')).toHaveValue('x'.repeat(TAG_NAME_MAX_LENGTH));
   });
 
   it('opens without a name when it receives none', async () => {
@@ -72,7 +82,7 @@ describe('TagCreationDialog', () => {
     const user = userEvent.setup();
     const addToast = vi.spyOn(toastModule.toast, 'add');
     const saved = vi.fn();
-    const unsubscribe = tagSaved.subscribe(saved);
+    onTestFinished(tagSaved.subscribe(saved));
     const { onCreated, onCancel } = renderDialog('Pós-operatório');
     await screen.findByLabelText('Nome');
 
@@ -92,7 +102,27 @@ describe('TagCreationDialog', () => {
       type: 'success',
     });
     expect(onCancel).not.toHaveBeenCalled();
-    unsubscribe();
+  });
+
+  it('offers no way out while saving and hands the tag back when the save ends', async () => {
+    const user = userEvent.setup();
+    let answer: (result: { ok: true; data: Tag }) => void = () => undefined;
+    mockCreate.mockReturnValue(new Promise((resolve) => (answer = resolve)));
+    const { onCreated, onCancel } = renderDialog('Pós-operatório');
+    await screen.findByLabelText('Nome');
+    await user.click(screen.getByRole('radio', { name: 'Azul' }));
+    await user.click(screen.getByRole('button', { name: 'Salvar' }));
+    await waitFor(() => expect(mockCreate).toHaveBeenCalledTimes(1));
+
+    await user.keyboard('{Escape}');
+
+    expect(onCancel).not.toHaveBeenCalled();
+    expect(screen.getByRole('button', { name: 'Cancelar' })).toBeDisabled();
+    await act(async () => {
+      answer({ ok: true, data: CREATED });
+      await Promise.resolve();
+    });
+    expect(onCreated).toHaveBeenCalledWith(CREATED);
   });
 
   it('shows a duplicate name tied to the name field under it', async () => {
@@ -166,7 +196,7 @@ describe('TagCreationDialog', () => {
     const user = userEvent.setup();
     const addToast = vi.spyOn(toastModule.toast, 'add');
     const saved = vi.fn();
-    const unsubscribe = tagSaved.subscribe(saved);
+    onTestFinished(tagSaved.subscribe(saved));
     let answer: (result: { ok: true; data: Tag }) => void = () => undefined;
     mockCreate.mockReturnValue(new Promise((resolve) => (answer = resolve)));
     const onCreated = vi.fn();
@@ -187,6 +217,5 @@ describe('TagCreationDialog', () => {
     expect(saved).toHaveBeenCalledWith({ id: '9' });
     expect(onCreated).not.toHaveBeenCalled();
     expect(addToast).not.toHaveBeenCalled();
-    unsubscribe();
   });
 });

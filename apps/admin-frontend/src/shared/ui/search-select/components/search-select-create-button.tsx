@@ -5,7 +5,7 @@ import { limitNoticeOf } from '../limit-notice';
 import type { SearchSelectCreateButtonProps } from '../search-select.types';
 
 function SearchSelectCreateButton(props: SearchSelectCreateButtonProps) {
-  const { label, disabled, reachedLimit, onCreate } = props;
+  const { label, disabled, reachedLimit, onCreate, onPress, onRelease } = props;
   const limitNoticeId = useId();
 
   return (
@@ -16,8 +16,10 @@ function SearchSelectCreateButton(props: SearchSelectCreateButtonProps) {
         size="xs"
         className="shrink-0 text-primary pointer-coarse:h-10"
         disabled={disabled}
-        focusableWhenDisabled
+        focusableWhenDisabled={reachedLimit !== null}
         aria-describedby={reachedLimit === null ? undefined : limitNoticeId}
+        onPointerDown={onPress}
+        onPointerLeave={onRelease}
         onClick={onCreate}
       >
         <PlusIcon aria-hidden="true" />

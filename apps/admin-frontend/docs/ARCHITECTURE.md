@@ -45,7 +45,7 @@ Para decidir onde fica uma peça da `ui/` da fatia, siga esta ordem e pare na pr
    página e sobe para `ui/components/` quando ganha a segunda.
 
 Uma entidade que também se cria por um seletor repete o desenho de etiquetas: o diálogo rápido
-`<Entity>QuickCreateDialog` em `dialogs/`, exportado pelo barril, e a casca, a validação e os campos
+`<Entity>CreationDialog` em `dialogs/`, exportado pelo barril, e a casca, a validação e os campos
 em `components/<Entity>Form/`, usados também pela página da rota. Cada entrada mantém seu hook: a
 rota carrega por id e fecha navegando; o diálogo recebe o texto digitado e devolve o item criado.
 Foram descartados um hook ou diálogo configurável para as duas entradas, que mistura rota e

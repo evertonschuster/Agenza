@@ -187,6 +187,21 @@ describe('SearchSelect creation from the field button', () => {
 
     expect(received()).toHaveTextContent('Pós-operatório');
   });
+
+  it('keeps the typed text when pressing the button takes focus off the search and closes the list', async () => {
+    const user = userEvent.setup();
+    render(<Harness loadItems={loaderOf(answer([VIP]), answer([]))} />);
+    await searchFor(user, 'Pós-operatório');
+    await screen.findByRole('button', { name: 'Criar etiqueta «Pós-operatório»' });
+    const button = fieldButton();
+
+    fireEvent.pointerDown(button);
+    fireEvent.focusOut(control(), { relatedTarget: button });
+    await waitFor(() => expect(control()).toHaveValue(''));
+    fireEvent.click(button);
+
+    expect(received()).toHaveTextContent('Pós-operatório');
+  });
 });
 
 describe('SearchSelect creation row', () => {
@@ -363,7 +378,7 @@ describe('SearchSelect creation limits', () => {
   it('offers no creation while the field is disabled', () => {
     render(<Harness loadItems={loaderOf(answer([VIP]))} disabled />);
 
-    expect(fieldButton()).toHaveAttribute('aria-disabled', 'true');
+    expect(fieldButton()).toBeDisabled();
   });
 
   it('shows neither the button nor the row without a creation', async () => {

@@ -117,6 +117,8 @@ interface SearchSelectCreateButtonProps {
   readonly disabled: boolean;
   readonly reachedLimit: number | null;
   readonly onCreate: () => void;
+  readonly onPress: () => void;
+  readonly onRelease: () => void;
 }
 
 interface UseSearchSelectCreationArgs<T extends SearchSelectItem> {
