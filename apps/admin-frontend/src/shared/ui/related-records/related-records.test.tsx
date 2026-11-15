@@ -10,6 +10,7 @@ describe('RelatedRecords', () => {
     render(
       <MemoryRouter>
         <RelatedRecords
+          notices={['A lista pode estar incompleta.']}
           groups={[
             {
               key: 'people',
@@ -41,6 +42,7 @@ describe('RelatedRecords', () => {
     expect(within(services).queryByRole('link')).not.toBeInTheDocument();
     expect(screen.queryByRole('region', { name: 'Sem registros' })).not.toBeInTheDocument();
     expect(screen.queryByText('Não exibir.')).not.toBeInTheDocument();
+    expect(screen.getByText('A lista pode estar incompleta.')).toBeInTheDocument();
     await user.tab();
     expect(link).toHaveFocus();
   });

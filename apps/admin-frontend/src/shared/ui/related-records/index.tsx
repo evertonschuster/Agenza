@@ -46,6 +46,23 @@ function RelatedRecordSection({ group }: { group: RelatedRecordGroup }) {
   );
 }
 
-export function RelatedRecords({ groups }: { groups: readonly RelatedRecordGroup[] }) {
-  return groups.map((group) => <RelatedRecordSection key={group.key} group={group} />);
+export function RelatedRecords({
+  groups,
+  notices = [],
+}: {
+  groups: readonly RelatedRecordGroup[];
+  notices?: readonly string[];
+}) {
+  return (
+    <div className="space-y-4 text-sm">
+      {groups.map((group) => (
+        <RelatedRecordSection key={group.key} group={group} />
+      ))}
+      {notices.map((notice) => (
+        <p key={notice} className="text-muted-foreground">
+          {notice}
+        </p>
+      ))}
+    </div>
+  );
 }
