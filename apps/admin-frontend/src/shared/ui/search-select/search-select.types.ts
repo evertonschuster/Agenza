@@ -115,8 +115,17 @@ interface SearchSelectSelectionProps {
 interface SearchSelectCreateButtonProps {
   readonly label: string;
   readonly disabled: boolean;
-  readonly limitNoticeId: string | undefined;
+  readonly reachedLimit: number | null;
   readonly onCreate: () => void;
+}
+
+interface UseSearchSelectCreationArgs<T extends SearchSelectItem> {
+  creation: SearchSelectCreation<T> | undefined;
+  value: T[];
+  onValueChange: (value: T[]) => void;
+  blocked: boolean;
+  closePicker: () => void;
+  anchor: RefObject<HTMLElement | null>;
 }
 
 interface SearchSelectCreationSlotProps<T extends SearchSelectItem> {
@@ -153,4 +162,5 @@ export type {
   SearchTimer,
   UseLoadMoreNearEndArgs,
   UseSearchOptionsArgs,
+  UseSearchSelectCreationArgs,
 };
