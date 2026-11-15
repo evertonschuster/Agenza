@@ -4,9 +4,9 @@ import { FormFieldsSkeleton } from '@/shared/ui/form-field';
 import { DialogFormFooter } from '@/widgets/form-footer';
 import { TAG_FORM_FIELDS } from './tagForm';
 import { TagFormBody } from './components/TagFormBody';
-import type { TagFormShellProps } from './TagFormShell.types';
+import type { TagFormDialogProps } from './TagFormDialog.types';
 
-function TagFormShell(props: TagFormShellProps) {
+function TagFormDialog(props: TagFormDialogProps) {
   const { methods, isEdit, isLoading, isSaving, canSubmit, onOpenChange, onSubmit, finalFocus } =
     props;
 
@@ -31,4 +31,4 @@ function TagFormShell(props: TagFormShellProps) {
   );
 }
 
-export { TagFormShell };
+export { TagFormDialog };
