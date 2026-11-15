@@ -1,5 +1,6 @@
 import { ConfirmDialog } from '@/widgets/confirm-dialog';
 import { useTagDeletePage } from './useTagDeletePage';
+import { TagUsageDetails } from './TagUsageDetails';
 
 export function TagDeletePage() {
   const { tag, onOpenChange, onConfirm } = useTagDeletePage();
@@ -9,6 +10,12 @@ export function TagDeletePage() {
       loading={!tag}
       onOpenChange={onOpenChange}
       onConfirm={onConfirm}
+      error={{
+        blockedContent: (problem) =>
+          problem.code === 'Tag.InUse' ? <TagUsageDetails problem={problem} /> : null,
+        canRetryBlocked: (problem) => problem.code === 'Tag.InUse',
+        blockedRetryLabel: 'Tentar excluir novamente',
+      }}
       confirmation={{
         title: 'Excluir etiqueta?',
         description: tag && (

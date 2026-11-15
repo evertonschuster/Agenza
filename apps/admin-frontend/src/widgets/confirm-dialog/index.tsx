@@ -25,6 +25,9 @@ function ConfirmDialog<T>({
     blockedTitle = 'Não é possível excluir',
     retryLabel = 'Tentar novamente',
     dismissLabel = 'Entendi',
+    blockedContent,
+    canRetryBlocked,
+    blockedRetryLabel = 'Tentar novamente',
   } = {},
   success: {
     title: successTitle = 'Excluído com sucesso',
@@ -44,7 +47,7 @@ function ConfirmDialog<T>({
   }, []);
 
   async function handleConfirm() {
-    setProblem(undefined);
+    if (!isBlocked) setProblem(undefined);
     setIsSubmitting(true);
     const result = await onConfirm();
     setIsSubmitting(false);
@@ -66,12 +69,19 @@ function ConfirmDialog<T>({
         if (!isSubmitting) onOpenChange(open);
       }}
     >
-      <DialogContent showCloseButton={!isSubmitting}>
+      <DialogContent
+        showCloseButton={!isSubmitting}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+      >
         {isBlocked ? (
           <ConfirmDialogBlockedView
             blockedTitle={blockedTitle}
             problem={problem}
             dismissLabel={dismissLabel}
+            content={blockedContent?.(problem)}
+            retryLabel={canRetryBlocked?.(problem) ? blockedRetryLabel : undefined}
+            isSubmitting={isSubmitting}
+            onRetry={() => void handleConfirm()}
           />
         ) : (
           <ConfirmDialogConfirmView

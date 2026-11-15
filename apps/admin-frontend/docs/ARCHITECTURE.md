@@ -141,6 +141,17 @@ abertura; a feature mantém o domínio. Ver
 [ADR 0085](../../../docs/adr/0085-admin-frontend-cpf-link-from-field-error.md) e
 [ADR 0086](../../../docs/adr/0086-admin-frontend-reusable-new-tab-link.md).
 
+### Etiqueta em uso
+
+Ao receber `Tag.InUse`, a exclusão apresenta os nomes recebidos e permite repetir a tentativa no
+mesmo diálogo. Pessoas com identificador abrem a edição em outra aba pelo mesmo `NewTabLink`;
+serviços aparecem sem link enquanto não houver tela de gerenciamento. O aviso de lista possivelmente
+incompleta aparece quando a resposta traz 10 registros daquele tipo. Os dados pertencem à tentativa
+que os retornou; voltar da outra aba não os atualiza. O caminho de edição de pessoa fica em
+`shared/routes/clientPaths.ts` para evitar uma dependência circular entre Pessoas e Etiquetas.
+Grupos desconhecidos com erro `Tag.InUse` e nome válido aparecem como “Outros vínculos”, sem usar
+as chaves como rótulos nem construir links a partir dos metadados.
+
 ## 3. Auth & tenancy
 
 OIDC Authorization Code + PKCE usa identity-service e oidc-client-ts. O
