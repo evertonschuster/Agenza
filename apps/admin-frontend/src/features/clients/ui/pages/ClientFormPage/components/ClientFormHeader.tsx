@@ -1,7 +1,7 @@
 import { UserCheckIcon, UserXIcon } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { PageHeader } from '@/widgets/page-header';
-import { ClientStatusBadge } from '../../../components/ClientStatusBadge';
+import { ClientStatusBadge } from '../../../components/ClientStatusBadge/ClientStatusBadge';
 import type { ClientFormHeaderProps } from './ClientFormHeader.types';
 
 function ClientFormHeader({ isSaving, statusChange }: ClientFormHeaderProps) {

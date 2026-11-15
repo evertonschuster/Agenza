@@ -13,7 +13,6 @@ export const SEARCH_DELAY_MS = 300;
 const UNLOADED: SearchOptionsState<never> = {
   searched: '',
   items: [],
-  totalCount: 0,
   next: null,
   phase: { kind: 'loadingFirst' },
 };
@@ -74,7 +73,6 @@ export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOpti
       setState((current) => ({
         searched: query.search,
         items: isFirstPage ? items : appendNew(current.items, items),
-        totalCount,
         next: hasNext ? { ...query, page: query.page + 1 } : null,
         phase: { kind: 'ready' },
       }));
@@ -107,5 +105,5 @@ export function useSearchOptions<T extends SearchSelectItem>(args: UseSearchOpti
     setState(UNLOADED);
   }
 
-  return { ...state, hasMore: state.next !== null, open, search, loadMore, retry, cancel, reset };
+  return { ...state, open, search, loadMore, retry, cancel, reset };
 }

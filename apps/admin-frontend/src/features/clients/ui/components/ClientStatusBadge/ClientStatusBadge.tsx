@@ -1,5 +1,5 @@
 import { Badge } from '@/shared/ui/badge';
-import { CLIENT_STATUS_LABELS, type ClientStatus } from '../../model/clientStatus';
+import { CLIENT_STATUS_LABELS, type ClientStatus } from '../../../model/clientStatus';
 import type { ClientStatusBadgeProps } from './ClientStatusBadge.types';
 
 const STATUS_BADGE_VARIANT: Record<ClientStatus, 'success' | 'muted'> = {

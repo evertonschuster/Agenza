@@ -31,9 +31,30 @@ Esses limites continuam na revisão. O adaptador OIDC
 
 Uma página tem sua pasta `ui/pages/<Page>/`: componente de apresentação, hook próprio quando houver
 estado/efeitos e tipos do hook em arquivo irmão quando necessários. Subcomponentes ganham
-`components/` quando tiverem conteúdo que justifique a separação. Hooks de página não são uma
-camada compartilhada de negócio; acessores de contexto, hooks genéricos de widgets e utilitários
-como [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) são reutilizáveis.
+`components/` quando tiverem conteúdo que justifique a separação.
+
+Para decidir onde fica uma peça da `ui/` da fatia, siga esta ordem e pare na primeira que servir:
+
+1. **Abre pela rota** (tem URL própria): `ui/pages/<Page>/`, mesmo quando aparece como diálogo.
+2. **Abre pelo código**, sem URL, e é usado fora de uma página só: `ui/dialogs/<Dialog>/`, com hook,
+   tipos e testes, como uma página.
+3. **Não abre sozinho** e é usado por mais de um consumidor da fatia (página ou diálogo) ou exportado
+   pelo barril: `ui/components/<Componente>/`, com seus tipos e testes. O que só existe por causa
+   dele fica na mesma pasta; partes internas descem para `components/`.
+4. **Serve a uma página só**: nos `components/` dela. Um formulário com uma entrada só fica na
+   página e sobe para `ui/components/` quando ganha a segunda.
+
+Uma entidade que também se cria por um seletor repete o desenho de etiquetas: o diálogo rápido
+`<Entity>CreationDialog` em `dialogs/`, exportado pelo barril, e a casca, a validação e os campos
+em `components/<Entity>Form/`, usados também pela página da rota. Cada entrada mantém seu hook: a
+rota carrega por id e fecha navegando; o diálogo recebe o texto digitado e devolve o item criado.
+Foram descartados um hook ou diálogo configurável para as duas entradas, que mistura rota e
+callbacks, uma pasta `ui/forms/` com um `useQuickCreate` comum e o formulário de toda entidade em
+`components/` desde o primeiro dia.
+
+Hooks de página não são uma camada compartilhada de negócio; acessores de contexto, hooks genéricos
+de widgets e utilitários como [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) são
+reutilizáveis.
 
 Quando uma página usa `loader` ou `action`, eles ficam em `route.ts`, reexportados pelo barril para
 [app/routes.tsx](../src/app/routes.tsx). Isso não obriga toda página a buscar dados no loader:
@@ -85,7 +106,9 @@ fica em `shared/ui/form-field/`. As receitas específicas pertencem à
 Seleção de várias opções `{ id, name }` carregadas do backend, com busca e páginas, usa
 [SearchSelect](../src/shared/ui/search-select/search-select.tsx) com a chamada paginada da feature; no
 formulário, `SearchSelectField`
-([ADR 0013](../../../docs/decisions/0013-frontend-ui-and-interaction.md)).
+([ADR 0013](../../../docs/decisions/0013-frontend-ui-and-interaction.md)). A `creation` opcional
+oferece criar o item ali mesmo; a feature desenha a criação e devolve o item, que entra selecionado.
+Um diálogo de criação passa o `finalFocus` recebido ao `DialogContent`, para o foco voltar à busca.
 `SelectField` continua para o `Select` simples.
 Texto e rotas de produto são pt-BR; identificadores são inglês. A rota `/tags` é uma exceção
 existente: renomear uma URL requer uma mudança própria de produto.

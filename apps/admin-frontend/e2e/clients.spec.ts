@@ -315,6 +315,47 @@ test.describe('Tag a person', () => {
         .getByRole('button', { name: `Remover ${tagName}`, exact: true }),
     ).toBeVisible();
   });
+
+  test('creates tags from the person form, by the field button and by a search, and keeps them', async ({
+    page,
+  }) => {
+    const fromButton = uniqueName('Botão E2E');
+    const fromSearch = uniqueName('Busca E2E');
+    const name = uniqueName('Etiquetada E2E');
+    await openNewPersonForm(page);
+    const section = page.getByRole('region', { name: 'Dados da pessoa' });
+    await section.getByLabel('Nome completo').fill(name);
+
+    await section.getByRole('button', { name: 'Nova etiqueta', exact: true }).click();
+    const dialog = page.getByRole('dialog', { name: 'Nova etiqueta' });
+    await dialog.getByLabel('Nome', { exact: true }).fill(fromButton);
+    await dialog.getByRole('radio', { name: 'Azul', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Salvar' }).click();
+    await expect(
+      section.getByRole('button', { name: `Remover ${fromButton}`, exact: true }),
+    ).toBeVisible();
+
+    await section.getByRole('combobox', { name: 'Etiquetas' }).fill(fromSearch);
+    await page.getByRole('button', { name: `Criar etiqueta «${fromSearch}»`, exact: true }).click();
+    await expect(dialog.getByLabel('Nome', { exact: true })).toHaveValue(fromSearch);
+    await dialog.getByRole('radio', { name: 'Azul', exact: true }).click();
+    await dialog.getByRole('button', { name: 'Salvar' }).click();
+    await expect(
+      section.getByRole('button', { name: `Remover ${fromSearch}`, exact: true }),
+    ).toBeVisible();
+
+    await page.getByRole('button', { name: 'Salvar', exact: true }).click();
+    await expect(page).toHaveURL(/\/pessoas$/);
+
+    await openEditForm(page, name);
+    const edited = page.getByRole('region', { name: 'Dados da pessoa' });
+    await expect(
+      edited.getByRole('button', { name: `Remover ${fromButton}`, exact: true }),
+    ).toBeVisible();
+    await expect(
+      edited.getByRole('button', { name: `Remover ${fromSearch}`, exact: true }),
+    ).toBeVisible();
+  });
 });
 
 test.describe('Delete a person', () => {

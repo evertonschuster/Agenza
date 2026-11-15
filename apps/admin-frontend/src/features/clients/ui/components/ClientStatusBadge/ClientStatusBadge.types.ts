@@ -1,4 +1,4 @@
-import type { ClientStatus } from '../../model/clientStatus';
+import type { ClientStatus } from '../../../model/clientStatus';
 
 export interface ClientStatusBadgeProps {
   status: ClientStatus;
