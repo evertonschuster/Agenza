@@ -3,8 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { FormProvider, useForm, useWatch } from 'react-hook-form';
-import type { SelectFieldOption } from '../fields.types';
-import { SelectField } from './select-field';
+import { SelectField, type SelectFieldOption } from './select-field';
 
 type Size = 'small' | 'medium' | 'large';
 

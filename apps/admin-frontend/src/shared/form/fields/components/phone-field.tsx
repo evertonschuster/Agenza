@@ -1,7 +1,11 @@
 import type { FieldValues } from 'react-hook-form';
 import { PHONE_MAX_LENGTH } from '@/shared/values/phone';
-import type { PhoneFieldProps } from '../fields.types';
-import { TextField } from './text-fields';
+import type { WithOptionalLabel } from '../fields.types';
+import { TextField, type TextFieldProps } from './text-fields';
+
+export type PhoneFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<TextFieldProps<T>, 'type'>
+>;
 
 export function PhoneField<T extends FieldValues>({
   label = 'Telefone',
