@@ -31,6 +31,26 @@ function personPath(person: RelatedRecord): string | undefined {
   }
 }
 
+type KnownGroup = Omit<RelatedRecordGroup, 'items' | 'key'> & {
+  field: string;
+  limitNotice: string;
+};
+
+const KNOWN_GROUPS: readonly KnownGroup[] = [
+  {
+    field: 'clients',
+    title: 'Pessoas',
+    getEditPath: personPath,
+    limitNotice: 'Mostramos até 10 pessoas. Pode haver outras vinculadas.',
+  },
+  {
+    field: 'services',
+    title: 'Serviços',
+    description: 'O gerenciamento de serviços ainda não está disponível.',
+    limitNotice: 'Mostramos até 10 serviços. Pode haver outros vinculados.',
+  },
+];
+
 export function getRelatedRecordsContent(problem: ApiProblem): {
   groups: RelatedRecordGroup[];
   notices: string[];
@@ -39,34 +59,26 @@ export function getRelatedRecordsContent(problem: ApiProblem): {
   const fields =
     errors && typeof errors === 'object' && !Array.isArray(errors) ? Object.entries(errors) : [];
   const code = problem.code ?? '';
-  const findEntries = (name: string) => fields.find(([field]) => field.toLowerCase() === name)?.[1];
-  const people = readEntries(findEntries('clients'), code);
-  const services = readEntries(findEntries('services'), code);
+  const notices: string[] = [];
+  const groups: RelatedRecordGroup[] = KNOWN_GROUPS.map(({ field, limitNotice, ...group }) => {
+    const raw = fields.find(([name]) => name.toLowerCase() === field.toLowerCase())?.[1];
+    const { items, limited } = readEntries(raw, code);
+    if (limited) notices.push(limitNotice);
+    return { ...group, key: `known:${field.toLowerCase()}`, items };
+  });
   const otherGroups = fields
-    .filter(([field]) => !['clients', 'services'].includes(field.toLowerCase()))
+    .filter(
+      ([field]) => !KNOWN_GROUPS.some((known) => known.field.toLowerCase() === field.toLowerCase()),
+    )
     .map(([, entries]) => readEntries(entries, code, true))
     .filter((group) => group.items.length > 0);
-  const notices: string[] = [];
-  if (people.limited) notices.push('Mostramos até 10 pessoas. Pode haver outras vinculadas.');
-  if (services.limited) notices.push('Mostramos até 10 serviços. Pode haver outros vinculados.');
   if (otherGroups.some((group) => group.limited)) {
     notices.push('Mostramos até 10 registros por tipo. Pode haver outros vinculados.');
   }
-  return {
-    groups: [
-      { key: 'people', title: 'Pessoas', items: people.items, getEditPath: personPath },
-      {
-        key: 'services',
-        title: 'Serviços',
-        items: services.items,
-        description: 'O gerenciamento de serviços ainda não está disponível.',
-      },
-      {
-        key: 'other',
-        title: 'Outros vínculos',
-        items: otherGroups.flatMap((group) => group.items),
-      },
-    ],
-    notices,
-  };
+  groups.push({
+    key: 'other',
+    title: 'Outros vínculos',
+    items: otherGroups.flatMap((group) => group.items),
+  });
+  return { groups, notices };
 }

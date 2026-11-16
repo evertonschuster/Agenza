@@ -155,7 +155,8 @@ O componente [RelatedRecords](../src/shared/ui/related-records/index.tsx) recebe
 grupos e avisos usando o [leitor compartilhado](../src/shared/ui/related-records/from-problem.ts). Os
 campos `Clients` e `Services`, `meta.name`, `meta.id` e o limite de 10 registros por tipo são padrões
 compartilhados; o código do problema seleciona os vínculos de grupos desconhecidos. A feature decide
-em quais erros exibir o componente.
+em quais erros exibir o componente. A lista interna de grupos conhecidos concentra título, aviso e
+eventual rota; tipos futuros aparecem como “Outros vínculos” até receberem uma definição própria.
 
 ## 3. Auth & tenancy
 
