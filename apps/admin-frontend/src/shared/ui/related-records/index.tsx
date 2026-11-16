@@ -1,18 +1,8 @@
-import { useId, type ReactNode } from 'react';
+import { useId } from 'react';
+import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
-
-export interface RelatedRecord {
-  id?: string;
-  name: string;
-}
-
-export interface RelatedRecordGroup {
-  key: string;
-  title: string;
-  items: readonly RelatedRecord[];
-  description?: ReactNode;
-  getEditPath?: (record: RelatedRecord) => string | undefined;
-}
+import { getRelatedRecordsContent } from './from-problem';
+import type { RelatedRecordGroup } from './related-records.types';
 
 function RelatedRecordSection({ group }: { group: RelatedRecordGroup }) {
   const headingId = useId();
@@ -46,13 +36,8 @@ function RelatedRecordSection({ group }: { group: RelatedRecordGroup }) {
   );
 }
 
-export function RelatedRecords({
-  groups,
-  notices = [],
-}: {
-  groups: readonly RelatedRecordGroup[];
-  notices?: readonly string[];
-}) {
+export function RelatedRecords({ problem }: { problem: ApiProblem }) {
+  const { groups, notices } = getRelatedRecordsContent(problem);
   return (
     <div className="space-y-4 text-sm">
       {groups.map((group) => (

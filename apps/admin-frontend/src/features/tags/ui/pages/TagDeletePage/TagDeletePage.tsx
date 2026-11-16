@@ -1,8 +1,6 @@
 import { ConfirmDialog } from '@/widgets/confirm-dialog';
 import { RelatedRecords } from '@/shared/ui/related-records';
-import { getRelatedRecordsContent } from '@/shared/ui/related-records/from-problem';
 import { useTagDeletePage } from './useTagDeletePage';
-import { tagUsageOptions } from './tagUsageOptions';
 
 export function TagDeletePage() {
   const { tag, onOpenChange, onConfirm } = useTagDeletePage();
@@ -14,9 +12,7 @@ export function TagDeletePage() {
       onConfirm={onConfirm}
       error={{
         blockedContent: (problem) =>
-          problem.code === 'Tag.InUse' ? (
-            <RelatedRecords {...getRelatedRecordsContent(problem, tagUsageOptions)} />
-          ) : null,
+          problem.code === 'Tag.InUse' ? <RelatedRecords problem={problem} /> : null,
         canRetryBlocked: (problem) => problem.code === 'Tag.InUse',
         blockedRetryLabel: 'Tentar excluir novamente',
       }}

@@ -2,60 +2,57 @@ import { render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
+import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { RelatedRecords } from './index';
 
 describe('RelatedRecords', () => {
-  it('renders accessible groups, optional descriptions and configured links', async () => {
+  it('renders groups and their configured behavior directly from a problem', async () => {
     const user = userEvent.setup();
+    const problem = {
+      code: 'Professional.InUse',
+      errors: {
+        Clients: [
+          { code: 'Professional.InUse', meta: { id: 'abc/123', name: 'Ana Lima' } },
+          { meta: { name: 'Sem identificador' } },
+        ],
+        Services: [{ code: 'Professional.InUse', meta: { id: '456', name: 'Massagem' } }],
+        Appointments: [{ code: 'Professional.InUse', meta: { name: 'Atendimento' } }],
+      },
+    } as ApiProblem;
     render(
       <MemoryRouter>
-        <RelatedRecords
-          notices={['A lista pode estar incompleta.']}
-          groups={[
-            {
-              key: 'people',
-              title: 'Pessoas',
-              items: [{ id: '123', name: 'Ana Lima' }, { name: 'Sem identificador' }],
-              getEditPath: (record) => (record.id ? `/pessoas/${record.id}/editar` : undefined),
-            },
-            {
-              key: 'services',
-              title: 'Serviços',
-              items: [{ id: '456', name: 'Massagem' }],
-              description: 'Gerenciamento indisponível.',
-            },
-            { key: 'empty', title: 'Sem registros', items: [], description: 'Não exibir.' },
-          ]}
-        />
+        <RelatedRecords problem={problem} />
       </MemoryRouter>,
     );
 
     const people = screen.getByRole('region', { name: 'Pessoas' });
     const link = within(people).getByRole('link', { name: /Ana Lima.*outra aba/ });
-    expect(link).toHaveAttribute('href', '/pessoas/123/editar');
+    expect(link).toHaveAttribute('href', '/pessoas/abc%2F123/editar');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(within(people).getByText('Sem identificador').tagName).toBe('LI');
     const services = screen.getByRole('region', { name: 'Serviços' });
     expect(within(services).getByText('Massagem').tagName).toBe('LI');
-    expect(within(services).getByText('Gerenciamento indisponível.')).toBeInTheDocument();
+    expect(
+      within(services).getByText('O gerenciamento de serviços ainda não está disponível.'),
+    ).toBeInTheDocument();
     expect(within(services).queryByRole('link')).not.toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'Sem registros' })).not.toBeInTheDocument();
-    expect(screen.queryByText('Não exibir.')).not.toBeInTheDocument();
-    expect(screen.getByText('A lista pode estar incompleta.')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Outros vínculos' })).getByText('Atendimento'),
+    ).toBeInTheDocument();
     await user.tab();
     expect(link).toHaveFocus();
   });
 
   it('keeps headings distinct when multiple instances use the same group title', () => {
+    const problem = { errors: { Clients: [{ meta: { name: 'Ana' } }] } } as ApiProblem;
     render(
       <MemoryRouter>
-        <RelatedRecords groups={[{ key: 'one', title: 'Vínculos', items: [{ name: 'Um' }] }]} />
-        <RelatedRecords groups={[{ key: 'two', title: 'Vínculos', items: [{ name: 'Dois' }] }]} />
+        <RelatedRecords problem={problem} />
+        <RelatedRecords problem={problem} />
       </MemoryRouter>,
     );
-
-    const regions = screen.getAllByRole('region', { name: 'Vínculos' });
+    const regions = screen.getAllByRole('region', { name: 'Pessoas' });
     expect(regions).toHaveLength(2);
     expect(regions[0]).toHaveAttribute('aria-labelledby');
     expect(regions[0]?.getAttribute('aria-labelledby')).not.toBe(
