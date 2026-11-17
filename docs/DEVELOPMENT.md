@@ -21,9 +21,9 @@ at 5432 and persists in the `agenza-postgres-data` volume.
 - `dotnet run` hands the AppHost to the Aspire CLI, which launches the Debug build. The first build
   fetches the CLI, dashboard and DCP into `~/.aspire` through `dotnet dnx`, so it needs network but
   no separate install ([ADR 0010](decisions/0010-git-ci-and-toolchain.md)).
-- One local-development password is shared by PostgreSQL, the restricted application roles and the
-  internal OAuth clients. Its demo default is `postgres`; override it with
-  `dotnet user-secrets set "Parameters:development-password" "<value>" --project backend/AppHost`.
+- One local-development password, `postgres`, is shared by PostgreSQL, the restricted application
+  roles and the internal OAuth clients. AppHost passes it as a fixed value, so configuration does
+  not override it.
 - PostgreSQL init files run only on the volume's first initialization. After changing that password
   or the scripts in `infra/postgres/init/`, stop AppHost and recreate the volume once with
   `docker volume rm agenza-postgres-data`. `identity_app` and `services_app` keep separate schema

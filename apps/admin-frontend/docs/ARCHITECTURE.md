@@ -155,8 +155,9 @@ diálogos, banners e toasts. A política HTTP detalhada fica em [docs/API.md](..
 O [ConfirmDialog](../src/widgets/confirm-dialog/index.tsx) mostra os registros relacionados de
 qualquer falha, sem configuração pela feature, e todo bloqueio oferece uma nova tentativa explícita.
 O [leitor](../src/widgets/confirm-dialog/related-records.ts) é a única fonte desses registros:
-grupos conhecidos (`Clients`, `Services`) com `meta.id` e `meta.name`, até 10 por tipo; um grupo
-desconhecido com o código do problema aparece como “Outros vínculos”. Rótulos e rotas vêm da lista
+grupos conhecidos (`Clients`, `Services`) com `meta.id` e `meta.name`, sem limite próprio (o
+`Tag.InUse` do backend manda até 10 por tipo); um grupo desconhecido com o código do problema
+aparece como “Outros vínculos”. Rótulos e rotas vêm da lista
 de grupos conhecidos, nunca dos metadados, e nada é inferido do texto da mensagem. O caminho de
 edição de pessoa fica em `shared/routes/clientPaths.ts` para que Etiquetas o use sem depender de
 Pessoas.
