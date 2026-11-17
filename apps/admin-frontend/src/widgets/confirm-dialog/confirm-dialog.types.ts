@@ -17,7 +17,6 @@ interface ConfirmDialogError {
   blockedTitle?: string;
   retryLabel?: string;
   dismissLabel?: string;
-  canRetryBlocked?: (problem: ApiProblem) => boolean;
   blockedRetryLabel?: string;
 }
 
@@ -40,7 +39,8 @@ interface ConfirmDialogBlockedViewProps {
   blockedTitle: string;
   problem: ApiProblem;
   dismissLabel: string;
-  retryLabel?: string | undefined;
+  retryLabel: string;
+  retryVariant: ConfirmDialogConfirmVariant;
   isSubmitting: boolean;
   onRetry: () => void;
 }

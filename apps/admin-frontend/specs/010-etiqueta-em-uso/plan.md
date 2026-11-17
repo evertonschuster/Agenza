@@ -10,9 +10,10 @@
   `Tag.InUse` e nome válido. Nenhuma chave ou URL recebida se transforma em rota ou rótulo.
 - O caminho de edição de pessoa passa a ser compartilhado sem depender de `features/clients`,
   que já consome `features/tags`. Os links usam o primitivo existente de nova aba.
-- O diálogo mantém a opção de nova tentativa independente da apresentação dos registros; conserva
-  a resposta bloqueada visível durante o envio, limita altura e permite rolagem. Erros transitórios
-  conservam seu alerta e botão de nova tentativa. Base UI continua responsável pelo foco e fechamento.
+- O diálogo oferece nova tentativa em qualquer bloqueio, com rótulo personalizável e mesma variante
+  visual da confirmação. Conserva a resposta bloqueada visível durante o envio, limita altura e
+  permite rolagem. Erros transitórios conservam seu alerta e botão de nova tentativa. Base UI continua
+  responsável pelo foco e fechamento.
 - A repetição explícita usa a mesma mutação, substitui o erro e preserva sucesso, falhas temporárias,
   navegação e os eventos de atualização existentes.
 

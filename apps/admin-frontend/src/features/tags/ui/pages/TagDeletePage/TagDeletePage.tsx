@@ -10,7 +10,6 @@ export function TagDeletePage() {
       onOpenChange={onOpenChange}
       onConfirm={onConfirm}
       error={{
-        canRetryBlocked: (problem) => problem.code === 'Tag.InUse',
         blockedRetryLabel: 'Tentar excluir novamente',
       }}
       confirmation={{

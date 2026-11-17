@@ -18,6 +18,7 @@ function ConfirmDialogBlockedView({
   problem,
   dismissLabel,
   retryLabel,
+  retryVariant,
   isSubmitting,
   onRetry,
 }: ConfirmDialogBlockedViewProps) {
@@ -43,11 +44,9 @@ function ConfirmDialogBlockedView({
         <DialogClose disabled={isSubmitting} render={<Button variant="outline" />}>
           {dismissLabel}
         </DialogClose>
-        {retryLabel && (
-          <ActionButton variant="destructive" pending={isSubmitting} onClick={onRetry}>
-            {retryLabel}
-          </ActionButton>
-        )}
+        <ActionButton variant={retryVariant} pending={isSubmitting} onClick={onRetry}>
+          {retryLabel}
+        </ActionButton>
       </DialogFooter>
     </>
   );

@@ -26,3 +26,14 @@ T001 e T002 precedem T003; T004 verifica o conjunto. Os resultados e limitaçõe
 - [ ] T011 [US2] Executar o E2E e a verificação do contrato com stack Aspire descartável e isolado.
 
 T007 e T008 antecedem T009; T010 e T011 registram a validação em ambientes apropriados.
+
+## US3 — Tentar novamente após qualquer bloqueio
+
+- [x] T012 [US3] Tornar a nova tentativa padrão em `src/widgets/confirm-dialog`, mantendo texto
+  personalizável e a variante visual da confirmação.
+- [x] T013 [US3] Remover a condição por código em `src/features/tags/ui/pages/TagDeletePage`.
+- [x] T014 [US3] Testar tentativa explícita, texto, variantes, estados pendentes e outros erros nos
+  testes do diálogo e da página de etiquetas.
+- [x] T015 [US3] Atualizar `docs/ARCHITECTURE.md` e executar formato, lint, build e cobertura.
+
+T012 e T013 antecedem T014; T015 valida o conjunto. O E2E e contrato continuam em T011.

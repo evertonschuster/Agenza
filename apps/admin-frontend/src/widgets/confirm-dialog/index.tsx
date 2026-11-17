@@ -25,7 +25,6 @@ function ConfirmDialog<T>({
     blockedTitle = 'Não é possível excluir',
     retryLabel = 'Tentar novamente',
     dismissLabel = 'Entendi',
-    canRetryBlocked,
     blockedRetryLabel = 'Tentar novamente',
   } = {},
   success: {
@@ -77,7 +76,8 @@ function ConfirmDialog<T>({
             blockedTitle={blockedTitle}
             problem={problem}
             dismissLabel={dismissLabel}
-            retryLabel={canRetryBlocked?.(problem) ? blockedRetryLabel : undefined}
+            retryLabel={blockedRetryLabel.trim() || 'Tentar novamente'}
+            retryVariant={confirmVariant}
             isSubmitting={isSubmitting}
             onRetry={() => void handleConfirm()}
           />

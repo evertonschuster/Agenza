@@ -238,7 +238,7 @@ describe('ConfirmDialog', () => {
     );
   });
 
-  it('swaps to the blocked state with a single dismiss button and no retry, for a non-transient failure', async () => {
+  it('offers an explicit retry for a non-transient failure without related records', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
     const onConfirm = vi.fn().mockResolvedValue({
@@ -260,13 +260,16 @@ describe('ConfirmDialog', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Código: Promotion.InUse')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Desativar promoção?' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Entendi' })).toBeEnabled());
 
     await user.click(screen.getByRole('button', { name: 'Entendi' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 
-  it('automatically displays related records for a different blocked error without changing its actions', async () => {
+  it('automatically displays related records and a retry for a different blocked error', async () => {
     const user = userEvent.setup();
     const onConfirm = vi.fn().mockResolvedValue({
       ok: false,
@@ -299,11 +302,53 @@ describe('ConfirmDialog', () => {
     expect(
       within(screen.getByRole('region', { name: 'Outros vínculos' })).getByText('Consulta'),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
     expect(screen.getByRole('button', { name: 'Entendi' })).toBeEnabled();
     expect(screen.getByRole('heading', { name: 'Não é possível desativar' })).toHaveFocus();
     await user.tab();
     expect(link).toHaveFocus();
+  });
+
+  it('supports a custom retry label and preserves the confirmation variant', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: { status: 409, code: 'Promotion.InUse', title: 'Não é possível desativar.' },
+    });
+    render(
+      <ConfirmDialog
+        {...BASE_PROPS}
+        confirmation={{ ...BASE_PROPS.confirmation, confirmVariant: 'default' }}
+        error={{ blockedRetryLabel: 'Tentar desativar novamente' }}
+        onOpenChange={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    const retry = await screen.findByRole('button', { name: 'Tentar desativar novamente' });
+    expect(retry).toHaveAttribute('data-variant', 'default');
+    await user.click(retry);
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps an accessible retry button if the custom label is blank', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: { status: 409, code: 'Promotion.InUse', title: 'Bloqueada.' },
+    });
+    render(
+      <ConfirmDialog
+        {...BASE_PROPS}
+        error={{ blockedRetryLabel: '   ' }}
+        onOpenChange={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
   });
 
   it('shows related records on transient errors and retains the existing retry action', async () => {

@@ -406,20 +406,24 @@ describe('TagDeletePage', () => {
     expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
   });
 
-  it('keeps other permanent errors without the tag-specific content or retry', async () => {
+  it('offers an explicit retry for other permanent errors without inventing related records', async () => {
     const user = userEvent.setup();
-    mockDelete.mockResolvedValue({
-      ok: false,
-      error: { status: 409, code: 'Tag.SaveFailed', title: 'Não foi possível excluir.' },
-    });
+    mockDelete
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { status: 409, code: 'Tag.SaveFailed', title: 'Não foi possível excluir.' },
+      })
+      .mockResolvedValueOnce({ ok: true, data: undefined });
     renderAt(['/tags/1/delete']);
     await screen.findByText(PROMOCAO_CONFIRMATION);
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
     expect(await screen.findByText('Não foi possível excluir.')).toBeInTheDocument();
-    expect(
-      screen.queryByRole('button', { name: 'Tentar excluir novamente' }),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Pessoas' })).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Entendi' })).toBeInTheDocument();
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Tentar excluir novamente' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mockDelete).toHaveBeenCalledTimes(2);
   });
 
   it('goes back to the list after deleting, so the browser Back button does not reopen the confirmation', async () => {
