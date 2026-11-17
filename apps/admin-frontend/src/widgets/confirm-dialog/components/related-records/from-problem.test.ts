@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
-import { getRelatedRecordsContent } from './from-problem';
+import { getRelatedRecordGroups } from './from-problem';
 
-describe('getRelatedRecordsContent', () => {
+describe('getRelatedRecordGroups', () => {
   it('uses the problem code for unknown groups and filters unrelated or incomplete records', () => {
     const problem = {
       code: 'Professional.InUse',
@@ -18,30 +18,34 @@ describe('getRelatedRecordsContent', () => {
         ],
       },
     } as ApiProblem;
-    const result = getRelatedRecordsContent(problem);
-    expect(result.groups[0]?.items).toEqual([{ id: 'a1', name: 'Ana' }]);
-    expect(result.groups[2]?.items).toEqual([{ name: 'Outro' }]);
+    const groups = getRelatedRecordGroups(problem);
+    expect(groups.find((group) => group.title === 'Pessoas')?.items).toEqual([
+      { id: 'a1', name: 'Ana' },
+    ]);
+    expect(groups.find((group) => group.title === 'Outros vínculos')?.items).toEqual([
+      { name: 'Outro' },
+    ]);
   });
 
   it('handles absent errors, malformed records and unknown groups with no problem code', () => {
-    expect(getRelatedRecordsContent({}).groups[0]?.items).toEqual([]);
-    const result = getRelatedRecordsContent({
+    expect(getRelatedRecordGroups({}).every((group) => group.items.length === 0)).toBe(true);
+    const groups = getRelatedRecordGroups({
       errors: {
         Clients: [null, {}, { meta: { id: '1' } }, { meta: { name: '  ' } }],
         FutureModule: [{ code: '', meta: { name: 'Não exibir' } }],
       },
     } as ApiProblem);
-    expect(result.groups.every((group) => group.items.length === 0)).toBe(true);
+    expect(groups.every((group) => group.items.length === 0)).toBe(true);
   });
 
   it('ignores invalid entries in known and unknown groups', () => {
     const entries = Array.from({ length: 10 }, () => ({ code: 'Tag.InUse', meta: {} }));
-    const result = getRelatedRecordsContent({
+    const groups = getRelatedRecordGroups({
       code: 'Tag.InUse',
       errors: { Clients: entries, Procedures: entries },
     });
 
-    expect(result.groups.every((group) => group.items.length === 0)).toBe(true);
+    expect(groups.every((group) => group.items.length === 0)).toBe(true);
   });
 
   it('keeps new types visible as other links until they have a known presentation', () => {
@@ -49,13 +53,14 @@ describe('getRelatedRecordsContent', () => {
       code: 'Category.InUse',
       meta: { id: String(index), name: `Procedimento ${index}`, url: 'https://example.com' },
     }));
-    const result = getRelatedRecordsContent({
+    const groups = getRelatedRecordGroups({
       code: 'Category.InUse',
       errors: { Procedures: entries },
     });
 
-    expect(result.groups[2]?.items).toHaveLength(10);
-    expect(result.groups[2]?.getEditPath).toBeUndefined();
+    const other = groups.find((group) => group.title === 'Outros vínculos');
+    expect(other?.items).toHaveLength(10);
+    expect(other?.basePath).toBeUndefined();
   });
 
   it.each([9, 10, 11])('uses all received service records when there are %i', (count) => {
@@ -63,16 +68,16 @@ describe('getRelatedRecordsContent', () => {
       code: 'Tag.InUse',
       meta: { id: String(index), name: `Serviço ${index}` },
     }));
-    const result = getRelatedRecordsContent({
+    const groups = getRelatedRecordGroups({
       code: 'Tag.InUse',
       errors: { Services: entries },
     });
 
-    expect(result.groups[1]?.items).toHaveLength(count);
+    expect(groups.find((group) => group.title === 'Serviços')?.items).toHaveLength(count);
   });
 
   it('reads the first matching field without repeating differently cased duplicates', () => {
-    const result = getRelatedRecordsContent({
+    const groups = getRelatedRecordGroups({
       code: 'Tag.InUse',
       errors: {
         Clients: [{ meta: { name: 'Primeiro' } }],
@@ -80,7 +85,9 @@ describe('getRelatedRecordsContent', () => {
       },
     });
 
-    expect(result.groups[0]?.items).toEqual([{ name: 'Primeiro' }]);
-    expect(result.groups[2]?.items).toEqual([]);
+    expect(groups.find((group) => group.title === 'Pessoas')?.items).toEqual([
+      { name: 'Primeiro' },
+    ]);
+    expect(groups.find((group) => group.title === 'Outros vínculos')?.items).toEqual([]);
   });
 });

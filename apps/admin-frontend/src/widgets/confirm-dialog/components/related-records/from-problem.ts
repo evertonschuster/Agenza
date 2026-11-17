@@ -9,7 +9,8 @@ function readEntries(raw: unknown, code: string, requireCode = false) {
   for (const entry of raw as unknown[]) {
     if (!entry || typeof entry !== 'object' || !('meta' in entry)) continue;
     const entryCode = 'code' in entry ? entry.code : undefined;
-    if (requireCode ? !code || entryCode !== code : entryCode && entryCode !== code) continue;
+    if (requireCode && (!code || entryCode !== code)) continue;
+    if (!requireCode && entryCode && entryCode !== code) continue;
     const meta = entry.meta;
     if (!meta || typeof meta !== 'object' || !('name' in meta)) continue;
     const name = typeof meta.name === 'string' ? meta.name.trim() : '';
@@ -20,55 +21,40 @@ function readEntries(raw: unknown, code: string, requireCode = false) {
   return items;
 }
 
-function editPathFor(basePath: string) {
-  return (record: RelatedRecord): string | undefined => {
-    if (!record.id) return undefined;
-    try {
-      return `${basePath}/${encodeURIComponent(record.id)}/editar`;
-    } catch {
-      return undefined;
-    }
-  };
-}
-
 type KnownGroup = Omit<RelatedRecordGroup, 'items' | 'key'> & {
-  field: string;
+  field: Lowercase<string>;
 };
 
 const KNOWN_GROUPS: readonly KnownGroup[] = [
   {
     field: 'clients',
     title: 'Pessoas',
-    getEditPath: editPathFor(CLIENTS_PATH),
+    basePath: CLIENTS_PATH,
   },
   {
     field: 'services',
     title: 'Serviços',
-    getEditPath: editPathFor('/servicos'),
+    basePath: '/servicos',
     description: 'O gerenciamento de serviços ainda não está disponível.',
   },
 ];
 
-export function getRelatedRecordsContent(problem: ApiProblem): {
-  groups: RelatedRecordGroup[];
-} {
+export function getRelatedRecordGroups(problem: ApiProblem): RelatedRecordGroup[] {
   const errors = problem.errors;
   const fields =
     errors && typeof errors === 'object' && !Array.isArray(errors) ? Object.entries(errors) : [];
   const code = problem.code ?? '';
   const groups: RelatedRecordGroup[] = KNOWN_GROUPS.map(({ field, ...group }) => {
-    const raw = fields.find(([name]) => name.toLowerCase() === field.toLowerCase())?.[1];
-    return { ...group, key: `known:${field.toLowerCase()}`, items: readEntries(raw, code) };
+    const raw = fields.find(([name]) => name.toLowerCase() === field)?.[1];
+    return { ...group, key: `known:${field}`, items: readEntries(raw, code) };
   });
   const otherItems = fields
-    .filter(
-      ([field]) => !KNOWN_GROUPS.some((known) => known.field.toLowerCase() === field.toLowerCase()),
-    )
+    .filter(([field]) => !KNOWN_GROUPS.some((known) => known.field === field.toLowerCase()))
     .flatMap(([, entries]) => readEntries(entries, code, true));
   groups.push({
     key: 'other',
     title: 'Outros vínculos',
     items: otherItems,
   });
-  return { groups };
+  return groups;
 }

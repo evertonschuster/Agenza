@@ -1,8 +1,17 @@
 import { useId } from 'react';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
-import { getRelatedRecordsContent } from './from-problem';
+import { getRelatedRecordGroups } from './from-problem';
 import type { RelatedRecordGroup } from './related-records.types';
+
+function getEditPath(basePath: string | undefined, id: string | undefined) {
+  if (!basePath || !id) return undefined;
+  try {
+    return `${basePath}/${encodeURIComponent(id)}/editar`;
+  } catch {
+    return undefined;
+  }
+}
 
 function RelatedRecordSection({ group }: { group: RelatedRecordGroup }) {
   const headingId = useId();
@@ -16,7 +25,7 @@ function RelatedRecordSection({ group }: { group: RelatedRecordGroup }) {
       </h3>
       <ul className="mt-2 list-disc space-y-1 pl-5">
         {group.items.map((record, index) => {
-          const path = group.getEditPath?.(record);
+          const path = getEditPath(group.basePath, record.id);
           return (
             <li key={`${record.id ?? record.name}-${index}`} className="break-words">
               {path ? (
@@ -37,7 +46,7 @@ function RelatedRecordSection({ group }: { group: RelatedRecordGroup }) {
 }
 
 export function RelatedRecords({ problem }: { problem: ApiProblem }) {
-  const { groups } = getRelatedRecordsContent(problem);
+  const groups = getRelatedRecordGroups(problem);
   if (groups.every((group) => group.items.length === 0)) return null;
   return (
     <div className="space-y-4 text-sm">
