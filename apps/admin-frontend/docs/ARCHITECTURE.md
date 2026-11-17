@@ -149,7 +149,7 @@ serviços com identificador oferecem um link para a futura rota de edição em o
 que o gerenciamento ainda não está disponível. A rota de edição de serviços ainda não existe. Os dados pertencem à tentativa
 que os retornou; voltar da outra aba não os atualiza. O caminho de edição de pessoa fica em
 `shared/routes/clientPaths.ts` para evitar uma dependência circular entre Pessoas e Etiquetas.
-Grupos desconhecidos com erro `Tag.InUse` e nome válido aparecem como “Outros vínculos”, sem usar
+Grupos desconhecidos com código igual ao erro e nome válido aparecem como “Outros vínculos”, sem usar
 as chaves como rótulos nem construir links a partir dos metadados.
 O componente interno [ConfirmDialogRelatedRecords](../src/widgets/confirm-dialog/components/confirm-dialog-related-records.tsx)
 recebe o problema e apresenta grupos usando seu
@@ -160,6 +160,15 @@ confirmação apresenta registros válidos em qualquer erro, sem configuração 
 oferece uma nova tentativa explícita, com texto personalizável. A lista de grupos conhecidos concentra título e
 eventual rota; pessoas e serviços usam o mesmo construtor de links no diálogo. Tipos futuros
 aparecem como “Outros vínculos” até receberem uma definição própria.
+Por tolerância a respostas incompletas, entradas dos grupos conhecidos sem código também podem ser
+exibidas; um código presente e incompatível é descartado. O frontend não interpreta texto para
+classificar vínculos, e nenhuma URL fornecida nos metadados é utilizada.
+
+Uma rejeição inesperada durante a confirmação apresenta resultado incerto, permite sair e orienta
+verificar a operação antes de tentar novamente. Quando a tela já foi desmontada, a orientação aparece
+como notificação global. Efeitos locais de sucesso não são chamados após a desmontagem; o diálogo
+de situação da pessoa é descartado ao trocar o ID da rota. Novos bloqueios são anunciados, e o foco
+passa ao alerta quando uma tentativa retorna falha transitória.
 
 ## 3. Auth & tenancy
 

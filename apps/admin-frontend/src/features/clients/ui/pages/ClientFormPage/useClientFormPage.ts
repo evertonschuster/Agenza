@@ -26,7 +26,10 @@ import {
 export function useClientFormPage(): UseClientFormPageResult {
   const { id } = useParams();
   const backToList = useCloseRoute(CLIENTS_PATH);
-  const [isConfirming, setIsConfirming] = useState(false);
+  const [confirmation, setConfirmation] = useState({ clientId: id, isOpen: false });
+  if (confirmation.clientId !== id) {
+    setConfirmation({ clientId: id, isOpen: false });
+  }
   const isMountedRef = useRef(true);
   const isEdit = id !== undefined;
 
@@ -94,9 +97,9 @@ export function useClientFormPage(): UseClientFormPageResult {
     return {
       fullName: methods.formState.defaultValues?.fullName ?? '',
       status: current,
-      isConfirming,
-      onOpen: () => setIsConfirming(true),
-      onOpenChange: setIsConfirming,
+      isConfirming: confirmation.clientId === clientId && confirmation.isOpen,
+      onOpen: () => setConfirmation({ clientId, isOpen: true }),
+      onOpenChange: (isOpen) => setConfirmation({ clientId, isOpen }),
       onConfirm: () =>
         current === 'active'
           ? clientsRepository.deactivate(clientId)

@@ -1,12 +1,11 @@
-import { useEffect, useRef, useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { isTransientProblem, type ApiProblem } from '@/shared/api/servicesFacade';
-import { toast } from '@/shared/ui/toast';
 import type { ConfirmDialogProps } from './confirm-dialog.types';
+import { useConfirmDialog } from './use-confirm-dialog';
 
 import { ConfirmDialogBlockedView } from './components/confirm-dialog-blocked-view';
 import { ConfirmDialogConfirmView } from './components/confirm-dialog-confirm-view';
+import { ConfirmDialogUncertainView } from './components/confirm-dialog-uncertain-view';
 
 function ConfirmDialog<T>({
   loading = false,
@@ -32,33 +31,8 @@ function ConfirmDialog<T>({
     description: successDescription = 'A operação foi concluída.',
   } = {},
 }: ConfirmDialogProps<T>) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [problem, setProblem] = useState<ApiProblem>();
-  const isMountedRef = useRef(true);
-  const isBlocked = problem !== undefined && !isTransientProblem(problem);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  async function handleConfirm() {
-    if (!isBlocked) setProblem(undefined);
-    setIsSubmitting(true);
-    const result = await onConfirm();
-    setIsSubmitting(false);
-
-    if (result.ok) {
-      toast.add({ title: successTitle, description: successDescription, type: 'success' });
-      onSuccess?.(result.data);
-      if (isMountedRef.current) onOpenChange(false);
-      return;
-    }
-
-    setProblem(result.error);
-  }
+  const { isSubmitting, problem, isBlocked, isUncertain, blockedRetries, handleConfirm } =
+    useConfirmDialog({ onConfirm, onOpenChange, onSuccess, successTitle, successDescription });
 
   return (
     <Dialog
@@ -71,7 +45,9 @@ function ConfirmDialog<T>({
         showCloseButton={!isSubmitting}
         className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
       >
-        {isBlocked ? (
+        {isUncertain ? (
+          <ConfirmDialogUncertainView dismissLabel={dismissLabel} />
+        ) : isBlocked && problem ? (
           <ConfirmDialogBlockedView
             blockedTitle={blockedTitle}
             problem={problem}
@@ -79,6 +55,7 @@ function ConfirmDialog<T>({
             retryLabel={blockedRetryLabel.trim() || 'Tentar novamente'}
             retryVariant={confirmVariant}
             isSubmitting={isSubmitting}
+            completedRetries={blockedRetries}
             onRetry={() => void handleConfirm()}
           />
         ) : (

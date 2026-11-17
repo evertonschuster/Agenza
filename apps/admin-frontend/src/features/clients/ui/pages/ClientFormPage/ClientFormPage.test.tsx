@@ -1235,6 +1235,36 @@ describe('ClientFormPage, editing a person', () => {
   });
 
   describe('changing the situation', () => {
+    it('does not apply an earlier person’s status after navigating to another person', async () => {
+      const user = userEvent.setup();
+      const nextPerson = { ...EXISTING, id: 'c2', fullName: 'Bia Souza' };
+      const pending = deferred<{ ok: true; data: Client }>();
+      mockGet.mockImplementation((id: string) =>
+        Promise.resolve({ ok: true, data: id === 'c1' ? EXISTING : nextPerson }),
+      );
+      mockDeactivate.mockReturnValue(pending.promise);
+      const router = createMemoryRouter(clientRoutes(), { initialEntries: ['/pessoas/c1/editar'] });
+      const view = render(<RouterProvider router={router} />);
+      await screen.findByDisplayValue('Lia Souza');
+      await user.click(screen.getByRole('button', { name: 'Desativar pessoa' }));
+      await user.click(
+        within(await screen.findByRole('dialog')).getByRole('button', { name: 'Desativar' }),
+      );
+
+      await act(async () => router.navigate('/pessoas/c2/editar'));
+      await waitFor(() =>
+        expect(view.container.querySelector('input[name="fullName"]')).toHaveValue('Bia Souza'),
+      );
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+      await act(async () => {
+        pending.resolve({ ok: true, data: { ...EXISTING, status: 'inactive' } });
+        await pending.promise;
+      });
+
+      expect(screen.getByText('Ativa')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'Desativar pessoa' })).toBeInTheDocument();
+    });
+
     it('asks before deactivating, then shows the person as inactive without losing what was typed', async () => {
       const user = userEvent.setup();
       const toastAdd = vi.spyOn(toast, 'add');

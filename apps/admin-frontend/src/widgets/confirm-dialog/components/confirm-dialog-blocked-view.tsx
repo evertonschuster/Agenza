@@ -20,6 +20,7 @@ function ConfirmDialogBlockedView({
   retryLabel,
   retryVariant,
   isSubmitting,
+  completedRetries,
   onRetry,
 }: ConfirmDialogBlockedViewProps) {
   const titleRef = useRef<HTMLHeadingElement>(null);
@@ -40,6 +41,11 @@ function ConfirmDialogBlockedView({
         <ProblemCode code={problem.code} />
       </DialogHeader>
       <ConfirmDialogRelatedRecords problem={problem} />
+      <div role="status" className="sr-only">
+        {!isSubmitting && completedRetries > 0
+          ? `Tentativa ${completedRetries} concluída. Confira as informações atualizadas.`
+          : ''}
+      </div>
       <DialogFooter>
         <DialogClose disabled={isSubmitting} render={<Button variant="outline" />}>
           {dismissLabel}

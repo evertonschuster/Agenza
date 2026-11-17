@@ -42,6 +42,7 @@ interface ConfirmDialogBlockedViewProps {
   retryLabel: string;
   retryVariant: ConfirmDialogConfirmVariant;
   isSubmitting: boolean;
+  completedRetries: number;
   onRetry: () => void;
 }
 
