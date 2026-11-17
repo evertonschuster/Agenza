@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
-import { getRelatedRecordGroups } from './from-problem';
+import { getRelatedRecordGroups } from './related-records';
 
 describe('getRelatedRecordGroups', () => {
   it('uses the problem code for unknown groups and filters unrelated or incomplete records', () => {

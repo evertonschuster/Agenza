@@ -10,7 +10,7 @@ import {
 import { Button } from '@/shared/ui/button';
 import { ActionButton } from '@/shared/ui/action-button';
 import { ProblemCode } from '@/shared/ui/problem-code';
-import { RelatedRecords } from './related-records';
+import { ConfirmDialogRelatedRecords } from './confirm-dialog-related-records';
 import type { ConfirmDialogBlockedViewProps } from '../confirm-dialog.types';
 
 function ConfirmDialogBlockedView({
@@ -39,7 +39,7 @@ function ConfirmDialogBlockedView({
         <DialogDescription aria-live="polite">{problem.title}</DialogDescription>
         <ProblemCode code={problem.code} />
       </DialogHeader>
-      <RelatedRecords problem={problem} />
+      <ConfirmDialogRelatedRecords problem={problem} />
       <DialogFooter>
         <DialogClose disabled={isSubmitting} render={<Button variant="outline" />}>
           {dismissLabel}

@@ -1,6 +1,17 @@
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { CLIENTS_PATH } from '@/shared/routes/clientPaths';
-import type { RelatedRecord, RelatedRecordGroup } from './related-records.types';
+interface RelatedRecord {
+  id?: string;
+  name: string;
+}
+
+export interface RelatedRecordGroup {
+  key: string;
+  title: string;
+  items: readonly RelatedRecord[];
+  description?: string;
+  basePath?: string;
+}
 
 function readEntries(raw: unknown, code: string, requireCode = false) {
   if (!Array.isArray(raw)) return [];

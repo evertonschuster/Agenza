@@ -1,8 +1,7 @@
 import { useId } from 'react';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { NewTabLink } from '@/shared/ui/new-tab-link';
-import { getRelatedRecordGroups } from './from-problem';
-import type { RelatedRecordGroup } from './related-records.types';
+import { getRelatedRecordGroups, type RelatedRecordGroup } from '../related-records';
 
 function getEditPath(basePath: string | undefined, id: string | undefined) {
   if (!basePath || !id) return undefined;
@@ -45,7 +44,7 @@ function RelatedRecordSection({ group }: { group: RelatedRecordGroup }) {
   );
 }
 
-export function RelatedRecords({ problem }: { problem: ApiProblem }) {
+function ConfirmDialogRelatedRecords({ problem }: { problem: ApiProblem }) {
   const groups = getRelatedRecordGroups(problem);
   if (groups.every((group) => group.items.length === 0)) return null;
   return (
@@ -56,3 +55,5 @@ export function RelatedRecords({ problem }: { problem: ApiProblem }) {
     </div>
   );
 }
+
+export { ConfirmDialogRelatedRecords };

@@ -18,7 +18,7 @@ T001 e T002 precedem T003; T004 verifica o conjunto. Os resultados e limitaçõe
 
 - [x] T007 [US2] Integrar os registros ao diálogo em `src/widgets/confirm-dialog` e remover a
   configuração de conteúdo da página em `src/features/tags/ui/pages/TagDeletePage`.
-- [x] T008 [US2] Evitar conteúdo vazio em `src/widgets/confirm-dialog/components/related-records` e preservar filtragem,
+- [x] T008 [US2] Evitar conteúdo vazio em `src/widgets/confirm-dialog` e preservar filtragem,
   rotas e tratamento de respostas incompletas.
 - [x] T009 [US2] Testar erros de outros códigos, falhas transitórias, dados incompletos e fluxos
   existentes em `src/widgets/confirm-dialog` e `src/features/tags/ui/pages/TagDeletePage`.
@@ -41,7 +41,7 @@ T012 e T013 antecedem T014; T015 valida o conjunto. O E2E e contrato continuam e
 ## US4 — Manter apenas os totais informados pelo backend
 
 - [x] T016 [US4] Remover a geração e renderização de avisos em
-  `src/widgets/confirm-dialog/components/related-records`.
+  `src/widgets/confirm-dialog`.
 - [x] T017 [US4] Verificar a mensagem e os nomes recebidos sem aviso adicional nos testes do leitor,
   do componente e de `src/features/tags/ui/pages/TagDeletePage`.
 - [x] T018 [US4] Atualizar `docs/ARCHITECTURE.md` e executar formato, lint, build e cobertura.
@@ -51,7 +51,7 @@ T016 antecede T017; T018 valida o conjunto. O E2E e contrato continuam em T011.
 ## US5 — Preparar a navegação para serviços
 
 - [x] T019 [US5] Manter a construção comum de links de edição e configurá-la para pessoas
-  e serviços em `src/widgets/confirm-dialog/components/related-records`.
+  e serviços em `src/widgets/confirm-dialog`.
 - [x] T020 [US5] Reverter a rota e a página provisórias de serviço em `src/app`.
 - [x] T021 [US5] Verificar links seguros, IDs inválidos e fluxos existentes.
 - [x] T022 [US5] Atualizar `docs/ARCHITECTURE.md` e executar formato, lint, build e cobertura.

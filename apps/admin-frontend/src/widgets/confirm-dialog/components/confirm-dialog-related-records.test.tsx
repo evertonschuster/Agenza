@@ -3,11 +3,11 @@ import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it } from 'vitest';
 import type { ApiProblem } from '@/shared/api/servicesFacade';
-import { RelatedRecords } from './index';
+import { ConfirmDialogRelatedRecords } from './confirm-dialog-related-records';
 
-describe('RelatedRecords', () => {
+describe('ConfirmDialogRelatedRecords', () => {
   it('renders nothing when no valid records are available', () => {
-    const { container } = render(<RelatedRecords problem={{}} />);
+    const { container } = render(<ConfirmDialogRelatedRecords problem={{}} />);
     expect(container).toBeEmptyDOMElement();
   });
 
@@ -26,7 +26,7 @@ describe('RelatedRecords', () => {
     } as ApiProblem;
     render(
       <MemoryRouter>
-        <RelatedRecords problem={problem} />
+        <ConfirmDialogRelatedRecords problem={problem} />
       </MemoryRouter>,
     );
 
@@ -63,7 +63,7 @@ describe('RelatedRecords', () => {
     } as ApiProblem;
     render(
       <MemoryRouter>
-        <RelatedRecords problem={problem} />
+        <ConfirmDialogRelatedRecords problem={problem} />
       </MemoryRouter>,
     );
 
@@ -76,8 +76,8 @@ describe('RelatedRecords', () => {
     const problem = { errors: { Clients: [{ meta: { name: 'Ana' } }] } } as ApiProblem;
     render(
       <MemoryRouter>
-        <RelatedRecords problem={problem} />
-        <RelatedRecords problem={problem} />
+        <ConfirmDialogRelatedRecords problem={problem} />
+        <ConfirmDialogRelatedRecords problem={problem} />
       </MemoryRouter>,
     );
     const regions = screen.getAllByRole('region', { name: 'Pessoas' });
