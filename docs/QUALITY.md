@@ -65,7 +65,8 @@ code file referenced by a guide. It installs no packages and starts no applicati
   toward a service's gate because no service test project references it) —
   counting it twice would let one hide behind the other's number
   (docs/decisions/0003). `ServicesService.PersistenceTests` covers EF tenant
-  assignment and filtering in memory (docs/decisions/0007). There is no
+  assignment, filtering and tag-deletion relationship coverage in memory
+  (docs/decisions/0007, docs/decisions/0014). There is no
   Testcontainers/`WebApplicationFactory` project. The frontend
   API-contract workflow starts the AppHost resource graph, applies the
   migration chain to Aspire's PostgreSQL resource, and runs the real OIDC

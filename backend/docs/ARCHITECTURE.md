@@ -16,7 +16,7 @@ exists, and what was tried and rejected, lives in the [decisions](../../docs/dec
 | §5       | [0004 multi-tenancy](../../docs/decisions/0004-multi-tenancy.md), [0009 bootstrap and migrations](../../docs/decisions/0009-database-bootstrap-and-migrations.md) |
 | §7       | [0006 dates and time zones](../../docs/decisions/0006-dates-and-time-zones.md)              |
 | §8       | [0011 logging](../../docs/decisions/0011-logging.md)                                         |
-| §9       | [0007 testing and verification](../../docs/decisions/0007-testing-and-verification.md)      |
+| §9       | [0007 testing and verification](../../docs/decisions/0007-testing-and-verification.md), [0014 tag deletion relationship coverage](../../docs/decisions/0014-tag-deletion-relationship-coverage.md) |
 
 Three rules of thumb behind everything below:
 
@@ -70,7 +70,7 @@ as the template, not a copied snippet ([`docs/MONOREPO.md`](../../docs/MONOREPO.
 <Service>.Infrastructure    EF Core, repositories, adapters              → Application, Admin.SharedKernel.EntityFrameworkCore, Admin.Identity.Client
 <Service>.Api               controllers, Program.cs, Setup/              → Application, Infrastructure, Admin.SharedKernel.AspNetCore, ServiceDefaults
 <Service>.Tests             unit tests                                   → Domain, Application
-<Service>.PersistenceTests  EF InMemory, only where tenant EF behaviour needs proof → Infrastructure
+<Service>.PersistenceTests  EF InMemory, only where EF model behaviour needs proof → Infrastructure
 ```
 
 The current `.csproj` references constrain which dependencies each layer can use. Compilation
@@ -474,7 +474,7 @@ strip control characters first (CWE-117), as `GenericExceptionHandler` and the r
 | Tier           | Project                                   | Scope and limits                                                                                                                                 | Tools                                                       |
 | -------------- | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------- |
 | Unit           | `<Service>.Tests`                         | Rule/handler/validator/binding behavior through the cases actually asserted; mocks do not prove the database or JWT boundary                     | xUnit, AwesomeAssertions, NSubstitute, fixed `TimeProvider` |
-| Persistence    | `<Service>.PersistenceTests`              | EF tenant assignment, query filters and conversions through existing cases; relational metadata assertions do not execute PostgreSQL constraints | EF InMemory                                                 |
+| Persistence    | `<Service>.PersistenceTests`              | EF tenant assignment, query filters, conversions and tag-deletion relationship coverage; relational metadata assertions do not execute PostgreSQL constraints | EF InMemory                                                 |
 | Contract smoke | the API-contract job in `frontend-ci.yml` | Fresh migrations, selected OIDC and tenant-isolation requests, both `ClientTags` tenant foreign keys, and generated type drift                 | Aspire AppHost                                              |
 
 Line coverage of Domain + Application has a gate in `Directory.Build.props`; local `dotnet test`

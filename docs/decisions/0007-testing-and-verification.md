@@ -13,7 +13,8 @@ Status: aceita (2026-11-15).
   frontend tem limiares no `vitest.config.ts`. Cobertura não prova que toda regra foi testada.
 - **O backend não tem camada de integração in-process.** Nada de Testcontainers nem
   `WebApplicationFactory`. `PersistenceTests` com EF InMemory existem só para provar atribuição de
-  tenant, filtros e conversões.
+  tenant, filtros, conversões e a cobertura de vínculos na exclusão de etiquetas
+  ([ADR 0014](0014-tag-deletion-relationship-coverage.md)).
 - **A prova real roda no stack Aspire**, no job de contrato do CI:
   - migrations aplicadas do zero e o fluxo OIDC;
   - isolamento HTTP entre dois donos reais (GET, PUT e DELETE de outro tenant);
