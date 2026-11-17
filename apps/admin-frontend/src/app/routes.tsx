@@ -1,5 +1,7 @@
 import { createBrowserRouter, Navigate } from 'react-router';
 import { LoginPage, AuthCallbackPage } from '@/features/auth';
+import { EDIT_RECORD_ROUTE } from '@/shared/routes/editRecordPath';
+import { SERVICES_PATH } from '@/shared/routes/servicePaths';
 import type { PageCrumbHandle } from '@/widgets/page-header';
 import { AppRouteError } from './AppRouteError';
 import { RouteHydrateFallback } from './RouteHydrateFallback';
@@ -54,7 +56,7 @@ export const router = createBrowserRouter([
                   import('@/features/clients').then((m) => ({ Component: m.ClientFormPage })),
               },
               {
-                path: ':id/editar',
+                path: EDIT_RECORD_ROUTE,
                 handle: crumb('Editar pessoa'),
                 lazy: () =>
                   import('@/features/clients').then((m) => ({ Component: m.ClientFormPage })),
@@ -74,9 +76,20 @@ export const router = createBrowserRouter([
               import('./pages/Conversations').then((m) => ({ Component: m.Conversations })),
           },
           {
-            path: 'servicos',
+            path: SERVICES_PATH,
             handle: crumb('Serviços'),
-            lazy: () => import('./pages/Services').then((m) => ({ Component: m.Services })),
+            children: [
+              {
+                index: true,
+                lazy: () => import('./pages/Services').then((m) => ({ Component: m.Services })),
+              },
+              {
+                path: EDIT_RECORD_ROUTE,
+                handle: crumb('Editar serviço'),
+                lazy: () =>
+                  import('./pages/ServiceEdit').then((m) => ({ Component: m.ServiceEdit })),
+              },
+            ],
           },
           {
             path: 'tags',

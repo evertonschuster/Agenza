@@ -178,7 +178,7 @@ describe('TagDeletePage', () => {
     expect(screen.getByText('Promoção')).toBeInTheDocument();
   });
 
-  it('shows people as links to their edit pages in a new tab and services without links', async () => {
+  it('opens people and services edit paths in a new tab', async () => {
     const user = userEvent.setup();
     mockDelete.mockResolvedValue({
       ok: false,
@@ -199,7 +199,10 @@ describe('TagDeletePage', () => {
     expect(link).toHaveAttribute('href', '/pessoas/abc%2F123/editar');
     expect(link).toHaveAttribute('target', '_blank');
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
-    expect(screen.getByText('Massagem').tagName).toBe('LI');
+    const serviceLink = screen.getByRole('link', { name: /Massagem.*outra aba/ });
+    expect(serviceLink).toHaveAttribute('href', '/servicos/service-1/editar');
+    expect(serviceLink).toHaveAttribute('target', '_blank');
+    expect(serviceLink).toHaveAttribute('rel', 'noopener noreferrer');
     expect(
       screen.getByText('O gerenciamento de serviços ainda não está disponível.'),
     ).toBeInTheDocument();

@@ -1,5 +1,7 @@
 import type { ApiProblem } from '@/shared/api/servicesFacade';
-import { editClientPath } from '@/shared/routes/clientPaths';
+import { CLIENTS_PATH } from '@/shared/routes/clientPaths';
+import { editRecordPath } from '@/shared/routes/editRecordPath';
+import { SERVICES_PATH } from '@/shared/routes/servicePaths';
 import type { RelatedRecord, RelatedRecordGroup } from './related-records.types';
 
 function readEntries(raw: unknown, code: string, requireCode = false) {
@@ -20,13 +22,15 @@ function readEntries(raw: unknown, code: string, requireCode = false) {
   return items;
 }
 
-function personPath(person: RelatedRecord): string | undefined {
-  if (!person.id) return undefined;
-  try {
-    return editClientPath(encodeURIComponent(person.id));
-  } catch {
-    return undefined;
-  }
+function editPathFor(basePath: string) {
+  return (record: RelatedRecord): string | undefined => {
+    if (!record.id) return undefined;
+    try {
+      return editRecordPath(basePath, encodeURIComponent(record.id));
+    } catch {
+      return undefined;
+    }
+  };
 }
 
 type KnownGroup = Omit<RelatedRecordGroup, 'items' | 'key'> & {
@@ -37,11 +41,12 @@ const KNOWN_GROUPS: readonly KnownGroup[] = [
   {
     field: 'clients',
     title: 'Pessoas',
-    getEditPath: personPath,
+    getEditPath: editPathFor(CLIENTS_PATH),
   },
   {
     field: 'services',
     title: 'Serviços',
+    getEditPath: editPathFor(SERVICES_PATH),
     description: 'O gerenciamento de serviços ainda não está disponível.',
   },
 ];

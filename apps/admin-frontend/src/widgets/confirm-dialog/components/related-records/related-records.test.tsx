@@ -20,7 +20,7 @@ describe('RelatedRecords', () => {
           { code: 'Professional.InUse', meta: { id: 'abc/123', name: 'Ana Lima' } },
           { meta: { name: 'Sem identificador' } },
         ],
-        Services: [{ code: 'Professional.InUse', meta: { id: '456', name: 'Massagem' } }],
+        Services: [{ code: 'Professional.InUse', meta: { id: '456/789', name: 'Massagem' } }],
         Appointments: [{ code: 'Professional.InUse', meta: { name: 'Atendimento' } }],
       },
     } as ApiProblem;
@@ -37,16 +37,39 @@ describe('RelatedRecords', () => {
     expect(link).toHaveAttribute('rel', 'noopener noreferrer');
     expect(within(people).getByText('Sem identificador').tagName).toBe('LI');
     const services = screen.getByRole('region', { name: 'Serviços' });
-    expect(within(services).getByText('Massagem').tagName).toBe('LI');
+    const serviceLink = within(services).getByRole('link', { name: /Massagem.*outra aba/ });
+    expect(serviceLink).toHaveAttribute('href', '/servicos/456%2F789/editar');
+    expect(serviceLink).toHaveAttribute('target', '_blank');
+    expect(serviceLink).toHaveAttribute('rel', 'noopener noreferrer');
     expect(
       within(services).getByText('O gerenciamento de serviços ainda não está disponível.'),
     ).toBeInTheDocument();
-    expect(within(services).queryByRole('link')).not.toBeInTheDocument();
     expect(
       within(screen.getByRole('region', { name: 'Outros vínculos' })).getByText('Atendimento'),
     ).toBeInTheDocument();
     await user.tab();
     expect(link).toHaveFocus();
+  });
+
+  it.each([
+    { label: 'ausente', id: undefined },
+    { label: 'um ponto', id: '.' },
+    { label: 'dois pontos', id: '..' },
+    { label: 'Unicode inválido', id: '\ud800' },
+  ])('does not create a service link for an ID $label', ({ id }) => {
+    const problem = {
+      code: 'Tag.InUse',
+      errors: { Services: [{ code: 'Tag.InUse', meta: { id, name: 'Massagem' } }] },
+    } as ApiProblem;
+    render(
+      <MemoryRouter>
+        <RelatedRecords problem={problem} />
+      </MemoryRouter>,
+    );
+
+    const services = screen.getByRole('region', { name: 'Serviços' });
+    expect(within(services).getByText('Massagem').tagName).toBe('LI');
+    expect(within(services).queryByRole('link')).not.toBeInTheDocument();
   });
 
   it('keeps headings distinct when multiple instances use the same group title', () => {

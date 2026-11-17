@@ -47,3 +47,13 @@ T012 e T013 antecedem T014; T015 valida o conjunto. O E2E e contrato continuam e
 - [ ] T018 [US4] Atualizar `docs/ARCHITECTURE.md` e executar formato, lint, build e cobertura.
 
 T016 antecede T017; T018 valida o conjunto. O E2E e contrato continuam em T011.
+
+## US5 — Preparar a navegação para serviços
+
+- [x] T019 [US5] Criar a construção compartilhada de caminhos de edição e configurá-la para pessoas
+  e serviços em `src/widgets/confirm-dialog/components/related-records`.
+- [x] T020 [US5] Registrar a rota de edição provisória e sua página em `src/app`.
+- [x] T021 [US5] Verificar links seguros, IDs inválidos, navegação provisória e fluxos existentes.
+- [ ] T022 [US5] Atualizar `docs/ARCHITECTURE.md` e executar formato, lint, build e cobertura.
+
+T019 e T020 antecedem T021; T022 valida o conjunto. O E2E e contrato continuam em T011.
