@@ -1,10 +1,8 @@
-import { editRecordPath } from './editRecordPath';
-
 export const CLIENTS_PATH = '/pessoas';
 export const NEW_CLIENT_PATH = `${CLIENTS_PATH}/nova`;
 
 export function editClientPath(id: string): string {
-  return editRecordPath(CLIENTS_PATH, id);
+  return `${CLIENTS_PATH}/${id}/editar`;
 }
 
 export function deleteClientPath(id: string): string {

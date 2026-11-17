@@ -145,8 +145,8 @@ abertura; a feature mantém o domínio. Ver
 
 Ao receber `Tag.InUse`, a exclusão apresenta os nomes recebidos e permite repetir a tentativa no
 mesmo diálogo. Pessoas com identificador abrem a edição em outra aba pelo mesmo `NewTabLink`;
-serviços com identificador abrem a rota de edição provisória em outra aba, com aviso de que a tela
-ainda não está disponível. Os dados pertencem à tentativa
+serviços com identificador oferecem um link para a futura rota de edição em outra aba, com aviso de
+que o gerenciamento ainda não está disponível. A rota de edição de serviços ainda não existe. Os dados pertencem à tentativa
 que os retornou; voltar da outra aba não os atualiza. O caminho de edição de pessoa fica em
 `shared/routes/clientPaths.ts` para evitar uma dependência circular entre Pessoas e Etiquetas.
 Grupos desconhecidos com erro `Tag.InUse` e nome válido aparecem como “Outros vínculos”, sem usar
@@ -158,7 +158,7 @@ campos `Clients` e `Services`, `meta.name`, `meta.id` e o limite de 10 registros
 compartilhados; o código do problema seleciona os vínculos de grupos desconhecidos. O diálogo de
 confirmação apresenta registros válidos em qualquer erro, sem configuração pela feature. Todo bloqueio
 oferece uma nova tentativa explícita, com texto personalizável. A lista de grupos conhecidos concentra título e
-eventual rota; pessoas e serviços usam o construtor compartilhado de caminhos de edição. Tipos futuros
+eventual rota; pessoas e serviços usam o mesmo construtor de links no diálogo. Tipos futuros
 aparecem como “Outros vínculos” até receberem uma definição própria.
 
 ## 3. Auth & tenancy

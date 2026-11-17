@@ -13,8 +13,8 @@ possa agir e tentar novamente. O backend e a regra de bloqueio permanecem inalte
 
 1. Ao receber `Tag.InUse`, a pessoa vê a mensagem com os totais e os nomes válidos recebidos.
 2. Cada pessoa com ID válido tem link para edição em outra aba, preservando o diálogo original.
-3. Serviços com ID válido oferecem link de edição em outra aba. Até a implementação do módulo,
-   o endereço de edição apresenta uma tela provisória informando que a funcionalidade virá depois.
+3. Serviços com ID válido oferecem link de edição em outra aba. A tela de edição ainda não está
+   disponível e sua implementação não faz parte desta mudança.
 4. Os totais permanecem na mensagem do backend; o frontend não cria aviso de limite de lista nem
    interpreta a mensagem para calcular quantos registros faltam.
 5. Tentar excluir novamente executa nova exclusão explícita: um novo bloqueio substitui os dados;
@@ -53,14 +53,14 @@ possa agir e tentar novamente. O backend e a regra de bloqueio permanecem inalte
 
 1. Pessoas e serviços com ID válido usam a mesma regra de construção e codificação do caminho
    interno de edição; sem ID válido, o nome aparece sem link.
-2. O endereço `/servicos/:id/editar` abre em outra aba e apresenta uma tela de edição ainda
-   indisponível, sem redirecionar a pessoa para o início nem alterar o diálogo original.
+2. O link aponta para `/servicos/:id/editar` em outra aba. Nenhuma rota ou tela de edição de
+   serviço é implementada nesta mudança; o diálogo original permanece aberto.
 
 ## Requisitos
 
 - **FR-001**: Usar somente os metadados recebidos no erro `Tag.InUse`, sem interpretar mensagem.
 - **FR-002**: Não remover vínculos nem excluir etiqueta sem ação explícita.
-- **FR-003**: Usar uma rota interna provisória de serviço e evitar dependência circular entre features.
+- **FR-003**: Não implementar telas ou rotas de serviço e evitar dependência circular entre features.
 - **FR-004**: O diálogo compartilhado apresenta os registros padronizados de qualquer erro sem
   exigir que a tela consumidora configure um conteúdo específico de vínculos.
 - **FR-005**: Todo erro bloqueante permite nova tentativa somente por ação explícita.
