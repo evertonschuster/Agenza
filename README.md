@@ -12,7 +12,7 @@ frontend em React, microsserviços de backend em .NET, serviços de IA em Python
 | `ai-services`         | Python + FastAPI                       | Serviços de IA/ML                          |
 | `infra`               | Scripts de inicialização do PostgreSQL | Roles e grants de schema do banco local    |
 
-Ver [docs/MONOREPO.md](docs/MONOREPO.md) para convenções, e o `README.md` de cada
+Ver [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) para convenções, e o `README.md` de cada
 stack para orientação específica. A preparação de ambiente do frontend —
 pré-requisitos, o caminho de execução só-via-Aspire, login de demonstração
 semeado e as duas pegadinhas de build — está em

@@ -1,7 +1,5 @@
 # ADR 0013 — Frontend: UI e interação
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **Base UI é a camada de primitivos.** Os componentes são código próprio em `src/shared/ui/`,

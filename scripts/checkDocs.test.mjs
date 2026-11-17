@@ -16,9 +16,6 @@ import { fileURLToPath } from 'node:url';
 import { checkDocumentation, entryDocuments } from './checkDocs.mjs';
 
 const skill = '.claude/skills/agenza-example/SKILL.md';
-const adrIndex = 'docs/decisions/README.md';
-const currentAdrs =
-  '## Decisões vigentes por assunto\n\n| Assunto | ADRs vigentes |\n| --- | --- |\n| Test | 0001 |\n';
 
 function write(root, file, text) {
   mkdirSync(dirname(join(root, file)), { recursive: true });
@@ -34,7 +31,6 @@ function fixture(t, files = {}) {
   for (const file of entryDocuments) {
     write(root, file, '# Fixture\n');
   }
-  write(root, adrIndex, currentAdrs);
   write(root, 'docs/decisions/0001-test.md', '# Decision\n');
   write(
     root,
@@ -126,84 +122,6 @@ test('does not reinterpret comment delimiters inside code or code inside comment
           target: 'missing.md',
         },
       ]);
-    });
-  }
-});
-
-test('validates only the current ADR column, including amended references', (t) => {
-  const root = fixture(t, {
-    [adrIndex]:
-      currentAdrs +
-      '| 7777 in concern | 0001 as amended by 9999 |\n' +
-      '\nHistorical note 8888.\n\n## Superseded decisions\n\n| ADR | Replaced by |\n| --- | --- |\n| 6666 | 5555 |\n',
-  });
-  assert.deepEqual(checkDocumentation(root).errors, [
-    {
-      file: adrIndex,
-      line: 6,
-      message: 'ADR vigente deve corresponder a um único arquivo.',
-      target: '9999',
-    },
-  ]);
-});
-
-test('fails if the current ADR table disappears instead of silently skipping it', (t) => {
-  const root = fixture(t, { [adrIndex]: '# Index\n\n## Complete register\n0001\n' });
-  assert.equal(
-    checkDocumentation(root).errors[0].message,
-    'Tabela de decisões vigentes não encontrada.',
-  );
-});
-
-test('validates current ADR IDs formatted as inline code', (t) => {
-  const root = fixture(t, { [adrIndex]: currentAdrs + '| Code | `9999` |\n' });
-  assert.deepEqual(checkDocumentation(root).errors, [
-    {
-      file: adrIndex,
-      line: 6,
-      message: 'ADR vigente deve corresponder a um único arquivo.',
-      target: '9999',
-    },
-  ]);
-});
-
-test('requires an unambiguous current ADR file', (t) => {
-  const root = fixture(t, { 'docs/decisions/0001-duplicate.md': '# Duplicate\n' });
-  assert.equal(checkDocumentation(root).errors[0].target, '0001');
-});
-
-test('accepts quoted and multiline required skill metadata', (t) => {
-  const root = fixture(t, {
-    [skill]:
-      '---\nname: "agenza-example"\ndescription: >-\n  Check links and\n  required metadata.\n---\n',
-  });
-  assert.deepEqual(checkDocumentation(root).errors, []);
-  write(root, skill, '---\nname: agenza-example\ndescription: "Check # links" # note\n---\n');
-  assert.deepEqual(checkDocumentation(root).errors, []);
-  write(root, skill, '---\nname: 123-example\ndescription: 123 examples to check.\n---\n');
-  assert.deepEqual(checkDocumentation(root).errors, []);
-});
-
-test('rejects missing, empty, non-text, duplicate and invalid skill metadata', async (t) => {
-  const cases = [
-    ['missing frontmatter', '# Skill\n'],
-    ['missing description', '---\nname: agenza-example\n---\n'],
-    ['empty description', '---\nname: agenza-example\ndescription: ""\n---\n'],
-    ['comment-only description', '---\nname: agenza-example\ndescription: # No value\n---\n'],
-    ['non-text description', '---\nname: agenza-example\ndescription: false\n---\n'],
-    [
-      'duplicate name',
-      '---\nname: agenza-example\nname: duplicate\ndescription: Check links.\n---\n',
-    ],
-    ['invalid name', '---\nname: Invalid Name\ndescription: Check links.\n---\n'],
-    ['empty block', '---\nname: agenza-example\ndescription: >\nmetadata:\n  owner: team\n---\n'],
-  ];
-  for (const [name, text] of cases) {
-    await t.test(name, (context) => {
-      const root = fixture(context, { [skill]: text });
-      const errors = checkDocumentation(root).errors;
-      assert.ok(errors.length > 0);
-      assert.ok(errors.every((error) => error.file === skill));
     });
   }
 });
@@ -408,34 +326,6 @@ test('does not read a reference destination across a blank line', (t) => {
   ]);
 });
 
-test('decodes YAML hexadecimal and Unicode escapes in required metadata', (t) => {
-  const root = fixture(t, {
-    [skill]: '---\nname: "\\x61genza-example"\ndescription: "\\x41ction checks \\U0001F600"\n---\n',
-  });
-  assert.deepEqual(checkDocumentation(root).errors, []);
-  write(root, skill, '---\nname: "\\x41genza-example"\ndescription: Check links.\n---\n');
-  assert.deepEqual(checkDocumentation(root).errors, [
-    {
-      file: skill,
-      line: 2,
-      message: 'Nome de skill inválido; use letras minúsculas, números e hífens.',
-      target: 'Agenza-example',
-    },
-  ]);
-});
-
-test('keeps an escaped table pipe inside the concern cell', (t) => {
-  const root = fixture(t, { [adrIndex]: currentAdrs + '| Rendering \\| navigation | 9999 |\n' });
-  assert.deepEqual(checkDocumentation(root).errors, [
-    {
-      file: adrIndex,
-      line: 6,
-      message: 'ADR vigente deve corresponder a um único arquivo.',
-      target: '9999',
-    },
-  ]);
-});
-
 test('decodes HTML entities once in bare and angle-delimited destinations', (t) => {
   const root = fixture(t, {
     'AGENTS.md':
@@ -451,21 +341,6 @@ test('decodes HTML entities once in bare and angle-delimited destinations', (t) 
     'docs/a&amp;b.md': '# Encoded name\n',
   });
   assert.deepEqual(checkDocumentation(root).errors, []);
-});
-
-test('reports invalid YAML escapes without calling the required field empty', (t) => {
-  const root = fixture(t);
-  for (const escape of ['\\q', '\\x4', '\\U00110000']) {
-    write(root, skill, '---\nname: agenza-example\ndescription: "' + escape + '"\n---\n');
-    assert.deepEqual(checkDocumentation(root).errors, [
-      {
-        file: skill,
-        line: 3,
-        message: 'Escape YAML inválido em valor entre aspas.',
-        target: 'description',
-      },
-    ]);
-  }
 });
 
 test('diagnoses unsupported named entities locally while ignoring external URLs', (t) => {

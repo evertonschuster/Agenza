@@ -45,7 +45,7 @@ essa leitura explícita não pressupõe descoberta nativa.
 
 ## Validação e entrega
 
-Use os [comandos do README](README.md#commands) e os [gates aplicáveis](../docs/QUALITY.md).
+Use os [comandos do README](README.md#commands) e os [gates aplicáveis](../docs/DEVELOPMENT.md#quality-gates).
 Escolha testes pelo comportamento e risco alterados; propriedades exclusivas do PostgreSQL
 seguem a verificação descartável do §9. Em Markdown, confira fontes, links, formatação e diff.
 

@@ -71,7 +71,7 @@ npm run test:coverage
 
 Playwright e a checagem de tipos exigem o ambiente Aspire. O
 [workflow](../../.github/workflows/frontend-ci.yml) define o que roda no CI;
-[QUALITY](../../docs/QUALITY.md) explica o alcance de cada gate.
+[DEVELOPMENT](../../docs/DEVELOPMENT.md) explica o alcance de cada gate.
 Para uma mudança apenas em Markdown, valide os arquivos alterados e seus links.
 
 ## Lockfile

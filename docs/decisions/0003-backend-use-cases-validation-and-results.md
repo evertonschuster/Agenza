@@ -1,7 +1,5 @@
 # ADR 0003 — Backend: casos de uso, validação e resultados
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **CQRS com dispatcher próprio**, em `Admin.SharedKernel`: resolve o handler do command ou query e

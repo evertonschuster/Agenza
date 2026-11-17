@@ -1,8 +1,5 @@
 # ADR 0001 — Documentação, decisões e instruções para agentes
 
-Status: aceita (2026-11-15). Recomeça o registro de decisões; as ADRs
-anteriores, as specs e o Spec Kit estão na tag `docs-archive-2026-11-14`.
-
 ## Decisão
 
 **Cada informação tem uma casa.** O resto aponta para ela, sem copiar.
@@ -24,10 +21,9 @@ feature não entram em prosa.
 dependência relevante ou escolha cara de reverter. Comportamento de uma tela ou de um componente,
 ajuste reversível e iteração de review ficam no código, nos testes e no PR.
 
-**Ciclo da ADR.** É `proposta` enquanto o PR está aberto e pode mudar. No último commit antes do
-merge passa a `aceita`, com data e o próximo número livre da `main`. Aceita, só muda a linha de
-status. Uma decisão nova substitui a anterior inteira ou nomeia a seção que deixa de valer. O índice
-lista só ADRs vigentes, sem qualificadores como "as amended by".
+**Edição no lugar.** Enquanto o produto não está em produção, uma decisão que muda é reescrita no
+próprio arquivo, sem status, data nem cadeia de emendas; o git guarda o histórico. O que deixou de
+valer entra em Rejeitado com o motivo. Uma ADR nova recebe o próximo número livre da `main`.
 
 **Commits de review não alteram Markdown.** Se o comportamento mudou, muda o teste. ADRs e guias
 tocados pelo PR são fechados no último commit antes do merge.
@@ -41,16 +37,14 @@ correção de protótipo vira teste ou código. Plano e tarefas ficam na sessão
 `.github/copilot-instructions.md`; o Codex segue a hierarquia de `AGENTS.md`. Não há espelhos
 editáveis, sincronização caseira nem symlinks entre essas fontes.
 
-**Checagem mecânica.** `npm run check:docs` confere links, imports dos `CLAUDE.md`, metadados das
-skills e os números do índice de ADRs. Ele não verifica se o texto concorda com o código.
+**Checagem mecânica.** `npm run check:docs` confere links e os imports dos `CLAUDE.md`. Ele não
+verifica se o texto concorda com o código.
 
 ## Por quê
 
-Até 2026-11 o repositório acumulou 92 ADRs (7,8 mil linhas) para um produto com login, pessoas e
-etiquetas. Muitas descreviam uma tela, o índice precisava de cadeias de emendas para dizer o que
-valia, e 38 dos últimos 60 PRs alteraram ADRs. O Spec Kit gerou 9 specs em cerca de 6 PRs, com 67
-arquivos de ferramenta, um plano reeditado a cada refactor e esclarecimentos datados que um agente
-lia como requisito. Como o produto não está em produção, o registro foi refeito do zero.
+O registro anterior chegou a 92 ADRs (7,8 mil linhas), muitas sobre uma tela, com cadeias de emendas
+e specs reeditadas a cada refactor; 38 dos últimos 60 PRs alteravam ADRs. Sem produção, foi refeito
+do zero; o anterior está na tag `docs-archive-2026-11-14`.
 
 ## Rejeitado
 
@@ -64,6 +58,10 @@ lia como requisito. Como o produto não está em produção, o registro foi refe
 - **Índice de ADRs gerado por frontmatter.** Mais tooling para manter um índice que, com poucas
   ADRs, cabe numa tabela curta.
 - **Manter as 92 ADRs e consolidá-las aos poucos.** Deixaria as cadeias de emendas valendo por meses.
+- **ADR imutável com ciclo proposta/aceita antes da produção.** Gerava emendas e commits só de
+  status; o git já guarda o histórico.
+- **Validar metadados de skills e o índice de ADRs no `check:docs`.** A checagem só sustentava a
+  própria burocracia.
 
 ## Reversão
 

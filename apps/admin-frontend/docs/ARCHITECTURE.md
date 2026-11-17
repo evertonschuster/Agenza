@@ -234,7 +234,7 @@ não há exclusão global de `shared/ui/`.
 
 Testes de unidade e componente ficam junto ao código, com Vitest, RTL e mocks de módulo.
 Playwright e a checagem de contrato/OIDC usam o stack Aspire real. Consulte
-[QUALITY](../../../docs/QUALITY.md) para o alcance e as limitações de cada gate.
+[DEVELOPMENT](../../../docs/DEVELOPMENT.md) para o alcance e as limitações de cada gate.
 
 ## 7. Pointers
 

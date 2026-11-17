@@ -1,12 +1,5 @@
 # ADR 0014 — Verificar vínculos locais na exclusão de etiquetas
 
-Status: aceita (2026-11-17).
-
-## Contexto
-
-Uma etiqueta em uso não pode ser excluída. A verificação explícita de pessoas e serviços pode ser
-esquecida quando uma nova relação com etiqueta for adicionada ao modelo.
-
 ## Decisão
 
 O teste de persistência compara as chaves estrangeiras que apontam para `Tag` no modelo EF com um
@@ -17,6 +10,11 @@ e a tabela de junção de serviços. Um teste negativo comprova a detecção de 
 O inventário é código de teste, não uma fonte de regras de domínio. Uma relação nova exige seu
 cenário e a implementação da verificação de negócio correspondente. O handler e o contrato HTTP
 existentes permanecem inalterados.
+
+## Por quê
+
+A verificação explícita de pessoas e serviços pode ser esquecida quando uma nova relação com
+etiqueta entrar no modelo.
 
 ## Limites
 

@@ -1,7 +1,5 @@
 # ADR 0010 — Git, CI e toolchain
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **Trunk-based.** Só `main` é permanente e está sempre liberável. Trabalho vai por PR, numa branch

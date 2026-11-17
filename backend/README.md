@@ -10,7 +10,7 @@ Use the [solution](AdminBackend.slnx) and repository pins:
 | [Architecture](docs/ARCHITECTURE.md)     | Current rules, reference implementations and known limits                              |
 | [HTTP conventions](../docs/API.md)       | Boundary conventions; check the controller and OpenAPI for an endpoint's current shape |
 | [Decisions](../docs/decisions/README.md) | Durable decisions and rejected alternatives                                            |
-| [Quality gates](../docs/QUALITY.md)      | What the checks measure                                                                |
+| [Development](../docs/DEVELOPMENT.md)    | Local stack and what the checks measure                                                |
 
 ## Commands
 
@@ -24,7 +24,7 @@ dotnet run --project AppHost --launch-profile http
 ```
 
 The AppHost is the local stack entry point; preparation is in
-[MONOREPO](../docs/MONOREPO.md). It orchestrates the database, services and frontend through Aspire.
+[DEVELOPMENT](../docs/DEVELOPMENT.md). It orchestrates the database, services and frontend through Aspire.
 
 Build and test settings are in [Directory.Build.props](Directory.Build.props),
 [Directory.Build.targets](Directory.Build.targets) and the

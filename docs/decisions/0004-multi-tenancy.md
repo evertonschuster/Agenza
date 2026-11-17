@@ -1,7 +1,5 @@
 # ADR 0004 — Multi-tenancy
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **O tenant vem só da claim do token validado.** O header `X-Tenant-Id` é conveniência de

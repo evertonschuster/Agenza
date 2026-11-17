@@ -1,7 +1,5 @@
 # ADR 0011 — Logging
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **Serilog é o pipeline de todo host .NET**, dono de `backend/shared/Admin.Logging`. Os serviços o

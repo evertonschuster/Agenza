@@ -1,7 +1,5 @@
 # ADR 0002 — Topologia de serviços e dados
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **Serviços agregados por contexto.** Cada serviço é um pequeno monólito de um contexto de

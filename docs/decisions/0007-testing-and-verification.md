@@ -1,7 +1,5 @@
 # ADR 0007 — Testes e verificação
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **Ferramentas gratuitas:**

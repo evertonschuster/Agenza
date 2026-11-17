@@ -1,7 +1,5 @@
 # ADR 0005 — Modelagem de domínio e contratos de API
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 **Agregados.**

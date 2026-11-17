@@ -21,8 +21,8 @@ salões): agendamento, gestão de clientes e uma recepcionista de IA. Persona v1
 | `infra`               | Scripts de init do PostgreSQL        | —                                                                                  |
 | `docs/decisions`      | Decisões duráveis                    | [índice](docs/decisions/README.md)                                                 |
 
-Convenções do monorepo: [docs/MONOREPO.md](docs/MONOREPO.md). Gates de qualidade:
-[docs/QUALITY.md](docs/QUALITY.md). Direção do produto: [docs/VISION.md](docs/VISION.md).
+Ambiente local e gates de qualidade: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Direção do produto:
+[docs/VISION.md](docs/VISION.md).
 
 ## Regras que valem em todo o repositório
 
@@ -46,14 +46,8 @@ genuína ou uma restrição não óbvia.
 
 ## Documentação
 
-Cada informação tem uma casa e o resto aponta para ela; só se escreve o que o código não mostra.
-Comportamento e aceite ficam nos testes; forma vigente, no `docs/ARCHITECTURE.md` da área;
-procedimentos, nas skills; decisões duráveis e alternativas rejeitadas, em `docs/decisions/`.
-
-Uma ADR é para fronteira, segurança, contrato compartilhado, persistência, operação, dependência
-relevante ou escolha cara de reverter, nunca para comportamento de uma tela. Ela é proposta durante
-o PR e passa a aceita no último commit antes do merge, com o próximo número livre da `main`; depois
-só muda o status. Política completa: [ADR 0001](docs/decisions/0001-documentation-and-decisions.md).
+Só se escreve o que o código não mostra, e cada informação tem uma casa:
+[ADR 0001](docs/decisions/0001-documentation-and-decisions.md).
 
 ## Fluxo de trabalho
 
@@ -86,5 +80,5 @@ sincronização.
 ## Validação e entrega
 
 Escolha testes pelo comportamento e risco alterados, mantendo os gates de
-[QUALITY](docs/QUALITY.md). Em mudança só de documentação, confira referências, formatação e diff;
+[DEVELOPMENT](docs/DEVELOPMENT.md). Em mudança só de documentação, confira referências, formatação e diff;
 não crie testes de aplicação para validar redação. Registre execuções e limitações no PR.

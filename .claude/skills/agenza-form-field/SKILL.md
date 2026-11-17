@@ -107,5 +107,5 @@ schema input/output, loading and saving guards, dynamic paths, error focus, pres
 stale conflict removal or keyboard interaction. Check coverage scope in the live
 [Vitest configuration](../../../apps/admin-frontend/vitest.config.ts), without assuming a whole UI
 directory is excluded. Commands and required gates live in
-[QUALITY.md](../../../docs/QUALITY.md); dependency changes also follow the
+[DEVELOPMENT.md](../../../docs/DEVELOPMENT.md); dependency changes also follow the
 [lockfile procedure](../../../apps/admin-frontend/README.md#lockfile).

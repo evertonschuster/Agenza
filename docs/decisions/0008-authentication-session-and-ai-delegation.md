@@ -1,7 +1,5 @@
 # ADR 0008 — Autenticação, sessão e delegação à IA
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **`/login` é uma transição automática.** Espera a checagem de sessão, inicia um único

@@ -1,6 +1,6 @@
 # SonarQube Cloud analysis - free for public repositories.
 #
-# One-time setup (see docs/QUALITY.md for the step-by-step):
+# One-time setup (see docs/DEVELOPMENT.md for the step-by-step):
 #   1. Import the repo at https://sonarcloud.io (login with GitHub).
 #   2. Create it as a monorepo with three projects:
 #        agenza-frontend / agenza-backend / agenza-ai-services

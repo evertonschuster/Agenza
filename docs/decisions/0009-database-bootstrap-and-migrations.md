@@ -1,7 +1,5 @@
 # ADR 0009 — Banco: bootstrap e migrations
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **Migrations e seed automáticos são opt-in.** Ficam desligados na configuração base e ligados só

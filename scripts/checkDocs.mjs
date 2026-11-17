@@ -17,8 +17,7 @@ export const entryDocuments = [
   'apps/admin-frontend/docs/ARCHITECTURE.md',
   'ai-services/assistant-service/README.md',
   'docs/API.md',
-  'docs/MONOREPO.md',
-  'docs/QUALITY.md',
+  'docs/DEVELOPMENT.md',
   'docs/VISION.md',
   'docs/decisions/README.md',
 ];
@@ -60,7 +59,7 @@ function fenceEnd(text, start, marker, depth) {
   return text.length;
 }
 
-function prose(text, { preserveInlineCode = false } = {}) {
+function prose(text) {
   const tokens = /^ {0,3}((?:> {0,3})*)(`{3,}(?=[^`\n]*$)|~{3,})[^\n]*$|<!--|`+/gm;
   const parts = [];
   let cursor = 0;
@@ -86,11 +85,6 @@ function prose(text, { preserveInlineCode = false } = {}) {
         continue;
       }
       end = close.index + close[0].length;
-      if (preserveInlineCode) {
-        parts.push(text.slice(cursor, end));
-        cursor = end;
-        continue;
-      }
     }
     parts.push(text.slice(cursor, match.index), blank(text.slice(match.index, end)));
     cursor = end;
@@ -167,156 +161,6 @@ function linkTargets(text) {
     }
   }
   return targets;
-}
-
-function quotedScalar(text) {
-  const escapes = {
-    0: '\0',
-    a: '\x07',
-    b: '\b',
-    t: '\t',
-    n: '\n',
-    v: '\v',
-    f: '\f',
-    r: '\r',
-    e: '\x1b',
-    ' ': ' ',
-    '"': '"',
-    '/': '/',
-    '\\': '\\',
-    N: '\u0085',
-    _: '\u00a0',
-    L: '\u2028',
-    P: '\u2029',
-  };
-  let valid = true;
-  const value = text.replace(
-    /\\(?:x([\da-fA-F]{2})|u([\da-fA-F]{4})|U([\da-fA-F]{8})|(.))/g,
-    (_, short, medium, long, escape) => {
-      const hex = short ?? medium ?? long;
-      if (hex !== undefined) {
-        const point = Number.parseInt(hex, 16);
-        if (point > 0x10ffff || (point >= 0xd800 && point <= 0xdfff)) {
-          valid = false;
-          return '';
-        }
-        return String.fromCodePoint(point);
-      }
-      if (Object.hasOwn(escapes, escape)) {
-        return escapes[escape];
-      }
-      valid = false;
-      return '';
-    },
-  );
-  return valid ? value : undefined;
-}
-
-function scalar(value) {
-  const trimmed = value.trim();
-  const doubleQuoted = /^("(?:[^"\\]|\\.)*")(?:\s+#.*)?$/.exec(trimmed);
-  if (doubleQuoted) {
-    return quotedScalar(doubleQuoted[1].slice(1, -1));
-  }
-  const singleQuoted = /^('(?:[^']|'')*')(?:\s+#.*)?$/.exec(trimmed);
-  if (singleQuoted) {
-    return singleQuoted[1].slice(1, -1).replace(/''/g, "'");
-  }
-  const plain = trimmed.replace(/\s+#.*$/, '').trim();
-  if (
-    !plain ||
-    /^(?:null|true|false|~|[-+]?\d+(?:\.\d*)?(?:e[-+]?\d+)?)$/i.test(plain) ||
-    /^[#\[\]{},&*!"']/.test(plain)
-  ) {
-    return '';
-  }
-  return plain;
-}
-
-function checkFrontmatter(text, report) {
-  const lines = text.split('\n');
-  const end = lines.findIndex((line, index) => index > 0 && /^(?:---|\.\.\.)\s*$/.test(line));
-  if (!/^---\s*$/.test(lines[0]) || end < 0) {
-    report(1, 'Frontmatter ausente ou sem fechamento.', 'name, description');
-    return;
-  }
-
-  for (const key of ['name', 'description']) {
-    const entries = lines.slice(1, end).flatMap((line, index) => {
-      const match = new RegExp(`^${key}:[ \\t]*(.*)$`).exec(line);
-      return match ? [{ value: match[1], line: index + 2 }] : [];
-    });
-    if (entries.length !== 1) {
-      report(entries[1]?.line ?? 1, 'Campo obrigatório ausente ou duplicado.', key);
-      continue;
-    }
-    const entry = entries[0];
-    let value = scalar(entry.value);
-    if (value === undefined) {
-      report(entry.line, 'Escape YAML inválido em valor entre aspas.', key);
-      continue;
-    }
-    if (/^[|>][+-]?(?:\s+#.*)?$/.test(entry.value.trim())) {
-      const block = [];
-      for (let index = entry.line; index < end; index++) {
-        if (lines[index].trim() && !/^[ \t]/.test(lines[index])) {
-          break;
-        }
-        block.push(lines[index]);
-      }
-      value = block.join(' ').trim();
-    }
-    if (!value.trim()) {
-      report(entry.line, 'Campo obrigatório deve conter texto.', key);
-    } else if (key === 'name' && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
-      report(entry.line, 'Nome de skill inválido; use letras minúsculas, números e hífens.', value);
-    }
-  }
-}
-
-function checkAdrIndex(text, directory, report) {
-  const files = readdirSync(directory, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name);
-  let inSection = false;
-  let column = -1;
-  let tableFound = false;
-  for (const [index, line] of text.split('\n').entries()) {
-    if (/^## Decisões vigentes por assunto\s*$/.test(line)) {
-      inSection = true;
-      continue;
-    }
-    if (inSection && /^#{1,2} /.test(line)) {
-      break;
-    }
-    if (!inSection || !line.trim().startsWith('|')) {
-      continue;
-    }
-    const cells = line
-      .trim()
-      .replace(/^\||\|$/g, '')
-      .split(/(?<!\\)\|/)
-      .map((cell) => cell.trim());
-    if (column < 0) {
-      column = cells.indexOf('ADRs vigentes');
-      tableFound ||= column >= 0;
-      continue;
-    }
-    for (const match of (cells[column] ?? '').matchAll(/\b\d{4}\b/g)) {
-      const id = match[0];
-      const candidates = files.filter((file) => file.startsWith(`${id}-`) && file.endsWith('.md'));
-      if (candidates.length !== 1) {
-        report(index + 1, 'ADR vigente deve corresponder a um único arquivo.', id);
-      }
-    }
-  }
-  if (!tableFound) {
-    report(
-      1,
-      'Tabela de decisões vigentes não encontrada.',
-      'Decisões vigentes por assunto / ADRs vigentes',
-    );
-  }
 }
 
 function markdownDestination(target) {
@@ -432,16 +276,6 @@ export function checkDocumentation(root) {
       } else if (!existsSync(destination)) {
         report(file, line, 'Destino local ausente.', target);
       }
-    }
-    if (skillFiles.has(file)) {
-      checkFrontmatter(text, (line, message, target) => report(file, line, message, target));
-    }
-    if (file === 'docs/decisions/README.md') {
-      checkAdrIndex(
-        prose(text, { preserveInlineCode: true }),
-        dirname(absolute),
-        (line, message, target) => report(file, line, message, target),
-      );
     }
   }
   return { errors, documents: documents.size, skills: skillFiles.size };

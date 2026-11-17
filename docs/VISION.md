@@ -1,7 +1,7 @@
 # Platform vision — target architecture
 
 Where this monorepo is heading. Agents: treat this as the map when
-deciding _where_ new code belongs; treat `MONOREPO.md` as the map of
+deciding _where_ new code belongs; the [root AGENTS](../AGENTS.md) maps
 what exists _today_.
 
 ## Frontends — always React (`apps/*`)

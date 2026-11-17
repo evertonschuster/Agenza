@@ -1,7 +1,5 @@
 # ADR 0006 — Datas e fusos
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **O backend trabalha só em UTC.** Instantes são `DateTimeOffset` do `TimeProvider` injetado;

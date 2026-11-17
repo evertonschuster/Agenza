@@ -1,7 +1,5 @@
 # ADR 0012 — Frontend: arquitetura e acesso a dados
 
-Status: aceita (2026-11-15).
-
 ## Decisão
 
 - **Camadas `app → features → widgets → shared`.** Uma feature é acessada de fora só pelo barril, e

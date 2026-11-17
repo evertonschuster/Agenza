@@ -60,7 +60,7 @@ A new service copies the project set below, the per-service `Domain/Common/` typ
 role in `infra/postgres/init/`, a schema-scoped migrations history table, and an AppHost resource;
 it registers `TenantHeaderFilter` if it serves tenant-owned resources. `AddServiceDefaults()` already
 brings logging, telemetry and health checks, so there is nothing to copy for them. Use the live services
-as the template, not a copied snippet ([`docs/MONOREPO.md`](../../docs/MONOREPO.md)).
+as the template, not a copied snippet ([`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md)).
 
 ### Projects and dependency direction
 
@@ -478,7 +478,7 @@ strip control characters first (CWE-117), as `GenericExceptionHandler` and the r
 | Contract smoke | the API-contract job in `frontend-ci.yml` | Fresh migrations, selected OIDC and tenant-isolation requests, both `ClientTags` tenant foreign keys, and generated type drift                 | Aspire AppHost                                              |
 
 Line coverage of Domain + Application has a gate in `Directory.Build.props`; local `dotnet test`
-uses the same coverage configuration as CI ([`docs/QUALITY.md`](../../docs/QUALITY.md)). Warnings are errors.
+uses the same coverage configuration as CI ([`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md)). Warnings are errors.
 Line coverage is not evidence that every rule or branch has been tested. Select tests by changed
 behavior and risk, including rejection paths and absence of unintended persistence. For input
 rules, assert the code; use a fixed clock when the day matters.

@@ -2,7 +2,7 @@
 
 The [architecture](../../../../backend/docs/ARCHITECTURE.md#9-tests) defines the available tiers and
 their limits. The [backend README](../../../../backend/README.md) owns execution commands;
-[QUALITY](../../../../docs/QUALITY.md) explains coverage.
+[DEVELOPMENT](../../../../docs/DEVELOPMENT.md) explains coverage.
 
 | Changed behavior                              | Useful evidence                                                                     |
 | --------------------------------------------- | ----------------------------------------------------------------------------------- |
