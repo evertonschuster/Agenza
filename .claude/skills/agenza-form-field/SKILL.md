@@ -52,6 +52,9 @@ also pass the specific path to `ControlledField<T, N>` or `SelectField<T, N>`.
   mode for a field that needs inline validation feedback.
 - Use `ControlledField` for another custom control; add a specialization when concrete repeated
   configuration or control behavior justifies it.
+- Declare a new field's props type in the field's own file and re-export it from the barrel, as
+  the [form conventions](../../../apps/admin-frontend/docs/ARCHITECTURE.md#componentes-e-formulários)
+  describe.
 - Forward RHF's `ref` and `onBlur` to the actual focus target, and preserve the supplied
   `aria-invalid`/`aria-describedby`. A composite control without a labelable input needs
   `labelHtmlFor={false}` and an accessible name, as in `ColorField`; an `htmlFor` pointing at
@@ -84,7 +87,7 @@ Keep these responsibilities separate:
   `FieldAliases<FormFieldValues>` beside the schema transform (`{ tagIds: 'tags' }`) and pass it to
   `applyApiProblem`; errors on the command field and on each of its items land on the form field. Only
   top-level command fields take an alias
-  ([ADR 0092](../../../docs/adr/0092-admin-frontend-form-fields-submitted-under-another-name.md)).
+  ([ADR 0012](../../../docs/decisions/0012-frontend-architecture-and-data.md)).
 - Feature UI interprets feature-specific codes/metadata. Shared fields and the bridge do not parse
   client conflicts. In
   [ClientPersonSection](../../../apps/admin-frontend/src/features/clients/ui/pages/ClientFormPage/components/ClientPersonSection.tsx),

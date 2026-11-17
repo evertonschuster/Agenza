@@ -1,7 +1,11 @@
 import type { FieldValues } from 'react-hook-form';
 import { cpfDigits, maskCpf } from '@/shared/values/cpf';
-import type { CpfFieldProps } from '../fields.types';
-import { MaskedField } from './masked-field';
+import type { WithOptionalLabel } from '../fields.types';
+import { MaskedField, type MaskedFieldProps } from './masked-field';
+
+export type CpfFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<MaskedFieldProps<T>, 'mask' | 'unmask'>
+>;
 
 export function CpfField<T extends FieldValues>({
   label = 'CPF',

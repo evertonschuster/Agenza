@@ -140,7 +140,7 @@ describe('TagDeletePage', () => {
     expect(screen.getByRole('button', { name: 'Excluir' })).toBeEnabled();
   });
 
-  it('deletes the tag, reloads the list from the backend and returns to /tags on confirm (spec US4)', async () => {
+  it('deletes the tag, reloads the list from the backend and returns to /tags on confirm', async () => {
     const user = userEvent.setup();
     mockDelete.mockResolvedValue({ ok: true, data: undefined });
     renderAt(['/tags']);
@@ -158,7 +158,7 @@ describe('TagDeletePage', () => {
     expect(screen.queryByRole('heading', { name: 'Excluir etiqueta?' })).not.toBeInTheDocument();
   });
 
-  it('shows the backend error verbatim and keeps the tag when delete is blocked (spec FR-012, US4 scenario 2)', async () => {
+  it('shows the backend error verbatim and keeps the tag when delete is blocked', async () => {
     const user = userEvent.setup();
     mockDelete.mockResolvedValue({
       ok: false,
@@ -506,7 +506,7 @@ describe('TagDeletePage', () => {
     expect(screen.getByTestId('location').textContent).toBe('location: /tags');
   });
 
-  it('closes without deleting when Cancelar is clicked, with the search the list had still on screen and in the address (spec US4 scenario 3, ADR 0074)', async () => {
+  it('closes without deleting when Cancelar is clicked, with the search the list had still on screen and in the address (ADR 0012)', async () => {
     const user = userEvent.setup();
     mockList.mockImplementation(({ search }: TagListQuery) =>
       Promise.resolve(

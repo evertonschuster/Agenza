@@ -29,16 +29,14 @@ async function getSignedInTenantId(page: import('@playwright/test').Page): Promi
   return payload.tenant_id;
 }
 
-test('unauthenticated visitor is redirected to identity-service login (quickstart Scenario 1, spec FR-001/FR-002)', async ({
-  page,
-}) => {
+test('unauthenticated visitor is redirected to identity-service login', async ({ page }) => {
   await page.goto('/');
 
   await page.waitForURL(LOGIN_URL_RE);
   await expect(page.locator('#Email')).toBeVisible();
 });
 
-test('a real login as the DemoTenant user renders the shell scoped to the matching tenant (quickstart Scenario 2, spec FR-003/FR-004)', async ({
+test('a real login as the DemoTenant user renders the shell scoped to the matching tenant', async ({
   page,
 }) => {
   await loginAsDemoUser(page);
@@ -51,9 +49,7 @@ test('a real login as the DemoTenant user renders the shell scoped to the matchi
   await expect(page.getByTestId('tenant-id')).toHaveText(tenantId);
 });
 
-test('an active session persists across reload and logout fully ends it (quickstart Scenario 3, spec FR-007/FR-008)', async ({
-  page,
-}) => {
+test('an active session persists across reload and logout fully ends it', async ({ page }) => {
   await loginAsDemoUser(page);
 
   // Reload rather than waiting out the real token lifetime: this exercises the same

@@ -1,6 +1,20 @@
-import { Controller, useFormContext, type FieldValues, type Path } from 'react-hook-form';
-import { FormField } from '@/shared/ui/form-field';
-import type { ControlledFieldProps } from '../fields.types';
+import type { ReactNode } from 'react';
+import {
+  Controller,
+  useFormContext,
+  type ControllerRenderProps,
+  type FieldValues,
+  type Path,
+} from 'react-hook-form';
+import { FormField, type FormFieldControlProps } from '@/shared/ui/form-field';
+
+export interface ControlledFieldProps<T extends FieldValues, N extends Path<T> = Path<T>> {
+  name: N;
+  label: string;
+  hint?: string | undefined;
+  labelHtmlFor?: boolean | undefined;
+  children: (field: ControllerRenderProps<T, N>, controlProps: FormFieldControlProps) => ReactNode;
+}
 
 export function ControlledField<T extends FieldValues, N extends Path<T> = Path<T>>({
   name,

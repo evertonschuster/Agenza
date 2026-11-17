@@ -3,6 +3,7 @@ import {
   useFormContext,
   type FieldValues,
   type Path,
+  type PathValue,
   type RefCallBack,
 } from 'react-hook-form';
 import { cn } from '@/shared/lib/utils';
@@ -15,8 +16,25 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/shared/ui/select';
-import type { SelectFieldOption, SelectFieldProps } from '../fields.types';
+import type { FieldLabelPlacement } from '../fields.types';
 import { ControlledField } from './controlled-field';
+
+export interface SelectFieldOption<V> {
+  value: V;
+  label: string;
+}
+
+interface SelectFieldBaseProps<T extends FieldValues, N extends Path<T>> {
+  name: N;
+  label: string;
+  options: readonly SelectFieldOption<PathValue<T, N>>[];
+  className?: string | undefined;
+}
+
+export type SelectFieldProps<
+  T extends FieldValues,
+  N extends Path<T> = Path<T>,
+> = SelectFieldBaseProps<T, N> & FieldLabelPlacement;
 
 export function SelectField<T extends FieldValues, N extends Path<T> = Path<T>>(
   props: SelectFieldProps<T, N>,

@@ -1,8 +1,12 @@
 import { useFormContext, useWatch, type FieldValues } from 'react-hook-form';
 import { formatAge } from '@/shared/format/age';
 import { ageFromBirthDate, birthDatePickerBounds } from '@/shared/values/birthDate';
-import type { BirthDateFieldProps } from '../fields.types';
-import { DateField } from './date-field';
+import type { WithOptionalLabel } from '../fields.types';
+import { DateField, type DateFieldProps } from './date-field';
+
+export type BirthDateFieldProps<T extends FieldValues> = WithOptionalLabel<
+  Omit<DateFieldProps<T>, 'minDate' | 'maxDate'>
+>;
 
 export function BirthDateField<T extends FieldValues>({
   name,

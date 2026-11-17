@@ -16,9 +16,9 @@ import { fileURLToPath } from 'node:url';
 import { checkDocumentation, entryDocuments } from './checkDocs.mjs';
 
 const skill = '.claude/skills/agenza-example/SKILL.md';
-const adrIndex = 'docs/adr/README.md';
+const adrIndex = 'docs/decisions/README.md';
 const currentAdrs =
-  '## Current decisions by concern\n\n| Concern | Current ADRs |\n| --- | --- |\n| Test | 0001 |\n';
+  '## Decisões vigentes por assunto\n\n| Assunto | ADRs vigentes |\n| --- | --- |\n| Test | 0001 |\n';
 
 function write(root, file, text) {
   mkdirSync(dirname(join(root, file)), { recursive: true });
@@ -35,7 +35,7 @@ function fixture(t, files = {}) {
     write(root, file, '# Fixture\n');
   }
   write(root, adrIndex, currentAdrs);
-  write(root, 'docs/adr/0001-test.md', '# Decision\n');
+  write(root, 'docs/decisions/0001-test.md', '# Decision\n');
   write(
     root,
     skill,
@@ -83,7 +83,7 @@ test('ignores external links, isolated fragments, placeholders, code and comment
     'AGENTS.md':
       '[Web](https://example.invalid/missing) [Mail](mailto:user@example.invalid)\n' +
       '[CDN](//example.invalid/a) [Fragment](#missing) [Query](?tab=missing)\n' +
-      '[Template](specs/[FEATURE]/spec.md)\n' +
+      '[Template](docs/[FEATURE]/notes.md)\n' +
       '`[Inline](missing.md)`\n<!-- [Comment](missing.md) -->\n' +
       '```md\n[Code](missing.md)\n```\n~~~md\n[Code](missing.md)\n~~~\n',
   });
@@ -168,7 +168,7 @@ test('validates current ADR IDs formatted as inline code', (t) => {
 });
 
 test('requires an unambiguous current ADR file', (t) => {
-  const root = fixture(t, { 'docs/adr/0001-duplicate.md': '# Duplicate\n' });
+  const root = fixture(t, { 'docs/decisions/0001-duplicate.md': '# Duplicate\n' });
   assert.equal(checkDocumentation(root).errors[0].target, '0001');
 });
 
@@ -208,12 +208,18 @@ test('rejects missing, empty, non-text, duplicate and invalid skill metadata', a
   }
 });
 
-test('checks skill references recursively, without scanning historical specs or adapters', (t) => {
+test('checks links inside decision records', (t) => {
+  const root = fixture(t, { 'docs/decisions/0001-test.md': '[Guide](../missing.md)\n' });
+  assert.deepEqual(
+    checkDocumentation(root).errors.map(({ file, target }) => ({ file, target })),
+    [{ file: 'docs/decisions/0001-test.md', target: '../missing.md' }],
+  );
+});
+
+test('checks skill references recursively, without scanning unlisted documents', (t) => {
   const root = fixture(t, {
     '.claude/skills/agenza-example/references/nested/guide.md': '[Missing](absent.md)\n',
-    'apps/admin-frontend/specs/001-example/spec.md': '[Historical](missing.md)\n',
-    'apps/admin-frontend/.agents/skills/agenza-example/SKILL.md': '# No metadata\n',
-    'docs/adr/0001-test.md': '[Historical](missing.md)\n',
+    'docs/notes/draft.md': '[Draft](missing.md)\n',
   });
   assert.equal(checkDocumentation(root).errors.length, 1);
   assert.equal(checkDocumentation(root).errors[0].target, 'absent.md');

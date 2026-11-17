@@ -1,9 +1,10 @@
-import { useState, type Ref } from 'react';
+import { useState, type ComponentProps, type Ref } from 'react';
 import { useFormContext, type FieldValues } from 'react-hook-form';
 import { CalendarIcon, XIcon } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Calendar } from '@/shared/ui/calendar';
 import type { FormFieldControlProps } from '@/shared/ui/form-field';
+import type { Input } from '@/shared/ui/input';
 import {
   InputGroup,
   InputGroupAddon,
@@ -11,7 +12,7 @@ import {
   InputGroupInput,
 } from '@/shared/ui/input-group';
 import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
-import type { DateFieldProps } from '../fields.types';
+import type { BaseFieldProps, FormFieldOwnedProps, RegisterOwnedProps } from '../fields.types';
 import { ControlledField } from './controlled-field';
 import {
   dateLayoutOf,
@@ -20,6 +21,15 @@ import {
   maskDate,
   parseMaskedDate,
 } from './masked-date';
+
+export type DateFieldProps<T extends FieldValues> = BaseFieldProps<T> &
+  Omit<
+    ComponentProps<typeof Input>,
+    RegisterOwnedProps | FormFieldOwnedProps | 'value' | 'type' | 'inputMode'
+  > & {
+    minDate: Date;
+    maxDate: Date;
+  };
 
 type DateFieldControlProps = Omit<DateFieldProps<FieldValues>, 'hint' | 'label'> &
   FormFieldControlProps & {

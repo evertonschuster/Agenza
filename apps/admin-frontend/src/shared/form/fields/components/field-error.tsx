@@ -1,5 +1,8 @@
-import { useFormContext, useFormState, type FieldValues } from 'react-hook-form';
-import type { FieldErrorProps } from '../fields.types';
+import { useFormContext, useFormState, type FieldValues, type Path } from 'react-hook-form';
+
+export interface FieldErrorProps<T extends FieldValues> {
+  name: Path<T>;
+}
 
 export function FieldError<T extends FieldValues>({ name }: FieldErrorProps<T>) {
   const { control, getFieldState } = useFormContext<T>();

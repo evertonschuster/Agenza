@@ -20,7 +20,7 @@ and a current example before editing.
    [ListClientsQuery](../../../../backend/services/services-service/ServicesService.Application/Clients/ListClients/ListClientsQuery.cs)
    and its validator: normalize filters before the repository and keep request validation explicit.
    Do not add a shared rule abstraction for two validators; reuse codes/constants as specified by
-   [ADR 0061](../../../../docs/adr/0061-validators-write-their-own-rules.md).
+   [ADR 0003](../../../../docs/decisions/0003-backend-use-cases-validation-and-results.md).
 
 ## Mapping and orchestration
 
