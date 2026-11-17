@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ArchiveIcon } from 'lucide-react';
+import { MemoryRouter } from 'react-router';
 import { ConfirmDialog } from '.';
 import { RATE_LIMIT_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
 
@@ -263,6 +264,73 @@ describe('ConfirmDialog', () => {
 
     await user.click(screen.getByRole('button', { name: 'Entendi' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('automatically displays related records for a different blocked error without changing its actions', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: 'Promotion.InUse',
+        title: 'Há registros vinculados.',
+        errors: {
+          Clients: [{ code: 'Promotion.InUse', meta: { id: 'a/1', name: 'Ana Lima' } }],
+          Services: [{ code: 'Promotion.InUse', meta: { name: 'Massagem' } }],
+          Procedures: [{ code: 'Promotion.InUse', meta: { name: 'Consulta' } }],
+        },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByText('Há registros vinculados.')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /Ana Lima.*outra aba/ });
+    expect(link).toHaveAttribute('href', '/pessoas/a%2F1/editar');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(
+      within(screen.getByRole('region', { name: 'Serviços' })).getByText('Massagem'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Outros vínculos' })).getByText('Consulta'),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entendi' })).toBeEnabled();
+    expect(screen.getByRole('heading', { name: 'Não é possível desativar' })).toHaveFocus();
+    await user.tab();
+    expect(link).toHaveFocus();
+  });
+
+  it('shows related records on transient errors and retains the existing retry action', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: {
+        status: 503,
+        code: 'Server.Unavailable',
+        title: 'Serviço indisponível.',
+        errors: { Clients: [{ code: 'Server.Unavailable', meta: { id: '123', name: 'Ana' } }] },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Serviço indisponível.');
+    expect(screen.getByRole('link', { name: /Ana.*outra aba/ })).toHaveAttribute(
+      'href',
+      '/pessoas/123/editar',
+    );
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onConfirm).toHaveBeenCalledTimes(2);
   });
 
   it('lets a second, differently-configured instance use its own copy, with none of the first left behind', () => {

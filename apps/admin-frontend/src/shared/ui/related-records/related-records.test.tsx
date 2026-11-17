@@ -6,6 +6,11 @@ import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { RelatedRecords } from './index';
 
 describe('RelatedRecords', () => {
+  it('renders nothing when no valid records or notices are available', () => {
+    const { container } = render(<RelatedRecords problem={{}} />);
+    expect(container).toBeEmptyDOMElement();
+  });
+
   it('renders groups and their configured behavior directly from a problem', async () => {
     const user = userEvent.setup();
     const problem = {

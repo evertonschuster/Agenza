@@ -17,7 +17,6 @@ interface ConfirmDialogError {
   blockedTitle?: string;
   retryLabel?: string;
   dismissLabel?: string;
-  blockedContent?: (problem: ApiProblem) => ReactNode;
   canRetryBlocked?: (problem: ApiProblem) => boolean;
   blockedRetryLabel?: string;
 }
@@ -41,7 +40,6 @@ interface ConfirmDialogBlockedViewProps {
   blockedTitle: string;
   problem: ApiProblem;
   dismissLabel: string;
-  content?: ReactNode;
   retryLabel?: string | undefined;
   isSubmitting: boolean;
   onRetry: () => void;

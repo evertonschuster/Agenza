@@ -9,6 +9,7 @@ import {
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import { ProblemCode } from '@/shared/ui/problem-code';
+import { RelatedRecords } from '@/shared/ui/related-records';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ConfirmDialogConfirmViewProps } from '../confirm-dialog.types';
 
@@ -51,6 +52,7 @@ function ConfirmDialogConfirmView({
           </div>
         </div>
       )}
+      {failure && <RelatedRecords problem={failure} />}
       <DialogFooter>
         <DialogClose disabled={isSubmitting} render={<Button variant="outline" />}>
           {cancelLabel}
