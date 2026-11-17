@@ -6,7 +6,6 @@ import { MemoryRouter } from 'react-router';
 import { ConfirmDialog } from '.';
 import { RATE_LIMIT_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
 import { logger } from '@/shared/logger';
-import { createTopic } from '@/shared/pubsub/createTopic';
 import { toast } from '@/shared/ui/toast';
 
 const BASE_PROPS = {
@@ -23,53 +22,6 @@ const BASE_PROPS = {
 } as const;
 
 describe('ConfirmDialog', () => {
-  it('keeps an unexpected outcome uncertain and allows closing without retrying', async () => {
-    const user = userEvent.setup();
-    const onOpenChange = vi.fn();
-    const onConfirm = vi.fn().mockRejectedValue(new Error('unexpected'));
-    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={onOpenChange} onConfirm={onConfirm} />);
-
-    await user.click(screen.getByRole('button', { name: 'Desativar' }));
-
-    const title = await screen.findByRole('heading', {
-      name: 'Não foi possível confirmar o resultado',
-    });
-    expect(title).toHaveFocus();
-    expect(
-      screen.getByText('Verifique se a ação foi concluída antes de tentar novamente.'),
-    ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
-    expect(logger.error).toHaveBeenCalledWith('confirm_dialog.outcome_unknown');
-    await user.click(screen.getByRole('button', { name: 'Entendi' }));
-    expect(onOpenChange).toHaveBeenCalledWith(false);
-    expect(onConfirm).toHaveBeenCalledTimes(1);
-  });
-
-  it('does not present a failed post-success notification as a failed operation', async () => {
-    const user = userEvent.setup();
-    const topic = createTopic<void>();
-    const unsubscribe = topic.subscribe(() => {
-      throw new Error('listener failed');
-    });
-    const mutation = vi
-      .fn<() => Promise<ApiResult<void>>>()
-      .mockResolvedValue({ ok: true, data: undefined });
-    const onConfirm = vi.fn(async () => {
-      const result = await mutation();
-      topic.publish();
-      return result;
-    });
-    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
-
-    await user.click(screen.getByRole('button', { name: 'Desativar' }));
-    expect(
-      await screen.findByRole('heading', { name: 'Não foi possível confirmar o resultado' }),
-    ).toBeInTheDocument();
-    expect(mutation).toHaveBeenCalledTimes(1);
-    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
-    unsubscribe();
-  });
-
   it('prevents synchronous reentry while a confirmation is pending', async () => {
     let resolveConfirm: (result: ApiResult<void>) => void = () => {};
     const onConfirm = vi.fn(
@@ -119,36 +71,6 @@ describe('ConfirmDialog', () => {
     });
     expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
     expect(onSuccess).not.toHaveBeenCalled();
-    expect(onOpenChange).not.toHaveBeenCalled();
-    toastSpy.mockRestore();
-  });
-
-  it('notifies an uncertain result after the dialog unmounts', async () => {
-    const user = userEvent.setup();
-    const toastSpy = vi.spyOn(toast, 'add');
-    const onOpenChange = vi.fn();
-    let rejectConfirm: (error: Error) => void = () => {};
-    const onConfirm = () =>
-      new Promise<ApiResult<void>>((_, reject) => {
-        rejectConfirm = reject;
-      });
-    const view = render(
-      <ConfirmDialog {...BASE_PROPS} onOpenChange={onOpenChange} onConfirm={onConfirm} />,
-    );
-
-    await user.click(screen.getByRole('button', { name: 'Desativar' }));
-    view.unmount();
-    await act(async () => {
-      rejectConfirm(new Error('unexpected'));
-      await Promise.resolve();
-    });
-    expect(toastSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        title: 'Não foi possível confirmar o resultado',
-        description: 'Verifique se a ação foi concluída antes de tentar novamente.',
-        type: 'error',
-      }),
-    );
     expect(onOpenChange).not.toHaveBeenCalled();
     toastSpy.mockRestore();
   });

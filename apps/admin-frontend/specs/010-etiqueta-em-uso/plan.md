@@ -18,20 +18,17 @@
   responsável pelo foco e fechamento.
 - A repetição explícita usa a mesma mutação, substitui o erro e preserva sucesso, falhas temporárias,
   navegação e os eventos de atualização existentes.
-- A rejeição inesperada de `onConfirm` leva a um estado distinto de resultado incerto, com saída
-  e sem ação de repetição; o log registra o incidente sem dados da resposta. Uma trava síncrona
-  impede reentrada. O sucesso global continua após desmontagem, mas callbacks locais não são chamados.
+- Uma trava síncrona impede reentrada. O sucesso global continua após desmontagem, mas callbacks
+  locais não são chamados.
 - Efeitos posteriores ao sucesso são isolados da confirmação para que suas exceções não sejam
   confundidas com uma falha da operação. A atualização de um bloqueio é anunciada e a transição
   para erro transitório recupera foco. A tolerância atual a códigos ausentes permanece, sujeita ao
   contrato de respostas incompletas; códigos incompatíveis continuam filtrados.
-- A confirmação de alteração de situação da pessoa fica associada ao ID da rota; trocar de pessoa
-  fecha o diálogo anterior e impede a aplicação da resposta antiga ao formulário atual.
 
 ## Validação
 
 Testar a página e o widget para dados parciais, ambos os tipos, limites, URLs codificadas, teclado,
 foco, rolagem, repetição e regressões. Executar formato, lint, build, cobertura e gates pertinentes.
-Testar rejeição, reentrada, conclusão tardia, exceções após sucesso e mudança de estado do diálogo.
+Testar reentrada, conclusão tardia, exceções após sucesso e mudança de estado do diálogo.
 E2E e contrato requerem stack descartável, sem reutilizar o Aspire do dono. Não há mudança de contrato
 nem necessidade de modelo, contrato ou pesquisa adicionais.

@@ -27,7 +27,6 @@ function useConfirmDialog<T>({
 }: ConfirmDialogOptions<T>) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [problem, setProblem] = useState<ApiProblem>();
-  const [isUncertain, setIsUncertain] = useState(false);
   const [blockedRetries, setBlockedRetries] = useState(0);
   const isMountedRef = useRef(true);
   const isSubmittingRef = useRef(false);
@@ -45,29 +44,9 @@ function useConfirmDialog<T>({
     isSubmittingRef.current = true;
     if (!isBlocked) setProblem(undefined);
     setIsSubmitting(true);
-    let result;
-    try {
-      result = await onConfirm();
-    } catch {
-      logger.error('confirm_dialog.outcome_unknown');
-      if (isMountedRef.current) {
-        setProblem(undefined);
-        setIsUncertain(true);
-      } else {
-        notify(
-          {
-            title: 'Não foi possível confirmar o resultado',
-            description: 'Verifique se a ação foi concluída antes de tentar novamente.',
-            type: 'error',
-          },
-          'confirm_dialog.uncertain_notification_failed',
-        );
-      }
-      return;
-    } finally {
-      isSubmittingRef.current = false;
-      if (isMountedRef.current) setIsSubmitting(false);
-    }
+    const result = await onConfirm();
+    isSubmittingRef.current = false;
+    if (isMountedRef.current) setIsSubmitting(false);
 
     if (result.ok) {
       notify(
@@ -101,7 +80,7 @@ function useConfirmDialog<T>({
     }
   }
 
-  return { isSubmitting, problem, isBlocked, isUncertain, blockedRetries, handleConfirm };
+  return { isSubmitting, problem, isBlocked, blockedRetries, handleConfirm };
 }
 
 export { useConfirmDialog };

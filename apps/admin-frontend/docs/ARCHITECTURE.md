@@ -164,11 +164,8 @@ Por tolerância a respostas incompletas, entradas dos grupos conhecidos sem cód
 exibidas; um código presente e incompatível é descartado. O frontend não interpreta texto para
 classificar vínculos, e nenhuma URL fornecida nos metadados é utilizada.
 
-Uma rejeição inesperada durante a confirmação apresenta resultado incerto, permite sair e orienta
-verificar a operação antes de tentar novamente. Quando a tela já foi desmontada, a orientação aparece
-como notificação global. Efeitos locais de sucesso não são chamados após a desmontagem; o diálogo
-de situação da pessoa é descartado ao trocar o ID da rota. Novos bloqueios são anunciados, e o foco
-passa ao alerta quando uma tentativa retorna falha transitória.
+Efeitos locais de sucesso não são chamados após a desmontagem. Novos bloqueios são anunciados, e o
+foco passa ao alerta quando uma tentativa retorna falha transitória.
 
 ## 3. Auth & tenancy
 

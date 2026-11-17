@@ -5,7 +5,6 @@ import { useConfirmDialog } from './use-confirm-dialog';
 
 import { ConfirmDialogBlockedView } from './components/confirm-dialog-blocked-view';
 import { ConfirmDialogConfirmView } from './components/confirm-dialog-confirm-view';
-import { ConfirmDialogUncertainView } from './components/confirm-dialog-uncertain-view';
 
 function ConfirmDialog<T>({
   loading = false,
@@ -31,8 +30,13 @@ function ConfirmDialog<T>({
     description: successDescription = 'A operação foi concluída.',
   } = {},
 }: ConfirmDialogProps<T>) {
-  const { isSubmitting, problem, isBlocked, isUncertain, blockedRetries, handleConfirm } =
-    useConfirmDialog({ onConfirm, onOpenChange, onSuccess, successTitle, successDescription });
+  const { isSubmitting, problem, isBlocked, blockedRetries, handleConfirm } = useConfirmDialog({
+    onConfirm,
+    onOpenChange,
+    onSuccess,
+    successTitle,
+    successDescription,
+  });
 
   return (
     <Dialog
@@ -45,9 +49,7 @@ function ConfirmDialog<T>({
         showCloseButton={!isSubmitting}
         className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
       >
-        {isUncertain ? (
-          <ConfirmDialogUncertainView dismissLabel={dismissLabel} />
-        ) : isBlocked && problem ? (
+        {isBlocked && problem ? (
           <ConfirmDialogBlockedView
             blockedTitle={blockedTitle}
             problem={problem}

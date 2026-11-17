@@ -60,13 +60,11 @@ T019 e T020 antecedem T021; T022 valida o conjunto. O E2E e contrato continuam e
 
 ## US6 — Preservar resultado e foco em confirmações assíncronas
 
-- [x] T023 [US6] Tratar rejeição inesperada e reentrada em `src/widgets/confirm-dialog`.
+- [x] T023 [US6] Impedir reentrada em `src/widgets/confirm-dialog`.
 - [x] T024 [US6] Isolar efeitos posteriores ao sucesso e evitar callbacks locais após desmontagem.
 - [x] T025 [US6] Anunciar bloqueio atualizado e restaurar foco ao erro transitório no diálogo.
-- [x] T026 [US6] Testar rejeição após operação concluída, reentrada, conclusão tardia, efeitos
+- [x] T026 [US6] Testar reentrada, conclusão tardia, efeitos
   posteriores, anúncios e regressões em `src/widgets/confirm-dialog`.
 - [x] T027 [US6] Alinhar documentação do leitor e executar os gates locais do frontend.
-- [x] T028 [US6] Associar a confirmação à pessoa atual em `src/features/clients/ui/pages/ClientFormPage`
-  e testar troca de ID durante a operação.
 
 T023–T025 antecedem T026 e T027. O E2E e contrato continuam em T011.

@@ -56,16 +56,13 @@ possa agir e tentar novamente. O backend e a regra de bloqueio permanecem inalte
 2. O link aponta para `/servicos/:id/editar` em outra aba. Nenhuma rota ou tela de edição de
    serviço é implementada nesta mudança; o diálogo original permanece aberto.
 
-### US6 — Lidar com resultado inesperado de uma confirmação
+### US6 — Preservar foco e efeitos das confirmações
 
-1. Se a confirmação rejeitar inesperadamente, o diálogo informa que o resultado é incerto,
-   permite sair e orienta a verificar antes de tentar novamente, sem disparar outra operação.
-2. Uma operação concluída mantém sua notificação global; seus efeitos locais não são aplicados
-   após a desmontagem da tela ou troca de pessoa. Falha em efeito posterior não é apresentada como
-   falha da operação. O resultado inesperado também é informado ao sair da tela durante a tentativa.
-3. Uma segunda tentativa bloqueada comunica a atualização; uma falha transitória subsequente
+1. Uma operação concluída mantém sua notificação global; seus efeitos locais não são aplicados
+   após a desmontagem da tela. Falha em efeito posterior não é apresentada como falha da operação.
+2. Uma segunda tentativa bloqueada comunica a atualização; uma falha transitória subsequente
    recebe foco e permanece utilizável pelo teclado.
-4. Não são iniciadas confirmações simultâneas pelo mesmo diálogo.
+3. Não são iniciadas confirmações simultâneas pelo mesmo diálogo.
 
 ## Requisitos
 
@@ -75,8 +72,6 @@ possa agir e tentar novamente. O backend e a regra de bloqueio permanecem inalte
 - **FR-004**: O diálogo compartilhado apresenta os registros padronizados de qualquer erro sem
   exigir que a tela consumidora configure um conteúdo específico de vínculos.
 - **FR-005**: Todo erro bloqueante permite nova tentativa somente por ação explícita.
-- **FR-006**: Uma exceção inesperada não é confundida com um erro de negócio nem autoriza
-  automaticamente nova tentativa quando o resultado da operação é desconhecido.
 
 ## Critério de sucesso
 
