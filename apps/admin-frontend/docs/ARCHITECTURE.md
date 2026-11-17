@@ -151,8 +151,9 @@ que os retornou; voltar da outra aba não os atualiza. O caminho de edição de 
 `shared/routes/clientPaths.ts` para evitar uma dependência circular entre Pessoas e Etiquetas.
 Grupos desconhecidos com erro `Tag.InUse` e nome válido aparecem como “Outros vínculos”, sem usar
 as chaves como rótulos nem construir links a partir dos metadados.
-O componente [RelatedRecords](../src/shared/ui/related-records/index.tsx) recebe o problema e apresenta
-grupos e avisos usando o [leitor compartilhado](../src/shared/ui/related-records/from-problem.ts). Os
+O componente interno [RelatedRecords](../src/widgets/confirm-dialog/components/related-records/index.tsx)
+recebe o problema e apresenta grupos e avisos usando seu
+[leitor](../src/widgets/confirm-dialog/components/related-records/from-problem.ts). Os
 campos `Clients` e `Services`, `meta.name`, `meta.id` e o limite de 10 registros por tipo são padrões
 compartilhados; o código do problema seleciona os vínculos de grupos desconhecidos. O diálogo de
 confirmação apresenta registros válidos em qualquer erro, sem configuração pela feature. Todo bloqueio

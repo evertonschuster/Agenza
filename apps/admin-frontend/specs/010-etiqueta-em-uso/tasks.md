@@ -18,7 +18,7 @@ T001 e T002 precedem T003; T004 verifica o conjunto. Os resultados e limitaçõe
 
 - [x] T007 [US2] Integrar os registros ao diálogo em `src/widgets/confirm-dialog` e remover a
   configuração de conteúdo da página em `src/features/tags/ui/pages/TagDeletePage`.
-- [x] T008 [US2] Evitar conteúdo vazio em `src/shared/ui/related-records` e preservar filtragem,
+- [x] T008 [US2] Evitar conteúdo vazio em `src/widgets/confirm-dialog/components/related-records` e preservar filtragem,
   rotas e tratamento de respostas incompletas.
 - [x] T009 [US2] Testar erros de outros códigos, falhas transitórias, dados incompletos e fluxos
   existentes em `src/widgets/confirm-dialog` e `src/features/tags/ui/pages/TagDeletePage`.

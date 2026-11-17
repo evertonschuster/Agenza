@@ -10,7 +10,7 @@ import {
 import { Button } from '@/shared/ui/button';
 import { ActionButton } from '@/shared/ui/action-button';
 import { ProblemCode } from '@/shared/ui/problem-code';
-import { RelatedRecords } from '@/shared/ui/related-records';
+import { RelatedRecords } from './related-records';
 import type { ConfirmDialogBlockedViewProps } from '../confirm-dialog.types';
 
 function ConfirmDialogBlockedView({
