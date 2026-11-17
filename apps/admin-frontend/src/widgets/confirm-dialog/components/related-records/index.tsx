@@ -37,17 +37,12 @@ function RelatedRecordSection({ group }: { group: RelatedRecordGroup }) {
 }
 
 export function RelatedRecords({ problem }: { problem: ApiProblem }) {
-  const { groups, notices } = getRelatedRecordsContent(problem);
-  if (notices.length === 0 && groups.every((group) => group.items.length === 0)) return null;
+  const { groups } = getRelatedRecordsContent(problem);
+  if (groups.every((group) => group.items.length === 0)) return null;
   return (
     <div className="space-y-4 text-sm">
       {groups.map((group) => (
         <RelatedRecordSection key={group.key} group={group} />
-      ))}
-      {notices.map((notice) => (
-        <p key={notice} className="text-muted-foreground">
-          {notice}
-        </p>
       ))}
     </div>
   );

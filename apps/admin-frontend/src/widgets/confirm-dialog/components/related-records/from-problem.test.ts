@@ -21,7 +21,6 @@ describe('getRelatedRecordsContent', () => {
     const result = getRelatedRecordsContent(problem);
     expect(result.groups[0]?.items).toEqual([{ id: 'a1', name: 'Ana' }]);
     expect(result.groups[2]?.items).toEqual([{ name: 'Outro' }]);
-    expect(result.notices).toEqual([]);
   });
 
   it('handles absent errors, malformed records and unknown groups with no problem code', () => {
@@ -33,10 +32,9 @@ describe('getRelatedRecordsContent', () => {
       },
     } as ApiProblem);
     expect(result.groups.every((group) => group.items.length === 0)).toBe(true);
-    expect(result.notices).toEqual([]);
   });
 
-  it('detects the raw limit for known groups while ignoring empty unknown groups', () => {
+  it('ignores invalid entries in known and unknown groups', () => {
     const entries = Array.from({ length: 10 }, () => ({ code: 'Tag.InUse', meta: {} }));
     const result = getRelatedRecordsContent({
       code: 'Tag.InUse',
@@ -44,7 +42,6 @@ describe('getRelatedRecordsContent', () => {
     });
 
     expect(result.groups.every((group) => group.items.length === 0)).toBe(true);
-    expect(result.notices).toEqual(['Mostramos até 10 pessoas. Pode haver outras vinculadas.']);
   });
 
   it('keeps new types visible as other links until they have a known presentation', () => {
@@ -59,16 +56,9 @@ describe('getRelatedRecordsContent', () => {
 
     expect(result.groups[2]?.items).toHaveLength(10);
     expect(result.groups[2]?.getEditPath).toBeUndefined();
-    expect(result.notices).toEqual([
-      'Mostramos até 10 registros por tipo. Pode haver outros vinculados.',
-    ]);
   });
 
-  it.each([
-    { count: 9, showsNotice: false },
-    { count: 10, showsNotice: true },
-    { count: 11, showsNotice: true },
-  ])('uses the received service list for $count records', ({ count, showsNotice }) => {
+  it.each([9, 10, 11])('uses all received service records when there are %i', (count) => {
     const entries = Array.from({ length: count }, (_, index) => ({
       code: 'Tag.InUse',
       meta: { id: String(index), name: `Serviço ${index}` },
@@ -79,9 +69,6 @@ describe('getRelatedRecordsContent', () => {
     });
 
     expect(result.groups[1]?.items).toHaveLength(count);
-    expect(result.notices).toEqual(
-      showsNotice ? ['Mostramos até 10 serviços. Pode haver outros vinculados.'] : [],
-    );
   });
 
   it('reads the first matching field without repeating differently cased duplicates', () => {

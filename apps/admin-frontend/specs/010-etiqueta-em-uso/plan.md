@@ -4,8 +4,8 @@
 
 - O diálogo compartilhado apresenta `RelatedRecords` sempre que recebe uma falha, sem exigir
   configuração de conteúdo pela feature. O leitor existente valida os metadados; nomes sem ID
-  permanecem visíveis sem link. O aviso de limite depende da quantidade de entradas recebidas
-  por tipo, nunca do texto da mensagem.
+  permanecem visíveis sem link. O frontend exibe a mensagem do backend sem interpretá-la e não
+  gera avisos adicionais sobre limite ou registros ausentes.
 - Grupos ainda desconhecidos são apresentados como outros vínculos quando suas entradas têm código
   `Tag.InUse` e nome válido. Nenhuma chave ou URL recebida se transforma em rota ou rótulo.
 - O caminho de edição de pessoa passa a ser compartilhado sem depender de `features/clients`,

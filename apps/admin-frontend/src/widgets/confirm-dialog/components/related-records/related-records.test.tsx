@@ -6,7 +6,7 @@ import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { RelatedRecords } from './index';
 
 describe('RelatedRecords', () => {
-  it('renders nothing when no valid records or notices are available', () => {
+  it('renders nothing when no valid records are available', () => {
     const { container } = render(<RelatedRecords problem={{}} />);
     expect(container).toBeEmptyDOMElement();
   });

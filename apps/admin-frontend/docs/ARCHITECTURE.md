@@ -145,19 +145,18 @@ abertura; a feature mantém o domínio. Ver
 
 Ao receber `Tag.InUse`, a exclusão apresenta os nomes recebidos e permite repetir a tentativa no
 mesmo diálogo. Pessoas com identificador abrem a edição em outra aba pelo mesmo `NewTabLink`;
-serviços aparecem sem link enquanto não houver tela de gerenciamento. O aviso de lista possivelmente
-incompleta aparece quando a resposta traz 10 registros daquele tipo. Os dados pertencem à tentativa
+serviços aparecem sem link enquanto não houver tela de gerenciamento. Os dados pertencem à tentativa
 que os retornou; voltar da outra aba não os atualiza. O caminho de edição de pessoa fica em
 `shared/routes/clientPaths.ts` para evitar uma dependência circular entre Pessoas e Etiquetas.
 Grupos desconhecidos com erro `Tag.InUse` e nome válido aparecem como “Outros vínculos”, sem usar
 as chaves como rótulos nem construir links a partir dos metadados.
 O componente interno [RelatedRecords](../src/widgets/confirm-dialog/components/related-records/index.tsx)
-recebe o problema e apresenta grupos e avisos usando seu
+recebe o problema e apresenta grupos usando seu
 [leitor](../src/widgets/confirm-dialog/components/related-records/from-problem.ts). Os
 campos `Clients` e `Services`, `meta.name`, `meta.id` e o limite de 10 registros por tipo são padrões
 compartilhados; o código do problema seleciona os vínculos de grupos desconhecidos. O diálogo de
 confirmação apresenta registros válidos em qualquer erro, sem configuração pela feature. Todo bloqueio
-oferece uma nova tentativa explícita, com texto personalizável. A lista de grupos conhecidos concentra título, aviso e
+oferece uma nova tentativa explícita, com texto personalizável. A lista de grupos conhecidos concentra título e
 eventual rota; tipos futuros aparecem como “Outros vínculos” até receberem uma definição própria.
 
 ## 3. Auth & tenancy

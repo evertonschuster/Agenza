@@ -209,7 +209,7 @@ describe('TagDeletePage', () => {
     expect(link).toHaveFocus();
   });
 
-  it('warns independently when either received list reaches the limit', async () => {
+  it('shows the backend totals and received names without extra limit notices', async () => {
     const user = userEvent.setup();
     const entries = Array.from({ length: 10 }, (_, i) => ({
       code: 'Tag.InUse',
@@ -220,7 +220,8 @@ describe('TagDeletePage', () => {
       error: {
         status: 409,
         code: 'Tag.InUse',
-        title: 'Etiqueta em uso.',
+        title:
+          'Esta etiqueta está em uso por 11 serviço(s) e 12 pessoa(s) e não pode ser excluída.',
         errors: {
           Clients: entries,
           Services: entries.map((entry) => ({
@@ -234,11 +235,17 @@ describe('TagDeletePage', () => {
     await screen.findByText(PROMOCAO_CONFIRMATION);
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
     expect(
-      await screen.findByText('Mostramos até 10 pessoas. Pode haver outras vinculadas.'),
+      await screen.findByText(
+        'Esta etiqueta está em uso por 11 serviço(s) e 12 pessoa(s) e não pode ser excluída.',
+      ),
     ).toBeInTheDocument();
     expect(
-      screen.getByText('Mostramos até 10 serviços. Pode haver outros vinculados.'),
-    ).toBeInTheDocument();
+      within(screen.getByRole('region', { name: 'Pessoas' })).getAllByRole('listitem'),
+    ).toHaveLength(10);
+    expect(
+      within(screen.getByRole('region', { name: 'Serviços' })).getAllByRole('listitem'),
+    ).toHaveLength(10);
+    expect(screen.queryByText(/Mostramos até 10/)).not.toBeInTheDocument();
   });
 
   it('handles incomplete entries without inventing names or links', async () => {
@@ -309,7 +316,7 @@ describe('TagDeletePage', () => {
     expect(screen.getByRole('link', { name: /Ana/ })).toBeInTheDocument();
   });
 
-  it('warns when an unknown group reaches ten entries without inferring a total', async () => {
+  it('shows all received records in an unknown group without an extra limit notice', async () => {
     const user = userEvent.setup();
     const entries = Array.from({ length: 10 }, (_, i) => ({
       code: 'Tag.InUse',
@@ -327,13 +334,12 @@ describe('TagDeletePage', () => {
     renderAt(['/tags/1/delete']);
     await screen.findByText(PROMOCAO_CONFIRMATION);
     await user.click(screen.getByRole('button', { name: 'Excluir' }));
-    expect(
-      await screen.findByText('Mostramos até 10 registros por tipo. Pode haver outros vinculados.'),
-    ).toBeInTheDocument();
+    expect(await screen.findByText('Etiqueta em uso.')).toBeInTheDocument();
     expect(
       within(screen.getByRole('region', { name: 'Outros vínculos' })).getAllByRole('listitem'),
     ).toHaveLength(10);
     expect(screen.queryByText('NewFeature')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mostramos até 10/)).not.toBeInTheDocument();
   });
 
   it('retries explicitly and replaces the blocked details with the new response before success', async () => {

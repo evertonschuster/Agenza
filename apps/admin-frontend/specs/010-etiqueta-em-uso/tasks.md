@@ -37,3 +37,13 @@ T007 e T008 antecedem T009; T010 e T011 registram a validação em ambientes apr
 - [x] T015 [US3] Atualizar `docs/ARCHITECTURE.md` e executar formato, lint, build e cobertura.
 
 T012 e T013 antecedem T014; T015 valida o conjunto. O E2E e contrato continuam em T011.
+
+## US4 — Manter apenas os totais informados pelo backend
+
+- [x] T016 [US4] Remover a geração e renderização de avisos em
+  `src/widgets/confirm-dialog/components/related-records`.
+- [x] T017 [US4] Verificar a mensagem e os nomes recebidos sem aviso adicional nos testes do leitor,
+  do componente e de `src/features/tags/ui/pages/TagDeletePage`.
+- [ ] T018 [US4] Atualizar `docs/ARCHITECTURE.md` e executar formato, lint, build e cobertura.
+
+T016 antecede T017; T018 valida o conjunto. O E2E e contrato continuam em T011.

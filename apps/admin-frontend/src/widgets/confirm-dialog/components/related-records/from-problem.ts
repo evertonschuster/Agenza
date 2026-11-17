@@ -2,10 +2,8 @@ import type { ApiProblem } from '@/shared/api/servicesFacade';
 import { editClientPath } from '@/shared/routes/clientPaths';
 import type { RelatedRecord, RelatedRecordGroup } from './related-records.types';
 
-const RECORD_LIMIT = 10;
-
 function readEntries(raw: unknown, code: string, requireCode = false) {
-  if (!Array.isArray(raw)) return { items: [], limited: false };
+  if (!Array.isArray(raw)) return [];
 
   const items: RelatedRecord[] = [];
   for (const entry of raw as unknown[]) {
@@ -19,7 +17,7 @@ function readEntries(raw: unknown, code: string, requireCode = false) {
     const id = 'id' in meta && typeof meta.id === 'string' ? meta.id.trim() : '';
     items.push(id && id !== '.' && id !== '..' ? { name, id } : { name });
   }
-  return { items, limited: raw.length >= RECORD_LIMIT };
+  return items;
 }
 
 function personPath(person: RelatedRecord): string | undefined {
@@ -33,7 +31,6 @@ function personPath(person: RelatedRecord): string | undefined {
 
 type KnownGroup = Omit<RelatedRecordGroup, 'items' | 'key'> & {
   field: string;
-  limitNotice: string;
 };
 
 const KNOWN_GROUPS: readonly KnownGroup[] = [
@@ -41,44 +38,34 @@ const KNOWN_GROUPS: readonly KnownGroup[] = [
     field: 'clients',
     title: 'Pessoas',
     getEditPath: personPath,
-    limitNotice: 'Mostramos até 10 pessoas. Pode haver outras vinculadas.',
   },
   {
     field: 'services',
     title: 'Serviços',
     description: 'O gerenciamento de serviços ainda não está disponível.',
-    limitNotice: 'Mostramos até 10 serviços. Pode haver outros vinculados.',
   },
 ];
 
 export function getRelatedRecordsContent(problem: ApiProblem): {
   groups: RelatedRecordGroup[];
-  notices: string[];
 } {
   const errors = problem.errors;
   const fields =
     errors && typeof errors === 'object' && !Array.isArray(errors) ? Object.entries(errors) : [];
   const code = problem.code ?? '';
-  const notices: string[] = [];
-  const groups: RelatedRecordGroup[] = KNOWN_GROUPS.map(({ field, limitNotice, ...group }) => {
+  const groups: RelatedRecordGroup[] = KNOWN_GROUPS.map(({ field, ...group }) => {
     const raw = fields.find(([name]) => name.toLowerCase() === field.toLowerCase())?.[1];
-    const { items, limited } = readEntries(raw, code);
-    if (limited) notices.push(limitNotice);
-    return { ...group, key: `known:${field.toLowerCase()}`, items };
+    return { ...group, key: `known:${field.toLowerCase()}`, items: readEntries(raw, code) };
   });
-  const otherGroups = fields
+  const otherItems = fields
     .filter(
       ([field]) => !KNOWN_GROUPS.some((known) => known.field.toLowerCase() === field.toLowerCase()),
     )
-    .map(([, entries]) => readEntries(entries, code, true))
-    .filter((group) => group.items.length > 0);
-  if (otherGroups.some((group) => group.limited)) {
-    notices.push('Mostramos até 10 registros por tipo. Pode haver outros vinculados.');
-  }
+    .flatMap(([, entries]) => readEntries(entries, code, true));
   groups.push({
     key: 'other',
     title: 'Outros vínculos',
-    items: otherGroups.flatMap((group) => group.items),
+    items: otherItems,
   });
-  return { groups, notices };
+  return { groups };
 }
