@@ -212,7 +212,7 @@ jobs:
         run: npm exec --workspace=apps/admin-frontend -- playwright install --with-deps chromium
 
       - name: Browser tests
-        # Real logins against the DemoTenant seed data (spec quickstart Scenarios 1-3), which is
+        # Real logins against the DemoTenant seed data, which is
         # why this needs the Aspire stack above rather than living in frontend-build-and-test.
         # playwright.config.ts's webServer waits for :5173 itself (reusing Aspire's Vite server),
         # so there's no separate readiness step here.

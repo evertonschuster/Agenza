@@ -150,31 +150,16 @@ As superfícies usam mensagens e códigos do `ApiProblem` normalizado; ramifica�
 `code`/status, nunca do texto da mensagem. Preserve a representação do problema em erros de lista,
 diálogos, banners e toasts. A política HTTP detalhada fica em [docs/API.md](../../../docs/API.md).
 
-### Etiqueta em uso
+### Registros relacionados em confirmações
 
-Ao receber `Tag.InUse`, a exclusão apresenta os nomes recebidos e permite repetir a tentativa no
-mesmo diálogo. Pessoas com identificador abrem a edição em outra aba pelo mesmo `NewTabLink`;
-serviços com identificador oferecem um link para a futura rota de edição em outra aba, com aviso de
-que o gerenciamento ainda não está disponível. A rota de edição de serviços ainda não existe. Os dados pertencem à tentativa
-que os retornou; voltar da outra aba não os atualiza. O caminho de edição de pessoa fica em
-`shared/routes/clientPaths.ts` para evitar uma dependência circular entre Pessoas e Etiquetas.
-Grupos desconhecidos com código igual ao erro e nome válido aparecem como “Outros vínculos”, sem usar
-as chaves como rótulos nem construir links a partir dos metadados.
-O componente interno [ConfirmDialogRelatedRecords](../src/widgets/confirm-dialog/components/confirm-dialog-related-records.tsx)
-recebe o problema e apresenta grupos usando seu
-[leitor](../src/widgets/confirm-dialog/related-records.ts). Os
-campos `Clients` e `Services`, `meta.name`, `meta.id` e o limite de 10 registros por tipo são padrões
-compartilhados; o código do problema seleciona os vínculos de grupos desconhecidos. O diálogo de
-confirmação apresenta registros válidos em qualquer erro, sem configuração pela feature. Todo bloqueio
-oferece uma nova tentativa explícita, com texto personalizável. A lista de grupos conhecidos concentra título e
-eventual rota; pessoas e serviços usam o mesmo construtor de links no diálogo. Tipos futuros
-aparecem como “Outros vínculos” até receberem uma definição própria.
-Por tolerância a respostas incompletas, entradas dos grupos conhecidos sem código também podem ser
-exibidas; um código presente e incompatível é descartado. O frontend não interpreta texto para
-classificar vínculos, e nenhuma URL fornecida nos metadados é utilizada.
-
-Efeitos locais de sucesso não são chamados após a desmontagem. Novos bloqueios são anunciados, e o
-foco passa ao alerta quando uma tentativa retorna falha transitória.
+O [ConfirmDialog](../src/widgets/confirm-dialog/index.tsx) mostra os registros relacionados de
+qualquer falha, sem configuração pela feature, e todo bloqueio oferece uma nova tentativa explícita.
+O [leitor](../src/widgets/confirm-dialog/related-records.ts) é a única fonte desses registros:
+grupos conhecidos (`Clients`, `Services`) com `meta.id` e `meta.name`, até 10 por tipo; um grupo
+desconhecido com o código do problema aparece como “Outros vínculos”. Rótulos e rotas vêm da lista
+de grupos conhecidos, nunca dos metadados, e nada é inferido do texto da mensagem. O caminho de
+edição de pessoa fica em `shared/routes/clientPaths.ts` para que Etiquetas o use sem depender de
+Pessoas.
 
 ## 3. Auth & tenancy
 

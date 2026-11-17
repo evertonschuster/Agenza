@@ -1,6 +1,6 @@
 # ADR 0011 — Logging
 
-Status: proposta (2026-11-14); passa a aceita no merge.
+Status: aceita (2026-11-15).
 
 ## Decisão
 

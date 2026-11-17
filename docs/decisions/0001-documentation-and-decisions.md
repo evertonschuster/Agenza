@@ -1,6 +1,6 @@
 # ADR 0001 — Documentação, decisões e instruções para agentes
 
-Status: proposta (2026-11-14); passa a aceita no merge. Recomeça o registro de decisões; as ADRs
+Status: aceita (2026-11-15). Recomeça o registro de decisões; as ADRs
 anteriores, as specs e o Spec Kit estão na tag `docs-archive-2026-11-14`.
 
 ## Decisão

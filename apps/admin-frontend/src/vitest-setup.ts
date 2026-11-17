@@ -7,7 +7,7 @@ declare global {
   var BASE_UI_ANIMATIONS_DISABLED: boolean;
 }
 
-// Keep FR-015's logAuthEvent calls (sessionStore) out of the test console without dropping them.
+// Keep the logAuthEvent calls (sessionStore) out of the test console without dropping them.
 vi.mock('@/shared/logger', () => ({
   logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
 }));
