@@ -24,7 +24,7 @@ import {
 } from '../../../../model/client';
 import type { ClientTag } from '../../../../model/clientTag';
 import type { ClientFormFieldValues } from '../clientForm';
-import { editClientPath } from '../../../clientsPaths';
+import { editClientPath } from '@/shared/routes/clientPaths';
 
 function ClientPersonSection() {
   const { control } = useFormContext<ClientFormFieldValues>();

@@ -1,9 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
 import { Trash2Icon } from 'lucide-react';
 import { Dialog, DialogContent } from '@/shared/ui/dialog';
-import { isTransientProblem, type ApiProblem } from '@/shared/api/servicesFacade';
-import { toast } from '@/shared/ui/toast';
 import type { ConfirmDialogProps } from './confirm-dialog.types';
+import { useConfirmDialog } from './use-confirm-dialog';
 
 import { ConfirmDialogBlockedView } from './components/confirm-dialog-blocked-view';
 import { ConfirmDialogConfirmView } from './components/confirm-dialog-confirm-view';
@@ -25,39 +23,20 @@ function ConfirmDialog<T>({
     blockedTitle = 'Não é possível excluir',
     retryLabel = 'Tentar novamente',
     dismissLabel = 'Entendi',
+    blockedRetryLabel = 'Tentar novamente',
   } = {},
   success: {
     title: successTitle = 'Excluído com sucesso',
     description: successDescription = 'A operação foi concluída.',
   } = {},
 }: ConfirmDialogProps<T>) {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [problem, setProblem] = useState<ApiProblem>();
-  const isMountedRef = useRef(true);
-  const isBlocked = problem !== undefined && !isTransientProblem(problem);
-
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  async function handleConfirm() {
-    setProblem(undefined);
-    setIsSubmitting(true);
-    const result = await onConfirm();
-    setIsSubmitting(false);
-
-    if (result.ok) {
-      toast.add({ title: successTitle, description: successDescription, type: 'success' });
-      onSuccess?.(result.data);
-      if (isMountedRef.current) onOpenChange(false);
-      return;
-    }
-
-    setProblem(result.error);
-  }
+  const { isSubmitting, problem, isBlocked, blockedRetries, handleConfirm } = useConfirmDialog({
+    onConfirm,
+    onOpenChange,
+    onSuccess,
+    successTitle,
+    successDescription,
+  });
 
   return (
     <Dialog
@@ -66,12 +45,20 @@ function ConfirmDialog<T>({
         if (!isSubmitting) onOpenChange(open);
       }}
     >
-      <DialogContent showCloseButton={!isSubmitting}>
-        {isBlocked ? (
+      <DialogContent
+        showCloseButton={!isSubmitting}
+        className="max-h-[calc(100dvh-2rem)] overflow-y-auto"
+      >
+        {isBlocked && problem ? (
           <ConfirmDialogBlockedView
             blockedTitle={blockedTitle}
             problem={problem}
             dismissLabel={dismissLabel}
+            retryLabel={blockedRetryLabel.trim() || 'Tentar novamente'}
+            retryVariant={confirmVariant}
+            isSubmitting={isSubmitting}
+            completedRetries={blockedRetries}
+            onRetry={() => void handleConfirm()}
           />
         ) : (
           <ConfirmDialogConfirmView

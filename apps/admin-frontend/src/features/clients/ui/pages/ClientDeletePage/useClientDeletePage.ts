@@ -5,7 +5,7 @@ import { toast } from '@/shared/ui/toast';
 import { clientsRepository } from '../../../api/clientsRepository';
 import { deleteClient } from '../../../application/clientUseCases';
 import type { Client } from '../../../model/client';
-import { CLIENTS_PATH } from '../../clientsPaths';
+import { CLIENTS_PATH } from '@/shared/routes/clientPaths';
 import type { UseClientDeletePageResult } from './useClientDeletePage.types';
 
 export function useClientDeletePage(): UseClientDeletePageResult {

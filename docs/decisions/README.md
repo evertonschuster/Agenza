@@ -21,6 +21,7 @@ estão na tag `docs-archive-2026-11-14`, como histórico e não como regra.
 | Logging                                      | 0011          |
 | Frontend: arquitetura e acesso a dados       | 0012          |
 | Frontend: UI e interação                     | 0013          |
+| Cobertura de vínculos na exclusão de etiqueta | 0014          |
 
 ## Substituídas
 

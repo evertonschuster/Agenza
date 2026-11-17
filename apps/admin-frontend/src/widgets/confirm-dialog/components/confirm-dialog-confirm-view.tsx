@@ -1,4 +1,5 @@
 import { AlertCircleIcon } from 'lucide-react';
+import { useEffect, useRef } from 'react';
 import {
   DialogClose,
   DialogDescription,
@@ -9,6 +10,7 @@ import {
 import { ActionButton } from '@/shared/ui/action-button';
 import { Button } from '@/shared/ui/button';
 import { ProblemCode } from '@/shared/ui/problem-code';
+import { ConfirmDialogRelatedRecords } from './confirm-dialog-related-records';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ConfirmDialogConfirmViewProps } from '../confirm-dialog.types';
 
@@ -25,6 +27,11 @@ function ConfirmDialogConfirmView({
   isSubmitting,
   onConfirm,
 }: ConfirmDialogConfirmViewProps) {
+  const failureRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (failure) failureRef.current?.focus();
+  }, [failure]);
+
   return (
     <>
       <DialogHeader>
@@ -41,7 +48,9 @@ function ConfirmDialogConfirmView({
       </DialogHeader>
       {failure && (
         <div
+          ref={failureRef}
           role="alert"
+          tabIndex={-1}
           className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive"
         >
           <AlertCircleIcon aria-hidden="true" className="mt-0.5 size-4 shrink-0" />
@@ -51,6 +60,7 @@ function ConfirmDialogConfirmView({
           </div>
         </div>
       )}
+      {failure && <ConfirmDialogRelatedRecords problem={failure} />}
       <DialogFooter>
         <DialogClose disabled={isSubmitting} render={<Button variant="outline" />}>
           {cancelLabel}

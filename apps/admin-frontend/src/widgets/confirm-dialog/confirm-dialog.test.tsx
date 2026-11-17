@@ -1,9 +1,12 @@
 import { describe, expect, it, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { ArchiveIcon } from 'lucide-react';
+import { MemoryRouter } from 'react-router';
 import { ConfirmDialog } from '.';
 import { RATE_LIMIT_PROBLEM, type ApiResult } from '@/shared/api/servicesFacade';
+import { logger } from '@/shared/logger';
+import { toast } from '@/shared/ui/toast';
 
 const BASE_PROPS = {
   confirmation: {
@@ -19,6 +22,111 @@ const BASE_PROPS = {
 } as const;
 
 describe('ConfirmDialog', () => {
+  it('prevents synchronous reentry while a confirmation is pending', async () => {
+    let resolveConfirm: (result: ApiResult<void>) => void = () => {};
+    const onConfirm = vi.fn(
+      () =>
+        new Promise<ApiResult<void>>((resolve) => {
+          resolveConfirm = resolve;
+        }),
+    );
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+    const button = screen.getByRole('button', { name: 'Desativar' });
+    act(() => {
+      fireEvent.click(button);
+      fireEvent.click(button);
+    });
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      resolveConfirm({ ok: true, data: undefined });
+      await Promise.resolve();
+    });
+  });
+
+  it('keeps global success but skips local callbacks after unmount', async () => {
+    const user = userEvent.setup();
+    const onOpenChange = vi.fn();
+    const onSuccess = vi.fn();
+    const toastSpy = vi.spyOn(toast, 'add');
+    let resolveConfirm: (result: ApiResult<void>) => void = () => {};
+    const onConfirm = () =>
+      new Promise<ApiResult<void>>((resolve) => {
+        resolveConfirm = resolve;
+      });
+    const view = render(
+      <ConfirmDialog
+        {...BASE_PROPS}
+        onOpenChange={onOpenChange}
+        onConfirm={onConfirm}
+        onSuccess={onSuccess}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    view.unmount();
+    await act(async () => {
+      resolveConfirm({ ok: true, data: undefined });
+      await Promise.resolve();
+    });
+    expect(toastSpy).toHaveBeenCalledWith(expect.objectContaining({ type: 'success' }));
+    expect(onSuccess).not.toHaveBeenCalled();
+    expect(onOpenChange).not.toHaveBeenCalled();
+    toastSpy.mockRestore();
+  });
+
+  it('reports a local callback failure without misreporting the completed operation', async () => {
+    const user = userEvent.setup();
+    const toastSpy = vi.spyOn(toast, 'add');
+    const onOpenChange = vi.fn();
+    const onSuccess = vi.fn(() => {
+      throw new Error('view update failed');
+    });
+    render(
+      <ConfirmDialog
+        {...BASE_PROPS}
+        onOpenChange={onOpenChange}
+        onConfirm={() => Promise.resolve({ ok: true, data: undefined })}
+        onSuccess={onSuccess}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(logger.error).toHaveBeenCalledWith('confirm_dialog.success_callback_failed');
+    expect(toastSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        title: 'Ação concluída',
+        description: 'Não foi possível atualizar a tela. Atualize a página.',
+        type: 'error',
+      }),
+    );
+    toastSpy.mockRestore();
+  });
+
+  it('still runs the local callback and closes when the success toast throws', async () => {
+    const user = userEvent.setup();
+    const toastSpy = vi.spyOn(toast, 'add').mockImplementationOnce(() => {
+      throw new Error('toast failed');
+    });
+    const onOpenChange = vi.fn();
+    const onSuccess = vi.fn();
+    render(
+      <ConfirmDialog
+        {...BASE_PROPS}
+        onOpenChange={onOpenChange}
+        onConfirm={() => Promise.resolve({ ok: true, data: undefined })}
+        onSuccess={onSuccess}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    await waitFor(() => expect(onOpenChange).toHaveBeenCalledWith(false));
+    expect(onSuccess).toHaveBeenCalledOnce();
+    expect(logger.error).toHaveBeenCalledWith('confirm_dialog.success_notification_failed');
+    toastSpy.mockRestore();
+  });
+
   it('renders the configured confirming-state copy, with no transient banner', () => {
     render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={vi.fn()} />);
 
@@ -237,7 +345,7 @@ describe('ConfirmDialog', () => {
     );
   });
 
-  it('swaps to the blocked state with a single dismiss button and no retry, for a non-transient failure', async () => {
+  it('offers an explicit retry for a non-transient failure without related records', async () => {
     const user = userEvent.setup();
     const onOpenChange = vi.fn();
     const onConfirm = vi.fn().mockResolvedValue({
@@ -259,10 +367,169 @@ describe('ConfirmDialog', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('Código: Promotion.InUse')).toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: 'Desativar promoção?' })).not.toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: 'Tentar novamente' })).not.toBeInTheDocument();
+    expect(onConfirm).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Entendi' })).toBeEnabled());
 
     await user.click(screen.getByRole('button', { name: 'Entendi' }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('automatically displays related records and a retry for a different blocked error', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: 'Promotion.InUse',
+        title: 'Há registros vinculados.',
+        errors: {
+          Clients: [{ code: 'Promotion.InUse', meta: { id: 'a/1', name: 'Ana Lima' } }],
+          Services: [{ code: 'Promotion.InUse', meta: { name: 'Massagem' } }],
+          Procedures: [{ code: 'Promotion.InUse', meta: { name: 'Consulta' } }],
+        },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByText('Há registros vinculados.')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: /Ana Lima.*outra aba/ });
+    expect(link).toHaveAttribute('href', '/pessoas/a%2F1/editar');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(
+      within(screen.getByRole('region', { name: 'Serviços' })).getByText('Massagem'),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Outros vínculos' })).getByText('Consulta'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: 'Entendi' })).toBeEnabled();
+    expect(screen.getByRole('heading', { name: 'Não é possível desativar' })).toHaveFocus();
+    await user.tab();
+    expect(link).toHaveFocus();
+  });
+
+  it('announces a repeated block even if its title is unchanged', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: 'Tag.InUse',
+          title: 'Em uso.',
+          errors: { Clients: [{ code: 'Tag.InUse', meta: { name: 'Ana' } }] },
+        },
+      })
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          code: 'Tag.InUse',
+          title: 'Em uso.',
+          errors: { Clients: [{ code: 'Tag.InUse', meta: { name: 'Bia' } }] },
+        },
+      });
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByText('Ana')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(await screen.findByText('Bia')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveTextContent(
+      'Tentativa 1 concluída. Confira as informações atualizadas.',
+    );
+  });
+
+  it('moves focus to a transient failure after a blocked retry', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi
+      .fn()
+      .mockResolvedValueOnce({ ok: false, error: { code: 'Tag.InUse', title: 'Em uso.' } })
+      .mockResolvedValueOnce({ ok: false, error: { status: 503, title: 'Indisponível.' } });
+    render(<ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />);
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    await user.click(await screen.findByRole('button', { name: 'Tentar novamente' }));
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Indisponível.');
+    await waitFor(() => expect(alert).toHaveFocus());
+    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
+  });
+
+  it('supports a custom retry label and preserves the confirmation variant', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: { status: 409, code: 'Promotion.InUse', title: 'Não é possível desativar.' },
+    });
+    render(
+      <ConfirmDialog
+        {...BASE_PROPS}
+        confirmation={{ ...BASE_PROPS.confirmation, confirmVariant: 'default' }}
+        error={{ blockedRetryLabel: 'Tentar desativar novamente' }}
+        onOpenChange={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    const retry = await screen.findByRole('button', { name: 'Tentar desativar novamente' });
+    expect(retry).toHaveAttribute('data-variant', 'default');
+    await user.click(retry);
+    expect(onConfirm).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps an accessible retry button if the custom label is blank', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: { status: 409, code: 'Promotion.InUse', title: 'Bloqueada.' },
+    });
+    render(
+      <ConfirmDialog
+        {...BASE_PROPS}
+        error={{ blockedRetryLabel: '   ' }}
+        onOpenChange={vi.fn()}
+        onConfirm={onConfirm}
+      />,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
+  });
+
+  it('shows related records on transient errors and retains the existing retry action', async () => {
+    const user = userEvent.setup();
+    const onConfirm = vi.fn().mockResolvedValue({
+      ok: false,
+      error: {
+        status: 503,
+        code: 'Server.Unavailable',
+        title: 'Serviço indisponível.',
+        errors: { Clients: [{ code: 'Server.Unavailable', meta: { id: '123', name: 'Ana' } }] },
+      },
+    });
+    render(
+      <MemoryRouter>
+        <ConfirmDialog {...BASE_PROPS} onOpenChange={vi.fn()} onConfirm={onConfirm} />
+      </MemoryRouter>,
+    );
+
+    await user.click(screen.getByRole('button', { name: 'Desativar' }));
+    expect(await screen.findByRole('alert')).toHaveTextContent('Serviço indisponível.');
+    expect(screen.getByRole('link', { name: /Ana.*outra aba/ })).toHaveAttribute(
+      'href',
+      '/pessoas/123/editar',
+    );
+    await user.click(screen.getByRole('button', { name: 'Tentar novamente' }));
+    expect(onConfirm).toHaveBeenCalledTimes(2);
   });
 
   it('lets a second, differently-configured instance use its own copy, with none of the first left behind', () => {

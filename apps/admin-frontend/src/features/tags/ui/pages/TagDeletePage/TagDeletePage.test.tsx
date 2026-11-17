@@ -178,6 +178,263 @@ describe('TagDeletePage', () => {
     expect(screen.getByText('Promoção')).toBeInTheDocument();
   });
 
+  it('opens people and services edit paths in a new tab', async () => {
+    const user = userEvent.setup();
+    mockDelete.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: 'Tag.InUse',
+        title: 'Etiqueta em uso.',
+        errors: {
+          Clients: [{ code: 'Tag.InUse', meta: { id: 'abc/123', name: 'Ana Lima' } }],
+          Services: [{ code: 'Tag.InUse', meta: { id: 'service-1', name: 'Massagem' } }],
+        },
+      },
+    });
+    renderAt(['/tags/1/delete']);
+    await screen.findByText(PROMOCAO_CONFIRMATION);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    const link = await screen.findByRole('link', { name: /Ana Lima.*outra aba/ });
+    expect(link).toHaveAttribute('href', '/pessoas/abc%2F123/editar');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    const serviceLink = screen.getByRole('link', { name: /Massagem.*outra aba/ });
+    expect(serviceLink).toHaveAttribute('href', '/servicos/service-1/editar');
+    expect(serviceLink).toHaveAttribute('target', '_blank');
+    expect(serviceLink).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(
+      screen.getByText('O gerenciamento de serviços ainda não está disponível.'),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Mostramos até 10/)).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: 'Não é possível excluir' })).toHaveFocus();
+    await user.tab();
+    expect(link).toHaveFocus();
+  });
+
+  it('shows the backend totals and received names without extra limit notices', async () => {
+    const user = userEvent.setup();
+    const entries = Array.from({ length: 10 }, (_, i) => ({
+      code: 'Tag.InUse',
+      meta: { id: String(i), name: `Pessoa ${i}` },
+    }));
+    mockDelete.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: 'Tag.InUse',
+        title:
+          'Esta etiqueta está em uso por 11 serviço(s) e 12 pessoa(s) e não pode ser excluída.',
+        errors: {
+          Clients: entries,
+          Services: entries.map((entry) => ({
+            ...entry,
+            meta: { ...entry.meta, name: `Serviço ${entry.meta.id}` },
+          })),
+        },
+      },
+    });
+    renderAt(['/tags/1/delete']);
+    await screen.findByText(PROMOCAO_CONFIRMATION);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    expect(
+      await screen.findByText(
+        'Esta etiqueta está em uso por 11 serviço(s) e 12 pessoa(s) e não pode ser excluída.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Pessoas' })).getAllByRole('listitem'),
+    ).toHaveLength(10);
+    expect(
+      within(screen.getByRole('region', { name: 'Serviços' })).getAllByRole('listitem'),
+    ).toHaveLength(10);
+    expect(screen.queryByText(/Mostramos até 10/)).not.toBeInTheDocument();
+  });
+
+  it('handles incomplete entries without inventing names or links', async () => {
+    const user = userEvent.setup();
+    mockDelete.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: 'Tag.InUse',
+        title: 'Etiqueta em uso.',
+        errors: {
+          Clients: [
+            null,
+            {},
+            { meta: { name: 'Sem identificador' } },
+            { meta: { id: '123' } },
+            { meta: { name: 'ID inválido', id: '..' } },
+          ],
+          Services: null,
+        },
+      },
+    });
+    renderAt(['/tags/1/delete']);
+    await screen.findByText(PROMOCAO_CONFIRMATION);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    expect(await screen.findByText('Sem identificador')).toBeInTheDocument();
+    expect(screen.getByText('ID inválido')).toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /Sem identificador|ID inválido/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: 'Serviços' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar excluir novamente' })).toBeEnabled();
+  });
+
+  it('shows unknown usage groups without inventing labels or links', async () => {
+    const user = userEvent.setup();
+    mockDelete.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: 'Tag.InUse',
+        title: 'Etiqueta em uso.',
+        errors: {
+          Clients: [{ code: 'Tag.InUse', meta: { id: 'client-1', name: 'Ana' } }],
+          Appointments: [
+            {
+              code: 'Tag.InUse',
+              meta: { id: 'unknown-1', name: 'Atendimento especial', url: 'https://example.com' },
+            },
+            { code: 'Another.Error', meta: { name: 'Não exibir' } },
+            { meta: { name: 'Sem código' } },
+            null,
+            { code: 'Tag.InUse', meta: { id: 'missing-name' } },
+          ],
+        },
+      },
+    });
+    renderAt(['/tags/1/delete']);
+    await screen.findByText(PROMOCAO_CONFIRMATION);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    const other = await screen.findByRole('region', { name: 'Outros vínculos' });
+    expect(within(other).getByText('Atendimento especial')).toBeInTheDocument();
+    expect(within(other).queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.queryByText('Appointments')).not.toBeInTheDocument();
+    expect(screen.queryByText('Não exibir')).not.toBeInTheDocument();
+    expect(screen.queryByText('Sem código')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mostramos até 10 registros/)).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Ana/ })).toBeInTheDocument();
+  });
+
+  it('shows all received records in an unknown group without an extra limit notice', async () => {
+    const user = userEvent.setup();
+    const entries = Array.from({ length: 10 }, (_, i) => ({
+      code: 'Tag.InUse',
+      meta: { id: String(i), name: `Vínculo ${i}` },
+    }));
+    mockDelete.mockResolvedValue({
+      ok: false,
+      error: {
+        status: 409,
+        code: 'Tag.InUse',
+        title: 'Etiqueta em uso.',
+        errors: { NewFeature: entries },
+      },
+    });
+    renderAt(['/tags/1/delete']);
+    await screen.findByText(PROMOCAO_CONFIRMATION);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    expect(await screen.findByText('Etiqueta em uso.')).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('region', { name: 'Outros vínculos' })).getAllByRole('listitem'),
+    ).toHaveLength(10);
+    expect(screen.queryByText('NewFeature')).not.toBeInTheDocument();
+    expect(screen.queryByText(/Mostramos até 10/)).not.toBeInTheDocument();
+  });
+
+  it('retries explicitly and replaces the blocked details with the new response before success', async () => {
+    const user = userEvent.setup();
+    const blocked = (name: string) => ({
+      ok: false,
+      error: {
+        status: 409,
+        code: 'Tag.InUse',
+        title: 'Etiqueta em uso.',
+        errors: {
+          Clients: [{ code: 'Tag.InUse', meta: { id: name, name } }],
+        },
+      },
+    });
+    mockDelete
+      .mockResolvedValueOnce(blocked('Ana'))
+      .mockResolvedValueOnce(blocked('Bia'))
+      .mockResolvedValueOnce({ ok: true, data: undefined });
+    renderAt(['/tags/1/delete']);
+    await screen.findByText(PROMOCAO_CONFIRMATION);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    await screen.findByRole('link', { name: /Ana/ });
+    await user.click(screen.getByRole('button', { name: 'Tentar excluir novamente' }));
+    expect(await screen.findByRole('link', { name: /Bia/ })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /Ana/ })).not.toBeInTheDocument();
+    expect(mockDelete).toHaveBeenCalledTimes(2);
+    await user.click(screen.getByRole('button', { name: 'Tentar excluir novamente' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mockDelete).toHaveBeenCalledTimes(3);
+  });
+
+  it('keeps the blocked details and disables actions while retrying, then preserves transient error handling', async () => {
+    const user = userEvent.setup();
+    let resolveRetry!: (value: unknown) => void;
+    mockDelete
+      .mockResolvedValueOnce({
+        ok: false,
+        error: {
+          status: 409,
+          code: 'Tag.InUse',
+          title: 'Etiqueta em uso.',
+          errors: {
+            Clients: [{ code: 'Tag.InUse', meta: { id: '123', name: 'Ana' } }],
+          },
+        },
+      })
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveRetry = resolve;
+          }),
+      );
+    renderAt(['/tags/1/delete']);
+    await screen.findByText(PROMOCAO_CONFIRMATION);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    await screen.findByRole('link', { name: /Ana/ });
+    await user.click(screen.getByRole('button', { name: 'Tentar excluir novamente' }));
+    expect(screen.getByRole('link', { name: /Ana/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Tentar excluir novamente' })).toHaveAttribute(
+      'aria-disabled',
+      'true',
+    );
+    expect(screen.getByRole('button', { name: 'Entendi' })).toBeDisabled();
+    resolveRetry({
+      ok: false,
+      error: { status: 0, code: 'Network.Unreachable', title: 'Sem conexão.' },
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent('Sem conexão.');
+    expect(screen.getByRole('button', { name: 'Tentar novamente' })).toBeEnabled();
+  });
+
+  it('offers an explicit retry for other permanent errors without inventing related records', async () => {
+    const user = userEvent.setup();
+    mockDelete
+      .mockResolvedValueOnce({
+        ok: false,
+        error: { status: 409, code: 'Tag.SaveFailed', title: 'Não foi possível excluir.' },
+      })
+      .mockResolvedValueOnce({ ok: true, data: undefined });
+    renderAt(['/tags/1/delete']);
+    await screen.findByText(PROMOCAO_CONFIRMATION);
+    await user.click(screen.getByRole('button', { name: 'Excluir' }));
+    expect(await screen.findByText('Não foi possível excluir.')).toBeInTheDocument();
+    expect(screen.queryByRole('region', { name: 'Pessoas' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Entendi' })).toBeInTheDocument();
+    expect(mockDelete).toHaveBeenCalledTimes(1);
+    await user.click(screen.getByRole('button', { name: 'Tentar excluir novamente' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mockDelete).toHaveBeenCalledTimes(2);
+  });
+
   it('goes back to the list after deleting, so the browser Back button does not reopen the confirmation', async () => {
     const user = userEvent.setup();
     mockDelete.mockResolvedValue({ ok: true, data: undefined });

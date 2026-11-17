@@ -9,6 +9,9 @@ export function TagDeletePage() {
       loading={!tag}
       onOpenChange={onOpenChange}
       onConfirm={onConfirm}
+      error={{
+        blockedRetryLabel: 'Tentar excluir novamente',
+      }}
       confirmation={{
         title: 'Excluir etiqueta?',
         description: tag && (

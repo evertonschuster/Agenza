@@ -6,7 +6,7 @@ import { OptionalText } from '@/shared/ui/optional-text';
 import { Skeleton } from '@/shared/ui/skeleton';
 import type { ListSectionColumn } from '@/widgets/list-section';
 import type { ClientListItem } from '../../../../model/clientList';
-import { deleteClientPath, editClientPath } from '../../../clientsPaths';
+import { deleteClientPath, editClientPath } from '@/shared/routes/clientPaths';
 import { ClientStatusBadge } from '../../../components/ClientStatusBadge/ClientStatusBadge';
 
 export function clientColumns(): ListSectionColumn<ClientListItem>[] {
