@@ -47,7 +47,8 @@ genuína ou uma restrição não óbvia.
 ## Documentação
 
 Só se escreve o que o código não mostra, e cada informação tem uma casa:
-[decisions/processo.md](docs/decisions/processo.md).
+[decisions/processo.md](docs/decisions/processo.md). Não crie arquivos em `docs/decisions/` nem ADRs
+numerados; uma decisão aprovada vira seção no arquivo do tema.
 
 ## Fluxo de trabalho
 
