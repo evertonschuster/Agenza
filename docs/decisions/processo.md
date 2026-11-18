@@ -11,15 +11,21 @@
 | Código, configuração, pins e CI     | O comportamento implementado e o que é de fato verificado               |
 | Testes                              | Comportamento e critérios de aceite                                     |
 | `AGENTS.md` da raiz e de cada área  | Invariantes e roteamento por tarefa                                     |
-| `docs/ARCHITECTURE.md` de cada área | Forma vigente, convenções e o que já foi tentado e descartado           |
+| `docs/ARCHITECTURE.md` de cada área | Forma vigente e convenções: o como                                      |
 | Skills em `.claude/skills/agenza-*` | Procedimentos, apontando para a regra em vez de restatá-la              |
-| ADRs em `docs/decisions/`           | Decisão durável, seu porquê e as alternativas rejeitadas                |
+| `docs/decisions/`                   | A decisão em poucas linhas, o porquê e o que foi rejeitado              |
 | PR                                  | A conversa com o dono, as iterações de review e a evidência de execução |
 
 **Só se escreve o que o código não mostra.** Layout de pastas, inventários, versões e status de
-feature não entram em prosa.
+feature não entram em prosa. Uma regra que já está num guia não se repete nas decisões, e o
+Rejeitado mora só nas decisões.
 
-**Quando há ADR.** Mudança de fronteira, segurança, contrato compartilhado, persistência, operação,
+**Quatro arquivos, sem número.** `processo.md`, `plataforma.md`, `backend.md` e `frontend.md`. Uma
+decisão nova entra como seção do arquivo do tema, com Decisão, Por quê quando houver e Rejeitado.
+Acima de 150 linhas, a maior seção vira um arquivo próprio, listado no `AGENTS.md` da raiz.
+
+**O que entra.** Uma escolha com alternativa que um agente plausivelmente proporia, ou uma regra
+que atravessa áreas: fronteira, segurança, contrato compartilhado, persistência, operação,
 dependência relevante ou escolha cara de reverter. Comportamento de uma tela ou de um componente,
 ajuste reversível e iteração de review ficam no código, nos testes e no PR.
 
@@ -27,8 +33,15 @@ ajuste reversível e iteração de review ficam no código, nos testes e no PR.
 próprio arquivo, sem status, data nem cadeia de emendas; o git guarda o histórico. O que deixou de
 valer entra em Rejeitado com o motivo.
 
-**Commits de review não alteram Markdown.** Se o comportamento mudou, muda o teste. ADRs e guias
+**Citações.** Um Markdown aponta para o arquivo de decisões, com o nome da seção em texto quando
+ajuda; o `check:docs` valida o arquivo, não a âncora. Comentário de código não cita documento:
+explica o porquê em uma linha.
+
+**Commits de review não alteram Markdown.** Se o comportamento mudou, muda o teste. Decisões e guias
 tocados pelo PR são fechados no último commit antes do merge.
+
+**A estrutura não muda sem falha.** Reorganizar a documentação exige uma falha concreta registrada
+no PR, como um agente que contradisse um guia ou propôs de novo um Rejeitado.
 
 **Planejamento sem ferramenta de spec.** Antes de codar comportamento novo, as dúvidas materiais vão
 ao dono numa única rodada de perguntas em lote, cada uma com a opção recomendada. Um protótipo
@@ -57,6 +70,9 @@ todo PR. Sem produção, foi refeito do zero; o anterior está na tag `docs-arch
   problema da spec: todo review precisaria sincronizá-lo.
 - **ADR imutável com ciclo proposta/aceita antes da produção.** Gerava emendas e commits só de
   status; o git já guarda o histórico.
+- **Um arquivo único de decisões, ou um arquivo numerado por decisão.** O único seria lido inteiro a
+  cada consulta; os numerados convidavam a criar mais um. Decisão do dono: poucos arquivos por tema.
+- **O Rejeitado repetido nos guias.** As duas cópias divergiam e citavam números que mudavam.
 
 ### Reversão
 

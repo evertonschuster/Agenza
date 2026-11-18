@@ -13,13 +13,13 @@ salões): agendamento, gestão de clientes e uma recepcionista de IA. Persona v1
 
 ## Onde está cada coisa
 
-| Caminho               | Stack                                | Leia primeiro                                                                      |
-| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------- |
-| `apps/admin-frontend` | Vite + React + TypeScript estrito    | [AGENTS.md local](apps/admin-frontend/AGENTS.md)                                   |
-| `backend`             | .NET, Clean Architecture por serviço | [AGENTS.md local](backend/AGENTS.md)                                               |
-| `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md) |
-| `infra`               | Scripts de init do PostgreSQL        | —                                                                                  |
-| `docs/decisions`      | Decisões duráveis                    | [índice](docs/decisions/)                                                          |
+| Caminho               | Stack                                | Leia primeiro                                                                                                                                                    |
+| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/admin-frontend` | Vite + React + TypeScript estrito    | [AGENTS.md local](apps/admin-frontend/AGENTS.md)                                                                                                                 |
+| `backend`             | .NET, Clean Architecture por serviço | [AGENTS.md local](backend/AGENTS.md)                                                                                                                             |
+| `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md)                                                                               |
+| `infra`               | Scripts de init do PostgreSQL        | —                                                                                                                                                                |
+| `docs/decisions`      | Porquê e alternativas rejeitadas     | [processo](docs/decisions/processo.md), [plataforma](docs/decisions/plataforma.md), [backend](docs/decisions/backend.md), [frontend](docs/decisions/frontend.md) |
 
 Ambiente local e gates de qualidade: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Direção do produto:
 [docs/VISION.md](docs/VISION.md).
@@ -61,7 +61,7 @@ atravessa backend e frontend vira dois PRs: o do backend primeiro, com os tipos 
 [decisions/processo.md](docs/decisions/processo.md).
 
 Commit de refactor durante o review não altera Markdown; se o comportamento mudou, muda o teste.
-ADRs e guias tocados pelo PR são fechados no último commit antes do merge.
+Decisões e guias tocados pelo PR são fechados no último commit antes do merge.
 
 ## Skills
 

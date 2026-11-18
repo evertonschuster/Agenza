@@ -8,7 +8,7 @@
   negócio: `identity-service` cuida de autenticação, tenants e usuários; `services-service` é o
   modelo de contexto de negócio com dados por tenant; `assistant-service` (Python) é a IA. Uma
   capacidade nova que cabe num contexto existente é uma pasta nesse serviço. Separar um contexto
-  exige divergência real de escala, dono ou release, e é uma ADR.
+  exige divergência real de escala, dono ou release, e é uma decisão nova.
 - **Um PostgreSQL, um schema por serviço.** Cada serviço tem seu schema, seu histórico de
   migrations dentro dele e sua role sem privilégio de superusuário; `PUBLIC` não cria nem usa
   esses schemas. Serviços conversam por HTTP com token, nunca pelas tabelas uns dos outros.

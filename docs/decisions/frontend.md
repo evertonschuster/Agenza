@@ -66,4 +66,4 @@ Forma vigente e convenções:
 - **Um `SearchSelect` de lista fixa com uma variante remota por cima.** A base passava a carregar os
   estados da busca remota.
 - **Excluir pela página de edição**, ou pelos dois caminhos.
-- **Atalhos de teclado customizados.** Foram removidos; voltar com eles exige uma ADR nova.
+- **Atalhos de teclado customizados.** Foram removidos; voltar com eles exige uma decisão nova.

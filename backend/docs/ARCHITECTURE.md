@@ -40,7 +40,7 @@ folder (`Clients`), `<Operation>` a verb + noun (`CreateClient`), `<Entity>` the
 
 Services are **context-aggregated**:
 a small monolith per business context. A capability that fits an existing context is a new
-`<Feature>/` folder in that service, not a new service. Splitting a context out is an ADR, not a PR
+`<Feature>/` folder in that service, not a new service. Splitting a context out is a recorded decision, not a PR
 detail. Each service owns its schema, its migrations history, its database role and its API
 ; services talk over HTTP with tokens,
 never through each other's tables.
@@ -435,7 +435,7 @@ UTC only. Inject `TimeProvider`. Instants are
 `DateTimeOffset` from `GetUtcNow()`; "today" is
 `DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime)`, computed in the handler or validator
 and handed to the domain. No `DateTime.Now`, `DateTime.Today` or `TimeZoneInfo`. A rule that needs
-the business's local day is a new ADR.
+the business's local day is a new decision.
 
 ## 8. Code style
 
@@ -447,7 +447,7 @@ Apply the convention to new or necessarily changed logic. An unrelated older pat
 automatic refactoring task; explain any conversion needed for the requested behavior or safety.
 
 No "what" comments and no XML doc comments; a one-line "why" only for a genuine race or a non-obvious
-constraint (root [`AGENTS.md`](../../AGENTS.md)). Rationale belongs in an ADR.
+constraint (root [`AGENTS.md`](../../AGENTS.md)). Rationale belongs in `docs/decisions/`.
 
 ### Logging
 

@@ -17,7 +17,7 @@ código da feature; aqui ficam as convenções que o consumidor precisa conhecer
 | Portas e composição local                | [AppHost](../backend/AppHost/AppHost.cs)                                                                                                                                                                |
 
 As regras das camadas e os exemplos atuais de backend estão na
-[arquitetura](../backend/docs/ARCHITECTURE.md). Use o [índice de ADRs](decisions/) para consultar
+[arquitetura](../backend/docs/ARCHITECTURE.md). Use as [decisões](decisions/) para consultar
 o motivo de uma decisão relevante, sem tratar observações históricas como uma execução atual.
 
 ## 2. Autenticação e tenant — duas checagens, uma mensagem

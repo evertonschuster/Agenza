@@ -52,7 +52,7 @@ These are local-demo administrative credentials; the services use the restricted
 ## Adding a service
 
 Usually you don't: a capability that fits an existing business context is a feature inside that
-service. A new context that justifies a service is an ADR; follow
+service. A new context that justifies a service is a recorded decision; follow
 [backend/docs/ARCHITECTURE.md §1](../backend/docs/ARCHITECTURE.md#1-shape) and use the live services,
 central package file, solution and AppHost as references. A new AI service copies
 `ai-services/assistant-service/` with its own venv.

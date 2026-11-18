@@ -116,7 +116,7 @@ orquestração explícita. O investimento fica no domínio (agregados, value obj
 - **No frontend, a ordem e o formato de datas digitadas e exibidas seguem o idioma do navegador**;
   textos e números seguem pt-BR.
 
-Uma regra que dependa do dia local do negócio exige uma ADR nova.
+Uma regra que dependa do dia local do negócio exige uma decisão nova.
 
 ### Rejeitado
 
