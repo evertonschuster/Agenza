@@ -22,6 +22,7 @@
   },
   "scripts": {
     "check:docs": "node scripts/checkDocs.mjs",
+    "sync:skills": "node scripts/syncSkills.mjs",
     "dev:frontend": "npm run dev --workspace=apps/admin-frontend",
     "build:frontend": "npm run build --workspace=apps/admin-frontend",
     "test:frontend": "npm run test --workspace=apps/admin-frontend",

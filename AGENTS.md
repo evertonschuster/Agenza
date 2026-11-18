@@ -71,16 +71,17 @@ one line in the report.
 ## Skills
 
 Agenza skills have a single source in `.claude/skills/agenza-*/`; each area's AGENTS points to the
-one for the task. If the host does not discover them, open the file by its path. Do not create
-per-host copies or syncing.
+one for the task. If the host does not discover them, open the file by its path. Codex reads only
+`.agents/skills`, so that folder is a generated copy: edit the source, run `npm run sync:skills` and
+commit both; `check:docs` fails while the copy differs. Never edit the copy by hand.
 
 ## How each tool gets here
 
-| Tool           | Path                                                                          |
-| -------------- | ----------------------------------------------------------------------------- |
-| Codex          | Discovers AGENTS through the directory hierarchy; open the area's when needed |
-| Claude Code    | `CLAUDE.md` imports this file                                                 |
-| GitHub Copilot | The bridge in `.github/copilot-instructions.md` asks it to read root and area |
+| Tool           | Path                                                                            |
+| -------------- | ------------------------------------------------------------------------------- |
+| Codex          | Discovers AGENTS through the directory hierarchy and skills in `.agents/skills` |
+| Claude Code    | `CLAUDE.md` imports this file; discovers skills in `.claude/skills`             |
+| GitHub Copilot | The bridge in `.github/copilot-instructions.md` asks it to read root and area   |
 
 ## Validation and delivery
 
