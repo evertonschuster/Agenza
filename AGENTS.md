@@ -70,10 +70,24 @@ one line in the report.
 
 ## Skills
 
-Agenza skills have a single source in `.claude/skills/agenza-*/`; each area's AGENTS points to the
-one for the task. If the host does not discover them, open the file by its path. Codex reads only
-`.agents/skills`, so that folder is a generated copy: edit the source, run `npm run sync:skills` and
-commit both; `check:docs` fails while the copy differs. Never edit the copy by hand.
+Before a task that matches a row, open that skill, even when the host did not load it on its own.
+Every skill is listed here; `check:docs` fails when one is missing.
+
+| Task                                               | Skill                                                                      |
+| -------------------------------------------------- | -------------------------------------------------------------------------- |
+| Backend use case, entity, migration, endpoint      | [agenza-backend-slice](.claude/skills/agenza-backend-slice/SKILL.md)       |
+| Backend review (revisar PR)                        | [agenza-backend-review](.claude/skills/agenza-backend-review/SKILL.md)     |
+| Tenant, login, session, token                      | [agenza-tenant-isolation](.claude/skills/agenza-tenant-isolation/SKILL.md) |
+| Contract, generated types, repository, API failure | [agenza-api-contract](.claude/skills/agenza-api-contract/SKILL.md)         |
+| Frontend screen, page, list, route (tela, página)  | [agenza-frontend-slice](.claude/skills/agenza-frontend-slice/SKILL.md)     |
+| Form, validation, field error (formulário)         | [agenza-form-field](.claude/skills/agenza-form-field/SKILL.md)             |
+| Shared component, theme, color, focus              | [agenza-ui-primitive](.claude/skills/agenza-ui-primitive/SKILL.md)         |
+| Copy, messages, dates, numbers, money (texto)      | [agenza-ptbr-copy](.claude/skills/agenza-ptbr-copy/SKILL.md)               |
+| Frontend tests, coverage, e2e                      | [agenza-testing](.claude/skills/agenza-testing/SKILL.md)                   |
+
+The source is `.claude/skills/agenza-*/`. Codex reads only `.agents/skills`, so that folder is a
+generated copy: edit the source, run `npm run sync:skills` and commit both; `check:docs` fails while
+the copy differs. Never edit the copy by hand.
 
 ## How each tool gets here
 

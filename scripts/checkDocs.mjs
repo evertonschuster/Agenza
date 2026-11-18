@@ -228,6 +228,7 @@ export function checkDocumentation(root) {
     collect('docs/decisions');
   }
 
+  const routedSkills = new Set();
   for (const file of documents) {
     const absolute = resolve(root, file);
     if (!existsSync(absolute)) {
@@ -275,7 +276,14 @@ export function checkDocumentation(root) {
         report(file, line, 'Destino fora do repositório.', target);
       } else if (!existsSync(destination)) {
         report(file, line, 'Destino local ausente.', target);
+      } else if (file === 'AGENTS.md') {
+        routedSkills.add(local);
       }
+    }
+  }
+  for (const file of skillFiles) {
+    if (existsSync(resolve(root, file)) && !routedSkills.has(file)) {
+      report('AGENTS.md', 1, 'Skill sem rota na tabela de skills do AGENTS da raiz.', file);
     }
   }
   for (const difference of skillCopyDifferences(root)) {

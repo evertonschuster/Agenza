@@ -24,6 +24,8 @@ function write(root, file, text) {
   writeFileSync(join(root, file), text);
 }
 
+const skillRoute = `\n[Example skill](${skill})\n`;
+
 function writeSkill(root, file, text) {
   write(root, file, text);
   write(root, file.replace('.claude/skills/', '.agents/skills/'), text);
@@ -44,8 +46,13 @@ function fixture(t, files = {}) {
     skill,
     '---\nname: agenza-example\ndescription: Use when checking documentation.\n---\n',
   );
+  write(root, 'AGENTS.md', `# Fixture\n${skillRoute}`);
   for (const [file, text] of Object.entries(files)) {
-    (file.startsWith('.claude/skills/') ? writeSkill : write)(root, file, text);
+    if (file === 'AGENTS.md') {
+      write(root, file, text + skillRoute);
+    } else {
+      (file.startsWith('.claude/skills/') ? writeSkill : write)(root, file, text);
+    }
   }
   return root;
 }
@@ -155,12 +162,27 @@ test('reports a removed active document or skill entry point', (t) => {
   rmSync(join(root, 'backend/AGENTS.md'));
   rmSync(join(root, skill));
   rmSync(join(root, skillCopy));
-  const errors = checkDocumentation(root).errors;
   assert.deepEqual(
-    errors.map((error) => error.file),
-    ['backend/AGENTS.md', skill],
+    checkDocumentation(root).errors.map(({ file, message }) => `${file}: ${message}`),
+    [
+      'AGENTS.md: Destino local ausente.',
+      'backend/AGENTS.md: Documento ativo ausente.',
+      `${skill}: Documento ativo ausente.`,
+    ],
   );
-  assert.ok(errors.every((error) => error.message === 'Documento ativo ausente.'));
+});
+
+test('reports a skill missing from the root AGENTS skill table', (t) => {
+  const root = fixture(t, { 'backend/AGENTS.md': skillRoute.replace(skill, '../' + skill) });
+  write(root, 'AGENTS.md', '# Fixture\n');
+  assert.deepEqual(checkDocumentation(root).errors, [
+    {
+      file: 'AGENTS.md',
+      line: 1,
+      message: 'Skill sem rota na tabela de skills do AGENTS da raiz.',
+      target: skill,
+    },
+  ]);
 });
 
 test('rejects targets outside the repository and malformed URL encoding', (t) => {
@@ -252,7 +274,7 @@ test('ignores escaped opening backticks and keeps backslashes literal inside cod
       target: 'missing.md',
     },
   ]);
-  write(root, 'AGENTS.md', '`Example\\` [Broken](missing.md)\n');
+  write(root, 'AGENTS.md', '`Example\\` [Broken](missing.md)\n' + skillRoute);
   assert.deepEqual(checkDocumentation(root).errors, [
     {
       file: 'AGENTS.md',
