@@ -1,6 +1,6 @@
 ---
 name: agenza-frontend-slice
-description: Builds or changes an admin-frontend feature: its model, page hook, list, route dialog and route wiring (tela, página, lista, rota, feature do frontend). Use when deciding where frontend behavior belongs. Not for forms (agenza-form-field), repositories or contract (agenza-api-contract) or copy (agenza-ptbr-copy).
+description: Builds or changes an admin-frontend feature — its model, page hook, list, route dialog and route wiring (tela, página, lista, rota, feature do frontend). Use when deciding where frontend behavior belongs. Not for forms (agenza-form-field), repositories or contract (agenza-api-contract) or copy (agenza-ptbr-copy).
 ---
 
 # Build a frontend feature

@@ -1,6 +1,6 @@
 ---
 name: agenza-ptbr-copy
-description: Writes or revises admin-frontend pt-BR copy: buttons, failure, empty and loading states, confirmations, accessible labels and displayed dates, numbers and money (texto da tela, mensagem, rótulo, formato de data). Use for wording or display formatting. Not for component behavior (agenza-ui-primitive) or form errors (agenza-form-field).
+description: Writes or revises admin-frontend pt-BR copy — buttons, failure, empty and loading states, confirmations, accessible labels and displayed dates, numbers and money (texto da tela, mensagem, rótulo, formato de data). Use for wording or display formatting. Not for component behavior (agenza-ui-primitive) or form errors (agenza-form-field).
 ---
 
 # Product language

@@ -1,6 +1,6 @@
 ---
 name: agenza-ui-primitive
-description: Adds or changes shared admin-frontend UI primitives: Base UI composition, shadcn-generated components, theme tokens, tooltips and focus (componente, botão, diálogo, tema, cor). Use when shared/ui or the theme changes. Not for copy (agenza-ptbr-copy) or feature screens (agenza-frontend-slice).
+description: Adds or changes shared admin-frontend UI primitives — Base UI composition, shadcn-generated components, theme tokens, tooltips and focus (componente, botão, diálogo, tema, cor). Use when shared/ui or the theme changes. Not for copy (agenza-ptbr-copy) or feature screens (agenza-frontend-slice).
 ---
 
 # Shared UI primitives

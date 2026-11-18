@@ -1,6 +1,6 @@
 ---
 name: agenza-backend-slice
-description: Builds or changes a use case in an Agenza .NET service: domain, value objects, validator, handler, persistence, migration and HTTP endpoint (caso de uso, entidade, migration, endpoint). Use when implementing backend behavior. Not for reviewing a diff (agenza-backend-review) or tracing tenant scope (agenza-tenant-isolation).
+description: Builds or changes a use case in an Agenza .NET service — domain, value objects, validator, handler, persistence, migration and HTTP endpoint (caso de uso, entidade, migration, endpoint). Use when implementing backend behavior. Not for reviewing a diff (agenza-backend-review) or tracing tenant scope (agenza-tenant-isolation).
 ---
 
 # Build a backend slice
