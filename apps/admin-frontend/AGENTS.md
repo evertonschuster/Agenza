@@ -52,7 +52,7 @@ adicionais apenas quando a tarefa tocar no assunto.
 
 ## Validação
 
-Use os [comandos do app](README.md#comandos) e confira os
+Use os [comandos do app](README.md#commands) e confira os
 [gates aplicáveis](../../.github/workflows/frontend-ci.yml). Limiares e exclusões de cobertura
 estão no [Vitest](vitest.config.ts); uma pasta de UI não é isenta por definição. Não rebaixe
 limiares nem dispense gates para a mudança passar.

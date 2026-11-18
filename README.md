@@ -1,65 +1,27 @@
-# Admin Panel — Monorepo
+# Agenza
 
-SaaS multi-tenant para pequenos negócios de saúde/bem-estar. Monorepo poliglota:
-frontend em React, microsserviços de backend em .NET, serviços de IA em Python.
+Multi-tenant SaaS for small service businesses in Brazil (clinics, beauty, massage, salons):
+scheduling, client management and an AI receptionist.
 
-## Estrutura
+## Quick start
 
-| Caminho               | Stack                                  | Propósito                                  |
-| --------------------- | -------------------------------------- | ------------------------------------------ |
-| `apps/admin-frontend` | Vite + React + TypeScript estrito      | A UI do painel administrativo              |
-| `backend`             | ASP.NET Core                           | Serviços de negócio agregados por contexto |
-| `ai-services`         | Python + FastAPI                       | Serviços de IA/ML                          |
-| `infra`               | Scripts de inicialização do PostgreSQL | Roles e grants de schema do banco local    |
-
-Ver [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md) para convenções, e o `README.md` de cada
-stack para orientação específica. A preparação de ambiente do frontend —
-pré-requisitos, o caminho de execução só-via-Aspire, login de demonstração
-semeado e as duas pegadinhas de build — está em
-[apps/admin-frontend/README.md](apps/admin-frontend/README.md).
-
-## Início rápido
+From the repository root, with Docker running:
 
 ```bash
-# Frontend — repare que precisa do orquestrador Aspire para as seis variáveis
-# VITE_*; veja apps/admin-frontend/README.md antes de rodar isolado.
-npm install
-npm run dev:frontend
-
-# Backend (.NET)
-dotnet tool restore --tool-manifest backend/.config/dotnet-tools.json
-dotnet build backend/AdminBackend.slnx
-dotnet run --project backend/services/services-service/ServicesService.Api
-
-# Serviços de IA (Python)
-cd ai-services/assistant-service
-pip install uv
-uv sync --frozen --extra dev
-uv run uvicorn app.main:app --reload --port 8001
-
-# Tudo junto (frontend, backend, PostgreSQL e o serviço de IA)
 dotnet run --project backend/AppHost --launch-profile http
 ```
 
-## Versões das ferramentas
+Aspire starts PostgreSQL, the .NET services, the AI service and the frontend, and prints its
+dashboard URL. Prerequisites, ports, the database client and the quality gates are in
+[docs/DEVELOPMENT.md](docs/DEVELOPMENT.md); the demo login is in the
+[frontend README](apps/admin-frontend/README.md).
 
-Use os pins do repositório em vez de copiar versões da documentação:
-`.nvmrc`/`packageManager`, `backend/global.json`, `.python-version`/`uv.lock`
-e as actions de setup do CI são as fontes executáveis. Exceções de
-compatibilidade e condições de upgrade estão registradas na
-[decisions/processo.md](docs/decisions/processo.md).
+## Where things are
 
-## Agentes de IA
+The map of the repository, the rules that apply everywhere and how each coding agent reaches them
+are in [AGENTS.md](AGENTS.md); each area has its own `AGENTS.md` or `README.md`. Tool versions come
+from the pins (`.nvmrc`, `packageManager`, `backend/global.json`, `.python-version`, `uv.lock`), not
+from documentation.
 
-[`AGENTS.md`](AGENTS.md) é o ponto de entrada independente de ferramenta; o Codex
-o lê nativamente, `CLAUDE.md` o importa, e `.github/copilot-instructions.md` faz a
-ponte para o Copilot. Fluxos de trabalho específicos deste repositório moram em
-`.claude/skills/agenza-*/`.
-
-Esses arquivos **apontam** para as fontes de verdade em vez de repeti-las: versões,
-inventário de arquivos e status de feature ficam em lockfiles, código e testes. A política
-de documentação está na [decisions/processo.md](docs/decisions/processo.md).
-
-[`.mcp.json`](.mcp.json) declara quatro servidores MCP opcionais (GitHub, shadcn,
-Playwright, Chrome DevTools). Nenhum é obrigatório para desenvolver; autorize-os
-com `claude mcp list` numa sessão interativa.
+[`.mcp.json`](.mcp.json) declares optional MCP servers (GitHub, shadcn, Playwright, Chrome DevTools);
+none is required for development.

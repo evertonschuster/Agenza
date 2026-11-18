@@ -32,7 +32,7 @@ gender is unknown. Numbers, money, durations and dates: [formatting.md](referenc
 Name what did not happen and offer a recovery the screen actually supports, through the existing
 problem component so its stable code stays visible for support. A retry instruction needs a working
 retry action; “contacte o administrador” alone does not help, and support copy never asks for a
-password. The [message policy](../../../docs/API.md#7-consumo-no-frontend-e-política-de-mensagens)
+password. The [message policy](../../../docs/API.md#7-frontend-consumption-and-message-policy)
 owns which API messages are shown; never add exception text, OIDC-provider descriptions, `detail`,
 `type` or diagnostic ids as copy. Local schema messages are specific to the field; one field never
 shows two competing messages, and expected validation never becomes a full-screen failure.

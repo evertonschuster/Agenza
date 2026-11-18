@@ -6,7 +6,7 @@ description: Regenerates the admin-frontend OpenAPI types, diagnoses contract dr
 # API contract — types, repositories and failures
 
 [docs/API.md](../../../docs/API.md) owns the HTTP shapes and the
-[message policy](../../../docs/API.md#7-consumo-no-frontend-e-política-de-mensagens). Consult backend
+[message policy](../../../docs/API.md#7-frontend-consumption-and-message-policy). Consult backend
 or frontend architecture only for the boundary the task changes.
 
 ## Regenerate a changed contract
@@ -79,5 +79,5 @@ filter the code does not implement.
 
 Run the generator fixtures for transform changes and the affected frontend tests for normalization
 or mapping changes; HTTP behavior needs the runtime checks. Commands are in the
-[frontend README](../../../apps/admin-frontend/README.md#comandos). A documentation fix alone does not
+[frontend README](../../../apps/admin-frontend/README.md#commands). A documentation fix alone does not
 require regeneration or starting the stack.

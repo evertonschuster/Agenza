@@ -55,7 +55,7 @@ Pass the form-values generic explicitly to
   never use it for a field that needs inline validation.
 - Use `ControlledField` for another custom control. A new field declares its props type in its own file
   and is re-exported from the barrel
-  ([form conventions](../../../apps/admin-frontend/docs/ARCHITECTURE.md#componentes-e-formulários)).
+  ([form conventions](../../../apps/admin-frontend/docs/ARCHITECTURE.md#components-and-forms)).
 - Forward RHF's `ref` and `onBlur` to the real focus target and keep `aria-invalid`/`aria-describedby`.
   A composite control without a labelable input needs `labelHtmlFor={false}` and its own accessible
   name, as in `ColorField`.

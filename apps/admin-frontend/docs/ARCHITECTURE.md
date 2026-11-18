@@ -1,242 +1,237 @@
 # admin-frontend — Architecture
 
-Desenho vigente do frontend. Consulte a seção relacionada à mudança; o porquê e as alternativas
-rejeitadas estão em [decisions/frontend.md](../../../docs/decisions/frontend.md). Versões, arquivos e gates
-devem ser conferidos nos pins, no código e na configuração.
+The current design of the frontend. Read the section related to the change; the why and the
+rejected alternatives are in [decisions/frontend.md](../../../docs/decisions/frontend.md). Check
+versions, files and gates in the pins, the code and the configuration.
 
 ## 1. Shape
 
-| Camada              | Responsabilidade                                                                     |
-| ------------------- | ------------------------------------------------------------------------------------ |
-| `app/`              | Composição de providers, rotas e shell; placeholders sem capacidade de negócio       |
-| `features/<slice>/` | Fatia de negócio com `model/`, `api/`, `ui/` e `index.ts` público                    |
-| `widgets/`          | Composições reutilizáveis de tela, com comportamento e sem domínio                   |
-| `shared/`           | Infraestrutura transversal, valores compartilhados e primitivos sem regra de negócio |
+| Layer               | Responsibility                                                                    |
+| ------------------- | --------------------------------------------------------------------------------- |
+| `app/`              | Providers, routes and shell composition; placeholders without business capability |
+| `features/<slice>/` | A business slice with `model/`, `api/`, `ui/` and a public `index.ts`             |
+| `widgets/`          | Reusable screen compositions, with behavior and without domain                    |
+| `shared/`           | Cross-cutting infrastructure, shared values and primitives without business rules |
 
-A direção é `app → features → widgets → shared`. Widgets podem compor outros widgets sem ciclos.
-Fora de uma fatia, seus consumidores importam apenas o barril `features/<slice>/index.ts`.
-Dentro dela, a direção usual é `ui → model | api` e `api → model`; tipos de domínio pertencem a
-`model/`, não à camada de transporte.
+The direction is `app → features → widgets → shared`. Widgets may compose other widgets without
+cycles. Outside a slice, consumers import only its barrel `features/<slice>/index.ts`. Inside it,
+the usual direction is `ui → model | api` and `api → model`; domain types belong to `model/`, not to
+the transport layer.
 
-A regra [agenza/layer-boundaries](../eslint-rules/layerBoundaries.js), ligada no
-[ESLint](../eslint.config.js), verifica importações para camadas superiores e acesso externo que
-contorne o barril. Ela cobre arquivos nas quatro camadas; não verifica direção entre segmentos
-dentro da fatia, ciclos, `src/main.tsx`, testes de suporte fora dessas camadas ou configurações.
-Esses limites continuam na revisão. O adaptador OIDC
-[sessionDriver](../src/features/auth/model/sessionDriver.ts) tem uma dependência intencional
-`model → api` dentro de auth; o núcleo compartilhado de sessão não conhece OIDC
+The [agenza/layer-boundaries](../eslint-rules/layerBoundaries.js) rule, enabled in
+[ESLint](../eslint.config.js), checks imports into higher layers and external access that bypasses
+the barrel. It covers files in the four layers; it does not check direction between segments inside
+a slice, cycles, `src/main.tsx`, support tests outside those layers or configuration. Those limits
+stay with review. The OIDC adapter
+[sessionDriver](../src/features/auth/model/sessionDriver.ts) has an intentional `model → api`
+dependency inside auth; the shared session core does not know OIDC
 ([decisions/plataforma.md](../../../docs/decisions/plataforma.md)).
 
-### Páginas, rotas e listas
+### Pages, routes and lists
 
-Uma página tem sua pasta `ui/pages/<Page>/`: componente de apresentação, hook próprio quando houver
-estado/efeitos e tipos do hook em arquivo irmão quando necessários. Subcomponentes ganham
-`components/` quando tiverem conteúdo que justifique a separação.
+A page has its folder `ui/pages/<Page>/`: the presentation component, its own hook when there is
+state or effects, and the hook's types in a sibling file when needed. Subcomponents get
+`components/` when their content justifies the split.
 
-Para decidir onde fica uma peça da `ui/` da fatia, siga esta ordem e pare na primeira que servir:
+To decide where a piece of a slice's `ui/` lives, follow this order and stop at the first match:
 
-1. **Abre pela rota** (tem URL própria): `ui/pages/<Page>/`, mesmo quando aparece como diálogo.
-2. **Abre pelo código**, sem URL, e é usado fora de uma página só: `ui/dialogs/<Dialog>/`, com hook,
-   tipos e testes, como uma página.
-3. **Não abre sozinho** e é usado por mais de um consumidor da fatia (página ou diálogo) ou exportado
-   pelo barril: `ui/components/<Componente>/`, com seus tipos e testes. O que só existe por causa
-   dele fica na mesma pasta; partes internas descem para `components/`.
-4. **Serve a uma página só**: nos `components/` dela. Um formulário com uma entrada só fica na
-   página e sobe para `ui/components/` quando ganha a segunda.
+1. **Opens by route** (has its own URL): `ui/pages/<Page>/`, even when it shows as a dialog.
+2. **Opens from code**, without a URL, and is used outside a single page: `ui/dialogs/<Dialog>/`,
+   with hook, types and tests, like a page.
+3. **Does not open by itself** and is used by more than one consumer in the slice (page or dialog)
+   or exported by the barrel: `ui/components/<Component>/`, with its types and tests. What exists
+   only because of it stays in the same folder; internal parts go down to `components/`.
+4. **Serves a single page**: in that page's `components/`. A form with a single entry stays in the
+   page and moves up to `ui/components/` when it gets a second one.
 
-Uma entidade que também se cria por um seletor repete o desenho de etiquetas: o diálogo rápido
-`<Entity>CreationDialog` em `dialogs/`, exportado pelo barril, e a casca, a validação e os campos
-em `components/<Entity>Form/`, usados também pela página da rota. Cada entrada mantém seu hook: a
-rota carrega por id e fecha navegando; o diálogo recebe o texto digitado e devolve o item criado.
+An entity that can also be created from a selector repeats the tags design: the quick dialog
+`<Entity>CreationDialog` in `dialogs/`, exported by the barrel, and the shell, validation and fields
+in `components/<Entity>Form/`, also used by the route page. Each entry keeps its own hook: the route
+loads by id and closes by navigating; the dialog receives the typed text and returns the created
+item.
 
-Hooks de página não são uma camada compartilhada de negócio; acessores de contexto, hooks genéricos
-de widgets e utilitários como [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) são
-reutilizáveis.
+Page hooks are not a shared business layer; context accessors, generic widget hooks and utilities
+such as [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) are reusable.
 
-Quando uma página usa `loader` ou `action`, eles ficam em `route.ts`, reexportados pelo barril para
-[app/routes.tsx](../src/app/routes.tsx). Isso não obriga toda página a buscar dados no loader:
-um loader bloqueante não permite que a própria página apresente seu carregamento. O cabeçalho
-deriva das rotas e seus `handle`, por
-[decisions/frontend.md](../../../docs/decisions/frontend.md).
+When a page uses a `loader` or `action`, they live in `route.ts`, re-exported by the barrel for
+[app/routes.tsx](../src/app/routes.tsx). That does not force every page to fetch in a loader: a
+blocking loader keeps the page from showing its own loading state. The header derives from the
+routes and their `handle`, per [decisions/frontend.md](../../../docs/decisions/frontend.md).
 
-[usePaginatedList](../src/widgets/paginated-list-section/use-paginated-list.ts) recebe o estado
-controlado e o repositório. Os hooks de
-[Pessoas](../src/features/clients/ui/pages/ClientListPage/useClientListPage.ts) e
-[Etiquetas](../src/features/tags/ui/pages/TagListPage/useTagListPage.ts) fornecem esse estado com
-[useSearchParamsState](../src/shared/hooks/useSearchParamsState.ts): filtros aplicados, página e
-tamanho são lidos da query string na montagem e suas mudanças são escritas com `replace` na rota
-dona da lista. O estado do formulário de filtros é separado; digitar não aplica a busca.
+[usePaginatedList](../src/widgets/paginated-list-section/use-paginated-list.ts) receives the
+controlled state and the repository. The hooks of
+[Pessoas](../src/features/clients/ui/pages/ClientListPage/useClientListPage.ts) and
+[Etiquetas](../src/features/tags/ui/pages/TagListPage/useTagListPage.ts) supply that state with
+[useSearchParamsState](../src/shared/hooks/useSearchParamsState.ts): applied filters, page and size
+are read from the query string on mount, and their changes are written with `replace` on the route
+that owns the list. The filter form's state is separate; typing does not apply the search.
 
-O widget pede dados nas ações, na montagem e ao corrigir uma página além do fim. Um efeito
-dependente da query não dispara as buscas. Uma nova ação cancela a requisição anterior; respostas
-canceladas não substituem a atual. `refetch` atualiza a consulta solicitada sem limpar as linhas,
-inclusive quando chamado pelos tópicos da feature. O hook deriva carregamento/erro/sucesso da
-resposta; uma lista vazia só é reconhecida depois de sucesso.
+The widget requests data on actions, on mount and when correcting a page past the end. An effect
+keyed on the query does not trigger requests. A new action cancels the previous request; cancelled
+answers do not replace the current one. `refetch` refreshes the requested query without clearing the
+rows, including when the feature's topics call it. The hook derives loading/error/success from the
+answer; an empty list is recognized only after a success.
 
-Barras de filtro são formulários React Hook Form com `SearchField` e `SelectField`
-(`labelPlacement="inline"`); um botão Buscar aplica todos os filtros. Excluir é uma rota de diálogo
-sobre a lista, aberta pela lixeira da linha, e fecha com `useCloseRoute`. Um link de menu para uma
-lista vai ao caminho sem filtros; formulários e diálogos voltam com `navigate(-1)`.
+Filter bars are React Hook Form forms with `SearchField` and `SelectField`
+(`labelPlacement="inline"`); a Buscar button applies every filter. Deleting is a dialog route over
+the list, opened by the row's trash icon, and closes with `useCloseRoute`. A menu link to a list goes
+to the path without filters; forms and dialogs go back with `navigate(-1)`.
 
-### Componentes e formulários
+### Components and forms
 
-Um primitivo em `shared/ui/<name>/` expõe seu `index.tsx`. Tipos próprios podem ficar em
-`<name>.types.ts`; tipos derivados de estilos ficam junto de quem define os estilos.
-`components/` serve para partes acopladas ou uma renderização cuja divisão melhora a leitura.
-Partes triviais podem dividir um arquivo de primitivos; não criar um arquivo por elemento.
-Reavalie a composição inteira ao alterá-la, sem refatorar áreas independentes por obrigação.
+A primitive in `shared/ui/<name>/` exposes its `index.tsx`. Its own types may live in
+`<name>.types.ts`; types derived from styles stay with whatever defines the styles. `components/` is
+for coupled parts or a rendering whose split improves reading. Trivial parts may share a primitives
+file; do not create a file per element. Reassess the whole composition when changing it, without
+refactoring independent areas out of obligation.
 
-Use retornos antecipados para variantes e preserve uniões discriminadas até o ponto em que são
-estreitadas. Uma base de props compartilhada se justifica quando três ou mais tipos irmãos repetem
-os mesmos campos. Props necessárias para nome acessível devem ser obrigatórias quando o componente
-não possui outra fonte desse nome. Remova variantes de tipo sem implementação e teste o efeito
-observável de uma prop, não apenas sua aceitação.
+Use early returns for variants and keep discriminated unions until the point where they narrow. A
+shared props base is justified when three or more sibling types repeat the same fields. Props needed
+for an accessible name are required when the component has no other source for that name. Remove
+type variants without an implementation, and test the observable effect of a prop, not only that it
+is accepted.
 
-[Base UI](../components.json) é a base dos primitivos; sua composição usa `render`.
-Use tokens semânticos e o tema resolvido por atributo, preservando escolha explícita de tema e
-contraste. Primitivos podem ter comportamento de interação e acessibilidade; composições de tela
-reutilizáveis ficam em widgets. Cobertura e exclusões vêm da configuração, não da pasta.
+[Base UI](../components.json) is the primitives' base; its composition uses `render`. Use semantic
+tokens and the attribute-resolved theme, keeping an explicit theme choice and contrast. Primitives
+may own interaction and accessibility behavior; reusable screen compositions live in widgets.
+Coverage and exclusions come from the configuration, not from the folder.
 
-Formulários usam React Hook Form e Zod com os controles de `shared/form/fields/`; a moldura visual
-fica em `shared/ui/form-field/`. O tipo das props de um campo fica no arquivo do campo em
-`components/`, derivado do primitivo que ele renderiza; `fields.types.ts` guarda só as peças que
-vários campos compartilham e não importa nada de `shared/ui`. As receitas específicas pertencem à
-[skill de formulário](../../../.claude/skills/agenza-form-field/SKILL.md).
-Seleção de várias opções `{ id, name }` carregadas do backend, com busca e páginas, usa
-[SearchSelect](../src/shared/ui/search-select/search-select.tsx) com a chamada paginada da feature; no
-formulário, `SearchSelectField`
-([decisions/frontend.md](../../../docs/decisions/frontend.md)). A `creation` opcional
-oferece criar o item ali mesmo; a feature desenha a criação e devolve o item, que entra selecionado.
-Um diálogo de criação passa o `finalFocus` recebido ao `DialogContent`, para o foco voltar à busca.
-`SelectField` continua para o `Select` simples.
-Texto e rotas de produto são pt-BR; identificadores são inglês. A rota `/tags` é uma exceção
-existente: renomear uma URL requer uma mudança própria de produto.
+Forms use React Hook Form and Zod with the controls in `shared/form/fields/`; the visual frame lives
+in `shared/ui/form-field/`. A field's props type lives in the field's file in `components/`, derived
+from the primitive it renders; `fields.types.ts` keeps only the pieces several fields share and
+imports nothing from `shared/ui`. The specific recipes belong to the
+[form skill](../../../.claude/skills/agenza-form-field/SKILL.md). Picking several `{ id, name }`
+options loaded from the backend, with search and pages, uses
+[SearchSelect](../src/shared/ui/search-select/search-select.tsx) with the feature's paged call; in a
+form, `SearchSelectField` ([decisions/frontend.md](../../../docs/decisions/frontend.md)). The
+optional `creation` offers creating the item right there; the feature draws the creation and returns
+the item, which enters selected. A creation dialog passes the `finalFocus` it receives to
+`DialogContent`, so focus returns to the search. `SelectField` stays for the plain `Select`.
+Product text and routes are pt-BR; identifiers are English. The `/tags` route is an existing
+exception: renaming a URL needs its own product change.
 
 ## 2. Talking to the backend
 
-| Fonte                                                           | Responsabilidade                                                |
-| --------------------------------------------------------------- | --------------------------------------------------------------- |
-| [generateApiTypes.mjs](../scripts/generateApiTypes.mjs)         | Tipos OpenAPI e metadados de campos de data; não gera a fachada |
-| [apiClient.ts](../src/shared/api/apiClient.ts)                  | Cliente openapi-fetch, credenciais atuais e headers de sessão   |
-| [servicesFacade.ts](../src/shared/api/servicesFacade.ts)        | Versão, envelope, normalização de falhas e `ApiResult<T>`       |
-| [servicesApi.ts](../src/shared/api/servicesApi.ts)              | Composição do cliente com a fonte compartilhada de credenciais  |
-| [tagsRepository.ts](../src/features/tags/api/tagsRepository.ts) | Exemplo de delegação tipada entre feature e fachada             |
+| Source                                                          | Responsibility                                                    |
+| --------------------------------------------------------------- | ----------------------------------------------------------------- |
+| [generateApiTypes.mjs](../scripts/generateApiTypes.mjs)         | OpenAPI types and date-field metadata; does not generate a facade |
+| [apiClient.ts](../src/shared/api/apiClient.ts)                  | openapi-fetch client, current credentials and session headers     |
+| [servicesFacade.ts](../src/shared/api/servicesFacade.ts)        | Version, envelope, failure normalization and `ApiResult<T>`       |
+| [servicesApi.ts](../src/shared/api/servicesApi.ts)              | Client composition with the shared credentials source             |
+| [tagsRepository.ts](../src/features/tags/api/tagsRepository.ts) | Example of typed delegation between a feature and the facade      |
 
-O repositório não repete token, tenant, versão, envelope ou tratamento de exceção. Os tipos de
-domínio pertencem ao frontend; um mapeamento explícito só é necessário quando a forma de domínio e
-a resposta divergem. As anotações de retorno mantêm a checagem estrutural contra o contrato gerado.
+A repository does not repeat token, tenant, version, envelope or exception handling. Domain types
+belong to the frontend; an explicit mapping is needed only when the domain shape and the answer
+differ. Return annotations keep the structural check against the generated contract.
 
-`servicesApi` resolve com `Result` em sucesso e falha. Para regras HTTP, consulte
-[docs/API.md](../../../docs/API.md); para os resultados efetivamente normalizados, consulte
-[servicesFacade.ts](../src/shared/api/servicesFacade.ts). A regeneração e sua checagem estão no
-[README](../README.md#comandos). O contrato narrativo pode ter exemplos históricos; o schema e o
-código vigente determinam a forma de um endpoint.
+`servicesApi` resolves with a `Result` on success and on failure. For HTTP rules read
+[docs/API.md](../../../docs/API.md); for the outcomes actually normalized read
+[servicesFacade.ts](../src/shared/api/servicesFacade.ts). Regeneration and its check are in the
+[README](../README.md#commands). The narrative contract may hold historical examples; the schema and
+the current code decide an endpoint's shape.
 
-A conversão de `Result` em exceção existe em [unwrap.ts](../src/shared/api/unwrap.ts), somente na
-fronteira de um loader ou de um eventual `queryFn` que sinalize erro por rejeição. Mutação e action
-mantêm falhas esperadas como valores. Isso preserva a validação no formulário, sem convertê-la em
-uma tela de erro.
+Turning a `Result` into an exception exists in [unwrap.ts](../src/shared/api/unwrap.ts), only at the
+boundary of a loader or of an eventual `queryFn` that signals errors by rejection. Mutations and
+actions keep expected failures as values, which keeps validation in the form instead of turning it
+into an error screen.
 
-[formErrors.ts](../src/shared/api/formErrors.ts) e
-[applyApiProblem.ts](../src/shared/form/applyApiProblem.ts) levam os erros da API aos campos do
-formulário, inclusive campos enviados com outro nome (`aliases`) e o link para o cadastro existente
-num conflito de CPF; o procedimento está na
-[skill de formulário](../../../.claude/skills/agenza-form-field/SKILL.md).
+[formErrors.ts](../src/shared/api/formErrors.ts) and
+[applyApiProblem.ts](../src/shared/form/applyApiProblem.ts) take API errors to the form fields,
+including fields submitted under another name (`aliases`) and the link to the existing record on a
+CPF conflict; the procedure is in the
+[form skill](../../../.claude/skills/agenza-form-field/SKILL.md).
 
-As superfícies usam mensagens e códigos do `ApiProblem` normalizado; ramificações dependem de
-`code`/status, nunca do texto da mensagem. Preserve a representação do problema em erros de lista,
-diálogos, banners e toasts. A política HTTP detalhada fica em [docs/API.md](../../../docs/API.md).
+Surfaces use the messages and codes of the normalized `ApiProblem`; branches depend on
+`code`/status, never on message text. Keep the problem's representation in list errors, dialogs,
+banners and toasts. The detailed HTTP policy is in [docs/API.md](../../../docs/API.md).
 
-### Registros relacionados em confirmações
+### Related records in confirmations
 
-O [ConfirmDialog](../src/widgets/confirm-dialog/index.tsx) mostra os registros relacionados de
-qualquer falha, sem configuração pela feature, e todo bloqueio oferece uma nova tentativa explícita.
-O [leitor](../src/widgets/confirm-dialog/related-records.ts) é a única fonte desses registros:
-grupos conhecidos (`Clients`, `Services`) com `meta.id` e `meta.name`, sem limite próprio (o
-`Tag.InUse` do backend manda até 10 por tipo); um grupo desconhecido com o código do problema
-aparece como “Outros vínculos”. Rótulos e rotas vêm da lista
-de grupos conhecidos, nunca dos metadados, e nada é inferido do texto da mensagem. O caminho de
-edição de pessoa fica em `shared/routes/clientPaths.ts` para que Etiquetas o use sem depender de
-Pessoas.
+The [ConfirmDialog](../src/widgets/confirm-dialog/index.tsx) shows the related records of any
+failure, without configuration by the feature, and every block offers an explicit retry. The
+[reader](../src/widgets/confirm-dialog/related-records.ts) is the only source of those records:
+known groups (`Clients`, `Services`) with `meta.id` and `meta.name`, without a limit of its own (the
+backend's `Tag.InUse` sends up to 10 per kind); an unknown group with the problem's code shows as
+“Outros vínculos”. Labels and routes come from the list of known groups, never from the metadata,
+and nothing is inferred from the message text. The person edit path lives in
+`shared/routes/clientPaths.ts` so Etiquetas can use it without depending on Pessoas.
 
 ## 3. Auth & tenancy
 
-OIDC Authorization Code + PKCE usa identity-service e oidc-client-ts. O
-[authClient](../src/features/auth/api/authClient.ts) configura a integração; o
-[sessionDriver](../src/features/auth/model/sessionDriver.ts) adapta os eventos à máquina de sessão.
-O núcleo em `shared/session/` não depende de React nem do provedor. AuthProvider expõe seu snapshot
-ao React por contexto e assinatura da store.
+OIDC Authorization Code + PKCE uses identity-service and oidc-client-ts. The
+[authClient](../src/features/auth/api/authClient.ts) configures the integration; the
+[sessionDriver](../src/features/auth/model/sessionDriver.ts) adapts its events to the session
+machine. The core in `shared/session/` depends on neither React nor the provider. AuthProvider
+exposes its snapshot to React through context and a store subscription.
 
-O cliente decodifica `tenant_id` do access token para roteamento; não verifica sua assinatura.
-A segurança está no backend, que valida token e correspondência do header. Nunca resolver tenant
-de URL, query ou valor independente em localStorage. O usuário OIDC é persistido pela biblioteca
-em localStorage para reutilização entre abas
-([decisions/plataforma.md](../../../docs/decisions/plataforma.md)); isso não o torna
-uma fonte de autorização.
+The client decodes `tenant_id` from the access token for routing; it does not verify the signature.
+Security is in the backend, which validates the token and the header match. Never resolve the tenant
+from a URL, a query or an independent value in localStorage. The library persists the OIDC user in
+localStorage for reuse across tabs ([decisions/plataforma.md](../../../docs/decisions/plataforma.md));
+that does not make it an authorization source.
 
-O cliente HTTP lê credenciais a cada chamada e falha fechado quando falta token/tenant. O gerador
-remove o parâmetro de header de tenant dos tipos para que as features não o forneçam manualmente.
-Essas proteções do frontend complementam a
-[fronteira de servidor](../../../docs/decisions/plataforma.md).
+The HTTP client reads credentials on every call and fails closed when the token or tenant is missing.
+The generator removes the tenant header parameter from the types so features do not supply it by
+hand. These frontend protections complement the
+[server boundary](../../../docs/decisions/plataforma.md).
 
 ### Session identity changes
 
-A máquina compara subject e tenant na renovação. Troca de identidade limpa credenciais, aborta o
-escopo de requisições e desmonta o estado protegido até login explícito. O adaptador OIDC rejeita
-eventos tardios e tenta remover o usuário persistido; uma falha nessa limpeza é registrada sem
-restaurar as credenciais da sessão bloqueada. O cliente HTTP combina cancelamento de sessão e do
-consumidor. A implementação está na
-[sessionStore](../src/shared/session/sessionStore.ts) e na
+The machine compares subject and tenant on renewal. An identity change clears credentials, aborts
+the request scope and unmounts protected state until an explicit login. The OIDC adapter rejects late
+events and tries to remove the persisted user; a failure in that cleanup is logged without restoring
+the blocked session's credentials. The HTTP client combines session and consumer cancellation. The
+implementation is in the [sessionStore](../src/shared/session/sessionStore.ts) and
 [decisions/plataforma.md](../../../docs/decisions/plataforma.md).
 
 ## 4. Principles
 
-As [regras da raiz](../../../AGENTS.md) continuam valendo. Aqui, a aplicação delas significa:
+The [root rules](../../../AGENTS.md) still apply. Here, applying them means:
 
-- Investir em regras de domínio e manter a infraestrutura de chamada concentrada.
-- Reutilizar uma composição quando houver necessidade concreta; `entities/`, uma camada global
-  de páginas ou um mapper não são pré-requisitos de uma feature.
-- Manter lógica da página em seu hook e tipos compartilhados no limite correto.
-- Depois de uma mutação assíncrona, verificar o ciclo de vida antes de navegar, fechar a página ou
-  aplicar efeitos locais de UI. Tópicos do caso de uso podem ser publicados após sucesso mesmo que
-  a página tenha desmontado. Cancelamento HTTP não substitui a proteção contra conclusão tardia.
-- Cada mutação publica o próprio tópico (`xCreated`, `xUpdated`, `xDeleted`), nunca um `xSaved`
-  comum, mesmo sem ouvinte no momento.
-- Escolher verificação pelo comportamento alterado e pelo risco; exclusão de cobertura não
-  dispensa testar interação, nome acessível ou tratamento de falha.
+- Invest in domain rules and keep the calling infrastructure concentrated.
+- Reuse a composition when there is a concrete need; `entities/`, a global pages layer or a mapper
+  are not prerequisites of a feature.
+- Keep page logic in its hook and shared types at the right boundary.
+- After an async mutation, check the lifecycle before navigating, closing the page or applying local
+  UI effects. Use-case topics may be published after success even if the page has unmounted. HTTP
+  cancellation does not replace the protection against late completion.
+- Each mutation publishes its own topic (`xCreated`, `xUpdated`, `xDeleted`), never a shared
+  `xSaved`, even with no listener at the moment.
+- Choose verification by the behavior changed and the risk; a coverage exclusion does not exempt
+  testing interaction, accessible name or failure handling.
 
 ## 5. Deferred, provisional & not-yet-built
 
-- Placeholders em `app/pages/` são substituídos pela fatia correspondente quando a capacidade é
-  implementada; a tabela de rotas mostra quais ainda existem.
-- Não há biblioteca de server state. Sua introdução exige uma necessidade concreta de cache,
-  revalidação ou sincronização que justifique substituir a forma atual
+- Placeholders in `app/pages/` are replaced by the matching slice when the capability is built; the
+  route table shows which still exist.
+- There is no server-state library. Introducing one needs a concrete need for caching, revalidation
+  or synchronization that justifies replacing the current shape
   ([decisions/frontend.md](../../../docs/decisions/frontend.md)).
-- O cancelamento de lista pertence ao widget que solicita dados; o cancelamento por perda da sessão
-  pertence à store. A fachada ainda normaliza abort de transporte como falha de rede; o consumidor
-  que cancela verifica seu próprio signal antes de aplicar a resposta.
-- Uma resposta HTTP de sessão inválida não altera por si só o snapshot OIDC. O tratamento
-  compartilhado desse caso durante uma visita continua uma lacuna; não duplicá-lo em cada lista.
-- O adaptador OIDC usa módulo concreto. Uma abstração de provedor só se justifica por integração ou
-  custo de teste que a necessite. Logs usam a infraestrutura existente; telemetria externa depende
-  de necessidade operacional.
+- List cancellation belongs to the widget that requests data; cancellation on session loss belongs to
+  the store. The facade still normalizes a transport abort as a network failure; the cancelling
+  consumer checks its own signal before applying the answer.
+- An HTTP answer for an invalid session does not change the OIDC snapshot by itself. Shared handling
+  of that case during a visit is still a gap; do not duplicate it in each list.
+- The OIDC adapter uses a concrete module. A provider abstraction is justified only by an integration
+  or test cost that needs it. Logs use the existing infrastructure; external telemetry depends on an
+  operational need.
 
-Não são promessas de roadmap. Antes de propor uma abstração, conferir consumidores e evidência do
-problema; o código e as decisões relevantes delimitam a escolha.
+These are not roadmap promises. Before proposing an abstraction, check the consumers and the evidence
+of the problem; the code and the relevant decisions bound the choice.
 
 ## 6. Toolchain & gates
 
-Os pins de runtime vêm da raiz. Os comandos estão no [README](../README.md#comandos); os gates
-efetivamente executados estão no [workflow](../../../.github/workflows/frontend-ci.yml).
-Configuração TypeScript e [ESLint](../eslint.config.js) definem as restrições estáticas.
-[vitest.config.ts](../vitest.config.ts) define os limiares e as exclusões nominais de cobertura;
-não há exclusão global de `shared/ui/`.
+Runtime pins come from the root. Commands are in the [README](../README.md#commands); the gates
+actually run are in the [workflow](../../../.github/workflows/frontend-ci.yml). The TypeScript
+configuration and [ESLint](../eslint.config.js) define the static constraints;
+[vitest.config.ts](../vitest.config.ts) defines the thresholds and the named coverage exclusions;
+there is no global exclusion of `shared/ui/`.
 
-Testes de unidade e componente ficam junto ao código, com Vitest, RTL e mocks de módulo.
-Playwright e a checagem de contrato/OIDC usam o stack Aspire real. Consulte
-[DEVELOPMENT](../../../docs/DEVELOPMENT.md) para o alcance e as limitações de cada gate.
+Unit and component tests live next to the code, with Vitest, RTL and module mocks. Playwright and the
+contract/OIDC check use the real Aspire stack. See [DEVELOPMENT](../../../docs/DEVELOPMENT.md) for
+what each gate covers and its limits.
 
 ## 7. Pointers
 
-- [AGENTS do frontend](../AGENTS.md): roteamento para skills e consulta por tarefa.
-- [README](../README.md): ambiente e manutenção de dependências.
+- [Frontend AGENTS](../AGENTS.md): routing to skills and lookup by task.
+- [README](../README.md): environment and dependency maintenance.
