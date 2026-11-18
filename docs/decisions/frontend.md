@@ -33,6 +33,9 @@ Forma vigente e convenções:
 - **A trilha declarada em cada página** e a seta voltando pelo histórico.
 - **Um `renameFieldErrors` separado, composto antes de `applyApiProblem`.** Cada página precisaria
   lembrar de chamá-lo.
+- **Um hook ou diálogo configurável para criar pela rota e pelo seletor**, uma pasta `ui/forms/` com
+  um `useQuickCreate` comum, ou o formulário de toda entidade em `components/` desde o primeiro dia.
+  Misturam rota e callbacks, ou criam estrutura antes da segunda entrada.
 
 ## UI e interação
 

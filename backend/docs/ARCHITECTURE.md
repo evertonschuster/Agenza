@@ -6,17 +6,10 @@ neither a stale document nor an older slice automatically defines the right chan
 supplies examples; section 11 states the limits of enforcement.
 
 This guide owns technical conventions; skills route the work to its sections. Why each convention
-exists, and what was tried and rejected, lives in the [decisions](../../docs/decisions/):
-
-| Sections | Decision                                                                                   |
-| -------- | ------------------------------------------------------------------------------------------ |
-| §1       | [0002 service and data topology](../../docs/decisions/plataforma.md)   |
-| §2, §4   | [0003 use cases, validation and results](../../docs/decisions/backend.md) |
-| §3, §6   | [0005 domain modeling and API contracts](../../docs/decisions/backend.md) |
-| §5       | [0004 multi-tenancy](../../docs/decisions/plataforma.md), [0009 bootstrap and migrations](../../docs/decisions/plataforma.md) |
-| §7       | [0006 dates and time zones](../../docs/decisions/backend.md)              |
-| §8       | [0011 logging](../../docs/decisions/plataforma.md)                                         |
-| §9       | [0007 testing and verification](../../docs/decisions/processo.md), [0014 tag deletion relationship coverage](../../docs/decisions/backend.md) |
+exists, and what was tried and rejected, lives in the decisions:
+[backend.md](../../docs/decisions/backend.md) for use cases, domain, API and dates;
+[plataforma.md](../../docs/decisions/plataforma.md) for topology, tenancy, auth, database and
+logging; [processo.md](../../docs/decisions/processo.md) for tests and CI.
 
 Three rules of thumb behind everything below:
 
@@ -550,19 +543,8 @@ No architecture guard script exists; don't count on a check to catch what review
 
 ## 12. Deliberately absent
 
-Recorded choices, with their reasons and rejected alternatives in the decisions above. Changing one
-needs a requirement and a new decision.
-
-- A mediator library, generic CRUD or base handlers, orchestration between handlers,
-  builder/factory classes and mapping libraries (0003).
-- Validator base classes, shared rule-builder extensions and repository-backed validators (0003).
-- Cross-aggregate navigations and performance mechanisms without a measured need (0003).
-- Business exceptions, monadic `Result` helpers and messages inferred from constraint names (0003).
-- A `Deleted` status beside the soft delete, EF complex types, membership-only value objects, enum
-  translation classes and flags (0005).
-- A repository bypass of tenant scope; a future deleted-row read keeps the tenant filter (0004).
-- Local-zone business time (0006).
-- A Testcontainers or `WebApplicationFactory` tier (0007).
+What was rejected, and why, is listed only in the decisions above; changing one needs a requirement
+and an edited decision.
 
 Do not assume a fine-grained panel permission model. Inspect the endpoint's actual policy: M2M
 scopes and tenant/token checks have their own boundaries, described in

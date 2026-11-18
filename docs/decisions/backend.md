@@ -47,6 +47,9 @@ orquestração explícita. O investimento fica no domínio (agregados, value obj
   extrair; constantes e códigos do domínio já alinham as cópias.
 - **`GetForUpdateAsync` na porta.** Amarra a Application à estratégia de carga do EF.
 - **Navegações entre agregados** para facilitar respostas: acoplam duas fronteiras de consistência.
+- **CRUD genérico, handler base, classes builder/factory e bibliotecas de mapeamento.** Estrutura
+  sem um problema que a peça; o mapeamento é um método `From<Entity>`.
+- **Mecanismos de performance sem uma necessidade medida.**
 - **Um registro de provedores de uso para a exclusão de etiqueta, ou só um checklist.** O registro
   também pode ser esquecido e o checklist não detecta a relação esquecida; o
   `TagDeletionUsageCoverageTests` compara cada FK para `Tag` com um cenário de exclusão.

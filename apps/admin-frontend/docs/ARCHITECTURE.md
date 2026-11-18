@@ -1,7 +1,7 @@
 # admin-frontend — Architecture
 
 Desenho vigente do frontend. Consulte a seção relacionada à mudança; o porquê e as alternativas
-rejeitadas estão nas [decisões](../../../docs/decisions/) 0012 e 0013. Versões, arquivos e gates
+rejeitadas estão em [decisions/frontend.md](../../../docs/decisions/frontend.md). Versões, arquivos e gates
 devem ser conferidos nos pins, no código e na configuração.
 
 ## 1. Shape
@@ -48,9 +48,6 @@ Uma entidade que também se cria por um seletor repete o desenho de etiquetas: o
 `<Entity>CreationDialog` em `dialogs/`, exportado pelo barril, e a casca, a validação e os campos
 em `components/<Entity>Form/`, usados também pela página da rota. Cada entrada mantém seu hook: a
 rota carrega por id e fecha navegando; o diálogo recebe o texto digitado e devolve o item criado.
-Foram descartados um hook ou diálogo configurável para as duas entradas, que mistura rota e
-callbacks, uma pasta `ui/forms/` com um `useQuickCreate` comum e o formulário de toda entidade em
-`components/` desde o primeiro dia.
 
 Hooks de página não são uma camada compartilhada de negócio; acessores de contexto, hooks genéricos
 de widgets e utilitários como [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) são
