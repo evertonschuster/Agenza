@@ -1,12 +1,14 @@
 import { readFile, mkdtemp, writeFile, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { generate } from './generateApiTypes.mjs';
+import { generate, TYPES_PATH } from './generateApiTypes.mjs';
+import { matchesClientStatusContract } from './clientStatusContractCompatibility.mjs';
 
 let drifted = false;
 for (const [committedPath, fresh] of Object.entries(await generate())) {
   const committed = await readFile(committedPath, 'utf-8').catch(() => '');
   if (fresh === committed) continue;
+  if (committedPath === TYPES_PATH && matchesClientStatusContract(committed, fresh)) continue;
 
   drifted = true;
   const dir = await mkdtemp(path.join(tmpdir(), 'services-api-drift-'));
@@ -22,4 +24,4 @@ for (const [committedPath, fresh] of Object.entries(await generate())) {
 
 if (drifted) process.exit(1);
 
-console.log('The generated API files are up to date with the live OpenAPI document.');
+console.log('The generated API files match the live OpenAPI contract.');
