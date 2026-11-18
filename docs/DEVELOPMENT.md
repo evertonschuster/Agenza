@@ -72,9 +72,19 @@ committing; the required GitHub Actions checks gate `main`, whatever agent produ
 | `ai-services-ci.yml` | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage and a Uvicorn `/health` smoke                                          |
 | `codeql.yml`         | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                                     |
 | `sonar.yml`          | all PRs/pushes                | SonarQube Cloud analysis for the three stacks (skips until `SONAR_TOKEN` exists)                                 |
-| `docs-ci.yml`        | all PRs/pushes to main        | `npm run check:docs` and its tests: local links and CLAUDE imports                                               |
+| `docs-ci.yml`        | all PRs/pushes to main        | `npm run check:docs` and its tests: local links, CLAUDE imports, the root skill table and the Codex skill copy   |
 
 Dependabot opens weekly grouped PRs for npm, NuGet, pip and the workflows' actions.
+
+### Skill loading eval
+
+`npm run eval:skills -- --host claude|codex [--runs 3] [--only form,tenant] [--model <id>]` sends
+each prompt in `scripts/skillEvals.json` to the local CLI, read-only, and reports whether the
+expected skill loaded (the Skill tool or a read of its `SKILL.md`) before the agent starts working.
+It spends tokens from your own login and varies between runs, so it is not a CI gate: run it after
+changing a skill description, a prompt in the file or the CLI/model version, and keep the printed
+versions with the result. A prompt under 2/3 gets its skill description rewritten. When the `codex`
+on the PATH is older than the desktop app, point `CODEX_BIN` at the app's `codex.exe`.
 
 ### What coverage measures
 

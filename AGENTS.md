@@ -87,7 +87,8 @@ Every skill is listed here; `check:docs` fails when one is missing.
 
 The source is `.claude/skills/agenza-*/`. Codex reads only `.agents/skills`, so that folder is a
 generated copy: edit the source, run `npm run sync:skills` and commit both; `check:docs` fails while
-the copy differs. Never edit the copy by hand.
+the copy differs. Never edit the copy by hand. After changing a description, run the
+[skill loading eval](docs/DEVELOPMENT.md#skill-loading-eval).
 
 ## How each tool gets here
 

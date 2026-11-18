@@ -1,0 +1,57 @@
+[
+  {
+    "id": "form",
+    "expected": "agenza-form-field",
+    "prompt": "Preciso de um formulário de cadastro de serviço com validação do preço no admin."
+  },
+  {
+    "id": "screen",
+    "expected": "agenza-frontend-slice",
+    "prompt": "Crie a tela de listagem de serviços no admin, com busca e uma rota própria."
+  },
+  {
+    "id": "primitive",
+    "expected": "agenza-ui-primitive",
+    "prompt": "Adicione uma variante de perigo ao botão compartilhado do admin, respeitando o tema escuro."
+  },
+  {
+    "id": "copy",
+    "expected": "agenza-ptbr-copy",
+    "prompt": "As mensagens de erro e o estado vazio da tela de Pessoas estão confusos; reescreva os textos."
+  },
+  {
+    "id": "tests",
+    "expected": "agenza-testing",
+    "prompt": "A cobertura do teste da página de Etiquetas caiu abaixo do limite; descubra o motivo e corrija."
+  },
+  {
+    "id": "contract",
+    "expected": "agenza-api-contract",
+    "prompt": "O backend mudou o contrato do endpoint de clientes; atualize os tipos gerados no admin."
+  },
+  {
+    "id": "tenant",
+    "expected": "agenza-tenant-isolation",
+    "prompt": "Quero que o admin aceite o tenant pela query string da URL para facilitar o suporte."
+  },
+  {
+    "id": "backend",
+    "expected": "agenza-backend-slice",
+    "prompt": "Implemente no backend o caso de uso de arquivar um serviço, com endpoint e migration."
+  },
+  {
+    "id": "review",
+    "expected": "agenza-backend-review",
+    "prompt": "Revise o diff do backend desta branch em relação à main e aponte os problemas por severidade."
+  },
+  {
+    "id": "none-general",
+    "expected": null,
+    "prompt": "Qual é a diferença entre let e const em JavaScript? Responda em duas frases."
+  },
+  {
+    "id": "none-product",
+    "expected": null,
+    "prompt": "Em duas frases, para quem é o produto Agenza?"
+  }
+]
