@@ -49,21 +49,24 @@ genuína ou uma restrição não óbvia.
 Só se escreve o que o código não mostra, e cada informação tem uma casa:
 [decisions/processo.md](docs/decisions/processo.md). Não crie ADRs numerados; uma decisão aprovada
 vira seção no arquivo do tema. Um arquivo novo em `docs/decisions/` só nasce da divisão de um tema
-acima de 150 linhas, como o `processo.md` descreve.
+acima de 150 linhas, como o `processo.md` descreve. Uma correção do dono que vale além da sessão
+entra neste AGENTS ou no guia da área, no mesmo PR; a memória privada de um host guarda só fatos da
+máquina ou do PR em curso.
 
 ## Fluxo de trabalho
 
-Antes de codar comportamento novo, esclareça as dúvidas materiais com o dono numa única rodada de
-perguntas em lote, cada uma com a opção recomendada; um protótipo aprovado é a referência visual.
-Critérios de aceite viram testes nomeados em pt-BR no mesmo PR, e uma correção de protótipo vira
-teste ou código. Plano e tarefas ficam na sessão; a conversa fica no PR.
+A rodada única de perguntas antes de codar, os critérios de aceite como testes em pt-BR e os commits
+de review seguem o [processo](docs/decisions/processo.md). Uma feature que atravessa backend e
+frontend vira dois PRs, o do backend primeiro, com os tipos OpenAPI regenerados.
 
-Trabalho por PR, em branch curta cortada da `main`; nunca commit direto na `main`. Uma feature que
-atravessa backend e frontend vira dois PRs: o do backend primeiro, com os tipos OpenAPI regenerados.
-[decisions/processo.md](docs/decisions/processo.md).
+Trabalho por PR, em branch curta cortada da `main`. Nunca commit direto na `main`, nem merge, push,
+auto-merge ou revert nela sem o OK explícito do dono naquele PR.
 
-Commit de refactor durante o review não altera Markdown; se o comportamento mudou, muda o teste.
-Decisões e guias tocados pelo PR são fechados no último commit antes do merge.
+Na máquina do dono, o checkout principal é compartilhado entre sessões: confira a branch antes de
+qualquer escrita no git e trabalhe numa worktree própria.
+
+Uma pergunta pede resposta, não mudança. O escopo é o pedido; um achado fora dele vira uma linha no
+relatório.
 
 ## Skills
 
@@ -84,3 +87,6 @@ sincronização.
 Escolha testes pelo comportamento e risco alterados, mantendo os gates de
 [DEVELOPMENT](docs/DEVELOPMENT.md). Em mudança só de documentação, confira referências, formatação e diff;
 não crie testes de aplicação para validar redação. Registre execuções e limitações no PR.
+
+Na máquina do dono, não pare processo nem container que você não iniciou: as portas fixas do
+[DEVELOPMENT](docs/DEVELOPMENT.md) costumam ser do Aspire que ele está usando.

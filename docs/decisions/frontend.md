@@ -22,6 +22,8 @@ Forma vigente e convenções:
 ### Rejeitado
 
 - **neverthrow ou Effect**, para algo que cabe em poucas linhas.
+- **Lembrar ou levar a busca da lista pelo link do menu** (`destinationTarget`, busca por destino).
+  Recusado duas vezes pelo dono; o link abre a lista sem filtros.
 - **TanStack Query, SWR ou RTK Query agora.** Uma prova de conceito com TanStack também foi recusada.
 - **`AbortController` passado pela fachada e pelos repositórios.**
 - **Disparar a busca por efeito ligado à query**, `useFetcher().load()`, ou uma promise com `use()`

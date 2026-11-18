@@ -41,9 +41,11 @@ folder (`Clients`), `<Operation>` a verb + noun (`CreateClient`), `<Entity>` the
 Services are **context-aggregated**:
 a small monolith per business context. A capability that fits an existing context is a new
 `<Feature>/` folder in that service, not a new service. Splitting a context out is a recorded decision, not a PR
-detail. Each service owns its schema, its migrations history, its database role and its API
-; services talk over HTTP with tokens,
-never through each other's tables.
+detail. Each service owns its schema, its migrations history, its database role and its API;
+services talk over HTTP with tokens, never through each other's tables.
+
+Cross-cutting behavior lives in a shared library behind one entry point, as `AddServiceDefaults`;
+a new service never has to remember to wire it.
 
 `services-service` is the template for a **tenant-owned business context**. `identity-service` is
 the OIDC provider and is shaped by that — ASP.NET Identity, no tenant-owned entities, a unit of work
@@ -443,6 +445,8 @@ Methods get a block body. Branching is written as guard clauses with early `retu
 `if`s, not as `&&`/`||` chains or ternaries folded into an expression body. `=>` stays for a short
 local function or property whose body is a single plain expression with no branching, and for the
 lambdas an API takes (FluentValidation `.Must(…)`, LINQ). The reference is the handler named in §10.
+LINQ chains take one operator per line, with lookups in their own method or local; an
+`Error`/`FieldError` construction stays one nested expression.
 Apply the convention to new or necessarily changed logic. An unrelated older pattern is not an
 automatic refactoring task; explain any conversion needed for the requested behavior or safety.
 

@@ -200,6 +200,8 @@ As [regras da raiz](../../../AGENTS.md) continuam valendo. Aqui, a aplicação d
 - Depois de uma mutação assíncrona, verificar o ciclo de vida antes de navegar, fechar a página ou
   aplicar efeitos locais de UI. Tópicos do caso de uso podem ser publicados após sucesso mesmo que
   a página tenha desmontado. Cancelamento HTTP não substitui a proteção contra conclusão tardia.
+- Cada mutação publica o próprio tópico (`xCreated`, `xUpdated`, `xDeleted`), nunca um `xSaved`
+  comum, mesmo sem ouvinte no momento.
 - Escolher verificação pelo comportamento alterado e pelo risco; exclusão de cobertura não
   dispensa testar interação, nome acessível ou tratamento de falha.
 

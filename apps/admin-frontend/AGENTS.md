@@ -31,6 +31,8 @@ Abra somente o que a mudança exigir:
 - Ramifique por código/status, nunca interpretando texto de erro.
 - Use controles existentes, tokens semânticos e o comportamento de teclado/foco do primitivo.
   Todo controle precisa de nome acessível; conteúdo visível segue pt-BR.
+- Assinatura TypeScript numa linha: se passar de 100 colunas, receba o objeto inteiro e desestruture
+  no corpo.
 
 ## Skills
 
