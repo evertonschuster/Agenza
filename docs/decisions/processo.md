@@ -25,7 +25,7 @@ ajuste reversível e iteração de review ficam no código, nos testes e no PR.
 
 **Edição no lugar.** Enquanto o produto não está em produção, uma decisão que muda é reescrita no
 próprio arquivo, sem status, data nem cadeia de emendas; o git guarda o histórico. O que deixou de
-valer entra em Rejeitado com o motivo. Uma ADR nova recebe o próximo número livre da `main`.
+valer entra em Rejeitado com o motivo.
 
 **Commits de review não alteram Markdown.** Se o comportamento mudou, muda o teste. ADRs e guias
 tocados pelo PR são fechados no último commit antes do merge.
@@ -44,9 +44,8 @@ verifica se o texto concorda com o código.
 
 ### Por quê
 
-O registro anterior chegou a 92 ADRs (7,8 mil linhas), muitas sobre uma tela, com cadeias de emendas
-e specs reeditadas a cada refactor; 38 dos últimos 60 PRs alteravam ADRs. Sem produção, foi refeito
-do zero; o anterior está na tag `docs-archive-2026-11-14`.
+O registro anterior (92 ADRs e as specs do Spec Kit) acumulava cadeias de emendas e mudava em quase
+todo PR. Sem produção, foi refeito do zero; o anterior está na tag `docs-archive-2026-11-14`.
 
 ### Rejeitado
 
@@ -56,14 +55,8 @@ do zero; o anterior está na tag `docs-archive-2026-11-14`.
   de comando.
 - **Um documento vivo de comportamento por feature** (`behavior.md`, `docs/features/`). Repete o
   problema da spec: todo review precisaria sincronizá-lo.
-- **Uma skill nova de esclarecimento.** Duplicaria um hábito que os agentes já seguem.
-- **Índice de ADRs gerado por frontmatter.** Mais tooling para manter um índice que, com poucas
-  ADRs, cabe numa tabela curta.
-- **Manter as 92 ADRs e consolidá-las aos poucos.** Deixaria as cadeias de emendas valendo por meses.
 - **ADR imutável com ciclo proposta/aceita antes da produção.** Gerava emendas e commits só de
   status; o git já guarda o histórico.
-- **Validar metadados de skills e o índice de ADRs no `check:docs`.** A checagem só sustentava a
-  própria burocracia.
 
 ### Reversão
 
@@ -81,11 +74,6 @@ volta um template de spec de arquivo único, com comportamento e aceite, sem fer
   sozinho nos seus gates.
 - **O CI é a autoridade dos gates.** O repositório não instala hooks locais; quem contribui, pessoa
   ou agente, roda os comandos aplicáveis antes de declarar o trabalho pronto.
-- **Versões vêm dos pins**, nunca de documentação: `.nvmrc`, `packageManager`,
-  `backend/global.json`, `.python-version`, `uv.lock` e as actions de setup do CI.
-- **O AppHost usa o bundle da CLI do Aspire** (`AspireUseCliBundle=true`).
-  `dotnet run --project backend/AppHost --launch-profile http` continua sendo o comando único, sem
-  instalar a CLI. O job de contrato roda a configuração Debug, a mesma que a CLI lança.
 - **Pins de compatibilidade ficam até a linha estável seguinte suportar a mudança**, por exemplo o
   TypeScript até o typescript-eslint estável aceitar a versão nova. O motivo de cada pin fica no PR
   que o cria.
@@ -101,22 +89,11 @@ volta um template de spec de arquivo único, com comportamento e aceite, sem fer
 
 ### Decisão
 
-- **Ferramentas gratuitas:**
-  - xUnit v3 em VSTest, AwesomeAssertions, NSubstitute e coverlet no .NET;
-  - Vitest com cobertura v8, Testing Library e Playwright no frontend;
-  - pytest, pytest-cov e Ruff no Python;
-  - ESLint e Prettier no TypeScript.
-- **Cobertura com limiar.** Linhas de Domain e Application têm gate no `Directory.Build.props`; o
-  frontend tem limiares no `vitest.config.ts`. Cobertura não prova que toda regra foi testada.
 - **O backend não tem camada de integração in-process.** Nada de Testcontainers nem
   `WebApplicationFactory`. `PersistenceTests` com EF InMemory existem só para provar atribuição de
-  tenant, filtros, conversões e a cobertura de vínculos na exclusão de etiquetas
-  ([backend.md](backend.md)).
-- **A prova real roda no stack Aspire**, no job de contrato do CI:
-  - migrations aplicadas do zero e o fluxo OIDC;
-  - isolamento HTTP entre dois donos reais (GET, PUT e DELETE de outro tenant);
-  - as FKs de tenant de `ClientTags` recusadas pelo PostgreSQL;
-  - drift dos tipos gerados do frontend.
+  tenant, filtros, conversões e a cobertura de vínculos na exclusão de etiquetas.
+- **A prova real roda no stack Aspire**, no job de contrato do CI: migrations do zero, OIDC,
+  isolamento entre tenants, FKs de tenant e drift dos tipos gerados.
 - **Testes são escolhidos pelo comportamento e pelo risco**, incluindo caminhos de recusa. Uma
   mudança só de documentação confere referências, formatação e diff.
 - Uma propriedade do PostgreSQL fora do alcance dos smokes é verificada à mão num banco descartável,

@@ -18,9 +18,8 @@
 - **Provedor OIDC próprio.** `identity-service` é a autoridade, com OpenIddict e ASP.NET Identity:
   Authorization Code + PKCE para o SPA e client credentials com escopos por audiência para M2M. O
   access token é um JWT assinado e não criptografado, para que qualquer stack o valide pelo JWKS.
-- **Aspire é o único orquestrador**, local e no job de contrato do CI. O AppHost sobe PostgreSQL
-  (volume `agenza-postgres-data`, porta 5432), os serviços e o frontend. Não há Docker no frontend
-  nem um segundo grafo de orquestração.
+- **Aspire é o único orquestrador**, local e no job de contrato do CI. Não há Docker no frontend nem
+  um segundo grafo de orquestração.
 
 Detalhes de forma: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §1.
 
@@ -63,7 +62,7 @@ posse dos dados verificável pelo banco sem multiplicar instâncias.
   validados por uma única dependência `TenantContext`.
 
 Prova automatizada: testes de persistência para filtros e atribuição, e smokes reais no Aspire
-([processo.md](processo.md)). Checklist de revisão: skill
+([processo.md](processo.md), "Testes e verificação"). Checklist de revisão: skill
 [agenza-tenant-isolation](../../.claude/skills/agenza-tenant-isolation/SKILL.md).
 
 ### Por quê
@@ -98,7 +97,7 @@ banco, não depender de cada handler lembrar.
   credenciais, usuário e tenant, cancela as requisições da sessão e fica bloqueada até um login
   explícito; eventos tardios não a reautenticam.
 - **Delegação à IA:** os serviços de IA recebem o token do usuário e o tenant do header validado
-  contra a claim ([plataforma.md](plataforma.md)).
+  contra a claim, como em Multi-tenancy.
 
 ### Rejeitado
 
@@ -123,8 +122,6 @@ banco, não depender de cada handler lembrar.
 - **Migrations são aditivas e nunca editadas depois de commitadas.** Cada mudança gera uma migration
   com o nome dela, criada com o `dotnet ef` fixado no repositório. Uma migration que apaga ou
   reescreve dados é revisada sozinha.
-- As migrations foram recriadas como um único `InitialCreate` por contexto antes do primeiro deploy.
-  Um novo reset só se justifica antes de um deploy, e é uma ADR.
 
 Comandos: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §5.
 
@@ -140,11 +137,6 @@ Comandos: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §5
 
 - **Serilog é o pipeline de todo host .NET**, dono de `backend/shared/Admin.Logging`. Os serviços o
   recebem por `AddServiceDefaults()`, e o AppHost o referencia direto; nenhum outro projeto.
-- Um serviço novo recebe tudo sem uma linha no `Program.cs`:
-  - um formato de console (`[HH:mm:ss LVL] Categoria: mensagem`);
-  - níveis padrão que silenciam ruído de EF e HttpClient;
-  - uma linha por requisição;
-  - exportação OTLP.
 - **O código escreve contra `ILogger<T>`**, com template de placeholders nomeados. Domain e
   Application não referenciam Serilog, e ninguém chama o `Log` estático.
 - **Nível por host** em `Serilog:MinimumLevel`; mensagens ruidosas filtradas por texto em
