@@ -35,15 +35,7 @@ independent areas. The why behind each convention and what was already refused a
 
 ## Skills
 
-The canonical sources are at the root. When the host does not discover them, open the task's path;
-this explicit read does not assume native discovery.
-
-| Task                                     | Procedure                                                                     |
-| ---------------------------------------- | ----------------------------------------------------------------------------- |
-| Use case, entity, migration, endpoint    | [agenza-backend-slice](../.claude/skills/agenza-backend-slice/SKILL.md)       |
-| Review a diff                            | [agenza-backend-review](../.claude/skills/agenza-backend-review/SKILL.md)     |
-| Tenant, authentication, session, AI      | [agenza-tenant-isolation](../.claude/skills/agenza-tenant-isolation/SKILL.md) |
-| Regenerate the contract for the frontend | [agenza-api-contract](../.claude/skills/agenza-api-contract/SKILL.md)         |
+Use the [skill table in the root AGENTS](../AGENTS.md#skills).
 
 ## Validation and delivery
 

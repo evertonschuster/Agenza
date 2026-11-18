@@ -14,10 +14,8 @@ import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { checkDocumentation, entryDocuments } from './checkDocs.mjs';
-import { syncSkills } from './syncSkills.mjs';
 
 const skill = '.claude/skills/agenza-example/SKILL.md';
-const skillCopy = '.agents/skills/agenza-example/SKILL.md';
 
 function write(root, file, text) {
   mkdirSync(dirname(join(root, file)), { recursive: true });
@@ -25,11 +23,6 @@ function write(root, file, text) {
 }
 
 const skillRoute = `\n[Example skill](${skill})\n`;
-
-function writeSkill(root, file, text) {
-  write(root, file, text);
-  write(root, file.replace('.claude/skills/', '.agents/skills/'), text);
-}
 
 function fixture(t, files = {}) {
   const root = mkdtempSync(join(tmpdir(), 'agenza-docs-'));
@@ -41,18 +34,14 @@ function fixture(t, files = {}) {
     write(root, file, '# Fixture\n');
   }
   write(root, 'docs/decisions/example.md', '# Decision\n');
-  writeSkill(
+  write(
     root,
     skill,
     '---\nname: agenza-example\ndescription: Use when checking documentation.\n---\n',
   );
   write(root, 'AGENTS.md', `# Fixture\n${skillRoute}`);
   for (const [file, text] of Object.entries(files)) {
-    if (file === 'AGENTS.md') {
-      write(root, file, text + skillRoute);
-    } else {
-      (file.startsWith('.claude/skills/') ? writeSkill : write)(root, file, text);
-    }
+    write(root, file, file === 'AGENTS.md' ? text + skillRoute : text);
   }
   return root;
 }
@@ -161,7 +150,6 @@ test('reports a removed active document or skill entry point', (t) => {
   const root = fixture(t);
   rmSync(join(root, 'backend/AGENTS.md'));
   rmSync(join(root, skill));
-  rmSync(join(root, skillCopy));
   assert.deepEqual(
     checkDocumentation(root).errors.map(({ file, message }) => `${file}: ${message}`),
     [
@@ -197,9 +185,7 @@ test('CLI exits nonzero for broken references and leaves its checkout unchanged'
   const root = fixture(t, { 'AGENTS.md': '# Guide\n[Broken](missing.md)\n' });
   const script = join(root, 'scripts/checkDocs.mjs');
   mkdirSync(dirname(script), { recursive: true });
-  for (const name of ['checkDocs.mjs', 'syncSkills.mjs']) {
-    copyFileSync(fileURLToPath(new URL(`./${name}`, import.meta.url)), join(root, 'scripts', name));
-  }
+  copyFileSync(fileURLToPath(new URL('./checkDocs.mjs', import.meta.url)), script);
   const before = readdirSync(root, { recursive: true })
     .sort()
     .map((file) => [file, file.endsWith('.md') ? readFileSync(join(root, file), 'utf8') : '']);
@@ -387,34 +373,4 @@ test('diagnoses unsupported named entities locally while ignoring external URLs'
       target: 'docs/caf&eacute;.md',
     },
   ]);
-});
-
-test('reports a Codex skill copy that is missing, stale or extra until it is synced', (t) => {
-  const root = fixture(t);
-  write(root, '.agents/skills/agenza-retired/SKILL.md', '# Retired\n');
-  write(root, '.agents/skills/agenza-example/notes.md', '# Leftover\n');
-  write(root, '.claude/skills/agenza-example/references/new.md', '# New\n');
-  write(root, skillCopy, '# Edited by hand\n');
-  const differences = () =>
-    checkDocumentation(root)
-      .errors.map(({ file, target }) => `${target} ${file}`)
-      .sort();
-  assert.deepEqual(differences(), [
-    'extra .agents/skills/agenza-example/notes.md',
-    'extra .agents/skills/agenza-retired',
-    'missing .agents/skills/agenza-example/references/new.md',
-    `stale ${skillCopy}`,
-  ]);
-  assert.equal(syncSkills(root), 1);
-  assert.deepEqual(differences(), []);
-  assert.equal(
-    readFileSync(join(root, skillCopy), 'utf8'),
-    readFileSync(join(root, skill), 'utf8'),
-  );
-});
-
-test('treats CRLF and LF line endings in the Codex copy as the same content', (t) => {
-  const root = fixture(t);
-  write(root, skillCopy, readFileSync(join(root, skill), 'utf8').replace(/\n/g, '\r\n'));
-  assert.deepEqual(checkDocumentation(root).errors, []);
 });

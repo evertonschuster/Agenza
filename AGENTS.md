@@ -85,18 +85,16 @@ Every skill is listed here; `check:docs` fails when one is missing.
 | Copy, messages, dates, numbers, money (texto)      | [agenza-ptbr-copy](.claude/skills/agenza-ptbr-copy/SKILL.md)               |
 | Frontend tests, coverage, e2e                      | [agenza-testing](.claude/skills/agenza-testing/SKILL.md)                   |
 
-The source is `.claude/skills/agenza-*/`. Codex reads only `.agents/skills`, so that folder is a
-generated copy: edit the source, run `npm run sync:skills` and commit both; `check:docs` fails while
-the copy differs. Never edit the copy by hand. After changing a description, run the
-[skill loading eval](docs/DEVELOPMENT.md#skill-loading-eval).
+Skills live only in `.claude/skills/agenza-*/`. Claude Code and Copilot discover them there; Codex
+reaches them through this table. This is the only skill table; area guides point here.
 
 ## How each tool gets here
 
-| Tool           | Path                                                                            |
-| -------------- | ------------------------------------------------------------------------------- |
-| Codex          | Discovers AGENTS through the directory hierarchy and skills in `.agents/skills` |
-| Claude Code    | `CLAUDE.md` imports this file; discovers skills in `.claude/skills`             |
-| GitHub Copilot | The bridge in `.github/copilot-instructions.md` asks it to read root and area   |
+| Tool           | Path                                                                                  |
+| -------------- | ------------------------------------------------------------------------------------- |
+| Codex          | Discovers AGENTS through the directory hierarchy; reaches skills through the table    |
+| Claude Code    | `CLAUDE.md` imports this file; discovers skills in `.claude/skills`                   |
+| GitHub Copilot | The bridge in `.github/copilot-instructions.md`; discovers skills in `.claude/skills` |
 
 ## Validation and delivery
 

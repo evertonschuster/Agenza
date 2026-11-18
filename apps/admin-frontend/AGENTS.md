@@ -36,19 +36,8 @@ Open only what the change needs:
 
 ## Skills
 
-The sources are in `.claude/skills/` at the root. If the host does not discover them, open the file
-by the path below; this is an explicit read, not a promise of native discovery. Read additional
+Use the [skill table in the root AGENTS](../../AGENTS.md#skills). Read a skill's additional
 references only when the task touches the subject.
-
-| Task                                       | Skill                                                                            |
-| ------------------------------------------ | -------------------------------------------------------------------------------- |
-| Screen, page, list, route (tela, página)   | [agenza-frontend-slice](../../.claude/skills/agenza-frontend-slice/SKILL.md)     |
-| Component, theme, color, focus             | [agenza-ui-primitive](../../.claude/skills/agenza-ui-primitive/SKILL.md)         |
-| Form, validation, field error (formulário) | [agenza-form-field](../../.claude/skills/agenza-form-field/SKILL.md)             |
-| Generated types, repository, API failure   | [agenza-api-contract](../../.claude/skills/agenza-api-contract/SKILL.md)         |
-| Tests, coverage, e2e                       | [agenza-testing](../../.claude/skills/agenza-testing/SKILL.md)                   |
-| Copy, messages, dates and numbers (texto)  | [agenza-ptbr-copy](../../.claude/skills/agenza-ptbr-copy/SKILL.md)               |
-| Tenant, login, session                     | [agenza-tenant-isolation](../../.claude/skills/agenza-tenant-isolation/SKILL.md) |
 
 ## Validation
 

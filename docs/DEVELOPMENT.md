@@ -72,7 +72,7 @@ committing; the required GitHub Actions checks gate `main`, whatever agent produ
 | `ai-services-ci.yml` | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage and a Uvicorn `/health` smoke                                          |
 | `codeql.yml`         | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                                     |
 | `sonar.yml`          | all PRs/pushes                | SonarQube Cloud analysis for the three stacks (skips until `SONAR_TOKEN` exists)                                 |
-| `docs-ci.yml`        | all PRs/pushes to main        | `npm run check:docs` and its tests: local links, CLAUDE imports, the root skill table and the Codex skill copy   |
+| `docs-ci.yml`        | all PRs/pushes to main        | `npm run check:docs` and its tests: local links, CLAUDE imports and the root skill table                         |
 
 Dependabot opens weekly grouped PRs for npm, NuGet, pip and the workflows' actions.
 

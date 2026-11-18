@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, readdirSync } from 'node:fs';
 import { basename, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { skillCopyDifferences } from './syncSkills.mjs';
 
 export const entryDocuments = [
   'AGENTS.md',
@@ -285,14 +284,6 @@ export function checkDocumentation(root) {
     if (existsSync(resolve(root, file)) && !routedSkills.has(file)) {
       report('AGENTS.md', 1, 'Skill sem rota na tabela de skills do AGENTS da raiz.', file);
     }
-  }
-  for (const difference of skillCopyDifferences(root)) {
-    report(
-      difference.file,
-      1,
-      'Cópia da skill para o Codex diverge da fonte; rode npm run sync:skills.',
-      difference.kind,
-    );
   }
   return { errors, documents: documents.size, skills: skillFiles.size };
 }
