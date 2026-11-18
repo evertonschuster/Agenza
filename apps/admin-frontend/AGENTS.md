@@ -38,15 +38,15 @@ As fontes estão em `.claude/skills/` na raiz. Se o host não as descobrir, abra
 caminho abaixo; esta é leitura explícita, não promessa de descoberta nativa. Leia referências
 adicionais apenas quando a tarefa tocar no assunto.
 
-| Tarefa                | Skill                                                                            |
-| --------------------- | -------------------------------------------------------------------------------- |
-| Fatia frontend        | [agenza-frontend-slice](../../.claude/skills/agenza-frontend-slice/SKILL.md)     |
-| Primitivo de UI       | [agenza-ui-primitive](../../.claude/skills/agenza-ui-primitive/SKILL.md)         |
-| Formulário            | [agenza-form-field](../../.claude/skills/agenza-form-field/SKILL.md)             |
-| Tipos e contrato HTTP | [agenza-api-contract](../../.claude/skills/agenza-api-contract/SKILL.md)         |
-| Testes e cobertura    | [agenza-testing](../../.claude/skills/agenza-testing/SKILL.md)                   |
-| Texto e formatação    | [agenza-ptbr-copy](../../.claude/skills/agenza-ptbr-copy/SKILL.md)               |
-| Isolamento de tenant  | [agenza-tenant-isolation](../../.claude/skills/agenza-tenant-isolation/SKILL.md) |
+| Tarefa                                   | Skill                                                                            |
+| ---------------------------------------- | -------------------------------------------------------------------------------- |
+| Tela, página, lista, rota                | [agenza-frontend-slice](../../.claude/skills/agenza-frontend-slice/SKILL.md)     |
+| Componente, tema, cor, foco              | [agenza-ui-primitive](../../.claude/skills/agenza-ui-primitive/SKILL.md)         |
+| Formulário, validação, erro no campo     | [agenza-form-field](../../.claude/skills/agenza-form-field/SKILL.md)             |
+| Tipos gerados, repositório, falha da API | [agenza-api-contract](../../.claude/skills/agenza-api-contract/SKILL.md)         |
+| Testes, cobertura, e2e                   | [agenza-testing](../../.claude/skills/agenza-testing/SKILL.md)                   |
+| Texto, mensagens, datas e números        | [agenza-ptbr-copy](../../.claude/skills/agenza-ptbr-copy/SKILL.md)               |
+| Tenant, login, sessão                    | [agenza-tenant-isolation](../../.claude/skills/agenza-tenant-isolation/SKILL.md) |
 
 ## Validação
 

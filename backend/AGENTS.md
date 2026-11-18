@@ -36,12 +36,12 @@ O porquê de cada convenção e o que já foi recusado estão nas [decisões](..
 As fontes canônicas estão na raiz. Quando o host não as descobrir, abra o caminho da tarefa;
 essa leitura explícita não pressupõe descoberta nativa.
 
-| Tarefa                             | Procedimento                                                                  |
-| ---------------------------------- | ----------------------------------------------------------------------------- |
-| Construir ou alterar uma fatia     | [agenza-backend-slice](../.claude/skills/agenza-backend-slice/SKILL.md)       |
-| Revisar um diff                    | [agenza-backend-review](../.claude/skills/agenza-backend-review/SKILL.md)     |
-| Alterar uma fronteira de tenant    | [agenza-tenant-isolation](../.claude/skills/agenza-tenant-isolation/SKILL.md) |
-| Regenerar contrato para o frontend | [agenza-api-contract](../.claude/skills/agenza-api-contract/SKILL.md)         |
+| Tarefa                                     | Procedimento                                                                  |
+| ------------------------------------------ | ----------------------------------------------------------------------------- |
+| Caso de uso, entidade, migration, endpoint | [agenza-backend-slice](../.claude/skills/agenza-backend-slice/SKILL.md)       |
+| Revisar um diff                            | [agenza-backend-review](../.claude/skills/agenza-backend-review/SKILL.md)     |
+| Tenant, autenticação, sessão, IA           | [agenza-tenant-isolation](../.claude/skills/agenza-tenant-isolation/SKILL.md) |
+| Regenerar contrato para o frontend         | [agenza-api-contract](../.claude/skills/agenza-api-contract/SKILL.md)         |
 
 ## Validação e entrega
 

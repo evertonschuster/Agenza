@@ -1,6 +1,6 @@
 ---
 name: agenza-backend-review
-description: Review backend diffs for concrete defects, security and data risks, contract regressions, and justified architectural concerns. Report findings in pt-BR with evidence and severity based on impact.
+description: Reviews backend diffs for concrete defects, security, tenant and data risks, contract regressions and justified architectural concerns, reporting in pt-BR by severity (revisar PR, review do backend, revisão de código .NET). Use when asked to review backend changes. Not for implementing them (agenza-backend-slice).
 ---
 
 # Review a backend change
@@ -60,5 +60,15 @@ Do not manufacture findings to fill a quota.
 For each finding, give the verified file/line, triggering scenario, consequence, evidence or
 uncertainty, and a correction proportional to the problem. Cite the relevant rule when useful.
 Keep the report in pt-BR, ordered by impact, and close with checks run and material coverage limits.
+The format of one finding (a fictitious example, not a known defect):
+
+```text
+**Alta — Foo/UpdateFooCommandHandler.cs:41: aceita uma categoria de outro tenant**
+Cenário: o dono do tenant A envia o id de uma categoria do tenant B no PUT /foos/{id}.
+Consequência: o Foo passa a apontar para dado de outro tenant; a FK composta recusa só no save.
+Evidência: a pré-checagem usa GetByIdAsync sem o filtro de tenant (IgnoreQueryFilters na linha 38).
+Correção: remover o IgnoreQueryFilters e cobrir o caso com um teste de handler.
+```
+
 If no actionable issue remains, say so. A review-only request does not authorize implementing fixes;
 a task that also requests corrections retains that authorization.

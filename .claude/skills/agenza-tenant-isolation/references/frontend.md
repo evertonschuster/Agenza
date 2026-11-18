@@ -1,8 +1,7 @@
 # Trace browser session and tenant data
 
 The browser decodes tenant information for routing; server authentication and data scoping remain
-the authority. Use the live implementation below rather than inferring protection from a header
-or from the current number of tenant-related files.
+the authority. Use the live implementation below rather than inferring protection from a header.
 
 ## Session to request
 
@@ -57,5 +56,4 @@ attachment, fresh credentials and cancellation. It does not prove that those cre
 a validated token. Choose the seam for the property being tested, and describe its limits.
 
 Inspect changed log fields and avoid raw tokens, claims payloads or identifying data that the
-operation does not require. Existing auth logging is in the store; do not infer a repository-wide
-PII policy from a file inventory or an old implementation diary.
+operation does not require. Existing auth logging is in the store.

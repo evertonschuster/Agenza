@@ -41,5 +41,3 @@ filtered unique index or CHECK under writes/concurrency.
 Use the current [verification policy](../../../../backend/docs/ARCHITECTURE.md#11-what-enforces-what)
 for guarantees outside the automated tiers. A new relational-test layer is a separate decision;
 do not silently introduce it during a documentation or small feature change.
-Run the affected test/gate when executable behavior changed. For documentation alone, validate
-links, skill format and diff without starting the application or claiming its tests passed.

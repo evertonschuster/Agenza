@@ -85,5 +85,6 @@ meaningful case is missing; changing a test file is not itself the acceptance cr
 
 Real FK/role enforcement and concurrent uniqueness need PostgreSQL evidence. Follow
 [backend tests policy](../../../../backend/docs/ARCHITECTURE.md#9-tests) and report what was actually
-run on a disposable database. Old references to an architecture guard do not prove a
-current check exists. State which properties remain unverified.
+run on a disposable database. No architecture test exists
+([§11](../../../../backend/docs/ARCHITECTURE.md#11-what-enforces-what)); state which properties remain
+unverified.
