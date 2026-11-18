@@ -10,22 +10,12 @@ comuns do wire: [docs/API.md](../API.md).
 - **CQRS com dispatcher próprio**, em `Admin.SharedKernel`: resolve o handler do command ou query e
   roda o validator antes. Fatias verticais organizam a Application, dentro das camadas
   Domain → Application → Infrastructure → Api.
-- **O controller liga o próprio command ou query**, sem record de corpo separado. O mapeamento para
-  o domínio é um método de extensão ao lado do command; uma raiz com muitos membros recebe um
-  `<Entity>Data`, e o handler chama `Create`/`Update`.
-- **Um handler por operação.** Sem handler base e sem classe que orquestre entre handlers. O que dois
-  handlers compartilham tem casa: regra no domínio, leitura no repositório, mapeamento em
-  `<Entity>Response.From<Entity>`. Repetir poucas linhas entre create e edit é aceito.
-- **O validator é síncrono e só checa a forma da entrada**, sem repositório. Cada regra leva o código
-  do domínio e a própria mensagem pt-BR; uma regra que dois validators usam é escrita nos dois.
-- **Regras que dependem do estado atual** (existência, unicidade, em uso, outro agregado) ficam no
-  handler e respondem `404` ou `409`, um conflito por resposta, numa ordem fixa.
 - **Falhas esperadas são valores.** O domínio retorna `DomainResult`; a Application, `Result`. Só o
   inesperado lança exceção.
-- **Chaves de erro no wire são o caminho camelCase do campo**, convertidas num único ponto da
-  fronteira HTTP. Dentro do backend continuam os nomes C#.
-- **Leituras sem tracking por padrão** no `services-service`. Um command carrega por `GetByIdAsync`,
-  aplica o comportamento e chama `UpdateAsync`, e a porta não expõe tracking do EF.
+
+Binding do command, um handler por operação, validator só de forma, conflitos `404`/`409`, chaves de
+erro e leituras sem tracking são convenções do
+[guia do backend](../../backend/docs/ARCHITECTURE.md), §2 a §6.
 
 ### Por quê
 

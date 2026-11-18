@@ -126,8 +126,8 @@ banco, não depender de cada handler lembrar.
 ### Decisão
 
 - **Serilog é o pipeline de todo host .NET**, dono de `backend/shared/Admin.Logging`. Os serviços o
-  recebem por `AddServiceDefaults()`, e o AppHost o referencia direto; nenhum outro projeto. Domain e
-  Application escrevem contra `ILogger<T>` e não referenciam Serilog. Uso e configuração:
+  recebem por `AddServiceDefaults()`, e o AppHost o referencia direto; nenhum outro projeto. O Domain não
+  tem pacote de log; a Application escreve contra `ILogger<T>`, sem Serilog. Uso e configuração:
   [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §8.
 
 ### Por quê

@@ -12,8 +12,8 @@ Forma vigente e convenções:
 - **Sem biblioteca de server state por enquanto.** Ela entra quando houver um gatilho concreto: cache
   reaproveitado entre telas, dados que sobrevivem à navegação, ou revalidação e sincronização que a
   forma atual não resolve. Quando entrar, substitui o repositório.
-- **Uma lista busca só na montagem, numa ação ou ao corrigir uma página além do fim**, nunca por
-  efeito ligado à query. Uma requisição por vez: a nova cancela a anterior.
+- **Uma lista só busca quando pedida**, nunca por efeito ligado à query; quando pede, o
+  [guia do frontend](../../apps/admin-frontend/docs/ARCHITECTURE.md) §1 descreve.
 - **Um `429` é um problema próprio** (`RATE_LIMIT_PROBLEM`), com mensagem do frontend. Sem retry
   automático e sem contagem regressiva; o retry manual existente basta.
 - **O cabeçalho da página e a trilha vêm das rotas** (`handle: crumb(...)`), com seta para o nível
@@ -51,7 +51,8 @@ Forma vigente e convenções:
   botão de excluir.
 - **Interação só por clique e pelo teclado nativo dos primitivos.** Não há atalhos de teclado
   próprios.
-- **Mensagens de erro do backend são texto pt-BR curado** e aparecem como vêm.
+- **Mensagens de erro de aplicação e de domínio são texto pt-BR curado** e aparecem como vêm. As de
+  model binding podem vir em inglês do framework ([API.md](../API.md), §4.3).
 
 ### Rejeitado
 
