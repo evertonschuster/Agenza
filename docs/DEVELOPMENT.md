@@ -1,6 +1,6 @@
 # Development and quality gates
 
-Where each area lives is in the [root AGENTS](../AGENTS.md#onde-está-cada-coisa); each app or
+Where each area lives is in the [root AGENTS](../AGENTS.md#where-things-are); each app or
 service keeps its own docs in its folder.
 
 ## Local development

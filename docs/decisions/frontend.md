@@ -1,72 +1,70 @@
-# Decisões: frontend
+# Decisions: frontend
 
-Forma vigente e convenções:
+Current shape and conventions:
 [apps/admin-frontend/docs/ARCHITECTURE.md](../../apps/admin-frontend/docs/ARCHITECTURE.md).
 
-## Arquitetura e acesso a dados
+## Architecture and data access
 
-### Decisão
+### Decision
 
-- **Sem camada de cancelamento na fachada.** Quem pede os dados cancela: o widget de lista e a
-  sessão. Quem cancela confere o próprio sinal antes de aplicar a resposta.
-- **Sem biblioteca de server state por enquanto.** Ela entra quando houver um gatilho concreto: cache
-  reaproveitado entre telas, dados que sobrevivem à navegação, ou revalidação e sincronização que a
-  forma atual não resolve. Quando entrar, substitui o repositório.
-- **Uma lista só busca quando pedida**, nunca por efeito ligado à query; quando pede, o
-  [guia do frontend](../../apps/admin-frontend/docs/ARCHITECTURE.md) §1 descreve.
-- **Um `429` é um problema próprio** (`RATE_LIMIT_PROBLEM`), com mensagem do frontend. Sem retry
-  automático e sem contagem regressiva; o retry manual existente basta.
-- **O cabeçalho da página e a trilha vêm das rotas** (`handle: crumb(...)`), com seta para o nível
-  de cima.
+- **No cancellation layer in the facade.** Whoever asks for the data cancels it: the list widget and
+  the session. Whoever cancels checks its own signal before applying the answer.
+- **No server-state library for now.** It comes in on a concrete trigger: a cache reused across
+  screens, data that survives navigation, or revalidation and synchronization the current shape
+  cannot handle. When it comes in, it replaces the repository.
+- **A list fetches only when asked**, never through an effect keyed on the query; when it asks is
+  described in §1 of the [frontend guide](../../apps/admin-frontend/docs/ARCHITECTURE.md).
+- **A `429` is a problem of its own** (`RATE_LIMIT_PROBLEM`), with a frontend message. No automatic
+  retry and no countdown; the existing manual retry is enough.
+- **The page header and breadcrumb come from the routes** (`handle: crumb(...)`), with an arrow to the
+  level above.
 
-### Rejeitado
+### Rejected
 
-- **neverthrow ou Effect**, para algo que cabe em poucas linhas.
-- **Lembrar ou levar a busca da lista pelo link do menu** (`destinationTarget`, busca por destino).
-  Recusado duas vezes pelo dono; o link abre a lista sem filtros.
-- **TanStack Query, SWR ou RTK Query agora.** Uma prova de conceito com TanStack também foi recusada.
-- **`AbortController` passado pela fachada e pelos repositórios.**
-- **Disparar a busca por efeito ligado à query**, `useFetcher().load()`, ou uma promise com `use()`
-  e Suspense. Revalidam sozinhos, ou reestruturam a tela.
-- **Um esquema de filtros com tipos inferidos**, Zod como leitor ou um flag de armazenamento
-  `url | memory`. É estrutura demais para filtros que se leem em uma linha.
-- **Contagem regressiva no botão de retry ou backoff automático na fachada.** Foi construído e
-  removido a pedido do dono.
-- **A trilha declarada em cada página** e a seta voltando pelo histórico.
-- **Um `renameFieldErrors` separado, composto antes de `applyApiProblem`.** Cada página precisaria
-  lembrar de chamá-lo.
-- **Um hook ou diálogo configurável para criar pela rota e pelo seletor**, uma pasta `ui/forms/` com
-  um `useQuickCreate` comum, ou o formulário de toda entidade em `components/` desde o primeiro dia.
-  Misturam rota e callbacks, ou criam estrutura antes da segunda entrada.
+- **neverthrow or Effect**, for something that fits in a few lines.
+- **Remembering or carrying the list's search through the menu link** (`destinationTarget`, search
+  per destination). Refused twice by the owner; the link opens the list without filters.
+- **TanStack Query, SWR or RTK Query now.** A TanStack proof of concept was refused too.
+- **An `AbortController` passed through the facade and the repositories.**
+- **Triggering the fetch through an effect keyed on the query**, `useFetcher().load()`, or a promise
+  with `use()` and Suspense. They revalidate on their own, or restructure the screen.
+- **A filter schema with inferred types**, Zod as the reader or a storage flag `url | memory`. Too much
+  structure for filters that read in one line.
+- **A countdown on the retry button or automatic backoff in the facade.** It was built and removed at
+  the owner's request.
+- **A breadcrumb declared in each page** and an arrow going back through history.
+- **A separate `renameFieldErrors`, composed before `applyApiProblem`.** Every page would have to
+  remember to call it.
+- **A configurable hook or dialog for creating from the route and from the selector**, a `ui/forms/`
+  folder with a shared `useQuickCreate`, or every entity's form in `components/` from day one. They
+  mix route and callbacks, or create structure before the second entry.
 
-## UI e interação
+## UI and interaction
 
-### Decisão
+### Decision
 
-- **Base UI é a camada de primitivos**, com os componentes como código próprio adicionado pela CLI
-  do shadcn. Toast e Combobox vêm do Base UI, sem `sonner` nem `cmdk`.
-- **Tema de três estados** (`light`, `dark`, `system`), guardado como escolha e resolvido na hora,
-  num store próprio. O tema resolvido vai ao `identity-service` no login.
-- **Barras de filtro são formulários React Hook Form** com os campos compartilhados, nunca partes de
-  primitivos montadas à mão. Um botão Buscar aplica todos os filtros; digitar não busca.
-- **Excluir é uma rota de diálogo sobre a lista**, aberta por uma lixeira na linha. A edição não tem
-  botão de excluir.
-- **Interação só por clique e pelo teclado nativo dos primitivos.** Não há atalhos de teclado
-  próprios.
-- **Mensagens de erro de aplicação e de domínio são texto pt-BR curado** e aparecem como vêm. As de
-  model binding podem vir em inglês do framework ([API.md](../API.md), §4.3).
+- **Base UI is the primitives layer**, with the components as our own code added by the shadcn CLI.
+  Toast and Combobox come from Base UI, without `sonner` or `cmdk`.
+- **Three-state theme** (`light`, `dark`, `system`), stored as a choice and resolved on the fly, in a
+  store of our own. The resolved theme goes to `identity-service` at login.
+- **Filter bars are React Hook Form forms** with the shared fields, never hand-assembled primitive
+  parts. A Buscar button applies every filter; typing does not search.
+- **Deleting is a dialog route over the list**, opened by a trash icon on the row. The edit page has
+  no delete button.
+- **Interaction only by click and the primitives' native keyboard.** There are no custom keyboard
+  shortcuts.
+- **Application and domain error messages are curated pt-BR text** and are shown as they come. Model
+  binding messages may come in English from the framework ([API.md](../API.md), §4.3).
 
-### Rejeitado
+### Rejected
 
-- **Continuar no Radix.** Ficaria fora do caminho padrão da CLI do shadcn e manteria `sonner` e
-  `cmdk`.
-- **Bibliotecas fechadas de componentes** (Mantine, HeroUI, Chakra): o código dos primitivos deixa de
-  ser nosso.
-- **`next-themes`**, por trazer maquinário de SSR para o que o store próprio faz em cerca de sessenta
-  linhas, e **`light-dark()` no CSS**, porque o seletor manual ainda precisa controlar `color-scheme`.
-- **Botões segmentados, abas ou um popover de "Filtros"** para escolher a situação (ativa ou inativa)
-  numa lista. Ela é um campo da barra de filtro como os outros.
-- **Um `SearchSelect` de lista fixa com uma variante remota por cima.** A base passava a carregar os
-  estados da busca remota.
-- **Excluir pela página de edição**, ou pelos dois caminhos.
-- **Atalhos de teclado customizados.** Foram removidos; voltar com eles exige uma decisão nova.
+- **Staying on Radix.** It would be off the shadcn CLI's default path and keep `sonner` and `cmdk`.
+- **Closed component libraries** (Mantine, HeroUI, Chakra): the primitives' code stops being ours.
+- **`next-themes`**, for bringing SSR machinery to what our store does in about sixty lines, and
+  **`light-dark()` in CSS**, because the manual selector still needs to control `color-scheme`.
+- **Segmented buttons, tabs or a "Filtros" popover** to pick the status (active or inactive) in a
+  list. It is a filter-bar field like the others.
+- **A fixed-list `SearchSelect` with a remote variant on top.** The base ended up carrying the remote
+  search's states.
+- **Deleting from the edit page**, or from both places.
+- **Custom keyboard shortcuts.** They were removed; bringing them back needs a new decision.

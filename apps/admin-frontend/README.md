@@ -93,7 +93,7 @@ the local orchestration through Aspire.
 
 ## Workflow
 
-The [root instructions](../../AGENTS.md#fluxo-de-trabalho) define planning and the PR flow; the
+The [root instructions](../../AGENTS.md#workflow) define planning and the PR flow; the
 current behavior lives in the code and tests. The [app AGENTS](AGENTS.md) routes each task to its
 skill and guide section, [CLAUDE.md](CLAUDE.md) keeps the shared imports, and the optional MCP
 integrations are in [.mcp.json](../../.mcp.json).

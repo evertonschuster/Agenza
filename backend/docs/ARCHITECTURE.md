@@ -23,7 +23,7 @@ Three rules of thumb behind everything below:
   saves; a query loads and maps. Caching, projections inside repositories, raw SQL, hand-opened
   transactions, gap-free sequences, denormalized columns and parallel queries need a measured problem or
   a product rule, stated in the PR. Record architectural decisions through the
-  [root workflow](../../AGENTS.md#fluxo-de-trabalho); routine implementation does not create an
+  [root workflow](../../AGENTS.md#workflow); routine implementation does not create an
   additional documentation step in this guide. Not a query per row, and
   explicit no-tracking reads with explicitly tracked updates, are shape rather than optimization and
   stay required.

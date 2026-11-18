@@ -1,117 +1,119 @@
-# Decisões: backend
+# Decisions: backend
 
-Convenções completas: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md). Formas
-comuns do wire: [docs/API.md](../API.md).
+Full conventions: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md). Common wire
+shapes: [docs/API.md](../API.md).
 
-## Casos de uso, validação e resultados
+## Use cases, validation and results
 
-### Decisão
+### Decision
 
-- **CQRS com dispatcher próprio**, em `Admin.SharedKernel`: resolve o handler do command ou query e
-  roda o validator antes. Fatias verticais organizam a Application, dentro das camadas
+- **CQRS with our own dispatcher**, in `Admin.SharedKernel`: it resolves the command's or query's
+  handler and runs the validator first. Vertical slices organize the Application, inside the layers
   Domain → Application → Infrastructure → Api.
-- **Falhas esperadas são valores.** O domínio retorna `DomainResult`; a Application, `Result`. Só o
-  inesperado lança exceção.
+- **Expected failures are values.** The domain returns `DomainResult`; the Application, `Result`. Only
+  the unexpected throws.
 
-Binding do command, um handler por operação, validator só de forma, conflitos `404`/`409`, chaves de
-erro e leituras sem tracking são convenções do
-[guia do backend](../../backend/docs/ARCHITECTURE.md), §2 a §6.
+Command binding, one handler per operation, shape-only validators, `404`/`409` conflicts, error keys
+and untracked reads are conventions of the [backend guide](../../backend/docs/ARCHITECTURE.md), §2 to
+§6.
 
-### Por quê
+### Why
 
-Abstração proporcional: o dispatcher inteiro cabe em cerca de cem linhas, e o código lê como
-orquestração explícita. O investimento fica no domínio (agregados, value objects, erros nomeados).
+Proportional abstraction: the whole dispatcher fits in about a hundred lines, and the code reads as
+explicit orchestration. The investment goes into the domain (aggregates, value objects, named
+errors).
 
-### Rejeitado
+### Rejected
 
-- **MediatR.** A partir da versão 13 exige licença comercial acima de um faturamento; o necessário
-  cabe num dispatcher próprio.
-- **Validators com repositório para regras entre agregados**, com domínio anêmico. Foi tentado e
-  revertido: escondia I/O na validação e tirava as invariantes do domínio.
-- **Um loader compartilhado entre handlers** (`ServiceRelationshipLoader`). Vira uma camada de
-  orquestração que cada feature tende a engordar; o repositório já é essa fronteira.
-- **Exceções de negócio e helpers monádicos sobre `Result`.**
-- **Mensagens derivadas do nome da constraint do banco.** A resposta específica vem das pré-checagens
-  do handler; uma nova tentativa passa por elas.
-- **`<Feature>RuleBuilderExtensions` para regras compartilhadas.** Exigia decidir caso a caso o que
-  extrair; constantes e códigos do domínio já alinham as cópias.
-- **`GetForUpdateAsync` na porta.** Amarra a Application à estratégia de carga do EF.
-- **Navegações entre agregados** para facilitar respostas: acoplam duas fronteiras de consistência.
-- **CRUD genérico, handler base, classes builder/factory e bibliotecas de mapeamento.** Estrutura
-  sem um problema que a peça; o mapeamento é um método `From<Entity>`.
-- **Mecanismos de performance sem uma necessidade medida.**
-- **Um registro de provedores de uso para a exclusão de etiqueta, ou só um checklist.** O registro
-  também pode ser esquecido e o checklist não detecta a relação esquecida; o
-  `TagDeletionUsageCoverageTests` compara cada FK para `Tag` com um cenário de exclusão.
+- **MediatR.** From version 13 it requires a commercial license above a revenue threshold; what is
+  needed fits in our own dispatcher.
+- **Validators with a repository for cross-aggregate rules**, with an anemic domain. It was tried and
+  reverted: it hid I/O in validation and took the invariants out of the domain.
+- **A loader shared between handlers** (`ServiceRelationshipLoader`). It becomes an orchestration
+  layer each feature tends to fatten; the repository already is that boundary.
+- **Business exceptions and monadic helpers over `Result`.**
+- **Messages derived from the database constraint's name.** The specific answer comes from the
+  handler's pre-checks; a retry goes through them.
+- **`<Feature>RuleBuilderExtensions` for shared rules.** It required deciding case by case what to
+  extract; the domain's constants and codes already align the copies.
+- **`GetForUpdateAsync` on the port.** It ties the Application to EF's loading strategy.
+- **Navigations between aggregates** to ease responses: they couple two consistency boundaries.
+- **Generic CRUD, a base handler, builder/factory classes and mapping libraries.** Structure without a
+  problem asking for it; mapping is a `From<Entity>` method.
+- **Performance mechanisms without a measured need.**
+- **A registry of usage providers for tag deletion, or just a checklist.** A registry can be
+  forgotten too and a checklist does not detect the forgotten relationship;
+  `TagDeletionUsageCoverageTests` compares each foreign key to `Tag` with a deletion scenario.
 
-## Modelagem de domínio e contratos de API
+## Domain modeling and API contracts
 
-### Decisão
+### Decision
 
-**Agregados.**
+**Aggregates.**
 
-- Construtor privado, `Create` que valida e constrói, comportamento que valida antes de atribuir.
-  Filhos só são criados pela raiz, por fábricas `internal` que geram o próprio id.
-- Agregados se referenciam por id. Um muitos-para-muitos é um filho da raiz dona, com FK composta
-  para as duas pontas (`ClientTag`).
-- Uma mudança de estado é um método com intenção (`Inactivate()`), que recusa transição inválida com
-  erro nomeado. Um `Update` do registro inteiro só serve para dados livres, sem transição.
+- Private constructor, a `Create` that validates and builds, behavior that validates before
+  assigning. Children are created only by the root, through `internal` factories that generate their
+  own id.
+- Aggregates reference each other by id. A many-to-many is a child of the owning root, with a
+  composite foreign key to both ends (`ClientTag`).
+- A state change is a method with intent (`Inactivate()`) that refuses an invalid transition with a
+  named error. An `Update` of the whole record only serves free-form data, without transitions.
 
-**Valores.**
+**Values.**
 
-- É value object o que tem formato, normalização ou regra; texto livre limitado só pelo tamanho pode
-  ficar primitivo.
-- Os value objects sem contexto ficam em `Admin.SharedKernel.ValueObjects` e se comportam como
-  escalar no wire.
-- Um value object de texto só é lido de query ou rota por opt-in; dado pessoal nunca, porque URL vai
-  para log.
-- Um conjunto fechado de opções é um enum simples, que viaja pelo nome em camelCase; de query ou
-  rota, exatamente um nome.
+- Whatever has a format, normalization or rule is a value object; free text limited only by length
+  may stay primitive.
+- The context-free value objects live in `Admin.SharedKernel.ValueObjects` and behave as scalars on
+  the wire.
+- A text value object is read from a query or route only by opt-in; personal data never, because
+  URLs end up in logs.
+- A closed set of options is a plain enum, traveling by its camelCase name; from a query or route,
+  exactly one name.
 
-**Ciclo de vida e unicidade.**
+**Lifecycle and uniqueness.**
 
-- Excluir é soft delete; um id excluído responde `404`.
-- A unicidade é um índice único com `TenantId` e `"DeletedAt" IS NULL`. A pré-checagem do handler
-  existe só para responder no campo.
-- Uma edição (`PUT`) substitui o registro inteiro, filhos incluídos.
+- Deleting is a soft delete; a deleted id answers `404`.
+- Uniqueness is a unique index with `TenantId` and `"DeletedAt" IS NULL`. The handler's pre-check
+  exists only to answer on the field.
+- An edit (`PUT`) replaces the whole record, children included.
 
-### Rejeitado
+### Rejected
 
-- **Um status `Deleted` ao lado do soft delete.** Duas fontes de verdade, e o status sozinho não
-  escondia a linha.
-- **Uma tabela de contatos com discriminador.** Colunas nulas que só valem para um tipo.
-- **CPF reservado para sempre**, inclusive de pessoas excluídas. Decisão de produto: excluir libera.
-- **Sincronizar filhos por id na edição.** Reconcilia identidade técnica quando a requisição já traz
-  o estado desejado inteiro.
-- **Value object para um conjunto de opções**, conversor registrado por enum, `[JsonConverter]` no
-  domínio e enums com valores em bits. Esquecer um registro falhava em silêncio, e bits aceitavam
-  combinações.
-- **Validator de paginação compartilhado ou especificação genérica no repositório.** Cada lista tem
-  seus filtros, e a porta recebe valores simples.
-- **Modo não paginado de listas**, recusado pelo dono.
-- **Idade no wire.** Prende a resposta ao dia em que foi calculada.
-- **Mascarar o CPF**, decisão do dono.
-- **`409` para ação repetida.** Um segundo clique viraria erro para o estado que o usuário queria.
-- **Etiquetas como `uuid[]` na tabela de pessoas.** O PostgreSQL não tem FK em elemento de array, e a
-  posse por tenant ficaria só na aplicação.
-- **Navegação direta entre `Client` e `Tag`.** Carregaria outra raiz dentro do agregado.
+- **A `Deleted` status beside the soft delete.** Two sources of truth, and the status alone did not
+  hide the row.
+- **A contacts table with a discriminator.** Nullable columns that apply to only one kind.
+- **Reserving a CPF forever**, even for deleted people. A product decision: deleting frees it.
+- **Syncing children by id on edit.** It reconciles technical identity when the request already
+  carries the whole desired state.
+- **A value object for a set of options**, a converter registered per enum, `[JsonConverter]` in the
+  domain and flag enums. Forgetting a registration failed silently, and flags accepted combinations.
+- **A shared paging validator or a generic specification in the repository.** Each list has its own
+  filters, and the port receives plain values.
+- **A non-paged list mode**, refused by the owner.
+- **Age on the wire.** It ties the answer to the day it was computed.
+- **Masking the CPF**, the owner's decision.
+- **`409` for a repeated action.** A second click would turn the state the user wanted into an error.
+- **Tags as `uuid[]` in the people table.** PostgreSQL has no foreign key on an array element, and
+  tenant ownership would live only in the application.
+- **A direct navigation between `Client` and `Tag`.** It would load another root inside the
+  aggregate.
 
-## Datas e fusos
+## Dates and time zones
 
-### Decisão
+### Decision
 
-- **Uma data de calendário enviada como instante mantém o dia escrito.** Um value object de data
-  aceita `2015-03-10T23:59:59-03:00` como 10 de março, ignorando hora e offset. O resto continua
-  com o framework.
-- **No frontend, a ordem e o formato de datas digitadas e exibidas seguem o idioma do navegador**;
-  textos e números seguem pt-BR.
+- **A calendar date sent as an instant keeps the written day.** A date value object accepts
+  `2015-03-10T23:59:59-03:00` as March 10, ignoring time and offset. The rest stays with the
+  framework.
+- **In the frontend, the order and format of typed and displayed dates follow the browser's
+  language**; text and numbers follow pt-BR.
 
-Uma regra que dependa do dia local do negócio exige uma decisão nova.
+A rule that depends on the business's local day needs a new decision.
 
-### Rejeitado
+### Rejected
 
-- **Converter a data no repositório do frontend** e manter o contrato estrito. O dono preferiu
-  afrouxar o backend a mexer no gerador de tipos.
-- **Usar o dia UTC do instante recebido.** O dono pediu a data como foi escrita.
-- **Fixar a ordem de data em pt-BR.** Um usuário com o navegador em outro idioma lê e digita na
-  ordem dele.
+- **Converting the date in the frontend repository** and keeping the contract strict. The owner
+  preferred relaxing the backend to changing the type generator.
+- **Using the UTC day of the received instant.** The owner asked for the date as written.
+- **Fixing the date order to pt-BR.** A user with the browser in another language reads and types in
+  their own order.
