@@ -2,7 +2,6 @@ using Admin.Identity.Client;
 using Admin.SharedKernel.AspNetCore;
 using Microsoft.OpenApi;
 using Scalar.AspNetCore;
-using ServicesService.Application.Clients.ListClients;
 using System.Text.Json.Nodes;
 
 namespace ServicesService.Api.Setup;
@@ -25,22 +24,6 @@ public static class DocumentationExtensions
         services.AddOpenApi(options =>
         {
             options.MapValueObjectsToStrings();
-
-            options.AddOperationTransformer(async (operation, context, cancellationToken) =>
-            {
-                var filter = context.Description.ParameterDescriptions
-                    .FirstOrDefault(parameter => parameter.Type == typeof(ClientStatusFilter?));
-                var status = operation.Parameters?.OfType<OpenApiParameter>()
-                    .FirstOrDefault(parameter => parameter.In == ParameterLocation.Query && parameter.Name == filter?.Name);
-                if (status is not null && context.Document is { } document)
-                {
-                    // ApiExplorer emits CLR enum names and drops null from this query parameter's schema.
-                    var schema = await context.GetOrCreateSchemaAsync(typeof(ClientStatusFilter?), cancellationToken: cancellationToken);
-                    schema.Enum?.Add(null!);
-                    document.AddComponent(nameof(ClientStatusFilter), schema);
-                    status.Schema = new OpenApiSchemaReference(nameof(ClientStatusFilter), document);
-                }
-            });
 
             options.AddDocumentTransformer((document, _, _) =>
             {
