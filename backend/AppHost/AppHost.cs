@@ -31,14 +31,20 @@ var servicesDatabase = builder.AddConnectionString(
         $"Port={postgresEndpoint.Property(EndpointProperty.Port)};" +
         $"Database=appdb;Username=services_app;Password={developmentPassword}"));
 
-var identityService = builder.AddProject<Projects.IdentityService_Api>("identity-service", launchProfileName: "http")
+var identityService = builder.AddDotnetProject(
+        "identity-service",
+        "../services/identity-service/IdentityService.Api/IdentityService.Api.csproj",
+        options => options.LaunchProfileName = "http")
     .WithHttpEndpoint(port: 5081, name: "http")
     .WithReference(identityDatabase, connectionName: "Default")
     .WithEnvironment("IdentityClients__AssistantServiceWorker__Secret", developmentPassword)
     .WithEnvironment("IdentityClients__TenantProvisioning__Secret", developmentPassword)
     .WaitFor(appdb);
 
-var servicesService = builder.AddProject<Projects.ServicesService_Api>("services-service", launchProfileName: "http")
+var servicesService = builder.AddDotnetProject(
+        "services-service",
+        "../services/services-service/ServicesService.Api/ServicesService.Api.csproj",
+        options => options.LaunchProfileName = "http")
     .WithHttpEndpoint(port: 5080, name: "http")
     .WithReference(servicesDatabase, connectionName: "Default")
     .WithReference(identityService)
