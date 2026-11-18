@@ -47,7 +47,7 @@ For a form or dialog, use `userEvent.setup()` to operate the actual control and 
 validation displayed, submission suppressed, successful save or closure. A render-only test does
 not prove the action works. Use accessible names; reserve test ids for values without an accessible
 query. Accessible names match by substring: pass `exact: true` when one name contains another, such
-as a field control or an "Editar <nome>" row link.
+as a field control or an "Editar <nome>" row link. Base UI toasts have `role="dialog"`.
 
 ## API transport seam
 
