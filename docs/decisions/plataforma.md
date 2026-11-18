@@ -84,18 +84,11 @@ banco, não depender de cada handler lembrar.
 
 ### Decisão
 
-- **`/login` é uma transição automática.** Espera a checagem de sessão, inicia um único
-  redirecionamento OIDC e devolve o usuário autenticado ao caminho de retorno validado. O tema atual
-  (`light` ou `dark`) vai ao `identity-service` como parâmetro, e ele só aceita esses dois valores.
-- **Falhas de autenticação têm código estável** e mensagem acionável.
 - **A sessão OIDC fica em `localStorage`**, para que uma segunda aba reutilize a sessão. O risco de um
   XSS na própria origem ler o token é aceito: `sessionStorage` não protege de forma relevante contra
   isso.
-- **O núcleo da sessão fica em `shared/session/`**, como máquina pura sem React nem `oidc-client-ts`.
-  O adaptador OIDC fica em `features/auth`.
-- **Trocar de identidade exige login novo.** Se `sub` ou tenant mudam numa renovação, a sessão limpa
-  credenciais, usuário e tenant, cancela as requisições da sessão e fica bloqueada até um login
-  explícito; eventos tardios não a reautenticam.
+- **Trocar de identidade exige login novo.** Se `sub` ou tenant mudam numa renovação, a sessão é
+  limpa inteira e fica bloqueada até um login explícito.
 - **Delegação à IA:** os serviços de IA recebem o token do usuário e o tenant do header validado
   contra a claim, como em Multi-tenancy.
 
@@ -118,12 +111,9 @@ banco, não depender de cada handler lembrar.
   `identity-service` roda seu seed idempotente de desenvolvimento.
 - **No máximo uma instância com bootstrap por serviço.** Bootstraps concorrentes não são suportados,
   e não há lock.
-- **Cada serviço tem `__EFMigrationsHistory` no próprio schema.**
-- **Migrations são aditivas e nunca editadas depois de commitadas.** Cada mudança gera uma migration
-  com o nome dela, criada com o `dotnet ef` fixado no repositório. Uma migration que apaga ou
-  reescreve dados é revisada sozinha.
-
-Comandos: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §5.
+- **Migrations são aditivas e nunca editadas depois de commitadas**; uma migration que apaga ou
+  reescreve dados é revisada sozinha. Convenções e comandos:
+  [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §5.
 
 ### Rejeitado
 
@@ -136,13 +126,9 @@ Comandos: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §5
 ### Decisão
 
 - **Serilog é o pipeline de todo host .NET**, dono de `backend/shared/Admin.Logging`. Os serviços o
-  recebem por `AddServiceDefaults()`, e o AppHost o referencia direto; nenhum outro projeto.
-- **O código escreve contra `ILogger<T>`**, com template de placeholders nomeados. Domain e
-  Application não referenciam Serilog, e ninguém chama o `Log` estático.
-- **Nível por host** em `Serilog:MinimumLevel`; mensagens ruidosas filtradas por texto em
-  `Serilog:Filter`. `Logging:LogLevel` é ignorado.
-- **Mensagens levam códigos, ids e nomes de constraint**, não a entrada do usuário. Quando precisam
-  levá-la, removem caracteres de controle antes (CWE-117).
+  recebem por `AddServiceDefaults()`, e o AppHost o referencia direto; nenhum outro projeto. Domain e
+  Application escrevem contra `ILogger<T>` e não referenciam Serilog. Uso e configuração:
+  [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §8.
 
 ### Por quê
 
