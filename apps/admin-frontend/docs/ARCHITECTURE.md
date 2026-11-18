@@ -1,7 +1,7 @@
 # admin-frontend — Architecture
 
 Desenho vigente do frontend. Consulte a seção relacionada à mudança; o porquê e as alternativas
-rejeitadas estão nas [decisões](../../../docs/decisions/README.md) 0012 e 0013. Versões, arquivos e gates
+rejeitadas estão nas [decisões](../../../docs/decisions/) 0012 e 0013. Versões, arquivos e gates
 devem ser conferidos nos pins, no código e na configuração.
 
 ## 1. Shape
@@ -25,7 +25,7 @@ dentro da fatia, ciclos, `src/main.tsx`, testes de suporte fora dessas camadas o
 Esses limites continuam na revisão. O adaptador OIDC
 [sessionDriver](../src/features/auth/model/sessionDriver.ts) tem uma dependência intencional
 `model → api` dentro de auth; o núcleo compartilhado de sessão não conhece OIDC
-([ADR 0008](../../../docs/decisions/0008-authentication-session-and-ai-delegation.md)).
+([decisions/plataforma.md](../../../docs/decisions/plataforma.md)).
 
 ### Páginas, rotas e listas
 
@@ -60,7 +60,7 @@ Quando uma página usa `loader` ou `action`, eles ficam em `route.ts`, reexporta
 [app/routes.tsx](../src/app/routes.tsx). Isso não obriga toda página a buscar dados no loader:
 um loader bloqueante não permite que a própria página apresente seu carregamento. O cabeçalho
 deriva das rotas e seus `handle`, por
-[ADR 0012](../../../docs/decisions/0012-frontend-architecture-and-data.md).
+[decisions/frontend.md](../../../docs/decisions/frontend.md).
 
 [usePaginatedList](../src/widgets/paginated-list-section/use-paginated-list.ts) recebe o estado
 controlado e o repositório. Os hooks de
@@ -108,7 +108,7 @@ vários campos compartilham e não importa nada de `shared/ui`. As receitas espe
 Seleção de várias opções `{ id, name }` carregadas do backend, com busca e páginas, usa
 [SearchSelect](../src/shared/ui/search-select/search-select.tsx) com a chamada paginada da feature; no
 formulário, `SearchSelectField`
-([ADR 0013](../../../docs/decisions/0013-frontend-ui-and-interaction.md)). A `creation` opcional
+([decisions/frontend.md](../../../docs/decisions/frontend.md)). A `creation` opcional
 oferece criar o item ali mesmo; a feature desenha a criação e devolve o item, que entra selecionado.
 Um diálogo de criação passa o `finalFocus` recebido ao `DialogContent`, para o foco voltar à busca.
 `SelectField` continua para o `Select` simples.
@@ -174,13 +174,13 @@ O cliente decodifica `tenant_id` do access token para roteamento; não verifica 
 A segurança está no backend, que valida token e correspondência do header. Nunca resolver tenant
 de URL, query ou valor independente em localStorage. O usuário OIDC é persistido pela biblioteca
 em localStorage para reutilização entre abas
-([ADR 0008](../../../docs/decisions/0008-authentication-session-and-ai-delegation.md)); isso não o torna
+([decisions/plataforma.md](../../../docs/decisions/plataforma.md)); isso não o torna
 uma fonte de autorização.
 
 O cliente HTTP lê credenciais a cada chamada e falha fechado quando falta token/tenant. O gerador
 remove o parâmetro de header de tenant dos tipos para que as features não o forneçam manualmente.
 Essas proteções do frontend complementam a
-[fronteira de servidor](../../../docs/decisions/0004-multi-tenancy.md).
+[fronteira de servidor](../../../docs/decisions/plataforma.md).
 
 ### Session identity changes
 
@@ -190,7 +190,7 @@ eventos tardios e tenta remover o usuário persistido; uma falha nessa limpeza �
 restaurar as credenciais da sessão bloqueada. O cliente HTTP combina cancelamento de sessão e do
 consumidor. A implementação está na
 [sessionStore](../src/shared/session/sessionStore.ts) e na
-[ADR 0008](../../../docs/decisions/0008-authentication-session-and-ai-delegation.md).
+[decisions/plataforma.md](../../../docs/decisions/plataforma.md).
 
 ## 4. Principles
 
@@ -212,7 +212,7 @@ As [regras da raiz](../../../AGENTS.md) continuam valendo. Aqui, a aplicação d
   implementada; a tabela de rotas mostra quais ainda existem.
 - Não há biblioteca de server state. Sua introdução exige uma necessidade concreta de cache,
   revalidação ou sincronização que justifique substituir a forma atual
-  ([ADR 0012](../../../docs/decisions/0012-frontend-architecture-and-data.md)).
+  ([decisions/frontend.md](../../../docs/decisions/frontend.md)).
 - O cancelamento de lista pertence ao widget que solicita dados; o cancelamento por perda da sessão
   pertence à store. A fachada ainda normaliza abort de transporte como falha de rede; o consumidor
   que cancela verifica seu próprio signal antes de aplicar a resposta.

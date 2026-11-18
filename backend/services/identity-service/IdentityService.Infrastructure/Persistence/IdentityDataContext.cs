@@ -28,9 +28,8 @@ public class IdentityDataContext : IdentityDbContext<ApplicationUser, IdentityRo
 
         builder.UseOpenIddict<Guid>();
 
-        // Soft-delete query filter + DeletedAt index for every BaseEntity
-        // (docs/decisions/0004) - a new entity gets both for free just by
-        // inheriting BaseEntity, no per-configuration boilerplate.
+        // Soft-delete query filter + DeletedAt index for every BaseEntity:
+        // a new entity gets both for free just by inheriting BaseEntity.
         builder.ApplyAuditableConventions(this, typeof(BaseEntity));
     }
 }

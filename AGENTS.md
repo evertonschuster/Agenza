@@ -1,7 +1,7 @@
 # Agenza — instruções para agentes
 
 Ponto de entrada compartilhado. Guarda invariantes e roteamento; o resto mora no código, nos guias
-de cada área e nas [decisões](docs/decisions/README.md). Se der vontade de colar código ou uma lista
+de cada área e nas [decisões](docs/decisions/). Se der vontade de colar código ou uma lista
 de arquivos aqui, coloque um link.
 
 ## O produto
@@ -19,7 +19,7 @@ salões): agendamento, gestão de clientes e uma recepcionista de IA. Persona v1
 | `backend`             | .NET, Clean Architecture por serviço | [AGENTS.md local](backend/AGENTS.md)                                               |
 | `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md) |
 | `infra`               | Scripts de init do PostgreSQL        | —                                                                                  |
-| `docs/decisions`      | Decisões duráveis                    | [índice](docs/decisions/README.md)                                                 |
+| `docs/decisions`      | Decisões duráveis                    | [índice](docs/decisions/)                                                          |
 
 Ambiente local e gates de qualidade: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Direção do produto:
 [docs/VISION.md](docs/VISION.md).
@@ -28,10 +28,10 @@ Ambiente local e gates de qualidade: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 **Multi-tenancy é fronteira de servidor.** O tenant vem só da claim do token validado; o header
 `X-Tenant-Id` é roteamento e o backend recusa o que não bate. Nunca aceite tenant de URL, query ou
-`localStorage`. [ADR 0004](docs/decisions/0004-multi-tenancy.md).
+`localStorage`. [decisions/plataforma.md](docs/decisions/plataforma.md).
 
 **Erros são valores, não exceções.** Falha esperada volta como `Result`; só o excepcional lança.
-[ADR 0003](docs/decisions/0003-backend-use-cases-validation-and-results.md).
+[decisions/backend.md](docs/decisions/backend.md).
 
 **Sem comentários de "o quê", sem JSDoc.** Um comentário curto de "por quê" só para uma corrida
 genuína ou uma restrição não óbvia.
@@ -42,12 +42,12 @@ genuína ou uma restrição não óbvia.
 `.python-version`, `uv.lock` e as actions de setup do CI.
 
 **Aspire é o único orquestrador local.** Não adicione Docker ao frontend.
-[ADR 0002](docs/decisions/0002-service-and-data-topology.md).
+[decisions/plataforma.md](docs/decisions/plataforma.md).
 
 ## Documentação
 
 Só se escreve o que o código não mostra, e cada informação tem uma casa:
-[ADR 0001](docs/decisions/0001-documentation-and-decisions.md).
+[decisions/processo.md](docs/decisions/processo.md).
 
 ## Fluxo de trabalho
 
@@ -58,7 +58,7 @@ teste ou código. Plano e tarefas ficam na sessão; a conversa fica no PR.
 
 Trabalho por PR, em branch curta cortada da `main`; nunca commit direto na `main`. Uma feature que
 atravessa backend e frontend vira dois PRs: o do backend primeiro, com os tipos OpenAPI regenerados.
-[ADR 0010](docs/decisions/0010-git-ci-and-toolchain.md).
+[decisions/processo.md](docs/decisions/processo.md).
 
 Commit de refactor durante o review não altera Markdown; se o comportamento mudou, muda o teste.
 ADRs e guias tocados pelo PR são fechados no último commit antes do merge.

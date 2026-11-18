@@ -3,8 +3,8 @@ using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Services;
 
-// Older generation, not a precedent: docs/decisions/0003 rejects a loader shared
-// between handlers (backend/docs/ARCHITECTURE.md §10).
+// Older generation, not a precedent: new code does not share a loader between
+// handlers (backend/docs/ARCHITECTURE.md §10).
 public sealed class ServiceRelationshipLoader
 {
     private readonly ICategoryRepository _categoryRepository;

@@ -43,4 +43,4 @@ Tenant isolation is distinct from operation-level permission. Inspect the endpoi
 authorization policy; neither a hidden UI control nor a valid tenant proves that every action
 is permitted. If a new machine/background operation needs tenant data, require an explicit
 tenant-scoped identity design rather than weakening the existing boundary
-([ADR 0004](../../../docs/decisions/0004-multi-tenancy.md)).
+([decisions/plataforma.md](../../../docs/decisions/plataforma.md)).

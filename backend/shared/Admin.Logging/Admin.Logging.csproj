@@ -9,7 +9,7 @@
   <ItemGroup>
     <!-- Referenced by hosts only (ServiceDefaults, AppHost), never by Domain or
          Application, so the ASP.NET Core dependency for request logging stays
-         out of the layers (docs/decisions/0003, docs/decisions/0011). -->
+         out of the layers. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
   </ItemGroup>
 

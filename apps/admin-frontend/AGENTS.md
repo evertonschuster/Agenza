@@ -13,7 +13,7 @@ Abra somente o que a mudança exigir:
 | Consumo HTTP, erros ou tipos gerados        | [Arquitetura §2](docs/ARCHITECTURE.md#2-talking-to-the-backend) e código de contrato indicado ali |
 | Autenticação e tenant                       | [Arquitetura §3](docs/ARCHITECTURE.md#3-auth--tenancy)                                            |
 | Planejamento de feature                     | [Fluxo da raiz](../../AGENTS.md#fluxo-de-trabalho)                                                |
-| Por que algo é assim, o que já foi recusado | [ADRs 0012 e 0013](../../docs/decisions/README.md)                                                |
+| Por que algo é assim, o que já foi recusado | [decisions/frontend.md](../../docs/decisions/frontend.md)                                         |
 | Ambiente, comandos ou dependências          | [README](README.md), inclusive [lockfile](README.md#lockfile)                                     |
 
 ## Invariantes do frontend

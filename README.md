@@ -47,7 +47,7 @@ Use os pins do repositório em vez de copiar versões da documentação:
 `.nvmrc`/`packageManager`, `backend/global.json`, `.python-version`/`uv.lock`
 e as actions de setup do CI são as fontes executáveis. Exceções de
 compatibilidade e condições de upgrade estão registradas na
-[ADR 0010](docs/decisions/0010-git-ci-and-toolchain.md).
+[decisions/processo.md](docs/decisions/processo.md).
 
 ## Agentes de IA
 
@@ -58,7 +58,7 @@ ponte para o Copilot. Fluxos de trabalho específicos deste repositório moram e
 
 Esses arquivos **apontam** para as fontes de verdade em vez de repeti-las: versões,
 inventário de arquivos e status de feature ficam em lockfiles, código e testes. A política
-de documentação está na [ADR 0001](docs/decisions/0001-documentation-and-decisions.md).
+de documentação está na [decisions/processo.md](docs/decisions/processo.md).
 
 [`.mcp.json`](.mcp.json) declara quatro servidores MCP opcionais (GitHub, shadcn,
 Playwright, Chrome DevTools). Nenhum é obrigatório para desenvolver; autorize-os

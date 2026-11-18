@@ -15,7 +15,7 @@
          mapping and the generic exception handler live here - all need
          MVC/hosting types. Everything else
          (Result, Error, Cqrs, Dispatcher) stays framework-agnostic in
-         Admin.SharedKernel (docs/decisions/0003). -->
+         Admin.SharedKernel. -->
     <FrameworkReference Include="Microsoft.AspNetCore.App" />
     <!-- The OpenAPI schema of the value objects (Admin.SharedKernel.ValueObjects): one string each. -->
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" />

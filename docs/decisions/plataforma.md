@@ -1,0 +1,158 @@
+# Decisões: plataforma
+
+## Topologia de serviços e dados
+
+### Decisão
+
+- **Serviços agregados por contexto.** Cada serviço é um pequeno monólito de um contexto de
+  negócio: `identity-service` cuida de autenticação, tenants e usuários; `services-service` é o
+  modelo de contexto de negócio com dados por tenant; `assistant-service` (Python) é a IA. Uma
+  capacidade nova que cabe num contexto existente é uma pasta nesse serviço. Separar um contexto
+  exige divergência real de escala, dono ou release, e é uma ADR.
+- **Um PostgreSQL, um schema por serviço.** Cada serviço tem seu schema, seu histórico de
+  migrations dentro dele e sua role sem privilégio de superusuário; `PUBLIC` não cria nem usa
+  esses schemas. Serviços conversam por HTTP com token, nunca pelas tabelas uns dos outros.
+- **Código compartilhado é infraestrutura.** `backend/shared/` não guarda regra de negócio. A
+  exceção é `Admin.SharedKernel.ValueObjects`: formatos iguais em todo serviço (CPF, nome, telefone,
+  e-mail, data de nascimento), sem contexto de negócio.
+- **Provedor OIDC próprio.** `identity-service` é a autoridade, com OpenIddict e ASP.NET Identity:
+  Authorization Code + PKCE para o SPA e client credentials com escopos por audiência para M2M. O
+  access token é um JWT assinado e não criptografado, para que qualquer stack o valide pelo JWKS.
+- **Aspire é o único orquestrador**, local e no job de contrato do CI. O AppHost sobe PostgreSQL
+  (volume `agenza-postgres-data`, porta 5432), os serviços e o frontend. Não há Docker no frontend
+  nem um segundo grafo de orquestração.
+
+Detalhes de forma: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §1.
+
+### Por quê
+
+Um dono solo não sustenta a operação de microserviços finos. Schemas e roles por serviço mantêm a
+posse dos dados verificável pelo banco sem multiplicar instâncias.
+
+### Rejeitado
+
+- **Microserviços finos por capacidade.** Custo de operação e de contrato sem ganho de escala.
+- **Uma cópia por serviço dos value objects sem contexto.** Repetiria o algoritmo de dígito
+  verificador e a integração com o wire em cada serviço.
+- **Um pacote NuGet para esses value objects.** Uma solução só, sem feed: uma `ProjectReference`
+  muda junto com quem a consome.
+- **Mover `DomainResult` para o projeto compartilhado.** O Domain passaria a depender de mais do que
+  formatos; ele continua duplicado por serviço.
+
+## Multi-tenancy
+
+### Decisão
+
+- **O tenant vem só da claim do token validado.** O header `X-Tenant-Id` é conveniência de
+  roteamento: o `TenantHeaderFilter` recusa header ausente, malformado ou diferente da claim antes
+  da action. `[IgnoreTenant]` exige justificativa explícita e não é política de acesso anônimo.
+  Nenhum command, query, DTO ou repositório de negócio aceita tenant escolhido pelo cliente.
+- **Atribuição no save.** Entidades `TenantOwnedEntity` recebem o tenant atual pelo interceptor ao
+  serem adicionadas; sem tenant disponível o save falha. Um tenant já atribuído não é trocado.
+- **Dois filtros nomeados em toda consulta:** `SoftDelete` e `Tenant`, aplicados pela convenção do
+  `DbContext`. Nenhum repositório os ignora; ler linhas excluídas exige um helper próprio que
+  preserve o tenant.
+- **O banco garante as relações.** Toda raiz tenant-owned expõe a chave candidata `(TenantId, Id)`,
+  e relações entre entidades tenant-owned usam FK composta com o tenant. Uma FK só por `Id` entre
+  elas é um defeito.
+- **As claims mantêm o nome do token** (`MapInboundClaims = false`): `tenant_id` é o tenant e `sub`
+  é quem fica nas colunas de auditoria.
+- **Frontend:** o header vem do token da sessão, nunca de URL, query ou valor avulso em
+  `localStorage`. O cliente HTTP falha fechado sem token ou tenant.
+- **Serviços de IA:** um endpoint tenant-owned exige JWT com `tenant_id` e o mesmo valor no header,
+  validados por uma única dependência `TenantContext`.
+
+Prova automatizada: testes de persistência para filtros e atribuição, e smokes reais no Aspire
+([processo.md](processo.md)). Checklist de revisão: skill
+[agenza-tenant-isolation](../../.claude/skills/agenza-tenant-isolation/SKILL.md).
+
+### Por quê
+
+O tenant é a fronteira de segurança de um SaaS multi-tenant; ela precisa valer no servidor e no
+banco, não depender de cada handler lembrar.
+
+### Rejeitado
+
+- **Garantir relações só na aplicação, com FKs por `Id`.** Bastava enquanto toda escrita passava
+  pelo EF; foi substituído por FKs compostas para que nenhum caminho de escrita crie uma relação
+  entre tenants.
+- **Um filtro único combinando exclusão e tenant.** Ignorar o soft delete desligaria o tenant junto.
+- **O accessor ler dois nomes de claim**, ou manter o mapeamento e remover só `sub`: cada claim
+  nova seria renomeada sem aviso.
+- **Tenant em rota ou query.**
+
+## Autenticação, sessão e delegação à IA
+
+### Decisão
+
+- **`/login` é uma transição automática.** Espera a checagem de sessão, inicia um único
+  redirecionamento OIDC e devolve o usuário autenticado ao caminho de retorno validado. O tema atual
+  (`light` ou `dark`) vai ao `identity-service` como parâmetro, e ele só aceita esses dois valores.
+- **Falhas de autenticação têm código estável** e mensagem acionável.
+- **A sessão OIDC fica em `localStorage`**, para que uma segunda aba reutilize a sessão. O risco de um
+  XSS na própria origem ler o token é aceito: `sessionStorage` não protege de forma relevante contra
+  isso.
+- **O núcleo da sessão fica em `shared/session/`**, como máquina pura sem React nem `oidc-client-ts`.
+  O adaptador OIDC fica em `features/auth`.
+- **Trocar de identidade exige login novo.** Se `sub` ou tenant mudam numa renovação, a sessão limpa
+  credenciais, usuário e tenant, cancela as requisições da sessão e fica bloqueada até um login
+  explícito; eventos tardios não a reautenticam.
+- **Delegação à IA:** os serviços de IA recebem o token do usuário e o tenant do header validado
+  contra a claim ([plataforma.md](plataforma.md)).
+
+### Rejeitado
+
+- **`sessionStorage`.** Cada aba refaria o redirecionamento, sem ganho real contra XSS.
+- **Recarregar só a página atual quando a identidade muda.** Estado e mutações carregados com a
+  identidade antiga continuariam vivos.
+- **Trocar de tenant em cada página**, ou **só limpar o storage**: duplicaria um ciclo de segurança
+  em cada feature, ou deixaria credenciais vivas até recarregar.
+- **Um registro global de requisições ou cache por tenant.** Um único sinal de sessão basta.
+
+## Banco: bootstrap e migrations
+
+### Decisão
+
+- **Migrations e seed automáticos são opt-in.** Ficam desligados na configuração base e ligados só
+  em `appsettings.Development.json` ou por override explícito
+  (`DatabaseBootstrap:RunOnStartup`). Com o bootstrap ligado, cada serviço aplica suas migrations e o
+  `identity-service` roda seu seed idempotente de desenvolvimento.
+- **No máximo uma instância com bootstrap por serviço.** Bootstraps concorrentes não são suportados,
+  e não há lock.
+- **Cada serviço tem `__EFMigrationsHistory` no próprio schema.**
+- **Migrations são aditivas e nunca editadas depois de commitadas.** Cada mudança gera uma migration
+  com o nome dela, criada com o `dotnet ef` fixado no repositório. Uma migration que apaga ou
+  reescreve dados é revisada sozinha.
+- As migrations foram recriadas como um único `InitialCreate` por contexto antes do primeiro deploy.
+  Um novo reset só se justifica antes de um deploy, e é uma ADR.
+
+Comandos: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) §5.
+
+### Rejeitado
+
+- **Um advisory lock do PostgreSQL serializando o bootstrap.** Foi criado e removido: a topologia
+  suportada já tem um único bootstrap por serviço.
+- **Um histórico de migrations comum no schema `public`.** Misturaria a posse dos schemas.
+
+## Logging
+
+### Decisão
+
+- **Serilog é o pipeline de todo host .NET**, dono de `backend/shared/Admin.Logging`. Os serviços o
+  recebem por `AddServiceDefaults()`, e o AppHost o referencia direto; nenhum outro projeto.
+- Um serviço novo recebe tudo sem uma linha no `Program.cs`:
+  - um formato de console (`[HH:mm:ss LVL] Categoria: mensagem`);
+  - níveis padrão que silenciam ruído de EF e HttpClient;
+  - uma linha por requisição;
+  - exportação OTLP.
+- **O código escreve contra `ILogger<T>`**, com template de placeholders nomeados. Domain e
+  Application não referenciam Serilog, e ninguém chama o `Log` estático.
+- **Nível por host** em `Serilog:MinimumLevel`; mensagens ruidosas filtradas por texto em
+  `Serilog:Filter`. `Logging:LogLevel` é ignorado.
+- **Mensagens levam códigos, ids e nomes de constraint**, não a entrada do usuário. Quando precisam
+  levá-la, removem caracteres de controle antes (CWE-117).
+
+### Por quê
+
+O provedor padrão escrevia duas linhas por evento, blocos de SQL em `Information` e nada para uma
+requisição normal, e o AppHost logava diferente dos serviços.

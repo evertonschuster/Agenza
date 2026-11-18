@@ -15,7 +15,7 @@
     <PackageVersion Include="OpenTelemetry.Instrumentation.AspNetCore" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Http" Version="1.20.1" />
     <PackageVersion Include="OpenTelemetry.Instrumentation.Runtime" Version="1.20.1" />
-    <!-- Admin.Logging: the one logging pipeline of every .NET host (docs/decisions/0011) -->
+    <!-- Admin.Logging: the one logging pipeline of every .NET host -->
     <PackageVersion Include="Serilog.AspNetCore" Version="10.0.0" />
     <PackageVersion Include="Serilog.Expressions" Version="5.0.0" />
     <PackageVersion Include="Serilog.Sinks.OpenTelemetry" Version="4.2.0" />
@@ -38,7 +38,7 @@
     <PackageVersion Include="FluentValidation" Version="12.2.0" />
     <PackageVersion Include="FluentValidation.DependencyInjectionExtensions" Version="12.2.0" />
     <!-- Admin.SharedKernel / consumers - framework-agnostic DI + logging
-         abstractions, no ASP.NET Core coupling (docs/decisions/0003) -->
+         abstractions, no ASP.NET Core coupling -->
     <PackageVersion Include="Microsoft.Extensions.DependencyInjection.Abstractions" Version="10.0.14" />
     <PackageVersion Include="Microsoft.Extensions.Logging.Abstractions" Version="10.0.14" />
     <!-- Testing (shared across every *.Tests project) -->
@@ -50,7 +50,7 @@
     <PackageVersion Include="Scalar.AspNetCore" Version="2.18.7" />
     <PackageVersion Include="xunit.v3.mtp-off" Version="4.0.2" />
     <PackageVersion Include="xunit.runner.visualstudio" Version="4.0.1" />
-    <!-- ServicesService.PersistenceTests only (docs/decisions/0007) - EF Core
+    <!-- ServicesService.PersistenceTests only - EF Core
          InMemory, no Postgres/Docker, deliberately outside the *.Tests
          Domain+Application-only boundary and its coverage gate -->
     <PackageVersion Include="Microsoft.EntityFrameworkCore.InMemory" Version="10.0.14" />

@@ -8,7 +8,7 @@ O [guia de arquitetura](docs/ARCHITECTURE.md) descreve o desenho atual.
 Use as fontes executáveis de versão: [Node](../../.nvmrc), `packageManager` no
 [package.json da raiz](../../package.json) e [.NET SDK](../../backend/global.json).
 Docker é necessário para o PostgreSQL gerenciado pelo Aspire.
-Pins de compatibilidade seguem a [ADR 0010](../../docs/decisions/0010-git-ci-and-toolchain.md).
+Pins de compatibilidade seguem a [decisions/processo.md](../../docs/decisions/processo.md).
 
 ## Subindo o ambiente
 

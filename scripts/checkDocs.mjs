@@ -19,7 +19,6 @@ export const entryDocuments = [
   'docs/API.md',
   'docs/DEVELOPMENT.md',
   'docs/VISION.md',
-  'docs/decisions/README.md',
 ];
 
 function blank(text) {

@@ -31,7 +31,7 @@ function fixture(t, files = {}) {
   for (const file of entryDocuments) {
     write(root, file, '# Fixture\n');
   }
-  write(root, 'docs/decisions/0001-test.md', '# Decision\n');
+  write(root, 'docs/decisions/example.md', '# Decision\n');
   write(
     root,
     skill,
@@ -127,10 +127,10 @@ test('does not reinterpret comment delimiters inside code or code inside comment
 });
 
 test('checks links inside decision records', (t) => {
-  const root = fixture(t, { 'docs/decisions/0001-test.md': '[Guide](../missing.md)\n' });
+  const root = fixture(t, { 'docs/decisions/example.md': '[Guide](../missing.md)\n' });
   assert.deepEqual(
     checkDocumentation(root).errors.map(({ file, target }) => ({ file, target })),
-    [{ file: 'docs/decisions/0001-test.md', target: '../missing.md' }],
+    [{ file: 'docs/decisions/example.md', target: '../missing.md' }],
   );
 });
 

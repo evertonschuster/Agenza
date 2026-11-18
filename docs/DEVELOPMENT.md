@@ -20,7 +20,7 @@ at 5432 and persists in the `agenza-postgres-data` volume.
   AppHost runs `npm` and a locked `uv sync` before starting Vite and Uvicorn.
 - `dotnet run` hands the AppHost to the Aspire CLI, which launches the Debug build. The first build
   fetches the CLI, dashboard and DCP into `~/.aspire` through `dotnet dnx`, so it needs network but
-  no separate install ([ADR 0010](decisions/0010-git-ci-and-toolchain.md)).
+  no separate install ([decisions/processo.md](decisions/processo.md)).
 - One local-development password, `postgres`, is shared by PostgreSQL, the restricted application
   roles and the internal OAuth clients. AppHost passes it as a fixed value, so configuration does
   not override it.
@@ -30,10 +30,10 @@ at 5432 and persists in the `agenza-postgres-data` volume.
   permissions even with equal local passwords.
 - Database bootstrap runs on startup only where `DatabaseBootstrap:RunOnStartup` is true
   (Development). A multi-replica deployment would need a one-shot bootstrap first
-  ([ADR 0009](decisions/0009-database-bootstrap-and-migrations.md)).
+  ([decisions/plataforma.md](decisions/plataforma.md)).
 
 There is no Docker Compose and no application Dockerfile: Aspire is the only local orchestration,
-and CI exercises the same AppHost graph ([ADR 0002](decisions/0002-service-and-data-topology.md)).
+and CI exercises the same AppHost graph ([decisions/plataforma.md](decisions/plataforma.md)).
 
 ### Database client
 
@@ -85,8 +85,8 @@ Dependabot opens weekly grouped PRs for npm, NuGet, pip and the workflows' actio
   `.targets`). `Admin.SharedKernel` and `Admin.Logging` have their own test projects and gates and
   are excluded from each service's number, so one cannot hide behind the other.
   `ServicesService.PersistenceTests` cover EF tenant assignment, filtering and tag-deletion
-  relationship coverage in memory ([ADR 0007](decisions/0007-testing-and-verification.md),
-  [ADR 0014](decisions/0014-tag-deletion-relationship-coverage.md)). There is no Testcontainers or
+  relationship coverage in memory ([decisions/processo.md](decisions/processo.md),
+  [decisions/backend.md](decisions/backend.md)). There is no Testcontainers or
   `WebApplicationFactory` project: the frontend API-contract job starts AppHost, applies the
   migrations and runs the real OIDC and tenant-isolation checks; its HTTP scenario needs
   `AGENZA_DISPOSABLE_TEST_DB=1` and `AGENZA_TENANT_PROVISIONING_SECRET`.

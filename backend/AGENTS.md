@@ -19,7 +19,7 @@ Leia somente as regras e os exemplos ligados à mudança:
 
 O [§10](docs/ARCHITECTURE.md#10-reference-code-and-the-older-generation) aponta exemplos da forma
 atual. Compare-os com o código afetado; uma divergência não autoriza refatorar áreas independentes.
-O porquê de cada convenção e o que já foi recusado estão nas [decisões](../docs/decisions/README.md), mapeadas no topo do guia.
+O porquê de cada convenção e o que já foi recusado estão nas [decisões](../docs/decisions/), mapeadas no topo do guia.
 
 ## Invariantes
 

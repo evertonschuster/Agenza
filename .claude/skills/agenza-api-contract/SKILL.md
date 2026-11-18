@@ -52,7 +52,7 @@ For dates or numeric schema transforms, inspect the
 and [apiClient.ts](../../../apps/admin-frontend/src/shared/api/apiClient.ts).
 Calendar dates in bodies/responses use Date, parameter-reachable schemas stay string and date-time
 stays string. Default JSON serialization sends a Date as an instant; backend calendar value objects
-keep its written day ([ADR 0006](../../../docs/decisions/0006-dates-and-time-zones.md)).
+keep its written day ([decisions/backend.md](../../../docs/decisions/backend.md)).
 Construct calendar values with the existing UTC helpers; repositories do not revive dates.
 
 ## Consume a result

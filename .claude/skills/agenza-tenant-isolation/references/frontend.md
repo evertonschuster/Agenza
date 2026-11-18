@@ -26,7 +26,7 @@ Follow [tenant.ts](../../../../apps/admin-frontend/src/shared/session/tenant.ts)
 
 ## Identity changes and stale data
 
-For [ADR 0008](../../../../docs/decisions/0008-authentication-session-and-ai-delegation.md), inspect
+For [decisions/plataforma.md](../../../../docs/decisions/plataforma.md), inspect
 the reducer/store above, [sessionDriver](../../../../apps/admin-frontend/src/features/auth/model/sessionDriver.ts)
 and [ProtectedRoute](../../../../apps/admin-frontend/src/features/auth/ui/ProtectedRoute.tsx).
 

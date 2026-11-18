@@ -6,17 +6,17 @@ neither a stale document nor an older slice automatically defines the right chan
 supplies examples; section 11 states the limits of enforcement.
 
 This guide owns technical conventions; skills route the work to its sections. Why each convention
-exists, and what was tried and rejected, lives in the [decisions](../../docs/decisions/README.md):
+exists, and what was tried and rejected, lives in the [decisions](../../docs/decisions/):
 
 | Sections | Decision                                                                                   |
 | -------- | ------------------------------------------------------------------------------------------ |
-| §1       | [0002 service and data topology](../../docs/decisions/0002-service-and-data-topology.md)   |
-| §2, §4   | [0003 use cases, validation and results](../../docs/decisions/0003-backend-use-cases-validation-and-results.md) |
-| §3, §6   | [0005 domain modeling and API contracts](../../docs/decisions/0005-domain-modeling-and-api-contracts.md) |
-| §5       | [0004 multi-tenancy](../../docs/decisions/0004-multi-tenancy.md), [0009 bootstrap and migrations](../../docs/decisions/0009-database-bootstrap-and-migrations.md) |
-| §7       | [0006 dates and time zones](../../docs/decisions/0006-dates-and-time-zones.md)              |
-| §8       | [0011 logging](../../docs/decisions/0011-logging.md)                                         |
-| §9       | [0007 testing and verification](../../docs/decisions/0007-testing-and-verification.md), [0014 tag deletion relationship coverage](../../docs/decisions/0014-tag-deletion-relationship-coverage.md) |
+| §1       | [0002 service and data topology](../../docs/decisions/plataforma.md)   |
+| §2, §4   | [0003 use cases, validation and results](../../docs/decisions/backend.md) |
+| §3, §6   | [0005 domain modeling and API contracts](../../docs/decisions/backend.md) |
+| §5       | [0004 multi-tenancy](../../docs/decisions/plataforma.md), [0009 bootstrap and migrations](../../docs/decisions/plataforma.md) |
+| §7       | [0006 dates and time zones](../../docs/decisions/backend.md)              |
+| §8       | [0011 logging](../../docs/decisions/plataforma.md)                                         |
+| §9       | [0007 testing and verification](../../docs/decisions/processo.md), [0014 tag deletion relationship coverage](../../docs/decisions/backend.md) |
 
 Three rules of thumb behind everything below:
 

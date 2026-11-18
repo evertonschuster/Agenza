@@ -17,7 +17,7 @@ código da feature; aqui ficam as convenções que o consumidor precisa conhecer
 | Portas e composição local                | [AppHost](../backend/AppHost/AppHost.cs)                                                                                                                                                                |
 
 As regras das camadas e os exemplos atuais de backend estão na
-[arquitetura](../backend/docs/ARCHITECTURE.md). Use o [índice de ADRs](decisions/README.md) para consultar
+[arquitetura](../backend/docs/ARCHITECTURE.md). Use o [índice de ADRs](decisions/) para consultar
 o motivo de uma decisão relevante, sem tratar observações históricas como uma execução atual.
 
 ## 2. Autenticação e tenant — duas checagens, uma mensagem
@@ -35,7 +35,7 @@ IgnoreTenant dispensa essa comparação, mas não concede acesso anônimo.
 
 O problema reduzido do filtro inclui type, title, status e code; não acrescenta traceId,
 correlationId nem errors. A claim validada continua sendo a fonte de tenant do servidor:
-o header não autoriza acesso ([ADR 0004](decisions/0004-multi-tenancy.md)).
+o header não autoriza acesso ([decisions/plataforma.md](decisions/plataforma.md)).
 Um consumidor não deve tentar resolver um 403 escolhendo outro tenant.
 
 ## 3. Envelope de sucesso — ApiResponse
@@ -90,7 +90,7 @@ cadastro em conflito. Não trate um metadado arbitrário como URL ou autorizaç�
 
 A factory converte caminhos C# para camelCase por segmento, preservando índices:
 Guardians[0].Name vira guardians[0].name
-([ADR 0003](decisions/0003-backend-use-cases-validation-and-results.md)).
+([decisions/backend.md](decisions/backend.md)).
 A chave vazia representa uma mensagem geral, não um campo de formulário.
 
 ### 4.2 Forma reduzida do filtro de tenant
@@ -118,8 +118,8 @@ Corpo e query/rota usam mecanismos distintos: o
 numéricos; o [binder de enum](../backend/shared/Admin.SharedKernel.AspNetCore/EnumNameModelBinder.cs)
 aceita exatamente um nome definido, sem distinguir caixa, e rejeita números, nomes desconhecidos ou
 nomes combinados. As conversões de value objects estão descritas nas
-[ADRs 0002](decisions/0002-service-and-data-topology.md) e
-[0005](decisions/0005-domain-modeling-and-api-contracts.md).
+[decisions/plataforma.md](decisions/plataforma.md) e
+[0005](decisions/backend.md).
 
 ### 4.4 404 e 405 de roteamento podem não ter corpo
 
@@ -156,7 +156,7 @@ rejeição de roteamento.
   estrutura recebida, sem deduzir o campo pelo status 409.
 - Uma falha de persistência traduzida usa a mensagem genérica definida para o save. Constraints e
   detalhes internos não são uma mensagem para o usuário
-  ([ADR 0003](decisions/0003-backend-use-cases-validation-and-results.md)).
+  ([decisions/backend.md](decisions/backend.md)).
 - Um 500 com problema reconhecido pode conservar a mensagem do backend no frontend; um 404 vazio
   pode receber uma mensagem local genérica. A origem e o formato importam além do status.
 
