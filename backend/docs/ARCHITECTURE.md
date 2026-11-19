@@ -9,17 +9,16 @@ section 11 states the limits of enforcement. Why each convention exists and what
 Three rules of thumb behind everything below:
 
 - **Abstraction proportional to the problem.** Lean plumbing — one hand-rolled dispatcher, explicit
-  mapping methods, explicit `if (x.IsFailure) return …`. Invested domain — aggregates, value objects,
-  named errors.
+  mapping methods, explicit `if (x.IsFailure) return …`. Invested domain — aggregates, value
+  objects, named errors.
 - **One source of truth per rule.** A rule lives where it is enforced and everything else reuses it:
   the domain's constants and error codes feed the validator and the EF configuration; the database
   index is the last word on uniqueness; the token claim is the only tenant.
-- **The simplest correct form first.** A command loads the aggregate, changes it through behaviour and
-  saves; a query loads and maps. Caching, projections inside repositories, raw SQL, hand-opened
-  transactions, gap-free sequences, denormalized columns and parallel queries need a measured problem or
-  a product rule, stated in the PR. Not a query per row, and
-  explicit no-tracking reads with explicitly tracked updates, are shape rather than optimization and
-  stay required.
+- **The simplest correct form first.** A command loads the aggregate, changes it through behaviour
+  and saves; a query loads and maps. Caching, projections inside repositories, raw SQL, hand-opened
+  transactions, gap-free sequences, denormalized columns and parallel queries need a measured
+  problem or a product rule, stated in the PR. Not a query per row, and explicit no-tracking reads
+  with explicitly tracked updates, are shape rather than optimization and stay required.
 
 Placeholders: `<Service>` is the project prefix (`ServicesService`), `<Feature>` a plural noun
 folder (`Clients`), `<Operation>` a verb + noun (`CreateClient`), `<Entity>` the aggregate
@@ -31,23 +30,23 @@ folder (`Clients`), `<Operation>` a verb + noun (`CreateClient`), `<Entity>` the
 
 ### Services
 
-Services are **context-aggregated**:
-a small monolith per business context. A capability that fits an existing context is a new
-`<Feature>/` folder in that service, not a new service. Splitting a context out is a recorded decision, not a PR
-detail. Each service owns its schema, its migrations history, its database role and its API;
-services talk over HTTP with tokens, never through each other's tables.
+Services are **context-aggregated**: a small monolith per business context. A capability that fits
+an existing context is a new `<Feature>/` folder in that service, not a new service. Splitting a
+context out is a recorded decision, not a PR detail. Each service owns its schema, its migrations
+history, its database role and its API; services talk over HTTP with tokens, never through each
+other's tables.
 
-Cross-cutting behavior lives in a shared library behind one entry point, as `AddServiceDefaults`;
-a new service never has to remember to wire it.
+Cross-cutting behavior lives in a shared library behind one entry point, as `AddServiceDefaults`; a
+new service never has to remember to wire it.
 
 `services-service` is the template for a **tenant-owned business context**. `identity-service` is
 the OIDC provider and is shaped by that — ASP.NET Identity, no tenant-owned entities, a unit of work
 that wraps two stores in one transaction. Don't carry its specifics into a business service.
 
 A new service copies the project set below, the per-service `Domain/Common/` types, a schema and a
-role in `infra/postgres/init/`, a schema-scoped migrations history table and an AppHost resource, and
-registers `TenantHeaderFilter` if it serves tenant-owned resources; `AddServiceDefaults()` already
-brings logging, telemetry and health checks.
+role in `infra/postgres/init/`, a schema-scoped migrations history table and an AppHost resource,
+and registers `TenantHeaderFilter` if it serves tenant-owned resources; `AddServiceDefaults()`
+already brings logging, telemetry and health checks.
 
 ### Projects and dependency direction
 
@@ -78,8 +77,8 @@ Shared projects in `backend/shared/` hold infrastructure, never business rules:
 purpose** — Domain references only a project that holds value objects and nothing else, so it cannot
 share them.
 
-A shared change affects the services consuming that project. Reuse needs a real second caller,
-not an anticipated one; inspect project references before treating it as repo-wide infrastructure.
+A shared change affects the services consuming that project. Reuse needs a real second caller, not
+an anticipated one; inspect project references before treating it as repo-wide infrastructure.
 
 ## 2. Anatomy of a feature
 
@@ -115,22 +114,23 @@ Vertical slices organise the Application layer; they do not replace the layers.
   it — not before.
 - `ToModel`/`ApplyTo` are extension methods on the command and keep the handler reading as
   orchestration; conversion helpers with a natural receiver prefer them too. The mapping only calls
-  the domain's public factories and behaviour, it adds no rule. A root with many
-  members takes an `<Entity>Data` record instead (`ClientData`): the extension only builds it
-  (`To<Entity>Data()`) and the handler calls `Create` / `Update` itself.
+  the domain's public factories and behaviour, it adds no rule. A root with many members takes an
+  `<Entity>Data` record instead (`ClientData`): the extension only builds it (`To<Entity>Data()`)
+  and the handler calls `Create` / `Update` itself.
 
-**A use case owns its orchestration.** One handler per operation, no base
-handler, and no class between handlers that orchestrates — no loader, manager, service or helper. What
-two handlers share has a home: a rule goes to the domain, a read to a repository method, a mapping to
-`<Entity>Response.From<Entity>`. A few orchestration lines repeated between the create and the edit of the
-same aggregate are accepted, and so is an input rule repeated between their validators (§4).
+**A use case owns its orchestration.** One handler per operation, no base handler, and no class
+between handlers that orchestrates — no loader, manager, service or helper. What two handlers share
+has a home: a rule goes to the domain, a read to a repository method, a mapping to
+`<Entity>Response.From<Entity>`. A few orchestration lines repeated between the create and the edit
+of the same aggregate are accepted, and so is an input rule repeated between their validators (§4).
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
-nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
-and enums (§6) — no other domain type, no tenant. The output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
-the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
-response, a value object flattens to its primitive, and an enum stays the enum: the kernel's converter writes it as a
-camelCase string (§6), so the mapping never calls `ToString()` on it. No mapping library, no DTO in the domain, no
+nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value
+objects and enums (§6) — no other domain type, no tenant. The output is `<Entity>Response` with a
+static `From<Entity>(entity, …)`, built from the aggregate plus what the handler read explicitly for
+it; another aggregate appears as a small `<Entity>Summary`. In a response, a value object flattens
+to its primitive, and an enum stays the enum: the kernel's converter writes it as a camelCase string
+(§6), so the mapping never calls `ToString()` on it. No mapping library, no DTO in the domain, no
 entity past the handler.
 
 ## 3. Domain
@@ -140,26 +140,24 @@ private; `public static DomainResult<T> Create(…)` validates and builds; behav
 `DomainResult` and validate every new value before assigning any, so a failure never leaves a
 half-updated entity. Setters are private. A private parameterless constructor exists for EF only.
 
-**Aggregates reference each other by id.** A root holds another root's id,
-never a navigation to it, and loads only its own children. A many-to-many between aggregates is a child
-of the owning root holding the other's id, keyed `(TenantId, OwnerId, OtherId)` with composite foreign
-keys to both.
+**Aggregates reference each other by id.** A root holds another root's id, never a navigation to it,
+and loads only its own children. A many-to-many between aggregates is a child of the owning root
+holding the other's id, keyed `(TenantId, OwnerId, OtherId)` with composite foreign keys to both.
 
 **Behaviour has intention.** A state transition, or a change to a part of the aggregate with its own
-rule, is a named method (`Inactivate()`, `ReplaceContacts(…)`) that refuses an invalid transition with a
-named error. A whole-record `Update(…)` is acceptable for an edit form over free data with no
+rule, is a named method (`Inactivate()`, `ReplaceContacts(…)`) that refuses an invalid transition
+with a named error. A whole-record `Update(…)` is acceptable for an edit form over free data with no
 transition. A method that sets state without checking anything (`SetX`) does not exist.
 
-**Factories are static methods on the type**: `Create` on roots and value objects, `internal static
-Create` on children, `Restore` on value objects. No `<X>Factory` or builder classes and no public
-constructors.
+**Factories are static methods on the type**: `Create` on roots and value objects,
+`internal static Create` on children, `Restore` on value objects. No `<X>Factory` or builder classes
+and no public constructors.
 
-**Children** are created only by their root
-: the root's
-`Create` or behaviour method receives plain data records and builds each child through an `internal`
-factory that receives the root's id. Children are exposed as `IReadOnlyCollection<T>` over a private
-list, have no `DbSet`, and are read and written through the root. Nothing outside the domain can
-create a child or move it to another root.
+**Children** are created only by their root : the root's `Create` or behaviour method receives plain
+data records and builds each child through an `internal` factory that receives the root's id.
+Children are exposed as `IReadOnlyCollection<T>` over a private list, have no `DbSet`, and are read
+and written through the root. Nothing outside the domain can create a child or move it to another
+root.
 
 **Value objects** are `sealed record`s with a private constructor and:
 
@@ -171,56 +169,57 @@ create a child or move it to another root.
 - pure predicates (`IsValid`, `HasValidShape`) when a validator needs the same check without
   building the value.
 
-A value **is** a value object when it has a format or a normalization (CPF, e-mail, phone), a rule over
-several values (a duration range), a closed set that carries a rule (a palette with a format), a rule that needs a parameter (a birth date
-and today), when it is money or a percentage, or when more than one type uses its rule. Free text bounded
-only by its length (a name, a description) **may** stay a primitive, validated by its owner with a named
-`DomainError`. The column stores the normalized value.
+A value **is** a value object when it has a format or a normalization (CPF, e-mail, phone), a rule
+over several values (a duration range), a closed set that carries a rule (a palette with a format),
+a rule that needs a parameter (a birth date and today), when it is money or a percentage, or when
+more than one type uses its rule. Free text bounded only by its length (a name, a description)
+**may** stay a primitive, validated by its owner with a named `DomainError`. The column stores the
+normalized value.
 
-A set of independent options with no rule beyond membership (the purposes of a contact) is not a value
-object: the options are a plain enum,
-and the entity holds an `IReadOnlySet<TEnum>` of them, keeps its own copy, and refuses an empty set and a
-value that is not a member with named errors, in `Create` and in every behaviour that replaces the set.
+A set of independent options with no rule beyond membership (the purposes of a contact) is not a
+value object: the options are a plain enum, and the entity holds an `IReadOnlySet<TEnum>` of them,
+keeps its own copy, and refuses an empty set and a value that is not a member with named errors, in
+`Create` and in every behaviour that replaces the set.
 
 **Shared value objects** live in `Admin.SharedKernel.ValueObjects` when the value has a format and
 no business context (CPF, full name, phone, e-mail, birth date, administrative notes). They behave
 like a scalar on the wire; the procedure for adding one is in the backend-slice skill's
 [value objects](../../.claude/skills/agenza-backend-slice/references/value-objects.md).
 
-- A `sealed record` implementing `IStringValueObject<T>`, with `Value`, `Restore` and a `Create(raw)`
-  that returns a `ParseResult<T>` — the value, or the pt-BR message of the rule that failed; no
-  `DomainResult`, no `DomainError`, no `Parse`.
+- A `sealed record` implementing `IStringValueObject<T>`, with `Value`, `Restore` and a
+  `Create(raw)` that returns a `ParseResult<T>` — the value, or the pt-BR message of the rule that
+  failed; no `DomainResult`, no `DomainError`, no `Parse`.
 - A blank string is not a value — `Create("")` fails — and an optional member is nullable.
-  `BlankIsAbsent` (default `true`) binds a blank to `null` for an optional field; a type that declares
-  it `false` (`FullName`) answers its own message instead.
+  `BlankIsAbsent` (default `true`) binds a blank to `null` for an optional field; a type that
+  declares it `false` (`FullName`) answers its own message instead.
 - The kernel registers the JSON converter, the OpenAPI `string` schema and the column conversion for
-  every implementer: only `HasMaxLength` is written in the entity configuration, and a command member
-  (`CpfNumber? Cpf`) needs no validator rule and no call in `ToModel`.
+  every implementer: only `HasMaxLength` is written in the entity configuration, and a command
+  member (`CpfNumber? Cpf`) needs no validator rule and no call in `ToModel`.
 - A string one is read from a query or a route only when it declares
-  `[TypeConverter(typeof(StringValueObjectTypeConverter<T>))]` (`SearchText` does; personal data never
-  does, because a URL ends up in logs).
+  `[TypeConverter(typeof(StringValueObjectTypeConverter<T>))]` (`SearchText` does; personal data
+  never does, because a URL ends up in logs).
 - A date whose rules depend on the day (`BirthDate`) implements `IDateValueObject<T>` instead —
-  `Create(date, today)`, with `today` read at binding from the container's `TimeProvider`. A value that
-  is neither a string nor a date stays in the service, with `Create`.
+  `Create(date, today)`, with `today` read at binding from the container's `TimeProvider`. A value
+  that is neither a string nor a date stays in the service, with `Create`.
 
-**Errors.** `DomainError(Code, Message)`, declared once per rule as `static readonly` on the type that
-owns it. The code is `<Type>.<Rule>` and talks about the value, not about who uses it
-(`Client.GuardianRequired`, `ClientReferenceContact.PurposesRequired`), so it can be reused elsewhere. Messages are pt-BR.
+**Errors.** `DomainError(Code, Message)`, declared once per rule as `static readonly` on the type
+that owns it. The code is `<Type>.<Rule>` and talks about the value, not about who uses it
+(`Client.GuardianRequired`, `ClientReferenceContact.PurposesRequired`), so it can be reused
+elsewhere. Messages are pt-BR.
 
 **Lifecycle.** "Deleted" is `BaseEntity`'s soft delete and nothing else: a repository `Remove`s, the
 save interceptor stamps `DeletedAt`, the query filter hides the row, a deleted id answers 404. Never
 add a `Deleted` status beside it. Other states are an enum on the entity, stored as text.
 
-**What the domain does not know**: the tenant (assigned on save, §5), the wire format (§6), the clock
-(`today` is a parameter, §7), persistence, and other aggregates — a rule that needs another aggregate
-or the current state of the database belongs to the handler (§4). Ids are `Guid.CreateVersion7()`: a
-root's by its caller (`ToModel`) or, for a root created from an `<Entity>Data`, by its own `Create`;
-a child's by its own internal factory.
+**What the domain does not know**: the tenant (assigned on save, §5), the wire format (§6), the
+clock (`today` is a parameter, §7), persistence, and other aggregates — a rule that needs another
+aggregate or the current state of the database belongs to the handler (§4). Ids are
+`Guid.CreateVersion7()`: a root's by its caller (`ToModel`) or, for a root created from an
+`<Entity>Data`, by its own `Create`; a child's by its own internal factory.
 
 ## 4. Errors — one pipeline, five gates
 
-Expected outcomes are values; only the unexpected throws. Each gate owns a
-different kind of rule:
+Expected outcomes are values; only the unexpected throws. Each gate owns a different kind of rule:
 
 | #   | Gate                                                    | Owns                                                                                    | Answers                                                                                                                                                                                       |
 | --- | ------------------------------------------------------- | --------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -231,26 +230,27 @@ different kind of rule:
 | 5   | Unit of work, `PersistenceResult`                       | recognized persistence failures                                                         | 409 `<Entity>.SaveFailed`, generic; unrecognized failures propagate to the exception boundary                                                                                                 |
 | —   | Anything else                                           | —                                                                                       | exception → `GenericExceptionHandler` → generic 500                                                                                                                                           |
 
-**Validator.** Synchronous; no repository, no I/O. Every rule
-carries the domain's code with `.WithErrorCode(<DomainError>.Code)` and its own pt-BR message naming
-the field; limits come from the domain's constants. It restates the rule rather than calling the
-domain to decide, and reuses the code, so a rule answers the same code whichever gate catches it. A
-rule two validators share is written in both: there is no `<Feature>RuleBuilderExtensions`. The domain's constants and codes keep the copies
-aligned, and each validator's tests assert the code.
+**Validator.** Synchronous; no repository, no I/O. Every rule carries the domain's code with
+`.WithErrorCode(<DomainError>.Code)` and its own pt-BR message naming the field; limits come from
+the domain's constants. It restates the rule rather than calling the domain to decide, and reuses
+the code, so a rule answers the same code whichever gate catches it. A rule two validators share is
+written in both: there is no `<Feature>RuleBuilderExtensions`. The domain's constants and codes keep
+the copies aligned, and each validator's tests assert the code.
 
 **Domain.** Defence in depth. Its messages are the fallback; the validator's are what the user
 normally sees.
 
 **Handler.** Pre-checks read through the normal query filters, `AsNoTracking`. A conflict a form can
-show under an input is keyed by the property: `Error.Conflict(code, message, field: "<Property>",
-meta)`, with `meta` carrying machine context such as the existing record's id and name. One conflict
-per answer, in a fixed order. Cheap rejections run before work with side effects (consuming a
-sequence, calling out).
+show under an input is keyed by the property:
+`Error.Conflict(code, message, field: "<Property>", meta)`, with `meta` carrying machine context
+such as the existing record's id and name. One conflict per answer, in a fixed order. Cheap
+rejections run before work with side effects (consuming a sequence, calling out).
 
 **Unit of work.** The service's unit of work recognizes expected database failures and logs them at
-`Warning` with kind and constraint; the handler only answers `Error.Conflict("<Entity>.SaveFailed", "Não foi possível salvar … Tente
-novamente.")` — no field, no claim about which rule broke, no logger. Application never knows a constraint or index name; the retry goes
-through the pre-checks and gets the specific answer.
+`Warning` with kind and constraint; the handler only answers
+`Error.Conflict("<Entity>.SaveFailed", "Não foi possível salvar … Tente novamente.")` — no field, no
+claim about which rule broke, no logger. Application never knows a constraint or index name; the
+retry goes through the pre-checks and gets the specific answer.
 
 **Exceptions** remain for: missing configuration at startup, programmer-error guards (`.Value` of a
 failed result, `AssignTenant(Guid.Empty)`, a save with no tenant), an unrecognised database error,
@@ -259,9 +259,9 @@ belongs in the unit of work.
 
 **What dies in gate 1** — malformed JSON, a missing non-nullable member, a wrong JSON type, an
 unknown enum name — answers the canonical shape with the framework's English message and the generic
-code `Validation.Failed`; only shared value objects and query/route enums bring a pt-BR message. In a
-body, a string with several enum names still converts, so the validator refuses it with `IsInEnum`.
-Details in [`docs/API.md`](../../docs/API.md) §4.3.
+code `Validation.Failed`; only shared value objects and query/route enums bring a pt-BR message. In
+a body, a string with several enum names still converts, so the validator refuses it with
+`IsInEnum`. Details in [`docs/API.md`](../../docs/API.md) §4.3.
 
 **Codes and messages.** `code` is English (`<Type>.<Rule>`, `<Entity>.<Reason>`) and is the contract
 clients branch on. Messages are pt-BR copy written for the end user; the frontend shows them as they
@@ -274,61 +274,64 @@ come and never branches on them. The wire shapes of every error: [`docs/API.md`]
 missing/malformed header, missing claim or mismatch before the action. `[IgnoreTenant]` bypasses
 this comparison and requires an explicit authorization rationale; it is not an anonymous-access
 policy. Commands, queries, DTOs, mappings and business repository methods do not accept a
-client-selected tenant. Do not assume a
-fine-grained panel permission model: M2M scopes and tenant/token checks have their own boundaries;
-inspect the endpoint's actual policy.
+client-selected tenant. Do not assume a fine-grained panel permission model: M2M scopes and
+tenant/token checks have their own boundaries; inspect the endpoint's actual policy.
 
-The [save interceptor](../services/services-service/ServicesService.Infrastructure/Persistence/Interceptors/AuditableEntitySaveChangesInterceptor.cs)
-fills an empty tenant on `Added` entities and throws if no current tenant is available. It does
-not replace or revalidate a preassigned tenant, nor validate the ownership of every modified row.
-Do not use this mechanism as permission to attach a client-selected graph. The bearer keeps the claim names the token carries,
-so `tenant_id` is the tenant and `sub` the actor the interceptor stamps on `CreatedBy`, `UpdatedBy` and `DeletedBy`. Review checklist: skill
+The
+[save interceptor](../services/services-service/ServicesService.Infrastructure/Persistence/Interceptors/AuditableEntitySaveChangesInterceptor.cs)
+fills an empty tenant on `Added` entities and throws if no current tenant is available. It does not
+replace or revalidate a preassigned tenant, nor validate the ownership of every modified row. Do not
+use this mechanism as permission to attach a client-selected graph. The bearer keeps the claim names
+the token carries, so `tenant_id` is the tenant and `sub` the actor the interceptor stamps on
+`CreatedBy`, `UpdatedBy` and `DeletedBy`. Review checklist: skill
 [`agenza-tenant-isolation`](../../.claude/skills/agenza-tenant-isolation/SKILL.md).
 
-**Query filters.** [ApplyAuditableConventions](../shared/Admin.SharedKernel.EntityFrameworkCore/ModelBuilderExtensions.cs), called from `OnModelCreating`, gives every
-`BaseEntity` a `SoftDelete` filter and every tenant-owned one a `Tenant` filter, plus their indexes. No repository ignores
-either; `IgnoreQueryFilters()` belongs to a persistence test that asserts a soft delete.
-The filter expression references the current context's `CurrentTenantId` property, never a tenant
-Guid constant in the model EF caches; the tenant skill covers the trap and its test.
+**Query filters.**
+[ApplyAuditableConventions](../shared/Admin.SharedKernel.EntityFrameworkCore/ModelBuilderExtensions.cs),
+called from `OnModelCreating`, gives every `BaseEntity` a `SoftDelete` filter and every tenant-owned
+one a `Tenant` filter, plus their indexes. No repository ignores either; `IgnoreQueryFilters()`
+belongs to a persistence test that asserts a soft delete. The filter expression references the
+current context's `CurrentTenantId` property, never a tenant Guid constant in the model EF caches;
+the tenant skill covers the trap and its test.
 
-Composite FKs constrain relationships within a tenant. PostgreSQL roles restrict each service to
-its schema; they do not isolate tenant rows by themselves. The init scripts, migrations and
-runtime query/write path are separate parts of the boundary (§11).
+Composite FKs constrain relationships within a tenant. PostgreSQL roles restrict each service to its
+schema; they do not isolate tenant rows by themselves. The init scripts, migrations and runtime
+query/write path are separate parts of the boundary (§11).
 
 **Entity configuration** — one `IEntityTypeConfiguration<T>` per entity:
 
 - A tenant-owned principal exposes `HasAlternateKey(e => new { e.TenantId, e.Id })`; a relationship
   between tenant-owned entities is the composite FK `(TenantId, <Parent>Id) → (TenantId, Id)`. An
   `Id`-only FK between two tenant-owned entities is a finding.
-- Value objects: `HasConversion(v => v.Value, s => <Vo>.Restore(s))` for the service's own; the shared
-  ones are converted by `AddValueObjectConversions()` in `ConfigureConventions`. Lengths from the value
-  object's constants, never literals. No EF complex types — the InMemory persistence tests do not
-  support them.
-- Enums: text, with a `CHECK` built from `Enum.GetNames<T>()`. A set of options kept in one column is the
-  sum of the members' fixed codes, with a `CHECK` on the range and a `ValueComparer` by set equality; a
-  stored value that no rule would accept today still reads back.
+- Value objects: `HasConversion(v => v.Value, s => <Vo>.Restore(s))` for the service's own; the
+  shared ones are converted by `AddValueObjectConversions()` in `ConfigureConventions`. Lengths from
+  the value object's constants, never literals. No EF complex types — the InMemory persistence tests
+  do not support them.
+- Enums: text, with a `CHECK` built from `Enum.GetNames<T>()`. A set of options kept in one column
+  is the sum of the members' fixed codes, with a `CHECK` on the range and a `ValueComparer` by set
+  equality; a stored value that no rule would accept today still reads back.
 - Uniqueness: a unique index that includes `TenantId` and filters `"DeletedAt" IS NULL`, plus any
   predicate of the rule itself. The index is the authority; the handler's pre-check only exists to
   give the per-field answer. Case-insensitive uniqueness follows what is displayed: when the
-  normalized value is what the interface shows (an e-mail in lowercase, CPF digits), the column stores
-  it; when the display keeps the user's form (a name with its casing), the index uses a generated
-  normalized column.
+  normalized value is what the interface shows (an e-mail in lowercase, CPF digits), the column
+  stores it; when the display keeps the user's form (a name with its casing), the index uses a
+  generated normalized column.
 - Children: `HasMany(…).WithOne()` with the composite foreign and principal keys, navigation through
-  the backing field. A child's factory mints its technical key and the configuration is `ValueGeneratedNever()`:
-  for a key EF thinks
-  the store generates, a child added to a loaded root is tracked as `Modified` and its save fails.
+  the backing field. A child's factory mints its technical key and the configuration is
+  `ValueGeneratedNever()`: for a key EF thinks the store generates, a child added to a loaded root
+  is tracked as `Modified` and its save fails.
 - Soft-delete and tenant filters and their indexes come from the convention — never by hand.
 
 **Repositories.** One per aggregate root — never one for a child.
 
-- The port `I<Entity>Repository` lives in `Application/Abstractions` and declares only what a handler
-  calls; the adapter extends `RepositoryBase<T>` in Infrastructure.
+- The port `I<Entity>Repository` lives in `Application/Abstractions` and declares only what a
+  handler calls; the adapter extends `RepositoryBase<T>` in Infrastructure.
 - It returns its own root with its children, a list or a page of them (each root whole there too,
   because `UpdateAsync` stages the children the root holds), a `bool` or a count — never a DTO, an
   `IQueryable` or another aggregate.
 - Methods say what they are for (`FindActiveByEmailAsync`), take value objects for value-object
-  columns, and use no tracking for reads. Infrastructure's `DependencyInjection.cs` sets it globally, and
-  `RepositoryBase` asks for it explicitly.
+  columns, and use no tracking for reads. Infrastructure's `DependencyInjection.cs` sets it
+  globally, and `RepositoryBase` asks for it explicitly.
 - A command loads its aggregate with `GetByIdAsync`, applies the domain behaviour, then stages
   persistence with `UpdateAsync`; the port does not expose EF tracking. An EF adapter makes any
   required state changes explicitly inside that operation.
@@ -354,8 +357,7 @@ dotnet ef migrations add <Name> --project ../<Service>.Infrastructure
 dotnet ef migrations has-pending-model-changes --project ../<Service>.Infrastructure
 ```
 
-Never edit a committed migration. A migration that drops
-or rewrites data is reviewed on its own.
+Never edit a committed migration. A migration that drops or rewrites data is reviewed on its own.
 
 ## 6. HTTP surface
 
@@ -373,29 +375,29 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
 - A body with a list is bounded twice: the validator caps the count and the action has a
   `[RequestSizeLimit]`.
 - Enums travel as camelCase names, set by the kernel's `AddWireFormat()` for every enum, with
-  integers refused; query and route binding is in [`docs/API.md`](../../docs/API.md) §4.3. Nothing to
-  register per enum, no translation class and no values chosen to dodge the parser. Each item of a
-  list of enums in a body has an `IsInEnum` rule with the domain's code.
-- The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`), and a date value object also reads an instant, keeping its day as
-  written; instants are UTC.
+  integers refused; query and route binding is in [`docs/API.md`](../../docs/API.md) §4.3. Nothing
+  to register per enum, no translation class and no values chosen to dodge the parser. Each item of
+  a list of enums in a body has an `IsInEnum` rule with the domain's code.
+- The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`), and a date value
+  object also reads an instant, keeping its day as written; instants are UTC.
 - The query of a paged list extends `PagedQuery` (`Page` and `PageSize`, with the `PageRequest`
   defaults, unguarded); its validator writes the three rules (page at least 1, size from 1 to
-  `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared `Paging.*` codes.
-- The query's own `ToFilter()` builds the list's filter (`ClientListFilter`, a `PageRequest` with the
-  plain filters); it maps into an Application record, not into the domain, so there is no extension
-  file as for a command. The port takes it and returns `PagedResult<T>`; the handler `Map`s it to the
-  response.
+  `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared `Paging.*`
+  codes.
+- The query's own `ToFilter()` builds the list's filter (`ClientListFilter`, a `PageRequest` with
+  the plain filters); it maps into an Application record, not into the domain, so there is no
+  extension file as for a command. The port takes it and returns `PagedResult<T>`; the handler
+  `Map`s it to the response.
 - A free-text search is a `SearchText`. An unpaged list returns `IReadOnlyList<T>`.
 
 A change to an endpoint's contract regenerates the frontend's types in the same change — skill
 [`agenza-api-contract`](../../.claude/skills/agenza-api-contract/SKILL.md). A change to a shape that
-every endpoint shares (envelope, problem, status mapping) updates [`docs/API.md`](../../docs/API.md);
-a feature's own codes and fields do not go there.
+every endpoint shares (envelope, problem, status mapping) updates
+[`docs/API.md`](../../docs/API.md); a feature's own codes and fields do not go there.
 
 ## 7. Time
 
-UTC only. Inject `TimeProvider`. Instants are
-`DateTimeOffset` from `GetUtcNow()`; "today" is
+UTC only. Inject `TimeProvider`. Instants are `DateTimeOffset` from `GetUtcNow()`; "today" is
 `DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime)`, computed in the handler or validator
 and handed to the domain. No `DateTime.Now`, `DateTime.Today` or `TimeZoneInfo`. A rule that needs
 the business's local day is a new decision.
@@ -407,21 +409,23 @@ Methods get a block body. Branching is written as guard clauses with early `retu
 local function or property whose body is a single plain expression with no branching, and for the
 lambdas an API takes (FluentValidation `.Must(…)`, LINQ). The reference is the handler named in §10.
 LINQ chains take one operator per line, with lookups in their own method or local; an
-`Error`/`FieldError` construction stays one nested expression.
-Apply the convention to new or necessarily changed logic (§10).
+`Error`/`FieldError` construction stays one nested expression. Apply the convention to new or
+necessarily changed logic (§10).
 
-No "what" comments and no XML doc comments; a one-line "why" only for a genuine race or a non-obvious
-constraint (root [`AGENTS.md`](../../AGENTS.md)). Rationale belongs in `docs/decisions/`.
+No "what" comments and no XML doc comments; a one-line "why" only for a genuine race or a
+non-obvious constraint (root [`AGENTS.md`](../../AGENTS.md)). Rationale belongs in
+`docs/decisions/`.
 
 ### Logging
 
-Inject `ILogger<T>` and write a message template with named placeholders, never an interpolated string. Application code that needs a logger uses `Microsoft.Extensions.Logging.Abstractions`, as declared
-by its project; Infrastructure and hosts use the injected abstractions too. Nothing in those layers
-calls the static Serilog `Log`. The default levels live in
-`Admin.Logging`; a host that needs another level sets it under `Serilog:MinimumLevel` in its `appsettings.json`, and drops a
-noisy message by text with `Serilog:Filter`
-(`Logging:LogLevel` is ignored). A message carries constraint names, codes and ids, not request input; when it must,
-strip control characters first (CWE-117), as `GenericExceptionHandler` and the request line do.
+Inject `ILogger<T>` and write a message template with named placeholders, never an interpolated
+string. Application code that needs a logger uses `Microsoft.Extensions.Logging.Abstractions`, as
+declared by its project; Infrastructure and hosts use the injected abstractions too. Nothing in
+those layers calls the static Serilog `Log`. The default levels live in `Admin.Logging`; a host that
+needs another level sets it under `Serilog:MinimumLevel` in its `appsettings.json`, and drops a
+noisy message by text with `Serilog:Filter` (`Logging:LogLevel` is ignored). A message carries
+constraint names, codes and ids, not request input; when it must, strip control characters first
+(CWE-117), as `GenericExceptionHandler` and the request line do.
 
 ## 9. Tests
 
@@ -431,27 +435,27 @@ strip control characters first (CWE-117), as `GenericExceptionHandler` and the r
 | Persistence    | `<Service>.PersistenceTests`              | EF tenant assignment, query filters, conversions and tag-deletion relationship coverage; relational metadata assertions do not execute PostgreSQL constraints | EF InMemory                                                 |
 | Contract smoke | the API-contract job in `frontend-ci.yml` | Fresh migrations, selected OIDC and tenant-isolation requests, both `ClientTags` tenant foreign keys, and generated type drift                                | Aspire AppHost                                              |
 
-Coverage and warning gates: §11 and [`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md).
-Line coverage is not evidence that every rule or branch has been tested. For input
-rules, assert the code; use a fixed clock when the day matters.
+Coverage and warning gates: §11 and [`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md). Line
+coverage is not evidence that every rule or branch has been tested. For input rules, assert the
+code; use a fixed clock when the day matters.
 
-The API-contract job runs the real HTTP and PostgreSQL tenant checks. The backend test projects
-stay free of Testcontainers and in-process HTTP hosting. Verify changed PostgreSQL properties outside
-the smoke's scope by hand in a **disposable** database initialised from `infra/postgres/init/`.
-Use a fresh volume separate from the persistent local development volume and record what ran in
-the PR.
+The API-contract job runs the real HTTP and PostgreSQL tenant checks. The backend test projects stay
+free of Testcontainers and in-process HTTP hosting. Verify changed PostgreSQL properties outside the
+smoke's scope by hand in a **disposable** database initialised from `infra/postgres/init/`. Use a
+fresh volume separate from the persistent local development volume and record what ran in the PR.
 
 ## 10. Reference code and the older generation
 
-Different generations coexist. Use the relevant example, inspect its callers and compare it with
-the convention in §§2–8. A disagreement needs investigation; it does not automatically expand the
-task into a migration of unrelated code.
+Different generations coexist. Use the relevant example, inspect its callers and compare it with the
+convention in §§2–8. A disagreement needs investigation; it does not automatically expand the task
+into a migration of unrelated code.
 
 - Handler orchestration, field conflicts and save failure:
   [CreateClientCommandHandler](../services/services-service/ServicesService.Application/Clients/CreateClient/CreateClientCommandHandler.cs).
 - Input validation with stable codes:
   [CreateClientCommandValidator](../services/services-service/ServicesService.Application/Clients/CreateClient/CreateClientCommandValidator.cs)
-  and [UpdateClientCommandValidator](../services/services-service/ServicesService.Application/Clients/UpdateClient/UpdateClientCommandValidator.cs).
+  and
+  [UpdateClientCommandValidator](../services/services-service/ServicesService.Application/Clients/UpdateClient/UpdateClientCommandValidator.cs).
 - Aggregate invariants, children and named errors:
   [Client](../services/services-service/ServicesService.Domain/Entities/Client.cs) and
   [ClientConfiguration](../services/services-service/ServicesService.Infrastructure/Persistence/Configurations/ClientConfiguration.cs).
@@ -459,27 +463,30 @@ task into a migration of unrelated code.
   [ClientTag](../services/services-service/ServicesService.Domain/Entities/ClientTag.cs) and
   [ClientTagConfiguration](../services/services-service/ServicesService.Infrastructure/Persistence/Configurations/ClientTagConfiguration.cs),
   with tenant-composite foreign keys.
-- Shared scalar value object:
-  [CpfNumber](../shared/Admin.SharedKernel.ValueObjects/CpfNumber.cs); context-specific values stay in
+- Shared scalar value object: [CpfNumber](../shared/Admin.SharedKernel.ValueObjects/CpfNumber.cs);
+  context-specific values stay in
   [the service's ValueObjects](../services/services-service/ServicesService.Domain/ValueObjects/).
 - Composition update:
   [UpdateClientCommandHandler](../services/services-service/ServicesService.Application/Clients/UpdateClient/UpdateClientCommandHandler.cs)
-  and [ClientRepository](../services/services-service/ServicesService.Infrastructure/Repositories/ClientRepository.cs).
+  and
+  [ClientRepository](../services/services-service/ServicesService.Infrastructure/Repositories/ClientRepository.cs).
 - Read by id and state transitions:
   [GetClientById](../services/services-service/ServicesService.Application/Clients/GetClientById/),
   [DeactivateClient](../services/services-service/ServicesService.Application/Clients/DeactivateClient/)
-  and [ReactivateClient](../services/services-service/ServicesService.Application/Clients/ReactivateClient/).
+  and
+  [ReactivateClient](../services/services-service/ServicesService.Application/Clients/ReactivateClient/).
 - Paging and search:
-  [ListClients](../services/services-service/ServicesService.Application/Clients/ListClients/),
-  the repository above and
+  [ListClients](../services/services-service/ServicesService.Application/Clients/ListClients/), the
+  repository above and
   [ListTags](../services/services-service/ServicesService.Application/Tags/ListTags/).
 - Soft deletion:
   [DeleteClientCommandHandler](../services/services-service/ServicesService.Application/Clients/DeleteClient/DeleteClientCommandHandler.cs).
 
 Some older operations still use persistence-error mappers, a tracked `GetForUpdateAsync` on the port
-(`ITagRepository`, used by `UpdateTag`/`DeleteTag`), a relationship loader shared between handlers, uncoded validator rules or cross-aggregate navigations. Their presence is not a precedent for new code. Explain a conversion needed for the
-requested behavior or safety.
-Update an example when it stops demonstrating its concern.
+(`ITagRepository`, used by `UpdateTag`/`DeleteTag`), a relationship loader shared between handlers,
+uncoded validator rules or cross-aggregate navigations. Their presence is not a precedent for new
+code. Explain a conversion needed for the requested behavior or safety. Update an example when it
+stops demonstrating its concern.
 
 ## 11. What enforces what
 
