@@ -39,7 +39,8 @@ constraint.
 **Abstraction proportional to the problem.** Lean plumbing, invested domain structure.
 
 **Versions come from the pins**, never from documentation: `.nvmrc`, `packageManager`,
-`backend/global.json`, `.python-version`, `uv.lock` and the CI setup actions.
+`backend/global.json`, `backend/Directory.Packages.props`, `backend/.config/dotnet-tools.json`,
+`ai-services/assistant-service/.python-version` and `uv.lock`, and the CI setup actions.
 
 **Aspire is the only local orchestrator.** Do not add Docker to the frontend.
 [decisions/platform.md](docs/decisions/platform.md).
@@ -69,7 +70,8 @@ one line in the report.
 ## Skills
 
 Before a task that matches a row, open that skill, even when the host did not load it on its own.
-Every skill is listed here; `check:docs` fails when one is missing.
+Every skill is listed here; `check:docs` fails when one is missing. Read a skill's additional
+references only when the task touches the subject.
 
 | Task                                               | Skill                                                                      |
 | -------------------------------------------------- | -------------------------------------------------------------------------- |

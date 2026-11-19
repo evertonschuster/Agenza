@@ -1,7 +1,6 @@
 # backend — instructions for agents
 
-Complements the [root AGENTS](../AGENTS.md). The pins are in [global.json](global.json),
-[Directory.Packages.props](Directory.Packages.props) and [.config/dotnet-tools.json](.config/dotnet-tools.json).
+Complements the [root AGENTS](../AGENTS.md).
 
 ## Lookup by task
 
@@ -16,10 +15,9 @@ Read only the rules and examples tied to the change:
 | HTTP boundary                          | [§6](docs/ARCHITECTURE.md#6-http-surface), the current controller and OpenAPI                                      |
 | Time, style or logging                 | [§7](docs/ARCHITECTURE.md#7-time) and [§8](docs/ARCHITECTURE.md#8-code-style)                                      |
 | Validation and guarantees              | [§9](docs/ARCHITECTURE.md#9-tests) and [§11](docs/ARCHITECTURE.md#11-what-enforces-what)                           |
+| Example of the current shape           | [§10](docs/ARCHITECTURE.md#10-reference-code-and-the-older-generation)                                             |
 
-[§10](docs/ARCHITECTURE.md#10-reference-code-and-the-older-generation) points to examples of the
-current shape. Compare them with the affected code; a divergence does not authorize refactoring
-independent areas. The why behind each convention and what was already refused are in the
+The why behind each convention and what was already refused are in the
 [decisions](../docs/decisions/), mapped at the top of the guide.
 
 ## Invariants
@@ -29,13 +27,8 @@ independent areas. The why behind each convention and what was already refused a
   handler orchestrates the operation through ports; the domain keeps its invariants.
 - Expected failures use Result. Input validation, domain, current state and persistence have
   distinct responsibilities; names or syntax alone do not prove a defect.
-- The server tenant comes from the validated claim. A header or tenant sent by the client does not
-  authorize access; filters, assignment on save, relationships and roles have their own limits,
-  described in §5.
-
-## Skills
-
-Use the [skill table in the root AGENTS](../AGENTS.md#skills).
+- Beyond the root tenant rule, filters, assignment on save, relationships and roles have their own
+  tenant limits, described in §5.
 
 ## Validation and delivery
 
