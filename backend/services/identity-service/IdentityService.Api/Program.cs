@@ -52,6 +52,8 @@ builder.Services.AddOpenIddict()
                .AllowRefreshTokenFlow()
                .AllowClientCredentialsFlow();
 
+        options.Configure(server => server.CodeChallengeMethods.Remove(OpenIddictConstants.CodeChallengeMethods.Plain));
+
         options.RegisterScopes(
             OpenIddictConstants.Scopes.OpenId,
             OpenIddictConstants.Scopes.Profile,
@@ -60,6 +62,13 @@ builder.Services.AddOpenIddict()
             "tenant_id",
             "services-api",
             "identity-admin");
+
+        var mcpResource = builder.Configuration["IdentityClients:Mcp:Resource"];
+        if (!string.IsNullOrWhiteSpace(mcpResource))
+        {
+            options.RegisterScopes("mcp:connect");
+            options.RegisterResources(new Uri(mcpResource).AbsoluteUri);
+        }
 
         if (builder.Environment.IsDevelopment())
         {

@@ -13,15 +13,18 @@ namespace IdentityService.Api.Controllers;
 // admin-panel is a pre-approved first-party client (seeded in DatabaseSeeder), so there is no consent screen here.
 public class AuthorizationController : Controller
 {
+    private readonly IConfiguration _configuration;
     private readonly IOpenIddictScopeManager _scopeManager;
     private readonly SignInManager<ApplicationUser> _signInManager;
     private readonly UserManager<ApplicationUser> _userManager;
 
     public AuthorizationController(
+        IConfiguration configuration,
         IOpenIddictScopeManager scopeManager,
         SignInManager<ApplicationUser> signInManager,
         UserManager<ApplicationUser> userManager)
     {
+        _configuration = configuration;
         _scopeManager = scopeManager;
         _signInManager = signInManager;
         _userManager = userManager;
@@ -34,6 +37,11 @@ public class AuthorizationController : Controller
     {
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
+
+        if (request.HasScope("mcp:connect") && !IsConfiguredMcpClient(request.ClientId))
+        {
+            return RejectUntrustedMcpClient();
+        }
 
         var result = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
         if (result is not { Succeeded: true })
@@ -77,6 +85,11 @@ public class AuthorizationController : Controller
         if (request.IsAuthorizationCodeGrantType() || request.IsRefreshTokenGrantType())
         {
             var result = await HttpContext.AuthenticateAsync(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            if (result.Principal!.HasScope("mcp:connect") && !IsConfiguredMcpClient(request.ClientId))
+            {
+                return RejectUntrustedMcpClient();
+            }
+
             var user = await _userManager.GetUserAsync(result.Principal!);
 
             // A vanished user (deleted/locked since the token was issued) and a
@@ -132,6 +145,19 @@ public class AuthorizationController : Controller
                 [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.UnsupportedGrantType,
             }));
     }
+
+    private bool IsConfiguredMcpClient(string? clientId) =>
+        !string.IsNullOrWhiteSpace(clientId)
+        && _configuration.GetSection("IdentityClients:Mcp:Clients").GetChildren()
+            .Any(client => string.Equals(client["ClientId"], clientId, StringComparison.Ordinal));
+
+    private ForbidResult RejectUntrustedMcpClient() => Forbid(
+        authenticationSchemes: OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
+        properties: new AuthenticationProperties(new Dictionary<string, string?>
+        {
+            [OpenIddictServerAspNetCoreConstants.Properties.Error] = OpenIddictConstants.Errors.UnauthorizedClient,
+            [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = "O cliente MCP não está cadastrado neste ambiente.",
+        }));
 
     private async Task<ClaimsPrincipal> CreateSignedInPrincipalAsync(ApplicationUser user, IEnumerable<string> scopes)
     {

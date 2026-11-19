@@ -8,13 +8,12 @@ O IdentityService autentica o usuário pela página de login existente e emite t
 MCP. O host MCP valida o token com os accessors compartilhados e exige usuário, tenant e escopo
 `mcp:connect`. O recurso configurado é a audiência do token. Tokens destinados ao REST são recusados.
 
-A prova usa Authorization Code com PKCE S256 e clientes públicos, com callbacks explícitos por
-cliente. O IdentityService anuncia `connect/register` nos metadados OAuth e aceita cadastro dinâmico
-para o cliente que começa apenas pela URL do MCP. O cadastro é limitado a 20 requisições por minuto
-por instância, com callbacks HTTPS ou HTTP no loopback e permissões exclusivas da prova MCP.
-O cliente nativo registra o callback sem porta para permitir a porta variável da aplicação local.
+A prova usa Authorization Code com PKCE S256 e clientes públicos previamente confiados,
+com callbacks explícitos por cliente e ambiente. Não há cadastro dinâmico anônimo. O login pode
+reutilizar uma sessão existente e não exige tela nem trilha adicional de consentimento.
+Aplicações persistidas fora da configuração não podem obter novos códigos ou renovar acesso MCP.
 
-O cadastro prévio opcional vem de `IdentityClients:Mcp:Clients`; o recurso vem de
+O cadastro obrigatório vem de `IdentityClients:Mcp:Clients`; o recurso vem de
 `IdentityClients:Mcp:Resource` no emissor e `Mcp:Resource` no host. O bootstrap existente aplica o
 cadastro. O cliente desktop local é nativo e aceita portas variáveis de loopback, mantendo o
 endereço e o caminho registrados, conforme RFC 8252. Seu callback foi obtido pela versão instalada
@@ -39,5 +38,13 @@ precisam de validação manual.
   submetidas ao IdentityService pelo navegador.
 - Reaproveitar o cliente `admin-panel` e a audiência REST. A integração tem cadastro e recurso
   próprios, com permissão explícita para o MCP.
-- Conceder escopos REST ou de administração pelo cadastro dinâmico do MCP. O registro é restrito à
-  conexão MCP e exige a autenticação do usuário para obter o token.
+- Cadastro dinâmico anônimo com autorização automática. Autenticar o usuário não estabelece
+  confiança no callback de um cliente arbitrário.
+
+## Estado anterior da prova
+
+Clientes criados pelo endpoint anônimo anterior deixam de obter novos códigos e tokens MCP
+quando não constam da configuração. JWTs já emitidos continuam válidos até expirar, pois o host
+valida assinatura e claims localmente. Recriar o banco não invalida esses JWTs; para uma invalidação
+imediata também é necessária a rotação das chaves e a atualização dos validadores. A remoção de
+registros antigos deve ocorrer somente na base descartável identificada para desenvolvimento.
