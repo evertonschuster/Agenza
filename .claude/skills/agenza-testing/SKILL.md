@@ -1,6 +1,6 @@
 ---
 name: agenza-testing
-description: Selects and writes admin-frontend tests with Vitest, Testing Library or the real-stack Playwright suite, and diagnoses coverage (teste do frontend, cobertura, e2e, teste que falha). Use when adding, fixing or choosing frontend tests. Not for backend tests (agenza-backend-slice).
+description: Selects, writes and fixes admin-frontend tests with Vitest, Testing Library or the real-stack Playwright suite. Use first, before investigating, when a frontend test fails, coverage drops below the threshold, or tests must be added or chosen (teste do frontend, teste falhando, cobertura caiu, limite de cobertura, e2e). Not for backend tests (agenza-backend-slice).
 ---
 
 # Test the admin frontend

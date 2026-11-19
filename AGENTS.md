@@ -83,7 +83,7 @@ Every skill is listed here; `check:docs` fails when one is missing.
 | Form, validation, field error (formulário)         | [agenza-form-field](.claude/skills/agenza-form-field/SKILL.md)             |
 | Shared component, theme, color, focus              | [agenza-ui-primitive](.claude/skills/agenza-ui-primitive/SKILL.md)         |
 | Copy, messages, dates, numbers, money (texto)      | [agenza-ptbr-copy](.claude/skills/agenza-ptbr-copy/SKILL.md)               |
-| Frontend tests, coverage, e2e                      | [agenza-testing](.claude/skills/agenza-testing/SKILL.md)                   |
+| Frontend test failing or missing, coverage, e2e    | [agenza-testing](.claude/skills/agenza-testing/SKILL.md)                   |
 
 Skills live only in `.claude/skills/agenza-*/`. Claude Code and Copilot discover them there; Codex
 reaches them through this table. This is the only skill table; area guides point here.

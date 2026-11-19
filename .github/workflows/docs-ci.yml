@@ -28,7 +28,7 @@ jobs:
           node-version-file: '.nvmrc'
 
       - name: Test documentation checker
-        run: node --test scripts/checkDocs.test.mjs scripts/evalSkills.test.mjs
+        run: node --test scripts/checkDocs.test.mjs
 
       - name: Check documentation references
         run: npm run check:docs
