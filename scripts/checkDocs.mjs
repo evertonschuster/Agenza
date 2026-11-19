@@ -309,7 +309,6 @@ export function headingAnchors(text) {
     if (heading) {
       const slug = heading[1]
         .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
-        .replace(/<[^>]+>/g, '')
         .replace(/[`*~]/g, '')
         .toLowerCase()
         .replace(/[^\p{L}\p{N}_ -]/gu, '')
