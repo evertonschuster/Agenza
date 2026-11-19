@@ -13,13 +13,13 @@ scheduling, client management and an AI receptionist. v1 persona: the owner-oper
 
 ## Where things are
 
-| Path                  | Stack                                | Read first                                                                                                                                                       |
-| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/admin-frontend` | Vite + React + strict TypeScript     | [local AGENTS.md](apps/admin-frontend/AGENTS.md)                                                                                                                 |
-| `backend`             | .NET, Clean Architecture per service | [local AGENTS.md](backend/AGENTS.md)                                                                                                                             |
-| `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md)                                                                               |
-| `infra`               | PostgreSQL init scripts              | —                                                                                                                                                                |
-| `docs/decisions`      | The why and rejected alternatives    | [processo](docs/decisions/processo.md), [plataforma](docs/decisions/plataforma.md), [backend](docs/decisions/backend.md), [frontend](docs/decisions/frontend.md) |
+| Path                  | Stack                                | Read first                                                                                                                                                 |
+| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/admin-frontend` | Vite + React + strict TypeScript     | [local AGENTS.md](apps/admin-frontend/AGENTS.md)                                                                                                           |
+| `backend`             | .NET, Clean Architecture per service | [local AGENTS.md](backend/AGENTS.md)                                                                                                                       |
+| `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md)                                                                         |
+| `infra`               | PostgreSQL init scripts              | —                                                                                                                                                          |
+| `docs/decisions`      | The why and rejected alternatives    | [process](docs/decisions/process.md), [platform](docs/decisions/platform.md), [backend](docs/decisions/backend.md), [frontend](docs/decisions/frontend.md) |
 
 Local environment and quality gates: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Product direction:
 [docs/VISION.md](docs/VISION.md).
@@ -28,7 +28,7 @@ Local environment and quality gates: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md).
 
 **Multi-tenancy is a server boundary.** The tenant comes only from the validated token's claim; the
 `X-Tenant-Id` header is routing and the backend refuses a mismatch. Never accept a tenant from a URL,
-a query or `localStorage`. [decisions/plataforma.md](docs/decisions/plataforma.md).
+a query or `localStorage`. [decisions/platform.md](docs/decisions/platform.md).
 
 **Errors are values, not exceptions.** An expected failure returns a `Result`; only the exceptional
 throws. [decisions/backend.md](docs/decisions/backend.md).
@@ -42,19 +42,19 @@ constraint.
 `backend/global.json`, `.python-version`, `uv.lock` and the CI setup actions.
 
 **Aspire is the only local orchestrator.** Do not add Docker to the frontend.
-[decisions/plataforma.md](docs/decisions/plataforma.md).
+[decisions/platform.md](docs/decisions/platform.md).
 
 ## Documentation
 
 Write only what the code does not show, and every fact has one home; the rules for guides and
-decisions are in [decisions/processo.md](docs/decisions/processo.md). Do not create numbered ADRs.
+decisions are in [decisions/process.md](docs/decisions/process.md). Do not create numbered ADRs.
 An owner correction that holds beyond the session goes into this AGENTS or the area guide, in the
 same PR; a host's private memory keeps only facts about the machine or the PR in flight.
 
 ## Workflow
 
 The single round of questions before coding, acceptance criteria as pt-BR-named tests and review
-commits follow the [process](docs/decisions/processo.md). A feature that spans backend and frontend
+commits follow the [process](docs/decisions/process.md). A feature that spans backend and frontend
 is two PRs, the backend one first, with the regenerated OpenAPI types.
 
 Work goes through a PR, on a short branch cut from `main`. Never commit directly to `main`, and never

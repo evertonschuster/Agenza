@@ -8,7 +8,7 @@ Agenza's admin panel. This README covers the frontend's environment and operatio
 Versions come from the executable sources: [Node](../../.nvmrc), `packageManager` in the
 [root package.json](../../package.json) and the [.NET SDK](../../backend/global.json). Docker is
 needed for the PostgreSQL that Aspire manages. Compatibility pins follow
-[decisions/processo.md](../../docs/decisions/processo.md).
+[decisions/process.md](../../docs/decisions/process.md).
 
 ## Running the stack
 

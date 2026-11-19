@@ -35,7 +35,7 @@ IgnoreTenant skips that comparison but does not grant anonymous access.
 
 The filter's reduced problem has type, title, status and code; it adds no traceId, correlationId or
 errors. The validated claim remains the server's tenant source: the header does not authorize access
-([decisions/plataforma.md](decisions/plataforma.md)). A consumer must not try to resolve a 403 by
+([decisions/platform.md](decisions/platform.md)). A consumer must not try to resolve a 403 by
 choosing another tenant.
 
 ## 3. Success envelope — ApiResponse
@@ -118,7 +118,7 @@ Body and query/route use different mechanisms: the
 [JSON format](../backend/shared/Admin.SharedKernel/JsonSerializerOptionsExtensions.cs) rejects
 numeric enums; the [enum binder](../backend/shared/Admin.SharedKernel.AspNetCore/EnumNameModelBinder.cs)
 accepts exactly one defined name, case-insensitively, and rejects numbers, unknown names or combined
-names. Value-object conversions are described in [decisions/plataforma.md](decisions/plataforma.md)
+names. Value-object conversions are described in [decisions/platform.md](decisions/platform.md)
 and [decisions/backend.md](decisions/backend.md).
 
 ### 4.4 Routing 404 and 405 may have no body

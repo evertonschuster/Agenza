@@ -25,7 +25,7 @@ Follow [tenant.ts](../../../../apps/admin-frontend/src/shared/session/tenant.ts)
 
 ## Identity changes and stale data
 
-For [decisions/plataforma.md](../../../../docs/decisions/plataforma.md), inspect
+For [decisions/platform.md](../../../../docs/decisions/platform.md), inspect
 the reducer/store above, [sessionDriver](../../../../apps/admin-frontend/src/features/auth/model/sessionDriver.ts)
 and [ProtectedRoute](../../../../apps/admin-frontend/src/features/auth/ui/ProtectedRoute.tsx).
 

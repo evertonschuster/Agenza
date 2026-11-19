@@ -20,7 +20,7 @@
 stay out of prose. A rule already in a guide is not repeated in the decisions, and the Rejected
 alternatives live only in the decisions.
 
-**Four files, no numbers.** `processo.md`, `plataforma.md`, `backend.md` and `frontend.md`. A new
+**Four files, no numbers.** `process.md`, `platform.md`, `backend.md` and `frontend.md`. A new
 decision becomes a section of its theme file, with Decision, Why when there is one, and Rejected.
 Above 150 lines, the largest section becomes its own file, listed in the root `AGENTS.md`.
 

@@ -30,10 +30,10 @@ at 5432 and persists in the `agenza-postgres-data` volume.
   permissions even with equal local passwords.
 - Database bootstrap runs on startup only where `DatabaseBootstrap:RunOnStartup` is true
   (Development). A multi-replica deployment would need a one-shot bootstrap first
-  ([decisions/plataforma.md](decisions/plataforma.md)).
+  ([decisions/platform.md](decisions/platform.md)).
 
 There is no Docker Compose and no application Dockerfile: Aspire is the only local orchestration,
-and CI exercises the same AppHost graph ([decisions/plataforma.md](decisions/plataforma.md)).
+and CI exercises the same AppHost graph ([decisions/platform.md](decisions/platform.md)).
 
 ### Database client
 
@@ -80,7 +80,7 @@ Dependabot opens weekly grouped PRs for npm, NuGet, pip and the workflows' actio
   `.targets`). `Admin.SharedKernel` and `Admin.Logging` have their own test projects and gates and
   are excluded from each service's number, so one cannot hide behind the other.
   `ServicesService.PersistenceTests` cover EF tenant assignment, filtering and tag-deletion
-  relationship coverage in memory ([decisions/processo.md](decisions/processo.md),
+  relationship coverage in memory ([decisions/process.md](decisions/process.md),
   [decisions/backend.md](decisions/backend.md)). There is no Testcontainers or
   `WebApplicationFactory` project: the frontend API-contract job starts AppHost, applies the
   migrations and runs the real OIDC and tenant-isolation checks; its HTTP scenario needs

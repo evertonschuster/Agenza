@@ -1,8 +1,7 @@
 # admin-frontend — Architecture
 
 The current design of the frontend. Read the section related to the change; the why and the
-rejected alternatives are in [decisions/frontend.md](../../../docs/decisions/frontend.md). Check
-versions, files and gates in the pins, the code and the configuration.
+rejected alternatives are in [decisions/frontend.md](../../../docs/decisions/frontend.md).
 
 ## 1. Shape
 
@@ -25,7 +24,7 @@ a slice, cycles, `src/main.tsx`, support tests outside those layers or configura
 stay with review. The OIDC adapter
 [sessionDriver](../src/features/auth/model/sessionDriver.ts) has an intentional `model → api`
 dependency inside auth; the shared session core does not know OIDC
-([decisions/plataforma.md](../../../docs/decisions/plataforma.md)).
+([decisions/platform.md](../../../docs/decisions/platform.md)).
 
 ### Pages, routes and lists
 
@@ -94,7 +93,6 @@ is accepted.
 [Base UI](../components.json) is the primitives' base; its composition uses `render`. Use semantic
 tokens and the attribute-resolved theme, keeping an explicit theme choice and contrast. Primitives
 may own interaction and accessibility behavior; reusable screen compositions live in widgets.
-Coverage and exclusions come from the configuration, not from the folder.
 
 Forms use React Hook Form and Zod with the controls in `shared/form/fields/`; the visual frame lives
 in `shared/ui/form-field/`. A field's props type lives in the field's file in `components/`, derived
@@ -107,8 +105,8 @@ form, `SearchSelectField` ([decisions/frontend.md](../../../docs/decisions/front
 optional `creation` offers creating the item right there; the feature draws the creation and returns
 the item, which enters selected. A creation dialog passes the `finalFocus` it receives to
 `DialogContent`, so focus returns to the search. `SelectField` stays for the plain `Select`.
-Product text and routes are pt-BR; identifiers are English. The `/tags` route is an existing
-exception: renaming a URL needs its own product change.
+Routes are pt-BR like the product text; `/tags` is an existing exception, and renaming a URL needs
+its own product change.
 
 ## 2. Talking to the backend
 
@@ -141,9 +139,8 @@ including fields submitted under another name (`aliases`) and the link to the ex
 CPF conflict; the procedure is in the
 [form skill](../../../.claude/skills/agenza-form-field/SKILL.md).
 
-Surfaces use the messages and codes of the normalized `ApiProblem`; branches depend on
-`code`/status, never on message text. Keep the problem's representation in list errors, dialogs,
-banners and toasts. The detailed HTTP policy is in [docs/API.md](../../../docs/API.md).
+Surfaces use the messages and codes of the normalized `ApiProblem` and keep its representation in
+list errors, dialogs, banners and toasts. The detailed HTTP policy is in [docs/API.md](../../../docs/API.md).
 
 ### Related records in confirmations
 
@@ -167,13 +164,13 @@ exposes its snapshot to React through context and a store subscription.
 The client decodes `tenant_id` from the access token for routing; it does not verify the signature.
 Security is in the backend, which validates the token and the header match. Never resolve the tenant
 from a URL, a query or an independent value in localStorage. The library persists the OIDC user in
-localStorage for reuse across tabs ([decisions/plataforma.md](../../../docs/decisions/plataforma.md));
+localStorage for reuse across tabs ([decisions/platform.md](../../../docs/decisions/platform.md));
 that does not make it an authorization source.
 
 The HTTP client reads credentials on every call and fails closed when the token or tenant is missing.
 The generator removes the tenant header parameter from the types so features do not supply it by
 hand. These frontend protections complement the
-[server boundary](../../../docs/decisions/plataforma.md).
+[server boundary](../../../docs/decisions/platform.md).
 
 ### Session identity changes
 
@@ -184,37 +181,23 @@ the blocked session's credentials. The HTTP client combines session and consumer
 HTTP answer for an invalid session does not change the OIDC snapshot by itself; that handling is not
 shared yet, so do not duplicate it in each list. The
 implementation is in the [sessionStore](../src/shared/session/sessionStore.ts) and
-[decisions/plataforma.md](../../../docs/decisions/plataforma.md).
+[decisions/platform.md](../../../docs/decisions/platform.md).
 
 ## 4. Principles
 
-The [root rules](../../../AGENTS.md) still apply. Here, applying them means:
-
-- Invest in domain rules and keep the calling infrastructure concentrated.
 - Reuse a composition when there is a concrete need; `entities/`, a global pages layer or a mapper
   are not prerequisites of a feature.
-- Keep page logic in its hook and shared types at the right boundary.
 - After an async mutation, check the lifecycle before navigating, closing the page or applying local
   UI effects. Use-case topics may be published after success even if the page has unmounted. HTTP
   cancellation does not replace the protection against late completion.
 - Each mutation publishes its own topic (`xCreated`, `xUpdated`, `xDeleted`), never a shared
   `xSaved`, even with no listener at the moment.
-- Choose verification by the behavior changed and the risk; a coverage exclusion does not exempt
-  testing interaction, accessible name or failure handling.
 
 ## 5. Toolchain & gates
 
-Runtime pins come from the root. Commands are in the [README](../README.md#commands); the gates
-actually run are in the [workflow](../../../.github/workflows/frontend-ci.yml). The TypeScript
-configuration and [ESLint](../eslint.config.js) define the static constraints;
-[vitest.config.ts](../vitest.config.ts) defines the thresholds and the named coverage exclusions;
-there is no global exclusion of `shared/ui/`.
-
-Unit and component tests live next to the code, with Vitest, RTL and module mocks. Playwright and the
-contract/OIDC check use the real Aspire stack. See [DEVELOPMENT](../../../docs/DEVELOPMENT.md) for
-what each gate covers and its limits.
-
-## 6. Pointers
-
-- [Frontend AGENTS](../AGENTS.md): routing to skills and lookup by task.
-- [README](../README.md): environment and dependency maintenance.
+Commands are in the [README](../README.md#commands) and the gates that run in the
+[workflow](../../../.github/workflows/frontend-ci.yml). The TypeScript configuration and
+[ESLint](../eslint.config.js) define the static constraints; [vitest.config.ts](../vitest.config.ts)
+defines the thresholds and the named coverage exclusions. Unit and component tests live next to the
+code, with Vitest, RTL and module mocks; Playwright and the contract/OIDC check use the real Aspire
+stack.

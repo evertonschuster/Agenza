@@ -1,7 +1,7 @@
 # Decisions: backend
 
-Full conventions: [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md). Common wire
-shapes: [docs/API.md](../API.md).
+The conventions live in [backend/docs/ARCHITECTURE.md](../../backend/docs/ARCHITECTURE.md) and the
+common wire shapes in [docs/API.md](../API.md); this file keeps the decisions and what was refused.
 
 ## Use cases, validation and results
 
@@ -49,33 +49,11 @@ errors).
 
 ### Decision
 
-**Aggregates.**
-
-- Private constructor, a `Create` that validates and builds, behavior that validates before
-  assigning. Children are created only by the root, through `internal` factories that generate their
-  own id.
-- Aggregates reference each other by id. A many-to-many is a child of the owning root, with a
-  composite foreign key to both ends (`ClientTag`).
-- A state change is a method with intent (`Inactivate()`) that refuses an invalid transition with a
-  named error. An `Update` of the whole record only serves free-form data, without transitions.
-
-**Values.**
-
-- Whatever has a format, normalization or rule is a value object; free text limited only by length
-  may stay primitive.
-- The context-free value objects live in `Admin.SharedKernel.ValueObjects` and behave as scalars on
-  the wire.
-- A text value object is read from a query or route only by opt-in; personal data never, because
-  URLs end up in logs.
-- A closed set of options is a plain enum, traveling by its camelCase name; from a query or route,
-  exactly one name.
-
-**Lifecycle and uniqueness.**
-
-- Deleting is a soft delete; a deleted id answers `404`.
-- Uniqueness is a unique index with `TenantId` and `"DeletedAt" IS NULL`. The handler's pre-check
-  exists only to answer on the field.
-- An edit (`PUT`) replaces the whole record, children included.
+- **A rich domain per aggregate.** Behavior with intent, children created only by their root,
+  aggregates that reference each other by id, value objects for whatever has a format or a rule,
+  soft delete as the only deletion and uniqueness decided by the database index. The rules are in
+  the [backend guide](../../backend/docs/ARCHITECTURE.md), §3, §5 and §6.
+- **An edit (`PUT`) replaces the whole record, children included.**
 
 ### Rejected
 

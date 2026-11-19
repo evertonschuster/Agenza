@@ -3,8 +3,8 @@
 Current backend conventions; read the section the task affects. Section 10 points to examples and
 section 11 states the limits of enforcement. Why each convention exists and what was rejected:
 [backend.md](../../docs/decisions/backend.md) (use cases, domain, API, dates),
-[plataforma.md](../../docs/decisions/plataforma.md) (topology, tenancy, auth, database, logging) and
-[processo.md](../../docs/decisions/processo.md) (tests and CI).
+[platform.md](../../docs/decisions/platform.md) (topology, tenancy, auth, database, logging) and
+[process.md](../../docs/decisions/process.md) (tests and CI).
 
 Three rules of thumb behind everything below:
 

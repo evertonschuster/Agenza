@@ -69,7 +69,7 @@ the resulting context rather than establishing a second authority from raw reque
 The context carries subject and scope; carrying scope is not an operation-level scope check.
 Health/readiness can remain tenant-free. A tenant-owned downstream call delegates the caller's
 access token with the validated header, as required by
-[decisions/plataforma.md](../../../../docs/decisions/plataforma.md).
+[decisions/platform.md](../../../../docs/decisions/platform.md).
 [ServiceTokenClient](../../../../ai-services/assistant-service/app/auth/service_token_client.py)
 only obtains/caches a client-credentials token; it does not add a tenant identity. Reserve it for
 explicitly tenant-free control-plane work. Background tenant access needs a designed job identity

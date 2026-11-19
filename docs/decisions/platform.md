@@ -63,7 +63,7 @@ data ownership verifiable by the database without multiplying instances.
   header, validated by a single `TenantContext` dependency.
 
 Automated proof: persistence tests for filters and assignment, and real smokes on Aspire
-([processo.md](processo.md), "Tests and verification"). Review checklist: the
+([process.md](process.md), "Tests and verification"). Review checklist: the
 [agenza-tenant-isolation](../../.claude/skills/agenza-tenant-isolation/SKILL.md) skill.
 
 ### Why
