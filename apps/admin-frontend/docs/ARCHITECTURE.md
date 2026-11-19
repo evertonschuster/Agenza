@@ -53,9 +53,9 @@ item.
 Page hooks are not a shared business layer; context accessors, generic widget hooks and utilities
 such as [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) are reusable.
 
-No page uses a `loader` or `action` today; one that does keeps them in `route.ts`, re-exported by the
-barrel for [app/routes.tsx](../src/app/routes.tsx). A blocking loader keeps the page from showing its
-own loading state.
+A page that uses a `loader` or `action` keeps them in `route.ts`, re-exported by the barrel for
+[app/routes.tsx](../src/app/routes.tsx); a blocking loader keeps the page from showing its own
+loading state.
 
 [usePaginatedList](../src/widgets/paginated-list-section/use-paginated-list.ts) receives the
 controlled state and the repository. The hooks of
@@ -126,8 +126,8 @@ differ. Return annotations keep the structural check against the generated contr
 [docs/API.md](../../../docs/API.md); for the outcomes actually normalized read
 [servicesFacade.ts](../src/shared/api/servicesFacade.ts).
 
-`unwrapOrThrow` in [unwrap.ts](../src/shared/api/unwrap.ts) has no production caller; it is reserved
-for a loader or `queryFn` that signals errors by rejection. Mutations and
+`unwrapOrThrow` in [unwrap.ts](../src/shared/api/unwrap.ts) is only for a loader or `queryFn` that
+signals errors by rejection. Mutations and
 actions keep expected failures as values, which keeps validation in the form instead of turning it
 into an error screen.
 
