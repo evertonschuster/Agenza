@@ -25,7 +25,8 @@ Current shape and conventions:
 - **Remembering or carrying the list's search through the menu link** (`destinationTarget`, search
   per destination). Refused twice by the owner; the link opens the list without filters.
 - **TanStack Query, SWR or RTK Query now.** A TanStack proof of concept was refused too.
-- **An `AbortController` passed through the facade and the repositories.**
+- **A cancellation layer in the facade**, such as a request registry or a controller it owns. The
+  repositories only forward the consumer's optional `signal`.
 - **Triggering the fetch through an effect keyed on the query**, `useFetcher().load()`, or a promise
   with `use()` and Suspense. They revalidate on their own, or restructure the screen.
 - **A filter schema with inferred types**, Zod as the reader or a storage flag `url | memory`. Too much

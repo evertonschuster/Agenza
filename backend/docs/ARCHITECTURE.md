@@ -92,8 +92,7 @@ Vertical slices organise the Application layer; they do not replace the layers.
 <Service>.Tests/<Feature>/<Operation>/     handler, validator and binding tests
 ```
 
-- Handlers and validators are registered by assembly scan; never by hand, never through a mediator
-  library. Repositories and adapters are registered in Infrastructure's `DependencyInjection.cs`.
+- Handlers and validators are registered by assembly scan, never by hand. Repositories and adapters are registered in Infrastructure's `DependencyInjection.cs`.
 - A type is born in its operation folder and moves to the feature root when a second operation needs
   it — not before.
 - `ToModel`/`ApplyTo` are extension methods on the command, so the handler reads as orchestration.
@@ -112,8 +111,8 @@ accepted.
 — no other domain type, no tenant. The output is `<Entity>Response.From<Entity>(entity, …)`, built
 from the aggregate plus what the handler read for it; another aggregate appears as a small
 `<Entity>Summary`. A value object flattens to its primitive; an enum stays an enum (the kernel
-writes it as a camelCase string), so the mapping never calls `ToString()` on it. No mapping library,
-no DTO in the domain, no entity past the handler.
+writes it as a camelCase string), so the mapping never calls `ToString()` on it. No DTO in the domain,
+no entity past the handler.
 
 ## 3. Domain
 
@@ -131,8 +130,8 @@ no DTO in the domain, no entity past the handler.
   named error. A whole-record `Update(…)` is fine for free data with no transition. A method that
   sets state without checking anything (`SetX`) does not exist.
 - **Factories are static methods on the type**: `Create` on roots and value objects,
-  `internal static Create` on children, `Restore` on value objects. No `<X>Factory` or builder
-  classes, no public constructors.
+  `internal static Create` on children, `Restore` on value objects. No public
+  constructors.
 - **Children** are created only by their root, through an `internal` factory that receives the
   root's id and plain data records. They are exposed as `IReadOnlyCollection<T>` over a private
   list, have no `DbSet` and are read and written through the root; nothing outside the domain
@@ -203,7 +202,7 @@ Expected outcomes are values; only the unexpected throws.
 **Validator.** Synchronous; no repository, no I/O. Each rule carries the domain's code
 (`.WithErrorCode(<DomainError>.Code)`) and its own pt-BR message naming the field, with limits from
 the domain's constants, so a rule answers the same code whichever gate catches it. A rule two
-validators share is written in both: there is no `<Feature>RuleBuilderExtensions`; the constants
+validators share is written in both; the constants
 keep the copies aligned and each validator's tests assert the code. In a body, a string with several
 enum names still converts, so the validator refuses it with `IsInEnum`.
 

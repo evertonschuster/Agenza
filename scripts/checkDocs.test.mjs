@@ -22,7 +22,7 @@ function write(root, file, text) {
   writeFileSync(join(root, file), text);
 }
 
-const skillRoute = `\n## Skills\n\n[Example skill](${skill})\n`;
+const skillRoute = `\n## Skills\n\n| Task | Skill |\n| --- | --- |\n| Example | [Example skill](${skill}) |\n`;
 const description = 'Checks documentation. Use when a guide changes. Not for code.';
 
 function fixture(t, files = {}) {
@@ -47,7 +47,7 @@ test('accepts existing nested, encoded, root-relative and reference destinations
   const root = fixture(t, {
     'AGENTS.md':
       '[Nested\nlabel](<docs/Folder With Spaces/Guide (draft).md> "Guide")\n' +
-      '[Encoded](docs/Folder%20With%20Spaces/Guide%20(draft).md#missing-anchor)\n' +
+      '[Encoded](docs/Folder%20With%20Spaces/Guide%20(draft).md#guide)\n' +
       '[Balanced](docs/guide(draft).md)\n' +
       '![Image](/docs/image.png)\n[Guide][ref]\n[ref]: docs/guide(draft).md\n',
     'docs/Folder With Spaces/Guide (draft).md': '# Guide\n',
@@ -55,6 +55,27 @@ test('accepts existing nested, encoded, root-relative and reference destinations
     'docs/image.png': 'fixture',
   });
   assert.deepEqual(checkDocumentation(root).errors, []);
+});
+
+test('checks fragments against the headings of the target and of the same file', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md':
+      '# Top\n\n[ok](docs/guide.md#3-auth--tenancy) [same](#top) [dup](docs/guide.md#again-1)\n' +
+      '[bad](docs/guide.md#nope) [badsame](#missing) [fenced](docs/guide.md#fenced)\n',
+    'docs/guide.md':
+      '# Guide\n\n## 3. Auth & `tenancy`\n\n## Again\n\n## Again\n\n```md\n## Fenced\n```\n',
+  });
+  const missing = (target) => ({
+    file: 'AGENTS.md',
+    line: 4,
+    message: 'Âncora ausente no documento de destino.',
+    target,
+  });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    missing('docs/guide.md#nope'),
+    missing('#missing'),
+    missing('docs/guide.md#fenced'),
+  ]);
 });
 
 test('reports a deleted target with its source line and destination', (t) => {
@@ -74,11 +95,11 @@ test('reports a deleted target with its source line and destination', (t) => {
   ]);
 });
 
-test('ignores external links, isolated fragments, placeholders, code and comments', (t) => {
+test('ignores external links, queries, placeholders, code and comments', (t) => {
   const root = fixture(t, {
     'AGENTS.md':
       '[Web](https://example.invalid/missing) [Mail](mailto:user@example.invalid)\n' +
-      '[CDN](//example.invalid/a) [Fragment](#missing) [Query](?tab=missing)\n' +
+      '[CDN](//example.invalid/a) [Query](?tab=missing)\n' +
       '[Template](docs/[FEATURE]/notes.md)\n' +
       '`[Inline](missing.md)`\n<!-- [Comment](missing.md) -->\n' +
       '```md\n[Code](missing.md)\n```\n~~~md\n[Code](missing.md)\n~~~\n',
@@ -170,6 +191,7 @@ test('reports a skill missing from the Skills section of the root AGENTS', async
     ['no link', '# Fixture\n'],
     ['link outside the section', `# Fixture\n\n[Example](${skill})\n\n## Skills\n\nNone.\n`],
     ['link after the section', `## Skills\n\nNone.\n\n## Other\n\n[Example](${skill})\n`],
+    ['link in prose, not in a table row', `## Skills\n\nSee [Example](${skill}).\n`],
   ]) {
     await t.test(name, (context) => {
       const root = fixture(context, {

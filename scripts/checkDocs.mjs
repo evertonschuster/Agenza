@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -289,7 +289,51 @@ export function frontmatterProblems(text, name) {
   return problems;
 }
 
+// GitHub's heading slug: lowercase, markup and punctuation dropped, spaces to hyphens, repeated
+// headings suffixed -1, -2. Headings inside fences do not count.
+export function headingAnchors(text) {
+  const anchors = new Set();
+  const seen = new Map();
+  let fence;
+  for (const line of text.split('\n')) {
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (marker) {
+      if (!fence) {
+        fence = marker;
+      } else if (marker[0] === fence[0] && marker.length >= fence.length) {
+        fence = undefined;
+      }
+      continue;
+    }
+    const heading = fence ? undefined : /^ {0,3}#{1,6}[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/.exec(line);
+    if (heading) {
+      const slug = heading[1]
+        .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/<[^>]+>/g, '')
+        .replace(/[`*~]/g, '')
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}_ -]/gu, '')
+        .replace(/ /g, '-');
+      const count = seen.get(slug) ?? 0;
+      seen.set(slug, count + 1);
+      anchors.add(count ? `${slug}-${count}` : slug);
+    }
+    for (const explicit of line.matchAll(/<a\s[^>]*\b(?:id|name)="([^"]+)"/gi)) {
+      anchors.add(explicit[1].toLowerCase());
+    }
+  }
+  return anchors;
+}
+
 export function checkDocumentation(root) {
+  const anchorCache = new Map();
+  function anchorsOf(path) {
+    if (!anchorCache.has(path)) {
+      const text = readFileSync(path, 'utf8').replace(/^﻿/, '').replace(/\r\n/g, '\n');
+      anchorCache.set(path, headingAnchors(text));
+    }
+    return anchorCache.get(path);
+  }
   const errors = [];
   const documents = new Set(entryDocuments);
   const skillFiles = new Set();
@@ -351,18 +395,37 @@ export function checkDocumentation(root) {
         });
       }
     }
+    const contentLines = content.split('\n');
+    function checkFragment(destination, fragment, line, target) {
+      let name = fragment;
+      try {
+        name = decodeURIComponent(fragment);
+      } catch {
+        report(file, line, 'Âncora com codificação inválida.', target);
+        return;
+      }
+      if (!anchorsOf(destination).has(name.toLowerCase())) {
+        report(file, line, 'Âncora ausente no documento de destino.', target);
+      }
+    }
     for (const { target, line } of targets) {
       const decoded = markdownDestination(target);
-      if (
-        /^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\?)/i.test(decoded.value) ||
-        /<[^>]+>|\[[A-Z][A-Z0-9_-]*\]|\$\{[^}]+\}/.test(decoded.value)
-      ) {
+      const placeholder = /<[^>]+>|\[[A-Z][A-Z0-9_-]*\]|\$\{[^}]+\}/.test(decoded.value);
+      if (decoded.value.startsWith('#') && !placeholder && !decoded.error) {
+        if (decoded.value.length > 1) {
+          checkFragment(absolute, decoded.value.slice(1), line, target);
+        }
+        continue;
+      }
+      if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\?)/i.test(decoded.value) || placeholder) {
         continue;
       }
       if (decoded.error) {
         report(file, line, decoded.error, target);
         continue;
       }
+      const hash = decoded.value.indexOf('#');
+      const fragment = hash < 0 ? '' : decoded.value.slice(hash + 1);
       const rawPath = decoded.value.split(/[?#]/)[0];
       let path;
       try {
@@ -379,8 +442,18 @@ export function checkDocumentation(root) {
         report(file, line, 'Destino fora do repositório.', target);
       } else if (!existsSync(destination)) {
         report(file, line, 'Destino local ausente.', target);
-      } else if (skillTable && line > skillTable.start && line < skillTable.end) {
-        routedSkills.add(local);
+      } else {
+        if (
+          skillTable &&
+          line > skillTable.start &&
+          line < skillTable.end &&
+          contentLines[line - 1].trimStart().startsWith('|')
+        ) {
+          routedSkills.add(local);
+        }
+        if (fragment && destination.endsWith('.md') && statSync(destination).isFile()) {
+          checkFragment(destination, fragment, line, target);
+        }
       }
     }
   }
