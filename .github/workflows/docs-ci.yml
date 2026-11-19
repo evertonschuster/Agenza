@@ -27,8 +27,8 @@ jobs:
         with:
           node-version-file: '.nvmrc'
 
-      - name: Test documentation checker and agent hooks
-        run: node --test scripts/checkDocs.test.mjs .claude/hooks/guardProcessKill.test.mjs
+      - name: Test documentation checker
+        run: node --test scripts/checkDocs.test.mjs
 
       - name: Check documentation references
         run: npm run check:docs

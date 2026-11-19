@@ -115,6 +115,9 @@ single-file spec template comes back, with behavior and acceptance, without a to
   authority.
 - **A pre-commit that refused commits on `main`.** GitHub branch protection is already that
   authority.
+- **A Claude Code hook refusing process kills by name or port.** It was built and removed: the
+  failure did not repeat after the rule entered `AGENTS.md`, the rule covers every host and the hook
+  only Claude Code. It comes back if an agent stops the owner's stack again.
 
 ## Tests and verification
 
