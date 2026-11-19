@@ -10,18 +10,13 @@ Follow [tenant.ts](../../../../apps/admin-frontend/src/shared/session/tenant.ts)
 [sessionStore.ts](../../../../apps/admin-frontend/src/shared/session/sessionStore.ts) and
 [apiClient.ts](../../../../apps/admin-frontend/src/shared/api/apiClient.ts).
 
-- Decoding a claim does not verify its signature or grant access. The session reducer refuses
-  authentication without the required subject/tenant, and the server validates the token.
+Decoding, request-time credentials and the generator's header omission are described in the frontend
+ARCHITECTURE, "3. Auth & tenancy".
+
 - Keep the routing tenant tied to the access token. Do not let a route, query, form field or an
   independently stored tenant override it. OIDC library persistence of the token is not a separate
   tenant authority.
-- The shared client reads credentials at request time and attaches the routing header. Missing
-  token/tenant causes `MissingSessionError`, normalized by the
-  [facade](../../../../apps/admin-frontend/src/shared/api/servicesFacade.ts).
-  Features must not choose a different header to recover from a 403.
-- The [generator](../../../../apps/admin-frontend/scripts/generateApiTypes.mjs) omits the tenant
-  header from call-site types. This discourages accidental override; the backend still performs
-  the security check.
+- Features must not choose a different header to recover from a 403.
 
 ## Identity changes and stale data
 
@@ -29,11 +24,9 @@ For [decisions/platform.md](../../../../docs/decisions/platform.md), inspect
 the reducer/store above, [sessionDriver](../../../../apps/admin-frontend/src/features/auth/model/sessionDriver.ts)
 and [ProtectedRoute](../../../../apps/admin-frontend/src/features/auth/ui/ProtectedRoute.tsx).
 
-Trace ordinary renewal separately from a change of subject or token-derived tenant. The changed
-identity must latch the blocked state until explicit login, clear credentials, cancel the previous
-request scope and unmount protected data. Inspect late initial reads, renewal events and replies.
-The OIDC adapter stops renewal and attempts persisted-user removal; cleanup failure is logged,
-not proof that the identity gate was released.
+Trace "Session identity changes" in the frontend ARCHITECTURE through the files above, separating
+ordinary renewal from a change of subject or token-derived tenant; inspect late initial reads,
+renewal events and replies.
 
 Transport cancellation does not undo a write already accepted by the server. Preserve lifecycle
 guards for page-local navigation/effects and inspect any cache/store retaining protected data.

@@ -6,9 +6,8 @@ description: Writes or revises admin-frontend pt-BR copy — buttons, failure, e
 # Product language
 
 Write for the owner of a service business: name the action and the thing affected, in short sentences
-and sentence case. Prefer “Serviço salvo.” to “Sua solicitação foi processada com sucesso.” Code
-identifiers stay in English; everything the user reads or hears, accessible names included, is pt-BR.
-Key names such as `Ctrl`, `Esc` and `Enter` are not translated.
+and sentence case. Prefer “Serviço salvo.” to “Sua solicitação foi processada com sucesso.” Accessible
+names are product copy too.
 
 Use the vocabulary of the screen and the
 [architecture guide](../../../apps/admin-frontend/docs/ARCHITECTURE.md): Pessoa, Responsável, Pessoa de

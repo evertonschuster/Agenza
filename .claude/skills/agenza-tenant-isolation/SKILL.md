@@ -1,6 +1,6 @@
 ---
 name: agenza-tenant-isolation
-description: Traces tenant authority and isolation across .NET, the browser session and the AI service (tenant, login, sessão, token, X-Tenant-Id, multi-tenant). Use when changing authentication, tenant-scoped HTTP or persistence, session identity or AI delegation, when building or reviewing. Not for operation-level permissions.
+description: Traces tenant authority and isolation across .NET, the browser session and the AI service (tenant, login, sessão, token, X-Tenant-Id, multi-tenant). Use when changing authentication, tenant-scoped HTTP or persistence, session identity or AI delegation, when building or reviewing. Not for operation-level permissions (backend ARCHITECTURE §5, Tenant).
 ---
 
 # Review tenant isolation

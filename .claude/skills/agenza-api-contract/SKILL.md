@@ -28,11 +28,8 @@ backend API changes too ([frontend-ci.yml](../../../.github/workflows/frontend-c
 
 For dates or numeric schema transforms, read the
 [generator tests](../../../apps/admin-frontend/scripts/generateApiTypes.test.mjs) and
-[apiClient.ts](../../../apps/admin-frontend/src/shared/api/apiClient.ts). Calendar dates in bodies
-and responses are `Date`; parameter-reachable schemas and date-time stay `string`. JSON sends a `Date`
-as an instant, and the backend keeps its written day
-([decisions/backend.md](../../../docs/decisions/backend.md)). Build calendar values with the existing
-UTC helpers; repositories do not revive dates.
+[apiClient.ts](../../../apps/admin-frontend/src/shared/api/apiClient.ts). Build calendar values with
+the existing UTC helpers; repositories do not revive dates.
 
 ## Add or change a repository
 
@@ -44,8 +41,7 @@ paged reads and mutations.
 - Call `servicesApi` with path, query, body and the consumer's abort signal, and return an explicit
   `Promise<ApiResult<T>>` typed with the slice's own model.
 - Credentials, tenant header, version, envelope and failure normalization belong to `apiClient` and
-  `servicesFacade`. The generator removes `X-Tenant-Id` from call-site parameters; a tenant rejection
-  is not permission to select another tenant.
+  `servicesFacade`; a tenant rejection is not permission to select another tenant.
 - Forward a compatible result directly; map only the success payload when the model differs. No
   `try/catch`, no duplicated wire schemas, no transport handling in a repository.
 - A mutation that publishes a topic does it in the slice's use case, as in
@@ -61,15 +57,9 @@ only at a framework boundary that needs rejection, such as a route loader. The f
 [agenza-form-field](../agenza-form-field/SKILL.md).
 
 Read `run()` in [servicesFacade.ts](../../../apps/admin-frontend/src/shared/api/servicesFacade.ts) for
-the normalized outcomes before choosing UI:
-
-- Generated `ApiProblem` fields are optional and nullable; `code` and `errors` may be absent. A title
-  is enough for the facade to keep a received problem, except on 429.
-- `SERVER_PROBLEM` means an HTTP failure without a recognized problem; an empty 404/405 can come from
-  the service itself. A 500 with a recognized problem is kept.
-- A rejected call is `NETWORK_PROBLEM` unless it is `MissingSessionError`; that is not proof of the
-  physical cause. Use `isTransientProblem` when the consumer needs retry classification; the facade
-  never navigates or retries.
+the normalized outcomes before choosing UI; the table is in [docs/API.md](../../../docs/API.md), "7.
+Frontend consumption and message policy". Use `isTransientProblem` when the consumer needs retry
+classification; the facade never navigates or retries.
 
 For a list, toast or dialog consumer, keep the established surface and supply fallback copy when
 message fields are absent. Framework messages can stay in English; do not claim a translation or

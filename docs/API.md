@@ -183,13 +183,11 @@ from the normalization above, not from a universal translation by code. Branch o
 when present; never interpret title, detail or message as a control rule. traceId and correlationId
 are for diagnosis.
 
-The [form mapping](../apps/admin-frontend/src/shared/api/formErrors.ts) uses each key's first entry
-that has a message, keeps code and meta and compares fields case-insensitively, turning
-guardians[0].name into guardians.0.name. Messages of unknown keys, "" and command included, go to the
-form level; the result holds only the first general message. title is the fallback when no field or
-general message was found. The
-[React Hook Form bridge](../apps/admin-frontend/src/shared/form/applyApiProblem.ts) applies this data
-to the fields and to root.serverError.
+The [form mapping](../apps/admin-frontend/src/shared/api/formErrors.ts) and the
+[React Hook Form bridge](../apps/admin-frontend/src/shared/form/applyApiProblem.ts) carry these errors
+to the fields and to root.serverError; which entry and which keys reach the form is in the
+[form skill](../.claude/skills/agenza-form-field/SKILL.md), "Apply API errors without losing recovery
+data".
 
 **Current limit:** neither the facade nor that mapper translates framework messages or removes the
 command entry. They can reach the interface. Changing that needs its own product change; do not add

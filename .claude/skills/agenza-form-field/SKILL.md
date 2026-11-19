@@ -35,8 +35,9 @@ the route dialog (TagFormPage) and the creation from a selector (TagCreationDial
   `canSubmit` and `isSaving`.
 
 An edit route reads its record from the backend and resets the form from that response; a list row is
-not a fresh snapshot. Abort the read on cleanup, ignore an aborted answer and check whether the mounted
-page can change `:id`, so loading or saving never uses the previous record. On a failed read, follow the
+not a fresh snapshot. Check whether the mounted page can change `:id`, so loading or saving never uses
+the previous record; the read guards are in [agenza-frontend-slice](../agenza-frontend-slice/SKILL.md),
+"Pending work". On a failed read, follow the
 screen's recovery: existing forms toast the problem and close. A late successful save may publish its
 result but must not navigate someone who already left; keep the mounted guard.
 
@@ -70,7 +71,7 @@ This is the one home for the API-failure → form bridge.
 
 - [formErrors.ts](../../../apps/admin-frontend/src/shared/api/formErrors.ts) matches API keys to current
   paths, normalizes indexed keys such as `guardians[1].name` and keeps the first entry's message, code
-  and metadata. Unmatched keys, the command's own entry included, become form-level; it returns one
+  and metadata; a key whose first entry has no message is skipped. Unmatched keys, the command's own entry included, become form-level; it returns one
   general message and uses `title` only when nothing else was collected.
 - [applyApiProblem.ts](../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts) sets the code as
   the field error `type`, keeps `meta`, sets `root.serverError` when needed and focuses the first invalid

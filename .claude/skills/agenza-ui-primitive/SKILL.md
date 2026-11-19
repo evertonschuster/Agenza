@@ -5,10 +5,6 @@ description: Adds or changes shared admin-frontend UI primitives — Base UI com
 
 # Shared UI primitives
 
-The [frontend architecture](../../../apps/admin-frontend/docs/ARCHITECTURE.md) owns layers and
-component organization. A primitive may own interaction state; domain rules and API calls belong to
-the feature that uses it.
-
 ## Reuse and compose
 
 Search `src/shared/ui/` for the role and its variants before adding a component, and read

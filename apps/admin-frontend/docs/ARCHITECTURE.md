@@ -134,9 +134,8 @@ actions keep expected failures as values, which keeps validation in the form ins
 into an error screen.
 
 [formErrors.ts](../src/shared/api/formErrors.ts) and
-[applyApiProblem.ts](../src/shared/form/applyApiProblem.ts) take API errors to the form fields,
-including fields submitted under another name (`aliases`) and the link to the existing record on a
-CPF conflict; the procedure is in the
+[applyApiProblem.ts](../src/shared/form/applyApiProblem.ts) take API errors to the form fields; the
+procedure is in the
 [form skill](../../../.claude/skills/agenza-form-field/SKILL.md).
 
 Surfaces use the messages and codes of the normalized `ApiProblem` and keep its representation in

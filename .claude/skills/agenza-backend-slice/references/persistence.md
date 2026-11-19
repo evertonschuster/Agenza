@@ -38,7 +38,5 @@ A pre-check helps the caller recover; the unique index decides races.
    [the architecture](../../../../backend/docs/ARCHITECTURE.md#5-tenancy-and-persistence).
    Inspect the generated SQL when PostgreSQL behavior is material.
 
-Use [tests.md](tests.md) to distinguish model metadata/EF behavior from relational enforcement.
-A composite FK, filtered uniqueness race or CHECK needs evidence from disposable PostgreSQL under
-the current verification policy; do not use the persistent development volume or claim InMemory
-proves the constraint. Report the actual scenario and result in the PR.
+Use [tests.md](tests.md) to distinguish model metadata/EF behavior from relational enforcement; do not
+use the persistent development volume, and report the actual scenario and result in the PR.

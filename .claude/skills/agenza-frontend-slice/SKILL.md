@@ -41,8 +41,7 @@ Compare [useClientListPage](../../../apps/admin-frontend/src/features/clients/ui
 or [useTagListPage](../../../apps/admin-frontend/src/features/tags/ui/pages/TagListPage/useTagListPage.ts).
 Filter types and initial query live in `model/`; state, requests and filters follow
 [§1 of the architecture](../../../apps/admin-frontend/docs/ARCHITECTURE.md#1-shape). When a save or
-deletion must refresh a mounted list, check the mutation topic and its subscribers; `refetch` keeps the
-displayed result while it requests the replacement.
+deletion must refresh a mounted list, check the mutation topic and its subscribers.
 
 ## Pending work
 
