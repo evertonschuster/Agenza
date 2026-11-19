@@ -3,6 +3,7 @@ using IdentityService.Application.Tenants.ProvisionTenant;
 using IdentityService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
+using IdentityService.Api.Setup;
 
 namespace IdentityService.Api.Seed;
 
@@ -34,11 +35,60 @@ public class DatabaseSeeder : IHostedService
         await dbContext.Database.MigrateAsync(cancellationToken);
 
         await SeedScopesAsync(services, cancellationToken);
+        await SeedMcpAsync(services, cancellationToken);
         await SeedClientsAsync(services, cancellationToken);
         await SeedDemoTenantAsync(services, cancellationToken);
     }
 
     public Task StopAsync(CancellationToken cancellationToken) => Task.CompletedTask;
+
+    private async Task SeedMcpAsync(IServiceProvider services, CancellationToken cancellationToken)
+    {
+        var resource = _configuration["IdentityClients:Mcp:Resource"];
+        if (string.IsNullOrWhiteSpace(resource))
+        {
+            return;
+        }
+
+        var scopeManager = services.GetRequiredService<IOpenIddictScopeManager>();
+        var scope = await scopeManager.FindByNameAsync("mcp:connect", cancellationToken);
+        var scopeDescriptor = new OpenIddictScopeDescriptor
+        {
+            Name = "mcp:connect",
+            DisplayName = "Testar conexão com o Agenza MCP",
+            Resources = { new Uri(resource).AbsoluteUri },
+        };
+        if (scope is null)
+        {
+            await scopeManager.CreateAsync(scopeDescriptor, cancellationToken);
+        }
+        else
+        {
+            await scopeManager.UpdateAsync(scope, scopeDescriptor, cancellationToken);
+        }
+
+        foreach (var client in _configuration.GetSection("IdentityClients:Mcp:Clients").GetChildren())
+        {
+            var clientId = client["ClientId"]
+                ?? throw new InvalidOperationException("Missing MCP client ID.");
+            var descriptor = McpClientDescriptor.Create(
+                clientId,
+                client["DisplayName"] ?? "Integração MCP do Agenza",
+                client["ApplicationType"] ?? OpenIddictConstants.ApplicationTypes.Web,
+                resource,
+                GetConfiguredUris(client, "RedirectUris"));
+            var applicationManager = services.GetRequiredService<IOpenIddictApplicationManager>();
+            var application = await applicationManager.FindByClientIdAsync(clientId, cancellationToken);
+            if (application is null)
+            {
+                await applicationManager.CreateAsync(descriptor, cancellationToken);
+            }
+            else
+            {
+                await applicationManager.UpdateAsync(application, descriptor, cancellationToken);
+            }
+        }
+    }
 
     private static async Task SeedScopesAsync(IServiceProvider services, CancellationToken cancellationToken)
     {

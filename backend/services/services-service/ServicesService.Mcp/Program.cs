@@ -1,9 +1,11 @@
 using ModelContextProtocol.AspNetCore;
 using ServicesService.Mcp.Tools;
+using ServicesService.Mcp.Setup;
 
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.Services.AddMcpAuthentication(builder.Configuration);
 
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
@@ -11,7 +13,10 @@ builder.Services.AddMcpServer()
 
 var app = builder.Build();
 
-app.MapMcp("/mcp");
+app.UseAuthentication();
+app.UseAuthorization();
+
+app.MapMcp("/mcp").RequireAuthorization("McpUser");
 app.MapDefaultEndpoints();
 
 await app.RunAsync();
