@@ -189,7 +189,7 @@ implementation is in the [sessionStore](../src/shared/session/sessionStore.ts) a
 - Each mutation publishes its own topic (`xCreated`, `xUpdated`, `xDeleted`), never a shared
   `xSaved`, even with no listener at the moment.
 
-## 5. Toolchain & gates
+## 5. Tests
 
 Unit and component tests live next to the code, with Vitest, RTL and module mocks; Playwright and
 the contract/OIDC check use the real Aspire stack.
