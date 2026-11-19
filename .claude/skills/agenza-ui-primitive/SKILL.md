@@ -47,7 +47,9 @@ Tokens, themes, overlay transitions and backend colours: [tokens.md](references/
   attribute is not a tooltip.
 - Keep the part's focus trap, focus return, roving tabindex and keyboard navigation instead of parallel
   handlers. With nested overlays, `Esc` closes the right one and focus returns to its trigger.
-- `element.focus()` does not trigger `:focus-visible`; debug focus rings with a real click or Tab.
+- Whether `element.focus()` shows `:focus-visible` depends on the last interaction: after a key it
+  usually does, after a click it does not. Check focus rings after a real Tab and a real click,
+  including focus moved into a dialog.
   Controls nested in `input-group` need `ring-offset-0` beside `ring-0`.
 
 ## Verify

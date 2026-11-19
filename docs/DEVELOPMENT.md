@@ -26,8 +26,9 @@ at 5432 and persists in the `agenza-postgres-data` volume.
   not override it.
 - PostgreSQL init files run only on the volume's first initialization. After changing that password
   or the scripts in `infra/postgres/init/`, stop AppHost and recreate the volume once with
-  `docker volume rm agenza-postgres-data`. `identity_app` and `services_app` keep separate schema
-  permissions even with equal local passwords.
+  `docker volume rm agenza-postgres-data`. That deletes every local record; export what you need
+  first. `identity_app` and `services_app` keep separate schema permissions even with equal local
+  passwords.
 - Database bootstrap runs on startup only where `DatabaseBootstrap:RunOnStartup` is true
   (Development). A multi-replica deployment would need a one-shot bootstrap first
   ([decisions/platform.md](decisions/platform.md)).
@@ -69,7 +70,8 @@ Each workflow in [.github/workflows](../.github/workflows/) states its own trigg
 frontend, backend and AI-services CI, CodeQL, SonarQube Cloud and the documentation check
 (`npm run check:docs`).
 
-Dependabot opens weekly grouped PRs for npm, NuGet, pip and the workflows' actions.
+Dependabot opens grouped PRs for npm, NuGet, pip and the workflows' actions on the schedule in
+[dependabot.yml](../.github/dependabot.yml).
 
 ### What coverage measures
 

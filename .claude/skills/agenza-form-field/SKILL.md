@@ -75,8 +75,8 @@ This is the one home for the API-failure → form bridge.
   general message and uses `title` only when nothing else was collected.
 - [applyApiProblem.ts](../../../apps/admin-frontend/src/shared/form/applyApiProblem.ts) sets the code as
   the field error `type`, keeps `meta`, sets `root.serverError` when needed and focuses the first invalid
-  field. Call `applyApiProblem({ problem, methods })` and render `FormErrorBanner` for the form-level
-  message.
+  field. Call `applyApiProblem({ problem, methods, aliases })` and render `FormErrorBanner` for the
+  form-level message.
 - A field submitted under another name needs `aliases`: declare `FieldAliases<FormFieldValues>` beside
   the schema transform (`{ tagIds: 'tags' }`). Only top-level command fields take an alias.
 - Feature UI interprets its own codes and metadata, and checks a field's error code before using its

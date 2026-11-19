@@ -447,6 +447,33 @@ test('reports skill frontmatter that would break YAML or routing', () => {
   );
 });
 
+test('reports a repeated key and a quoted value YAML cannot read', () => {
+  const messages = (text) =>
+    frontmatterProblems(text, 'agenza-example').map(({ line, target }) => `${line} ${target}`);
+  assert.deepEqual(
+    messages(`---\nname: agenza-example\nname: agenza-example\ndescription: ${description}\n---\n`),
+    ['3 name'],
+  );
+  assert.deepEqual(
+    messages('---\nname: agenza-example\ndescription: "Use \\q. Not for code."\n---\n'),
+    ['3 description'],
+  );
+  assert.deepEqual(
+    messages('---\nname: agenza-example\ndescription: "Use a" and "Not for b"\n---\n'),
+    ['3 description'],
+  );
+  assert.deepEqual(
+    messages(
+      "---\nname: agenza-example\ndescription: 'Use it''s \"x\" \\q. Not for y.' # note\n---\n",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    messages('---\nname: agenza-example\ndescription: "Use \\"a\\"\\t\\u00e9. Not for b."\n---\n'),
+    [],
+  );
+});
+
 test('reports a skill whose frontmatter breaks, from the documentation check', (t) => {
   const root = fixture(t);
   write(root, skill, '---\nname: agenza-example\ndescription: Use when: x. Not for y.\n---\n');

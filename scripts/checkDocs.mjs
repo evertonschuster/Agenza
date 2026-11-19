@@ -201,6 +201,11 @@ function sectionLines(content, title) {
   return { start, end: next < 0 ? lines.length + 1 : next + 1 };
 }
 
+// A whole double-quoted scalar with only YAML escapes, or a whole single-quoted one, then an
+// optional comment.
+const QUOTED_SCALAR =
+  /^(?:"((?:[^"\\]|\\[0abtnvfre "/\\N_LP\t]|\\x[\da-fA-F]{2}|\\u[\da-fA-F]{4}|\\U[\da-fA-F]{8})*)"|'((?:[^']|'')*)')(?:\s+#.*)?$/;
+
 // Hosts parse this block as YAML and silently skip a skill whose frontmatter does not parse.
 export function frontmatterProblems(text, name) {
   const lines = text.split('\n');
@@ -229,16 +234,28 @@ export function frontmatterProblems(text, name) {
       continue;
     }
     const [, key, value] = field;
+    if (Object.hasOwn(fields, key)) {
+      problems.push({ line: index + 1, message: 'Chave repetida no frontmatter.', target: key });
+      continue;
+    }
     fields[key] = { line: index + 1, value };
     if (value === '' || /^[|>][-+1-9]*$/.test(value)) {
       block = fields[key];
       block.value = '';
       continue;
     }
-    const quoted = /^(["']).*\1$/.exec(value);
-    if (quoted) {
-      fields[key].value = value.slice(1, -1);
-    } else if (/:(?:\s|$)|\s#/.test(value) || /^[[\]{}&*!|>%@`"']/.test(value)) {
+    if (/^["']/.test(value)) {
+      const quoted = QUOTED_SCALAR.exec(value);
+      if (quoted) {
+        fields[key].value = quoted[1] ?? quoted[2];
+      } else {
+        problems.push({
+          line: index + 1,
+          message: 'Texto entre aspas que o YAML não lê; feche as aspas e use só escapes válidos.',
+          target: key,
+        });
+      }
+    } else if (/:(?:\s|$)|\s#/.test(value) || /^[[\]{}&*!|>%@`]/.test(value)) {
       problems.push({
         line: index + 1,
         message: 'Valor sem aspas que o YAML não lê como texto; reescreva sem ": " ou use aspas.',
