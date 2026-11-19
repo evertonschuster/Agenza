@@ -8,6 +8,8 @@ using ServicesService.Infrastructure.Repositories;
 
 namespace ServicesService.PersistenceTests;
 
+// Covers direct EF foreign keys to Tag only: references in JSON or in other services need their own
+// guard, and EF InMemory proves neither PostgreSQL constraints nor safety under concurrency.
 public class TagDeletionUsageCoverageTests
 {
     private static readonly DateOnly Today = new(2026, 11, 14);

@@ -5,7 +5,6 @@ public enum PersistenceErrorKind
     UniqueConstraintViolation,
 }
 
-// UnitOfWork logs the constraint that fired. Only the older persistence-error mappers
-// branch on it (backend/docs/ARCHITECTURE.md §10); new handlers answer a generic
-// <Entity>.SaveFailed (docs/decisions/0003).
+// UnitOfWork logs the constraint that fired; only the older mappers branch on it, new handlers
+// answer a generic <Entity>.SaveFailed.
 public readonly record struct PersistenceError(PersistenceErrorKind Kind, string? ConstraintName);

@@ -128,7 +128,7 @@ describe('TagListPage', () => {
     vi.clearAllMocks();
   });
 
-  describe('when it asks the backend (ADR 0012)', () => {
+  describe('when it asks the backend', () => {
     it('asks once on mount, for the first page of 20 tags with no search', async () => {
       renderPage(TAGS);
 

@@ -8,7 +8,15 @@ import { layerBoundaries } from './eslint-rules/layerBoundaries.js';
 
 export default tseslint.config(
   {
-    ignores: ['dist', 'coverage', 'playwright-report', 'test-results', 'src/shared/api/generated'],
+    ignores: [
+      'dist',
+      'coverage',
+      'playwright-report',
+      'test-results',
+      'src/shared/api/generated',
+      // Nested agent worktrees carry their own copy of the source.
+      '.claude',
+    ],
   },
   {
     extends: [js.configs.recommended, ...tseslint.configs.recommendedTypeChecked],

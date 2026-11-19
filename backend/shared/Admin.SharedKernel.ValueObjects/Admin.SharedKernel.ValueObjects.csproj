@@ -7,6 +7,6 @@
   </PropertyGroup>
 
   <!-- No project or package reference, on purpose: every service's Domain references this project,
-       and Domain depends on nothing else (docs/decisions/0002). -->
+       and Domain depends on nothing else. -->
 
 </Project>

@@ -3,7 +3,7 @@ namespace ServicesService.Application.Services.CreateService;
 public static class CreateServiceCommandExtensions
 {
     // TenantId is intentionally Guid.Empty - AuditableEntitySaveChangesInterceptor
-    // assigns it on save (docs/decisions/0004).
+    // assigns it on save.
     public static DomainResult<Service> ToModel(this CreateServiceCommand command, int code, IReadOnlyCollection<Tag> tags)
     {
         var durationResult = DurationRange.Create(command.MinDurationMinutes, command.DurationMinutes, command.MaxDurationMinutes);

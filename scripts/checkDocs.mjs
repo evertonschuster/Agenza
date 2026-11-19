@@ -1,4 +1,4 @@
-import { existsSync, readFileSync, readdirSync } from 'node:fs';
+import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { basename, dirname, relative, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -17,10 +17,8 @@ export const entryDocuments = [
   'apps/admin-frontend/docs/ARCHITECTURE.md',
   'ai-services/assistant-service/README.md',
   'docs/API.md',
-  'docs/MONOREPO.md',
-  'docs/QUALITY.md',
+  'docs/DEVELOPMENT.md',
   'docs/VISION.md',
-  'docs/decisions/README.md',
 ];
 
 function blank(text) {
@@ -60,7 +58,7 @@ function fenceEnd(text, start, marker, depth) {
   return text.length;
 }
 
-function prose(text, { preserveInlineCode = false } = {}) {
+function prose(text) {
   const tokens = /^ {0,3}((?:> {0,3})*)(`{3,}(?=[^`\n]*$)|~{3,})[^\n]*$|<!--|`+/gm;
   const parts = [];
   let cursor = 0;
@@ -86,11 +84,6 @@ function prose(text, { preserveInlineCode = false } = {}) {
         continue;
       }
       end = close.index + close[0].length;
-      if (preserveInlineCode) {
-        parts.push(text.slice(cursor, end));
-        cursor = end;
-        continue;
-      }
     }
     parts.push(text.slice(cursor, match.index), blank(text.slice(match.index, end)));
     cursor = end;
@@ -169,156 +162,6 @@ function linkTargets(text) {
   return targets;
 }
 
-function quotedScalar(text) {
-  const escapes = {
-    0: '\0',
-    a: '\x07',
-    b: '\b',
-    t: '\t',
-    n: '\n',
-    v: '\v',
-    f: '\f',
-    r: '\r',
-    e: '\x1b',
-    ' ': ' ',
-    '"': '"',
-    '/': '/',
-    '\\': '\\',
-    N: '\u0085',
-    _: '\u00a0',
-    L: '\u2028',
-    P: '\u2029',
-  };
-  let valid = true;
-  const value = text.replace(
-    /\\(?:x([\da-fA-F]{2})|u([\da-fA-F]{4})|U([\da-fA-F]{8})|(.))/g,
-    (_, short, medium, long, escape) => {
-      const hex = short ?? medium ?? long;
-      if (hex !== undefined) {
-        const point = Number.parseInt(hex, 16);
-        if (point > 0x10ffff || (point >= 0xd800 && point <= 0xdfff)) {
-          valid = false;
-          return '';
-        }
-        return String.fromCodePoint(point);
-      }
-      if (Object.hasOwn(escapes, escape)) {
-        return escapes[escape];
-      }
-      valid = false;
-      return '';
-    },
-  );
-  return valid ? value : undefined;
-}
-
-function scalar(value) {
-  const trimmed = value.trim();
-  const doubleQuoted = /^("(?:[^"\\]|\\.)*")(?:\s+#.*)?$/.exec(trimmed);
-  if (doubleQuoted) {
-    return quotedScalar(doubleQuoted[1].slice(1, -1));
-  }
-  const singleQuoted = /^('(?:[^']|'')*')(?:\s+#.*)?$/.exec(trimmed);
-  if (singleQuoted) {
-    return singleQuoted[1].slice(1, -1).replace(/''/g, "'");
-  }
-  const plain = trimmed.replace(/\s+#.*$/, '').trim();
-  if (
-    !plain ||
-    /^(?:null|true|false|~|[-+]?\d+(?:\.\d*)?(?:e[-+]?\d+)?)$/i.test(plain) ||
-    /^[#\[\]{},&*!"']/.test(plain)
-  ) {
-    return '';
-  }
-  return plain;
-}
-
-function checkFrontmatter(text, report) {
-  const lines = text.split('\n');
-  const end = lines.findIndex((line, index) => index > 0 && /^(?:---|\.\.\.)\s*$/.test(line));
-  if (!/^---\s*$/.test(lines[0]) || end < 0) {
-    report(1, 'Frontmatter ausente ou sem fechamento.', 'name, description');
-    return;
-  }
-
-  for (const key of ['name', 'description']) {
-    const entries = lines.slice(1, end).flatMap((line, index) => {
-      const match = new RegExp(`^${key}:[ \\t]*(.*)$`).exec(line);
-      return match ? [{ value: match[1], line: index + 2 }] : [];
-    });
-    if (entries.length !== 1) {
-      report(entries[1]?.line ?? 1, 'Campo obrigatório ausente ou duplicado.', key);
-      continue;
-    }
-    const entry = entries[0];
-    let value = scalar(entry.value);
-    if (value === undefined) {
-      report(entry.line, 'Escape YAML inválido em valor entre aspas.', key);
-      continue;
-    }
-    if (/^[|>][+-]?(?:\s+#.*)?$/.test(entry.value.trim())) {
-      const block = [];
-      for (let index = entry.line; index < end; index++) {
-        if (lines[index].trim() && !/^[ \t]/.test(lines[index])) {
-          break;
-        }
-        block.push(lines[index]);
-      }
-      value = block.join(' ').trim();
-    }
-    if (!value.trim()) {
-      report(entry.line, 'Campo obrigatório deve conter texto.', key);
-    } else if (key === 'name' && !/^[a-z0-9]+(?:-[a-z0-9]+)*$/.test(value)) {
-      report(entry.line, 'Nome de skill inválido; use letras minúsculas, números e hífens.', value);
-    }
-  }
-}
-
-function checkAdrIndex(text, directory, report) {
-  const files = readdirSync(directory, { withFileTypes: true })
-    .filter((entry) => entry.isFile())
-    .map((entry) => entry.name);
-  let inSection = false;
-  let column = -1;
-  let tableFound = false;
-  for (const [index, line] of text.split('\n').entries()) {
-    if (/^## Decisões vigentes por assunto\s*$/.test(line)) {
-      inSection = true;
-      continue;
-    }
-    if (inSection && /^#{1,2} /.test(line)) {
-      break;
-    }
-    if (!inSection || !line.trim().startsWith('|')) {
-      continue;
-    }
-    const cells = line
-      .trim()
-      .replace(/^\||\|$/g, '')
-      .split(/(?<!\\)\|/)
-      .map((cell) => cell.trim());
-    if (column < 0) {
-      column = cells.indexOf('ADRs vigentes');
-      tableFound ||= column >= 0;
-      continue;
-    }
-    for (const match of (cells[column] ?? '').matchAll(/\b\d{4}\b/g)) {
-      const id = match[0];
-      const candidates = files.filter((file) => file.startsWith(`${id}-`) && file.endsWith('.md'));
-      if (candidates.length !== 1) {
-        report(index + 1, 'ADR vigente deve corresponder a um único arquivo.', id);
-      }
-    }
-  }
-  if (!tableFound) {
-    report(
-      1,
-      'Tabela de decisões vigentes não encontrada.',
-      'Decisões vigentes por assunto / ADRs vigentes',
-    );
-  }
-}
-
 function markdownDestination(target) {
   const entities = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'" };
   let error;
@@ -348,7 +191,148 @@ function markdownDestination(target) {
   return { value, error };
 }
 
+function sectionLines(content, title) {
+  const lines = content.split('\n');
+  const start = lines.findIndex((line) => line.trim() === `## ${title}`) + 1;
+  if (!start) {
+    return { start: 0, end: 0 };
+  }
+  const next = lines.findIndex((line, index) => index >= start && /^#{1,2}\s/.test(line));
+  return { start, end: next < 0 ? lines.length + 1 : next + 1 };
+}
+
+// A whole double-quoted scalar with only YAML escapes, or a whole single-quoted one, then an
+// optional comment.
+const QUOTED_SCALAR =
+  /^(?:"((?:[^"\\]|\\[0abtnvfre "/\\N_LP\t]|\\x[\da-fA-F]{2}|\\u[\da-fA-F]{4}|\\U[\da-fA-F]{8})*)"|'((?:[^']|'')*)')(?:\s+#.*)?$/;
+
+// Hosts parse this block as YAML and silently skip a skill whose frontmatter does not parse.
+export function frontmatterProblems(text, name) {
+  const lines = text.split('\n');
+  if (lines[0] !== '---') {
+    return [{ line: 1, message: 'Skill sem frontmatter.', target: '---' }];
+  }
+  const end = lines.indexOf('---', 1);
+  if (end < 0) {
+    return [{ line: 1, message: 'Frontmatter da skill sem fechamento.', target: '---' }];
+  }
+  const problems = [];
+  const fields = {};
+  let block;
+  for (let index = 1; index < end; index++) {
+    const line = lines[index];
+    if (block && (/^\s/.test(line) || !line.trim())) {
+      block.value += ` ${line.trim()}`;
+      continue;
+    }
+    block = undefined;
+    const field = /^([a-z][\w-]*):[ \t]*(.*)$/.exec(line);
+    if (!field) {
+      if (line.trim()) {
+        problems.push({ line: index + 1, message: 'Linha inválida no frontmatter.', target: line });
+      }
+      continue;
+    }
+    const [, key, value] = field;
+    if (Object.hasOwn(fields, key)) {
+      problems.push({ line: index + 1, message: 'Chave repetida no frontmatter.', target: key });
+      continue;
+    }
+    fields[key] = { line: index + 1, value };
+    if (value === '' || /^[|>][-+1-9]*$/.test(value)) {
+      block = fields[key];
+      block.value = '';
+      continue;
+    }
+    if (/^["']/.test(value)) {
+      const quoted = QUOTED_SCALAR.exec(value);
+      if (quoted) {
+        fields[key].value = quoted[1] ?? quoted[2];
+      } else {
+        problems.push({
+          line: index + 1,
+          message: 'Texto entre aspas que o YAML não lê; feche as aspas e use só escapes válidos.',
+          target: key,
+        });
+      }
+    } else if (/:(?:\s|$)|\s#/.test(value) || /^[[\]{}&*!|>%@`]/.test(value)) {
+      problems.push({
+        line: index + 1,
+        message: 'Valor sem aspas que o YAML não lê como texto; reescreva sem ": " ou use aspas.',
+        target: key,
+      });
+    }
+  }
+  if (fields.name?.value !== name) {
+    problems.push({
+      line: fields.name?.line ?? 1,
+      message: 'O name da skill difere do nome da pasta.',
+      target: name,
+    });
+  }
+  const description = fields.description?.value.trim() ?? '';
+  const descriptionLine = fields.description?.line ?? 1;
+  if (!/\bUse\b/.test(description) || !/\bNot for\b/.test(description)) {
+    problems.push({
+      line: descriptionLine,
+      message: 'A description precisa dizer quando usar ("Use …") e quando não ("Not for …").',
+      target: 'description',
+    });
+  }
+  if (description.length > 1024) {
+    problems.push({
+      line: descriptionLine,
+      message: 'A description passa de 1024 caracteres.',
+      target: 'description',
+    });
+  }
+  return problems;
+}
+
+// GitHub's heading slug: lowercase, markup and punctuation dropped, spaces to hyphens, repeated
+// headings suffixed -1, -2. Headings inside fences do not count.
+export function headingAnchors(text) {
+  const anchors = new Set();
+  const seen = new Map();
+  let fence;
+  for (const line of text.split('\n')) {
+    const marker = /^ {0,3}(`{3,}|~{3,})/.exec(line)?.[1];
+    if (marker) {
+      if (!fence) {
+        fence = marker;
+      } else if (marker[0] === fence[0] && marker.length >= fence.length) {
+        fence = undefined;
+      }
+      continue;
+    }
+    const heading = fence ? undefined : /^ {0,3}#{1,6}[ \t]+(.*?)(?:[ \t]+#+)?[ \t]*$/.exec(line);
+    if (heading) {
+      const slug = heading[1]
+        .replace(/!?\[([^\]]*)\]\([^)]*\)/g, '$1')
+        .replace(/[`*~]/g, '')
+        .toLowerCase()
+        .replace(/[^\p{L}\p{N}_ -]/gu, '')
+        .replace(/ /g, '-');
+      const count = seen.get(slug) ?? 0;
+      seen.set(slug, count + 1);
+      anchors.add(count ? `${slug}-${count}` : slug);
+    }
+    for (const explicit of line.matchAll(/<a\s[^>]*\b(?:id|name)="([^"]+)"/gi)) {
+      anchors.add(explicit[1].toLowerCase());
+    }
+  }
+  return anchors;
+}
+
 export function checkDocumentation(root) {
+  const anchorCache = new Map();
+  function anchorsOf(path) {
+    if (!anchorCache.has(path)) {
+      const text = readFileSync(path, 'utf8').replace(/^﻿/, '').replace(/\r\n/g, '\n');
+      anchorCache.set(path, headingAnchors(text));
+    }
+    return anchorCache.get(path);
+  }
   const errors = [];
   const documents = new Set(entryDocuments);
   const skillFiles = new Set();
@@ -384,6 +368,7 @@ export function checkDocumentation(root) {
     collect('docs/decisions');
   }
 
+  const routedSkills = new Set();
   for (const file of documents) {
     const absolute = resolve(root, file);
     if (!existsSync(absolute)) {
@@ -393,8 +378,14 @@ export function checkDocumentation(root) {
     const text = readFileSync(absolute, 'utf8')
       .replace(/^\uFEFF/, '')
       .replace(/\r\n/g, '\n');
+    if (skillFiles.has(file)) {
+      for (const problem of frontmatterProblems(text, basename(dirname(file)))) {
+        report(file, problem.line, problem.message, problem.target);
+      }
+    }
     const content = prose(text);
     const targets = linkTargets(content);
+    const skillTable = file === 'AGENTS.md' ? sectionLines(content, 'Skills') : undefined;
     if (basename(file) === 'CLAUDE.md') {
       for (const match of content.matchAll(/^@(?:"([^"\n]+)"|(\S+))[ \t]*$/gm)) {
         targets.push({
@@ -403,18 +394,37 @@ export function checkDocumentation(root) {
         });
       }
     }
+    const contentLines = content.split('\n');
+    function checkFragment(destination, fragment, line, target) {
+      let name = fragment;
+      try {
+        name = decodeURIComponent(fragment);
+      } catch {
+        report(file, line, 'Âncora com codificação inválida.', target);
+        return;
+      }
+      if (!anchorsOf(destination).has(name.toLowerCase())) {
+        report(file, line, 'Âncora ausente no documento de destino.', target);
+      }
+    }
     for (const { target, line } of targets) {
       const decoded = markdownDestination(target);
-      if (
-        /^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\?)/i.test(decoded.value) ||
-        /<[^>]+>|\[[A-Z][A-Z0-9_-]*\]|\$\{[^}]+\}/.test(decoded.value)
-      ) {
+      const placeholder = /<[^>]+>|\[[A-Z][A-Z0-9_-]*\]|\$\{[^}]+\}/.test(decoded.value);
+      if (decoded.value.startsWith('#') && !placeholder && !decoded.error) {
+        if (decoded.value.length > 1) {
+          checkFragment(absolute, decoded.value.slice(1), line, target);
+        }
+        continue;
+      }
+      if (/^(?:[a-z][a-z0-9+.-]*:|\/\/|#|\?)/i.test(decoded.value) || placeholder) {
         continue;
       }
       if (decoded.error) {
         report(file, line, decoded.error, target);
         continue;
       }
+      const hash = decoded.value.indexOf('#');
+      const fragment = hash < 0 ? '' : decoded.value.slice(hash + 1);
       const rawPath = decoded.value.split(/[?#]/)[0];
       let path;
       try {
@@ -431,17 +441,24 @@ export function checkDocumentation(root) {
         report(file, line, 'Destino fora do repositório.', target);
       } else if (!existsSync(destination)) {
         report(file, line, 'Destino local ausente.', target);
+      } else {
+        if (
+          skillTable &&
+          line > skillTable.start &&
+          line < skillTable.end &&
+          contentLines[line - 1].trimStart().startsWith('|')
+        ) {
+          routedSkills.add(local);
+        }
+        if (fragment && destination.endsWith('.md') && statSync(destination).isFile()) {
+          checkFragment(destination, fragment, line, target);
+        }
       }
     }
-    if (skillFiles.has(file)) {
-      checkFrontmatter(text, (line, message, target) => report(file, line, message, target));
-    }
-    if (file === 'docs/decisions/README.md') {
-      checkAdrIndex(
-        prose(text, { preserveInlineCode: true }),
-        dirname(absolute),
-        (line, message, target) => report(file, line, message, target),
-      );
+  }
+  for (const file of skillFiles) {
+    if (existsSync(resolve(root, file)) && !routedSkills.has(file)) {
+      report('AGENTS.md', 1, 'Skill sem rota na seção Skills do AGENTS da raiz.', file);
     }
   }
   return { errors, documents: documents.size, skills: skillFiles.size };

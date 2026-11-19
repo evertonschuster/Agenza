@@ -3,7 +3,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Admin.SharedKernel;
 
-// Hand-rolled instead of MediatR - see docs/decisions/0003 (licensing).
+// Hand-rolled instead of MediatR, which needs a commercial license from version 13.
 public sealed class Dispatcher : IDispatcher
 {
     private readonly IServiceProvider _serviceProvider;
@@ -89,7 +89,7 @@ public sealed class Dispatcher : IDispatcher
         }
 
         // Grouped by field instead of collapsed into one joined string, so the
-        // Api can return a structured, per-field response (docs/decisions/0003) - each
+        // Api can return a structured, per-field response - each
         // failure's own WithErrorCode is preserved instead of discarded.
         var fieldErrors = result.Errors
             .GroupBy(failure => failure.PropertyName)

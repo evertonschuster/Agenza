@@ -1,6 +1,6 @@
 ---
 name: agenza-testing
-description: Select and write admin-frontend tests, diagnose coverage failures, and verify async page, session or routing behavior with Vitest, Testing Library or the real-stack Playwright suite.
+description: Selects, writes and fixes admin-frontend tests with Vitest, Testing Library or the real-stack Playwright suite. Use first, before investigating, when a frontend test fails, coverage drops below the threshold, or tests must be added or chosen (teste do frontend, teste falhando, cobertura caiu, limite de cobertura, e2e). Not for backend tests (agenza-backend-slice).
 ---
 
 # Test the admin frontend
@@ -44,22 +44,15 @@ for every test. For races, control promise resolution instead of waiting on a re
 ## Diagnose coverage
 
 Read `coverage.include`, `coverage.exclude` and thresholds from
-[vitest.config.ts](../../../apps/admin-frontend/vitest.config.ts). `shared/ui/` is not excluded as a
-whole: exclusions name particular files or component folders. Do not move behavior to an excluded
-file, expand exclusions or lower thresholds to make a change pass. An excluded renderer can still
-need a behavior or accessibility test. Keep test assertions tied to an observable effect, not class
-snapshots or render-only checks.
+[vitest.config.ts](../../../apps/admin-frontend/vitest.config.ts); exclusions name files or component
+folders, not whole directories. Never move behavior to an excluded file, widen exclusions or lower
+thresholds to pass. An excluded renderer can still need a behavior or accessibility test; assert an
+observable effect, not class snapshots or render-only checks.
 
-## Run the relevant checks
+## Run the checks
 
-Use the scripts in [package.json](../../../apps/admin-frontend/package.json) and the requirements of
-[frontend CI](../../../.github/workflows/frontend-ci.yml). Diagnose a failing targeted test first,
-then run the applicable gate for the change; report the checks actually executed.
-
-Playwright uses the real Aspire stack and seeded login. Follow
-[README.md](../../../apps/admin-frontend/README.md) for startup and reuse
-[e2e/helpers.ts](../../../apps/admin-frontend/e2e/helpers.ts) for login. The suite's worker and server
-settings are owned by `playwright.config.ts`; do not start a competing frontend server or replace
-the authenticated flow with mocks. Obtain seeded login credentials through `e2e/helpers.ts`, which
-reads development configuration. Read generated tenant/entity ids from the current session or
-responses instead of hardcoding them.
+From `apps/admin-frontend/`: run the failing or affected test first (`npx vitest run <file>`), fix and
+repeat, then `npm run test:coverage`. Playwright (`npm run test:e2e`) needs the Aspire stack from the
+[README](../../../apps/admin-frontend/README.md); its server and workers are owned by
+`playwright.config.ts`, so do not start a competing frontend server. Real-stack rules:
+[patterns.md](references/patterns.md#real-stack-flows). Report the checks actually run.

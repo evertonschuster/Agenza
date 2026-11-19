@@ -36,7 +36,7 @@ Do not add a parallel requirements file.
   UUID tenant claim/header values and exposes the validated context to tenant-owned routes.
 - [ServiceTokenClient](app/auth/service_token_client.py) obtains and caches a client-credentials
   token. That tenant-free identity is for explicit control-plane calls, not tenant data.
-- [ADR 0004](../../docs/decisions/0004-multi-tenancy.md) defines delegation for
+- [decisions/platform.md](../../docs/decisions/platform.md) defines delegation for
   tenant-owned outbound calls and explicit identity for background work; the probe does not
   implement those business flows.
 

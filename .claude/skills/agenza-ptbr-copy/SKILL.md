@@ -1,19 +1,17 @@
 ---
 name: agenza-ptbr-copy
-description: Write or revise admin-frontend pt-BR interface copy, failure and empty states, accessible labels, and displayed numbers or dates.
+description: Writes or revises admin-frontend pt-BR copy — buttons, failure, empty and loading states, confirmations, accessible labels and displayed dates, numbers and money (texto da tela, mensagem, rótulo, formato de data). Use for wording or display formatting. Not for component behavior (agenza-ui-primitive) or form errors (agenza-form-field).
 ---
 
 # Product language
 
-Write for the owner operating a service business: name the action and the thing affected, using
-short sentences and sentence case. Prefer “Serviço salvo.” to “Sua solicitação foi processada com
-sucesso.” Keep code identifiers in English and user-facing text in pt-BR, including accessible names.
-Preserve key names such as `Ctrl`, `Esc` and `Enter`.
+Write for the owner of a service business: name the action and the thing affected, in short sentences
+and sentence case. Prefer “Serviço salvo.” to “Sua solicitação foi processada com sucesso.” Accessible
+names are product copy too.
 
-Use the vocabulary already present in the relevant screen and
-[architecture guide](../../../apps/admin-frontend/docs/ARCHITECTURE.md): Pessoa, Responsável,
-Pessoa de referência and Etiqueta correspond to `Client`, `ClientGuardian`,
-`ClientReferenceContact` and `Tag` in code. Do not rename navigation destinations as a copy cleanup.
+Use the vocabulary of the screen: Pessoa, Responsável, Pessoa de referência and Etiqueta are `Client`,
+`ClientGuardian`, `ClientReferenceContact` and `Tag` in code. Do not rename navigation destinations as
+a copy cleanup.
 
 | Action                      | Wording                                                               |
 | --------------------------- | --------------------------------------------------------------------- |
@@ -23,27 +21,40 @@ Pessoa de referência and Etiqueta correspond to `Client`, `ClientGuardian`,
 | Start creation              | Novo/Nova followed by the domain noun                                 |
 | Modify, search, end session | Editar, Buscar, Sair                                                  |
 
-Keep the same action verb in the button, confirmation and success message. Avoid vague errors,
-technical implementation language and routine exclamation marks. Use gender-neutral wording when
-the person's gender is unknown.
+Keep the same verb in the button, the confirmation and the success message. Avoid vague errors,
+implementation language and routine exclamation marks; use gender-neutral wording when the person's
+gender is unknown. Numbers, money, durations and dates: [formatting.md](references/formatting.md).
 
-An icon-only control needs an accessible name. When text is visible, the accessible name must
-include that label and describe the same action; decorative icons stay hidden from assistive
-technology. Preserve the page's document language when changing HTML or layout.
+## Failures
 
-## Choose the relevant detail
+Name what did not happen and offer a recovery the screen actually supports, through the existing
+problem component so its stable code stays visible for support. A retry instruction needs a working
+retry action; “contacte o administrador” alone does not help, and support copy never asks for a
+password. The [message policy](../../../docs/API.md#6-frontend-consumption-and-message-policy)
+owns which API messages are shown; never add exception text, OIDC-provider descriptions, `detail`,
+`type` or diagnostic ids as copy. Local schema messages are specific to the field; one field never
+shows two competing messages, and expected validation never becomes a full-screen failure.
 
-- Failure, empty, loading, confirmation or unavailable-screen copy:
-  [states.md](references/states.md).
-- Numbers, money, durations, dates or locale-sensitive assertions:
-  [formatting.md](references/formatting.md).
+## Empty, loading and unavailable
 
-Display API messages intended for users through the existing normalized problem/form surfaces;
-branch on stable codes and typed metadata, never on free text. Do not surface exception messages,
-provider descriptions or diagnostic payloads. The exact boundary is described with the live code in
-[states.md](references/states.md).
+| Situation                     | Copy and recovery                                                                                          |
+| ----------------------------- | ---------------------------------------------------------------------------------------------------------- |
+| Nothing has been created      | “Nenhum serviço ainda”, a brief explanation and the creation action                                        |
+| Applied filters match nothing | Say nothing matched and offer Limpar busca/filtros                                                         |
+| Data did not load             | Explain the failure and show recovery; never claim that no records exist                                   |
+| Data is loading               | The existing skeleton and `aria-busy`; if text is needed, name the content, such as “Carregando serviços…” |
 
-Keep ordinary copy with its rendering component and reusable code-to-message data in the owning
-slice's `model/`. Reuse [shared/format](../../../apps/admin-frontend/src/shared/format/) for display
-helpers and [shared/values](../../../apps/admin-frontend/src/shared/values/) for domain parsing and
-validation. Do not introduce an i18n catalog or new formatting abstraction for a single wording edit.
+Decide from the applied filters and the loading state, never from an absent response. A destination
+not built yet explains what it will do and gives a working way back, without a date or fake rows.
+
+## Confirmation and success
+
+Describe the record and the real consequence; check whether deletion is soft, recoverable or blocked
+by related data before promising anything. The confirmation button repeats the verb, such as
+Excluir, never “Sim” or “OK”. Follow the screen's existing success feedback without duplicate
+notifications, short and specific: “Pessoa cadastrada”, “Etiqueta atualizada”.
+
+Keep ordinary copy with its component and reusable code-to-message data in the slice's `model/`. Reuse
+[shared/format](../../../apps/admin-frontend/src/shared/format/) and
+[shared/values](../../../apps/admin-frontend/src/shared/values/); do not add an i18n catalog or a
+formatting abstraction for a single wording edit.

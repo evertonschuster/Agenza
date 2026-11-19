@@ -1,6 +1,6 @@
 ---
 name: agenza-tenant-isolation
-description: Trace tenant authority and isolation when changing authentication, tenant-scoped HTTP or persistence, session identity, or delegated AI-service calls.
+description: Traces tenant authority and isolation across .NET, the browser session and the AI service (tenant, login, sessão, token, X-Tenant-Id, multi-tenant). Use when changing authentication, tenant-scoped HTTP or persistence, session identity or AI delegation, when building or reviewing. Not for operation-level permissions (backend ARCHITECTURE §5, Tenant).
 ---
 
 # Review tenant isolation
@@ -43,4 +43,4 @@ Tenant isolation is distinct from operation-level permission. Inspect the endpoi
 authorization policy; neither a hidden UI control nor a valid tenant proves that every action
 is permitted. If a new machine/background operation needs tenant data, require an explicit
 tenant-scoped identity design rather than weakening the existing boundary
-([ADR 0004](../../../docs/decisions/0004-multi-tenancy.md)).
+([decisions/platform.md](../../../docs/decisions/platform.md)).

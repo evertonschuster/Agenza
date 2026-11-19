@@ -1,16 +1,15 @@
 # Backend — .NET services
 
-Use the [solution](AdminBackend.slnx) and repository pins:
-[SDK](global.json), [packages](Directory.Packages.props) and
-[local tools](.config/dotnet-tools.json).
+Use the [solution](AdminBackend.slnx) and repository pins: [SDK](global.json),
+[packages](Directory.Packages.props) and [local tools](.config/dotnet-tools.json).
 
-| Reference                                | Purpose                                                                                |
-| ---------------------------------------- | -------------------------------------------------------------------------------------- |
-| [AGENTS.md](AGENTS.md)                   | Task routing and critical invariants                                                   |
-| [Architecture](docs/ARCHITECTURE.md)     | Current rules, reference implementations and known limits                              |
-| [HTTP conventions](../docs/API.md)       | Boundary conventions; check the controller and OpenAPI for an endpoint's current shape |
-| [Decisions](../docs/decisions/README.md) | Durable decisions and rejected alternatives                                            |
-| [Quality gates](../docs/QUALITY.md)      | What the checks measure                                                                |
+| Reference                             | Purpose                                                                                |
+| ------------------------------------- | -------------------------------------------------------------------------------------- |
+| [AGENTS.md](AGENTS.md)                | Task routing and critical invariants                                                   |
+| [Architecture](docs/ARCHITECTURE.md)  | Current rules, reference implementations and known limits                              |
+| [HTTP conventions](../docs/API.md)    | Boundary conventions; check the controller and OpenAPI for an endpoint's current shape |
+| [Decisions](../docs/decisions/)       | Durable decisions and rejected alternatives                                            |
+| [Development](../docs/DEVELOPMENT.md) | Local stack and what the checks measure                                                |
 
 ## Commands
 
@@ -23,8 +22,19 @@ dotnet test AdminBackend.slnx -c Release
 dotnet run --project AppHost --launch-profile http
 ```
 
-The AppHost is the local stack entry point; preparation is in
-[MONOREPO](../docs/MONOREPO.md). It orchestrates the database, services and frontend through Aspire.
+The AppHost is the local stack entry point; preparation is in [DEVELOPMENT](../docs/DEVELOPMENT.md).
+It orchestrates the database, services and frontend through Aspire.
+
+### Migrations
+
+Run from the service's Api folder with the pinned `dotnet ef`, so the design-time factory reads
+`appsettings.Development.json`; neither command connects to a database:
+
+```bash
+cd backend/services/<service>/<Service>.Api
+dotnet ef migrations add <Name> --project ../<Service>.Infrastructure
+dotnet ef migrations has-pending-model-changes --project ../<Service>.Infrastructure
+```
 
 Build and test settings are in [Directory.Build.props](Directory.Build.props),
 [Directory.Build.targets](Directory.Build.targets) and the
@@ -32,5 +42,5 @@ Build and test settings are in [Directory.Build.props](Directory.Build.props),
 locally; EF InMemory persistence tests cover selected tenant behaviors, not PostgreSQL enforcement.
 Use [architecture §9](docs/ARCHITECTURE.md#9-tests) to select the appropriate verification tier.
 
-For an exclusively documentary change, compare the relevant source, check links and formatting,
-and review the diff. Do not treat a local command not executed as a passing result.
+For an exclusively documentary change, compare the relevant source, check links and formatting, and
+review the diff. Do not treat a local command not executed as a passing result.

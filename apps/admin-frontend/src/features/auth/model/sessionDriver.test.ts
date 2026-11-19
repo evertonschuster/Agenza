@@ -179,7 +179,7 @@ describe('login', () => {
     themeStore.reset();
   });
 
-  it('sends the current resolved theme as an extension parameter (ADR 0008, 0013)', async () => {
+  it('sends the current resolved theme as an extension parameter', async () => {
     themeStore.setChoice('dark');
     mockSigninRedirect.mockResolvedValue(undefined);
 

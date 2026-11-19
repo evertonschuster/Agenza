@@ -1,7 +1,7 @@
 # Platform vision — target architecture
 
 Where this monorepo is heading. Agents: treat this as the map when
-deciding _where_ new code belongs; treat `MONOREPO.md` as the map of
+deciding _where_ new code belongs; the [root AGENTS](../AGENTS.md) maps
 what exists _today_.
 
 ## Frontends — always React (`apps/*`)
@@ -13,7 +13,7 @@ what exists _today_.
 | `company-site`   | planned | Company marketing site — mostly static, SEO-focused                                                                                          |
 
 All React + TypeScript, npm workspaces. New apps copy `admin-frontend`'s
-tooling (Vite, Vitest, ESLint boundaries) unless an ADR says otherwise.
+tooling (Vite, Vitest, ESLint boundaries) unless a decision says otherwise.
 `packages/shared-types` held shared DTO/contract types at one point but was
 removed as unused while `admin-frontend` is the only Node app in the
 workspace — recreate it once `user-app` or `company-site` actually exist and
@@ -21,7 +21,7 @@ need to share contracts with `admin-frontend`, rather than before.
 
 ## Backend — context-aggregated .NET services (`backend/services/*`)
 
-Not fine-grained microservices (ADR 0002): each service is a small,
+Not fine-grained microservices: each service is a small,
 explicit-purpose monolith owning one business context end-to-end —
 its own domain model, its own schema, its own API.
 

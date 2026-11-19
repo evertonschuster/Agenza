@@ -13,17 +13,17 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { checkDocumentation, entryDocuments } from './checkDocs.mjs';
+import { checkDocumentation, entryDocuments, frontmatterProblems } from './checkDocs.mjs';
 
 const skill = '.claude/skills/agenza-example/SKILL.md';
-const adrIndex = 'docs/decisions/README.md';
-const currentAdrs =
-  '## Decisões vigentes por assunto\n\n| Assunto | ADRs vigentes |\n| --- | --- |\n| Test | 0001 |\n';
 
 function write(root, file, text) {
   mkdirSync(dirname(join(root, file)), { recursive: true });
   writeFileSync(join(root, file), text);
 }
+
+const skillRoute = `\n## Skills\n\n| Task | Skill |\n| --- | --- |\n| Example | [Example skill](${skill}) |\n`;
+const description = 'Checks documentation. Use when a guide changes. Not for code.';
 
 function fixture(t, files = {}) {
   const root = mkdtempSync(join(tmpdir(), 'agenza-docs-'));
@@ -34,15 +34,11 @@ function fixture(t, files = {}) {
   for (const file of entryDocuments) {
     write(root, file, '# Fixture\n');
   }
-  write(root, adrIndex, currentAdrs);
-  write(root, 'docs/decisions/0001-test.md', '# Decision\n');
-  write(
-    root,
-    skill,
-    '---\nname: agenza-example\ndescription: Use when checking documentation.\n---\n',
-  );
+  write(root, 'docs/decisions/example.md', '# Decision\n');
+  write(root, skill, `---\nname: agenza-example\ndescription: ${description}\n---\n`);
+  write(root, 'AGENTS.md', `# Fixture\n${skillRoute}`);
   for (const [file, text] of Object.entries(files)) {
-    write(root, file, text);
+    write(root, file, file === 'AGENTS.md' ? text + skillRoute : text);
   }
   return root;
 }
@@ -51,7 +47,7 @@ test('accepts existing nested, encoded, root-relative and reference destinations
   const root = fixture(t, {
     'AGENTS.md':
       '[Nested\nlabel](<docs/Folder With Spaces/Guide (draft).md> "Guide")\n' +
-      '[Encoded](docs/Folder%20With%20Spaces/Guide%20(draft).md#missing-anchor)\n' +
+      '[Encoded](docs/Folder%20With%20Spaces/Guide%20(draft).md#guide)\n' +
       '[Balanced](docs/guide(draft).md)\n' +
       '![Image](/docs/image.png)\n[Guide][ref]\n[ref]: docs/guide(draft).md\n',
     'docs/Folder With Spaces/Guide (draft).md': '# Guide\n',
@@ -59,6 +55,27 @@ test('accepts existing nested, encoded, root-relative and reference destinations
     'docs/image.png': 'fixture',
   });
   assert.deepEqual(checkDocumentation(root).errors, []);
+});
+
+test('checks fragments against the headings of the target and of the same file', (t) => {
+  const root = fixture(t, {
+    'AGENTS.md':
+      '# Top\n\n[ok](docs/guide.md#3-auth--tenancy) [same](#top) [dup](docs/guide.md#again-1)\n' +
+      '[bad](docs/guide.md#nope) [badsame](#missing) [fenced](docs/guide.md#fenced)\n',
+    'docs/guide.md':
+      '# Guide\n\n## 3. Auth & `tenancy`\n\n## Again\n\n## Again\n\n```md\n## Fenced\n```\n',
+  });
+  const missing = (target) => ({
+    file: 'AGENTS.md',
+    line: 4,
+    message: 'Âncora ausente no documento de destino.',
+    target,
+  });
+  assert.deepEqual(checkDocumentation(root).errors, [
+    missing('docs/guide.md#nope'),
+    missing('#missing'),
+    missing('docs/guide.md#fenced'),
+  ]);
 });
 
 test('reports a deleted target with its source line and destination', (t) => {
@@ -78,11 +95,11 @@ test('reports a deleted target with its source line and destination', (t) => {
   ]);
 });
 
-test('ignores external links, isolated fragments, placeholders, code and comments', (t) => {
+test('ignores external links, queries, placeholders, code and comments', (t) => {
   const root = fixture(t, {
     'AGENTS.md':
       '[Web](https://example.invalid/missing) [Mail](mailto:user@example.invalid)\n' +
-      '[CDN](//example.invalid/a) [Fragment](#missing) [Query](?tab=missing)\n' +
+      '[CDN](//example.invalid/a) [Query](?tab=missing)\n' +
       '[Template](docs/[FEATURE]/notes.md)\n' +
       '`[Inline](missing.md)`\n<!-- [Comment](missing.md) -->\n' +
       '```md\n[Code](missing.md)\n```\n~~~md\n[Code](missing.md)\n~~~\n',
@@ -130,89 +147,11 @@ test('does not reinterpret comment delimiters inside code or code inside comment
   }
 });
 
-test('validates only the current ADR column, including amended references', (t) => {
-  const root = fixture(t, {
-    [adrIndex]:
-      currentAdrs +
-      '| 7777 in concern | 0001 as amended by 9999 |\n' +
-      '\nHistorical note 8888.\n\n## Superseded decisions\n\n| ADR | Replaced by |\n| --- | --- |\n| 6666 | 5555 |\n',
-  });
-  assert.deepEqual(checkDocumentation(root).errors, [
-    {
-      file: adrIndex,
-      line: 6,
-      message: 'ADR vigente deve corresponder a um único arquivo.',
-      target: '9999',
-    },
-  ]);
-});
-
-test('fails if the current ADR table disappears instead of silently skipping it', (t) => {
-  const root = fixture(t, { [adrIndex]: '# Index\n\n## Complete register\n0001\n' });
-  assert.equal(
-    checkDocumentation(root).errors[0].message,
-    'Tabela de decisões vigentes não encontrada.',
-  );
-});
-
-test('validates current ADR IDs formatted as inline code', (t) => {
-  const root = fixture(t, { [adrIndex]: currentAdrs + '| Code | `9999` |\n' });
-  assert.deepEqual(checkDocumentation(root).errors, [
-    {
-      file: adrIndex,
-      line: 6,
-      message: 'ADR vigente deve corresponder a um único arquivo.',
-      target: '9999',
-    },
-  ]);
-});
-
-test('requires an unambiguous current ADR file', (t) => {
-  const root = fixture(t, { 'docs/decisions/0001-duplicate.md': '# Duplicate\n' });
-  assert.equal(checkDocumentation(root).errors[0].target, '0001');
-});
-
-test('accepts quoted and multiline required skill metadata', (t) => {
-  const root = fixture(t, {
-    [skill]:
-      '---\nname: "agenza-example"\ndescription: >-\n  Check links and\n  required metadata.\n---\n',
-  });
-  assert.deepEqual(checkDocumentation(root).errors, []);
-  write(root, skill, '---\nname: agenza-example\ndescription: "Check # links" # note\n---\n');
-  assert.deepEqual(checkDocumentation(root).errors, []);
-  write(root, skill, '---\nname: 123-example\ndescription: 123 examples to check.\n---\n');
-  assert.deepEqual(checkDocumentation(root).errors, []);
-});
-
-test('rejects missing, empty, non-text, duplicate and invalid skill metadata', async (t) => {
-  const cases = [
-    ['missing frontmatter', '# Skill\n'],
-    ['missing description', '---\nname: agenza-example\n---\n'],
-    ['empty description', '---\nname: agenza-example\ndescription: ""\n---\n'],
-    ['comment-only description', '---\nname: agenza-example\ndescription: # No value\n---\n'],
-    ['non-text description', '---\nname: agenza-example\ndescription: false\n---\n'],
-    [
-      'duplicate name',
-      '---\nname: agenza-example\nname: duplicate\ndescription: Check links.\n---\n',
-    ],
-    ['invalid name', '---\nname: Invalid Name\ndescription: Check links.\n---\n'],
-    ['empty block', '---\nname: agenza-example\ndescription: >\nmetadata:\n  owner: team\n---\n'],
-  ];
-  for (const [name, text] of cases) {
-    await t.test(name, (context) => {
-      const root = fixture(context, { [skill]: text });
-      const errors = checkDocumentation(root).errors;
-      assert.ok(errors.length > 0);
-      assert.ok(errors.every((error) => error.file === skill));
-    });
-  }
-});
-
 test('checks links inside decision records', (t) => {
-  const root = fixture(t, { 'docs/decisions/0001-test.md': '[Guide](../missing.md)\n' });
+  const root = fixture(t, { 'docs/decisions/example.md': '[Guide](../missing.md)\n' });
   assert.deepEqual(
     checkDocumentation(root).errors.map(({ file, target }) => ({ file, target })),
-    [{ file: 'docs/decisions/0001-test.md', target: '../missing.md' }],
+    [{ file: 'docs/decisions/example.md', target: '../missing.md' }],
   );
 });
 
@@ -229,12 +168,39 @@ test('reports a removed active document or skill entry point', (t) => {
   const root = fixture(t);
   rmSync(join(root, 'backend/AGENTS.md'));
   rmSync(join(root, skill));
-  const errors = checkDocumentation(root).errors;
   assert.deepEqual(
-    errors.map((error) => error.file),
-    ['backend/AGENTS.md', skill],
+    checkDocumentation(root).errors.map(({ file, message }) => `${file}: ${message}`),
+    [
+      'AGENTS.md: Destino local ausente.',
+      'backend/AGENTS.md: Documento ativo ausente.',
+      `${skill}: Documento ativo ausente.`,
+    ],
   );
-  assert.ok(errors.every((error) => error.message === 'Documento ativo ausente.'));
+});
+
+test('reports a skill missing from the Skills section of the root AGENTS', async (t) => {
+  const missing = [
+    {
+      file: 'AGENTS.md',
+      line: 1,
+      message: 'Skill sem rota na seção Skills do AGENTS da raiz.',
+      target: skill,
+    },
+  ];
+  for (const [name, text] of [
+    ['no link', '# Fixture\n'],
+    ['link outside the section', `# Fixture\n\n[Example](${skill})\n\n## Skills\n\nNone.\n`],
+    ['link after the section', `## Skills\n\nNone.\n\n## Other\n\n[Example](${skill})\n`],
+    ['link in prose, not in a table row', `## Skills\n\nSee [Example](${skill}).\n`],
+  ]) {
+    await t.test(name, (context) => {
+      const root = fixture(context, {
+        'backend/AGENTS.md': skillRoute.replace(skill, '../' + skill),
+      });
+      write(root, 'AGENTS.md', text);
+      assert.deepEqual(checkDocumentation(root).errors, missing);
+    });
+  }
 });
 
 test('rejects targets outside the repository and malformed URL encoding', (t) => {
@@ -324,7 +290,7 @@ test('ignores escaped opening backticks and keeps backslashes literal inside cod
       target: 'missing.md',
     },
   ]);
-  write(root, 'AGENTS.md', '`Example\\` [Broken](missing.md)\n');
+  write(root, 'AGENTS.md', '`Example\\` [Broken](missing.md)\n' + skillRoute);
   assert.deepEqual(checkDocumentation(root).errors, [
     {
       file: 'AGENTS.md',
@@ -408,34 +374,6 @@ test('does not read a reference destination across a blank line', (t) => {
   ]);
 });
 
-test('decodes YAML hexadecimal and Unicode escapes in required metadata', (t) => {
-  const root = fixture(t, {
-    [skill]: '---\nname: "\\x61genza-example"\ndescription: "\\x41ction checks \\U0001F600"\n---\n',
-  });
-  assert.deepEqual(checkDocumentation(root).errors, []);
-  write(root, skill, '---\nname: "\\x41genza-example"\ndescription: Check links.\n---\n');
-  assert.deepEqual(checkDocumentation(root).errors, [
-    {
-      file: skill,
-      line: 2,
-      message: 'Nome de skill inválido; use letras minúsculas, números e hífens.',
-      target: 'Agenza-example',
-    },
-  ]);
-});
-
-test('keeps an escaped table pipe inside the concern cell', (t) => {
-  const root = fixture(t, { [adrIndex]: currentAdrs + '| Rendering \\| navigation | 9999 |\n' });
-  assert.deepEqual(checkDocumentation(root).errors, [
-    {
-      file: adrIndex,
-      line: 6,
-      message: 'ADR vigente deve corresponder a um único arquivo.',
-      target: '9999',
-    },
-  ]);
-});
-
 test('decodes HTML entities once in bare and angle-delimited destinations', (t) => {
   const root = fixture(t, {
     'AGENTS.md':
@@ -453,21 +391,6 @@ test('decodes HTML entities once in bare and angle-delimited destinations', (t) 
   assert.deepEqual(checkDocumentation(root).errors, []);
 });
 
-test('reports invalid YAML escapes without calling the required field empty', (t) => {
-  const root = fixture(t);
-  for (const escape of ['\\q', '\\x4', '\\U00110000']) {
-    write(root, skill, '---\nname: agenza-example\ndescription: "' + escape + '"\n---\n');
-    assert.deepEqual(checkDocumentation(root).errors, [
-      {
-        file: skill,
-        line: 3,
-        message: 'Escape YAML inválido em valor entre aspas.',
-        target: 'description',
-      },
-    ]);
-  }
-});
-
 test('diagnoses unsupported named entities locally while ignoring external URLs', (t) => {
   const root = fixture(t, {
     'AGENTS.md': '[Local](docs/caf&eacute;.md)\n[Web](https://example.invalid/?q=&eacute;)\n',
@@ -480,4 +403,104 @@ test('diagnoses unsupported named entities locally while ignoring external URLs'
       target: 'docs/caf&eacute;.md',
     },
   ]);
+});
+
+test('accepts a skill frontmatter that hosts can parse', () => {
+  assert.deepEqual(
+    frontmatterProblems(
+      `---\nname: agenza-example\ndescription: ${description}\n---\n`,
+      'agenza-example',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    frontmatterProblems(
+      '---\nname: agenza-example\ndescription: "Use when a: b. Not for c."\n---\n',
+      'agenza-example',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    frontmatterProblems(
+      "---\nname: 'agenza-example'\ndescription: >-\n  Checks forms. Use when a form\n  changes. Not for pages.\nallowed-tools:\n  - Read\n---\n",
+      'agenza-example',
+    ),
+    [],
+  );
+});
+
+test('reports a trailing colon and points at the line of the field', () => {
+  const lines = (text) => frontmatterProblems(text, 'agenza-example').map(({ line }) => line);
+  assert.deepEqual(
+    lines('---\nname: agenza-example\ndescription: Use when a form changes. Not for:\n---\n'),
+    [3],
+  );
+  assert.deepEqual(
+    lines('---\ndescription: Checks forms.\nlicense: MIT\nname: agenza-other\n---\n'),
+    [4, 2],
+  );
+  assert.deepEqual(lines('---\nlicense: MIT\n---\n'), [1, 1]);
+});
+
+test('reports skill frontmatter that would break YAML or routing', () => {
+  const messages = (text) =>
+    frontmatterProblems(text, 'agenza-example').map(({ line, target }) => `${line} ${target}`);
+  assert.deepEqual(messages('# No frontmatter\n'), ['1 ---']);
+  assert.deepEqual(messages('---\nname: agenza-example\n'), ['1 ---']);
+  assert.deepEqual(
+    messages('---\nname: agenza-example\ndescription: Use when: forms. Not for pages.\n---\n'),
+    ['3 description'],
+  );
+  assert.deepEqual(messages(`---\nname: agenza-other\ndescription: ${description}\n---\n`), [
+    '2 agenza-example',
+  ]);
+  assert.deepEqual(messages('---\nname: agenza-example\ndescription: Checks forms.\n---\n'), [
+    '3 description',
+  ]);
+  assert.deepEqual(
+    messages(
+      `---\nname: agenza-example\ndescription: Use x. Not for y. ${'z'.repeat(1024)}\n---\n`,
+    ),
+    ['3 description'],
+  );
+  assert.deepEqual(
+    messages(`---\nname: agenza-example\ndescription: ${description}\nbroken\n---\n`),
+    ['4 broken'],
+  );
+});
+
+test('reports a repeated key and a quoted value YAML cannot read', () => {
+  const messages = (text) =>
+    frontmatterProblems(text, 'agenza-example').map(({ line, target }) => `${line} ${target}`);
+  assert.deepEqual(
+    messages(`---\nname: agenza-example\nname: agenza-example\ndescription: ${description}\n---\n`),
+    ['3 name'],
+  );
+  assert.deepEqual(
+    messages('---\nname: agenza-example\ndescription: "Use \\q. Not for code."\n---\n'),
+    ['3 description'],
+  );
+  assert.deepEqual(
+    messages('---\nname: agenza-example\ndescription: "Use a" and "Not for b"\n---\n'),
+    ['3 description'],
+  );
+  assert.deepEqual(
+    messages(
+      "---\nname: agenza-example\ndescription: 'Use it''s \"x\" \\q. Not for y.' # note\n---\n",
+    ),
+    [],
+  );
+  assert.deepEqual(
+    messages('---\nname: agenza-example\ndescription: "Use \\"a\\"\\t\\u00e9. Not for b."\n---\n'),
+    [],
+  );
+});
+
+test('reports a skill whose frontmatter breaks, from the documentation check', (t) => {
+  const root = fixture(t);
+  write(root, skill, '---\nname: agenza-example\ndescription: Use when: x. Not for y.\n---\n');
+  assert.deepEqual(
+    checkDocumentation(root).errors.map(({ file, target }) => `${file} ${target}`),
+    [`${skill} description`],
+  );
 });

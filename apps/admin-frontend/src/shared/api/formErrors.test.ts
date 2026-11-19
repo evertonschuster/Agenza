@@ -5,7 +5,7 @@ import { toFormErrors } from './formErrors';
 const FIELDS = ['name', 'color', 'description'] as const;
 
 describe('toFormErrors', () => {
-  it('maps PascalCase FluentValidation keys to the matching form field (docs/API.md §4.1)', () => {
+  it('maps PascalCase FluentValidation keys to the matching form field', () => {
     const problem: ApiProblem = {
       status: 400,
       code: 'Validation.Failed',

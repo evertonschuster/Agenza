@@ -1,68 +1,60 @@
 ---
 name: agenza-ui-primitive
-description: Add or change shared UI primitives in the admin frontend, including Base UI composition, generated components, theme tokens and accessible interactions.
+description: Adds or changes shared admin-frontend UI primitives — Base UI composition, shadcn-generated components, theme tokens, tooltips and focus (componente, botão, diálogo, tema, cor). Use when shared/ui or the theme changes. Not for copy (agenza-ptbr-copy) or feature screens (agenza-frontend-slice).
 ---
 
 # Shared UI primitives
 
-Use the [frontend architecture](../../../apps/admin-frontend/docs/ARCHITECTURE.md) for layer boundaries
-and component organization. Primitives can own interaction state and behaviour; domain rules and API
-requests belong to the feature that uses them.
+## Reuse and compose
 
-## Reuse and composition
-
-Search `src/shared/ui/` for the role and existing variants before adding a component. Read
+Search `src/shared/ui/` for the role and its variants before adding a component, and read
 [`button/index.tsx`](../../../apps/admin-frontend/src/shared/ui/button/index.tsx) for the local cva,
-`data-slot`, `data-variant` and `data-size` conventions.
-
-The library is Base UI. Compose its parts with `render`, rather than Radix's `asChild`/`Slot`:
+`data-slot`, `data-variant` and `data-size` conventions. The library is Base UI: compose parts with
+`render`, not Radix's `asChild`/`Slot`:
 
 ```tsx
 <DialogClose render={<Button variant="outline" />}>Fechar</DialogClose>
 ```
 
-Use `ActionButton` for actions and `ActionLink` for navigation styled as a button. `ActionButton`'s
-`pending` state supplies the spinner and prevents activation while retaining focus. Preserve Base
-UI's keyboard and focus behaviour when wrapping a part.
+`ActionButton` is for actions and `ActionLink` for navigation styled as a button; `ActionButton`'s
+`pending` supplies the spinner and blocks activation while keeping focus.
 
 ## Generate when needed
 
-From `apps/admin-frontend/`, use the existing CLI pin:
+From `apps/admin-frontend/`, with the CLI version pinned here (this line is its only source):
 
 ```bash
 npx shadcn@4.21.0 add <name>
 ```
 
-[`components.json`](../../../apps/admin-frontend/components.json) selects the `base-nova` registry
-style and the local aliases. The documentation site's library tab does not configure the CLI.
-The CLI pin does not freeze registry component source: review the generated code and dependency diff.
+[`components.json`](../../../apps/admin-frontend/components.json) selects the `base-nova` style and the
+local aliases. The pin does not freeze registry source, so review the generated code and dependencies:
 
-- Move flat generated output into the component folder required by the architecture; split types and
-  subparts when their contents justify it.
-- Use `@/shared/lib/utils` for `cn`. The existing bare-`cn` aliases can make generated imports compile
-  while an unwanted npm dependency remains; remove that dependency if the CLI adds it.
-- Check for unexpected Radix dependencies and use the configured Lucide icons.
-- For dependency changes, follow the single [lockfile procedure](../../../apps/admin-frontend/README.md#lockfile).
+- Move flat output into the component folder the architecture requires.
+- Import `cn` from `@/shared/lib/utils`. The bare-`cn` aliases let generated imports compile while an
+  unwanted npm dependency stays; remove it if the CLI adds it.
+- Remove unexpected Radix dependencies and use the configured Lucide icons. Dependency changes follow
+  the [lockfile procedure](../../../apps/admin-frontend/README.md#lockfile).
 
-## Adapt the output
+## Style, focus and keyboard
 
-Check the [TypeScript configuration](../../../apps/admin-frontend/tsconfig.json). In particular,
-`exactOptionalPropertyTypes` requires `prop?: T | undefined` when a forwarded optional value can be
-`undefined`; `verbatimModuleSyntax` requires type imports, and `noUncheckedIndexedAccess` requires
-handling a missing indexed value.
+Tokens, themes, overlay transitions and backend colours: [tokens.md](references/tokens.md).
 
-For styling, read [tokens.md](references/tokens.md): semantic utilities, attribute-driven themes,
-overlay transitions and backend-supplied colours. For tooltips, accessible names and focus, read
-[interaction.md](references/interaction.md).
+- An icon-only control needs a pt-BR accessible name; a labelled control's name matches its visible
+  label; decorative icons use `aria-hidden="true"`. The action must make sense without a tooltip.
+- Use the Base UI tooltip parts so content opens on focus as well as hover; after changing a wrapper,
+  check that `Esc` dismisses it, the pointer can move onto it, and it stays until dismissed. A `title`
+  attribute is not a tooltip.
+- Keep the part's focus trap, focus return, roving tabindex and keyboard navigation instead of parallel
+  handlers. With nested overlays, `Esc` closes the right one and focus returns to its trigger.
+- Whether `element.focus()` shows `:focus-visible` depends on the last interaction: after a key it
+  usually does, after a click it does not. Check focus rings after a real Tab and a real click,
+  including focus moved into a dialog.
+  Controls nested in `input-group` need `ring-offset-0` beside `ring-0`.
 
-## Verify the changed behaviour
+## Verify
 
-Assert the visible or accessible effect of a changed prop or interaction, rather than only rendering
-it without an error. Exercise pending/disabled states, keyboard operation and focus when affected.
-Check both themes for visual changes.
-
-Read [`vitest.config.ts`](../../../apps/admin-frontend/vitest.config.ts) for the current coverage
-exclusions. They name individual paths; `shared/ui/` has no blanket exemption. An exclusion neither
-forbids local UI behaviour nor removes the need to test a meaningful regression.
-
-Run the relevant checks from the [frontend README](../../../apps/admin-frontend/README.md#comandos).
+Assert the visible or accessible effect of a changed prop or interaction, including pending/disabled
+states, keyboard operation and focus when affected, and check both themes for visual changes. From
+`apps/admin-frontend/`, run the affected tests, `npm run lint` and `npm run build`, fix and repeat; finish
+with `npm run test:coverage` ([agenza-testing](../agenza-testing/SKILL.md) for coverage scope).

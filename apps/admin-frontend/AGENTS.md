@@ -1,61 +1,42 @@
-# admin-frontend — instruções para agentes
+# admin-frontend — instructions for agents
 
-Complementa o [AGENTS da raiz](../../AGENTS.md). Versões vêm dos pins e do lockfile;
-implementação e gates vêm do código e da configuração.
+Complements the [root AGENTS](../../AGENTS.md).
 
-## Consulta por tarefa
+## Lookup by task
 
-Abra somente o que a mudança exigir:
+Open only what the change needs:
 
-| Mudança                                     | Referência                                                                                        |
-| ------------------------------------------- | ------------------------------------------------------------------------------------------------- |
-| Limites entre camadas, páginas ou listas    | [Arquitetura §1](docs/ARCHITECTURE.md#1-shape)                                                    |
-| Consumo HTTP, erros ou tipos gerados        | [Arquitetura §2](docs/ARCHITECTURE.md#2-talking-to-the-backend) e código de contrato indicado ali |
-| Autenticação e tenant                       | [Arquitetura §3](docs/ARCHITECTURE.md#3-auth--tenancy)                                            |
-| Planejamento de feature                     | [Fluxo da raiz](../../AGENTS.md#fluxo-de-trabalho)                                                |
-| Por que algo é assim, o que já foi recusado | [ADRs 0012 e 0013](../../docs/decisions/README.md)                                                |
-| Ambiente, comandos ou dependências          | [README](README.md), inclusive [lockfile](README.md#lockfile)                                     |
+| Change                                        | Reference                                                                                       |
+| --------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| Layer boundaries, pages or lists              | [Architecture §1](docs/ARCHITECTURE.md#1-shape)                                                 |
+| HTTP consumption, errors or generated types   | [Architecture §2](docs/ARCHITECTURE.md#2-talking-to-the-backend) and the contract code it names |
+| Authentication and tenant                     | [Architecture §3](docs/ARCHITECTURE.md#3-auth--tenancy)                                         |
+| Why something is so, what was already refused | [decisions/frontend.md](../../docs/decisions/frontend.md)                                       |
+| Environment, commands or dependencies         | [README](README.md), including the [lockfile](README.md#lockfile)                               |
 
-## Invariantes do frontend
+## Frontend invariants
 
-- TypeScript estrito: não enfraqueça o [tsconfig](tsconfig.json) nem introduza `any` implícito.
-- `app → features → widgets → shared`; consumidores externos acessam uma feature pelo barril.
-  O [ESLint](eslint.config.js) verifica direção entre camadas e esse limite público.
-- Páginas compõem e renderizam a UI; estado, efeitos e handlers ficam no hook da página.
-  Reutilização genérica fica em shared/widgets conforme a responsabilidade.
-- Listas usam estado controlado: Pessoas e Etiquetas o fornecem por `useSearchParamsState`.
-  O formulário de filtros não dispara busca ao digitar; ações aplicam a consulta.
-- `servicesApi` devolve `ApiResult`; token, tenant, versão e envelope pertencem à camada HTTP.
-  Mutação mantém falhas esperadas como valores; `unwrapOrThrow` existe na fronteira do framework.
-  Tipos de wire vêm do contrato gerado; não escreva `fetch` à mão nem duplique DTOs de wire.
-- Ramifique por código/status, nunca interpretando texto de erro.
-- Use controles existentes, tokens semânticos e o comportamento de teclado/foco do primitivo.
-  Todo controle precisa de nome acessível; conteúdo visível segue pt-BR.
+- Strict TypeScript: do not weaken the [tsconfig](tsconfig.json) or introduce an implicit `any`.
+- `app → features → widgets → shared`; outside consumers reach a feature through its barrel. The
+  [ESLint](eslint.config.js) rule checks the direction between layers and that public boundary.
+- Pages compose and render the UI; state, effects and handlers live in the page's hook. Generic
+  reuse lives in shared/widgets according to its responsibility.
+- List pages keep controlled state in the query string with `useSearchParamsState`. The filter form
+  does not search while typing; actions apply the query.
+- `servicesApi` returns an `ApiResult`; token, tenant, version and envelope belong to the HTTP
+  layer. Mutations keep expected failures as values; `unwrapOrThrow` is only for the framework
+  boundary. Wire types come from the generated contract; do not hand-write `fetch` or duplicate wire
+  DTOs.
+- Branch on code/status, never by interpreting error text.
+- Use existing controls, semantic tokens and the primitive's keyboard/focus behavior. Every control
+  needs an accessible name; visible content is pt-BR.
+- TypeScript signatures on one line: past 100 columns, take the object whole and destructure it in
+  the body.
 
-## Skills
+## Validation
 
-As fontes estão em `.claude/skills/` na raiz. Se o host não as descobrir, abra o arquivo pelo
-caminho abaixo; esta é leitura explícita, não promessa de descoberta nativa. Leia referências
-adicionais apenas quando a tarefa tocar no assunto.
-
-| Tarefa                | Skill                                                                            |
-| --------------------- | -------------------------------------------------------------------------------- |
-| Fatia frontend        | [agenza-frontend-slice](../../.claude/skills/agenza-frontend-slice/SKILL.md)     |
-| Primitivo de UI       | [agenza-ui-primitive](../../.claude/skills/agenza-ui-primitive/SKILL.md)         |
-| Formulário            | [agenza-form-field](../../.claude/skills/agenza-form-field/SKILL.md)             |
-| Tipos e contrato HTTP | [agenza-api-contract](../../.claude/skills/agenza-api-contract/SKILL.md)         |
-| Testes e cobertura    | [agenza-testing](../../.claude/skills/agenza-testing/SKILL.md)                   |
-| Texto e formatação    | [agenza-ptbr-copy](../../.claude/skills/agenza-ptbr-copy/SKILL.md)               |
-| Isolamento de tenant  | [agenza-tenant-isolation](../../.claude/skills/agenza-tenant-isolation/SKILL.md) |
-
-## Validação
-
-Use os [comandos do app](README.md#comandos) e confira os
-[gates aplicáveis](../../.github/workflows/frontend-ci.yml). Limiares e exclusões de cobertura
-estão no [Vitest](vitest.config.ts); uma pasta de UI não é isenta por definição. Não rebaixe
-limiares nem dispense gates para a mudança passar.
-`exactOptionalPropertyTypes` exige atenção a props opcionais repassadas por spread.
-Alterou contrato? Regenere os tipos no PR backend correspondente e execute a checagem com o serviço.
-
-Para alteração exclusivamente documental, confira referências, formatação e diff. Não crie testes
-de aplicação para validar redação nem execute a suíte inteira por esse motivo.
+Use the [app commands](README.md#commands) and check the
+[applicable gates](../../.github/workflows/frontend-ci.yml). Coverage thresholds and exclusions are
+in [Vitest](vitest.config.ts); a UI folder is not exempt by definition. Do not lower thresholds or
+skip gates to make a change pass. `exactOptionalPropertyTypes` needs care with optional props
+forwarded by spread.

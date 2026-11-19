@@ -1,9 +1,9 @@
-# Copilot — instruções
+# Copilot — instructions
 
-Leia o [AGENTS da raiz](../AGENTS.md) e somente o guia da área afetada:
-[frontend](../apps/admin-frontend/AGENTS.md), [backend](../backend/AGENTS.md) ou
-[serviço de IA](../ai-services/assistant-service/README.md).
+Read the [root AGENTS](../AGENTS.md) and only the guide of the affected area:
+[frontend](../apps/admin-frontend/AGENTS.md), [backend](../backend/AGENTS.md) or the
+[AI service](../ai-services/assistant-service/README.md).
 
-Esta ponte encaminha a leitura; os links não são imports nativos. O suporte depende da superfície
-do Copilot e de seu acesso a arquivos. Quando houver acesso, abra os caminhos indicados para a
-tarefa; não declare que uma skill foi carregada sem verificar. As regras ficam no AGENTS aplicável.
+This bridge routes the reading; its links are not native imports. Support depends on the Copilot
+surface and its file access. When you have access, open the paths given for the task; do not claim a
+skill was loaded without checking. The rules live in the applicable AGENTS.

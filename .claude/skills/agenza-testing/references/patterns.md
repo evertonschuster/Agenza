@@ -46,7 +46,8 @@ mount request before starting the next one.
 For a form or dialog, use `userEvent.setup()` to operate the actual control and assert its effect:
 validation displayed, submission suppressed, successful save or closure. A render-only test does
 not prove the action works. Use accessible names; reserve test ids for values without an accessible
-query.
+query. In Testing Library a string `name` matches the whole accessible name; use a regex for part
+of it. Base UI toasts have `role="dialog"`.
 
 ## API transport seam
 
@@ -67,7 +68,13 @@ identity service's development configuration instead of copying credentials. Exa
 [clients.spec.ts](../../../../apps/admin-frontend/e2e/clients.spec.ts) and
 [tags.spec.ts](../../../../apps/admin-frontend/e2e/tags.spec.ts).
 
+Playwright locators match accessible names and text by substring: pass `exact: true` when one name
+contains another, such as a field control or an "Editar <nome>" row link.
+
 Keep the real stack and login flow. Derive generated ids from the session or response, wait for an
 observable state, and use reloads where they prove persistence. When checking logout, verify that
 the credentials form is reached again; a navigation that silently restores the session does not
 prove logout.
+
+Verify database-backed changes on a disposable PostgreSQL with its own port, never on the owner's
+running stack or the `agenza-postgres-data` volume.

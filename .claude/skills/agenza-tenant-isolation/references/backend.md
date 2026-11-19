@@ -16,15 +16,12 @@ for header/claim comparison.
   in DI alone does not install a global MVC filter.
   [services-service Program](../../../../backend/services/services-service/ServicesService.Api/Program.cs)
   is the tenant-owned API reference.
-- A missing/unparseable header, absent/unparseable claim or mismatch is rejected by the filter.
-  The accessor reads the authenticated principal, never the header being compared.
+- The accessor reads the authenticated principal, never the header being compared.
   Preserve `MapInboundClaims = false` where accessors depend on the token's original claim names.
 - Inspect any `IgnoreTenant` exception by endpoint and policy. A tenant-free provisioning endpoint
   needs its own authorization, as
   [TenantsController](../../../../backend/services/identity-service/IdentityService.Api/Controllers/TenantsController.cs)
   checks `identity-admin`. Do not install tenant requirements indiscriminately on OIDC endpoints.
-- A validated tenant does not establish a role/permission check. Follow the endpoint's actual
-  policy rather than assuming an additional authorization layer.
 
 ## Reads, writes and relationships
 
@@ -43,9 +40,7 @@ scope; unqualified `IgnoreQueryFilters()` disables both.
 For writes, trace
 [AuditableEntitySaveChangesInterceptor](../../../../backend/services/services-service/ServicesService.Infrastructure/Persistence/Interceptors/AuditableEntitySaveChangesInterceptor.cs)
 and its [tests](../../../../backend/services/services-service/ServicesService.PersistenceTests/AuditableEntitySaveChangesInterceptorTests.cs).
-It assigns the current tenant to an Added tenant-owned entity whose tenant is empty, or throws
-when the provider has none. It does not reassign a prepopulated tenant or independently validate
-the tenant on every Modified entity. Do not treat the interceptor as blanket write authorization:
+Do not treat the interceptor as blanket write authorization:
 trace how the entity entered the context and prevent a business caller from supplying its tenant.
 
 Inspect aggregate children, alternate keys and composite tenant FKs in the relevant configuration;
@@ -69,7 +64,7 @@ the resulting context rather than establishing a second authority from raw reque
 The context carries subject and scope; carrying scope is not an operation-level scope check.
 Health/readiness can remain tenant-free. A tenant-owned downstream call delegates the caller's
 access token with the validated header, as required by
-[ADR 0004](../../../../docs/decisions/0004-multi-tenancy.md).
+[decisions/platform.md](../../../../docs/decisions/platform.md).
 [ServiceTokenClient](../../../../ai-services/assistant-service/app/auth/service_token_client.py)
 only obtains/caches a client-credentials token; it does not add a tenant identity. Reserve it for
 explicitly tenant-free control-plane work. Background tenant access needs a designed job identity
@@ -83,7 +78,5 @@ The [AI-service tests](../../../../ai-services/assistant-service/tests/) exercis
 dependencies. Select existing cases that cover the changed behavior and add a regression when a
 meaningful case is missing; changing a test file is not itself the acceptance criterion.
 
-Real FK/role enforcement and concurrent uniqueness need PostgreSQL evidence. Follow
-[backend tests policy](../../../../backend/docs/ARCHITECTURE.md#9-tests) and report what was actually
-run on a disposable database. Historical ADR references to an architecture guard do not prove a
-current check exists. State which properties remain unverified.
+Real FK/role enforcement and concurrent uniqueness need PostgreSQL evidence on a disposable database,
+per the backend ARCHITECTURE, "9. Tests"; state which properties remain unverified.

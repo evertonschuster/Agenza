@@ -21,7 +21,9 @@ arrives as the same JavaScript type.
   and [DateField](../../../../apps/admin-frontend/src/shared/form/fields/components/date-field.tsx),
   which use UTC, Gregorian dates and Latin digits. Do not force `dd/mm/aaaa` for every browser.
 - Preserve `DateField`'s distinct values: an empty field is `null`; incomplete/impossible text is an
-  invalid `Date` that the schema rejects. Do not convert invalid input to an absent birth date.
+  invalid `Date` that the schema rejects. Do not convert invalid input to an absent birth date. Reuse
+  `BirthDateField`/`birthDateSchema` for birth-date bounds, and keep the calendar's keyboard focus and
+  the focus return when clearing from the input.
 
 For new agenda copy, Hoje/Amanhã/Ontem are calendar-day comparisons in the display zone, not
 differences smaller than 24 hours. Prefer an absolute time when the person must act on it; relative

@@ -304,7 +304,7 @@ describe('TagFormPage', () => {
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
     });
 
-    it('closes without creating when Cancelar is clicked, with the search the list had still on screen and in the address (ADR 0012)', async () => {
+    it('closes without creating when Cancelar is clicked, with the search the list had still on screen and in the address', async () => {
       const user = userEvent.setup();
       mockList.mockImplementation(({ search }: TagListQuery) =>
         Promise.resolve(
