@@ -11,8 +11,7 @@ podem criar sua identificação e abrir o login sem editar `client_id` na config
 O endpoint cadastra clientes públicos com PKCE obrigatório. Após o login, o fluxo retorna
 diretamente ao cliente.
 
-Para reproduzir a prova automática desse caminho, use `--register` no lugar de `--client-id` no
-script abaixo. O cadastro prévio continua disponível para clientes que o exigem.
+O cadastro prévio continua disponível para clientes que o exigem.
 
 O recurso padrão local é `https://localhost:7091/mcp`, e o emissor usa
 `https://localhost:7081/`. Ambos usam o certificado HTTPS de desenvolvimento confiável da máquina.
@@ -43,16 +42,7 @@ MCP ou a versão do cliente. Uma entrada sem `client_id` pode usar o cadastro di
 descoberta.
 
 Obtenha o callback exato no cliente MCP antes de cadastrá-lo. Desktop e web podem exigir cadastros
-distintos. Configure as variáveis no terminal que inicia o Aspire, por exemplo:
-
-```powershell
-$env:IdentityClients__Mcp__Clients__1__ClientId = 'agenza-mcp-proof'
-$env:IdentityClients__Mcp__Clients__1__RedirectUris__0 = 'http://127.0.0.1:5099/callback'
-dotnet run --project backend/AppHost --launch-profile http
-```
-
-Esse callback pertence exclusivamente ao script de prova abaixo. Para o ChatGPT, use o endereço
-informado pela configuração OAuth real. O cliente recebe seu `client_id`, usa Authorization Code
+distintos. Use o endereço informado pela configuração OAuth real. O cliente recebe seu `client_id`, usa Authorization Code
 com PKCE S256 e solicita `openid profile tenant_id mcp:connect offline_access`. Os endpoints são
 descobertos no IdentityService. O parâmetro `resource` deve coincidir com o recurso configurado.
 
@@ -66,30 +56,15 @@ Para um ambiente acessível pelo ChatGPT web, configure URLs alcançáveis para 
 Siga o bootstrap existente para aplicar o cadastro no ambiente controlado. A implantação
 definitiva é tratada na #237.
 
-## Executar a prova do servidor
+## Provar os clientes reais
 
 Para uma execução isolada, configure `Postgres__DataVolume` no terminal do Aspire com um nome de
 volume exclusivo do teste. O volume padrão continua sendo `agenza-postgres-data`.
-
-Com a stack saudável e o cliente do exemplo cadastrado, configure no terminal do teste
-`AGENZA_MCP_TEST_PASSWORD` e `AGENZA_MCP_REST_CLIENT_SECRET`. Use uma conta do ambiente controlado
-e o segredo do cliente `assistant-service-worker` desse ambiente. Execute na raiz:
-
-```powershell
-python scripts/smoke_mcp_oauth.py --client-id agenza-mcp-proof --callback http://127.0.0.1:5099/callback --email owner@demo.local
-```
-
-O script verifica descoberta, login inválido e válido com retorno direto ao cliente, proteção do
-formulário de login, PKCE, recurso, chamada autenticada de `hello_world`, renovação, reutilização de código, token REST
-e header de tenant divergente. Usa cookies e códigos reais e não imprime credenciais nem tokens.
-A tentativa de reutilizar um código pode revogar a autorização da própria execução.
-
-## Provar os clientes reais
 
 Após cadastrar cada cliente e selecionar OAuth na conexão MCP, conclua o login e execute
 `hello_world`. Repita no ChatGPT Desktop e no ChatGPT web pelo navegador do
 celular. Registre na issue a versão, a conta/plano, o dispositivo, os callbacks e o resultado de
 cada contexto, com evidências sem segredos.
 
-O teste do servidor valida o protocolo. O aceite dos clientes permanece pendente até demonstrar
+O aceite dos clientes permanece pendente até demonstrar
 o vínculo, o retorno ao chat e a chamada autenticada em cada contexto exigido.

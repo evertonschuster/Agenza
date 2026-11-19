@@ -30,8 +30,8 @@ O MCP e o login usam HTTPS em localhost com o certificado de desenvolvimento con
 O callback do cliente nativo usa HTTP no endereço de loopback `127.0.0.1`, conforme RFC 8252.
 
 O aceite da #232 exige demonstração no ChatGPT Desktop e no ChatGPT web pelo navegador do celular.
-A prova automatizada do servidor fornece evidência do protocolo. Disponibilidade da integração,
-callback e apresentação da janela dependem de cada cliente e precisam de validação real.
+Disponibilidade da integração, callback e apresentação da janela dependem de cada cliente e
+precisam de validação manual.
 
 ## Alternativas rejeitadas
 
