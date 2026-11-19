@@ -14,7 +14,7 @@ them. Copy a live slice, not the nearest file:
 
 ```text
 - [ ] Owning slice found; extend it, or put a screen without domain behavior in app/
-- [ ] Pure rules in model/, lifecycle in the page hook, rendering in the page
+- [ ] Pure rules in model/, use cases in application/, lifecycle in the page hook, rendering in the page
 - [ ] Repository and result handling per agenza-api-contract
 - [ ] Route wired in routes.tsx and exported through the slice barrel
 - [ ] Forms per agenza-form-field; copy per agenza-ptbr-copy; tests per agenza-testing

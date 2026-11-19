@@ -5,16 +5,17 @@ rejected alternatives are in [decisions/frontend.md](../../../docs/decisions/fro
 
 ## 1. Shape
 
-| Layer               | Responsibility                                                                    |
-| ------------------- | --------------------------------------------------------------------------------- |
-| `app/`              | Providers, routes and shell composition; placeholders without business capability |
-| `features/<slice>/` | A business slice with `model/`, `api/`, `ui/` and a public `index.ts`             |
-| `widgets/`          | Reusable screen compositions, with behavior and without domain                    |
-| `shared/`           | Cross-cutting infrastructure, shared values and primitives without business rules |
+| Layer               | Responsibility                                                                                    |
+| ------------------- | ------------------------------------------------------------------------------------------------- |
+| `app/`              | Providers, routes and shell composition; placeholders without business capability                 |
+| `features/<slice>/` | A business slice with `model/`, `api/`, `application/` (use cases), `ui/` and a public `index.ts` |
+| `widgets/`          | Reusable screen compositions, with behavior and without domain                                    |
+| `shared/`           | Cross-cutting infrastructure, shared values and primitives without business rules                 |
 
 The direction is `app → features → widgets → shared`. Widgets may compose other widgets without
 cycles. Outside a slice, consumers import only its barrel `features/<slice>/index.ts`. Inside it,
-the usual direction is `ui → model | api` and `api → model`; domain types belong to `model/`, not to
+the usual direction is `ui → application | model | api`, `application → api | model` and
+`api → model`; domain types belong to `model/`, not to
 the transport layer.
 
 The [agenza/layer-boundaries](../eslint-rules/layerBoundaries.js) rule, enabled in
@@ -52,10 +53,9 @@ item.
 Page hooks are not a shared business layer; context accessors, generic widget hooks and utilities
 such as [useCloseRoute](../src/shared/hooks/useCloseRoute.ts) are reusable.
 
-When a page uses a `loader` or `action`, they live in `route.ts`, re-exported by the barrel for
-[app/routes.tsx](../src/app/routes.tsx). That does not force every page to fetch in a loader: a
-blocking loader keeps the page from showing its own loading state. The header derives from the
-routes and their `handle`, per [decisions/frontend.md](../../../docs/decisions/frontend.md).
+No page uses a `loader` or `action` today; one that does keeps them in `route.ts`, re-exported by the
+barrel for [app/routes.tsx](../src/app/routes.tsx). A blocking loader keeps the page from showing its
+own loading state.
 
 [usePaginatedList](../src/widgets/paginated-list-section/use-paginated-list.ts) receives the
 controlled state and the repository. The hooks of
@@ -63,12 +63,12 @@ controlled state and the repository. The hooks of
 [Etiquetas](../src/features/tags/ui/pages/TagListPage/useTagListPage.ts) supply that state with
 [useSearchParamsState](../src/shared/hooks/useSearchParamsState.ts): applied filters, page and size
 are read from the query string on mount, and their changes are written with `replace` on the route
-that owns the list. The filter form's state is separate; typing does not apply the search.
+that owns the list.
 
 The widget requests data on actions, on mount and when correcting a page past the end. An effect
 keyed on the query does not trigger requests. A new action cancels the previous request; cancelled
-answers do not replace the current one. `refetch` refreshes the requested query without clearing the
-rows, including when the feature's topics call it. The hook derives loading/error/success from the
+answers do not replace the current one. `refetch` keeps the rows while it is pending, including when the feature's topics call it; a failed
+answer replaces them with the error. The hook derives loading/error/success from the
 answer; an empty list is recognized only after a success.
 
 Filter bars are React Hook Form forms with `SearchField` and `SelectField`
@@ -105,7 +105,7 @@ form, `SearchSelectField` ([decisions/frontend.md](../../../docs/decisions/front
 optional `creation` offers creating the item right there; the feature draws the creation and returns
 the item, which enters selected. A creation dialog passes the `finalFocus` it receives to
 `DialogContent`, so focus returns to the search. `SelectField` stays for the plain `Select`.
-Routes are pt-BR like the product text; `/tags` is an existing exception, and renaming a URL needs
+Routes are pt-BR like the product text; `/tags` and its children (`new`, `:id/edit`, `:id/delete`) are an existing exception, and renaming a URL needs
 its own product change.
 
 ## 2. Talking to the backend
@@ -122,13 +122,12 @@ A repository does not repeat token, tenant, version, envelope or exception handl
 belong to the frontend; an explicit mapping is needed only when the domain shape and the answer
 differ. Return annotations keep the structural check against the generated contract.
 
-`servicesApi` resolves with a `Result` on success and on failure. For HTTP rules read
+`servicesApi` resolves with an `ApiResult` on success and on failure. For HTTP rules read
 [docs/API.md](../../../docs/API.md); for the outcomes actually normalized read
-[servicesFacade.ts](../src/shared/api/servicesFacade.ts). Regeneration and its check are in the
-[README](../README.md#commands).
+[servicesFacade.ts](../src/shared/api/servicesFacade.ts).
 
-Turning a `Result` into an exception exists in [unwrap.ts](../src/shared/api/unwrap.ts), only at the
-boundary of a loader or of an eventual `queryFn` that signals errors by rejection. Mutations and
+`unwrapOrThrow` in [unwrap.ts](../src/shared/api/unwrap.ts) has no production caller; it is reserved
+for a loader or `queryFn` that signals errors by rejection. Mutations and
 actions keep expected failures as values, which keeps validation in the form instead of turning it
 into an error screen.
 
@@ -138,15 +137,14 @@ procedure is in the
 [form skill](../../../.claude/skills/agenza-form-field/SKILL.md).
 
 Surfaces use the messages and codes of the normalized `ApiProblem` and keep its representation in
-list errors, dialogs, banners and toasts. The detailed HTTP policy is in [docs/API.md](../../../docs/API.md).
+list errors, dialogs, banners and toasts.
 
 ### Related records in confirmations
 
 The [ConfirmDialog](../src/widgets/confirm-dialog/index.tsx) shows the related records of any
 failure, without configuration by the feature, and every block offers an explicit retry. The
 [reader](../src/widgets/confirm-dialog/related-records.ts) is the only source of those records:
-known groups (`Clients`, `Services`) with `meta.id` and `meta.name`, without a limit of its own (the
-backend's `Tag.InUse` sends up to 10 per kind); an unknown group with the problem's code shows as
+known groups (`Clients`, `Services`) with `meta.id` and `meta.name`, without a limit of its own; an unknown group with the problem's code shows as
 “Outros vínculos”. Labels and routes come from the list of known groups, never from the metadata,
 and nothing is inferred from the message text. The person edit path lives in
 `shared/routes/clientPaths.ts` so Etiquetas can use it without depending on Pessoas.
@@ -193,9 +191,5 @@ implementation is in the [sessionStore](../src/shared/session/sessionStore.ts) a
 
 ## 5. Toolchain & gates
 
-Commands are in the [README](../README.md#commands) and the gates that run in the
-[workflow](../../../.github/workflows/frontend-ci.yml). The TypeScript configuration and
-[ESLint](../eslint.config.js) define the static constraints; [vitest.config.ts](../vitest.config.ts)
-defines the thresholds and the named coverage exclusions. Unit and component tests live next to the
-code, with Vitest, RTL and module mocks; Playwright and the contract/OIDC check use the real Aspire
-stack.
+Unit and component tests live next to the code, with Vitest, RTL and module mocks; Playwright and
+the contract/OIDC check use the real Aspire stack.

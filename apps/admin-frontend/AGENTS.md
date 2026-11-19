@@ -26,7 +26,7 @@ Open only what the change needs:
 - Lists use controlled state: Pessoas and Etiquetas supply it through `useSearchParamsState`. The
   filter form does not search while typing; actions apply the query.
 - `servicesApi` returns an `ApiResult`; token, tenant, version and envelope belong to the HTTP layer.
-  Mutations keep expected failures as values; `unwrapOrThrow` exists at the framework boundary. Wire
+  Mutations keep expected failures as values; `unwrapOrThrow` is reserved for the framework boundary (no production caller today). Wire
   types come from the generated contract; do not hand-write `fetch` or duplicate wire DTOs.
 - Branch on code/status, never by interpreting error text.
 - Use existing controls, semantic tokens and the primitive's keyboard/focus behavior. Every control
