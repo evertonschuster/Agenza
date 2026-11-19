@@ -41,10 +41,5 @@ Use the [skill table in the root AGENTS](../AGENTS.md#skills).
 
 Use the [README commands](README.md#commands) and the
 [applicable gates](../docs/DEVELOPMENT.md#quality-gates). Choose tests by the behavior and risk
-changed; PostgreSQL-only properties follow the disposable verification in §9. For Markdown, check
-sources, links, formatting and the diff.
-
-A contract change carries the regenerated OpenAPI types in the backend PR; frontend work follows the
-root's separate flow. Record what actually ran and what is still unproven. Architectural decisions
-follow the root process. Update the rule or example the change invalidates, without creating feature
-inventories, counts or extra run reports.
+changed; PostgreSQL-only properties follow the disposable verification in §9. Update the rule or
+example the change invalidates, without creating feature inventories, counts or extra run reports.

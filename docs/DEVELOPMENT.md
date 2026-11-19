@@ -20,7 +20,7 @@ at 5432 and persists in the `agenza-postgres-data` volume.
   AppHost runs `npm` and a locked `uv sync` before starting Vite and Uvicorn.
 - `dotnet run` hands the AppHost to the Aspire CLI, which launches the Debug build. The first build
   fetches the CLI, dashboard and DCP into `~/.aspire` through `dotnet dnx`, so it needs network but
-  no separate install ([decisions/processo.md](decisions/processo.md)).
+  no separate install.
 - One local-development password, `postgres`, is shared by PostgreSQL, the restricted application
   roles and the internal OAuth clients. AppHost passes it as a fixed value, so configuration does
   not override it.
@@ -65,14 +65,9 @@ projects use their own tooling.
 No local Git hooks are installed. Run the applicable format, lint, build and test commands before
 committing; the required GitHub Actions checks gate `main`, whatever agent produced the change.
 
-| Workflow             | Triggers on                   | What it gates                                                                                                    |
-| -------------------- | ----------------------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `frontend-ci.yml`    | frontend/backend API surfaces | Prettier, ESLint, tsc/Vite, Vitest coverage, Playwright, generated OpenAPI drift, real OIDC and tenant isolation |
-| `backend-ci.yml`     | `backend/**`                  | Warning-free build, unit coverage and Docker-free EF persistence tests                                           |
-| `ai-services-ci.yml` | `ai-services/**`              | Locked Python deps, Ruff, pytest coverage and a Uvicorn `/health` smoke                                          |
-| `codeql.yml`         | all PRs/pushes + weekly cron  | Static security analysis (C#, TS/JS, Python)                                                                     |
-| `sonar.yml`          | all PRs/pushes                | SonarQube Cloud analysis for the three stacks (skips until `SONAR_TOKEN` exists)                                 |
-| `docs-ci.yml`        | all PRs/pushes to main        | `npm run check:docs` and its tests: links, CLAUDE imports, skill table and frontmatter                           |
+Each workflow in [.github/workflows](../.github/workflows/) states its own triggers and gates:
+frontend, backend and AI-services CI, CodeQL, SonarQube Cloud and the documentation check
+(`npm run check:docs`).
 
 Dependabot opens weekly grouped PRs for npm, NuGet, pip and the workflows' actions.
 
@@ -96,15 +91,10 @@ Line coverage, type drift, runtime smokes and PostgreSQL checks prove different 
 backend's [guarantee matrix](../backend/docs/ARCHITECTURE.md#11-what-enforces-what) lists each one
 and its limits.
 
-### SonarQube Cloud (one-time setup)
+### SonarQube Cloud
 
-1. Sign in at <https://sonarcloud.io> with GitHub and import `Agenza`.
-2. Create three projects (monorepo mode) under organization `evertonschuster`: `agenza-frontend`,
-   `agenza-backend`, `agenza-ai-services`. Other keys require updating `.github/workflows/sonar.yml`.
-3. In each project, disable Automatic Analysis (it conflicts with CI analysis).
-4. Add a token (My Account → Security) as the `SONAR_TOKEN` repository secret.
-
-Until step 4, `sonar.yml` skips itself.
+The one-time setup steps are in the header of [sonar.yml](../.github/workflows/sonar.yml); until the
+`SONAR_TOKEN` secret exists, that workflow skips itself.
 
 ### Branch protection
 

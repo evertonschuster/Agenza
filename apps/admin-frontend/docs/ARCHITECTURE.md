@@ -180,7 +180,9 @@ hand. These frontend protections complement the
 The machine compares subject and tenant on renewal. An identity change clears credentials, aborts
 the request scope and unmounts protected state until an explicit login. The OIDC adapter rejects late
 events and tries to remove the persisted user; a failure in that cleanup is logged without restoring
-the blocked session's credentials. The HTTP client combines session and consumer cancellation. The
+the blocked session's credentials. The HTTP client combines session and consumer cancellation. An
+HTTP answer for an invalid session does not change the OIDC snapshot by itself; that handling is not
+shared yet, so do not duplicate it in each list. The
 implementation is in the [sessionStore](../src/shared/session/sessionStore.ts) and
 [decisions/plataforma.md](../../../docs/decisions/plataforma.md).
 
@@ -200,26 +202,7 @@ The [root rules](../../../AGENTS.md) still apply. Here, applying them means:
 - Choose verification by the behavior changed and the risk; a coverage exclusion does not exempt
   testing interaction, accessible name or failure handling.
 
-## 5. Deferred, provisional & not-yet-built
-
-- Placeholders in `app/pages/` are replaced by the matching slice when the capability is built; the
-  route table shows which still exist.
-- There is no server-state library. Introducing one needs a concrete need for caching, revalidation
-  or synchronization that justifies replacing the current shape
-  ([decisions/frontend.md](../../../docs/decisions/frontend.md)).
-- List cancellation belongs to the widget that requests data; cancellation on session loss belongs to
-  the store. The facade still normalizes a transport abort as a network failure; the cancelling
-  consumer checks its own signal before applying the answer.
-- An HTTP answer for an invalid session does not change the OIDC snapshot by itself. Shared handling
-  of that case during a visit is still a gap; do not duplicate it in each list.
-- The OIDC adapter uses a concrete module. A provider abstraction is justified only by an integration
-  or test cost that needs it. Logs use the existing infrastructure; external telemetry depends on an
-  operational need.
-
-These are not roadmap promises. Before proposing an abstraction, check the consumers and the evidence
-of the problem; the code and the relevant decisions bound the choice.
-
-## 6. Toolchain & gates
+## 5. Toolchain & gates
 
 Runtime pins come from the root. Commands are in the [README](../README.md#commands); the gates
 actually run are in the [workflow](../../../.github/workflows/frontend-ci.yml). The TypeScript
@@ -231,7 +214,7 @@ Unit and component tests live next to the code, with Vitest, RTL and module mock
 contract/OIDC check use the real Aspire stack. See [DEVELOPMENT](../../../docs/DEVELOPMENT.md) for
 what each gate covers and its limits.
 
-## 7. Pointers
+## 6. Pointers
 
 - [Frontend AGENTS](../AGENTS.md): routing to skills and lookup by task.
 - [README](../README.md): environment and dependency maintenance.

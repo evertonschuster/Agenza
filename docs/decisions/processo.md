@@ -49,10 +49,8 @@ a single batched round of questions, each with the recommended option. An approv
 visual reference. Acceptance criteria become pt-BR-named tests in the same PR; a prototype correction
 becomes a test or code. Plan and tasks stay in the agent's session.
 
-**Agent hosts.** `CLAUDE.md` imports `AGENTS.md`; Copilot reads the bridge in
-`.github/copilot-instructions.md`; Codex follows the `AGENTS.md` hierarchy. Skills live only in
-`.claude/skills`, which Claude Code and Copilot discover. Codex discovers only `.agents/skills`, so it
-reaches them through the single skill table in the root `AGENTS.md`, which every host loads.
+**Agent hosts.** One source per instruction: `AGENTS.md`, imported by `CLAUDE.md` and bridged for
+Copilot, and the skills in `.claude/skills`; how each host reaches them is in the root `AGENTS.md`.
 Automatic loading is not guaranteed on any host: the hard rules stay as invariants and gates, not
 only in a skill.
 
@@ -128,8 +126,7 @@ single-file spec template comes back, with behavior and acceptance, without a to
   the coverage of tag-deletion relationships.
 - **The real proof runs on the Aspire stack**, in CI's contract job: migrations from scratch, OIDC,
   isolation between tenants, tenant foreign keys and drift of the generated types.
-- **Tests are chosen by behavior and risk**, refusal paths included. A documentation-only change
-  checks references, formatting and the diff.
+- **Tests are chosen by behavior and risk**, refusal paths included.
 - A PostgreSQL property outside the smokes' reach is checked by hand on a disposable database, and
   what ran is recorded in the PR.
 

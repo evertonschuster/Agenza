@@ -1,13 +1,13 @@
 # SonarQube Cloud analysis - free for public repositories.
 #
 # One-time setup:
-#   1. Import the repo at https://sonarcloud.io (login with GitHub).
-#   2. Create it as a monorepo with three projects:
+#   1. Sign in at https://sonarcloud.io with GitHub and import the repo.
+#   2. Create it as a monorepo under organization evertonschuster with three projects:
 #        agenza-frontend / agenza-backend / agenza-ai-services
 #      (adjust the projectKey args below if you pick different keys).
 #   3. Disable "Automatic Analysis" for each project (Administration >
 #      Analysis Method) - it conflicts with CI-based analysis.
-#   4. Add the SONAR_TOKEN repository secret on GitHub.
+#   4. Create a token (My Account > Security) and add it as the SONAR_TOKEN repository secret.
 #
 # Until SONAR_TOKEN exists, every job here skips instead of failing, so
 # merging this workflow before the SonarCloud setup is safe.

@@ -45,8 +45,4 @@ Use the [app commands](README.md#commands) and check the
 [applicable gates](../../.github/workflows/frontend-ci.yml). Coverage thresholds and exclusions are
 in [Vitest](vitest.config.ts); a UI folder is not exempt by definition. Do not lower thresholds or
 skip gates to make a change pass. `exactOptionalPropertyTypes` needs care with optional props
-forwarded by spread. Changed the contract? Regenerate the types in the matching backend PR and run
-the check against the service.
-
-For a documentation-only change, check references, formatting and the diff. Do not create
-application tests to validate wording or run the whole suite for that reason.
+forwarded by spread.

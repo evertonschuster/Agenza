@@ -72,8 +72,7 @@ npm run test:coverage
 
 Playwright and the type check need the Aspire stack. The
 [workflow](../../.github/workflows/frontend-ci.yml) defines what CI runs, and
-[DEVELOPMENT](../../docs/DEVELOPMENT.md) explains what each gate covers. For a Markdown-only
-change, validate the changed files and their links.
+[DEVELOPMENT](../../docs/DEVELOPMENT.md) explains what each gate covers.
 
 ## Lockfile
 

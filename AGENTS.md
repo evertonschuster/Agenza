@@ -46,12 +46,10 @@ constraint.
 
 ## Documentation
 
-Write only what the code does not show, and every fact has one home:
-[decisions/processo.md](docs/decisions/processo.md). Do not create numbered ADRs; an approved
-decision becomes a section in its theme file. A new file in `docs/decisions/` only comes from
-splitting a theme above 150 lines, as `processo.md` describes. An owner correction that holds beyond
-the session goes into this AGENTS or the area guide, in the same PR; a host's private memory keeps
-only facts about the machine or the PR in flight.
+Write only what the code does not show, and every fact has one home; the rules for guides and
+decisions are in [decisions/processo.md](docs/decisions/processo.md). Do not create numbered ADRs.
+An owner correction that holds beyond the session goes into this AGENTS or the area guide, in the
+same PR; a host's private memory keeps only facts about the machine or the PR in flight.
 
 ## Workflow
 
@@ -84,9 +82,6 @@ Every skill is listed here; `check:docs` fails when one is missing.
 | Shared component, theme, color, focus              | [agenza-ui-primitive](.claude/skills/agenza-ui-primitive/SKILL.md)         |
 | Copy, messages, dates, numbers, money (texto)      | [agenza-ptbr-copy](.claude/skills/agenza-ptbr-copy/SKILL.md)               |
 | Frontend test failing or missing, coverage, e2e    | [agenza-testing](.claude/skills/agenza-testing/SKILL.md)                   |
-
-Skills live only in `.claude/skills/agenza-*/`. Claude Code and Copilot discover them there; Codex
-reaches them through this table. This is the only skill table; area guides point here.
 
 ## How each tool gets here
 
