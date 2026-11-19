@@ -1,6 +1,6 @@
 namespace ServicesService.Domain.ValueObjects;
 
-// Fixed 8-color palette (docs/API.md) - not a free-form hex value.
+// Fixed 8-color palette shared with the frontend - not a free-form hex value.
 // Palette membership is also checked in CreateTagCommandValidator/UpdateTagCommandValidator
 // (cheap, data-only shape rule) - this is defense-in-depth for a genuine domain invariant.
 public sealed record TagColor

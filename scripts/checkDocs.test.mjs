@@ -22,7 +22,7 @@ function write(root, file, text) {
   writeFileSync(join(root, file), text);
 }
 
-const skillRoute = `\n[Example skill](${skill})\n`;
+const skillRoute = `\n## Skills\n\n[Example skill](${skill})\n`;
 const description = 'Checks documentation. Use when a guide changes. Not for code.';
 
 function fixture(t, files = {}) {
@@ -157,17 +157,28 @@ test('reports a removed active document or skill entry point', (t) => {
   );
 });
 
-test('reports a skill missing from the root AGENTS skill table', (t) => {
-  const root = fixture(t, { 'backend/AGENTS.md': skillRoute.replace(skill, '../' + skill) });
-  write(root, 'AGENTS.md', '# Fixture\n');
-  assert.deepEqual(checkDocumentation(root).errors, [
+test('reports a skill missing from the Skills section of the root AGENTS', async (t) => {
+  const missing = [
     {
       file: 'AGENTS.md',
       line: 1,
-      message: 'Skill sem rota na tabela de skills do AGENTS da raiz.',
+      message: 'Skill sem rota na seção Skills do AGENTS da raiz.',
       target: skill,
     },
-  ]);
+  ];
+  for (const [name, text] of [
+    ['no link', '# Fixture\n'],
+    ['link outside the section', `# Fixture\n\n[Example](${skill})\n\n## Skills\n\nNone.\n`],
+    ['link after the section', `## Skills\n\nNone.\n\n## Other\n\n[Example](${skill})\n`],
+  ]) {
+    await t.test(name, (context) => {
+      const root = fixture(context, {
+        'backend/AGENTS.md': skillRoute.replace(skill, '../' + skill),
+      });
+      write(root, 'AGENTS.md', text);
+      assert.deepEqual(checkDocumentation(root).errors, missing);
+    });
+  }
 });
 
 test('rejects targets outside the repository and malformed URL encoding', (t) => {
@@ -387,6 +398,26 @@ test('accepts a skill frontmatter that hosts can parse', () => {
     ),
     [],
   );
+  assert.deepEqual(
+    frontmatterProblems(
+      "---\nname: 'agenza-example'\ndescription: >-\n  Checks forms. Use when a form\n  changes. Not for pages.\nallowed-tools:\n  - Read\n---\n",
+      'agenza-example',
+    ),
+    [],
+  );
+});
+
+test('reports a trailing colon and points at the line of the field', () => {
+  const lines = (text) => frontmatterProblems(text, 'agenza-example').map(({ line }) => line);
+  assert.deepEqual(
+    lines('---\nname: agenza-example\ndescription: Use when a form changes. Not for:\n---\n'),
+    [3],
+  );
+  assert.deepEqual(
+    lines('---\ndescription: Checks forms.\nlicense: MIT\nname: agenza-other\n---\n'),
+    [4, 2],
+  );
+  assert.deepEqual(lines('---\nlicense: MIT\n---\n'), [1, 1]);
 });
 
 test('reports skill frontmatter that would break YAML or routing', () => {

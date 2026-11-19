@@ -191,6 +191,16 @@ function markdownDestination(target) {
   return { value, error };
 }
 
+function sectionLines(content, title) {
+  const lines = content.split('\n');
+  const start = lines.findIndex((line) => line.trim() === `## ${title}`) + 1;
+  if (!start) {
+    return { start: 0, end: 0 };
+  }
+  const next = lines.findIndex((line, index) => index >= start && /^#{1,2}\s/.test(line));
+  return { start, end: next < 0 ? lines.length + 1 : next + 1 };
+}
+
 // Hosts parse this block as YAML and silently skip a skill whose frontmatter does not parse.
 export function frontmatterProblems(text, name) {
   const lines = text.split('\n');
@@ -203,22 +213,32 @@ export function frontmatterProblems(text, name) {
   }
   const problems = [];
   const fields = {};
+  let block;
   for (let index = 1; index < end; index++) {
-    const field = /^([a-z][\w-]*):[ \t]*(.*)$/.exec(lines[index]);
+    const line = lines[index];
+    if (block && (/^\s/.test(line) || !line.trim())) {
+      block.value += ` ${line.trim()}`;
+      continue;
+    }
+    block = undefined;
+    const field = /^([a-z][\w-]*):[ \t]*(.*)$/.exec(line);
     if (!field) {
-      if (lines[index].trim() && !/^\s/.test(lines[index])) {
-        problems.push({
-          line: index + 1,
-          message: 'Linha inválida no frontmatter.',
-          target: lines[index],
-        });
+      if (line.trim()) {
+        problems.push({ line: index + 1, message: 'Linha inválida no frontmatter.', target: line });
       }
       continue;
     }
     const [, key, value] = field;
-    fields[key] = value;
-    const quoted = /^(["']).*\1$/.test(value);
-    if (!quoted && (/: |\s#/.test(value) || /^[[\]{}&*!|>%@`"']/.test(value))) {
+    fields[key] = { line: index + 1, value };
+    if (value === '' || /^[|>][-+1-9]*$/.test(value)) {
+      block = fields[key];
+      block.value = '';
+      continue;
+    }
+    const quoted = /^(["']).*\1$/.exec(value);
+    if (quoted) {
+      fields[key].value = value.slice(1, -1);
+    } else if (/:(?:\s|$)|\s#/.test(value) || /^[[\]{}&*!|>%@`"']/.test(value)) {
       problems.push({
         line: index + 1,
         message: 'Valor sem aspas que o YAML não lê como texto; reescreva sem ": " ou use aspas.',
@@ -226,20 +246,25 @@ export function frontmatterProblems(text, name) {
       });
     }
   }
-  if (fields.name !== name) {
-    problems.push({ line: 2, message: 'O name da skill difere do nome da pasta.', target: name });
+  if (fields.name?.value !== name) {
+    problems.push({
+      line: fields.name?.line ?? 1,
+      message: 'O name da skill difere do nome da pasta.',
+      target: name,
+    });
   }
-  const description = fields.description ?? '';
+  const description = fields.description?.value.trim() ?? '';
+  const descriptionLine = fields.description?.line ?? 1;
   if (!/\bUse\b/.test(description) || !/\bNot for\b/.test(description)) {
     problems.push({
-      line: 3,
+      line: descriptionLine,
       message: 'A description precisa dizer quando usar ("Use …") e quando não ("Not for …").',
       target: 'description',
     });
   }
   if (description.length > 1024) {
     problems.push({
-      line: 3,
+      line: descriptionLine,
       message: 'A description passa de 1024 caracteres.',
       target: 'description',
     });
@@ -300,6 +325,7 @@ export function checkDocumentation(root) {
     }
     const content = prose(text);
     const targets = linkTargets(content);
+    const skillTable = file === 'AGENTS.md' ? sectionLines(content, 'Skills') : undefined;
     if (basename(file) === 'CLAUDE.md') {
       for (const match of content.matchAll(/^@(?:"([^"\n]+)"|(\S+))[ \t]*$/gm)) {
         targets.push({
@@ -336,14 +362,14 @@ export function checkDocumentation(root) {
         report(file, line, 'Destino fora do repositório.', target);
       } else if (!existsSync(destination)) {
         report(file, line, 'Destino local ausente.', target);
-      } else if (file === 'AGENTS.md') {
+      } else if (skillTable && line > skillTable.start && line < skillTable.end) {
         routedSkills.add(local);
       }
     }
   }
   for (const file of skillFiles) {
     if (existsSync(resolve(root, file)) && !routedSkills.has(file)) {
-      report('AGENTS.md', 1, 'Skill sem rota na tabela de skills do AGENTS da raiz.', file);
+      report('AGENTS.md', 1, 'Skill sem rota na seção Skills do AGENTS da raiz.', file);
     }
   }
   return { errors, documents: documents.size, skills: skillFiles.size };

@@ -3,8 +3,7 @@ using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Services;
 
-// Older generation, not a precedent: new code does not share a loader between
-// handlers (backend/docs/ARCHITECTURE.md §10).
+// Older generation, not a precedent: new handlers load their own relationships.
 public sealed class ServiceRelationshipLoader
 {
     private readonly ICategoryRepository _categoryRepository;
