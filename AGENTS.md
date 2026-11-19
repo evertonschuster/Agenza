@@ -103,4 +103,6 @@ Choose tests by the behavior and risk changed, keeping the gates in
 and the diff; do not create application tests to validate wording. Record runs and limits in the PR.
 
 On the owner's machine, do not stop a process or container you did not start: the fixed ports in
-[DEVELOPMENT](docs/DEVELOPMENT.md) usually belong to the Aspire stack the owner is using.
+[DEVELOPMENT](docs/DEVELOPMENT.md) usually belong to the Aspire stack the owner is using. In Claude
+Code, [a hook](.claude/hooks/guardProcessKill.mjs) refuses kills by name or port and asks before
+stopping a container; stop only the PID you started.

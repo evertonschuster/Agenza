@@ -19,7 +19,8 @@ export default defineConfig({
     },
     globals: true,
     setupFiles: ['./src/vitest-setup.ts'],
-    exclude: ['e2e/**', 'node_modules/**'],
+    // Nested agent worktrees live under .claude/ and carry their own copy of every test.
+    exclude: ['e2e/**', 'node_modules/**', '.claude/**'],
     coverage: {
       provider: 'v8',
       reporter: ['text', 'html', 'lcov'],

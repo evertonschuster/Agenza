@@ -56,8 +56,9 @@ reaches them through the single skill table in the root `AGENTS.md`, which every
 Automatic loading is not guaranteed on any host: the hard rules stay as invariants and gates, not
 only in a skill.
 
-**Mechanical check.** `npm run check:docs` checks links, the `CLAUDE.md` imports and that every skill
-is in the root `AGENTS.md` table. It does not check whether the text agrees with the code.
+**Mechanical check.** `npm run check:docs` checks links, the `CLAUDE.md` imports, that every skill is
+in the root `AGENTS.md` table and that its frontmatter parses, with a description that says when to
+use it and when not. It does not check whether the text agrees with the code.
 
 ### Why
 

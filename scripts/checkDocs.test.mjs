@@ -13,7 +13,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join, resolve } from 'node:path';
 import { test } from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { checkDocumentation, entryDocuments } from './checkDocs.mjs';
+import { checkDocumentation, entryDocuments, frontmatterProblems } from './checkDocs.mjs';
 
 const skill = '.claude/skills/agenza-example/SKILL.md';
 
@@ -23,6 +23,7 @@ function write(root, file, text) {
 }
 
 const skillRoute = `\n[Example skill](${skill})\n`;
+const description = 'Checks documentation. Use when a guide changes. Not for code.';
 
 function fixture(t, files = {}) {
   const root = mkdtempSync(join(tmpdir(), 'agenza-docs-'));
@@ -34,11 +35,7 @@ function fixture(t, files = {}) {
     write(root, file, '# Fixture\n');
   }
   write(root, 'docs/decisions/example.md', '# Decision\n');
-  write(
-    root,
-    skill,
-    '---\nname: agenza-example\ndescription: Use when checking documentation.\n---\n',
-  );
+  write(root, skill, `---\nname: agenza-example\ndescription: ${description}\n---\n`);
   write(root, 'AGENTS.md', `# Fixture\n${skillRoute}`);
   for (const [file, text] of Object.entries(files)) {
     write(root, file, file === 'AGENTS.md' ? text + skillRoute : text);
@@ -373,4 +370,57 @@ test('diagnoses unsupported named entities locally while ignoring external URLs'
       target: 'docs/caf&eacute;.md',
     },
   ]);
+});
+
+test('accepts a skill frontmatter that hosts can parse', () => {
+  assert.deepEqual(
+    frontmatterProblems(
+      `---\nname: agenza-example\ndescription: ${description}\n---\n`,
+      'agenza-example',
+    ),
+    [],
+  );
+  assert.deepEqual(
+    frontmatterProblems(
+      '---\nname: agenza-example\ndescription: "Use when a: b. Not for c."\n---\n',
+      'agenza-example',
+    ),
+    [],
+  );
+});
+
+test('reports skill frontmatter that would break YAML or routing', () => {
+  const messages = (text) =>
+    frontmatterProblems(text, 'agenza-example').map(({ line, target }) => `${line} ${target}`);
+  assert.deepEqual(messages('# No frontmatter\n'), ['1 ---']);
+  assert.deepEqual(messages('---\nname: agenza-example\n'), ['1 ---']);
+  assert.deepEqual(
+    messages('---\nname: agenza-example\ndescription: Use when: forms. Not for pages.\n---\n'),
+    ['3 description'],
+  );
+  assert.deepEqual(messages(`---\nname: agenza-other\ndescription: ${description}\n---\n`), [
+    '2 agenza-example',
+  ]);
+  assert.deepEqual(messages('---\nname: agenza-example\ndescription: Checks forms.\n---\n'), [
+    '3 description',
+  ]);
+  assert.deepEqual(
+    messages(
+      `---\nname: agenza-example\ndescription: Use x. Not for y. ${'z'.repeat(1024)}\n---\n`,
+    ),
+    ['3 description'],
+  );
+  assert.deepEqual(
+    messages(`---\nname: agenza-example\ndescription: ${description}\nbroken\n---\n`),
+    ['4 broken'],
+  );
+});
+
+test('reports a skill whose frontmatter breaks, from the documentation check', (t) => {
+  const root = fixture(t);
+  write(root, skill, '---\nname: agenza-example\ndescription: Use when: x. Not for y.\n---\n');
+  assert.deepEqual(
+    checkDocumentation(root).errors.map(({ file, target }) => `${file} ${target}`),
+    [`${skill} description`],
+  );
 });

@@ -47,8 +47,7 @@ Read `coverage.include`, `coverage.exclude` and thresholds from
 [vitest.config.ts](../../../apps/admin-frontend/vitest.config.ts); exclusions name files or component
 folders, not whole directories. Never move behavior to an excluded file, widen exclusions or lower
 thresholds to pass. An excluded renderer can still need a behavior or accessibility test; assert an
-observable effect, not class snapshots or render-only checks. A full local coverage run also picks up
-tests from nested worktrees; add `--exclude ".claude/**"`.
+observable effect, not class snapshots or render-only checks.
 
 ## Run the checks
 

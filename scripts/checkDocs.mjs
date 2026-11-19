@@ -191,6 +191,62 @@ function markdownDestination(target) {
   return { value, error };
 }
 
+// Hosts parse this block as YAML and silently skip a skill whose frontmatter does not parse.
+export function frontmatterProblems(text, name) {
+  const lines = text.split('\n');
+  if (lines[0] !== '---') {
+    return [{ line: 1, message: 'Skill sem frontmatter.', target: '---' }];
+  }
+  const end = lines.indexOf('---', 1);
+  if (end < 0) {
+    return [{ line: 1, message: 'Frontmatter da skill sem fechamento.', target: '---' }];
+  }
+  const problems = [];
+  const fields = {};
+  for (let index = 1; index < end; index++) {
+    const field = /^([a-z][\w-]*):[ \t]*(.*)$/.exec(lines[index]);
+    if (!field) {
+      if (lines[index].trim() && !/^\s/.test(lines[index])) {
+        problems.push({
+          line: index + 1,
+          message: 'Linha inválida no frontmatter.',
+          target: lines[index],
+        });
+      }
+      continue;
+    }
+    const [, key, value] = field;
+    fields[key] = value;
+    const quoted = /^(["']).*\1$/.test(value);
+    if (!quoted && (/: |\s#/.test(value) || /^[[\]{}&*!|>%@`"']/.test(value))) {
+      problems.push({
+        line: index + 1,
+        message: 'Valor sem aspas que o YAML não lê como texto; reescreva sem ": " ou use aspas.',
+        target: key,
+      });
+    }
+  }
+  if (fields.name !== name) {
+    problems.push({ line: 2, message: 'O name da skill difere do nome da pasta.', target: name });
+  }
+  const description = fields.description ?? '';
+  if (!/\bUse\b/.test(description) || !/\bNot for\b/.test(description)) {
+    problems.push({
+      line: 3,
+      message: 'A description precisa dizer quando usar ("Use …") e quando não ("Not for …").',
+      target: 'description',
+    });
+  }
+  if (description.length > 1024) {
+    problems.push({
+      line: 3,
+      message: 'A description passa de 1024 caracteres.',
+      target: 'description',
+    });
+  }
+  return problems;
+}
+
 export function checkDocumentation(root) {
   const errors = [];
   const documents = new Set(entryDocuments);
@@ -237,6 +293,11 @@ export function checkDocumentation(root) {
     const text = readFileSync(absolute, 'utf8')
       .replace(/^\uFEFF/, '')
       .replace(/\r\n/g, '\n');
+    if (skillFiles.has(file)) {
+      for (const problem of frontmatterProblems(text, basename(dirname(file)))) {
+        report(file, problem.line, problem.message, problem.target);
+      }
+    }
     const content = prose(text);
     const targets = linkTargets(content);
     if (basename(file) === 'CLAUDE.md') {
