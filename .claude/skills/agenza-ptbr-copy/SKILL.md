@@ -9,10 +9,9 @@ Write for the owner of a service business: name the action and the thing affecte
 and sentence case. Prefer “Serviço salvo.” to “Sua solicitação foi processada com sucesso.” Accessible
 names are product copy too.
 
-Use the vocabulary of the screen and the
-[architecture guide](../../../apps/admin-frontend/docs/ARCHITECTURE.md): Pessoa, Responsável, Pessoa de
-referência and Etiqueta are `Client`, `ClientGuardian`, `ClientReferenceContact` and `Tag` in code. Do
-not rename navigation destinations as a copy cleanup.
+Use the vocabulary of the screen: Pessoa, Responsável, Pessoa de referência and Etiqueta are `Client`,
+`ClientGuardian`, `ClientReferenceContact` and `Tag` in code. Do not rename navigation destinations as
+a copy cleanup.
 
 | Action                      | Wording                                                               |
 | --------------------------- | --------------------------------------------------------------------- |
