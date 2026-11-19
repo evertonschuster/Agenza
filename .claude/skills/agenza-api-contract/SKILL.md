@@ -6,7 +6,7 @@ description: Regenerates the admin-frontend OpenAPI types, diagnoses contract dr
 # API contract — types, repositories and failures
 
 [docs/API.md](../../../docs/API.md) owns the HTTP shapes and the
-[message policy](../../../docs/API.md#7-frontend-consumption-and-message-policy). Consult backend
+[message policy](../../../docs/API.md#6-frontend-consumption-and-message-policy). Consult backend
 or frontend architecture only for the boundary the task changes.
 
 ## Regenerate a changed contract
@@ -57,7 +57,7 @@ only at a framework boundary that needs rejection, such as a route loader. The f
 [agenza-form-field](../agenza-form-field/SKILL.md).
 
 Read `run()` in [servicesFacade.ts](../../../apps/admin-frontend/src/shared/api/servicesFacade.ts) for
-the normalized outcomes before choosing UI; the table is in [docs/API.md](../../../docs/API.md), "7.
+the normalized outcomes before choosing UI; the table is in [docs/API.md](../../../docs/API.md), "6.
 Frontend consumption and message policy". Use `isTransientProblem` when the consumer needs retry
 classification; the facade never navigates or retries.
 
