@@ -1,15 +1,10 @@
 # Backend — Architecture
 
-Current backend conventions. Read the section affected by the task. Code, project files and CI
-describe the implementation and checks actually present; a disagreement needs investigation, since
-neither a stale document nor an older slice automatically defines the right change. Section 10
-supplies examples; section 11 states the limits of enforcement.
-
-This guide owns technical conventions; skills route the work to its sections. Why each convention
-exists, and what was tried and rejected, lives in the decisions:
-[backend.md](../../docs/decisions/backend.md) for use cases, domain, API and dates;
-[plataforma.md](../../docs/decisions/plataforma.md) for topology, tenancy, auth, database and
-logging; [processo.md](../../docs/decisions/processo.md) for tests and CI.
+Current backend conventions; read the section the task affects. Section 10 points to examples and
+section 11 states the limits of enforcement. Why each convention exists and what was rejected:
+[backend.md](../../docs/decisions/backend.md) (use cases, domain, API, dates),
+[plataforma.md](../../docs/decisions/plataforma.md) (topology, tenancy, auth, database, logging) and
+[processo.md](../../docs/decisions/processo.md) (tests and CI).
 
 Three rules of thumb behind everything below:
 
@@ -22,9 +17,7 @@ Three rules of thumb behind everything below:
 - **The simplest correct form first.** A command loads the aggregate, changes it through behaviour and
   saves; a query loads and maps. Caching, projections inside repositories, raw SQL, hand-opened
   transactions, gap-free sequences, denormalized columns and parallel queries need a measured problem or
-  a product rule, stated in the PR. Record architectural decisions through the
-  [root workflow](../../AGENTS.md#workflow); routine implementation does not create an
-  additional documentation step in this guide. Not a query per row, and
+  a product rule, stated in the PR. Not a query per row, and
   explicit no-tracking reads with explicitly tracked updates, are shape rather than optimization and
   stay required.
 
@@ -52,43 +45,38 @@ the OIDC provider and is shaped by that — ASP.NET Identity, no tenant-owned en
 that wraps two stores in one transaction. Don't carry its specifics into a business service.
 
 A new service copies the project set below, the per-service `Domain/Common/` types, a schema and a
-role in `infra/postgres/init/`, a schema-scoped migrations history table, and an AppHost resource;
-it registers `TenantHeaderFilter` if it serves tenant-owned resources. `AddServiceDefaults()` already
-brings logging, telemetry and health checks, so there is nothing to copy for them. Use the live services
-as the template, not a copied snippet ([`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md)).
+role in `infra/postgres/init/`, a schema-scoped migrations history table and an AppHost resource, and
+registers `TenantHeaderFilter` if it serves tenant-owned resources; `AddServiceDefaults()` already
+brings logging, telemetry and health checks.
 
 ### Projects and dependency direction
 
 ```
-<Service>.Domain            entities, value objects, DomainResult        → Admin.SharedKernel.ValueObjects only; no package
-<Service>.Application       use cases, ports in Abstractions/            → Domain, Admin.SharedKernel
-<Service>.Infrastructure    EF Core, repositories, adapters              → Application, Admin.SharedKernel.EntityFrameworkCore, Admin.Identity.Client
-<Service>.Api               controllers, Program.cs, Setup/              → Application, Infrastructure, Admin.SharedKernel.AspNetCore, ServiceDefaults
-<Service>.Tests             unit tests                                   → Domain, Application
-<Service>.PersistenceTests  EF InMemory, only where EF model behaviour needs proof → Infrastructure
+<Service>.Domain            → Admin.SharedKernel.ValueObjects only; no package
+<Service>.Application       → Domain, Admin.SharedKernel
+<Service>.Infrastructure    → Application, Admin.SharedKernel.EntityFrameworkCore, Admin.Identity.Client
+<Service>.Api               → Application, Infrastructure, Admin.SharedKernel.AspNetCore, ServiceDefaults
+<Service>.Tests             → Domain, Application
+<Service>.PersistenceTests  → Infrastructure; EF InMemory, only where EF model behaviour needs proof
 ```
 
-The current `.csproj` references constrain which dependencies each layer can use. Compilation
-catches an unavailable dependency, but does not forbid adding a new reference that violates this
-direction. Review changed project/package references as architecture; there is no dedicated
-dependency-policy check in the current repository (§11).
+No check forbids a new reference that breaks this direction (§11): review changed project and
+package references as architecture.
 
 Shared projects in `backend/shared/` hold infrastructure, never business rules:
 
-| Project                                  | Holds                                                                                                                                                                                 | Referenced by                                |
-| ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
-| `Admin.SharedKernel`                     | `Result`, `Error`/`ErrorType`/`FieldError`, CQRS contracts, `IDispatcher`, `PagedQuery`, `PageRequest` and `PagedResult`, the JSON converters of the wire (value objects, enum names) | Application                                  |
-| `Admin.SharedKernel.AspNetCore`          | `ToActionResult`, `ApiResponse<T>`, `ApiProblemDetails`, `AgenzaControllerBase`, `GenericExceptionHandler`, `AddWireFormat()`                                                         | Api                                          |
-| `Admin.SharedKernel.EntityFrameworkCore` | `RepositoryBase<T>` (with the paged read over `PageRequest`), `ApplyAuditableConventions` (soft-delete and tenant filters), the column conversion of the shared value objects         | Infrastructure                               |
-| `Admin.SharedKernel.ValueObjects`        | `IStringValueObject<T>` and the string value objects every service shares (`CpfNumber`); no reference at all                                                                          | Domain                                       |
-| `Admin.Identity.Client`                  | JWT validation, `ITenantAccessor`, `ICurrentUserAccessor`, `TenantHeaderFilter`, `[IgnoreTenant]`                                                                                     | Infrastructure, Api                          |
-| `Admin.Logging`                          | the Serilog pipeline: console format, default levels, OTLP export, one line per request                                                                                               | `ServiceDefaults`, `AppHost` — never a layer |
+| Project                                  | Referenced by                                |
+| ---------------------------------------- | -------------------------------------------- |
+| `Admin.SharedKernel`                     | Application                                  |
+| `Admin.SharedKernel.AspNetCore`          | Api                                          |
+| `Admin.SharedKernel.EntityFrameworkCore` | Infrastructure                               |
+| `Admin.SharedKernel.ValueObjects`        | Domain; it references nothing                |
+| `Admin.Identity.Client`                  | Infrastructure, Api                          |
+| `Admin.Logging`                          | `ServiceDefaults`, `AppHost` — never a layer |
 
 `BaseEntity`, `TenantOwnedEntity`, `DomainResult` and `DomainError` are **duplicated per service on
 purpose** — Domain references only a project that holds value objects and nothing else, so it cannot
-share them. That project,
-`Admin.SharedKernel.ValueObjects`, is the one shared project that holds domain types: a format that is
-the same in every service, never a rule of one context.
+share them.
 
 A shared change affects the services consuming that project. Reuse needs a real second caller,
 not an anticipated one; inspect project references before treating it as repo-wide infrastructure.
@@ -99,12 +87,11 @@ Vertical slices organise the Application layer; they do not replace the layers.
 
 ```
 <Service>.Domain/
-  Common/                                  BaseEntity, TenantOwnedEntity, DomainResult, DomainError
+  Common/
   Entities/                                aggregate roots, their children, their enums
   ValueObjects/
 <Service>.Application/
-  Abstractions/                            ports: I<Entity>Repository, IUnitOfWork, ICurrentTenantProvider;
-                                           DomainErrorMapper; PersistenceResult
+  Abstractions/                            ports
   <Feature>/
     <Entity>Response.cs                    wire DTO with a static From<Entity>(…), shared by the operations
     <Operation>/
@@ -116,7 +103,7 @@ Vertical slices organise the Application layer; they do not replace the layers.
   Persistence/Configurations/<Entity>Configuration.cs
   Persistence/Migrations/
   Repositories/<Entity>Repository.cs
-  DependencyInjection.cs                   registers each repository and adapter
+  DependencyInjection.cs
 <Service>.Api/Controllers/<Feature>Controller.cs
 <Service>.Tests/<Feature>/                 tests of the feature's entities and value objects
 <Service>.Tests/<Feature>/<Operation>/     handler, validator and binding tests
@@ -140,9 +127,7 @@ same aggregate are accepted, and so is an input rule repeated between their vali
 
 **Inputs and outputs are explicit records.** The input is the command or query record itself and its
 nested `<Thing>Input` records: primitives, strings, `DateOnly`, ids and the shared string value objects
-(`CpfNumber`, `FullName`, `PhoneNumber`, `EmailAddress`, `BirthDate`, `AdministrativeNotes`, `SearchText`) and enums (§6) — no other domain type,
-no tenant. The
-output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
+and enums (§6) — no other domain type, no tenant. The output is `<Entity>Response` with a static `From<Entity>(entity, …)`, built from the aggregate plus what
 the handler read explicitly for it; another aggregate appears as a small `<Entity>Summary`. In a
 response, a value object flattens to its primitive, and an enum stays the enum: the kernel's converter writes it as a
 camelCase string (§6), so the mapping never calls `ToString()` on it. No mapping library, no DTO in the domain, no
@@ -197,28 +182,27 @@ object: the options are a plain enum,
 and the entity holds an `IReadOnlySet<TEnum>` of them, keeps its own copy, and refuses an empty set and a
 value that is not a member with named errors, in `Create` and in every behaviour that replaces the set.
 
-**Shared value objects** live in
-`Admin.SharedKernel.ValueObjects` when the value has a format and no business context (CPF, full name,
-phone, e-mail, birth date, administrative notes). They
-behave like a scalar on the wire: a `sealed record` implementing `IStringValueObject<T>`, with `Value`,
-`Restore` and a `Create(raw)` that returns a `ParseResult<T>` — the value, or the pt-BR message of the
-rule that failed; no `DomainResult`, no `DomainError`, no `Parse`. A blank string is not a value —
-`Create("")` fails — and an optional member is nullable. What a blank means is the type's to say:
-`BlankIsAbsent` (default `true`) binds it to `null`, for an optional field; a type that declares it
-`false` (`FullName`) answers its own message instead. The kernel does the rest for every implementer: the JSON converter
-(`AddValueObjectConverters`), the OpenAPI `string` schema (`MapValueObjectsToStrings`) and the column
-conversion (`AddValueObjectConversions`, called from the `DbContext`'s `ConfigureConventions`). Only
-`HasMaxLength` is written in the entity configuration. A command may carry one (`CpfNumber? Cpf`, `FullName FullName`); it
-needs no validator rule and no call in `ToModel`. Binding stops at the first invalid value, so a body with
-two invalid fields answers one at a time. A string one is read from a query or a route only when it declares
-`[TypeConverter(typeof(StringValueObjectTypeConverter<T>))]` (`SearchText` does; personal data never does, because a URL
-ends up in logs): a bad value answers `400 Validation.Failed` under the parameter with its own
-message. To add one: the type in that project and its tests in
-`Admin.SharedKernel.Tests`. A date whose rules depend on the day (`BirthDate`) implements
-`IDateValueObject<T>` instead — `Create(date, today)`, with `today` read at binding from the container's
-`TimeProvider` (the same one the handlers use) and the same
-three pieces from the kernel. A value that is neither a string nor a date stays in the service, with
-`Create`.
+**Shared value objects** live in `Admin.SharedKernel.ValueObjects` when the value has a format and
+no business context (CPF, full name, phone, e-mail, birth date, administrative notes). They behave
+like a scalar on the wire; the procedure for adding one is in the backend-slice skill's
+[value objects](../../.claude/skills/agenza-backend-slice/references/value-objects.md).
+
+- A `sealed record` implementing `IStringValueObject<T>`, with `Value`, `Restore` and a `Create(raw)`
+  that returns a `ParseResult<T>` — the value, or the pt-BR message of the rule that failed; no
+  `DomainResult`, no `DomainError`, no `Parse`.
+- A blank string is not a value — `Create("")` fails — and an optional member is nullable.
+  `BlankIsAbsent` (default `true`) binds a blank to `null` for an optional field; a type that declares
+  it `false` (`FullName`) answers its own message instead.
+- The kernel registers the JSON converter, the OpenAPI `string` schema and the column conversion for
+  every implementer: only `HasMaxLength` is written in the entity configuration, and a command member
+  (`CpfNumber? Cpf`) needs no validator rule and no call in `ToModel`.
+- Binding stops at the first invalid value, so a body with two invalid fields answers one at a time.
+- A string one is read from a query or a route only when it declares
+  `[TypeConverter(typeof(StringValueObjectTypeConverter<T>))]` (`SearchText` does; personal data never
+  does, because a URL ends up in logs).
+- A date whose rules depend on the day (`BirthDate`) implements `IDateValueObject<T>` instead —
+  `Create(date, today)`, with `today` read at binding from the container's `TimeProvider`. A value that
+  is neither a string nor a date stays in the service, with `Create`.
 
 **Errors.** `DomainError(Code, Message)`, declared once per rule as `static readonly` on the type that
 owns it. The code is `<Type>.<Rule>` and talks about the value, not about who uses it
@@ -275,15 +259,11 @@ and transactional cleanup. Trace a handler's `try/catch` to its actual responsib
 business failures remain results, while persistence translation belongs in the unit of work.
 The syntax alone does not establish a defect or its severity.
 
-**What dies in gate 1** — malformed JSON, a non-nullable member absent from the body, a value of the
-wrong JSON type, an unknown JSON enum — reaches the client in the canonical shape
-(`AddModelStateProblemDetails`), but with the framework's English message and the generic code
-`Validation.Failed`; only a shared value object and an enum read from a query or a route bring their own pt-BR
-message. An enum is bound by name (§6), so an unknown name dies here too. In a body, the JSON converter can also yield a
-value that is not a member (several names in one string), which the validator refuses with `IsInEnum`; from a query or
-a route the kernel's binder accepts exactly one name, so a number or several names die here. A failed body read also
-carries the framework's entry for the body parameter (`command`), which the backend does not remove.
-The shape is described in [`docs/API.md`](../../docs/API.md) §4.3.
+**What dies in gate 1** — malformed JSON, a missing non-nullable member, a wrong JSON type, an
+unknown enum name — answers the canonical shape with the framework's English message and the generic
+code `Validation.Failed`; only shared value objects and query/route enums bring a pt-BR message. In a
+body, a string with several enum names still converts, so the validator refuses it with `IsInEnum`.
+Details in [`docs/API.md`](../../docs/API.md) §4.3.
 
 **Codes and messages.** `code` is English (`<Type>.<Rule>`, `<Entity>.<Reason>`) and is the contract
 clients branch on. Messages are pt-BR copy written for the end user; the frontend shows them as they
@@ -312,11 +292,8 @@ model-cache trap of the query filter: skill
 **Query filters.** [ApplyAuditableConventions](../shared/Admin.SharedKernel.EntityFrameworkCore/ModelBuilderExtensions.cs), called from `OnModelCreating`, gives every
 `BaseEntity` a `SoftDelete` filter and every tenant-owned one a `Tenant` filter, plus their indexes. No repository ignores
 either; `IgnoreQueryFilters()` belongs to a persistence test that asserts a soft delete.
-The filter expression must reference the current context's `CurrentTenantId` property, not embed
-a tenant Guid constant in the model EF caches by context type. The
-[ServicesDataContext](../services/services-service/ServicesService.Infrastructure/Persistence/ServicesDataContext.cs)
-captures its scoped provider at construction and uses `Guid.Empty` when absent; that is not an
-unscoped query. Test different contexts sharing the model when changing this expression.
+The filter expression references the current context's `CurrentTenantId` property, never a tenant
+Guid constant in the model EF caches; the tenant skill covers the trap and its test.
 
 Composite FKs constrain relationships within a tenant. PostgreSQL roles restrict each service to
 its schema; they do not isolate tenant rows by themselves. The init scripts, migrations and
@@ -346,24 +323,30 @@ runtime query/write path are separate parts of the boundary (§11).
   the store generates, a child added to a loaded root is tracked as `Modified` and its save fails.
 - Soft-delete and tenant filters and their indexes come from the convention — never by hand.
 
-**Repositories.** One per aggregate root — never one for a child. The port `I<Entity>Repository` lives
-in `Application/Abstractions` and declares only what a handler calls; the adapter extends
-`RepositoryBase<T>` in Infrastructure. It returns its own root with its children, a list or a page
-of them (each root whole there too, because `UpdateAsync` stages the children the root holds), a `bool` or a count —
-never a DTO, an `IQueryable` or another aggregate. Methods say what they
-are for (`FindActiveByEmailAsync`), take value objects for value-object columns, and use
-no tracking for reads. `ServicesDataContext` sets that behavior globally; shared helpers may preserve
-it explicitly for a service outside that decision. A command loads its aggregate with `GetByIdAsync`,
-applies the domain behaviour, then stages persistence with `UpdateAsync`; the port does not expose EF
-tracking. An EF adapter makes any required state changes explicitly inside that operation. Paged reads
-take a `PageRequest` — or the filter of the list, a record that extends it with the list's plain filters — and return a
-`PagedResult<T>` through `ListPagedAsync`, whose filter-and-order function returns an `IOrderedQueryable<T>`. The tenant
-and soft-delete filters come from the `DbContext`: a repository never writes a `TenantId` or
-`DeletedAt` predicate. A query cannot reach `.Value` through a converter: compare whole value objects or order by the
-property. Matching or sorting a value-object column as text — `EF.Property<string>` over it throws — goes through a
-stored generated `string` column (`lower("FullName")`) added by an additive migration. Repositories
-only stage (`Add`, `UpdateAsync`, `Remove`); the handler commits through `IUnitOfWork`, whose shape follows the
-service's real transactional need.
+**Repositories.** One per aggregate root — never one for a child.
+
+- The port `I<Entity>Repository` lives in `Application/Abstractions` and declares only what a handler
+  calls; the adapter extends `RepositoryBase<T>` in Infrastructure.
+- It returns its own root with its children, a list or a page of them (each root whole there too,
+  because `UpdateAsync` stages the children the root holds), a `bool` or a count — never a DTO, an
+  `IQueryable` or another aggregate.
+- Methods say what they are for (`FindActiveByEmailAsync`), take value objects for value-object
+  columns, and use no tracking for reads. `ServicesDataContext` sets that behavior globally; shared
+  helpers may preserve it explicitly for a service outside that decision.
+- A command loads its aggregate with `GetByIdAsync`, applies the domain behaviour, then stages
+  persistence with `UpdateAsync`; the port does not expose EF tracking. An EF adapter makes any
+  required state changes explicitly inside that operation.
+- Paged reads take a `PageRequest` — or the filter of the list, a record that extends it with the
+  list's plain filters — and return a `PagedResult<T>` through `ListPagedAsync`, whose
+  filter-and-order function returns an `IOrderedQueryable<T>`.
+- The tenant and soft-delete filters come from the `DbContext`: a repository never writes a
+  `TenantId` or `DeletedAt` predicate.
+- A query cannot reach `.Value` through a converter: compare whole value objects or order by the
+  property. Matching or sorting a value-object column as text — `EF.Property<string>` over it throws
+  — goes through a stored generated `string` column (`lower("FullName")`) added by an additive
+  migration.
+- Repositories only stage (`Add`, `UpdateAsync`, `Remove`); the handler commits through
+  `IUnitOfWork`, whose shape follows the service's real transactional need.
 
 **Migrations.** One additive migration per change, named after it (`Add<Thing>`), generated with the
 repository's pinned `dotnet ef` (`dotnet tool restore`). Run from the Api folder, so the design-time
@@ -393,21 +376,21 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
 - The success envelope and the problem shapes come from the shared kernel; never build them by hand.
 - A body with a list is bounded twice: the validator caps the count and the action has a
   `[RequestSizeLimit]`.
-- Enums travel as camelCase strings: a plain enum, named by the kernel for every enum with integers
-  refused (`AddEnumNameConverter`, registered by `AddWireFormat()` in the MVC options and in the
-  minimal-API options, which the OpenAPI generator reads). From a query or a route, the same call's binder reads
-  exactly one name in any case and refuses a number or several names, with a pt-BR message that lists the names. Nothing to register per enum, no
-  translation class and no values chosen to dodge the parser. Each item of a list of enums in a body has an `IsInEnum`
-  rule with the domain's code.
+- Enums travel as camelCase names, set by the kernel's `AddWireFormat()` for every enum, with
+  integers refused; query and route binding is in [`docs/API.md`](../../docs/API.md) §4.3. Nothing to
+  register per enum, no translation class and no values chosen to dodge the parser. Each item of a
+  list of enums in a body has an `IsInEnum` rule with the domain's code.
 - The wire is camelCase English; calendar dates are `DateOnly` (`yyyy-MM-dd`), and a date value object also reads an instant, keeping its day as
   written; instants are UTC.
-- The query of a paged list extends `PagedQuery` (`Page` and `PageSize`, with the `PageRequest` defaults, unguarded) and
-  its validator writes the three rules
-  (page at least 1, size from 1 to `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared
-  `Paging.*` codes; the query's own `ToFilter()` method builds the list's filter (`ClientListFilter`, a `PageRequest` with the
-  plain filters; it maps into an Application record, not into the domain, so there is no extension file as for a command), the port takes it and returns `PagedResult<T>`, and the handler `Map`s it to the response.
-  A free-text search is a `SearchText`. An unpaged list returns `IReadOnlyList<T>`. A page past the last answers `200`
-  with no items.
+- The query of a paged list extends `PagedQuery` (`Page` and `PageSize`, with the `PageRequest`
+  defaults, unguarded); its validator writes the three rules (page at least 1, size from 1 to
+  `PageRequest.MaxPageSize`, offset within `PageRequest.OffsetFits`) with the shared `Paging.*` codes.
+- The query's own `ToFilter()` builds the list's filter (`ClientListFilter`, a `PageRequest` with the
+  plain filters); it maps into an Application record, not into the domain, so there is no extension
+  file as for a command. The port takes it and returns `PagedResult<T>`; the handler `Map`s it to the
+  response.
+- A free-text search is a `SearchText`. An unpaged list returns `IReadOnlyList<T>`. A page past the
+  last answers `200` with no items.
 
 A change to an endpoint's contract regenerates the frontend's types in the same change — skill
 [`agenza-api-contract`](../../.claude/skills/agenza-api-contract/SKILL.md). A change to a shape that
@@ -430,8 +413,7 @@ local function or property whose body is a single plain expression with no branc
 lambdas an API takes (FluentValidation `.Must(…)`, LINQ). The reference is the handler named in §10.
 LINQ chains take one operator per line, with lookups in their own method or local; an
 `Error`/`FieldError` construction stays one nested expression.
-Apply the convention to new or necessarily changed logic. An unrelated older pattern is not an
-automatic refactoring task; explain any conversion needed for the requested behavior or safety.
+Apply the convention to new or necessarily changed logic (§10).
 
 No "what" comments and no XML doc comments; a one-line "why" only for a genuine race or a non-obvious
 constraint (root [`AGENTS.md`](../../AGENTS.md)). Rationale belongs in `docs/decisions/`.
@@ -456,8 +438,7 @@ strip control characters first (CWE-117), as `GenericExceptionHandler` and the r
 | Persistence    | `<Service>.PersistenceTests`              | EF tenant assignment, query filters, conversions and tag-deletion relationship coverage; relational metadata assertions do not execute PostgreSQL constraints | EF InMemory                                                 |
 | Contract smoke | the API-contract job in `frontend-ci.yml` | Fresh migrations, selected OIDC and tenant-isolation requests, both `ClientTags` tenant foreign keys, and generated type drift                                | Aspire AppHost                                              |
 
-Line coverage of Domain + Application has a gate in `Directory.Build.props`; local `dotnet test`
-uses the same coverage configuration as CI ([`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md)). Warnings are errors.
+Coverage and warning gates: §11 and [`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md).
 Line coverage is not evidence that every rule or branch has been tested. Select tests by changed
 behavior and risk, including rejection paths and absence of unintended persistence. For input
 rules, assert the code; use a fixed clock when the day matters.
