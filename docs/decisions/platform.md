@@ -50,8 +50,8 @@ data ownership verifiable by the database without multiplying instances.
   when added; without an available tenant the save fails. An already assigned tenant is never
   swapped.
 - **Two named filters on every query:** `SoftDelete` and `Tenant`, applied by the `DbContext`
-  convention. No repository ignores them; reading deleted rows needs a dedicated helper that keeps
-  the tenant.
+  convention. No repository ignores them; `IgnoreQueryFilters()` appears only in a persistence test that asserts
+  a soft delete.
 - **The database enforces relationships.** Every tenant-owned root exposes the candidate key
   `(TenantId, Id)`, and relationships between tenant-owned entities use a composite foreign key with
   the tenant. A foreign key on `Id` alone between them is a defect.

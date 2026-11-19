@@ -196,7 +196,6 @@ like a scalar on the wire; the procedure for adding one is in the backend-slice 
 - The kernel registers the JSON converter, the OpenAPI `string` schema and the column conversion for
   every implementer: only `HasMaxLength` is written in the entity configuration, and a command member
   (`CpfNumber? Cpf`) needs no validator rule and no call in `ToModel`.
-- Binding stops at the first invalid value, so a body with two invalid fields answers one at a time.
 - A string one is read from a query or a route only when it declares
   `[TypeConverter(typeof(StringValueObjectTypeConverter<T>))]` (`SearchText` does; personal data never
   does, because a URL ends up in logs).
@@ -255,9 +254,8 @@ through the pre-checks and gets the specific answer.
 
 **Exceptions** remain for: missing configuration at startup, programmer-error guards (`.Value` of a
 failed result, `AssignTenant(Guid.Empty)`, a save with no tenant), an unrecognised database error,
-and transactional cleanup. Trace a handler's `try/catch` to its actual responsibility: expected
-business failures remain results, while persistence translation belongs in the unit of work.
-The syntax alone does not establish a defect or its severity.
+and transactional cleanup. Expected business failures remain results, while persistence translation
+belongs in the unit of work.
 
 **What dies in gate 1** — malformed JSON, a missing non-nullable member, a wrong JSON type, an
 unknown enum name — answers the canonical shape with the framework's English message and the generic
@@ -276,8 +274,7 @@ come and never branches on them. The wire shapes of every error: [`docs/API.md`]
 missing/malformed header, missing claim or mismatch before the action. `[IgnoreTenant]` bypasses
 this comparison and requires an explicit authorization rationale; it is not an anonymous-access
 policy. Commands, queries, DTOs, mappings and business repository methods do not accept a
-client-selected tenant. Trusted accessors, internal adapters and isolated test doubles are different
-seams: trace their source rather than rejecting every tenant parameter by name. Do not assume a
+client-selected tenant. Do not assume a
 fine-grained panel permission model: M2M scopes and tenant/token checks have their own boundaries;
 inspect the endpoint's actual policy.
 
@@ -285,8 +282,7 @@ The [save interceptor](../services/services-service/ServicesService.Infrastructu
 fills an empty tenant on `Added` entities and throws if no current tenant is available. It does
 not replace or revalidate a preassigned tenant, nor validate the ownership of every modified row.
 Do not use this mechanism as permission to attach a client-selected graph. The bearer keeps the claim names the token carries,
-so `tenant_id` is the tenant and `sub` the actor the interceptor stamps on `CreatedBy`, `UpdatedBy` and `DeletedBy`. Review checklist and the
-model-cache trap of the query filter: skill
+so `tenant_id` is the tenant and `sub` the actor the interceptor stamps on `CreatedBy`, `UpdatedBy` and `DeletedBy`. Review checklist: skill
 [`agenza-tenant-isolation`](../../.claude/skills/agenza-tenant-isolation/SKILL.md).
 
 **Query filters.** [ApplyAuditableConventions](../shared/Admin.SharedKernel.EntityFrameworkCore/ModelBuilderExtensions.cs), called from `OnModelCreating`, gives every
@@ -331,8 +327,8 @@ runtime query/write path are separate parts of the boundary (§11).
   because `UpdateAsync` stages the children the root holds), a `bool` or a count — never a DTO, an
   `IQueryable` or another aggregate.
 - Methods say what they are for (`FindActiveByEmailAsync`), take value objects for value-object
-  columns, and use no tracking for reads. `ServicesDataContext` sets that behavior globally; shared
-  helpers may preserve it explicitly for a service outside that decision.
+  columns, and use no tracking for reads. Infrastructure's `DependencyInjection.cs` sets it globally, and
+  `RepositoryBase` asks for it explicitly.
 - A command loads its aggregate with `GetByIdAsync`, applies the domain behaviour, then stages
   persistence with `UpdateAsync`; the port does not expose EF tracking. An EF adapter makes any
   required state changes explicitly inside that operation.
@@ -389,8 +385,7 @@ injects `IDispatcher`, holds no logic — bind, dispatch, `result.ToActionResult
   plain filters); it maps into an Application record, not into the domain, so there is no extension
   file as for a command. The port takes it and returns `PagedResult<T>`; the handler `Map`s it to the
   response.
-- A free-text search is a `SearchText`. An unpaged list returns `IReadOnlyList<T>`. A page past the
-  last answers `200` with no items.
+- A free-text search is a `SearchText`. An unpaged list returns `IReadOnlyList<T>`.
 
 A change to an endpoint's contract regenerates the frontend's types in the same change — skill
 [`agenza-api-contract`](../../.claude/skills/agenza-api-contract/SKILL.md). A change to a shape that
@@ -420,9 +415,7 @@ constraint (root [`AGENTS.md`](../../AGENTS.md)). Rationale belongs in `docs/dec
 
 ### Logging
 
-Inject `ILogger<T>` and write a message template with named placeholders, never an interpolated string. Serilog is
-the pipeline behind it, owned by `Admin.Logging` and brought in by `AddServiceDefaults()`. Domain remains free of logging packages.
-Application code that needs a logger uses `Microsoft.Extensions.Logging.Abstractions`, as declared
+Inject `ILogger<T>` and write a message template with named placeholders, never an interpolated string. Application code that needs a logger uses `Microsoft.Extensions.Logging.Abstractions`, as declared
 by its project; Infrastructure and hosts use the injected abstractions too. Nothing in those layers
 calls the static Serilog `Log`. The default levels live in
 `Admin.Logging`; a host that needs another level sets it under `Serilog:MinimumLevel` in its `appsettings.json`, and drops a
@@ -439,8 +432,7 @@ strip control characters first (CWE-117), as `GenericExceptionHandler` and the r
 | Contract smoke | the API-contract job in `frontend-ci.yml` | Fresh migrations, selected OIDC and tenant-isolation requests, both `ClientTags` tenant foreign keys, and generated type drift                                | Aspire AppHost                                              |
 
 Coverage and warning gates: §11 and [`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md).
-Line coverage is not evidence that every rule or branch has been tested. Select tests by changed
-behavior and risk, including rejection paths and absence of unintended persistence. For input
+Line coverage is not evidence that every rule or branch has been tested. For input
 rules, assert the code; use a fixed clock when the day matters.
 
 The API-contract job runs the real HTTP and PostgreSQL tenant checks. The backend test projects
@@ -484,8 +476,8 @@ task into a migration of unrelated code.
 - Soft deletion:
   [DeleteClientCommandHandler](../services/services-service/ServicesService.Application/Clients/DeleteClient/DeleteClientCommandHandler.cs).
 
-Some older operations still use persistence-error mappers, a relationship loader shared between
-handlers, uncoded validator rules or cross-aggregate navigations. Their presence is not a precedent for new code. Explain a conversion needed for the
+Some older operations still use persistence-error mappers, a tracked `GetForUpdateAsync` on the port
+(`ITagRepository`, used by `UpdateTag`/`DeleteTag`), a relationship loader shared between handlers, uncoded validator rules or cross-aggregate navigations. Their presence is not a precedent for new code. Explain a conversion needed for the
 requested behavior or safety.
 Update an example when it stops demonstrating its concern.
 
