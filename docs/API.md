@@ -14,7 +14,6 @@ the feature code; this guide holds the conventions a consumer needs to know.
 | Authorization and tenant            | [Service configuration](../backend/services/services-service/ServicesService.Api/Program.cs) and [TenantHeaderFilter](../backend/shared/Admin.Identity.Client/TenantHeaderFilter.cs)                       |
 | Declared routes and responses       | [Controllers](../backend/services/services-service/ServicesService.Api/Controllers) and [OpenAPI documentation](../backend/services/services-service/ServicesService.Api/Setup/DocumentationExtensions.cs) |
 | Frontend normalization              | [servicesFacade.ts](../apps/admin-frontend/src/shared/api/servicesFacade.ts)                                                                                                                               |
-| Ports and local composition         | [AppHost](../backend/AppHost/AppHost.cs)                                                                                                                                                                   |
 
 The layer rules and the current backend examples are in the
 [architecture guide](../backend/docs/ARCHITECTURE.md). Use the [decisions](decisions/) for the
@@ -27,14 +26,13 @@ actions subject to TenantHeaderFilter, the X-Tenant-Id header must be a UUID equ
 token's tenant_id claim. A missing, invalid or different claim or header gets the same rejection.
 IgnoreTenant skips that comparison but does not grant anonymous access.
 
-| Rejection                                     | Status | Shape                                               |
-| --------------------------------------------- | ------ | --------------------------------------------------- |
-| Authentication required or invalid credential | 401    | Authorization problem from the shared pipeline      |
-| Insufficient authorization                    | 403    | Authorization problem from the shared pipeline      |
-| Invalid tenant context                        | 403    | Reduced ProblemDetails, with Tenant.ContextMismatch |
+| Rejection                                     | Status | Shape                                                      |
+| --------------------------------------------- | ------ | ---------------------------------------------------------- |
+| Authentication required or invalid credential | 401    | Authorization problem from the shared pipeline             |
+| Insufficient authorization                    | 403    | Authorization problem from the shared pipeline             |
+| Invalid tenant context                        | 403    | Reduced ProblemDetails (§4.2), with Tenant.ContextMismatch |
 
-The filter's reduced problem has type, title, status and code; it adds no traceId, correlationId or
-errors. The validated claim remains the server's tenant source: the header does not authorize access
+The validated claim remains the server's tenant source: the header does not authorize access
 ([decisions/platform.md](decisions/platform.md)). A consumer must not try to resolve a 403 by
 choosing another tenant.
 
@@ -44,11 +42,7 @@ The generic Result conversion wraps an ObjectResult's value in
 { data, success, timestamp, traceId, correlationId }. The controller sets the status and, on a
 creation, the Location. An operation without content, such as a delete with 204, gets no body.
 
-The tag listing returns a page, per the
-[TagsController](../backend/services/services-service/ServicesService.Api/Controllers/TagsController.cs),
-the [query](../backend/services/services-service/ServicesService.Application/Tags/ListTags/ListTagsQuery.cs)
-and the [consumer](../apps/admin-frontend/src/features/tags/api/tagsRepository.ts). An illustrative
-empty page, without the tracing fields:
+An illustrative empty page from the tag listing, without the tracing fields:
 
 ```json
 {
@@ -58,7 +52,6 @@ empty page, without the tracing fields:
 ```
 
 A page past the last one can be a success with empty items, the real total and the requested page.
-Paging and search rules belong to the operation's validator and repository.
 
 In JSON, decimals are numbers without guaranteed trailing zeros; whoever displays them formats money
 and percentages. Calendar dates use yyyy-MM-dd; instants are UTC. Enums in the shared format are
@@ -95,8 +88,9 @@ not a form field.
 
 ### 4.2 Reduced shape of the tenant filter
 
-Tenant.ContextMismatch uses the reduced ProblemDetails described in §2. The consumer must accept the
-absence of the factory's enriched fields; a tenant rejection is not a network failure.
+The filter's reduced problem, with Tenant.ContextMismatch, has type, title, status and code; it adds
+no traceId, correlationId or errors. The consumer must accept the absence of the factory's enriched
+fields; a tenant rejection is not a network failure.
 
 ### 4.3 Model binding failure — before the dispatcher
 
@@ -144,7 +138,8 @@ The mapping is in [ResultExtensions](../backend/shared/Admin.SharedKernel.AspNet
 | Failure and fallback | 400    |
 
 The [exception handler](../backend/shared/Admin.SharedKernel.AspNetCore/GenericExceptionHandler.cs)
-handles unexpected failures with a generic 500 and transport read rejections with 400/413. It does
+handles unexpected failures with a generic 500 and transport read rejections with the rejection's
+status (`Request.TooLarge` for 413, `Request.Invalid` otherwise). It does
 not replace handling an expected failure through Result, nor guarantee a body on every routing
 rejection.
 
@@ -156,8 +151,6 @@ rejection.
   structure received, without inferring the field from the 409 status.
 - A translated persistence failure uses the generic message defined for the save. Constraints and
   internal details are not a user message ([decisions/backend.md](decisions/backend.md)).
-- A 500 with a recognized problem may keep the backend's message in the frontend; an empty 404 may
-  get a generic local message. Origin and shape matter beyond the status.
 
 ## 7. Frontend consumption and message policy
 
@@ -177,6 +170,8 @@ navigation, presentation and a later retry from the Result.
 The guard does not check the problem's origin or completeness: a textual title is enough. Generated
 problems, except RATE_LIMIT_PROBLEM, use status 0; the HTTP status of an unrecognized answer is not
 kept in SERVER_PROBLEM. None of these values triggers a redirect or a retry by itself.
+`isTransientProblem` in the same file treats transient codes and any status of 500 or more as
+transient.
 
 Messages of kept problems are shown by the consumers, 5xx problems included. Local messages come
 from the normalization above, not from a universal translation by code. Branch on code and status
@@ -195,10 +190,9 @@ a diverging local filter in each form.
 
 ## 8. Verification and maintenance
 
-The [type generator](../apps/admin-frontend/scripts/generateApiTypes.mjs) reads the running service's
-OpenAPI document and produces the frontend's contract files. The
-[drift check](../apps/admin-frontend/scripts/checkGeneratedApiTypes.mjs) compares the generated
-content with the committed one; it does not exercise every operation, message or empty answer.
+The [contract skill](../.claude/skills/agenza-api-contract/SKILL.md), "Regenerate a changed
+contract", covers type generation and the drift check; the drift check does not exercise every
+operation, message or empty answer.
 
 The [facade tests](../apps/admin-frontend/src/shared/api/servicesFacade.test.ts) and the
 [mapper tests](../apps/admin-frontend/src/shared/api/formErrors.test.ts) check the consumer's
@@ -207,5 +201,4 @@ their own scopes; one of these proofs does not replace the others.
 
 When changing a convention, check the matching code, configuration and tests and update the affected
 source. Record manual runs in the PR, with disposable data and environment; do not turn an
-exploration's results into a permanent catalog. The generation and integration procedure is in the
-[contract skill](../.claude/skills/agenza-api-contract/SKILL.md).
+exploration's results into a permanent catalog.

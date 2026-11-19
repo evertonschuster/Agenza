@@ -125,8 +125,7 @@ differ. Return annotations keep the structural check against the generated contr
 `servicesApi` resolves with a `Result` on success and on failure. For HTTP rules read
 [docs/API.md](../../../docs/API.md); for the outcomes actually normalized read
 [servicesFacade.ts](../src/shared/api/servicesFacade.ts). Regeneration and its check are in the
-[README](../README.md#commands). The narrative contract may hold historical examples; the schema and
-the current code decide an endpoint's shape.
+[README](../README.md#commands).
 
 Turning a `Result` into an exception exists in [unwrap.ts](../src/shared/api/unwrap.ts), only at the
 boundary of a loader or of an eventual `queryFn` that signals errors by rejection. Mutations and
