@@ -3,6 +3,8 @@ using ServicesService.Mcp.Tools;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.AddServiceDefaults();
+
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
     .WithTools<HelloWorldTools>();
@@ -10,5 +12,6 @@ builder.Services.AddMcpServer()
 var app = builder.Build();
 
 app.MapMcp("/mcp");
+app.MapDefaultEndpoints();
 
 await app.RunAsync();

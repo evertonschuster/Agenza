@@ -50,6 +50,13 @@ var servicesService = builder.AddDotnetProject(
     .WithReference(identityService)
     .WaitFor(identityService);
 
+builder.AddDotnetProject(
+        "services-mcp",
+        "../services/services-service/ServicesService.Mcp/ServicesService.Mcp.csproj",
+        options => options.LaunchProfileName = "http")
+    .WithHttpEndpoint(port: 5091, name: "http")
+    .WithHttpHealthCheck("/health");
+
 builder.AddUvicornApp(
         "assistant-service",
         "../../ai-services/assistant-service",
