@@ -129,6 +129,16 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(metadata["resource"], self.resource)
         self.assertEqual(metadata["scopes_supported"], ["mcp:connect"])
 
+    def test_callback_raiz_do_vscode_aceita_porta_variavel(self):
+        callback = "http://127.0.0.1:33418/"
+        status, location, result, verifier, _ = self.authorize(redirect_uri=callback)
+        self.assertEqual(status, 302)
+        self.assertTrue(location.startswith(callback + "?"))
+        self.assertIn("code", result)
+        status, tokens = self.token(redirect_uri=callback, code=result["code"][0], code_verifier=verifier)
+        self.assertEqual(status, 200)
+        self.assertIn("access_token", tokens)
+
     def test_callback_nativo_aceita_porta_variavel(self):
         callback = parse.urlsplit(self.callback)
         if callback.scheme != "http" or callback.hostname not in ("127.0.0.1", "::1", "localhost"):
@@ -192,6 +202,22 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertNotIn("code", result)
         self.assertFalse(location.startswith("https://attacker.invalid"))
+
+    def test_callback_local_nao_cadastrado_nao_herda_permissao_da_raiz(self):
+        status, location, result, _, _ = self.authorize(
+            redirect_uri="http://127.0.0.1:49817/caminho-nao-cadastrado")
+        self.assertEqual(status, 400)
+        self.assertNotIn("code", result)
+        self.assertFalse(location.startswith("http://127.0.0.1:49817/"))
+
+    def test_troca_do_codigo_recusa_outro_callback_cadastrado(self):
+        callback = "http://127.0.0.1:49817/"
+        _, _, result, verifier, _ = self.authorize(redirect_uri=callback)
+        self.assertIn("code", result)
+        status, tokens = self.token(redirect_uri="http://127.0.0.1:49817/oauth/callback",
+                                    code=result["code"][0], code_verifier=verifier)
+        self.assertEqual(status, 400)
+        self.assertNotIn("access_token", tokens)
 
     def test_pkce_ausente_e_recusado(self):
         status, _, result, _, _ = self.authorize(code_challenge="", code_challenge_method="")

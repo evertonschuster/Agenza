@@ -30,3 +30,20 @@ O aceite de agnosticismo Ã© configurar um segundo consumidor com seu escopo e au
 alterar controller ou polÃ­tica OAuth. Verifique a recusa cruzada, a renovaÃ§Ã£o com permissÃµes
 reduzidas e a desativaÃ§Ã£o de cliente. Uma alteraÃ§Ã£o de cadastro nÃ£o revoga imediatamente access
 tokens JWT jÃ¡ emitidos e aceitos localmente pelos consumidores.
+
+## Integrar um cliente nativo local
+
+Mantenha callbacks completos e explícitos; para loopback de cliente nativo, apenas a porta pode
+variar. Cadastrar `/` não autoriza subcaminhos. Não substitua a validação do OpenIddict por wildcard,
+nem em desenvolvimento. Essa regra também vale quando o Identity é remoto e o cliente é local.
+
+Antes de incluir um novo harness, verifique o callback real, sua estabilidade entre instalações e
+execuções, o suporte a `client_id` pré-configurado e se navegador e listener alcançam a mesma
+máquina de loopback. Cadastre o callback exato, reaplique o bootstrap e execute o smoke OAuth,
+incluindo recusa de caminho não cadastrado e troca de código com callback diferente.
+
+O `client_id` público identifica uma configuração; não autentica o programa. PKCE vincula a troca
+do código à instância que iniciou o fluxo, sem comprovar que o aplicativo é confiável. Autorização
+automática assume essa limitação. A equipe prepara a integração, sem delegar o cadastro ao usuário.
+Se o caminho realmente variar e não puder ser estabilizado por configuração ou ponte, avalie
+registro controlado como decisão separada; os callbacks desta máquina não provam suporte universal.
