@@ -346,6 +346,13 @@ A contract change regenerates the frontend's types in the same change (skill
 every endpoint shares (envelope, problem, status mapping) updates
 [`docs/API.md`](../../docs/API.md); a feature's own codes and fields do not.
 
+OAuth/OIDC endpoints stay in the Identity API host. Client and scope registrations are OpenIddict
+data; the opt-in bootstrap provisions them from the validated `OAuth` manifest. Runtime grant
+policy reads the persisted registrations, independently of the consuming resource or technology.
+Code exchange and refresh retain only permissions and audiences allowed by both the original grant
+and the current registration. The resource server owns transport and operation authorization.
+See [ADR 0015](../../docs/decisions/0015-mcp-oauth-proof.md).
+
 ## 7. Time
 
 UTC only. Inject `TimeProvider`: instants are `DateTimeOffset` from `GetUtcNow()`; "today" is
@@ -382,11 +389,15 @@ PostgreSQL constraints. The real HTTP, OIDC, migration and PostgreSQL tenant che
 API-contract job (§11). The backend test projects stay free of Testcontainers and in-process HTTP
 hosting.
 
-Line coverage (§11, [`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md)) is not evidence that every
+ine coverage (§11, [`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md)) is not evidence that every
 rule or branch is tested. Assert rejection paths, including that a rejected command saved nothing;
 for input rules assert the code; use a fixed clock when the day matters. Verify a changed PostgreSQL
 property outside the smoke's scope by hand on a **disposable** database initialised from
 `infra/postgres/init/`, never the persistent development volume, and record what ran in the PR.
+
+IdentityService.ProtocolTests exercises client provisioning and grant policy with application
+and scope-manager doubles. It does not host HTTP in process or replace the real Aspire smoke;
+the Domain/Application coverage gate remains separate from these protocol checks.
 
 ## 10. Reference code and the older generation
 

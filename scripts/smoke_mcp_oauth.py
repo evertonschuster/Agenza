@@ -34,7 +34,7 @@ class McpOAuthTests(unittest.TestCase):
     def setUpClass(cls):
         cls.identity = os.getenv("AGENZA_IDENTITY_URL", "https://localhost:7081").rstrip("/")
         cls.resource = os.getenv("AGENZA_MCP_URL", "https://localhost:7091/mcp")
-        cls.client_id = os.getenv("AGENZA_MCP_CLIENT_ID", "agenza-desktop")
+        cls.client_id = os.getenv("AGENZA_MCP_CLIENT_ID", "agenza-mcp")
         cls.callback = os.getenv("AGENZA_MCP_CALLBACK", "http://127.0.0.1/callback/w0rLwdQGb9n5")
         cls.browser = request.build_opener(
             request.HTTPCookieProcessor(http.cookiejar.CookieJar()), NoRedirect()
@@ -114,7 +114,9 @@ class McpOAuthTests(unittest.TestCase):
         metadata = json.loads(body)
         self.assertEqual(metadata["code_challenge_methods_supported"], ["S256"])
         self.assertIn("mcp:connect", metadata["scopes_supported"])
+        self.assertIn("none", metadata["token_endpoint_auth_methods_supported"])
         self.assertNotIn("registration_endpoint", metadata)
+        self.assertNotIn("client_id_metadata_document_supported", metadata)
         status, headers, _ = self.send("POST", self.resource,
             headers={"Accept": "application/json, text/event-stream"},
             json_body=dict(jsonrpc="2.0", id=1, method="tools/list"))
@@ -151,6 +153,39 @@ class McpOAuthTests(unittest.TestCase):
         self.assertNotIn("code", result)
         self.assertFalse(location.startswith(self.callback))
         self.assertEqual(status, 400)
+
+    def test_identidade_publicada_desconhecida_e_recusada(self):
+        status, _, result, _, _ = self.authorize(client_id="https://attacker.invalid/client.json")
+        self.assertEqual(status, 400)
+        self.assertNotIn("code", result)
+
+    @unittest.skipUnless(os.getenv("AGENZA_TEST_SECOND_RESOURCE") == "1", "Requer cadastro do segundo recurso na base de teste.")
+    def test_segundo_recurso_configurado_isola_audiencia_escopos_e_renovacao(self):
+        client_id = "protocol-test"
+        callback = "http://127.0.0.1/protocol-test/callback"
+        resource = "https://localhost:7091/second-resource"
+        status, _, result, verifier, _ = self.authorize(client_id=client_id, redirect_uri=callback,
+            scope="openid tenant_id example:read offline_access", resource=resource)
+        self.assertEqual(status, 302)
+        self.assertIn("code", result)
+        status, tokens = self.token(client_id=client_id, redirect_uri=callback,
+            code=result["code"][0], code_verifier=verifier)
+        self.assertEqual(status, 200)
+        payload = json.loads(base64.urlsafe_b64decode(tokens["access_token"].split('.')[1] + "=="))
+        self.assertIn(payload["aud"], (resource, [resource]))
+        self.assertNotIn("mcp:connect", payload["scope"].split())
+        status, _, _ = self.call_tool(tokens["access_token"])
+        self.assertEqual(status, 401)
+        for other_id, other_callback, scope in (
+            (client_id, callback, "openid mcp:connect"),
+            (self.client_id, self.callback, "openid example:read"),
+        ):
+            _, _, result, _, _ = self.authorize(client_id=other_id, redirect_uri=other_callback,
+                scope=scope, resource=resource)
+            self.assertNotIn("code", result)
+        status, _ = self.token(client_id=client_id, grant_type="refresh_token",
+                               refresh_token=tokens["refresh_token"])
+        self.assertEqual(status, 200)
 
     def test_callback_nao_cadastrado_e_recusado(self):
         status, location, result, _, _ = self.authorize(redirect_uri="https://attacker.invalid/callback")

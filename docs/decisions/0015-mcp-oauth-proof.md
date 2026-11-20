@@ -1,50 +1,55 @@
-# ADR 0015 — Prova de autenticação OAuth do MCP
+# ADR 0015 — Autoridade OAuth e recurso MCP
 
 Status: proposta (2026-11-19).
 
 ## Decisão
 
-O IdentityService autentica o usuário pela página de login existente e emite tokens para o recurso
-MCP. O host MCP valida o token com os accessors compartilhados e exige usuário, tenant e escopo
-`mcp:connect`. O recurso configurado é a audiência do token. Tokens destinados ao REST são recusados.
+O IdentityService conhece protocolos de autenticação e autorização, usuários, clientes, recursos
+e escopos. Identificadores como `mcp:connect` são dados de cadastro; não determinam ramos especiais
+no fluxo OAuth. O host MCP conhece o transporte, publica seus metadados de recurso protegido e
+autoriza ferramentas. A autoridade não referencia o SDK MCP nem interpreta operações de negócio.
 
-A prova usa Authorization Code com PKCE S256 e clientes públicos previamente confiados,
-com callbacks explícitos por cliente e ambiente. Não há cadastro dinâmico anônimo. O login pode
-reutilizar uma sessão existente e não exige tela nem trilha adicional de consentimento.
-Aplicações persistidas fora da configuração não podem obter novos códigos ou renovar acesso MCP.
+A primeira entrega suporta Authorization Code com PKCE S256 para clientes públicos interativos e
+Client Credentials para serviços confidenciais. Renovação é uma permissão explícita do cliente.
+Autorização automática é restrita aos clientes interativos que tenham essa política declarada;
+não há tela nem trilha adicional de consentimento. M2M representa um serviço e não recebe tenant.
 
-O cadastro obrigatório vem de `IdentityClients:Mcp:Clients`; o recurso vem de
-`IdentityClients:Mcp:Resource` no emissor e `Mcp:Resource` no host. O bootstrap existente aplica o
-cadastro. O cliente desktop local é nativo e aceita portas variáveis de loopback, mantendo o
-endereço e o caminho registrados, conforme RFC 8252. Seu callback foi obtido pela versão instalada
-do cliente. O cadastro web depende do callback exibido para a conexão real.
+O cadastro persistido do OpenIddict é a fonte operacional de permissões. O manifesto `OAuth`
+provisiona clientes e escopos no bootstrap opt-in existente; ele não é uma segunda allowlist
+consultada a cada requisição. Alterar o manifesto exige reaplicar o provisionamento. Registros
+omitidos do manifesto não são apagados implicitamente; desativação é uma operação explícita.
 
-O SDK MCP publica os metadados do recurso protegido e o desafio de autenticação. Após o login, o
-IdentityService retorna diretamente ao cliente e emite o código de autorização. Uma sessão válida
-existente pode ser reutilizada. Os clientes MCP usam autorização implícita após a autenticação,
-conforme o fluxo solicitado para a prova. `hello_world` é protegida para verificar esse contrato
-antes das ferramentas de negócio.
+A emissão usa os escopos permitidos ao cliente e os recursos associados a esses escopos. Troca de
+código e renovação também respeitam a concessão original: uma nova permissão ou audiência no
+cadastro não amplia uma autorização antiga. Permissões retiradas deixam de ser concedidas na
+renovação. Mudança de tenant exige um novo login. OpenIddict mantém validação de clientes, grants,
+callbacks, PKCE e tokens; a política local limita a concessão usando o cadastro vigente.
 
-O MCP e o login usam HTTPS em localhost com o certificado de desenvolvimento confiável da máquina.
-O callback do cliente nativo usa HTTP no endereço de loopback `127.0.0.1`, conforme RFC 8252.
+O recurso MCP usa audiência própria. O host exige usuário, tenant e escopo adequados; tokens da
+API REST e tokens M2M sem identidade de usuário não autorizam ferramentas desse host. O bootstrap
+trata o recurso da mesma maneira que qualquer outra audiência cadastrada.
 
-O aceite da #232 exige demonstração no ChatGPT Desktop e no ChatGPT web pelo navegador do celular.
-Disponibilidade da integração, callback e apresentação da janela dependem de cada cliente e
-precisam de validação manual.
+Clientes locais são provisionados para desenvolvimento com callbacks explícitos de loopback.
+Porta variável é admitida apenas conforme as regras de cliente nativo do OpenIddict. MCP e Identity
+usam HTTPS com certificado de desenvolvimento confiável e são orquestrados pelo Aspire.
 
-## Alternativas rejeitadas
-
-- Receber a senha como parâmetro de ferramenta ou formulário do agente. As credenciais são
-  submetidas ao IdentityService pelo navegador.
-- Reaproveitar o cliente `admin-panel` e a audiência REST. A integração tem cadastro e recurso
-  próprios, com permissão explícita para o MCP.
-- Cadastro dinâmico anônimo com autorização automática. Autenticar o usuário não estabelece
-  confiança no callback de um cliente arbitrário.
+Não há cadastro dinâmico anônimo nem resolução CIMD nesta entrega. Distribuição de uma integração
+pré-configurada e identificação automática de plataformas são etapas separadas. Elas devem usar
+as permissões da autoridade, sem inserir conhecimento de MCP no mecanismo OAuth. A conexão real
+com aplicativos na nuvem depende de URLs HTTPS públicas e do cadastro aceito pela plataforma.
 
 ## Estado anterior da prova
 
-Clientes criados pelo endpoint anônimo anterior deixam de obter novos códigos e tokens MCP
-quando não constam da configuração. JWTs já emitidos continuam válidos até expirar, pois o host
-valida assinatura e claims localmente. Recriar o banco não invalida esses JWTs; para uma invalidação
-imediata também é necessária a rotação das chaves e a atualização dos validadores. A remoção de
-registros antigos deve ocorrer somente na base descartável identificada para desenvolvimento.
+O projeto ainda não tem produção. O novo provisionamento deve ser validado em base descartável
+nova, sem transportar aplicações geradas pelo antigo cadastro anônimo. Desativar clientes impede
+novas emissões; JWTs já emitidos podem continuar válidos até expirar nos recursos que os validam
+localmente. Recriar o banco sozinho não os invalida.
+
+## Alternativas rejeitadas
+
+- Condicionar a política da autoridade a `mcp:connect` ou a nomes de plataformas. Recursos são
+  consumidores configurados do mesmo protocolo.
+- Resolver metadados de cliente e conceder permissões MCP fixas na mesma operação.
+- Fazer o frontend ou uma ferramenta MCP escolher o tenant que será autorizado.
+- Reabrir cadastro anônimo com autorização automática para eliminar configuração de `client_id`.
+- Fazer um novo framework ou serviço de identidade: OpenIddict já administra os contratos OAuth.
