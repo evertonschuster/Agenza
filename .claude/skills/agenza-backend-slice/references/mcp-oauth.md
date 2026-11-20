@@ -1,7 +1,7 @@
 # Provar o vínculo OAuth do MCP
 
 Use o host MCP e o IdentityService pelo Aspire. A
-[ADR 0015](../../../../docs/decisions/0015-mcp-oauth-proof.md) define a fronteira entre autoridade e
+[OAuth/MCP](../../../../docs/decisions/mcp.md) define a fronteira entre autoridade e
 recurso; o [provisionamento OAuth](oauth-clients.md) define como cadastrar clientes e escopos.
 
 ## Ambiente local

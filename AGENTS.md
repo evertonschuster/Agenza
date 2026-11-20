@@ -19,7 +19,7 @@ scheduling, client management and an AI receptionist. v1 persona: the owner-oper
 | `backend`             | .NET, Clean Architecture per service | [local AGENTS.md](backend/AGENTS.md)                                                                                                                       |
 | `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md)                                                                         |
 | `infra`               | PostgreSQL init scripts              | —                                                                                                                                                          |
-| `docs/decisions`      | The why and rejected alternatives    | [process](docs/decisions/process.md), [platform](docs/decisions/platform.md), [backend](docs/decisions/backend.md), [frontend](docs/decisions/frontend.md) |
+| `docs/decisions`      | The why and rejected alternatives    | [process](docs/decisions/process.md), [platform](docs/decisions/platform.md), [backend](docs/decisions/backend.md), [frontend](docs/decisions/frontend.md), [OAuth/MCP](docs/decisions/mcp.md) |
 
 Local environment and quality gates: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Product direction:
 [docs/VISION.md](docs/VISION.md).

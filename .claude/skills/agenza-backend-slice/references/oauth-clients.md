@@ -1,6 +1,6 @@
 # Provisionar clientes e escopos OAuth
 
-A [ADR 0015](../../../../docs/decisions/0015-mcp-oauth-proof.md) define a fronteira da autoridade.
+A decis√£o [OAuth/MCP](../../../../docs/decisions/mcp.md) define a fronteira da autoridade.
 O manifesto de desenvolvimento est√° no
 [appsettings](../../../../backend/services/identity-service/IdentityService.Api/appsettings.Development.json),
 e sua valida√ß√£o e convers√£o est√£o em
@@ -18,7 +18,7 @@ cliente n√£o significa apag√°-lo. Mudan√ßas na pol√≠tica devem passar pelo geren
 
 Nesta revis√£o anterior ao primeiro deploy, teste com um volume PostgreSQL novo. Configure
 `Postgres__DataVolume` antes de iniciar o Aspire; n√£o reutilize a base da prova de cadastro an√¥nimo.
-Os [procedimentos de ambiente](../../../../docs/MONOREPO.md) explicam a orquestra√ß√£o.
+Os [procedimentos de ambiente](../../../../docs/DEVELOPMENT.md) explicam a orquestra√ß√£o.
 
 Execute `dotnet test backend/services/identity-service/IdentityService.ProtocolTests` para validar
 as concess√µes e a configura√ß√£o. Use tamb√©m o smoke real de
@@ -33,17 +33,19 @@ tokens JWT j√° emitidos e aceitos localmente pelos consumidores.
 
 ## Integrar um cliente nativo local
 
-Mantenha callbacks completos e explÌcitos; para loopback de cliente nativo, apenas a porta pode
-variar. Cadastrar `/` n„o autoriza subcaminhos. N„o substitua a validaÁ„o do OpenIddict por wildcard,
-nem em desenvolvimento. Essa regra tambÈm vale quando o Identity È remoto e o cliente È local.
+Por padr√£o, cadastre callbacks completos; apenas a porta varia para clientes nativos. Quando o
+harness exigir caminhos vari√°veis, `AllowAnyLoopbackRedirectPath: true` habilita uma exce√ß√£o por
+cliente p√∫blico nativo com PKCE. O bootstrap persiste essa escolha no OpenIddict. Ela permite
+somente HTTP em `127.0.0.1`, com porta v√°lida e caminho livre, sem query, fragmento ou credenciais.
+N√£o cadastre `*` em `RedirectUris`. Mantenha os callbacks exatos para poder reverter a exce√ß√£o.
 
-Antes de incluir um novo harness, verifique o callback real, sua estabilidade entre instalaÁıes e
-execuÁıes, o suporte a `client_id` prÈ-configurado e se navegador e listener alcanÁam a mesma
-m·quina de loopback. Cadastre o callback exato, reaplique o bootstrap e execute o smoke OAuth,
-incluindo recusa de caminho n„o cadastrado e troca de cÛdigo com callback diferente.
+Verifique o callback real, o suporte a `client_id` pr√©-configurado e se navegador e listener
+alcan√ßam a mesma m√°quina de loopback. A pol√≠tica descreve o cliente local, mesmo que o Identity
+esteja remoto. Ela n√£o garante compatibilidade com qualquer harness. O `client_id` p√∫blico n√£o
+autentica o programa; a autoriza√ß√£o autom√°tica assume essa limita√ß√£o.
 
-O `client_id` p˙blico identifica uma configuraÁ„o; n„o autentica o programa. PKCE vincula a troca
-do cÛdigo ‡ inst‚ncia que iniciou o fluxo, sem comprovar que o aplicativo È confi·vel. AutorizaÁ„o
-autom·tica assume essa limitaÁ„o. A equipe prepara a integraÁ„o, sem delegar o cadastro ao usu·rio.
-Se o caminho realmente variar e n„o puder ser estabilizado por configuraÁ„o ou ponte, avalie
-registro controlado como decis„o separada; os callbacks desta m·quina n„o provam suporte universal.
+Execute o smoke OAuth para provar caminhos vari√°veis, recusa de hosts indevidos e de clientes sem
+opt-in, e correspond√™ncia integral do callback na troca do c√≥digo. Para reverter, desative a op√ß√£o,
+reaplique o bootstrap e execute o smoke com `AGENZA_MCP_ANY_LOOPBACK_PATH=0`. Confirme a recusa de
+novos caminhos ap√≥s a atualiza√ß√£o e a continuidade dos callbacks exatos. A equipe prepara essa
+configura√ß√£o sem delegar o cadastro ao usu√°rio final.

@@ -1,6 +1,4 @@
-# ADR 0015 — Autoridade OAuth e recurso MCP
-
-Status: proposta (2026-11-19).
+# Autoridade OAuth e recurso MCP
 
 ## Decisão
 
@@ -29,9 +27,19 @@ O recurso MCP usa audiência própria. O host exige usuário, tenant e escopo ad
 API REST e tokens M2M sem identidade de usuário não autorizam ferramentas desse host. O bootstrap
 trata o recurso da mesma maneira que qualquer outra audiência cadastrada.
 
-Clientes locais são provisionados para desenvolvimento com callbacks explícitos de loopback.
-Porta variável é admitida apenas conforme as regras de cliente nativo do OpenIddict. MCP e Identity
-usam HTTPS com certificado de desenvolvimento confiável e são orquestrados pelo Aspire.
+Clientes locais usam callbacks explícitos por padrão, com porta variável para clientes nativos.
+Uma exceção opt-in permite qualquer caminho HTTP em `127.0.0.1` para clientes públicos nativos
+com PKCE. A propriedade `allow_any_loopback_redirect_path` fica no cadastro persistido; o manifesto
+provisiona `AllowAnyLoopbackRedirectPath`, inicialmente apenas para `agenza-mcp` em desenvolvimento.
+Isso é uma exceção deliberada à correspondência de caminho exigida pela RFC 8252, seção 8.4.
+O mecanismo não depende do ambiente do servidor: um cliente local pode usar uma autoridade remota.
+
+A exceção não admite queries, fragmentos, credenciais na URI, `localhost`, IPv6 ou representações
+alternativas do IPv4. O gerenciador derivado do OpenIddict altera apenas a validação do destino
+contra o cadastro. O callback completo continua vinculado ao código e deve ser idêntico na troca por
+token. Desativar a propriedade e reaplicar o bootstrap restaura os callbacks cadastrados.
+Um `client_id` público não autentica o aplicativo; PKCE também não comprova a identidade do harness.
+MCP e Identity usam HTTPS confiável e são orquestrados pelo Aspire.
 
 Não há cadastro dinâmico anônimo nem resolução CIMD nesta entrega. Distribuição de uma integração
 pré-configurada e identificação automática de plataformas são etapas separadas. Elas devem usar

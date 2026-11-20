@@ -351,7 +351,7 @@ data; the opt-in bootstrap provisions them from the validated `OAuth` manifest. 
 policy reads the persisted registrations, independently of the consuming resource or technology.
 Code exchange and refresh retain only permissions and audiences allowed by both the original grant
 and the current registration. The resource server owns transport and operation authorization.
-See [ADR 0015](../../docs/decisions/0015-mcp-oauth-proof.md).
+See [OAuth/MCP](../../docs/decisions/mcp.md).
 
 ## 7. Time
 
