@@ -10,8 +10,8 @@ The largest section of [platform.md](platform.md), in its own file.
   operations. A resource host owns its transport, publishes its protected-resource metadata and
   authorizes its own operations.
 - **Two grants.** Authorization Code with PKCE S256 for interactive public clients, Client
-  Credentials for confidential services. Refresh is an explicit client permission. Automatic
-  authorization is limited to interactive clients that declare it, with no consent screen. An M2M
+  Credentials for confidential services. Refresh is an explicit client permission. Consent is implicit for all interactive clients, with no consent screen or repeated consent check
+  during code exchange and refresh. An M2M
   client represents a service and gets no tenant.
 - **The persisted OpenIddict registration is the operational source.** The `DatabaseSeeder` defines clients and
   provisions them and the configured `OAuth` scopes through the opt-in bootstrap; it is not a second allowlist read per

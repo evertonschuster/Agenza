@@ -23,7 +23,7 @@ public sealed class AuthorizationController(
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
         var grant = await grantPolicy.ResolveAsync(request.ClientId!, request.GetScopes(), request.GetResources(),
-            previousGrant: null, requireAutomaticConsent: true, cancellationToken);
+            previousGrant: null, cancellationToken);
         if (grant.IsFailure)
         {
             return Reject(grant.Error.Code);
@@ -74,7 +74,7 @@ public sealed class AuthorizationController(
             }
 
             var grant = await grantPolicy.ResolveAsync(request.ClientId!, request.GetScopes(), request.GetResources(),
-                previous, requireAutomaticConsent: true, cancellationToken);
+                previous, cancellationToken);
             if (grant.IsFailure)
             {
                 return Reject(grant.Error.Code);
@@ -86,7 +86,7 @@ public sealed class AuthorizationController(
         if (request.IsClientCredentialsGrantType())
         {
             var grant = await grantPolicy.ResolveAsync(request.ClientId!, request.GetScopes(), request.GetResources(),
-                previousGrant: null, requireAutomaticConsent: false, cancellationToken);
+                previousGrant: null, cancellationToken);
             if (grant.IsFailure)
             {
                 return Reject(grant.Error.Code);

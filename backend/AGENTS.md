@@ -31,6 +31,7 @@ The why behind each convention and what was already refused are in the
   tenant limits, described in §5.
 
 OAuth client definitions belong in `DatabaseSeeder`; secrets stay in external configuration.
+Consent is implicit for all interactive clients; there is no consent screen.
 
 ## Validation and delivery
 

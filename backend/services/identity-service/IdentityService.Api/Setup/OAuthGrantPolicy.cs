@@ -16,53 +16,30 @@ public sealed class OAuthGrantPolicy(
         IEnumerable<string> requestedScopes,
         IEnumerable<string> requestedResources,
         ClaimsPrincipal? previousGrant,
-        bool requireAutomaticConsent,
         CancellationToken cancellationToken)
     {
-        var application = await applications.FindByClientIdAsync(clientId, cancellationToken);
-        if (application is null)
-        {
-            return Failure(OpenIddictConstants.Errors.InvalidClient);
-        }
+        var application = await applications.FindByClientIdAsync(clientId, cancellationToken)
+            ?? throw new InvalidOperationException("The client validated by OpenIddict cannot be retrieved.");
 
         var permissions = await applications.GetPermissionsAsync(application, cancellationToken);
-        if (!permissions.Contains(OpenIddictConstants.Permissions.Endpoints.Token))
-        {
-            return Failure(OpenIddictConstants.Errors.UnauthorizedClient);
-        }
-
-        if (requireAutomaticConsent
-            && await applications.GetConsentTypeAsync(application, cancellationToken) != OpenIddictConstants.ConsentTypes.Implicit)
-        {
-            return Failure(OpenIddictConstants.Errors.ConsentRequired);
-        }
 
         var scopes = requestedScopes.Distinct(StringComparer.Ordinal).ToArray();
         var allowedScopes = permissions.Where(permission => permission.StartsWith(OpenIddictConstants.Permissions.Prefixes.Scope, StringComparison.Ordinal))
             .Select(permission => permission[OpenIddictConstants.Permissions.Prefixes.Scope.Length..]).ToHashSet(StringComparer.Ordinal);
         var allowedResources = permissions.Where(permission => permission.StartsWith(OpenIddictConstants.Permissions.Prefixes.Resource, StringComparison.Ordinal))
             .Select(permission => permission[OpenIddictConstants.Permissions.Prefixes.Resource.Length..]).ToHashSet(StringComparer.Ordinal);
-        if (previousGrant is null)
-        {
-            if (scopes.Any(scope => !allowedScopes.Contains(scope)))
-            {
-                return Failure(OpenIddictConstants.Errors.InvalidScope);
-            }
-        }
-        else
+        if (previousGrant is not null)
         {
             var originalScopes = previousGrant.GetScopes();
-            if (scopes.Any(scope => !originalScopes.Contains(scope, StringComparer.Ordinal)))
-            {
-                return Failure(OpenIddictConstants.Errors.InvalidScope);
-            }
 
             if (scopes.Length == 0)
             {
                 scopes = originalScopes.ToArray();
             }
 
-            scopes = scopes.Where(allowedScopes.Contains).ToArray();
+            scopes = scopes.Where(scope => originalScopes.Contains(scope, StringComparer.Ordinal)
+                && (scope is OpenIddictConstants.Scopes.OpenId or OpenIddictConstants.Scopes.OfflineAccess
+                    || allowedScopes.Contains(scope))).ToArray();
         }
 
         var resources = await scopeManager.ListResourcesAsync(scopes.ToImmutableArray(), cancellationToken).ToListAsync(cancellationToken);

@@ -349,8 +349,10 @@ every endpoint shares (envelope, problem, status mapping) updates
 OAuth/OIDC endpoints stay in the Identity API host. Clients and scopes are OpenIddict data:
 [OAuthProvisioningOptions](../services/identity-service/IdentityService.Api/Setup/OAuthProvisioningOptions.cs)
 validates the client definitions in `DatabaseSeeder` and configured `OAuth` scopes the opt-in bootstrap applies,
-[OAuthGrantPolicy](../services/identity-service/IdentityService.Api/Setup/OAuthGrantPolicy.cs) limits each grant
-against the persisted registration, and
+[OAuthGrantPolicy](../services/identity-service/IdentityService.Api/Setup/OAuthGrantPolicy.cs) calculates grants
+after OpenIddict validates the client, endpoint, grant and requested scopes. It limits renewal to the
+original grant and current business permissions, preserving protocol scopes without extra permissions;
+
 [LoopbackApplicationManager](../services/identity-service/IdentityService.Api/Setup/LoopbackApplicationManager.cs)
 changes only the loopback redirect check. A resource host owns its transport and operation
 authorization ([decisions/mcp.md](../../docs/decisions/mcp.md)).
