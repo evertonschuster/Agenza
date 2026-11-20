@@ -1,63 +1,48 @@
-# Autoridade OAuth e recurso MCP
+# Decisions: OAuth authority and MCP resource
 
-## Decisão
+The largest section of [platform.md](platform.md), in its own file.
 
-O IdentityService conhece protocolos de autenticação e autorização, usuários, clientes, recursos
-e escopos. Identificadores como `mcp:connect` são dados de cadastro; não determinam ramos especiais
-no fluxo OAuth. O host MCP conhece o transporte, publica seus metadados de recurso protegido e
-autoriza ferramentas. A autoridade não referencia o SDK MCP nem interpreta operações de negócio.
+## Decision
 
-A primeira entrega suporta Authorization Code com PKCE S256 para clientes públicos interativos e
-Client Credentials para serviços confidenciais. Renovação é uma permissão explícita do cliente.
-Autorização automática é restrita aos clientes interativos que tenham essa política declarada;
-não há tela nem trilha adicional de consentimento. M2M representa um serviço e não recebe tenant.
+- **The identity service is a generic OAuth authority.** It knows protocols, users, clients,
+  resources and scopes. Identifiers such as `mcp:connect` are registration data and never select a
+  branch of the OAuth flow; the authority does not reference the MCP SDK or interpret business
+  operations. A resource host owns its transport, publishes its protected-resource metadata and
+  authorizes its own operations.
+- **Two grants.** Authorization Code with PKCE S256 for interactive public clients, Client
+  Credentials for confidential services. Refresh is an explicit client permission. Automatic
+  authorization is limited to interactive clients that declare it, with no consent screen. An M2M
+  client represents a service and gets no tenant.
+- **The persisted OpenIddict registration is the operational source.** The `OAuth` manifest
+  provisions clients and scopes through the opt-in bootstrap; it is not a second allowlist read per
+  request. A client left out of the manifest is not deleted: disabling is explicit, and it stops new
+  tokens while JWTs already issued stay valid until they expire wherever they are validated locally.
+- **A grant never widens.** Issuance uses the scopes allowed to the client and the resources of
+  those scopes; code exchange and refresh keep only what both the original grant and the current
+  registration allow. Changing tenant needs a new login. OpenIddict keeps validating clients,
+  grants, callbacks, PKCE and tokens.
+- **The MCP resource has its own audience.** Its tools need a user, a tenant and the matching scope;
+  REST API tokens and M2M tokens do not authorize them.
+- **Loopback callbacks are exact, except by opt-in.** Native clients register full callbacks and
+  only the port varies. `AllowAnyLoopbackRedirectPath` lets a public native PKCE client use any path
+  on HTTP `127.0.0.1`, a deliberate exception to RFC 8252 §8.4, without query, fragment,
+  credentials, `localhost`, IPv6 or alternative IPv4 forms. The full callback stays bound to the
+  code and must match on exchange. The exception depends on the client, not on the server's
+  environment. A public `client_id` and PKCE do not authenticate the application.
+- **No anonymous dynamic registration and no CIMD.** A preconfigured integration supplies its OAuth
+  client to the platform and uses the authority's permissions, without MCP knowledge in the OAuth
+  mechanism.
 
-O cadastro persistido do OpenIddict é a fonte operacional de permissões. O manifesto `OAuth`
-provisiona clientes e escopos no bootstrap opt-in existente; ele não é uma segunda allowlist
-consultada a cada requisição. Alterar o manifesto exige reaplicar o provisionamento. Registros
-omitidos do manifesto não são apagados implicitamente; desativação é uma operação explícita.
+## Why
 
-A emissão usa os escopos permitidos ao cliente e os recursos associados a esses escopos. Troca de
-código e renovação também respeitam a concessão original: uma nova permissão ou audiência no
-cadastro não amplia uma autorização antiga. Permissões retiradas deixam de ser concedidas na
-renovação. Mudança de tenant exige um novo login. OpenIddict mantém validação de clientes, grants,
-callbacks, PKCE e tokens; a política local limita a concessão usando o cadastro vigente.
+Keeping resource knowledge out of the authority lets a second consumer be configured with its own
+scope and audience without changing the controller or the grant policy.
 
-O recurso MCP usa audiência própria. O host exige usuário, tenant e escopo adequados; tokens da
-API REST e tokens M2M sem identidade de usuário não autorizam ferramentas desse host. O bootstrap
-trata o recurso da mesma maneira que qualquer outra audiência cadastrada.
+## Rejected
 
-Clientes locais usam callbacks explícitos por padrão, com porta variável para clientes nativos.
-Uma exceção opt-in permite qualquer caminho HTTP em `127.0.0.1` para clientes públicos nativos
-com PKCE. A propriedade `allow_any_loopback_redirect_path` fica no cadastro persistido; o manifesto
-provisiona `AllowAnyLoopbackRedirectPath`, inicialmente apenas para `agenza-mcp` em desenvolvimento.
-Isso é uma exceção deliberada à correspondência de caminho exigida pela RFC 8252, seção 8.4.
-O mecanismo não depende do ambiente do servidor: um cliente local pode usar uma autoridade remota.
-
-A exceção não admite queries, fragmentos, credenciais na URI, `localhost`, IPv6 ou representações
-alternativas do IPv4. O gerenciador derivado do OpenIddict altera apenas a validação do destino
-contra o cadastro. O callback completo continua vinculado ao código e deve ser idêntico na troca por
-token. Desativar a propriedade e reaplicar o bootstrap restaura os callbacks cadastrados.
-Um `client_id` público não autentica o aplicativo; PKCE também não comprova a identidade do harness.
-MCP e Identity usam HTTPS confiável e são orquestrados pelo Aspire.
-
-Não há cadastro dinâmico anônimo nem resolução CIMD nesta entrega. Distribuição de uma integração
-pré-configurada e identificação automática de plataformas são etapas separadas. Elas devem usar
-as permissões da autoridade, sem inserir conhecimento de MCP no mecanismo OAuth. A conexão real
-com aplicativos na nuvem depende de URLs HTTPS públicas e do cadastro aceito pela plataforma.
-
-## Estado anterior da prova
-
-O projeto ainda não tem produção. O novo provisionamento deve ser validado em base descartável
-nova, sem transportar aplicações geradas pelo antigo cadastro anônimo. Desativar clientes impede
-novas emissões; JWTs já emitidos podem continuar válidos até expirar nos recursos que os validam
-localmente. Recriar o banco sozinho não os invalida.
-
-## Alternativas rejeitadas
-
-- Condicionar a política da autoridade a `mcp:connect` ou a nomes de plataformas. Recursos são
-  consumidores configurados do mesmo protocolo.
-- Resolver metadados de cliente e conceder permissões MCP fixas na mesma operação.
-- Fazer o frontend ou uma ferramenta MCP escolher o tenant que será autorizado.
-- Reabrir cadastro anônimo com autorização automática para eliminar configuração de `client_id`.
-- Fazer um novo framework ou serviço de identidade: OpenIddict já administra os contratos OAuth.
+- **Conditioning the authority's policy on `mcp:connect` or on platform names.** Resources are
+  configured consumers of the same protocol.
+- **Resolving client metadata and granting fixed MCP permissions in the same operation.**
+- **Letting the frontend or an MCP tool choose the authorized tenant.**
+- **Anonymous registration with automatic authorization**, to avoid configuring a `client_id`.
+- **A new identity framework or service.** OpenIddict already manages the OAuth contracts.

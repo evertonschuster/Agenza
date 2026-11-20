@@ -13,12 +13,12 @@ scheduling, client management and an AI receptionist. v1 persona: the owner-oper
 
 ## Where things are
 
-| Path                  | Stack                                | Read first                                                                                                                                                 |
-| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `apps/admin-frontend` | Vite + React + strict TypeScript     | [local AGENTS.md](apps/admin-frontend/AGENTS.md)                                                                                                           |
-| `backend`             | .NET, Clean Architecture per service | [local AGENTS.md](backend/AGENTS.md)                                                                                                                       |
-| `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md)                                                                         |
-| `infra`               | PostgreSQL init scripts              | —                                                                                                                                                          |
+| Path                  | Stack                                | Read first                                                                                                                                                                                     |
+| --------------------- | ------------------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `apps/admin-frontend` | Vite + React + strict TypeScript     | [local AGENTS.md](apps/admin-frontend/AGENTS.md)                                                                                                                                               |
+| `backend`             | .NET, Clean Architecture per service | [local AGENTS.md](backend/AGENTS.md)                                                                                                                                                           |
+| `ai-services`         | Python + FastAPI                     | [ai-services/assistant-service/README.md](ai-services/assistant-service/README.md)                                                                                                             |
+| `infra`               | PostgreSQL init scripts              | —                                                                                                                                                                                              |
 | `docs/decisions`      | The why and rejected alternatives    | [process](docs/decisions/process.md), [platform](docs/decisions/platform.md), [backend](docs/decisions/backend.md), [frontend](docs/decisions/frontend.md), [OAuth/MCP](docs/decisions/mcp.md) |
 
 Local environment and quality gates: [docs/DEVELOPMENT.md](docs/DEVELOPMENT.md). Product direction:
@@ -77,7 +77,7 @@ references only when the task touches the subject.
 | -------------------------------------------------- | -------------------------------------------------------------------------- |
 | Backend use case, entity, migration, endpoint      | [agenza-backend-slice](.claude/skills/agenza-backend-slice/SKILL.md)       |
 | Backend review (revisar PR)                        | [agenza-backend-review](.claude/skills/agenza-backend-review/SKILL.md)     |
-| Tenant, login, session, token                      | [agenza-tenant-isolation](.claude/skills/agenza-tenant-isolation/SKILL.md) |
+| Tenant, login, session, token, OAuth client        | [agenza-tenant-isolation](.claude/skills/agenza-tenant-isolation/SKILL.md) |
 | Contract, generated types, repository, API failure | [agenza-api-contract](.claude/skills/agenza-api-contract/SKILL.md)         |
 | Frontend screen, page, list, route (tela, página)  | [agenza-frontend-slice](.claude/skills/agenza-frontend-slice/SKILL.md)     |
 | Form, validation, field error (formulário)         | [agenza-form-field](.claude/skills/agenza-form-field/SKILL.md)             |

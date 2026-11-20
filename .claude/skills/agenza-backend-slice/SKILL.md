@@ -16,8 +16,6 @@ separates current patterns from older slices: copy Clients, not the file next to
 | Request, validator, mapping, handler or response         | [use-case.md](references/use-case.md)           |
 | Repository, EF configuration or migration                | [persistence.md](references/persistence.md)     |
 | Selecting and writing backend tests                      | [tests.md](references/tests.md)                 |
-| Provisioning OAuth clients and scopes                  | [oauth-clients.md](references/oauth-clients.md)          |
-| Proving MCP OAuth with IdentityService                   | [mcp-oauth.md](references/mcp-oauth.md)          |
 
 ```text
 - [ ] Owning context and aggregate found; no new service for an operation inside an existing context

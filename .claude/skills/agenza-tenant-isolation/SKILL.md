@@ -1,6 +1,6 @@
 ---
 name: agenza-tenant-isolation
-description: Traces tenant authority and isolation across .NET, the browser session and the AI service (tenant, login, sessão, token, X-Tenant-Id, multi-tenant). Use when changing authentication, tenant-scoped HTTP or persistence, session identity or AI delegation, when building or reviewing. Not for operation-level permissions (backend ARCHITECTURE §5, Tenant).
+description: Traces tenant authority and isolation across .NET, the browser session and the AI service (tenant, login, sessão, token, X-Tenant-Id, multi-tenant, OAuth client, MCP). Use when changing authentication, tenant-scoped HTTP or persistence, session identity or AI delegation, when building or reviewing. Not for operation-level permissions (backend ARCHITECTURE §5, Tenant).
 ---
 
 # Review tenant isolation
@@ -16,6 +16,8 @@ Open only the affected path:
   [backend.md](references/backend.md).
 - Browser session, API credentials, identity changes or client-side data:
   [frontend.md](references/frontend.md).
+- OAuth clients, scopes and loopback callbacks: [oauth-clients.md](references/oauth-clients.md);
+  proving the MCP sign-in: [mcp-oauth.md](references/mcp-oauth.md).
 
 ## Trace authority before judging a pattern
 

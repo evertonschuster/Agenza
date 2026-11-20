@@ -346,12 +346,14 @@ A contract change regenerates the frontend's types in the same change (skill
 every endpoint shares (envelope, problem, status mapping) updates
 [`docs/API.md`](../../docs/API.md); a feature's own codes and fields do not.
 
-OAuth/OIDC endpoints stay in the Identity API host. Client and scope registrations are OpenIddict
-data; the opt-in bootstrap provisions them from the validated `OAuth` manifest. Runtime grant
-policy reads the persisted registrations, independently of the consuming resource or technology.
-Code exchange and refresh retain only permissions and audiences allowed by both the original grant
-and the current registration. The resource server owns transport and operation authorization.
-See [OAuth/MCP](../../docs/decisions/mcp.md).
+OAuth/OIDC endpoints stay in the Identity API host. Clients and scopes are OpenIddict data:
+[OAuthProvisioningOptions](../services/identity-service/IdentityService.Api/Setup/OAuthProvisioningOptions.cs)
+validates the `OAuth` manifest the opt-in bootstrap applies,
+[OAuthGrantPolicy](../services/identity-service/IdentityService.Api/Setup/OAuthGrantPolicy.cs) limits each grant
+against the persisted registration, and
+[LoopbackApplicationManager](../services/identity-service/IdentityService.Api/Setup/LoopbackApplicationManager.cs)
+changes only the loopback redirect check. A resource host owns its transport and operation
+authorization ([decisions/mcp.md](../../docs/decisions/mcp.md)).
 
 ## 7. Time
 
@@ -389,7 +391,7 @@ PostgreSQL constraints. The real HTTP, OIDC, migration and PostgreSQL tenant che
 API-contract job (§11). The backend test projects stay free of Testcontainers and in-process HTTP
 hosting.
 
-ine coverage (§11, [`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md)) is not evidence that every
+Line coverage (§11, [`docs/DEVELOPMENT.md`](../../docs/DEVELOPMENT.md)) is not evidence that every
 rule or branch is tested. Assert rejection paths, including that a rejected command saved nothing;
 for input rules assert the code; use a fixed clock when the day matters. Verify a changed PostgreSQL
 property outside the smoke's scope by hand on a **disposable** database initialised from
