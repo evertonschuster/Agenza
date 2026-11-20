@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import secrets
 from dataclasses import dataclass
 from typing import Any
 from urllib import error, parse, request
@@ -108,10 +107,6 @@ def main() -> None:
         "--assistant-secret",
         default="postgres",
     )
-    parser.add_argument(
-        "--provisioning-secret",
-        default="postgres",
-    )
     args = parser.parse_args()
 
     readiness = send("GET", f"{args.services_url}/health")
@@ -170,30 +165,9 @@ def main() -> None:
             "identity-service 403 did not return the stable Authorization.MissingScope code"
         )
 
-    provisioning_token = request_token(
-        args.identity_url,
-        "tenant-provisioning-cli",
-        args.provisioning_secret,
-        "identity-admin",
-    )
-    nonce = secrets.token_hex(6)
-    provisioned = send(
-        "POST",
-        f"{args.identity_url}/internal/v1/tenants",
-        bearer_token=provisioning_token,
-        json_body={
-            "tenantName": f"Architecture check {nonce}",
-            "ownerEmail": f"architecture-check-{nonce}@demo.local",
-            "ownerPassword": f"Architecture-{nonce}-1!",
-        },
-    )
-    require_status(provisioned, 201, "identity-admin tenant provisioning")
-    if not provisioned.body.get("data", {}).get("tenantId"):
-        raise AssertionError("tenant provisioning response has no tenantId")
-
     print(
         "OIDC contract smoke passed: stable 401, client credentials, scope "
-        "denial, tenant fail-closed boundary, and authorized provisioning."
+        "denial, and tenant fail-closed boundary."
     )
 
 

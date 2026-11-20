@@ -13,9 +13,9 @@ The largest section of [platform.md](platform.md), in its own file.
   Credentials for confidential services. Refresh is an explicit client permission. Automatic
   authorization is limited to interactive clients that declare it, with no consent screen. An M2M
   client represents a service and gets no tenant.
-- **The persisted OpenIddict registration is the operational source.** The `OAuth` manifest
-  provisions clients and scopes through the opt-in bootstrap; it is not a second allowlist read per
-  request. A client left out of the manifest is not deleted: disabling is explicit, and it stops new
+- **The persisted OpenIddict registration is the operational source.** The `DatabaseSeeder` defines clients and
+  provisions them and the configured `OAuth` scopes through the opt-in bootstrap; it is not a second allowlist read per
+  request. A client left out of the definitions is not deleted: disabling is explicit, and it stops new
   tokens while JWTs already issued stay valid until they expire wherever they are validated locally.
 - **A grant never widens.** Issuance uses the scopes allowed to the client and the resources of
   those scopes; code exchange and refresh keep only what both the original grant and the current

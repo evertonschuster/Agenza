@@ -39,7 +39,6 @@ var identityService = builder.AddDotnetProject(
     .WithHttpsEndpoint(port: 7081, name: "https")
     .WithReference(identityDatabase, connectionName: "Default")
     .WithEnvironment("OAuthClientSecrets__assistant-service-worker", developmentPassword)
-    .WithEnvironment("OAuthClientSecrets__tenant-provisioning-cli", developmentPassword)
     .WaitFor(appdb);
 
 var servicesService = builder.AddDotnetProject(
