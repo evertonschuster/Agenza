@@ -100,7 +100,7 @@ public static class DocumentationExtensions
                             Schema = new OpenApiSchema
                             {
                                 Type = JsonSchemaType.String,
-                                Default = JsonValue.Create("019f9b0b-e7fb-7ac6-84b7-5c8ed52c6120"),
+                                Default = JsonValue.Create("01a1f94b-0a1f-7e38-8c55-295dd79fcfeb"),
                             },
                         });
                     }
