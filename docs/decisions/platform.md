@@ -137,3 +137,7 @@ database, not depend on every handler remembering it.
 
 The default provider wrote two lines per event, SQL blocks at `Information` and nothing for a normal
 request, and the AppHost logged differently from the services.
+
+## OAuth and MCP
+
+The authority/resource boundary and local callback policy live in [mcp.md](mcp.md).

@@ -346,6 +346,16 @@ A contract change regenerates the frontend's types in the same change (skill
 every endpoint shares (envelope, problem, status mapping) updates
 [`docs/API.md`](../../docs/API.md); a feature's own codes and fields do not.
 
+OAuth/OIDC endpoints stay in the Identity API host. Clients and scopes are OpenIddict data:
+[OAuthProvisioningOptions](../services/identity-service/IdentityService.Api/Setup/OAuthProvisioningOptions.cs)
+validates the client definitions in `DatabaseSeeder` and configured `OAuth` scopes the opt-in bootstrap applies,
+[OAuthGrantPolicy](../services/identity-service/IdentityService.Api/Setup/OAuthGrantPolicy.cs) calculates grants
+after OpenIddict validates the client, endpoint, grant and requested scopes. It limits renewal to the
+original grant and current business permissions, preserving protocol scopes without extra permissions;
+
+OpenIddict validates registered callback paths and permits variable loopback ports for native clients. A resource host owns its transport and operation
+authorization ([decisions/mcp.md](../../docs/decisions/mcp.md)).
+
 ## 7. Time
 
 UTC only. Inject `TimeProvider`: instants are `DateTimeOffset` from `GetUtcNow()`; "today" is
@@ -387,6 +397,10 @@ rule or branch is tested. Assert rejection paths, including that a rejected comm
 for input rules assert the code; use a fixed clock when the day matters. Verify a changed PostgreSQL
 property outside the smoke's scope by hand on a **disposable** database initialised from
 `infra/postgres/init/`, never the persistent development volume, and record what ran in the PR.
+
+IdentityService.ProtocolTests exercises client provisioning and grant policy with application
+and scope-manager doubles. It does not host HTTP in process or replace the real Aspire smoke;
+the Domain/Application coverage gate remains separate from these protocol checks.
 
 ## 10. Reference code and the older generation
 
