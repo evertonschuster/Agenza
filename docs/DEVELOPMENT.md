@@ -86,7 +86,11 @@ Dependabot opens grouped PRs for npm, NuGet, pip and the workflows' actions on t
   [decisions/backend.md](decisions/backend.md)). There is no Testcontainers or
   `WebApplicationFactory` project: the frontend API-contract job starts AppHost, applies the
   migrations and runs the real OIDC and tenant-isolation checks; its HTTP scenario needs
-  `AGENZA_DISPOSABLE_TEST_DB=1` and `AGENZA_TENANT_PROVISIONING_SECRET`.
+  `AGENZA_DISPOSABLE_TEST_DB=1` and `AGENZA_TENANT_PROVISIONING_SECRET`. AppHost passes the
+  development password to the identity service as `IdentityClients:TenantProvisioning:Secret`, which
+  registers the `tenant-provisioning-cli` client (`client_credentials`, scope `identity-admin`); the
+  variable is the same `postgres` value. Removing the secret later does not remove a registered
+  client: disable it explicitly.
 - **AI services:** `--cov=app` measures the whole package, gated at 80%.
 
 Line coverage, type drift, runtime smokes and PostgreSQL checks prove different properties; the

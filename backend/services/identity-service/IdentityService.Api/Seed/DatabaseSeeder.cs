@@ -56,7 +56,7 @@ public class DatabaseSeeder : IHostedService
         }
 
         var applicationManager = services.GetRequiredService<IOpenIddictApplicationManager>();
-        foreach (var descriptor in ClientDefinitions())
+        foreach (var descriptor in ClientDefinitions(_configuration))
         {
             var application = await applicationManager.FindByClientIdAsync(descriptor.ClientId!, cancellationToken);
             if (application is null)
@@ -108,7 +108,7 @@ public class DatabaseSeeder : IHostedService
         ];
     }
 
-    private List<OpenIddictApplicationDescriptor> ClientDefinitions()
+    public static List<OpenIddictApplicationDescriptor> ClientDefinitions(IConfiguration configuration)
     {
         List<OpenIddictApplicationDescriptor> clients =
         [
@@ -182,7 +182,7 @@ public class DatabaseSeeder : IHostedService
             },
         ];
 
-        if (_configuration["IdentityClients:TenantProvisioning:Secret"] is { Length: > 0 } secret)
+        if (configuration["IdentityClients:TenantProvisioning:Secret"] is { Length: > 0 } secret)
         {
             clients.Add(new OpenIddictApplicationDescriptor
             {

@@ -190,8 +190,6 @@ jobs:
           echo "SSL_CERT_FILE=$RUNNER_TEMP/agenza-ca-bundle.pem" >> "$GITHUB_ENV"
 
       - name: Start the application through Aspire
-        env:
-          IdentityClients__TenantProvisioning__Secret: postgres
         run: |
           dotnet run --project backend/AppHost --no-build --launch-profile http > "$RUNNER_TEMP/agenza-apphost.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/agenza-apphost.pid"
