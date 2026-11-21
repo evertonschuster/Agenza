@@ -239,10 +239,15 @@ jobs:
         env:
           AGENZA_DISPOSABLE_TEST_DB: '1'
           AGENZA_TENANT_PROVISIONING_SECRET: postgres
-        run: npm run test:e2e --workspace=apps/admin-frontend -- --max-failures=1
+        run: npm run test:e2e --workspace=apps/admin-frontend
 
       - name: Exercise real OIDC scopes and cross-service tenant boundary
         run: python scripts/smoke_oidc_contract.py
+
+      - name: Show the application log
+        # The Aspire log is the only evidence of a server-side failure the browser tests cannot see.
+        if: failure()
+        run: tail -n 300 "$RUNNER_TEMP/agenza-apphost.log" || true
 
       - name: Tear down
         if: always()
