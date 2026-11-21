@@ -137,7 +137,22 @@ public sealed class AuthorizationController(
             properties: new AuthenticationProperties(new Dictionary<string, string?>
             {
                 [OpenIddictServerAspNetCoreConstants.Properties.Error] = error,
+                [OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription] = Describe(error),
             }));
+    }
+
+    // Without a description OpenIddict reports "denied by the end user", which misleads for
+    // errors that are not a user decision.
+    private static string? Describe(string error)
+    {
+        return error switch
+        {
+            OpenIddictConstants.Errors.InvalidTarget =>
+                "The requested resource is not granted by the requested scopes.",
+            OpenIddictConstants.Errors.LoginRequired => "The user must sign in again.",
+            OpenIddictConstants.Errors.InvalidGrant => "The grant is no longer valid.",
+            _ => null,
+        };
     }
 
     private async Task<string?> ApplyGrantAsync(

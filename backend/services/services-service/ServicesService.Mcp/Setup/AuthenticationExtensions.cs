@@ -6,6 +6,8 @@ namespace ServicesService.Mcp.Setup;
 
 public static class AuthenticationExtensions
 {
+    public const string RequiredScope = "services-mcp";
+
     public static IServiceCollection AddMcpAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -28,7 +30,7 @@ public static class AuthenticationExtensions
                 Resource = resource.AbsoluteUri,
                 ResourceName = "Agenza Serviços",
                 AuthorizationServers = { authority },
-                ScopesSupported = ["services-mcp", "offline_access"],
+                ScopesSupported = [RequiredScope, "offline_access"],
             };
         });
 

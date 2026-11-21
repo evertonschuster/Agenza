@@ -113,8 +113,9 @@ public sealed class AuthorizationControllerTests
         var request = new OpenIddictRequest { ClientId = "client", Scope = scope, ["resource"] = resource };
         var result = await fixture.Controller(request).Authorize(TestContext.Current.CancellationToken);
 
-        result.Should().BeOfType<ForbidResult>().Subject.Properties!.Items
-            [OpenIddictServerAspNetCoreConstants.Properties.Error].Should().Be(OpenIddictConstants.Errors.InvalidTarget);
+        var items = result.Should().BeOfType<ForbidResult>().Subject.Properties!.Items;
+        items[OpenIddictServerAspNetCoreConstants.Properties.Error].Should().Be(OpenIddictConstants.Errors.InvalidTarget);
+        items[OpenIddictServerAspNetCoreConstants.Properties.ErrorDescription].Should().Contain("not granted by the requested scopes");
     }
 
     [Theory]

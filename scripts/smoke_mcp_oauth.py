@@ -303,6 +303,18 @@ class McpOAuthTests(unittest.TestCase):
             json_body=dict(jsonrpc="2.0", id=1, method="tools/list"))
         self.assertEqual(status, 401)
         self.assertIn("resource_metadata=", headers.get("WWW-Authenticate", ""))
+        self.assertIn('scope="services-mcp"', headers["WWW-Authenticate"])
+        self.assertNotIn("invalid_token", headers["WWW-Authenticate"])
+
+    def test_token_recusado_recebe_invalid_token_no_desafio(self):
+        status, headers, _ = self.call_tool("abc.def.ghi")
+        self.assertEqual(status, 401)
+        self.assertIn('error="invalid_token"', headers["WWW-Authenticate"])
+
+    def test_recurso_fora_dos_escopos_explica_o_erro(self):
+        _, _, result, _, _ = self.authorize(scope="openid")
+        self.assertEqual(result.get("error"), ["invalid_target"])
+        self.assertNotIn("end user", result["error_description"][0])
 
     def test_callbacks_dos_clientes_suportados_sao_aceitos(self):
         for callback in (

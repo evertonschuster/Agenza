@@ -24,6 +24,7 @@ builder.Services.AddMcpServer()
 var app = builder.Build();
 
 app.UseCors(CorsExtensions.PolicyName);
+app.UseMcpChallengeParameters(AuthenticationExtensions.RequiredScope);
 app.UseAuthentication();
 app.UseAuthorization();
 
