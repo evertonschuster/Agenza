@@ -178,6 +178,13 @@ jobs:
           echo "SSL_CERT_DIR=$SSL_CERT_DIR" >> "$GITHUB_ENV"
           dotnet dev-certs https --trust
           dotnet dev-certs https --export-path "$RUNNER_TEMP/agenza-https.pem" --format PEM
+          for nss_dir in "$HOME/.pki/nssdb" "$HOME/.local/share/pki/nssdb"; do
+            mkdir -p "$nss_dir"
+            if [ ! -f "$nss_dir/cert9.db" ]; then
+              certutil -N --empty-password -d "sql:$nss_dir"
+            fi
+            certutil -A -d "sql:$nss_dir" -n agenza-development -t 'P,,' -i "$RUNNER_TEMP/agenza-https.pem"
+          done
           echo "NODE_EXTRA_CA_CERTS=$RUNNER_TEMP/agenza-https.pem" >> "$GITHUB_ENV"
           cat /etc/ssl/certs/ca-certificates.crt "$RUNNER_TEMP/agenza-https.pem" > "$RUNNER_TEMP/agenza-ca-bundle.pem"
           echo "SSL_CERT_FILE=$RUNNER_TEMP/agenza-ca-bundle.pem" >> "$GITHUB_ENV"
