@@ -6,14 +6,17 @@ persistence policy. Use this reference to inspect the affected enforcement path 
 ## Authentication and HTTP entry
 
 Read [IdentityJwtBearerExtensions](../../../../backend/shared/Admin.Identity.Client/IdentityJwtBearerExtensions.cs)
-for authority, audience and claim mapping, then
+for authority, audience and claim mapping,
+[TenantAuthorizationExtensions](../../../../backend/shared/Admin.Identity.Client/TenantAuthorizationExtensions.cs)
+for the common API/MCP policy, then
 [HttpContextTenantAccessor](../../../../backend/shared/Admin.Identity.Client/HttpContextTenantAccessor.cs)
 for the claim source and
 [TenantHeaderFilter](../../../../backend/shared/Admin.Identity.Client/TenantHeaderFilter.cs)
 for header/claim comparison.
 
-- Verify the route actually uses authentication and registers the filter; registering its service
-  in DI alone does not install a global MVC filter.
+- Verify both transports apply the shared authenticated-tenant policy without extra `sub` or scope
+  requirements. The REST API additionally requires the tenant header through its MVC filter; MCP
+  reads tenant only from claims. Registering the filter in DI alone does not install it globally.
   [services-service Program](../../../../backend/services/services-service/ServicesService.Api/Program.cs)
   is the tenant-owned API reference.
 - The accessor reads the authenticated principal, never the header being compared.

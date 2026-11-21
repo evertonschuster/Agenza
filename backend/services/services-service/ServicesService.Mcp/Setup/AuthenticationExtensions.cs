@@ -6,8 +6,6 @@ namespace ServicesService.Mcp.Setup;
 
 public static class AuthenticationExtensions
 {
-    public const string McpUserPolicy = "McpUser";
-
     public static IServiceCollection AddMcpAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -33,17 +31,6 @@ public static class AuthenticationExtensions
                 ScopesSupported = ["services-api", "offline_access"],
             };
         });
-
-        services.AddAuthorization(options => options.AddPolicy(McpUserPolicy, policy => policy
-            .RequireAuthenticatedUser()
-            .RequireAssertion(context =>
-                Guid.TryParse(context.User.FindFirst("sub")?.Value, out var userId)
-                && userId != Guid.Empty
-                && Guid.TryParse(context.User.FindFirst("tenant_id")?.Value, out var tenantId)
-                && tenantId != Guid.Empty
-                && context.User.FindAll("scope")
-                    .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                    .Contains("services-api", StringComparer.Ordinal))));
 
         return services;
     }

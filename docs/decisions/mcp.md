@@ -26,8 +26,8 @@ The largest section of [platform.md](platform.md), in its own file.
   client-permission policy. Changing tenant needs a new login; current user roles are rebuilt.
   Removing a permission from a client's registration is not an application-level revocation of
   previously granted scopes when refresh omits them.
-- **The MCP resource has its own audience.** Its tools require a user and tenant and use the same
-  `services-api` scope as the SPA. The requested resource selects the destination, not different
+- **The MCP resource has its own audience.** Its tools use the same shared authenticated-tenant policy as REST, without additional subject-format
+  or scope requirements. The OAuth clients still share the same registered scopes. The requested resource selects the destination, not different
   business permissions. Tokens destined only for REST and M2M tokens do not authorize MCP tools.
 - **An MCP host is an entry point of its own context.** Its tools call that context's Application
   handlers in process, with the user and tenant from the validated claims, as the REST controllers

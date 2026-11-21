@@ -1,3 +1,4 @@
+using Admin.Identity.Client;
 using Admin.SharedKernel;
 using ModelContextProtocol.AspNetCore;
 using ServicesService.Application;
@@ -24,7 +25,7 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapMcp("/mcp").RequireAuthorization(AuthenticationExtensions.McpUserPolicy);
+app.MapMcp("/mcp").RequireAuthorization(TenantAuthorizationExtensions.PolicyName);
 app.MapDefaultEndpoints();
 
 await app.RunAsync();

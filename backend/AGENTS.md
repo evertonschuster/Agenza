@@ -36,6 +36,8 @@ Declare each client explicitly, including its scopes and resources, without shar
 Consent is implicit for all interactive clients; there is no consent screen.
 SPA and MCP are interfaces of the same application with the same scopes and operation authorization;
 OAuth audiences still identify the destination of each token.
+API and MCP share the authenticated-tenant policy, without additional subject-format or scope
+requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses the tenant claim.
 
 ## Validation and delivery
 

@@ -16,22 +16,17 @@ public class HttpContextTenantAccessor : ITenantAccessor
     {
         get
         {
-            var claim = _httpContextAccessor.HttpContext?.User.FindFirst("tenant_id")
-                ?? throw new InvalidOperationException("The current principal has no 'tenant_id' claim.");
+            if (TryGetTenantId(out var tenantId))
+            {
+                return tenantId;
+            }
 
-            return Guid.Parse(claim.Value);
+            throw new InvalidOperationException("The current principal has no valid 'tenant_id' claim.");
         }
     }
 
     public bool TryGetTenantId(out Guid tenantId)
     {
-        var claim = _httpContextAccessor.HttpContext?.User.FindFirst("tenant_id");
-        if (claim is not null && Guid.TryParse(claim.Value, out tenantId))
-        {
-            return true;
-        }
-
-        tenantId = Guid.Empty;
-        return false;
+        return TenantAuthorizationExtensions.TryGetTenantId(_httpContextAccessor.HttpContext?.User, out tenantId);
     }
 }

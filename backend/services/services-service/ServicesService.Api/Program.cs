@@ -2,7 +2,6 @@ using Admin.Identity.Client;
 using Admin.SharedKernel;
 using Admin.SharedKernel.AspNetCore;
 using Asp.Versioning;
-using Microsoft.AspNetCore.Authorization;
 using ServicesService.Api.Setup;
 using ServicesService.Application;
 using ServicesService.Infrastructure;
@@ -34,14 +33,6 @@ builder.Services
     .AddMvc();
 
 builder.Services.AddIdentityServiceAuthentication(builder.Configuration, audience: "services-api");
-builder.Services.AddAuthorization(options =>
-{
-    // Endpoint-level fallback keeps the API fail-closed while allowing the
-    // authorization middleware to return the shared problem contract.
-    options.FallbackPolicy = new AuthorizationPolicyBuilder()
-        .RequireAuthenticatedUser()
-        .Build();
-});
 
 builder.Services.AddSharedKernel();
 builder.Services.AddServicesApplication();
@@ -73,7 +64,7 @@ app.UseCors("spa");
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapControllers();
+app.MapControllers().RequireAuthorization(TenantAuthorizationExtensions.PolicyName);
 app.MapDefaultEndpoints();
 
 await app.RunAsync();

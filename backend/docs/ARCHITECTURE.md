@@ -239,13 +239,21 @@ what dies in gate 1: [`docs/API.md`](../../docs/API.md) §4.3.
 
 ### Tenant
 
-From the validated token, only. A tenant-owned service registers
-[TenantHeaderFilter](../shared/Admin.Identity.Client/TenantHeaderFilter.cs), which refuses a missing
-or malformed header, a missing claim or a mismatch. `[IgnoreTenant]` skips that comparison, needs an
-explicit authorization rationale and is not anonymous access. Commands, queries, DTOs, mappings and
-business repository methods do not accept a client-selected tenant. Do not assume a fine-grained
-panel permission model: M2M scopes and tenant/token checks have their own boundaries; inspect the
-endpoint's actual policy.
+From the validated token, only. API and MCP use the same
+[Tenant policy](../shared/Admin.Identity.Client/TenantAuthorizationExtensions.cs), requiring
+an authenticated principal and a non-empty GUID `tenant_id`, without extra `sub` format or scope
+requirements. JWT validation still checks the destination audience of each host.
+
+The REST API also registers [TenantHeaderFilter](../shared/Admin.Identity.Client/TenantHeaderFilter.cs)
+to require a matching `X-Tenant-Id`; MCP does not depend on that header. The accessor and policy use
+the same tenant parsing rule. `[IgnoreTenant]` skips the REST header comparison, not authentication
+or the shared tenant policy.
+
+A missing or invalid token follows each transport's authentication challenge. A valid token without
+a valid tenant is forbidden by the shared policy before MVC executes. REST header failures retain
+`Tenant.ContextMismatch`; other authorization failures use the API's authorization problem contract.
+Commands, queries, DTOs, mappings and business repository methods do not accept a client-selected
+tenant. No fine-grained role policy is introduced by the shared tenant policy.
 
 The
 [save interceptor](../services/services-service/ServicesService.Infrastructure/Persistence/Interceptors/AuditableEntitySaveChangesInterceptor.cs)

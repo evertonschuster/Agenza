@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using Admin.Identity.Client;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Configuration;
@@ -7,13 +8,13 @@ using ServicesService.Mcp.Setup;
 
 namespace ServicesService.McpTests;
 
-public sealed class McpUserPolicyTests
+public sealed class McpTenantAuthorizationTests
 {
     private static readonly string UserId = Guid.NewGuid().ToString();
     private static readonly string TenantId = Guid.NewGuid().ToString();
 
     [Fact]
-    public async Task Token_com_usuario_tenant_e_escopo_services_api_e_autorizado()
+    public async Task Token_autenticado_com_tenant_e_autorizado()
     {
         var result = await AuthorizeAsync(Principal(UserId, TenantId, "openid services-api offline_access"));
 
@@ -35,11 +36,11 @@ public sealed class McpUserPolicyTests
     [InlineData(null)]
     [InlineData("nao-e-guid")]
     [InlineData("00000000-0000-0000-0000-000000000000")]
-    public async Task Token_sem_usuario_valido_e_recusado(string? sub)
+    public async Task Sub_nao_participa_da_politica_de_autorizacao(string? sub)
     {
         var result = await AuthorizeAsync(Principal(sub, TenantId, "services-api"));
 
-        result.Succeeded.Should().BeFalse();
+        result.Succeeded.Should().BeTrue();
     }
 
     [Theory]
@@ -59,11 +60,11 @@ public sealed class McpUserPolicyTests
     [InlineData("outro-escopo")]
     [InlineData("services-api:extra")]
     [InlineData("SERVICES-API")]
-    public async Task Token_sem_escopo_services_api_e_recusado(string? scope)
+    public async Task Escopos_nao_participam_da_politica_de_autorizacao(string? scope)
     {
         var result = await AuthorizeAsync(Principal(UserId, TenantId, scope));
 
-        result.Succeeded.Should().BeFalse();
+        result.Succeeded.Should().BeTrue();
     }
 
     [Fact]
@@ -116,6 +117,6 @@ public sealed class McpUserPolicyTests
             httpContext.Request.Headers["X-Tenant-Id"] = tenantHeader;
         }
 
-        return await provider.GetRequiredService<IAuthorizationService>().AuthorizeAsync(principal, httpContext, AuthenticationExtensions.McpUserPolicy);
+        return await provider.GetRequiredService<IAuthorizationService>().AuthorizeAsync(principal, httpContext, TenantAuthorizationExtensions.PolicyName);
     }
 }
