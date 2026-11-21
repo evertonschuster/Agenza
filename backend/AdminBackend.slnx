@@ -14,6 +14,7 @@
     <Project Path="services/services-service/ServicesService.Domain/ServicesService.Domain.csproj" />
     <Project Path="services/services-service/ServicesService.Infrastructure/ServicesService.Infrastructure.csproj" />
     <Project Path="services/services-service/ServicesService.Mcp/ServicesService.Mcp.csproj" />
+    <Project Path="services/services-service/ServicesService.McpTests/ServicesService.McpTests.csproj" />
     <Project Path="services/services-service/ServicesService.PersistenceTests/ServicesService.PersistenceTests.csproj" />
     <Project Path="services/services-service/ServicesService.Tests/ServicesService.Tests.csproj" />
   </Folder>

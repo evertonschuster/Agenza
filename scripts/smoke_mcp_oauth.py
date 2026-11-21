@@ -127,7 +127,7 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(status, 200)
         metadata = json.loads(body)
         self.assertEqual(metadata["resource"], self.resource)
-        self.assertEqual(metadata["scopes_supported"], ["mcp:connect"])
+        self.assertEqual(metadata["scopes_supported"], ["mcp:connect", "offline_access"])
 
     def test_callback_raiz_do_vscode_aceita_porta_variavel(self):
         callback = "http://127.0.0.1:33418/"
