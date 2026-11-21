@@ -51,9 +51,9 @@ resources.
 <Service>.McpTests          → Mcp; host authorization, outside the coverage gate
 ```
 
-An MCP tool dispatches the context's query or command and returns the `Result` as a
-`CallToolResult`, a failure as `isError`; it authorizes as the REST endpoint of the same operation.
-The boundary is in [decisions/mcp.md](../../docs/decisions/mcp.md).
+`<Service>.Mcp` registers the context's Application and Infrastructure as the Api does. Each tool
+carries `[Authorize]` and authorizes as the REST endpoint of the same operation; the boundary is in
+[decisions/mcp.md](../../docs/decisions/mcp.md).
 
 Nothing checks this direction (§11): review changed project and package references as architecture.
 
@@ -424,7 +424,6 @@ investigation and does not expand the task into migrating unrelated code.
 | Read by id and state transitions                     | [GetClientById](../services/services-service/ServicesService.Application/Clients/GetClientById/), [DeactivateClient](../services/services-service/ServicesService.Application/Clients/DeactivateClient/), [ReactivateClient](../services/services-service/ServicesService.Application/Clients/ReactivateClient/) |
 | Paging and search                                    | [ListClients](../services/services-service/ServicesService.Application/Clients/ListClients/), [ListTags](../services/services-service/ServicesService.Application/Tags/ListTags/)                                                                                                                                |
 | Soft deletion                                        | [DeleteClientCommandHandler](../services/services-service/ServicesService.Application/Clients/DeleteClient/DeleteClientCommandHandler.cs)                                                                                                                                                                        |
-| MCP tool over a query                                | [TagTools](../services/services-service/ServicesService.Mcp/Tools/TagTools.cs)                                                                                                                                                                                                                                   |
 
 Older operations still use persistence-error mappers, a tracked `GetForUpdateAsync` on the port, a
 relationship loader shared between handlers, uncoded validator rules or cross-aggregate navigations.
