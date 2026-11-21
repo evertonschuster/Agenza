@@ -24,14 +24,14 @@ public sealed class AuthorizationController(
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
         var authentication = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
-        if (authentication is not { Succeeded: true })
+        var forceLogin = request.HasPromptValue(OpenIddictConstants.PromptValues.Login);
+        if (forceLogin || authentication is not { Succeeded: true })
         {
             return Challenge(
                 authenticationSchemes: IdentityConstants.ApplicationScheme,
                 properties: new AuthenticationProperties
                 {
-                    RedirectUri = Request.PathBase + Request.Path + QueryString.Create(
-                        Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList()),
+                    RedirectUri = Request.PathBase + Request.Path + QueryString.Create(ReturnParameters(request, forceLogin)),
                 });
         }
 
@@ -49,6 +49,28 @@ public sealed class AuthorizationController(
         }
 
         return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+    }
+
+    // prompt=login (OIDC Core 3.1.2.1) forces a fresh login. The value is dropped from the return URL
+    // so the request does not loop once the user has authenticated again.
+    private List<KeyValuePair<string, Microsoft.Extensions.Primitives.StringValues>> ReturnParameters(
+        OpenIddictRequest request,
+        bool forceLogin)
+    {
+        var parameters = (Request.HasFormContentType ? Request.Form.ToList() : Request.Query.ToList());
+        if (!forceLogin)
+        {
+            return parameters;
+        }
+
+        parameters.RemoveAll(parameter => parameter.Key == OpenIddictConstants.Parameters.Prompt);
+        var remaining = request.GetPromptValues().Remove(OpenIddictConstants.PromptValues.Login);
+        if (remaining.Length > 0)
+        {
+            parameters.Add(new(OpenIddictConstants.Parameters.Prompt, string.Join(' ', remaining)));
+        }
+
+        return parameters;
     }
 
     [HttpPost("~/connect/token")]

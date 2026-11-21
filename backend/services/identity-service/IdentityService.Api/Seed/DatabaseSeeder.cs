@@ -90,19 +90,19 @@ public class DatabaseSeeder : IHostedService
             new()
             {
                 Name = "services-api",
-                DisplayName = "API de serviços",
+                DisplayName = "API de serviÃ§os",
                 Resources = { "services-api" },
             },
             new()
             {
                 Name = "services-mcp",
-                DisplayName = "MCP de serviços",
+                DisplayName = "MCP de serviÃ§os",
                 Resources = { "https://localhost:7091/mcp" },
             },
             new()
             {
                 Name = "identity-admin",
-                DisplayName = "Administração de identidade",
+                DisplayName = "AdministraÃ§Ã£o de identidade",
                 Resources = { "identity-service" },
             },
         ];
@@ -152,8 +152,18 @@ public class DatabaseSeeder : IHostedService
                 RedirectUris =
                 {
                     new("http://127.0.0.1/oauth/callback"),
+                    new("http://127.0.0.1/callback"),
                     new("http://127.0.0.1/"),
+                    new("http://localhost/oauth/callback"),
+                    new("http://localhost/callback"),
+                    new("http://localhost/"),
+                    new("http://[::1]/oauth/callback"),
+                    new("http://[::1]/callback"),
+                    new("http://[::1]/"),
                     new("https://vscode.dev/redirect"),
+                    new("https://insiders.vscode.dev/redirect"),
+                    new("https://claude.ai/api/mcp/auth_callback"),
+                    new("https://claude.com/api/mcp/auth_callback"),
                 },
                 Permissions =
                 {

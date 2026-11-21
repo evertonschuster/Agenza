@@ -36,6 +36,13 @@ The largest section of [platform.md](platform.md), in its own file.
 - **Loopback callbacks use the standard OpenIddict validation.** Native clients register full
   callbacks and only the port varies. Generated paths are not accepted; the callback must match
   a registered path. The full callback remains bound to the authorization code.
+- **The `agenza-mcp` client registers the callbacks of the supported hosts.** Loopback callbacks for
+  `127.0.0.1`, `localhost` and `[::1]` (`/`, `/callback`, `/oauth/callback`), `vscode.dev` and
+  `insiders.vscode.dev` (`/redirect`), and the Claude web callbacks (`claude.ai` and `claude.com`,
+  `/api/mcp/auth_callback`). A new host is a new registration, not a looser match.
+- **Browser-hosted clients get explicit CORS origins.** The MCP resource and the authority allow only
+  the configured origins (`vscode.dev`, `insiders.vscode.dev`), without credentials. The origin list is
+  configuration and an empty list grants nothing.
 - **No anonymous dynamic registration and no CIMD.** A preconfigured integration supplies its OAuth
   client to the platform and uses the authority's permissions, without MCP knowledge in the OAuth
   mechanism.

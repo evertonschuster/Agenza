@@ -10,6 +10,7 @@ var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
 builder.Services.AddMcpAuthentication(builder.Configuration);
+builder.Services.AddMcpCors(builder.Configuration);
 
 builder.Services.AddSharedKernel();
 builder.Services.AddServicesApplication();
@@ -22,6 +23,7 @@ builder.Services.AddMcpServer()
 
 var app = builder.Build();
 
+app.UseCors(CorsExtensions.PolicyName);
 app.UseAuthentication();
 app.UseAuthorization();
 

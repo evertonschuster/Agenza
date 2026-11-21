@@ -304,6 +304,37 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(status, 401)
         self.assertIn("resource_metadata=", headers.get("WWW-Authenticate", ""))
 
+    def test_callbacks_dos_clientes_suportados_sao_aceitos(self):
+        for callback in (
+            "http://localhost:54321/callback",
+            "http://127.0.0.1:54321/callback",
+            "http://[::1]:54321/oauth/callback",
+            "https://insiders.vscode.dev/redirect",
+            "https://claude.ai/api/mcp/auth_callback",
+            "https://claude.com/api/mcp/auth_callback",
+        ):
+            with self.subTest(callback=callback):
+                status, _, result, verifier, _ = self.authorize(redirect_uri=callback)
+                self.assertEqual(status, 302)
+                self.assertIn("code", result)
+                status, _ = self.token(redirect_uri=callback, code=result["code"][0], code_verifier=verifier)
+                self.assertEqual(status, 200)
+
+    def test_cors_libera_apenas_origens_configuradas(self):
+        preflight = {"Access-Control-Request-Method": "POST", "Access-Control-Request-Headers": "authorization,content-type"}
+        for url in (self.resource, self.identity + "/connect/token"):
+            status, headers, _ = self.send("OPTIONS", url, headers={"Origin": "https://vscode.dev", **preflight})
+            self.assertIn(status, (200, 204))
+            self.assertEqual(headers.get("Access-Control-Allow-Origin"), "https://vscode.dev")
+            status, headers, _ = self.send("OPTIONS", url, headers={"Origin": "https://attacker.invalid", **preflight})
+            self.assertIsNone(headers.get("Access-Control-Allow-Origin"))
+
+    def test_prompt_login_exige_novo_login(self):
+        status, location, _, _, _ = self.authorize(prompt="login")
+        self.assertEqual(status, 302)
+        self.assertIn("/Account/Login", location)
+        self.assertNotIn("prompt%3Dlogin", location)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
