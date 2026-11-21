@@ -32,6 +32,8 @@ The why behind each convention and what was already refused are in the
 
 OAuth client definitions belong in `DatabaseSeeder`; secrets stay in external configuration.
 Consent is implicit for all interactive clients; there is no consent screen.
+SPA and MCP are interfaces of the same application with the same scopes and operation authorization;
+OAuth audiences still identify the destination of each token.
 
 ## Validation and delivery
 

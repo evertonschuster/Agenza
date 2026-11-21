@@ -38,7 +38,6 @@ builder.Services.AddIdentityApplication();
 builder.Services.AddHostedService<DatabaseSeeder>();
 
 builder.Services.AddIdentityCors(builder.Configuration);
-builder.Services.AddScoped<OAuthGrantPolicy>();
 var oauthProvisioning = builder.Configuration.GetSection(OAuthProvisioningOptions.SectionName).Get<OAuthProvisioningOptions>()
     ?? new OAuthProvisioningOptions();
 var provisioningErrors = oauthProvisioning.Validate(builder.Configuration);

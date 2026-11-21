@@ -19,7 +19,7 @@ For a local Codex client:
 ```toml
 [mcp_servers.agenza-local]
 url = "https://localhost:7091/mcp"
-scopes = ["openid", "profile", "tenant_id", "mcp:connect", "offline_access"]
+scopes = ["openid", "profile", "tenant_id", "services-api", "offline_access"]
 
 [mcp_servers.agenza-local.oauth]
 client_id = "agenza-mcp"
@@ -37,7 +37,7 @@ and `--host 127.0.0.1`.
 
 Pass `--static-oauth-client-info` with a JSON holding `client_id: agenza-mcp`, and
 `--static-oauth-client-metadata` with a JSON holding the method `none` and the scopes
-`openid profile tenant_id mcp:connect offline_access`. The bridge's approved callback is
+`openid profile tenant_id services-api offline_access`. The bridge's approved callback is
 `http://127.0.0.1/oauth/callback`. Back up the active `claude_desktop_config.json`, keep its other
 entries, add `agenza-local` and reopen the app.
 
@@ -46,12 +46,6 @@ entries, add `agenza-local` and reopen the app.
 With the stack running, run `python scripts/smoke_mcp_oauth.py` from the root. It uses the local
 client and the demo user; for another registration set `AGENZA_IDENTITY_URL`, `AGENZA_MCP_URL`,
 `AGENZA_MCP_CLIENT_ID`, `AGENZA_MCP_CALLBACK`, `AGENZA_TEST_EMAIL` and `AGENZA_TEST_PASSWORD`.
-
-`AGENZA_TEST_SECOND_RESOURCE=1` enables the second-resource acceptance. It needs a `protocol-test`
-client, the callback `http://127.0.0.1/protocol-test/callback`, the scopes
-`openid tenant_id example:read offline_access` and the audience
-`https://localhost:7091/second-resource`, provisioned only in the test database. It checks
-audience, cross scopes and refresh, without a second business server.
 
 In the real app, enable the connection in the conversation and ask for `hello_world`. Record the
 result, the app version and the callbacks used in the PR, without tokens or secrets. A passing HTTP

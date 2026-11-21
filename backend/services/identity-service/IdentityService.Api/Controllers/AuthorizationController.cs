@@ -1,5 +1,5 @@
+using System.Collections.Immutable;
 using System.Security.Claims;
-using IdentityService.Api.Setup;
 using IdentityService.Infrastructure.Identity;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Authentication;
@@ -11,7 +11,8 @@ using OpenIddict.Server.AspNetCore;
 namespace IdentityService.Api.Controllers;
 
 public sealed class AuthorizationController(
-    OAuthGrantPolicy grantPolicy,
+    IOpenIddictScopeManager scopeManager,
+    IConfiguration configuration,
     SignInManager<ApplicationUser> signInManager,
     UserManager<ApplicationUser> userManager) : Controller
 {
@@ -22,13 +23,6 @@ public sealed class AuthorizationController(
     {
         var request = HttpContext.GetOpenIddictServerRequest()
             ?? throw new InvalidOperationException("The OpenID Connect request cannot be retrieved.");
-        var grant = await grantPolicy.ResolveAsync(request.ClientId!, request.GetScopes(), request.GetResources(),
-            previousGrant: null, cancellationToken);
-        if (grant.IsFailure)
-        {
-            return Reject(grant.Error.Code);
-        }
-
         var authentication = await HttpContext.AuthenticateAsync(IdentityConstants.ApplicationScheme);
         if (authentication is not { Succeeded: true })
         {
@@ -47,7 +41,14 @@ public sealed class AuthorizationController(
             return Reject(OpenIddictConstants.Errors.LoginRequired);
         }
 
-        return SignIn(await CreatePrincipalAsync(user, grant.Value), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+        var principal = await signInManager.CreateUserPrincipalAsync(user);
+        var error = await ApplyGrantAsync(principal, request, previousGrant: null, cancellationToken);
+        if (error is not null)
+        {
+            return Reject(error);
+        }
+
+        return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
     }
 
     [HttpPost("~/connect/token")]
@@ -73,31 +74,29 @@ public sealed class AuthorizationController(
                 return Reject(OpenIddictConstants.Errors.InvalidGrant);
             }
 
-            var grant = await grantPolicy.ResolveAsync(request.ClientId!, request.GetScopes(), request.GetResources(),
-                previous, cancellationToken);
-            if (grant.IsFailure)
+            var principal = await signInManager.CreateUserPrincipalAsync(user);
+            var error = await ApplyGrantAsync(principal, request, previous, cancellationToken);
+            if (error is not null)
             {
-                return Reject(grant.Error.Code);
+                return Reject(error);
             }
 
-            return SignIn(await CreatePrincipalAsync(user, grant.Value), OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
+            return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
         if (request.IsClientCredentialsGrantType())
         {
-            var grant = await grantPolicy.ResolveAsync(request.ClientId!, request.GetScopes(), request.GetResources(),
-                previousGrant: null, cancellationToken);
-            if (grant.IsFailure)
-            {
-                return Reject(grant.Error.Code);
-            }
-
             var identity = new ClaimsIdentity(OpenIddictServerAspNetCoreDefaults.AuthenticationScheme,
                 OpenIddictConstants.Claims.Name, OpenIddictConstants.Claims.Role);
             identity.SetClaim(OpenIddictConstants.Claims.Subject, request.ClientId);
             identity.SetClaim(OpenIddictConstants.Claims.Name, request.ClientId);
             var principal = new ClaimsPrincipal(identity);
-            ApplyGrant(principal, grant.Value);
+            var error = await ApplyGrantAsync(principal, request, previousGrant: null, cancellationToken);
+            if (error is not null)
+            {
+                return Reject(error);
+            }
+
             return SignIn(principal, OpenIddictServerAspNetCoreDefaults.AuthenticationScheme);
         }
 
@@ -119,21 +118,59 @@ public sealed class AuthorizationController(
             }));
     }
 
-    private async Task<ClaimsPrincipal> CreatePrincipalAsync(ApplicationUser user, OAuthGrant grant)
+    private async Task<string?> ApplyGrantAsync(
+        ClaimsPrincipal principal,
+        OpenIddictRequest request,
+        ClaimsPrincipal? previousGrant,
+        CancellationToken cancellationToken)
     {
-        var principal = await signInManager.CreateUserPrincipalAsync(user);
-        ApplyGrant(principal, grant);
-        return principal;
-    }
+        var scopes = request.GetScopes();
+        if (previousGrant is not null)
+        {
+            var originalScopes = previousGrant.GetScopes();
+            if (scopes.Length == 0)
+            {
+                scopes = originalScopes;
+            }
 
-    private static void ApplyGrant(ClaimsPrincipal principal, OAuthGrant grant)
-    {
-        principal.SetScopes(grant.Scopes);
-        principal.SetResources(grant.Resources);
+            scopes = scopes.Intersect(originalScopes, StringComparer.Ordinal).ToImmutableArray();
+        }
+
+        var resources = await scopeManager.ListResourcesAsync(scopes, cancellationToken).ToListAsync(cancellationToken);
+        if (previousGrant is not null)
+        {
+            var originalResources = previousGrant.GetResources();
+            resources = resources.Intersect(originalResources, StringComparer.Ordinal).ToList();
+            if (originalResources.Length > 0 && resources.Count == 0)
+            {
+                return OpenIddictConstants.Errors.InvalidGrant;
+            }
+        }
+
+        var targets = request.GetResources();
+        if (targets.Any(target => !resources.Contains(target, StringComparer.Ordinal)))
+        {
+            return OpenIddictConstants.Errors.InvalidTarget;
+        }
+
+        if (targets.Length > 0)
+        {
+            resources = resources.Intersect(targets, StringComparer.Ordinal).ToList();
+        }
+        else if (previousGrant is null && configuration["OAuth:DefaultResource"] is { } defaultResource
+            && resources.Contains(defaultResource, StringComparer.Ordinal))
+        {
+            resources = [defaultResource];
+        }
+
+        principal.SetScopes(scopes);
+        principal.SetResources(resources);
         foreach (var claim in principal.Claims)
         {
             claim.SetDestinations(GetDestinations(claim, principal));
         }
+
+        return null;
     }
 
     private static IEnumerable<string> GetDestinations(Claim claim, ClaimsPrincipal principal)

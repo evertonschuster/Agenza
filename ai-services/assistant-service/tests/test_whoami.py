@@ -17,7 +17,7 @@ async def test_whoami_requires_a_bearer_token() -> None:
 async def test_whoami_returns_claims_for_a_valid_token() -> None:
     tenant_id = uuid4()
     app.dependency_overrides[require_valid_token] = lambda: {
-        "sub": "assistant-service-worker",
+        "sub": "test-service-client",
         "scope": "services-api",
         "tenant_id": str(tenant_id),
     }
@@ -38,7 +38,7 @@ async def test_whoami_returns_claims_for_a_valid_token() -> None:
 
     assert response.status_code == 200
     assert response.json() == {
-        "client_id": "assistant-service-worker",
+        "client_id": "test-service-client",
         "scope": "services-api",
         "tenant_id": str(tenant_id),
     }

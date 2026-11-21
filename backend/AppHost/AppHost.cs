@@ -38,7 +38,6 @@ var identityService = builder.AddDotnetProject(
     .WithHttpEndpoint(port: 5081, name: "http")
     .WithHttpsEndpoint(port: 7081, name: "https")
     .WithReference(identityDatabase, connectionName: "Default")
-    .WithEnvironment("OAuthClientSecrets__assistant-service-worker", developmentPassword)
     .WaitFor(appdb);
 
 var servicesService = builder.AddDotnetProject(
@@ -73,9 +72,6 @@ var assistantService = builder.AddUvicornApp(
     .WithEnvironment("IDENTITY_AUTHORITY", identityService.GetEndpoint("https"))
     .WithEnvironment("IDENTITY_ISSUER", ReferenceExpression.Create($"{identityService.GetEndpoint("https")}/"))
     .WithEnvironment("IDENTITY_AUDIENCE", "services-api")
-    .WithEnvironment("IDENTITY_CLIENT_ID", "assistant-service-worker")
-    .WithEnvironment("IDENTITY_CLIENT_SECRET", developmentPassword)
-    .WithEnvironment("IDENTITY_SCOPE", "services-api")
     .WaitFor(identityService);
 
 #pragma warning disable ASPIRECERTIFICATES001

@@ -13,9 +13,9 @@ public sealed class McpUserPolicyTests
     private static readonly string TenantId = Guid.NewGuid().ToString();
 
     [Fact]
-    public async Task Token_com_usuario_tenant_e_escopo_mcp_connect_e_autorizado()
+    public async Task Token_com_usuario_tenant_e_escopo_services_api_e_autorizado()
     {
-        var result = await AuthorizeAsync(Principal(UserId, TenantId, "openid mcp:connect offline_access"));
+        var result = await AuthorizeAsync(Principal(UserId, TenantId, "openid services-api offline_access"));
 
         result.Succeeded.Should().BeTrue();
     }
@@ -24,7 +24,7 @@ public sealed class McpUserPolicyTests
     public async Task Principal_nao_autenticado_e_recusado()
     {
         var identity = new ClaimsIdentity(
-            [new Claim("sub", UserId), new Claim("tenant_id", TenantId), new Claim("scope", "mcp:connect")]);
+            [new Claim("sub", UserId), new Claim("tenant_id", TenantId), new Claim("scope", "services-api")]);
 
         var result = await AuthorizeAsync(new ClaimsPrincipal(identity));
 
@@ -37,7 +37,7 @@ public sealed class McpUserPolicyTests
     [InlineData("00000000-0000-0000-0000-000000000000")]
     public async Task Token_sem_usuario_valido_e_recusado(string? sub)
     {
-        var result = await AuthorizeAsync(Principal(sub, TenantId, "mcp:connect"));
+        var result = await AuthorizeAsync(Principal(sub, TenantId, "services-api"));
 
         result.Succeeded.Should().BeFalse();
     }
@@ -48,7 +48,7 @@ public sealed class McpUserPolicyTests
     [InlineData("00000000-0000-0000-0000-000000000000")]
     public async Task Token_sem_tenant_valido_e_recusado(string? tenantId)
     {
-        var result = await AuthorizeAsync(Principal(UserId, tenantId, "mcp:connect"));
+        var result = await AuthorizeAsync(Principal(UserId, tenantId, "services-api"));
 
         result.Succeeded.Should().BeFalse();
     }
@@ -56,10 +56,10 @@ public sealed class McpUserPolicyTests
     [Theory]
     [InlineData(null)]
     [InlineData("openid offline_access")]
-    [InlineData("services-api")]
-    [InlineData("mcp:connect:extra")]
-    [InlineData("MCP:CONNECT")]
-    public async Task Token_sem_escopo_mcp_connect_e_recusado(string? scope)
+    [InlineData("outro-escopo")]
+    [InlineData("services-api:extra")]
+    [InlineData("SERVICES-API")]
+    public async Task Token_sem_escopo_services_api_e_recusado(string? scope)
     {
         var result = await AuthorizeAsync(Principal(UserId, TenantId, scope));
 
@@ -69,10 +69,10 @@ public sealed class McpUserPolicyTests
     [Fact]
     public async Task Header_X_Tenant_Id_nao_participa_da_decisao()
     {
-        var principal = Principal(UserId, TenantId, "mcp:connect");
+        var principal = Principal(UserId, TenantId, "services-api");
 
         var withOtherTenant = await AuthorizeAsync(principal, Guid.NewGuid().ToString());
-        var withoutTenant = await AuthorizeAsync(Principal(UserId, null, "mcp:connect"), TenantId);
+        var withoutTenant = await AuthorizeAsync(Principal(UserId, null, "services-api"), TenantId);
 
         withOtherTenant.Succeeded.Should().BeTrue();
         withoutTenant.Succeeded.Should().BeFalse();

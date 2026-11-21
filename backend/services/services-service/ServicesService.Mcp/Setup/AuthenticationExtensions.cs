@@ -30,7 +30,7 @@ public static class AuthenticationExtensions
                 Resource = resource.AbsoluteUri,
                 ResourceName = "Agenza Serviços",
                 AuthorizationServers = { authority },
-                ScopesSupported = ["mcp:connect", "offline_access"],
+                ScopesSupported = ["services-api", "offline_access"],
             };
         });
 
@@ -43,7 +43,7 @@ public static class AuthenticationExtensions
                 && tenantId != Guid.Empty
                 && context.User.FindAll("scope")
                     .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                    .Contains("mcp:connect", StringComparer.Ordinal))));
+                    .Contains("services-api", StringComparer.Ordinal))));
 
         return services;
     }

@@ -10,7 +10,7 @@ def _config() -> IdentityConfig:
         authority="http://identity-service:8080",
         issuer="http://identity-service:8080",
         audience="services-api",
-        client_id="assistant-service-worker",
+        client_id="test-service-client",
         client_secret="secret",
         scope="services-api",
     )

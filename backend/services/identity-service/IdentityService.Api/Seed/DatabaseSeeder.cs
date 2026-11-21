@@ -83,44 +83,39 @@ public class DatabaseSeeder : IHostedService
         }
     }
 
-    private static List<OAuthClientDefinition> ClientDefinitions() =>
-    [
-        new()
-        {
-            ClientId = "admin-panel",
-            DisplayName = "Painel administrativo",
-            ClientType = "public",
-            ApplicationType = "web",
-            ConsentType = "implicit",
-            GrantTypes = ["authorization_code", "refresh_token"],
-            Scopes = ["openid", "profile", "email", "offline_access", "tenant_id", "services-api"],
-            Resources = ["services-api"],
-            RedirectUris = ["http://localhost:5173/callback", "http://localhost:5080/api-docs/", "http://localhost:5081/api-docs/"],
-            PostLogoutRedirectUris = ["http://localhost:5173/login"],
-        },
-        new()
-        {
-            ClientId = "agenza-mcp",
-            DisplayName = "Agenza MCP",
-            ClientType = "public",
-            ApplicationType = "native",
-            ConsentType = "implicit",
-            GrantTypes = ["authorization_code", "refresh_token"],
-            Scopes = ["openid", "profile", "tenant_id", "mcp:connect", "offline_access"],
-            Resources = ["https://localhost:7091/mcp"],
-            RedirectUris = ["http://127.0.0.1/oauth/callback", "http://127.0.0.1/", "https://vscode.dev/redirect"],
-        },
-        new()
-        {
-            ClientId = "assistant-service-worker",
-            DisplayName = "Serviço de assistente",
-            ClientType = "confidential",
-            GrantTypes = ["client_credentials"],
-            Scopes = ["services-api"],
-            Resources = ["services-api"],
-            SecretConfigurationKey = "OAuthClientSecrets:assistant-service-worker",
-        },
-    ];
+    private static List<OAuthClientDefinition> ClientDefinitions()
+    {
+        List<string> interactiveScopes = ["openid", "profile", "email", "offline_access", "tenant_id", "services-api"];
+        List<string> interactiveResources = ["services-api", "https://localhost:7091/mcp"];
+        return
+        [
+            new()
+            {
+                ClientId = "admin-panel",
+                DisplayName = "Painel administrativo",
+                ClientType = "public",
+                ApplicationType = "web",
+                ConsentType = "implicit",
+                GrantTypes = ["authorization_code", "refresh_token"],
+                Scopes = [.. interactiveScopes],
+                Resources = [.. interactiveResources],
+                RedirectUris = ["http://localhost:5173/callback", "http://localhost:5080/api-docs/", "http://localhost:5081/api-docs/"],
+                PostLogoutRedirectUris = ["http://localhost:5173/login"],
+            },
+            new()
+            {
+                ClientId = "agenza-mcp",
+                DisplayName = "Agenza MCP",
+                ClientType = "public",
+                ApplicationType = "native",
+                ConsentType = "implicit",
+                GrantTypes = ["authorization_code", "refresh_token"],
+                Scopes = [.. interactiveScopes],
+                Resources = [.. interactiveResources],
+                RedirectUris = ["http://127.0.0.1/oauth/callback", "http://127.0.0.1/", "https://vscode.dev/redirect"],
+            },
+        ];
+    }
 
     private async Task SeedDemoTenantAsync(IServiceProvider services, CancellationToken cancellationToken)
     {

@@ -5,24 +5,30 @@ The largest section of [platform.md](platform.md), in its own file.
 ## Decision
 
 - **The identity service is a generic OAuth authority.** It knows protocols, users, clients,
-  resources and scopes. Identifiers such as `mcp:connect` are registration data and never select a
+  resources and scopes. Scope identifiers are registration data and never select a
   branch of the OAuth flow; the authority does not reference the MCP SDK or interpret business
   operations. A resource host owns its transport, publishes its protected-resource metadata and
   authorizes its own operations.
 - **Two grants.** Authorization Code with PKCE S256 for interactive public clients, Client
-  Credentials for confidential services. Refresh is an explicit client permission. Consent is implicit for all interactive clients, with no consent screen or repeated consent check
-  during code exchange and refresh. An M2M
-  client represents a service and gets no tenant.
+  Credentials for confidential services. Refresh is an explicit client permission. Consent is
+  implicit for all interactive clients, with no consent screen or repeated consent check during
+  code exchange and refresh. An M2M client represents a service and gets no tenant.
 - **The persisted OpenIddict registration is the operational source.** The `DatabaseSeeder` defines clients and
   provisions them and the configured `OAuth` scopes through the opt-in bootstrap; it is not a second allowlist read per
   request. A client left out of the definitions is not deleted: disabling is explicit, and it stops new
   tokens while JWTs already issued stay valid until they expire wherever they are validated locally.
-- **A grant never widens.** Issuance uses the scopes allowed to the client and the resources of
-  those scopes; code exchange and refresh keep only what both the original grant and the current
-  registration allow. Changing tenant needs a new login. OpenIddict keeps validating clients,
-  grants, callbacks, PKCE and tokens.
-- **The MCP resource has its own audience.** Its tools need a user, a tenant and the matching scope;
-  REST API tokens and M2M tokens do not authorize them.
+- **SPA and MCP share application access.** Both interactive clients receive the same scopes and
+  use the same operation authorization for a user and tenant. There is no application-maintained
+  permission matrix that gives these interfaces different business capabilities. OpenIddict owns
+  client, endpoint, grant, scope and resource permission validation.
+- **A grant never widens.** The token controller builds fresh user claims on exchange and refresh,
+  keeping the original scopes and audiences or a requested reduction. It does not reapply a separate
+  client-permission policy. Changing tenant needs a new login; current user roles are rebuilt.
+  Removing a permission from a client's registration is not an application-level revocation of
+  previously granted scopes when refresh omits them.
+- **The MCP resource has its own audience.** Its tools require a user and tenant and use the same
+  `services-api` scope as the SPA. The requested resource selects the destination, not different
+  business permissions. Tokens destined only for REST and M2M tokens do not authorize MCP tools.
 - **An MCP host is an entry point of its own context.** Its tools call that context's Application
   handlers in process, with the user and tenant from the validated claims, as the REST controllers
   do. Each context that exposes tools gets its own host, resource and audience.
@@ -36,11 +42,11 @@ The largest section of [platform.md](platform.md), in its own file.
 ## Why
 
 Keeping resource knowledge out of the authority lets a second consumer be configured with its own
-scope and audience without changing the controller or the grant policy.
+scope and audience without changing the controller or the token issuance flow.
 
 ## Rejected
 
-- **Conditioning the authority's policy on `mcp:connect` or on platform names.** Resources are
+- **Conditioning token issuance on platform names.** Resources are
   configured consumers of the same protocol.
 - **Resolving client metadata and granting fixed MCP permissions in the same operation.**
 - **Letting the frontend or an MCP tool choose the authorized tenant.**

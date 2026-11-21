@@ -9,7 +9,9 @@ secrets stay in external configuration.
 [OAuthProvisioningOptions](../../../../backend/services/identity-service/IdentityService.Api/Setup/OAuthProvisioningOptions.cs)
 validates the definitions and converts clients to OpenIddict descriptors.
 
-Register each scope with its audiences and give the client its scopes and resources explicitly.
+Register each scope with its audiences. SPA and MCP interactive clients share their scopes and
+resource permissions in `DatabaseSeeder`; only their callbacks and native/web profiles differ.
+Keep M2M clients as service identities without user roles or tenant claims.
 Choose the interactive public profile, with PKCE and approved callbacks, or the confidential M2M
 profile, with a secret reference from configuration. Consent is implicit for all interactive
 clients; there is no consent screen. Do not use resource names to choose OAuth behavior.
@@ -25,9 +27,10 @@ Aspire. The [development guide](../../../../docs/DEVELOPMENT.md) covers the orch
 configuration with simulated managers; it proves neither HTTP nor PostgreSQL. For those, run the
 real [OIDC smoke](../../../../scripts/smoke_oidc_contract.py) and the [MCP proof](mcp-oauth.md).
 
-A second consumer is configured with its own scope and audience without changing the controller or
-the grant policy. Check cross-resource refusal, refresh with reduced permissions and client
-disabling.
+For MCP requests, the `resource` parameter selects the MCP audience. `OAuth:DefaultResource` selects
+the default audience for requests without that parameter, such as the SPA and worker, when it is
+mapped to the granted scopes. Verify equal SPA/MCP scopes and roles, audience validation and refresh
+with reduced scopes.
 
 ## Local native client
 
