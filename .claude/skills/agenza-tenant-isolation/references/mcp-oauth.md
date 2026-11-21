@@ -53,7 +53,7 @@ client, the callback `http://127.0.0.1/protocol-test/callback`, the scopes
 `https://localhost:7091/second-resource`, provisioned only in the test database. It checks
 audience, cross scopes and refresh, without a second business server.
 
-In the real app, enable the connection in the conversation and ask for `hello_world`. Record the
+In the real app, enable the connection in the conversation and ask for `agenza_list_tags`. Record the
 result, the app version and the callbacks used in the PR, without tokens or secrets. A passing HTTP
 test consumer does not replace that run.
 
