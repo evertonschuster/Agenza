@@ -303,7 +303,7 @@ class McpOAuthTests(unittest.TestCase):
             json_body=dict(jsonrpc="2.0", id=1, method="tools/list"))
         self.assertEqual(status, 401)
         self.assertIn("resource_metadata=", headers.get("WWW-Authenticate", ""))
-        self.assertIn('scope="services-mcp"', headers["WWW-Authenticate"])
+        self.assertIn('scope="services-mcp offline_access"', headers["WWW-Authenticate"])
         self.assertNotIn("invalid_token", headers["WWW-Authenticate"])
 
     def test_token_recusado_recebe_invalid_token_no_desafio(self):
@@ -346,6 +346,16 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(status, 302)
         self.assertIn("/Account/Login", location)
         self.assertNotIn("prompt%3Dlogin", location)
+
+    def test_escopo_do_desafio_rende_token_com_refresh(self):
+        status, headers, _ = self.send("POST", self.resource,
+            headers={"Accept": "application/json, text/event-stream"},
+            json_body=dict(jsonrpc="2.0", id=1, method="tools/list"))
+        scope = headers["WWW-Authenticate"].split('scope="', 1)[1].split('"', 1)[0]
+        _, _, result, verifier, _ = self.authorize(scope=scope)
+        status, tokens = self.token(code=result["code"][0], code_verifier=verifier)
+        self.assertEqual(status, 200)
+        self.assertIn("refresh_token", tokens)
 
 
 if __name__ == "__main__":

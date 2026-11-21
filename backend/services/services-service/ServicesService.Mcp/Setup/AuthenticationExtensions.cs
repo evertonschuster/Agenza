@@ -8,6 +8,10 @@ public static class AuthenticationExtensions
 {
     public const string RequiredScope = "services-mcp";
 
+    // Advertised in the 401 challenge and in the resource metadata. Clients request the challenge scope as
+    // given, so offline_access has to be part of it or they never receive a refresh token.
+    public const string ChallengeScope = RequiredScope + " offline_access";
+
     public static IServiceCollection AddMcpAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
