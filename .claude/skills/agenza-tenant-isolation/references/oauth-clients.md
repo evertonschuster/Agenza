@@ -7,8 +7,9 @@ OpenIddict descriptors in
 Keep each client explicit and secrets in external configuration. OpenIddict validates descriptors
 when the bootstrap creates or updates their registrations.
 
-Register each scope with its audiences. SPA and MCP interactive clients share their scopes and
-resource permissions in `DatabaseSeeder`; only their callbacks and native/web profiles differ.
+Register each scope with its audiences. Give the SPA the `services-api` scope and REST audience,
+and the MCP client the `services-mcp` scope and MCP audience in `DatabaseSeeder`. Their operation authorization policy remains shared and does
+not require either scope.
 Keep M2M clients as service identities without user roles or tenant claims.
 Choose the interactive public profile, with PKCE and approved callbacks, or the confidential M2M
 profile, with a secret reference from configuration. Consent is implicit for all interactive
@@ -27,7 +28,7 @@ real [OIDC smoke](../../../../scripts/smoke_oidc_contract.py) and the [MCP proof
 
 For MCP requests, the `resource` parameter selects the MCP audience. `OAuth:DefaultResource` selects
 the default audience for requests without that parameter, such as the SPA and worker, when it is
-mapped to the granted scopes. Verify equal SPA/MCP scopes and roles, audience validation and refresh
+mapped to the granted scopes. Verify dedicated SPA/MCP scopes, equal user roles, audience validation and refresh
 with reduced scopes.
 
 ## Local native client

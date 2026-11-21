@@ -75,7 +75,7 @@ class McpOAuthTests(unittest.TestCase):
         challenge = base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest()).decode().rstrip("=")
         values = dict(
             client_id=self.client_id, redirect_uri=self.callback, response_type="code",
-            scope="openid tenant_id services-api offline_access", resource=self.resource,
+            scope="openid tenant_id services-mcp offline_access", resource=self.resource,
             code_challenge=challenge, code_challenge_method="S256", state=secrets.token_urlsafe(16),
         )
         values.update(overrides)
@@ -118,7 +118,7 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(status, 200)
         metadata = json.loads(body)
         self.assertEqual(metadata["code_challenge_methods_supported"], ["S256"])
-        self.assertIn("services-api", metadata["scopes_supported"])
+        self.assertIn("services-mcp", metadata["scopes_supported"])
         self.assertIn("none", metadata["token_endpoint_auth_methods_supported"])
         self.assertNotIn("registration_endpoint", metadata)
         self.assertNotIn("client_id_metadata_document_supported", metadata)
@@ -132,7 +132,7 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(status, 200)
         metadata = json.loads(body)
         self.assertEqual(metadata["resource"], self.resource)
-        self.assertEqual(metadata["scopes_supported"], ["services-api", "offline_access"])
+        self.assertEqual(metadata["scopes_supported"], ["services-mcp", "offline_access"])
 
     def test_callback_raiz_do_vscode_aceita_porta_variavel(self):
         callback = "http://127.0.0.1:33418/"
@@ -159,7 +159,7 @@ class McpOAuthTests(unittest.TestCase):
 
     def test_cadastro_anonimo_nao_existe(self):
         status, _, _ = self.send("POST", self.identity + "/connect/register", json_body=dict(
-            redirect_uris=["https://attacker.invalid/callback"], scope="services-api"
+            redirect_uris=["https://attacker.invalid/callback"], scope="services-mcp"
         ))
         self.assertEqual(status, 404)
 
@@ -174,26 +174,36 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(status, 400)
         self.assertNotIn("code", result)
 
-    def test_spa_e_mcp_recebem_mesmos_escopos_e_roles(self):
-        scopes = "openid profile email tenant_id services-api offline_access"
+    def test_spa_e_mcp_recebem_escopos_dedicados_e_mesmas_roles(self):
+        identity_scopes = "openid profile email tenant_id offline_access"
         payloads = []
-        for client_id, callback, resource in (
-            ("admin-panel", "http://localhost:5173/callback", None),
-            (self.client_id, self.callback, self.resource),
+        for client_id, callback, resource, scope in (
+            ("admin-panel", "http://localhost:5173/callback", None, "services-api"),
+            (self.client_id, self.callback, self.resource, "services-mcp"),
         ):
             status, _, result, verifier, _ = self.authorize(
-                client_id=client_id, redirect_uri=callback, scope=scopes, resource=resource)
+                client_id=client_id, redirect_uri=callback, scope=identity_scopes + " " + scope, resource=resource)
             self.assertEqual(status, 302)
             status, tokens = self.token(client_id=client_id, redirect_uri=callback,
                 code=result["code"][0], code_verifier=verifier)
             self.assertEqual(status, 200)
             payloads.append(json.loads(base64.urlsafe_b64decode(
                 tokens["access_token"].split('.')[1] + "==")))
-        self.assertEqual(set(payloads[0]["scope"].split()), set(payloads[1]["scope"].split()))
+        self.assertEqual(set(payloads[0]["scope"].split()), set(identity_scopes.split()) | {"services-api"})
+        self.assertEqual(set(payloads[1]["scope"].split()), set(identity_scopes.split()) | {"services-mcp"})
         for claim in ("sub", "tenant_id", "role"):
             self.assertEqual(payloads[0].get(claim), payloads[1].get(claim))
         self.assertIn(payloads[0]["aud"], ("services-api", ["services-api"]))
         self.assertIn(payloads[1]["aud"], (self.resource, [self.resource]))
+
+    def test_clientes_nao_solicitam_escopo_da_outra_interface(self):
+        for client_id, callback, scope, resource in (
+            ("admin-panel", "http://localhost:5173/callback", "services-mcp", self.resource),
+            (self.client_id, self.callback, "services-api", None),
+        ):
+            _, _, result, _, _ = self.authorize(client_id=client_id, redirect_uri=callback,
+                scope="openid tenant_id " + scope, resource=resource)
+            self.assertNotIn("code", result)
 
     def test_callback_nao_cadastrado_e_recusado(self):
         status, location, result, _, _ = self.authorize(redirect_uri="https://attacker.invalid/callback")

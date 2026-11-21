@@ -91,7 +91,13 @@ public class DatabaseSeeder : IHostedService
             {
                 Name = "services-api",
                 DisplayName = "API de serviços",
-                Resources = { "services-api", "https://localhost:7091/mcp" },
+                Resources = { "services-api" },
+            },
+            new()
+            {
+                Name = "services-mcp",
+                DisplayName = "MCP de serviços",
+                Resources = { "https://localhost:7091/mcp" },
             },
             new()
             {
@@ -133,7 +139,6 @@ public class DatabaseSeeder : IHostedService
                     OpenIddictConstants.Permissions.Prefixes.Scope + "tenant_id",
                     OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
                     OpenIddictConstants.Permissions.Prefixes.Resource + "services-api",
-                    OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7091/mcp",
                 },
                 Requirements = { OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange },
             },
@@ -160,8 +165,7 @@ public class DatabaseSeeder : IHostedService
                     OpenIddictConstants.Permissions.Scopes.Profile,
                     OpenIddictConstants.Permissions.Scopes.Email,
                     OpenIddictConstants.Permissions.Prefixes.Scope + "tenant_id",
-                    OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
-                    OpenIddictConstants.Permissions.Prefixes.Resource + "services-api",
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "services-mcp",
                     OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7091/mcp",
                 },
                 Requirements = { OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange },

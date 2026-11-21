@@ -29,7 +29,8 @@ public sealed class AuthorizationControllerTests
         public SignInManager<ApplicationUser> SignIn { get; }
         public Dictionary<string, string[]> Resources { get; } = new()
         {
-            ["services-api"] = [Api, Mcp],
+            ["services-api"] = [Api],
+            ["services-mcp"] = [Mcp],
             ["other"] = ["https://other.test/api"],
         };
         private readonly IOpenIddictScopeManager _scopes = Substitute.For<IOpenIddictScopeManager>();
@@ -88,12 +89,12 @@ public sealed class AuthorizationControllerTests
     }
 
     [Theory]
-    [InlineData("admin-panel", null, Api)]
-    [InlineData("agenza-mcp", Mcp, Mcp)]
-    public async Task Interfaces_interativas_recebem_os_mesmos_escopos_e_roles(string client, string? resource, string audience)
+    [InlineData("admin-panel", "services-api", null, Api)]
+    [InlineData("agenza-mcp", "services-mcp", Mcp, Mcp)]
+    public async Task Interfaces_interativas_recebem_escopo_do_recurso_e_as_mesmas_roles(string client, string scope, string? resource, string audience)
     {
         var fixture = new Fixture();
-        var request = new OpenIddictRequest { ClientId = client, Scope = "openid profile email tenant_id services-api offline_access", ["resource"] = resource };
+        var request = new OpenIddictRequest { ClientId = client, Scope = $"openid profile email tenant_id {scope} offline_access", ["resource"] = resource };
         var result = await fixture.Controller(request).Authorize(TestContext.Current.CancellationToken);
 
         var principal = result.Should().BeOfType<SignInResult>().Subject.Principal;
@@ -104,11 +105,25 @@ public sealed class AuthorizationControllerTests
     }
 
     [Theory]
+    [InlineData("services-api", Mcp)]
+    [InlineData("services-mcp", Api)]
+    public async Task Escopo_de_recurso_nao_emite_token_para_destino_da_outra_interface(string scope, string resource)
+    {
+        var fixture = new Fixture();
+        var request = new OpenIddictRequest { ClientId = "client", Scope = scope, ["resource"] = resource };
+        var result = await fixture.Controller(request).Authorize(TestContext.Current.CancellationToken);
+
+        result.Should().BeOfType<ForbidResult>().Subject.Properties!.Items
+            [OpenIddictServerAspNetCoreConstants.Properties.Error].Should().Be(OpenIddictConstants.Errors.InvalidTarget);
+    }
+
+    [Theory]
     [InlineData(null)]
     [InlineData("openid services-api")]
     public async Task Renovacao_preserva_destino_original_e_utiliza_roles_atuais(string? requestedScopes)
     {
         var fixture = new Fixture();
+        fixture.Resources["services-api"] = [Api, Mcp];
         var previous = fixture.Principal();
         previous.SetScopes("openid", "services-api", "offline_access");
         previous.SetResources(Api);

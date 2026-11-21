@@ -28,7 +28,7 @@ public static class AuthenticationExtensions
                 Resource = resource.AbsoluteUri,
                 ResourceName = "Agenza Serviços",
                 AuthorizationServers = { authority },
-                ScopesSupported = ["services-api", "offline_access"],
+                ScopesSupported = ["services-mcp", "offline_access"],
             };
         });
 

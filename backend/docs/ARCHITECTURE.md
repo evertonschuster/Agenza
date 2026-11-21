@@ -364,7 +364,7 @@ OAuth/OIDC endpoints stay in the Identity API host. Clients and scopes are decla
 OpenIddict descriptors in `DatabaseSeeder`; the opt-in bootstrap creates or updates their persisted
 registrations. The same scope definitions configure the server's published scopes and resources.
 The authorization controller builds the token principal after OpenIddict validates the request.
-SPA and MCP share scopes and business authorization. Code exchange and refresh rebuild current user
+SPA and MCP share business authorization, with dedicated `services-api` and `services-mcp` OAuth scopes. Code exchange and refresh rebuild current user
 claims while retaining the original scopes and audiences, or a requested reduction, without a
 separate client-permission policy.
 

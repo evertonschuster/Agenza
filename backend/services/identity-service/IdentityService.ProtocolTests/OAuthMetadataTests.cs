@@ -17,7 +17,7 @@ public sealed class OAuthMetadataTests
         var options = provider.GetRequiredService<IOptions<OpenIddictServerOptions>>().Value;
 
         options.Scopes.Should().Contain(
-            ["openid", "profile", "email", "offline_access", "tenant_id", "services-api", "identity-admin"]);
+            ["openid", "profile", "email", "offline_access", "tenant_id", "services-api", "services-mcp", "identity-admin"]);
         options.Resources.Should().Contain(new Uri("https://localhost:7091/mcp"));
     }
 }

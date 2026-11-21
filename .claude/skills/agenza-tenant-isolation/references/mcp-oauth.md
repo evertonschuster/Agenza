@@ -19,7 +19,7 @@ For a local Codex client:
 ```toml
 [mcp_servers.agenza-local]
 url = "https://localhost:7091/mcp"
-scopes = ["openid", "profile", "tenant_id", "services-api", "offline_access"]
+scopes = ["openid", "profile", "tenant_id", "services-mcp", "offline_access"]
 
 [mcp_servers.agenza-local.oauth]
 client_id = "agenza-mcp"
@@ -37,7 +37,7 @@ and `--host 127.0.0.1`.
 
 Pass `--static-oauth-client-info` with a JSON holding `client_id: agenza-mcp`, and
 `--static-oauth-client-metadata` with a JSON holding the method `none` and the scopes
-`openid profile tenant_id services-api offline_access`. The bridge's approved callback is
+`openid profile tenant_id services-mcp offline_access`. The bridge's approved callback is
 `http://127.0.0.1/oauth/callback`. Back up the active `claude_desktop_config.json`, keep its other
 entries, add `agenza-local` and reopen the app.
 
