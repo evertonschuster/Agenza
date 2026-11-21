@@ -138,6 +138,6 @@ public sealed class McpUserPolicyTests
             httpContext.Request.Headers["X-Tenant-Id"] = tenantHeader;
         }
 
-        return await provider.GetRequiredService<IAuthorizationService>().AuthorizeAsync(principal, httpContext, "McpUser");
+        return await provider.GetRequiredService<IAuthorizationService>().AuthorizeAsync(principal, httpContext, AuthenticationExtensions.McpUserPolicy);
     }
 }

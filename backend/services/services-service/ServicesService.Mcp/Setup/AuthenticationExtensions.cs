@@ -6,6 +6,8 @@ namespace ServicesService.Mcp.Setup;
 
 public static class AuthenticationExtensions
 {
+    public const string McpUserPolicy = "McpUser";
+
     public static IServiceCollection AddMcpAuthentication(
         this IServiceCollection services,
         IConfiguration configuration)
@@ -26,13 +28,13 @@ public static class AuthenticationExtensions
             options.ResourceMetadata = new()
             {
                 Resource = resource.AbsoluteUri,
-                ResourceName = "Agenza MCP",
+                ResourceName = "Agenza Serviços",
                 AuthorizationServers = { authority },
                 ScopesSupported = ["mcp:connect", "offline_access"],
             };
         });
 
-        services.AddAuthorization(options => options.AddPolicy("McpUser", policy => policy
+        services.AddAuthorization(options => options.AddPolicy(McpUserPolicy, policy => policy
             .RequireAuthenticatedUser()
             .RequireAssertion(context =>
                 Guid.TryParse(context.User.FindFirst("sub")?.Value, out var userId)

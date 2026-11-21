@@ -16,7 +16,7 @@ var app = builder.Build();
 app.UseAuthentication();
 app.UseAuthorization();
 
-app.MapMcp("/mcp").RequireAuthorization("McpUser");
+app.MapMcp("/mcp").RequireAuthorization(AuthenticationExtensions.McpUserPolicy);
 app.MapDefaultEndpoints();
 
 await app.RunAsync();
