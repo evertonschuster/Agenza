@@ -45,9 +45,14 @@ resources.
 <Service>.Application       → Domain, Admin.SharedKernel
 <Service>.Infrastructure    → Application, Admin.SharedKernel.EntityFrameworkCore, Admin.Identity.Client
 <Service>.Api               → Application, Infrastructure, Admin.SharedKernel.AspNetCore, ServiceDefaults
+<Service>.Mcp               → Application, Infrastructure, Admin.Identity.Client, ServiceDefaults; optional MCP host
 <Service>.Tests             → Domain, Application
 <Service>.PersistenceTests  → Infrastructure; EF InMemory, only where EF model behaviour needs proof
+<Service>.McpTests          → Mcp; host authorization, outside the coverage gate
 ```
+
+`<Service>.Mcp` references Application and Infrastructure from its first tool that uses the domain;
+the boundary is in [decisions/mcp.md](../../docs/decisions/mcp.md).
 
 Nothing checks this direction (§11): review changed project and package references as architecture.
 
@@ -57,7 +62,7 @@ Nothing checks this direction (§11): review changed project and package referen
 | `Admin.SharedKernel.AspNetCore`                            | Api                                          |
 | `Admin.SharedKernel.EntityFrameworkCore`                   | Infrastructure                               |
 | `Admin.SharedKernel.ValueObjects`                          | Domain; it references nothing                |
-| `Admin.Identity.Client`                                    | Infrastructure, Api                          |
+| `Admin.Identity.Client`                                    | Infrastructure, Api, Mcp                     |
 | `Admin.Logging`                                            | `ServiceDefaults`, `AppHost` — never a layer |
 
 `BaseEntity`, `TenantOwnedEntity`, `DomainResult` and `DomainError` are duplicated per service on
