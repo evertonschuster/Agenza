@@ -174,10 +174,13 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y libnss3-tools
+          export SSL_CERT_DIR="$HOME/.aspnet/dev-certs/trust:/usr/lib/ssl/certs"
+          echo "SSL_CERT_DIR=$SSL_CERT_DIR" >> "$GITHUB_ENV"
           dotnet dev-certs https --trust
           dotnet dev-certs https --export-path "$RUNNER_TEMP/agenza-https.pem" --format PEM
           echo "NODE_EXTRA_CA_CERTS=$RUNNER_TEMP/agenza-https.pem" >> "$GITHUB_ENV"
-          echo "SSL_CERT_FILE=$RUNNER_TEMP/agenza-https.pem" >> "$GITHUB_ENV"
+          cat /etc/ssl/certs/ca-certificates.crt "$RUNNER_TEMP/agenza-https.pem" > "$RUNNER_TEMP/agenza-ca-bundle.pem"
+          echo "SSL_CERT_FILE=$RUNNER_TEMP/agenza-ca-bundle.pem" >> "$GITHUB_ENV"
 
       - name: Start the application through Aspire
         env:
