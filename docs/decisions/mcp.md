@@ -23,6 +23,9 @@ The largest section of [platform.md](platform.md), in its own file.
   grants, callbacks, PKCE and tokens.
 - **The MCP resource has its own audience.** Its tools need a user, a tenant and the matching scope;
   REST API tokens and M2M tokens do not authorize them.
+- **An MCP host is an entry point of its own context.** Its tools call that context's Application
+  handlers in process, with the user and tenant from the validated claims, as the REST controllers
+  do. Each context that exposes tools gets its own host, resource and audience.
 - **Loopback callbacks use the standard OpenIddict validation.** Native clients register full
   callbacks and only the port varies. Generated paths are not accepted; the callback must match
   a registered path. The full callback remains bound to the authorization code.
@@ -41,5 +44,7 @@ scope and audience without changing the controller or the grant policy.
   configured consumers of the same protocol.
 - **Resolving client metadata and granting fixed MCP permissions in the same operation.**
 - **Letting the frontend or an MCP tool choose the authorized tenant.**
+- **An MCP tool calling its context's REST API.** The MCP token must not be passed through, the
+  authority has no token exchange, and an M2M token carries no tenant.
 - **Anonymous registration with automatic authorization**, to avoid configuring a `client_id`.
 - **A new identity framework or service.** OpenIddict already manages the OAuth contracts.
