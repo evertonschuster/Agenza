@@ -104,12 +104,6 @@ public class DatabaseSeeder : IHostedService
             DisplayName = "Agenza MCP",
             ClientType = "public",
             ApplicationType = "native",
-            // TODO(security): consider an explicit consent screen for agenza-mcp. This public native client is
-            // authorized silently (implicit consent) and, in Development, accepts any loopback path, so a local
-            // process that knows the client_id and brings its own PKCE pair can obtain a user+tenant token with
-            // mcp:connect while the user has a session at the authority. A consent screen (or prompt=login) would
-            // need: ConsentType "explicit" here, OAuthProvisioningOptions.Validate allowing it for authorization_code
-            // clients, and AuthorizationController/OAuthGrantPolicy dropping requireAutomaticConsent for this client.
             ConsentType = "implicit",
             GrantTypes = ["authorization_code", "refresh_token"],
             Scopes = ["openid", "profile", "tenant_id", "mcp:connect", "offline_access"],
