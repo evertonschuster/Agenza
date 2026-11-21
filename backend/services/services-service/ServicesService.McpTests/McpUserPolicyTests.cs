@@ -67,37 +67,15 @@ public sealed class McpUserPolicyTests
     }
 
     [Fact]
-    public async Task Header_de_tenant_igual_a_claim_e_aceito()
+    public async Task Header_X_Tenant_Id_nao_participa_da_decisao()
     {
-        var result = await AuthorizeAsync(Principal(UserId, TenantId, "mcp:connect"), TenantId);
+        var principal = Principal(UserId, TenantId, "mcp:connect");
 
-        result.Succeeded.Should().BeTrue();
-    }
+        var withOtherTenant = await AuthorizeAsync(principal, Guid.NewGuid().ToString());
+        var withoutTenant = await AuthorizeAsync(Principal(UserId, null, "mcp:connect"), TenantId);
 
-    [Theory]
-    [InlineData("nao-e-guid")]
-    [InlineData("00000000-0000-0000-0000-000000000000")]
-    public async Task Header_de_tenant_divergente_da_claim_e_recusado(string header)
-    {
-        var result = await AuthorizeAsync(Principal(UserId, TenantId, "mcp:connect"), header);
-
-        result.Succeeded.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Header_de_tenant_de_outro_tenant_e_recusado()
-    {
-        var result = await AuthorizeAsync(Principal(UserId, TenantId, "mcp:connect"), Guid.NewGuid().ToString());
-
-        result.Succeeded.Should().BeFalse();
-    }
-
-    [Fact]
-    public async Task Header_de_tenant_repetido_e_recusado()
-    {
-        var result = await AuthorizeAsync(Principal(UserId, TenantId, "mcp:connect"), TenantId, TenantId);
-
-        result.Succeeded.Should().BeFalse();
+        withOtherTenant.Succeeded.Should().BeTrue();
+        withoutTenant.Succeeded.Should().BeFalse();
     }
 
     private static ClaimsPrincipal Principal(string? sub, string? tenantId, string? scope)

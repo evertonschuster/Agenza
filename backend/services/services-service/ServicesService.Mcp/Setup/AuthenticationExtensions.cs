@@ -43,12 +43,7 @@ public static class AuthenticationExtensions
                 && tenantId != Guid.Empty
                 && context.User.FindAll("scope")
                     .SelectMany(claim => claim.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                    .Contains("mcp:connect", StringComparer.Ordinal)
-                && (context.Resource is not HttpContext httpContext
-                    || !httpContext.Request.Headers.TryGetValue("X-Tenant-Id", out var header)
-                    || (header.Count == 1
-                        && Guid.TryParse(header[0], out var routedTenant)
-                        && routedTenant == tenantId)))));
+                    .Contains("mcp:connect", StringComparer.Ordinal))));
 
         return services;
     }

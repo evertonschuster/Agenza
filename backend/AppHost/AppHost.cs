@@ -55,8 +55,11 @@ builder.AddDotnetProject(
         "../services/services-service/ServicesService.Mcp/ServicesService.Mcp.csproj",
         options => options.LaunchProfileName = "https")
     .WithHttpsEndpoint(port: 7091, name: "https")
+    .WithReference(servicesDatabase, connectionName: "Default")
     .WithReference(identityService)
     .WaitFor(identityService)
+    // The services API owns the schema migrations this host reads.
+    .WaitFor(servicesService)
     .WithHttpHealthCheck("/health", endpointName: "https");
 
 var assistantService = builder.AddUvicornApp(

@@ -105,8 +105,13 @@ class McpOAuthTests(unittest.TestCase):
         if tenant:
             headers["X-Tenant-Id"] = tenant
         return self.send("POST", self.resource, headers=headers, json_body=dict(
-            jsonrpc="2.0", id=1, method="tools/call", params=dict(name="hello_world", arguments={})
+            jsonrpc="2.0", id=1, method="tools/call", params=dict(name="agenza_list_tags", arguments={})
         ))
+
+    @staticmethod
+    def tool_result(body):
+        payload = next((line[6:] for line in body.splitlines() if line.startswith("data: ")), body)
+        return json.loads(payload)["result"]
 
     def test_descoberta_publica_recurso_e_s256_sem_cadastro_dinamico(self):
         status, _, body = self.send("GET", self.identity + "/.well-known/openid-configuration")
@@ -261,18 +266,20 @@ class McpOAuthTests(unittest.TestCase):
         tokens = self.access_token()
         status, _, body = self.call_tool(tokens["access_token"])
         self.assertEqual(status, 200)
-        payload = next((line[6:] for line in body.splitlines() if line.startswith("data: ")), body)
-        self.assertEqual(json.loads(payload)["result"]["content"][0]["text"],
-                         "Olá! O MCP do Agenza está funcionando.")
+        result = self.tool_result(body)
+        self.assertFalse(result.get("isError", False), result)
+        self.assertIsInstance(result["structuredContent"]["items"], list)
         status, renewed = self.token(grant_type="refresh_token", refresh_token=tokens["refresh_token"])
         self.assertEqual(status, 200)
         status, _, _ = self.call_tool(renewed["access_token"])
         self.assertEqual(status, 200)
 
-    def test_header_de_outro_tenant_e_recusado(self):
+    def test_header_de_outro_tenant_e_ignorado_e_o_tenant_vem_da_claim(self):
         tokens = self.access_token()
-        status, _, _ = self.call_tool(tokens["access_token"], "11111111-1111-1111-1111-111111111111")
-        self.assertEqual(status, 403)
+        _, _, own = self.call_tool(tokens["access_token"])
+        status, _, other = self.call_tool(tokens["access_token"], "11111111-1111-1111-1111-111111111111")
+        self.assertEqual(status, 200)
+        self.assertEqual(self.tool_result(other)["structuredContent"], self.tool_result(own)["structuredContent"])
 
     def test_audiencia_rest_e_recusada_pelo_mcp(self):
         _, _, result, verifier, _ = self.authorize(
