@@ -10,7 +10,7 @@ Start Aspire on a new PostgreSQL volume. The host is `https://localhost:7091/mcp
 `https://localhost:7081/`. Check the certificate with `dotnet dev-certs https --check --trust`; do
 not disable TLS validation.
 
-The Identity `OAuth` manifest provisions `agenza-mcp` as a public native client. Get the app's
+The Identity `DatabaseSeeder` provisions `agenza-mcp` as a public native client. Get the app's
 callback before registering another consumer: address and path must match, and only the loopback
 port varies.
 

@@ -140,24 +140,4 @@ public sealed class OAuthProvisioningTests
         definitions.Clients[0].ToDescriptor(Configuration).Requirements
             .Should().Contain(OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange);
     }
-    [Fact]
-    public void Excecao_de_callback_local_exige_cliente_publico_nativo_e_persiste_opt_in()
-    {
-        var definitions = Definitions();
-        var client = definitions.Clients[0];
-        client.AllowAnyLoopbackRedirectPath = true;
-        definitions.Validate(Configuration).Should().NotBeEmpty();
-        client.ApplicationType = "native";
-        definitions.Validate(Configuration).Should().BeEmpty();
-        client.ToDescriptor(Configuration).Properties[LoopbackApplicationManager<object>.AllowAnyLoopbackRedirectPath]
-            .GetBoolean().Should().BeTrue();
-        client.Enabled = false;
-        client.ToDescriptor(Configuration).Properties.Should().NotContainKey(
-            LoopbackApplicationManager<object>.AllowAnyLoopbackRedirectPath);
-        client.Enabled = true;
-        client.AllowAnyLoopbackRedirectPath = false;
-        client.ToDescriptor(Configuration).Properties.Should().NotContainKey(
-            LoopbackApplicationManager<object>.AllowAnyLoopbackRedirectPath);
-    }
-
 }

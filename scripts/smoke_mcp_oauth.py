@@ -35,7 +35,7 @@ class McpOAuthTests(unittest.TestCase):
         cls.identity = os.getenv("AGENZA_IDENTITY_URL", "https://localhost:7081").rstrip("/")
         cls.resource = os.getenv("AGENZA_MCP_URL", "https://localhost:7091/mcp")
         cls.client_id = os.getenv("AGENZA_MCP_CLIENT_ID", "agenza-mcp")
-        cls.callback = os.getenv("AGENZA_MCP_CALLBACK", "http://127.0.0.1/callback/w0rLwdQGb9n5")
+        cls.callback = os.getenv("AGENZA_MCP_CALLBACK", "http://127.0.0.1/oauth/callback")
         cls.browser = request.build_opener(
             request.HTTPCookieProcessor(http.cookiejar.CookieJar()), NoRedirect()
         )
@@ -203,51 +203,15 @@ class McpOAuthTests(unittest.TestCase):
         self.assertNotIn("code", result)
         self.assertFalse(location.startswith("https://attacker.invalid"))
 
-    def test_callback_local_variavel_exige_politica_explicita_do_cliente(self):
-        callback = "http://127.0.0.1:49817/caminho-" + secrets.token_urlsafe(12)
-        status, location, result, verifier, _ = self.authorize(redirect_uri=callback)
-        if os.getenv("AGENZA_MCP_ANY_LOOPBACK_PATH", "1") == "0":
-            self.assertEqual(status, 400)
-            self.assertNotIn("code", result)
-        else:
-            self.assertEqual(status, 302)
-            self.assertTrue(location.startswith(callback + "?"))
-            status, tokens = self.token(redirect_uri=callback, code=result["code"][0], code_verifier=verifier)
-            self.assertEqual(status, 200)
-            self.assertIn("access_token", tokens)
-        status, _, result, _, _ = self.authorize(client_id="admin-panel", redirect_uri=callback,
-            scope="openid services-api", resource="services-api")
+    def test_caminho_local_nao_cadastrado_e_recusado(self):
+        callback = "http://127.0.0.1:49817/callback/" + secrets.token_urlsafe(12)
+        status, location, result, _, _ = self.authorize(redirect_uri=callback)
         self.assertEqual(status, 400)
         self.assertNotIn("code", result)
+        self.assertFalse(location.startswith(callback))
 
-    def test_callback_local_variavel_recusa_hosts_e_componentes_indevidos(self):
-        for callback in (
-            "http://localhost:49817/aleatorio", "http://[::1]:49817/aleatorio",
-            "http://127.1:49817/aleatorio", "http://2130706433:49817/aleatorio",
-            "http://127.0.0.1.evil.invalid:49817/aleatorio", "http://user@127.0.0.1:49817/aleatorio",
-            "http://127.0.0.1:49817/aleatorio?next=x", "http://127.0.0.1:49817/aleatorio#fragment",
-        ):
-            with self.subTest(callback=callback):
-                status, _, result, _, _ = self.authorize(redirect_uri=callback)
-                self.assertEqual(status, 400)
-                self.assertNotIn("code", result)
-
-    def test_callback_variavel_continua_vinculado_ao_codigo(self):
-        if os.getenv("AGENZA_MCP_ANY_LOOPBACK_PATH", "1") == "0":
-            self.skipTest("Excecao de caminhos locais desativada.")
-        callback = "http://127.0.0.1:49817/aleatorio-" + secrets.token_urlsafe(12)
-        for changed in (callback + "/outro", callback.replace(":49817", ":49818"), callback + "?a=1"):
-            with self.subTest(changed=changed):
-                _, _, result, verifier, _ = self.authorize(redirect_uri=callback)
-                self.assertIn("code", result)
-                status, tokens = self.token(redirect_uri=changed, code=result["code"][0], code_verifier=verifier)
-                self.assertEqual(status, 400)
-                self.assertNotIn("access_token", tokens)
-
-    def test_codigo_com_callback_variavel_exige_pkce_e_nao_pode_ser_reutilizado(self):
-        if os.getenv("AGENZA_MCP_ANY_LOOPBACK_PATH", "1") == "0":
-            self.skipTest("Excecao de caminhos locais desativada.")
-        callback = "http://127.0.0.1:49817/aleatorio-" + secrets.token_urlsafe(12)
+    def test_codigo_com_callback_fixo_exige_pkce_e_nao_pode_ser_reutilizado(self):
+        callback = "http://127.0.0.1:49817/oauth/callback"
         _, _, result, _, _ = self.authorize(redirect_uri=callback)
         self.assertIn("code", result)
         status, tokens = self.token(redirect_uri=callback, code=result["code"][0],

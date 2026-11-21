@@ -48,7 +48,6 @@ if (provisioningErrors.Count > 0)
 }
 
 builder.Services.AddOpenIddict()
-    .AddCore(options => options.ReplaceApplicationManager(typeof(LoopbackApplicationManager<>)))
     .AddServer(options =>
     {
         options.SetAuthorizationEndpointUris("connect/authorize")

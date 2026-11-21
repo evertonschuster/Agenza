@@ -1,4 +1,3 @@
-using System.Text.Json;
 using OpenIddict.Abstractions;
 
 namespace IdentityService.Api.Setup;
@@ -60,14 +59,6 @@ public sealed class OAuthProvisioningOptions
                 errors.Add("O cliente de serviço deve ser confidencial, usar client_credentials e ter segredo configurado.");
             }
 
-            if (client.AllowAnyLoopbackRedirectPath
-                && (client.ClientType != OpenIddictConstants.ClientTypes.Public
-                    || client.ApplicationType != OpenIddictConstants.ApplicationTypes.Native
-                    || !client.GrantTypes.Contains(OpenIddictConstants.GrantTypes.AuthorizationCode)))
-            {
-                errors.Add("A permissão de caminhos locais exige cliente público nativo com Authorization Code.");
-            }
-
             if (client.ApplicationType is not ("web" or "native")
                 || client.RedirectUris.Concat(client.PostLogoutRedirectUris).Any(value => !IsValidCallback(value)))
             {
@@ -105,7 +96,6 @@ public sealed class OAuthClientDefinition
     public string ApplicationType { get; set; } = "web";
     public string ConsentType { get; set; } = string.Empty;
     public bool Enabled { get; set; } = true;
-    public bool AllowAnyLoopbackRedirectPath { get; set; }
     public string? SecretConfigurationKey { get; set; }
     public List<string> GrantTypes { get; set; } = [];
     public List<string> Scopes { get; set; } = [];
@@ -126,12 +116,6 @@ public sealed class OAuthClientDefinition
         if (!string.IsNullOrWhiteSpace(ConsentType))
         {
             descriptor.ConsentType = ConsentType;
-        }
-
-        if (AllowAnyLoopbackRedirectPath && Enabled)
-        {
-            descriptor.Properties[LoopbackApplicationManager<object>.AllowAnyLoopbackRedirectPath]
-                = JsonSerializer.SerializeToElement(true);
         }
 
         descriptor.RedirectUris.UnionWith(RedirectUris.Select(value => new Uri(value)));

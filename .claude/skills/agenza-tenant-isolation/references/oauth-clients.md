@@ -29,17 +29,11 @@ disabling.
 
 ## Local native client
 
-Register full callbacks by default; only the port varies for native clients. When the harness needs
-variable paths, `AllowAnyLoopbackRedirectPath: true` enables the exception for that public native
-PKCE client, and the bootstrap persists it. Never register `*` in `RedirectUris`, and keep the exact
-callbacks so the exception can be reverted.
+Register full callbacks; only the port varies for native clients. Generated callback paths are
+not supported. Use the standard OpenIddict validation and keep the callback path registered in
+`DatabaseSeeder`.
 
-Check the real callback, the support for a preconfigured `client_id`, and that the browser and the
-listener reach the same loopback machine. The policy describes the local client, even with a remote
-Identity; it does not make every harness compatible.
-
-Run the OAuth smoke to prove variable paths, the refusal of other hosts and of clients without the
-opt-in, and the full callback match on code exchange. To revert, disable the option, reapply the
-bootstrap and run the smoke with `AGENZA_MCP_ANY_LOOPBACK_PATH=0`: new paths are refused and the
-exact callbacks keep working. The team prepares this configuration; the end user does not register
-clients.
+Check the real callback, support for a preconfigured `client_id`, and that the browser and listener
+reach the same loopback machine. Run the OAuth smoke to prove registered callbacks work with
+variable ports and unregistered paths are refused. The team prepares this configuration; the end
+user does not register clients.

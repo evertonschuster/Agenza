@@ -44,7 +44,7 @@ public class DatabaseSeeder : IHostedService
     {
         var options = _configuration.GetSection(OAuthProvisioningOptions.SectionName).Get<OAuthProvisioningOptions>()
             ?? new OAuthProvisioningOptions();
-        options.Clients = ClientDefinitions(services.GetRequiredService<IHostEnvironment>().IsDevelopment());
+        options.Clients = ClientDefinitions();
         var errors = options.Validate(_configuration);
         if (errors.Count > 0)
         {
@@ -83,7 +83,7 @@ public class DatabaseSeeder : IHostedService
         }
     }
 
-    private static List<OAuthClientDefinition> ClientDefinitions(bool isDevelopment) =>
+    private static List<OAuthClientDefinition> ClientDefinitions() =>
     [
         new()
         {
@@ -101,7 +101,6 @@ public class DatabaseSeeder : IHostedService
         new()
         {
             ClientId = "agenza-mcp",
-            AllowAnyLoopbackRedirectPath = isDevelopment,
             DisplayName = "Agenza MCP",
             ClientType = "public",
             ApplicationType = "native",
@@ -115,7 +114,7 @@ public class DatabaseSeeder : IHostedService
             GrantTypes = ["authorization_code", "refresh_token"],
             Scopes = ["openid", "profile", "tenant_id", "mcp:connect", "offline_access"],
             Resources = ["https://localhost:7091/mcp"],
-            RedirectUris = ["http://127.0.0.1/callback/w0rLwdQGb9n5", "http://127.0.0.1/oauth/callback", "http://127.0.0.1/", "https://vscode.dev/redirect"],
+            RedirectUris = ["http://127.0.0.1/oauth/callback", "http://127.0.0.1/", "https://vscode.dev/redirect"],
         },
         new()
         {
