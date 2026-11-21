@@ -209,7 +209,7 @@ class McpOAuthTests(unittest.TestCase):
         status, location, result, _, _ = self.authorize(redirect_uri="https://attacker.invalid/callback")
         self.assertEqual(status, 400)
         self.assertNotIn("code", result)
-        self.assertFalse(location.startswith("https://attacker.invalid"))
+        self.assertNotEqual(parse.urlsplit(location).hostname, "attacker.invalid")
 
     def test_caminho_local_nao_cadastrado_e_recusado(self):
         callback = "http://127.0.0.1:49817/callback/" + secrets.token_urlsafe(12)
