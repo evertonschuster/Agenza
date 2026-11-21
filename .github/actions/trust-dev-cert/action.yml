@@ -1,0 +1,39 @@
+name: Trust the development HTTPS certificate
+description: >-
+  Makes the ASP.NET Core development certificate trusted by every client the CI jobs use
+  against the local HTTPS endpoints (identity-service on 7081, services-mcp on 7091).
+  Runs on Linux runners.
+
+runs:
+  using: composite
+  steps:
+    - name: Trust the certificate
+      shell: bash
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libnss3-tools
+
+        # OpenSSL clients (.NET, Python, curl): dev-certs installs the trusted certificate under
+        # ~/.aspnet/dev-certs/trust, which OpenSSL only reads when SSL_CERT_DIR lists it. The system
+        # directory stays in the list so public roots keep working.
+        export SSL_CERT_DIR="$HOME/.aspnet/dev-certs/trust:/usr/lib/ssl/certs"
+        echo "SSL_CERT_DIR=$SSL_CERT_DIR" >> "$GITHUB_ENV"
+        dotnet dev-certs https --trust
+        dotnet dev-certs https --export-path "$RUNNER_TEMP/agenza-https.pem" --format PEM
+
+        # Chromium (Playwright) reads the NSS database, which dev-certs --trust did not populate here.
+        for nss_dir in "$HOME/.pki/nssdb" "$HOME/.local/share/pki/nssdb"; do
+          mkdir -p "$nss_dir"
+          if [ ! -f "$nss_dir/cert9.db" ]; then
+            certutil -N --empty-password -d "sql:$nss_dir"
+          fi
+          certutil -A -d "sql:$nss_dir" -n agenza-development -t 'P,,' -i "$RUNNER_TEMP/agenza-https.pem"
+        done
+
+        # Node (the Playwright runner) ignores the system store and only reads this file.
+        echo "NODE_EXTRA_CA_CERTS=$RUNNER_TEMP/agenza-https.pem" >> "$GITHUB_ENV"
+
+        # A bundle with the system roots plus the dev certificate: pointing SSL_CERT_FILE at the dev
+        # certificate alone replaced the public roots for the clients that honor it.
+        cat /etc/ssl/certs/ca-certificates.crt "$RUNNER_TEMP/agenza-https.pem" > "$RUNNER_TEMP/agenza-ca-bundle.pem"
+        echo "SSL_CERT_FILE=$RUNNER_TEMP/agenza-ca-bundle.pem" >> "$GITHUB_ENV"

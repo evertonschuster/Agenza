@@ -37,7 +37,7 @@ public static class IdentityJwtBearerExtensions
                 options.MapInboundClaims = false;
             });
 
-        services.AddAuthorization();
+        services.AddTenantAuthorization();
 
         return services;
     }

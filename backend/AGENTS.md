@@ -30,6 +30,16 @@ The why behind each convention and what was already refused are in the
 - Beyond the root tenant rule, filters, assignment on save, relationships and roles have their own
   tenant limits, described in §5.
 
+OAuth clients and scopes use native OpenIddict descriptors directly in `DatabaseSeeder`, without
+intermediate configuration models; secrets stay in external configuration.
+Declare each client explicitly, including its scopes and resources, without shared configuration variables.
+Consent is implicit for all interactive clients; there is no consent screen.
+SPA and MCP share operation authorization, with `services-api` and `services-mcp` as their respective
+OAuth resource scopes;
+OAuth audiences still identify the destination of each token.
+API and MCP share the authenticated-tenant policy, without additional subject-format or scope
+requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses the tenant claim.
+
 ## Validation and delivery
 
 Use the [README commands](README.md#commands) and the

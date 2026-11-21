@@ -78,7 +78,7 @@ Object.defineProperty(window.navigator, 'language', { value: 'pt-BR', configurab
 
 // Stub Aspire-injected env vars so tests don't trip shared/env.ts's fail-fast check.
 vi.stubEnv('VITE_API_BASE_URL', 'http://localhost:5080');
-vi.stubEnv('VITE_OIDC_AUTHORITY', 'http://localhost:5081');
+vi.stubEnv('VITE_OIDC_AUTHORITY', 'https://localhost:7081');
 vi.stubEnv('VITE_OIDC_CLIENT_ID', 'admin-panel');
 vi.stubEnv('VITE_OIDC_REDIRECT_URI', 'http://localhost:5173/callback');
 vi.stubEnv('VITE_OIDC_POST_LOGOUT_REDIRECT_URI', 'http://localhost:5173/login');

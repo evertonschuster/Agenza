@@ -38,7 +38,6 @@ builder.Services.AddIdentityApplication();
 builder.Services.AddHostedService<DatabaseSeeder>();
 
 builder.Services.AddIdentityCors(builder.Configuration);
-
 builder.Services.AddOpenIddict()
     .AddServer(options =>
     {
@@ -52,14 +51,13 @@ builder.Services.AddOpenIddict()
                .AllowRefreshTokenFlow()
                .AllowClientCredentialsFlow();
 
-        options.RegisterScopes(
-            OpenIddictConstants.Scopes.OpenId,
-            OpenIddictConstants.Scopes.Profile,
-            OpenIddictConstants.Scopes.Email,
-            OpenIddictConstants.Scopes.OfflineAccess,
-            "tenant_id",
-            "services-api",
-            "identity-admin");
+        options.Configure(server =>
+        {
+            server.CodeChallengeMethods.Remove(OpenIddictConstants.CodeChallengeMethods.Plain);
+            server.ClientAuthenticationMethods.Add(OpenIddictConstants.ClientAuthenticationMethods.None);
+        });
+
+        DatabaseSeeder.ConfigureScopes(options);
 
         if (builder.Environment.IsDevelopment())
         {

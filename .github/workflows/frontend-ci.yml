@@ -170,6 +170,9 @@ jobs:
         # which launches the Debug build whatever -c says.
         run: dotnet build backend/AdminBackend.slnx
 
+      - name: Trust the development HTTPS certificate
+        uses: ./.github/actions/trust-dev-cert
+
       - name: Start the application through Aspire
         run: |
           dotnet run --project backend/AppHost --no-build --launch-profile http > "$RUNNER_TEMP/agenza-apphost.log" 2>&1 &
@@ -224,6 +227,11 @@ jobs:
 
       - name: Exercise real OIDC scopes and cross-service tenant boundary
         run: python scripts/smoke_oidc_contract.py
+
+      - name: Show the application log
+        # The Aspire log is the only evidence of a server-side failure the browser tests cannot see.
+        if: failure()
+        run: tail -n 300 "$RUNNER_TEMP/agenza-apphost.log" || true
 
       - name: Tear down
         if: always()

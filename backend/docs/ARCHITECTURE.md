@@ -45,9 +45,15 @@ resources.
 <Service>.Application       → Domain, Admin.SharedKernel
 <Service>.Infrastructure    → Application, Admin.SharedKernel.EntityFrameworkCore, Admin.Identity.Client
 <Service>.Api               → Application, Infrastructure, Admin.SharedKernel.AspNetCore, ServiceDefaults
+<Service>.Mcp               → Application, Infrastructure, Admin.Identity.Client, ServiceDefaults; optional MCP host
 <Service>.Tests             → Domain, Application
 <Service>.PersistenceTests  → Infrastructure; EF InMemory, only where EF model behaviour needs proof
+<Service>.McpTests          → Mcp; host authorization, outside the coverage gate
 ```
+
+`<Service>.Mcp` registers the context's Application and Infrastructure as the Api does. Each tool
+carries `[Authorize]` and authorizes as the REST endpoint of the same operation; the boundary is in
+[decisions/mcp.md](../../docs/decisions/mcp.md).
 
 Nothing checks this direction (§11): review changed project and package references as architecture.
 
@@ -57,7 +63,7 @@ Nothing checks this direction (§11): review changed project and package referen
 | `Admin.SharedKernel.AspNetCore`                            | Api                                          |
 | `Admin.SharedKernel.EntityFrameworkCore`                   | Infrastructure                               |
 | `Admin.SharedKernel.ValueObjects`                          | Domain; it references nothing                |
-| `Admin.Identity.Client`                                    | Infrastructure, Api                          |
+| `Admin.Identity.Client`                                    | Infrastructure, Api, Mcp                     |
 | `Admin.Logging`                                            | `ServiceDefaults`, `AppHost` — never a layer |
 
 `BaseEntity`, `TenantOwnedEntity`, `DomainResult` and `DomainError` are duplicated per service on
@@ -233,13 +239,21 @@ what dies in gate 1: [`docs/API.md`](../../docs/API.md) §4.3.
 
 ### Tenant
 
-From the validated token, only. A tenant-owned service registers
-[TenantHeaderFilter](../shared/Admin.Identity.Client/TenantHeaderFilter.cs), which refuses a missing
-or malformed header, a missing claim or a mismatch. `[IgnoreTenant]` skips that comparison, needs an
-explicit authorization rationale and is not anonymous access. Commands, queries, DTOs, mappings and
-business repository methods do not accept a client-selected tenant. Do not assume a fine-grained
-panel permission model: M2M scopes and tenant/token checks have their own boundaries; inspect the
-endpoint's actual policy.
+From the validated token, only. API and MCP use the same
+[Tenant policy](../shared/Admin.Identity.Client/TenantAuthorizationExtensions.cs), requiring
+an authenticated principal and a non-empty GUID `tenant_id`, without extra `sub` format or scope
+requirements. JWT validation still checks the destination audience of each host.
+
+The REST API also registers [TenantHeaderFilter](../shared/Admin.Identity.Client/TenantHeaderFilter.cs)
+to require a matching `X-Tenant-Id`; MCP does not depend on that header. The accessor and policy use
+the same tenant parsing rule. `[IgnoreTenant]` skips the REST header comparison, not authentication
+or the shared tenant policy.
+
+A missing or invalid token follows each transport's authentication challenge. A valid token without
+a valid tenant is forbidden by the shared policy before MVC executes. REST header failures retain
+`Tenant.ContextMismatch`; other authorization failures use the API's authorization problem contract.
+Commands, queries, DTOs, mappings and business repository methods do not accept a client-selected
+tenant. No fine-grained role policy is introduced by the shared tenant policy.
 
 The
 [save interceptor](../services/services-service/ServicesService.Infrastructure/Persistence/Interceptors/AuditableEntitySaveChangesInterceptor.cs)
@@ -346,6 +360,17 @@ A contract change regenerates the frontend's types in the same change (skill
 every endpoint shares (envelope, problem, status mapping) updates
 [`docs/API.md`](../../docs/API.md); a feature's own codes and fields do not.
 
+OAuth/OIDC endpoints stay in the Identity API host. Clients and scopes are declared directly as
+OpenIddict descriptors in `DatabaseSeeder`; the opt-in bootstrap creates or updates their persisted
+registrations. The same scope definitions configure the server's published scopes and resources.
+The authorization controller builds the token principal after OpenIddict validates the request.
+SPA and MCP share business authorization, with dedicated `services-api` and `services-mcp` OAuth scopes. Code exchange and refresh rebuild current user
+claims while retaining the original scopes and audiences, or a requested reduction, without a
+separate client-permission policy.
+
+OpenIddict validates registered callback paths and permits variable loopback ports for native clients. A resource host owns its transport and operation
+authorization ([decisions/mcp.md](../../docs/decisions/mcp.md)).
+
 ## 7. Time
 
 UTC only. Inject `TimeProvider`: instants are `DateTimeOffset` from `GetUtcNow()`; "today" is
@@ -387,6 +412,10 @@ rule or branch is tested. Assert rejection paths, including that a rejected comm
 for input rules assert the code; use a fixed clock when the day matters. Verify a changed PostgreSQL
 property outside the smoke's scope by hand on a **disposable** database initialised from
 `infra/postgres/init/`, never the persistent development volume, and record what ran in the PR.
+
+IdentityService.ProtocolTests exercises published OAuth metadata and token issuance with application
+and scope-manager doubles. It does not host HTTP in process or replace the real Aspire smoke;
+the Domain/Application coverage gate remains separate from these protocol checks.
 
 ## 10. Reference code and the older generation
 

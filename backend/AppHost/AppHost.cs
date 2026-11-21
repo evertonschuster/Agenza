@@ -14,7 +14,7 @@ var postgres = builder.AddPostgres("postgres", password: developmentPassword)
     .WithEnvironment("POSTGRES_DB", "appdb")
     .WithEnvironment("APP_DB_PASSWORD", developmentPassword)
     .WithInitFiles("../../infra/postgres/init")
-    .WithDataVolume("agenza-postgres-data");
+    .WithDataVolume(builder.Configuration["Postgres:DataVolume"] ?? "agenza-postgres-data");
 var appdb = postgres.AddDatabase("appdb", "appdb");
 
 var postgresEndpoint = postgres.GetEndpoint("tcp");
@@ -34,10 +34,10 @@ var servicesDatabase = builder.AddConnectionString(
 var identityService = builder.AddDotnetProject(
         "identity-service",
         "../services/identity-service/IdentityService.Api/IdentityService.Api.csproj",
-        options => options.LaunchProfileName = "http")
+        options => options.LaunchProfileName = "https")
     .WithHttpEndpoint(port: 5081, name: "http")
+    .WithHttpsEndpoint(port: 7081, name: "https")
     .WithReference(identityDatabase, connectionName: "Default")
-    .WithEnvironment("IdentityClients__AssistantServiceWorker__Secret", developmentPassword)
     .WithEnvironment("IdentityClients__TenantProvisioning__Secret", developmentPassword)
     .WaitFor(appdb);
 
@@ -50,7 +50,19 @@ var servicesService = builder.AddDotnetProject(
     .WithReference(identityService)
     .WaitFor(identityService);
 
-builder.AddUvicornApp(
+builder.AddDotnetProject(
+        "services-mcp",
+        "../services/services-service/ServicesService.Mcp/ServicesService.Mcp.csproj",
+        options => options.LaunchProfileName = "https")
+    .WithHttpsEndpoint(port: 7091, name: "https")
+    .WithReference(servicesDatabase, connectionName: "Default")
+    .WithReference(identityService)
+    .WaitFor(identityService)
+    // The services API owns the schema migrations this host reads.
+    .WaitFor(servicesService)
+    .WithHttpHealthCheck("/health", endpointName: "https");
+
+var assistantService = builder.AddUvicornApp(
         "assistant-service",
         "../../ai-services/assistant-service",
         "app.main:app")
@@ -58,20 +70,22 @@ builder.AddUvicornApp(
     .WithHttpEndpoint(port: 8001, env: "PORT")
     .WithReference(identityService)
     // IDENTITY_ISSUER needs the trailing slash to match OpenIddict's "iss" claim, or token validation fails with "Invalid issuer".
-    .WithEnvironment("IDENTITY_AUTHORITY", identityService.GetEndpoint("http"))
-    .WithEnvironment("IDENTITY_ISSUER", ReferenceExpression.Create($"{identityService.GetEndpoint("http")}/"))
+    .WithEnvironment("IDENTITY_AUTHORITY", identityService.GetEndpoint("https"))
+    .WithEnvironment("IDENTITY_ISSUER", ReferenceExpression.Create($"{identityService.GetEndpoint("https")}/"))
     .WithEnvironment("IDENTITY_AUDIENCE", "services-api")
-    .WithEnvironment("IDENTITY_CLIENT_ID", "assistant-service-worker")
-    .WithEnvironment("IDENTITY_CLIENT_SECRET", developmentPassword)
-    .WithEnvironment("IDENTITY_SCOPE", "services-api")
     .WaitFor(identityService);
+
+#pragma warning disable ASPIRECERTIFICATES001
+// Keep Uvicorn's HTTP endpoint while trusting Identity's HTTPS certificate.
+assistantService.WithoutHttpsCertificate();
+#pragma warning restore ASPIRECERTIFICATES001
 
 builder.AddViteApp("admin-frontend", "../../apps/admin-frontend")
     .WithHttpEndpoint(port: 5173)
     .WithReference(servicesService)
     .WithReference(identityService)
     .WithEnvironment("VITE_API_BASE_URL", servicesService.GetEndpoint("http"))
-    .WithEnvironment("VITE_OIDC_AUTHORITY", identityService.GetEndpoint("http"))
+    .WithEnvironment("VITE_OIDC_AUTHORITY", identityService.GetEndpoint("https"))
     .WithEnvironment("VITE_OIDC_CLIENT_ID", "admin-panel")
     .WithEnvironment("VITE_OIDC_REDIRECT_URI", "http://localhost:5173/callback")
     .WithEnvironment("VITE_OIDC_POST_LOGOUT_REDIRECT_URI", "http://localhost:5173/login")

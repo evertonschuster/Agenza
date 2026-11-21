@@ -9,7 +9,7 @@ def _config() -> IdentityConfig:
         authority="http://identity-service:8080",
         issuer="http://identity-service:8080",
         audience="services-api",
-        client_id="assistant-service-worker",
+        client_id="test-service-client",
         client_secret="secret",
         scope="services-api",
     )
@@ -47,7 +47,7 @@ async def test_get_access_token_requests_client_credentials_grant(
     assert len(requests_seen) == 1
     body = requests_seen[0].content.decode()
     assert "grant_type=client_credentials" in body
-    assert "client_id=assistant-service-worker" in body
+    assert "client_id=test-service-client" in body
 
 
 @pytest.mark.asyncio

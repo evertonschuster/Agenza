@@ -21,7 +21,7 @@ dotnet run --project backend/AppHost --launch-profile http
 ```
 
 The Aspire dashboard lists the resources and their addresses. The frontend uses
-`http://localhost:5173` and identity-service `http://localhost:5081`; these ports match the OIDC
+`http://localhost:5173` and identity-service `https://localhost:7081`; these ports match the OIDC
 redirects registered for the local environment, so changing them means aligning the AppHost and the
 registered client.
 

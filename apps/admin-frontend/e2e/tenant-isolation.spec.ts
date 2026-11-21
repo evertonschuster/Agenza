@@ -9,7 +9,7 @@ import {
 } from '@playwright/test';
 import { loginAsDemoUser, loginAsUser } from './helpers';
 
-const IDENTITY_URL = 'http://localhost:5081';
+const IDENTITY_URL = 'https://localhost:7081';
 const CLIENTS_URL = 'http://localhost:5080/api/v1/clients';
 
 interface TenantSession {

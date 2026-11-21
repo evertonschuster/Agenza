@@ -13,7 +13,9 @@ dotnet run --project backend/AppHost --launch-profile http
 
 Aspire starts the frontend, both .NET services, assistant-service and PostgreSQL, and prints its
 dashboard URL (logs, traces, health, resource controls). Application ports are fixed at
-5081/5080/8001/5173 because the OIDC issuer, redirects and CORS origin use them. PostgreSQL is fixed
+7081 (identity, HTTPS)/5080/8001/5173 because the OIDC issuer, redirects and CORS origin use them. The
+issuer is HTTPS, so trust the ASP.NET Core development certificate once with
+`dotnet dev-certs https --trust`; clients must not disable TLS validation. PostgreSQL is fixed
 at 5432 and persists in the `agenza-postgres-data` volume.
 
 - Docker is needed only as Aspire's container runtime. Node, Python and `uv` must be installed;
@@ -86,7 +88,11 @@ Dependabot opens grouped PRs for npm, NuGet, pip and the workflows' actions on t
   [decisions/backend.md](decisions/backend.md)). There is no Testcontainers or
   `WebApplicationFactory` project: the frontend API-contract job starts AppHost, applies the
   migrations and runs the real OIDC and tenant-isolation checks; its HTTP scenario needs
-  `AGENZA_DISPOSABLE_TEST_DB=1` and `AGENZA_TENANT_PROVISIONING_SECRET`.
+  `AGENZA_DISPOSABLE_TEST_DB=1` and `AGENZA_TENANT_PROVISIONING_SECRET`. AppHost passes the
+  development password to the identity service as `IdentityClients:TenantProvisioning:Secret`, which
+  registers the `tenant-provisioning-cli` client (`client_credentials`, scope `identity-admin`); the
+  variable is the same `postgres` value. Removing the secret later does not remove a registered
+  client: disable it explicitly.
 - **AI services:** `--cov=app` measures the whole package, gated at 80%.
 
 Line coverage, type drift, runtime smokes and PostgreSQL checks prove different properties; the

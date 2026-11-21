@@ -24,12 +24,12 @@ class IdentityConfig:
 
 
 def load_identity_config() -> IdentityConfig:
-    authority = os.environ.get("IDENTITY_AUTHORITY", "http://localhost:5081")
+    authority = os.environ.get("IDENTITY_AUTHORITY", "https://localhost:7081")
     return IdentityConfig(
         authority=authority,
         issuer=os.environ.get("IDENTITY_ISSUER", authority),
         audience=os.environ.get("IDENTITY_AUDIENCE", "services-api"),
-        client_id=os.environ.get("IDENTITY_CLIENT_ID", "assistant-service-worker"),
+        client_id=os.environ.get("IDENTITY_CLIENT_ID", ""),
         # No fallback: the M2M secret must come from Aspire's environment.
         # Left empty rather than raising here so importing this module
         # (e.g. inbound-only token validation, or running tests) doesn't

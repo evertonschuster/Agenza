@@ -43,8 +43,10 @@ data ownership verifiable by the database without multiplying instances.
 ### Decision
 
 - **The tenant comes only from the validated token's claim.** The `X-Tenant-Id` header is a routing
-  convenience: `TenantHeaderFilter` refuses a missing, malformed or mismatching header before the
-  action. `[IgnoreTenant]` requires an explicit justification and is not an anonymous-access policy.
+  convenience in the REST API: `TenantHeaderFilter` refuses a missing, malformed or mismatching
+  header before the action. API and MCP share the policy requiring authentication and a non-empty
+  GUID `tenant_id`; neither adds subject-format or scope requirements. MCP does not require the
+  routing header. `[IgnoreTenant]` requires an explicit justification and is not an anonymous-access policy.
   No business command, query, DTO or repository accepts a tenant chosen by the client.
 - **Assignment on save.** `TenantOwnedEntity` entities get the current tenant from the interceptor
   when added; without an available tenant the save fails. An already assigned tenant is never
@@ -137,3 +139,7 @@ database, not depend on every handler remembering it.
 
 The default provider wrote two lines per event, SQL blocks at `Information` and nothing for a normal
 request, and the AppHost logged differently from the services.
+
+## OAuth and MCP
+
+The authority/resource boundary and local callback policy live in [mcp.md](mcp.md).
