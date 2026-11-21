@@ -13,7 +13,9 @@ dotnet run --project backend/AppHost --launch-profile http
 
 Aspire starts the frontend, both .NET services, assistant-service and PostgreSQL, and prints its
 dashboard URL (logs, traces, health, resource controls). Application ports are fixed at
-5081/5080/8001/5173 because the OIDC issuer, redirects and CORS origin use them. PostgreSQL is fixed
+7081 (identity, HTTPS)/5080/8001/5173 because the OIDC issuer, redirects and CORS origin use them. The
+issuer is HTTPS, so trust the ASP.NET Core development certificate once with
+`dotnet dev-certs https --trust`; clients must not disable TLS validation. PostgreSQL is fixed
 at 5432 and persists in the `agenza-postgres-data` volume.
 
 - Docker is needed only as Aspire's container runtime. Node, Python and `uv` must be installed;

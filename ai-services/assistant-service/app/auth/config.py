@@ -24,7 +24,7 @@ class IdentityConfig:
 
 
 def load_identity_config() -> IdentityConfig:
-    authority = os.environ.get("IDENTITY_AUTHORITY", "http://localhost:5081")
+    authority = os.environ.get("IDENTITY_AUTHORITY", "https://localhost:7081")
     return IdentityConfig(
         authority=authority,
         issuer=os.environ.get("IDENTITY_ISSUER", authority),
