@@ -78,7 +78,7 @@ def require_status(result: HttpResult, expected: int, scenario: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--identity-url", default="http://localhost:5081")
+    parser.add_argument("--identity-url", default="https://localhost:7081")
     parser.add_argument("--services-url", default="http://localhost:5080")
     args = parser.parse_args()
 

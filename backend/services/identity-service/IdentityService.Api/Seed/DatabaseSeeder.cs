@@ -108,9 +108,9 @@ public class DatabaseSeeder : IHostedService
         ];
     }
 
-    private static List<OpenIddictApplicationDescriptor> ClientDefinitions()
+    private List<OpenIddictApplicationDescriptor> ClientDefinitions()
     {
-        return
+        List<OpenIddictApplicationDescriptor> clients =
         [
             new()
             {
@@ -181,6 +181,26 @@ public class DatabaseSeeder : IHostedService
                 Requirements = { OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange },
             },
         ];
+
+        if (_configuration["IdentityClients:TenantProvisioning:Secret"] is { Length: > 0 } secret)
+        {
+            clients.Add(new OpenIddictApplicationDescriptor
+            {
+                ClientId = "tenant-provisioning-cli",
+                ClientSecret = secret,
+                DisplayName = "Tenant provisioning",
+                ClientType = OpenIddictConstants.ClientTypes.Confidential,
+                Permissions =
+                {
+                    OpenIddictConstants.Permissions.Endpoints.Token,
+                    OpenIddictConstants.Permissions.GrantTypes.ClientCredentials,
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "identity-admin",
+                    OpenIddictConstants.Permissions.Prefixes.Resource + "identity-service",
+                },
+            });
+        }
+
+        return clients;
     }
 
     private async Task SeedDemoTenantAsync(IServiceProvider services, CancellationToken cancellationToken)

@@ -170,7 +170,18 @@ jobs:
         # which launches the Debug build whatever -c says.
         run: dotnet build backend/AdminBackend.slnx
 
+      - name: Trust the development HTTPS certificate
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y libnss3-tools
+          dotnet dev-certs https --trust
+          dotnet dev-certs https --export-path "$RUNNER_TEMP/agenza-https.pem" --format PEM
+          echo "NODE_EXTRA_CA_CERTS=$RUNNER_TEMP/agenza-https.pem" >> "$GITHUB_ENV"
+          echo "SSL_CERT_FILE=$RUNNER_TEMP/agenza-https.pem" >> "$GITHUB_ENV"
+
       - name: Start the application through Aspire
+        env:
+          IdentityClients__TenantProvisioning__Secret: postgres
         run: |
           dotnet run --project backend/AppHost --no-build --launch-profile http > "$RUNNER_TEMP/agenza-apphost.log" 2>&1 &
           echo $! > "$RUNNER_TEMP/agenza-apphost.pid"

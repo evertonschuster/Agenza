@@ -12,7 +12,7 @@ const IDENTITY_DEVELOPMENT_SETTINGS = new URL(
 const { OwnerEmail: DEMO_EMAIL, OwnerPassword: DEMO_PASSWORD } = (
   JSON.parse(readFileSync(IDENTITY_DEVELOPMENT_SETTINGS, 'utf8')) as IdentityDevelopmentSettings
 ).DemoTenant;
-export const LOGIN_URL_RE = /localhost:5081\/Account\/Login/;
+export const LOGIN_URL_RE = /localhost:7081\/Account\/Login/;
 
 export async function loginAsDemoUser(page: Page): Promise<void> {
   await loginAsUser(page, DEMO_EMAIL, DEMO_PASSWORD);

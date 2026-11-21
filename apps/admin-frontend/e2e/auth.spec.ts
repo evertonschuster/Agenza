@@ -3,7 +3,7 @@ import { loginAsDemoUser, LOGIN_URL_RE } from './helpers';
 
 // Matches authClient.ts's UserManager config (env-contract.md) — oidc-client-ts's
 // WebStorageStateStore key format.
-const OIDC_STORAGE_KEY = 'oidc.user:http://localhost:5081:admin-panel';
+const OIDC_STORAGE_KEY = 'oidc.user:https://localhost:7081:admin-panel';
 
 interface StoredOidcUser {
   access_token: string;
