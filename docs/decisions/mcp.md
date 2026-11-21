@@ -14,7 +14,7 @@ The largest section of [platform.md](platform.md), in its own file.
   implicit for all interactive clients, with no consent screen or repeated consent check during
   code exchange and refresh. An M2M client represents a service and gets no tenant.
 - **The persisted OpenIddict registration is the operational source.** The `DatabaseSeeder` defines clients and
-  provisions them and the configured `OAuth` scopes through the opt-in bootstrap; it is not a second allowlist read per
+  provisions them and their scopes using native OpenIddict descriptors through the opt-in bootstrap; it is not a second allowlist read per
   request. A client left out of the definitions is not deleted: disabling is explicit, and it stops new
   tokens while JWTs already issued stay valid until they expire wherever they are validated locally.
 - **SPA and MCP share application access.** Both interactive clients receive the same scopes and

@@ -352,9 +352,9 @@ A contract change regenerates the frontend's types in the same change (skill
 every endpoint shares (envelope, problem, status mapping) updates
 [`docs/API.md`](../../docs/API.md); a feature's own codes and fields do not.
 
-OAuth/OIDC endpoints stay in the Identity API host. Clients and scopes are OpenIddict data:
-[OAuthProvisioningOptions](../services/identity-service/IdentityService.Api/Setup/OAuthProvisioningOptions.cs)
-validates the client definitions in `DatabaseSeeder` and configured `OAuth` scopes the opt-in bootstrap applies.
+OAuth/OIDC endpoints stay in the Identity API host. Clients and scopes are declared directly as
+OpenIddict descriptors in `DatabaseSeeder`; the opt-in bootstrap creates or updates their persisted
+registrations. The same scope definitions configure the server's published scopes and resources.
 The authorization controller builds the token principal after OpenIddict validates the request.
 SPA and MCP share scopes and business authorization. Code exchange and refresh rebuild current user
 claims while retaining the original scopes and audiences, or a requested reduction, without a
@@ -405,7 +405,7 @@ for input rules assert the code; use a fixed clock when the day matters. Verify 
 property outside the smoke's scope by hand on a **disposable** database initialised from
 `infra/postgres/init/`, never the persistent development volume, and record what ran in the PR.
 
-IdentityService.ProtocolTests exercises client provisioning and token issuance with application
+IdentityService.ProtocolTests exercises published OAuth metadata and token issuance with application
 and scope-manager doubles. It does not host HTTP in process or replace the real Aspire smoke;
 the Domain/Application coverage gate remains separate from these protocol checks.
 

@@ -1,13 +1,11 @@
 # Provision OAuth clients and scopes
 
 The authority boundary and its limits are in
-[decisions/mcp.md](../../../../docs/decisions/mcp.md). Define clients in
+[decisions/mcp.md](../../../../docs/decisions/mcp.md). Define clients and scopes directly with native
+OpenIddict descriptors in
 [DatabaseSeeder](../../../../backend/services/identity-service/IdentityService.Api/Seed/DatabaseSeeder.cs).
-Scopes remain in the `OAuth:Scopes` section of
-[appsettings.Development.json](../../../../backend/services/identity-service/IdentityService.Api/appsettings.Development.json);
-secrets stay in external configuration.
-[OAuthProvisioningOptions](../../../../backend/services/identity-service/IdentityService.Api/Setup/OAuthProvisioningOptions.cs)
-validates the definitions and converts clients to OpenIddict descriptors.
+Keep each client explicit and secrets in external configuration. OpenIddict validates descriptors
+when the bootstrap creates or updates their registrations.
 
 Register each scope with its audiences. SPA and MCP interactive clients share their scopes and
 resource permissions in `DatabaseSeeder`; only their callbacks and native/web profiles differ.
@@ -17,8 +15,8 @@ profile, with a secret reference from configuration. Consent is implicit for all
 clients; there is no consent screen. Do not use resource names to choose OAuth behavior.
 
 Apply the definitions through the opt-in bootstrap in Aspire; changing them while the application
-runs changes no persisted permission. To disable a client, set `Enabled = false` in its definition
-and reapply the bootstrap. Policy changes go through the OpenIddict manager.
+runs changes no persisted permission. Removing a client from the definitions does not delete an existing registration.
+Registration changes go through the OpenIddict manager.
 
 Test provisioning changes on a new PostgreSQL volume: set `Postgres__DataVolume` before starting
 Aspire. The [development guide](../../../../docs/DEVELOPMENT.md) covers the orchestration.

@@ -38,14 +38,6 @@ builder.Services.AddIdentityApplication();
 builder.Services.AddHostedService<DatabaseSeeder>();
 
 builder.Services.AddIdentityCors(builder.Configuration);
-var oauthProvisioning = builder.Configuration.GetSection(OAuthProvisioningOptions.SectionName).Get<OAuthProvisioningOptions>()
-    ?? new OAuthProvisioningOptions();
-var provisioningErrors = oauthProvisioning.Validate(builder.Configuration);
-if (provisioningErrors.Count > 0)
-{
-    throw new InvalidOperationException(string.Join(" ", provisioningErrors));
-}
-
 builder.Services.AddOpenIddict()
     .AddServer(options =>
     {
@@ -65,10 +57,7 @@ builder.Services.AddOpenIddict()
             server.ClientAuthenticationMethods.Add(OpenIddictConstants.ClientAuthenticationMethods.None);
         });
 
-        options.RegisterScopes(oauthProvisioning.Scopes.Select(scope => scope.Name).ToArray());
-        options.RegisterResources(oauthProvisioning.Scopes.SelectMany(scope => scope.Resources)
-            .Where(resource => Uri.TryCreate(resource, UriKind.Absolute, out _))
-            .Distinct(StringComparer.Ordinal).ToArray());
+        DatabaseSeeder.ConfigureScopes(options);
 
         if (builder.Environment.IsDevelopment())
         {

@@ -3,7 +3,6 @@ using IdentityService.Application.Tenants.ProvisionTenant;
 using IdentityService.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using OpenIddict.Abstractions;
-using IdentityService.Api.Setup;
 
 namespace IdentityService.Api.Seed;
 
@@ -42,21 +41,10 @@ public class DatabaseSeeder : IHostedService
 
     private async Task SeedOAuthAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
-        var options = _configuration.GetSection(OAuthProvisioningOptions.SectionName).Get<OAuthProvisioningOptions>()
-            ?? new OAuthProvisioningOptions();
-        options.Clients = ClientDefinitions();
-        var errors = options.Validate(_configuration);
-        if (errors.Count > 0)
-        {
-            throw new InvalidOperationException(string.Join(Environment.NewLine, errors));
-        }
-
         var scopeManager = services.GetRequiredService<IOpenIddictScopeManager>();
-        foreach (var definition in options.Scopes)
+        foreach (var descriptor in ScopeDefinitions())
         {
-            var descriptor = new OpenIddictScopeDescriptor { Name = definition.Name, DisplayName = definition.DisplayName };
-            descriptor.Resources.UnionWith(definition.Resources);
-            var scope = await scopeManager.FindByNameAsync(definition.Name, cancellationToken);
+            var scope = await scopeManager.FindByNameAsync(descriptor.Name!, cancellationToken);
             if (scope is null)
             {
                 await scopeManager.CreateAsync(descriptor, cancellationToken);
@@ -68,10 +56,9 @@ public class DatabaseSeeder : IHostedService
         }
 
         var applicationManager = services.GetRequiredService<IOpenIddictApplicationManager>();
-        foreach (var definition in options.Clients)
+        foreach (var descriptor in ClientDefinitions())
         {
-            var descriptor = definition.ToDescriptor(_configuration);
-            var application = await applicationManager.FindByClientIdAsync(definition.ClientId, cancellationToken);
+            var application = await applicationManager.FindByClientIdAsync(descriptor.ClientId!, cancellationToken);
             if (application is null)
             {
                 await applicationManager.CreateAsync(descriptor, cancellationToken);
@@ -83,7 +70,39 @@ public class DatabaseSeeder : IHostedService
         }
     }
 
-    private static List<OAuthClientDefinition> ClientDefinitions()
+    public static void ConfigureScopes(OpenIddictServerBuilder options)
+    {
+        options.RegisterScopes(ScopeDefinitions().Select(scope => scope.Name!).ToArray());
+        options.RegisterResources(ScopeDefinitions().SelectMany(scope => scope.Resources)
+            .Where(resource => Uri.TryCreate(resource, UriKind.Absolute, out _))
+            .Distinct(StringComparer.Ordinal).ToArray());
+    }
+
+    private static List<OpenIddictScopeDescriptor> ScopeDefinitions()
+    {
+        return
+        [
+            new() { Name = OpenIddictConstants.Scopes.OpenId, DisplayName = "openid" },
+            new() { Name = OpenIddictConstants.Scopes.Profile, DisplayName = "profile" },
+            new() { Name = OpenIddictConstants.Scopes.Email, DisplayName = "email" },
+            new() { Name = OpenIddictConstants.Scopes.OfflineAccess, DisplayName = "offline_access" },
+            new() { Name = "tenant_id", DisplayName = "tenant_id" },
+            new()
+            {
+                Name = "services-api",
+                DisplayName = "API de serviços",
+                Resources = { "services-api", "https://localhost:7091/mcp" },
+            },
+            new()
+            {
+                Name = "identity-admin",
+                DisplayName = "Administração de identidade",
+                Resources = { "identity-service" },
+            },
+        ];
+    }
+
+    private static List<OpenIddictApplicationDescriptor> ClientDefinitions()
     {
         return
         [
@@ -91,26 +110,61 @@ public class DatabaseSeeder : IHostedService
             {
                 ClientId = "admin-panel",
                 DisplayName = "Painel administrativo",
-                ClientType = "public",
-                ApplicationType = "web",
-                ConsentType = "implicit",
-                GrantTypes = ["authorization_code", "refresh_token"],
-                Scopes = ["openid", "profile", "email", "offline_access", "tenant_id", "services-api"],
-                Resources = ["services-api", "https://localhost:7091/mcp"],
-                RedirectUris = ["http://localhost:5173/callback", "http://localhost:5080/api-docs/", "http://localhost:5081/api-docs/"],
-                PostLogoutRedirectUris = ["http://localhost:5173/login"],
+                ClientType = OpenIddictConstants.ClientTypes.Public,
+                ApplicationType = OpenIddictConstants.ApplicationTypes.Web,
+                ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+                RedirectUris =
+                {
+                    new("http://localhost:5173/callback"),
+                    new("http://localhost:5080/api-docs/"),
+                    new("http://localhost:5081/api-docs/"),
+                },
+                PostLogoutRedirectUris = { new("http://localhost:5173/login") },
+                Permissions =
+                {
+                    OpenIddictConstants.Permissions.Endpoints.Authorization,
+                    OpenIddictConstants.Permissions.Endpoints.Token,
+                    OpenIddictConstants.Permissions.Endpoints.EndSession,
+                    OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                    OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+                    OpenIddictConstants.Permissions.ResponseTypes.Code,
+                    OpenIddictConstants.Permissions.Scopes.Profile,
+                    OpenIddictConstants.Permissions.Scopes.Email,
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "tenant_id",
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
+                    OpenIddictConstants.Permissions.Prefixes.Resource + "services-api",
+                    OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7091/mcp",
+                },
+                Requirements = { OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange },
             },
             new()
             {
                 ClientId = "agenza-mcp",
                 DisplayName = "Agenza MCP",
-                ClientType = "public",
-                ApplicationType = "native",
-                ConsentType = "implicit",
-                GrantTypes = ["authorization_code", "refresh_token"],
-                Scopes = ["openid", "profile", "email", "offline_access", "tenant_id", "services-api"],
-                Resources = ["services-api", "https://localhost:7091/mcp"],
-                RedirectUris = ["http://127.0.0.1/oauth/callback", "http://127.0.0.1/", "https://vscode.dev/redirect"],
+                ClientType = OpenIddictConstants.ClientTypes.Public,
+                ApplicationType = OpenIddictConstants.ApplicationTypes.Native,
+                ConsentType = OpenIddictConstants.ConsentTypes.Implicit,
+                RedirectUris =
+                {
+                    new("http://127.0.0.1/oauth/callback"),
+                    new("http://127.0.0.1/"),
+                    new("https://vscode.dev/redirect"),
+                },
+                Permissions =
+                {
+                    OpenIddictConstants.Permissions.Endpoints.Authorization,
+                    OpenIddictConstants.Permissions.Endpoints.Token,
+                    OpenIddictConstants.Permissions.GrantTypes.AuthorizationCode,
+                    OpenIddictConstants.Permissions.GrantTypes.RefreshToken,
+                    OpenIddictConstants.Permissions.ResponseTypes.Code,
+                    OpenIddictConstants.Permissions.Scopes.Profile,
+                    OpenIddictConstants.Permissions.Scopes.Email,
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "tenant_id",
+                    OpenIddictConstants.Permissions.Prefixes.Scope + "services-api",
+                    OpenIddictConstants.Permissions.Prefixes.Resource + "services-api",
+                    OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7091/mcp",
+                },
+                Requirements = { OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange },
             },
         ];
     }

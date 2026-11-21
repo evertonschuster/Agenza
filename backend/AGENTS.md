@@ -30,7 +30,8 @@ The why behind each convention and what was already refused are in the
 - Beyond the root tenant rule, filters, assignment on save, relationships and roles have their own
   tenant limits, described in §5.
 
-OAuth client definitions belong in `DatabaseSeeder`; secrets stay in external configuration.
+OAuth clients and scopes use native OpenIddict descriptors directly in `DatabaseSeeder`, without
+intermediate configuration models; secrets stay in external configuration.
 Declare each client explicitly, including its scopes and resources, without shared configuration variables.
 Consent is implicit for all interactive clients; there is no consent screen.
 SPA and MCP are interfaces of the same application with the same scopes and operation authorization;
