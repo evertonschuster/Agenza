@@ -85,8 +85,6 @@ public class DatabaseSeeder : IHostedService
 
     private static List<OAuthClientDefinition> ClientDefinitions()
     {
-        List<string> interactiveScopes = ["openid", "profile", "email", "offline_access", "tenant_id", "services-api"];
-        List<string> interactiveResources = ["services-api", "https://localhost:7091/mcp"];
         return
         [
             new()
@@ -97,8 +95,8 @@ public class DatabaseSeeder : IHostedService
                 ApplicationType = "web",
                 ConsentType = "implicit",
                 GrantTypes = ["authorization_code", "refresh_token"],
-                Scopes = [.. interactiveScopes],
-                Resources = [.. interactiveResources],
+                Scopes = ["openid", "profile", "email", "offline_access", "tenant_id", "services-api"],
+                Resources = ["services-api", "https://localhost:7091/mcp"],
                 RedirectUris = ["http://localhost:5173/callback", "http://localhost:5080/api-docs/", "http://localhost:5081/api-docs/"],
                 PostLogoutRedirectUris = ["http://localhost:5173/login"],
             },
@@ -110,8 +108,8 @@ public class DatabaseSeeder : IHostedService
                 ApplicationType = "native",
                 ConsentType = "implicit",
                 GrantTypes = ["authorization_code", "refresh_token"],
-                Scopes = [.. interactiveScopes],
-                Resources = [.. interactiveResources],
+                Scopes = ["openid", "profile", "email", "offline_access", "tenant_id", "services-api"],
+                Resources = ["services-api", "https://localhost:7091/mcp"],
                 RedirectUris = ["http://127.0.0.1/oauth/callback", "http://127.0.0.1/", "https://vscode.dev/redirect"],
             },
         ];

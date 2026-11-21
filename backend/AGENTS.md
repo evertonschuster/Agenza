@@ -31,6 +31,7 @@ The why behind each convention and what was already refused are in the
   tenant limits, described in §5.
 
 OAuth client definitions belong in `DatabaseSeeder`; secrets stay in external configuration.
+Declare each client explicitly, including its scopes and resources, without shared configuration variables.
 Consent is implicit for all interactive clients; there is no consent screen.
 SPA and MCP are interfaces of the same application with the same scopes and operation authorization;
 OAuth audiences still identify the destination of each token.
