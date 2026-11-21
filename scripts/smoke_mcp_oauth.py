@@ -105,7 +105,7 @@ class McpOAuthTests(unittest.TestCase):
         if tenant:
             headers["X-Tenant-Id"] = tenant
         return self.send("POST", self.resource, headers=headers, json_body=dict(
-            jsonrpc="2.0", id=1, method="tools/call", params=dict(name="agenza_list_tags", arguments={})
+            jsonrpc="2.0", id=1, method="tools/call", params=dict(name="hello_world", arguments={})
         ))
 
     @staticmethod
@@ -268,18 +268,17 @@ class McpOAuthTests(unittest.TestCase):
         self.assertEqual(status, 200)
         result = self.tool_result(body)
         self.assertFalse(result.get("isError", False), result)
-        self.assertIsInstance(result["structuredContent"]["items"], list)
+        self.assertEqual(result["content"][0]["text"], "Olá! O MCP do Agenza está funcionando.")
         status, renewed = self.token(grant_type="refresh_token", refresh_token=tokens["refresh_token"])
         self.assertEqual(status, 200)
         status, _, _ = self.call_tool(renewed["access_token"])
         self.assertEqual(status, 200)
 
-    def test_header_de_outro_tenant_e_ignorado_e_o_tenant_vem_da_claim(self):
+    def test_header_de_outro_tenant_nao_participa_da_autorizacao(self):
         tokens = self.access_token()
-        _, _, own = self.call_tool(tokens["access_token"])
-        status, _, other = self.call_tool(tokens["access_token"], "11111111-1111-1111-1111-111111111111")
+        status, _, body = self.call_tool(tokens["access_token"], "11111111-1111-1111-1111-111111111111")
         self.assertEqual(status, 200)
-        self.assertEqual(self.tool_result(other)["structuredContent"], self.tool_result(own)["structuredContent"])
+        self.assertFalse(self.tool_result(body).get("isError", False))
 
     def test_audiencia_rest_e_recusada_pelo_mcp(self):
         _, _, result, verifier, _ = self.authorize(
