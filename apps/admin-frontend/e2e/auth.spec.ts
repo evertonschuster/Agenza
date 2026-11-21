@@ -30,6 +30,16 @@ async function getSignedInTenantId(page: import('@playwright/test').Page): Promi
 }
 
 test('unauthenticated visitor is redirected to identity-service login', async ({ page }) => {
+  page.on('requestfailed', (request) => {
+    const url = new URL(request.url());
+    console.error(`Request failed: ${url.origin}${url.pathname}: ${request.failure()?.errorText}`);
+  });
+  page.on('response', (response) => {
+    const url = new URL(response.url());
+    if (url.port === '7081' && response.status() >= 400) {
+      console.error(`Identity response: ${url.pathname}: ${response.status()}`);
+    }
+  });
   await page.goto('/');
 
   await page.waitForURL(LOGIN_URL_RE);
