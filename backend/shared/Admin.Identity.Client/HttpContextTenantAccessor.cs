@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using Microsoft.AspNetCore.Http;
 
 namespace Admin.Identity.Client;
@@ -12,10 +13,16 @@ public class HttpContextTenantAccessor : ITenantAccessor
         _httpContextAccessor = httpContextAccessor;
     }
 
-    public string? TenantName => _httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true
-        && TryGetTenantId(out _)
-            ? _httpContextAccessor.HttpContext.User.FindFirst("tenant_name")?.Value
-            : null;
+    public string? TenantName
+    {
+        get
+        {
+            var principal = AuthenticatedPrincipal;
+            return TenantAuthorizationExtensions.TryGetTenantId(principal, out _)
+                ? principal?.FindFirst("tenant_name")?.Value
+                : null;
+        }
+    }
 
     public Guid TenantId
     {
@@ -32,6 +39,11 @@ public class HttpContextTenantAccessor : ITenantAccessor
 
     public bool TryGetTenantId(out Guid tenantId)
     {
-        return TenantAuthorizationExtensions.TryGetTenantId(_httpContextAccessor.HttpContext?.User, out tenantId);
+        return TenantAuthorizationExtensions.TryGetTenantId(CurrentPrincipal, out tenantId);
     }
+
+    private ClaimsPrincipal? CurrentPrincipal => _httpContextAccessor.HttpContext?.User;
+
+    private ClaimsPrincipal? AuthenticatedPrincipal =>
+        CurrentPrincipal is { Identity.IsAuthenticated: true } principal ? principal : null;
 }
