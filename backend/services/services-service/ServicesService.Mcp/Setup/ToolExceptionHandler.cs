@@ -20,17 +20,11 @@ public sealed class ToolExceptionHandler(
         {
             return await next(context, cancellationToken);
         }
-        catch (Exception exception) when (
-            exception is not McpException and not InputRequiredException
-            && !(exception is OperationCanceledException && cancellationToken.IsCancellationRequested))
+        catch (Exception exception) when (IsUnexpected(exception, cancellationToken))
         {
             var httpContext = httpContextAccessor.HttpContext;
             var traceId = httpContext?.TraceIdentifier;
-            var correlationId = httpContext is not null
-                && httpContext.Request.Headers.TryGetValue("X-Correlation-Id", out var header)
-                && !StringValues.IsNullOrEmpty(header)
-                    ? header.ToString()
-                    : traceId;
+            var correlationId = GetCorrelationId(httpContext);
 
             logger.LogError(exception,
                 "Unhandled exception invoking MCP tool {ToolName} with TraceId {TraceId} and CorrelationId {CorrelationId}",
@@ -41,5 +35,24 @@ public sealed class ToolExceptionHandler(
             return Error.Failure("Unexpected.Error", "Ocorreu um erro inesperado.")
                 .ToToolResult(traceId, correlationId);
         }
+    }
+
+    private static bool IsUnexpected(Exception exception, CancellationToken cancellationToken) => exception switch
+    {
+        McpException or InputRequiredException => false,
+        OperationCanceledException => !cancellationToken.IsCancellationRequested,
+        _ => true,
+    };
+
+    private static string? GetCorrelationId(HttpContext? httpContext)
+    {
+        if (httpContext is not null
+            && httpContext.Request.Headers.TryGetValue("X-Correlation-Id", out var header)
+            && !StringValues.IsNullOrEmpty(header))
+        {
+            return header.ToString();
+        }
+
+        return httpContext?.TraceIdentifier;
     }
 }
