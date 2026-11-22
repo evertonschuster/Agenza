@@ -1,4 +1,4 @@
-namespace Admin.Identity.Client;
+namespace Admin.SharedKernel;
 
 public interface ITenantAccessor
 {

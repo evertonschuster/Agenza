@@ -27,6 +27,8 @@ The why behind each convention and what was already refused are in the
   handler orchestrates the operation through ports; the domain keeps its invariants.
 - Expected failures use Result. Input validation, domain, current state and persistence have
   distinct responsibilities; names or syntax alone do not prove a defect.
+- Application handlers consume `ICurrentUserAccessor` and `ITenantAccessor` from `Admin.SharedKernel`
+  directly; their HTTP implementations stay in `Admin.Identity.Client`, without pass-through providers.
 - Beyond the root tenant rule, filters, assignment on save, relationships and roles have their own
   tenant limits, described in §5.
 

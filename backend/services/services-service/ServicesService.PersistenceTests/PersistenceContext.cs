@@ -1,4 +1,4 @@
-using Admin.Identity.Client;
+using Admin.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
 using ServicesService.Infrastructure.Persistence;

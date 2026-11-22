@@ -1,4 +1,4 @@
-using Admin.Identity.Client;
+using Admin.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;

@@ -1,4 +1,4 @@
-namespace Admin.Identity.Client;
+namespace Admin.SharedKernel;
 
 // Null for client_credentials/M2M tokens (no "sub" claim) - a valid audit
 // value, not an error.

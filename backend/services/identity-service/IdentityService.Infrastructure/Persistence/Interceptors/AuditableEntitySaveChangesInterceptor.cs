@@ -1,4 +1,4 @@
-using Admin.Identity.Client;
+using Admin.SharedKernel;
 using IdentityService.Domain.Common;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;

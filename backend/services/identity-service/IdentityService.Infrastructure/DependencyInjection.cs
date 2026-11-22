@@ -1,3 +1,4 @@
+using Admin.SharedKernel;
 using Admin.Identity.Client;
 using IdentityService.Application.Abstractions;
 using IdentityService.Infrastructure.Identity;

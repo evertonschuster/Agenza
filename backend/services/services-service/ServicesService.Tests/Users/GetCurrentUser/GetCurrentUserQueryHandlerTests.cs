@@ -1,4 +1,4 @@
-using ServicesService.Application.Abstractions;
+using Admin.SharedKernel;
 using ServicesService.Application.Users.GetCurrentUser;
 
 namespace ServicesService.Tests.Users.GetCurrentUser;
@@ -8,15 +8,16 @@ public sealed class GetCurrentUserQueryHandlerTests
     [Fact]
     public async Task Consulta_retorna_usuario_e_tenant_do_contexto_atual()
     {
-        var provider = Substitute.For<ICurrentUserProvider>();
+        var currentUserAccessor = Substitute.For<ICurrentUserAccessor>();
+        var tenantAccessor = Substitute.For<ITenantAccessor>();
         var userId = Guid.NewGuid();
         var tenantId = Guid.NewGuid();
-        provider.UserId.Returns(userId);
-        provider.Username.Returns("maria");
-        provider.Email.Returns("maria@exemplo.com");
-        provider.TenantId.Returns(tenantId);
-        provider.TenantName.Returns("Clínica Maria");
-        var handler = new GetCurrentUserQueryHandler(provider);
+        currentUserAccessor.UserId.Returns(userId);
+        currentUserAccessor.Username.Returns("maria");
+        currentUserAccessor.Email.Returns("maria@exemplo.com");
+        tenantAccessor.TenantId.Returns(tenantId);
+        tenantAccessor.TenantName.Returns("Clínica Maria");
+        var handler = new GetCurrentUserQueryHandler(currentUserAccessor, tenantAccessor);
 
         var result = await handler.Handle(new GetCurrentUserQuery(), CancellationToken.None);
 
@@ -28,13 +29,14 @@ public sealed class GetCurrentUserQueryHandlerTests
     [Fact]
     public async Task Consulta_preserva_campos_opcionais_ausentes()
     {
-        var provider = Substitute.For<ICurrentUserProvider>();
+        var currentUserAccessor = Substitute.For<ICurrentUserAccessor>();
+        var tenantAccessor = Substitute.For<ITenantAccessor>();
         var tenantId = Guid.NewGuid();
-        provider.Username.Returns((string?)null);
-        provider.Email.Returns((string?)null);
-        provider.TenantId.Returns(tenantId);
-        provider.TenantName.Returns((string?)null);
-        var handler = new GetCurrentUserQueryHandler(provider);
+        currentUserAccessor.Username.Returns((string?)null);
+        currentUserAccessor.Email.Returns((string?)null);
+        tenantAccessor.TenantId.Returns(tenantId);
+        tenantAccessor.TenantName.Returns((string?)null);
+        var handler = new GetCurrentUserQueryHandler(currentUserAccessor, tenantAccessor);
 
         var result = await handler.Handle(new GetCurrentUserQuery(), CancellationToken.None);
 

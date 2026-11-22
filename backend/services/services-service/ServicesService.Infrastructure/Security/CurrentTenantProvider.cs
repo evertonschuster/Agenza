@@ -1,4 +1,4 @@
-using Admin.Identity.Client;
+using Admin.SharedKernel;
 using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Infrastructure.Security;
