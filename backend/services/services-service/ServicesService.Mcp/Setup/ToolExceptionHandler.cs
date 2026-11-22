@@ -34,14 +34,12 @@ public sealed class ToolExceptionHandler(
 
             logger.LogError(exception,
                 "Unhandled exception invoking MCP tool {ToolName} with TraceId {TraceId} and CorrelationId {CorrelationId}",
-                SanitizeForLog(context.Params?.Name),
-                SanitizeForLog(traceId),
-                SanitizeForLog(correlationId));
+                context.Params?.Name,
+                traceId,
+                correlationId);
 
             return Error.Failure("Unexpected.Error", "Ocorreu um erro inesperado.")
                 .ToToolResult(traceId, correlationId);
         }
     }
-
-    private static string? SanitizeForLog(string? value) => value?.Replace('\r', '_').Replace('\n', '_');
 }

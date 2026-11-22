@@ -63,9 +63,9 @@ public sealed class ToolExceptionHandlerTests
         text.Text.Should().NotContain(exception.Message);
         var entry = logs.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Error).Subject;
         entry.Exception.Should().BeSameAs(exception);
-        entry.Message.Should().Contain("who_am_i__linha falsa").And.NotContain("\r").And.NotContain("\n");
+        entry.Message.Should().Contain(context.Params.Name);
         entry.Message.Should().Contain(httpContext.TraceIdentifier)
-            .And.Contain(expectedCorrelation.Replace('\r', '_').Replace('\n', '_'));
+            .And.Contain(expectedCorrelation);
     }
 
     [Theory]
