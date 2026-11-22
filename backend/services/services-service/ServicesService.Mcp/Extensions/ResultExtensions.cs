@@ -11,22 +11,7 @@ public static class ResultExtensions
     {
         if (result.IsFailure)
         {
-            var error = JsonSerializer.SerializeToElement(new
-            {
-                Error = new
-                {
-                    result.Error.Code,
-                    result.Error.Message,
-                    Type = result.Error.Type.ToString(),
-                    result.Error.FieldErrors,
-                },
-            }, McpJsonUtilities.DefaultOptions);
-
-            return new CallToolResult
-            {
-                IsError = true,
-                Content = [new TextContentBlock { Text = error.GetRawText() }],
-            };
+            return result.Error.ToToolResult();
         }
 
         var content = JsonSerializer.SerializeToElement(result.Value, McpJsonUtilities.DefaultOptions);
@@ -34,6 +19,26 @@ public static class ResultExtensions
         {
             IsError = false,
             StructuredContent = content,
+            Content = [new TextContentBlock { Text = content.GetRawText() }],
+        };
+    }
+
+    public static CallToolResult ToToolResult(this Error error)
+    {
+        var content = JsonSerializer.SerializeToElement(new
+        {
+            Error = new
+            {
+                error.Code,
+                error.Message,
+                Type = error.Type.ToString(),
+                error.FieldErrors,
+            },
+        }, McpJsonUtilities.DefaultOptions);
+
+        return new CallToolResult
+        {
+            IsError = true,
             Content = [new TextContentBlock { Text = content.GetRawText() }],
         };
     }

@@ -1,0 +1,129 @@
+using System.Text.Json;
+using Admin.SharedKernel;
+using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
+using ModelContextProtocol.Server;
+using ServicesService.Mcp.Extensions;
+using ServicesService.Mcp.Setup;
+
+namespace ServicesService.McpTests;
+
+public sealed class ToolExceptionHandlerTests
+{
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Filtro_registrado_oculta_excecao_e_registra_detalhes_no_servidor(bool cancellationNotRequested)
+    {
+        using var logs = new CapturingLoggerProvider();
+        var services = new ServiceCollection().AddLogging(builder => builder.AddProvider(logs));
+        services.AddMcpServer().WithToolExceptionHandling();
+        using var provider = services.BuildServiceProvider();
+        var options = provider.GetRequiredService<IOptions<McpServerOptions>>().Value;
+        await using var transport = new StreamServerTransport(Stream.Null, Stream.Null);
+        await using var server = McpServer.Create(transport, options, serviceProvider: provider);
+        var context = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" },
+            new CallToolRequestParams { Name = "who_am_i\r\nlinha falsa" }) { Services = provider };
+        Exception exception = cancellationNotRequested
+            ? new OperationCanceledException("timeout interno")
+            : new InvalidOperationException("connection string secreta");
+        var tool = McpServerTool.Create((Func<string>)(() => throw exception),
+            new McpServerToolCreateOptions { Name = "failing_tool" });
+        var filter = options.Filters.Request.CallToolFilters.Should().ContainSingle().Subject;
+        var handler = filter((request, token) => tool.InvokeAsync(request, token));
+
+        var result = await handler(context, CancellationToken.None);
+
+        result.IsError.Should().BeTrue();
+        result.StructuredContent.Should().BeNull();
+        var text = result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>().Subject;
+        using var json = JsonDocument.Parse(text.Text);
+        var error = json.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Unexpected.Error");
+        error.GetProperty("message").GetString().Should().Be("Ocorreu um erro inesperado.");
+        error.GetProperty("type").GetString().Should().Be("Failure");
+        text.Text.Should().NotContain(exception.Message);
+        var entry = logs.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Error).Subject;
+        entry.Exception.Should().BeSameAs(exception);
+        entry.Message.Should().Contain("who_am_i__linha falsa").And.NotContain("\r").And.NotContain("\n");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Filtro_preserva_sucesso_e_falha_esperada_sem_reescrever_resposta(bool failure)
+    {
+        var expected = failure
+            ? Error.NotFound("User.NotFound", "Usuário não encontrado.").ToToolResult()
+            : new CallToolResult { Content = [new TextContentBlock { Text = "Concluído." }] };
+        using var logs = new CapturingLoggerProvider();
+        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>());
+
+        var result = await handler.HandleAsync(null!, (_, _) => ValueTask.FromResult(expected), CancellationToken.None);
+
+        result.Should().BeSameAs(expected);
+        logs.Entries.Should().BeEmpty();
+    }
+
+    [Fact]
+    public async Task Cancelamento_solicitado_nao_e_convertido_em_erro_inesperado()
+    {
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        var exception = new OperationCanceledException(cancellation.Token);
+        using var logs = new CapturingLoggerProvider();
+        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>());
+
+        var action = async () => await handler.HandleAsync(null!,
+            (_, _) => ValueTask.FromException<CallToolResult>(exception), cancellation.Token);
+
+        (await action.Should().ThrowAsync<OperationCanceledException>()).Which.Should().BeSameAs(exception);
+        logs.Entries.Should().BeEmpty();
+    }
+
+    public static TheoryData<Exception> ProtocolExceptions() => new()
+    {
+        new McpProtocolException("Requisição inválida.", McpErrorCode.InvalidParams),
+        new McpException("Falha esperada da ferramenta."),
+        new InputRequiredException(requestState: "continuar"),
+    };
+
+    [Theory]
+    [MemberData(nameof(ProtocolExceptions))]
+    public async Task Excecoes_controladas_do_mcp_sao_preservadas(Exception exception)
+    {
+        using var logs = new CapturingLoggerProvider();
+        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>());
+        var action = async () => await handler.HandleAsync(null!,
+            (_, _) => ValueTask.FromException<CallToolResult>(exception), CancellationToken.None);
+
+        (await action.Should().ThrowAsync<Exception>()).Which.Should().BeSameAs(exception);
+        logs.Entries.Should().BeEmpty();
+    }
+
+    private sealed class CapturingLoggerProvider : ILoggerProvider
+    {
+        public List<(LogLevel Level, Exception? Exception, string Message)> Entries { get; } = [];
+
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(this);
+
+        public ILogger<T> CreateLogger<T>() => new Logger<T>(new LoggerFactory([this]));
+
+        public void Dispose() { }
+
+        private sealed class CapturingLogger(CapturingLoggerProvider provider) : ILogger
+        {
+            public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
+
+            public bool IsEnabled(LogLevel logLevel) => true;
+
+            public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
+                Exception? exception, Func<TState, Exception?, string> formatter) =>
+                provider.Entries.Add((logLevel, exception, formatter(state, exception)));
+        }
+    }
+}
