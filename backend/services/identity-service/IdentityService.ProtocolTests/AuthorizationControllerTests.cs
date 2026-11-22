@@ -54,7 +54,7 @@ public sealed class AuthorizationControllerTests
         public ClaimsPrincipal Principal(string role = "Admin")
         {
             var identity = new ClaimsIdentity("Bearer", "name", "role");
-            identity.AddClaims([new("sub", User.Id.ToString()), new("tenant_id", User.TenantId.ToString()), new("role", role)]);
+            identity.AddClaims([new("sub", User.Id.ToString()), new("tenant_id", User.TenantId.ToString()), new("tenant_name", "Clínica Maria"), new("role", role)]);
             return new(identity);
         }
 
@@ -102,6 +102,7 @@ public sealed class AuthorizationControllerTests
         principal.GetResources().Should().Equal(audience);
         principal.IsInRole("Member").Should().BeTrue();
         principal.FindFirst("tenant_id")!.Value.Should().Be(fixture.User.TenantId.ToString());
+        principal.FindFirst("tenant_name")!.GetDestinations().Should().Contain(OpenIddictConstants.Destinations.AccessToken);
     }
 
     [Theory]
@@ -128,6 +129,7 @@ public sealed class AuthorizationControllerTests
         var previous = fixture.Principal();
         previous.SetScopes("openid", "services-api", "offline_access");
         previous.SetResources(Api);
+        previous.SetClaim("tenant_name", "Nome anterior");
         var request = new OpenIddictRequest { ClientId = "admin-panel", GrantType = "refresh_token", Scope = requestedScopes };
         var result = await fixture.Controller(request, previous).Exchange(TestContext.Current.CancellationToken);
 
@@ -137,6 +139,8 @@ public sealed class AuthorizationControllerTests
         principal.HasScope("openid").Should().BeTrue();
         principal.IsInRole("Member").Should().BeTrue();
         principal.IsInRole("Admin").Should().BeFalse();
+        principal.FindFirst("tenant_name")!.Value.Should().Be("Clínica Maria");
+        principal.FindFirst("tenant_name")!.GetDestinations().Should().Contain(OpenIddictConstants.Destinations.AccessToken);
     }
 
     [Fact]
@@ -203,6 +207,7 @@ public sealed class AuthorizationControllerTests
         principal.GetResources().Should().Equal(Api);
         principal.FindFirst("sub")!.Value.Should().Be("test-service-client");
         principal.FindFirst("tenant_id").Should().BeNull();
+        principal.FindFirst("tenant_name").Should().BeNull();
         principal.FindFirst("role").Should().BeNull();
     }
 }

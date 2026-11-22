@@ -12,6 +12,11 @@ public class HttpContextTenantAccessor : ITenantAccessor
         _httpContextAccessor = httpContextAccessor;
     }
 
+    public string? TenantName => _httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true
+        && TryGetTenantId(out _)
+            ? _httpContextAccessor.HttpContext.User.FindFirst("tenant_name")?.Value
+            : null;
+
     public Guid TenantId
     {
         get
