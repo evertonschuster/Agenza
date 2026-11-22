@@ -1,11 +1,10 @@
 using System.ComponentModel;
-using System.Text.Json;
 using Admin.SharedKernel;
 using Microsoft.AspNetCore.Authorization;
-using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ServicesService.Application.Users.GetCurrentUser;
+using ServicesService.Mcp.Extensions;
 
 namespace ServicesService.Mcp.Tools;
 
@@ -28,25 +27,6 @@ public sealed class IdentityTools(IDispatcher dispatcher)
     public async Task<CallToolResult> WhoAmI(CancellationToken cancellationToken)
     {
         var result = await dispatcher.Query(new GetCurrentUserQuery(), cancellationToken);
-        return ToToolResult(result);
-    }
-
-    private static CallToolResult ToToolResult(Result<CurrentUserResponse> result)
-    {
-        if (result.IsFailure)
-        {
-            return new CallToolResult
-            {
-                IsError = true,
-                Content = [new TextContentBlock { Text = result.Error.Message }],
-            };
-        }
-
-        var content = JsonSerializer.SerializeToElement(result.Value, McpJsonUtilities.DefaultOptions);
-        return new CallToolResult
-        {
-            StructuredContent = content,
-            Content = [new TextContentBlock { Text = content.GetRawText() }],
-        };
+        return result.ToToolResult();
     }
 }
