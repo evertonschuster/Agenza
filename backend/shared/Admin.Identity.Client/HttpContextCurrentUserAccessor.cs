@@ -11,6 +11,12 @@ public class HttpContextCurrentUserAccessor : ICurrentUserAccessor
         _httpContextAccessor = httpContextAccessor;
     }
 
+    public bool IsAuthenticated => _httpContextAccessor.HttpContext?.User.Identity?.IsAuthenticated == true;
+
+    public string? Username => IsAuthenticated ? _httpContextAccessor.HttpContext?.User.FindFirst("name")?.Value : null;
+
+    public string? Email => IsAuthenticated ? _httpContextAccessor.HttpContext?.User.FindFirst("email")?.Value : null;
+
     public Guid? UserId
     {
         get

@@ -4,5 +4,8 @@ namespace Admin.Identity.Client;
 // value, not an error.
 public interface ICurrentUserAccessor
 {
+    bool IsAuthenticated { get; }
     Guid? UserId { get; }
+    string? Username { get; }
+    string? Email { get; }
 }
