@@ -33,6 +33,7 @@ public sealed class IdentityToolsTests
         var result = await tools.WhoAmI(CancellationToken.None);
         var response = Response(result);
 
+        result.IsError.Should().BeFalse();
         response.User.Should().Be(new CurrentUserDetails(userId, "maria", "maria@exemplo.com"));
         response.Tenant.Should().Be(new CurrentUserTenant(tenantId, "Clínica Maria"));
         var text = result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>().Subject;
@@ -99,7 +100,11 @@ public sealed class IdentityToolsTests
         result.IsError.Should().BeTrue();
         result.StructuredContent.Should().BeNull();
         var text = result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>().Subject;
-        text.Text.Should().Contain("Não foi possível consultar o usuário.");
+        using var json = JsonDocument.Parse(text.Text);
+        var error = json.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("message").GetString().Should().Be("Não foi possível consultar o usuário.");
+        error.GetProperty("type").GetString().Should().Be("Validation");
     }
 
     [Fact]
@@ -116,6 +121,11 @@ public sealed class IdentityToolsTests
         contract.OutputSchema.Should().NotBeNull();
         contract.OutputSchema!.Value.GetProperty("properties").TryGetProperty("user", out _).Should().BeTrue();
         contract.OutputSchema.Value.GetProperty("properties").TryGetProperty("tenant", out _).Should().BeTrue();
+        contract.OutputSchema.Value.GetProperty("properties").GetProperty("user")
+            .GetProperty("description").GetString().Should().Contain("identidade autenticada");
+        contract.OutputSchema.Value.GetProperty("properties").GetProperty("tenant")
+            .GetProperty("description").GetString().Should().Contain("Estabelecimento");
+        contract.Description.Should().Contain("Campos nulos indicam informação indisponível");
         contract.Annotations!.ReadOnlyHint.Should().BeTrue();
         contract.Annotations.DestructiveHint.Should().BeFalse();
         contract.Annotations.OpenWorldHint.Should().BeFalse();

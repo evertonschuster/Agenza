@@ -23,7 +23,10 @@ public sealed class IdentityTools(IDispatcher dispatcher)
     [Description(
         "Retorna o ID, o login e o e-mail do usuário autenticado " +
         "e o ID e o nome do tenant da conexão atual com o Agenza. " +
-        "Campos ausentes são retornados como nulos.")]
+        "Use para identificar a conexão atual, sem informar usuário ou tenant como entrada. " +
+        "Os dados refletem a identidade autenticada e podem mudar após a renovação do token. " +
+        "Campos nulos indicam informação indisponível, não ausência de autenticação. " +
+        "Este resultado não descreve permissões para operações de negócio.")]
     public async Task<CallToolResult> WhoAmI(CancellationToken cancellationToken)
     {
         var result = await dispatcher.Query(new GetCurrentUserQuery(), cancellationToken);
