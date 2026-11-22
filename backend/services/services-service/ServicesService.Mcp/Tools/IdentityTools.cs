@@ -1,15 +1,17 @@
 using System.ComponentModel;
-using Admin.Identity.Client;
+using System.Text.Json;
+using Admin.SharedKernel;
 using Microsoft.AspNetCore.Authorization;
+using ModelContextProtocol;
+using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using ServicesService.Application.Users.GetCurrentUser;
 
 namespace ServicesService.Mcp.Tools;
 
 [Authorize]
 [McpServerToolType]
-public sealed class IdentityTools(
-    ICurrentUserAccessor currentUserAccessor,
-    ITenantAccessor tenantAccessor)
+public sealed class IdentityTools(IDispatcher dispatcher)
 {
     [McpServerTool(
         Name = "who_am_i",
@@ -17,22 +19,34 @@ public sealed class IdentityTools(
         ReadOnly = true,
         Destructive = false,
         OpenWorld = false,
-        UseStructuredContent = true)]
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(CurrentUserResponse))]
     [Description(
         "Retorna o ID, o login e o e-mail do usuário autenticado " +
         "e o ID e o nome do tenant da conexão atual com o Agenza. " +
         "Campos ausentes são retornados como nulos.")]
-    public CurrentIdentityResponse WhoAmI()
+    public async Task<CallToolResult> WhoAmI(CancellationToken cancellationToken)
     {
-        var user = new CurrentIdentityUser(
-            currentUserAccessor.UserId,
-            currentUserAccessor.Username,
-            currentUserAccessor.Email);
+        var result = await dispatcher.Query(new GetCurrentUserQuery(), cancellationToken);
+        return ToToolResult(result);
+    }
 
-        var tenant = new CurrentIdentityTenant(
-            tenantAccessor.TenantId,
-            tenantAccessor.TenantName);
+    private static CallToolResult ToToolResult(Result<CurrentUserResponse> result)
+    {
+        if (result.IsFailure)
+        {
+            return new CallToolResult
+            {
+                IsError = true,
+                Content = [new TextContentBlock { Text = result.Error.Message }],
+            };
+        }
 
-        return new CurrentIdentityResponse(user, tenant);
+        var content = JsonSerializer.SerializeToElement(result.Value, McpJsonUtilities.DefaultOptions);
+        return new CallToolResult
+        {
+            StructuredContent = content,
+            Content = [new TextContentBlock { Text = content.GetRawText() }],
+        };
     }
 }

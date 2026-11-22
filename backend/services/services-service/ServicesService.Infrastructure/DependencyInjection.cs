@@ -21,6 +21,7 @@ public static class DependencyInjection
         services.AddSingleton(TimeProvider.System);
         services.AddScoped<AuditableEntitySaveChangesInterceptor>();
         services.AddScoped<ICurrentTenantProvider, CurrentTenantProvider>();
+        services.AddScoped<ICurrentUserProvider, CurrentUserProvider>();
 
         services.AddDbContext<ServicesDataContext>((serviceProvider, options) =>
             options
