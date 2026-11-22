@@ -23,7 +23,7 @@ public static class ResultExtensions
         };
     }
 
-    public static CallToolResult ToToolResult(this Error error)
+    public static CallToolResult ToToolResult(this Error error, string? traceId = null, string? correlationId = null)
     {
         var content = JsonSerializer.SerializeToElement(new
         {
@@ -33,6 +33,8 @@ public static class ResultExtensions
                 error.Message,
                 Type = error.Type.ToString(),
                 error.FieldErrors,
+                TraceId = traceId,
+                CorrelationId = correlationId,
             },
         }, McpJsonUtilities.DefaultOptions);
 

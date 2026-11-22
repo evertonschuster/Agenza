@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Admin.SharedKernel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
@@ -14,14 +15,24 @@ namespace ServicesService.McpTests;
 public sealed class ToolExceptionHandlerTests
 {
     [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Filtro_registrado_oculta_excecao_e_registra_detalhes_no_servidor(bool cancellationNotRequested)
+    [InlineData(false, null)]
+    [InlineData(true, "correlation-123")]
+    [InlineData(false, "")]
+    [InlineData(false, "correlation\r\nlinha falsa")]
+    public async Task Filtro_registrado_oculta_excecao_e_registra_detalhes_no_servidor(
+        bool cancellationNotRequested, string? correlationId)
     {
         using var logs = new CapturingLoggerProvider();
         var services = new ServiceCollection().AddLogging(builder => builder.AddProvider(logs));
         services.AddMcpServer().WithToolExceptionHandling();
         using var provider = services.BuildServiceProvider();
+        var httpContext = new DefaultHttpContext { TraceIdentifier = "http-trace-123" };
+        if (correlationId is not null)
+        {
+            httpContext.Request.Headers["X-Correlation-Id"] = correlationId;
+        }
+
+        provider.GetRequiredService<IHttpContextAccessor>().HttpContext = httpContext;
         var options = provider.GetRequiredService<IOptions<McpServerOptions>>().Value;
         await using var transport = new StreamServerTransport(Stream.Null, Stream.Null);
         await using var server = McpServer.Create(transport, options, serviceProvider: provider);
@@ -46,10 +57,15 @@ public sealed class ToolExceptionHandlerTests
         error.GetProperty("code").GetString().Should().Be("Unexpected.Error");
         error.GetProperty("message").GetString().Should().Be("Ocorreu um erro inesperado.");
         error.GetProperty("type").GetString().Should().Be("Failure");
+        error.GetProperty("traceId").GetString().Should().Be(httpContext.TraceIdentifier);
+        var expectedCorrelation = string.IsNullOrEmpty(correlationId) ? httpContext.TraceIdentifier : correlationId;
+        error.GetProperty("correlationId").GetString().Should().Be(expectedCorrelation);
         text.Text.Should().NotContain(exception.Message);
         var entry = logs.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Error).Subject;
         entry.Exception.Should().BeSameAs(exception);
         entry.Message.Should().Contain("who_am_i__linha falsa").And.NotContain("\r").And.NotContain("\n");
+        entry.Message.Should().Contain(httpContext.TraceIdentifier)
+            .And.Contain(expectedCorrelation.Replace('\r', '_').Replace('\n', '_'));
     }
 
     [Theory]
@@ -61,7 +77,7 @@ public sealed class ToolExceptionHandlerTests
             ? Error.NotFound("User.NotFound", "Usuário não encontrado.").ToToolResult()
             : new CallToolResult { Content = [new TextContentBlock { Text = "Concluído." }] };
         using var logs = new CapturingLoggerProvider();
-        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>());
+        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>(), new HttpContextAccessor());
 
         var result = await handler.HandleAsync(null!, (_, _) => ValueTask.FromResult(expected), CancellationToken.None);
 
@@ -76,7 +92,7 @@ public sealed class ToolExceptionHandlerTests
         cancellation.Cancel();
         var exception = new OperationCanceledException(cancellation.Token);
         using var logs = new CapturingLoggerProvider();
-        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>());
+        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>(), new HttpContextAccessor());
 
         var action = async () => await handler.HandleAsync(null!,
             (_, _) => ValueTask.FromException<CallToolResult>(exception), cancellation.Token);
@@ -97,7 +113,7 @@ public sealed class ToolExceptionHandlerTests
     public async Task Excecoes_controladas_do_mcp_sao_preservadas(Exception exception)
     {
         using var logs = new CapturingLoggerProvider();
-        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>());
+        var handler = new ToolExceptionHandler(logs.CreateLogger<ToolExceptionHandler>(), new HttpContextAccessor());
         var action = async () => await handler.HandleAsync(null!,
             (_, _) => ValueTask.FromException<CallToolResult>(exception), CancellationToken.None);
 
