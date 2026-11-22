@@ -9,4 +9,6 @@ public sealed record CurrentIdentityUser(
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] string? Username,
     [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] string? Email);
 
-public sealed record CurrentIdentityTenant(Guid Id);
+public sealed record CurrentIdentityTenant(
+    Guid Id,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.Never)] string? Name);
