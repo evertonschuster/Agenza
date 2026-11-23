@@ -19,7 +19,9 @@ builder.Services.AddServicesInfrastructure(builder.Configuration);
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
     .AddAuthorizationFilters()
-    .WithTools<HelloWorldTools>();
+    .WithToolExceptionHandling()
+    .WithTools<HelloWorldTools>()
+    .WithTools<IdentityTools>();
 
 var app = builder.Build();
 

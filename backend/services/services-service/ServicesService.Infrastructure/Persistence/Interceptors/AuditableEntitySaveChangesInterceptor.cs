@@ -1,4 +1,4 @@
-using Admin.Identity.Client;
+using Admin.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using ServicesService.Application.Abstractions;

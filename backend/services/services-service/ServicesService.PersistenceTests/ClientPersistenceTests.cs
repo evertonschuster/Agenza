@@ -1,4 +1,4 @@
-using Admin.Identity.Client;
+using Admin.SharedKernel;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;

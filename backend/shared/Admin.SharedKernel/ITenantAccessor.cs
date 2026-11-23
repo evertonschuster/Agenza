@@ -1,7 +1,9 @@
-namespace Admin.Identity.Client;
+namespace Admin.SharedKernel;
 
 public interface ITenantAccessor
 {
+    string? TenantName { get; }
+
     // Throws if the principal has no tenant_id claim (e.g. an M2M token) - use TryGetTenantId instead for endpoints callable by both.
     Guid TenantId { get; }
 
