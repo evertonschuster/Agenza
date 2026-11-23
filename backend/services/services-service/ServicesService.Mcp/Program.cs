@@ -22,7 +22,7 @@ builder.Services.AddMcpServer()
     .WithToolExceptionHandling()
     .WithTools<HelloWorldTools>()
     .WithTools<IdentityTools>()
-    .WithTools<TagsTools>();
+    .WithValueObjectTools<TagsTools>();
 
 var app = builder.Build();
 

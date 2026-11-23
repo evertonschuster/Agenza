@@ -41,6 +41,8 @@ OAuth resource scopes;
 OAuth audiences still identify the destination of each token.
 API and MCP share the authenticated-tenant policy, without additional subject-format or scope
 requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses the tenant claim.
+MCP tools receive shared value objects directly; their conversion and primitive schemas belong to
+the MCP setup, not to individual tool methods.
 
 ## Validation and delivery
 

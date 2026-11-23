@@ -8,6 +8,7 @@ using ModelContextProtocol.Server;
 using ServicesService.Application;
 using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.ListTags;
+using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
 using Result = Admin.SharedKernel.Result;
 
@@ -21,10 +22,9 @@ public sealed class TagsToolsTests
         var handler = new RecordingHandler();
         using var provider = Services(handler);
         using var scope = provider.CreateScope();
-        var tools = new TagsTools(scope.ServiceProvider.GetRequiredService<IDispatcher>());
         var cancellationToken = TestContext.Current.CancellationToken;
 
-        var result = await tools.ListTags("  vIp  ", 3, 50, cancellationToken);
+        var result = await Invoke(scope.ServiceProvider, new { search = "  vIp  ", page = 3, pageSize = 50 }, cancellationToken);
 
         result.IsError.Should().BeFalse();
         handler.Query.Should().BeEquivalentTo(new ListTagsQuery(SearchText.Create("vip").Value) { Page = 3, PageSize = 50 });
@@ -40,9 +40,8 @@ public sealed class TagsToolsTests
         var handler = new RecordingHandler();
         using var provider = Services(handler);
         using var scope = provider.CreateScope();
-        var tools = new TagsTools(scope.ServiceProvider.GetRequiredService<IDispatcher>());
 
-        var result = await tools.ListTags(search, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await Invoke(scope.ServiceProvider, new { search }, TestContext.Current.CancellationToken);
 
         result.IsError.Should().BeFalse();
         handler.Query.Should().Be(new ListTagsQuery());
@@ -54,10 +53,9 @@ public sealed class TagsToolsTests
         var handler = new RecordingHandler();
         using var provider = Services(handler);
         using var scope = provider.CreateScope();
-        var tools = new TagsTools(scope.ServiceProvider.GetRequiredService<IDispatcher>());
         var search = new string('a', SearchText.MaxLength + 1);
 
-        var result = await tools.ListTags(search, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await Invoke(scope.ServiceProvider, new { search }, TestContext.Current.CancellationToken);
 
         var error = Error(result);
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
@@ -73,10 +71,9 @@ public sealed class TagsToolsTests
         var handler = new RecordingHandler();
         using var provider = Services(handler);
         using var scope = provider.CreateScope();
-        var tools = new TagsTools(scope.ServiceProvider.GetRequiredService<IDispatcher>());
         var search = new string('a', SearchText.MaxLength);
 
-        var result = await tools.ListTags("  " + search + "  ", cancellationToken: TestContext.Current.CancellationToken);
+        var result = await Invoke(scope.ServiceProvider, new { search = "  " + search + "  " }, TestContext.Current.CancellationToken);
 
         result.IsError.Should().BeFalse();
         handler.Query!.Search!.Value.Should().Be(search);
@@ -95,9 +92,8 @@ public sealed class TagsToolsTests
         var handler = new RecordingHandler();
         using var provider = Services(handler);
         using var scope = provider.CreateScope();
-        var tools = new TagsTools(scope.ServiceProvider.GetRequiredService<IDispatcher>());
 
-        var result = await tools.ListTags(page: page, pageSize: pageSize, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await Invoke(scope.ServiceProvider, new { page, pageSize }, TestContext.Current.CancellationToken);
 
         var error = Error(result);
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
@@ -113,9 +109,8 @@ public sealed class TagsToolsTests
         var handler = new RecordingHandler { Outcome = Result.Success(page) };
         using var provider = Services(handler);
         using var scope = provider.CreateScope();
-        var tools = new TagsTools(scope.ServiceProvider.GetRequiredService<IDispatcher>());
 
-        var result = await tools.ListTags(page: 2, pageSize: 100, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await Invoke(scope.ServiceProvider, new { page = 2, pageSize = 100 }, TestContext.Current.CancellationToken);
 
         result.IsError.Should().BeFalse();
         result.StructuredContent!.Value.Deserialize<PagedResult<TagResponse>>(McpJsonUtilities.DefaultOptions)
@@ -133,9 +128,8 @@ public sealed class TagsToolsTests
         var handler = new RecordingHandler { Outcome = Result.Success(page) };
         using var provider = Services(handler);
         using var scope = provider.CreateScope();
-        var tools = new TagsTools(scope.ServiceProvider.GetRequiredService<IDispatcher>());
 
-        var result = await tools.ListTags(page: pageNumber, cancellationToken: TestContext.Current.CancellationToken);
+        var result = await Invoke(scope.ServiceProvider, new { page = pageNumber }, TestContext.Current.CancellationToken);
 
         result.IsError.Should().BeFalse();
         result.StructuredContent!.Value.Deserialize<PagedResult<TagResponse>>(McpJsonUtilities.DefaultOptions)
@@ -147,8 +141,7 @@ public sealed class TagsToolsTests
     {
         using var provider = Services(new RecordingHandler());
         using var scope = provider.CreateScope();
-        var tools = new TagsTools(scope.ServiceProvider.GetRequiredService<IDispatcher>());
-        var tool = McpServerTool.Create(typeof(TagsTools).GetMethod(nameof(TagsTools.ListTags))!, tools);
+        var tool = scope.ServiceProvider.GetServices<McpServerTool>().Single();
         var contract = tool.ProtocolTool;
 
         contract.Name.Should().Be("list_tags");
@@ -157,6 +150,8 @@ public sealed class TagsToolsTests
         var properties = contract.InputSchema.GetProperty("properties");
         properties.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("search", "page", "pageSize");
         properties.GetProperty("search").GetProperty("description").GetString().Should().Contain("não aplica filtro");
+        properties.GetProperty("search").GetProperty("type").EnumerateArray().Select(type => type.GetString())
+            .Should().BeEquivalentTo("string", "null");
         properties.GetProperty("page").GetProperty("default").GetInt32().Should().Be(PageRequest.FirstPage);
         properties.GetProperty("pageSize").GetProperty("default").GetInt32().Should().Be(PageRequest.DefaultPageSize);
         contract.OutputSchema.Should().NotBeNull();
@@ -181,8 +176,25 @@ public sealed class TagsToolsTests
         var services = new ServiceCollection().AddLogging();
         services.AddSharedKernel();
         services.AddServicesApplication();
+        services.AddMcpServer().WithValueObjectTools<TagsTools>();
         services.AddScoped<IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>>(_ => handler);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+    }
+
+    private static async Task<CallToolResult> Invoke(IServiceProvider services, object arguments, CancellationToken cancellationToken = default)
+    {
+        var tool = services.GetServices<McpServerTool>().Single();
+        await using var transport = new StreamServerTransport(Stream.Null, Stream.Null);
+        await using var server = McpServer.Create(transport, new McpServerOptions(), serviceProvider: services);
+        var context = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" },
+            new CallToolRequestParams
+            {
+                Name = "list_tags",
+                Arguments = JsonSerializer.SerializeToElement(arguments).Deserialize<Dictionary<string, JsonElement>>(),
+            })
+        { Services = services };
+        return await tool.InvokeAsync(context, cancellationToken);
     }
 
     private sealed class RecordingHandler : IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>
