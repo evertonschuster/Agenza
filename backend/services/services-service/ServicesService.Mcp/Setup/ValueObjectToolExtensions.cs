@@ -1,6 +1,8 @@
+using System.ComponentModel;
 using System.Reflection;
 using System.Text.Json;
 using System.Text.Json.Nodes;
+using System.Text.Json.Serialization.Metadata;
 using Admin.SharedKernel;
 using Admin.SharedKernel.ValueObjects;
 using Microsoft.Extensions.AI;
@@ -121,13 +123,37 @@ public static class ValueObjectToolExtensions
 
     private static JsonNode TransformSchema(AIJsonSchemaCreateContext context, JsonNode schema)
     {
+        if (schema is JsonObject objectSchema)
+        {
+            // O SDK pode reduzir um VO a string sem carregar os metadados da propriedade.
+            ApplyPropertyMetadata(context.TypeInfo, objectSchema);
+        }
+
         var type = context.TypeInfo.Type;
-        if (!StringValueObjects.Is(type) && !DateValueObjects.Is(type))
+        var description = context.GetCustomAttribute<DescriptionAttribute>();
+        var defaultValue = context.GetCustomAttribute<DefaultValueAttribute>();
+        var isValueObject = StringValueObjects.Is(type) || DateValueObjects.Is(type);
+        if (!isValueObject && description is null && defaultValue is null)
         {
             return schema;
         }
 
         var node = schema as JsonObject ?? new JsonObject();
+        if (description is not null)
+        {
+            node["description"] = description.Description;
+        }
+
+        if (defaultValue is not null)
+        {
+            node["default"] = JsonSerializer.SerializeToNode(defaultValue.Value);
+        }
+
+        if (!isValueObject)
+        {
+            return node;
+        }
+
         var nullable = context.PropertyInfo?.IsSetNullable ?? false;
 
         if (nullable)
@@ -145,6 +171,55 @@ public static class ValueObjectToolExtensions
         }
 
         return node;
+    }
+
+    private static void ApplyPropertyMetadata(JsonTypeInfo typeInfo, JsonObject schema)
+    {
+        if (schema["properties"] is not JsonObject properties)
+        {
+            return;
+        }
+
+        foreach (var property in typeInfo.Properties)
+        {
+            if (properties[property.Name] is not JsonObject node)
+            {
+                continue;
+            }
+
+            var description = property.AttributeProvider?.GetCustomAttributes(typeof(DescriptionAttribute), true)
+                .OfType<DescriptionAttribute>()
+                .FirstOrDefault();
+            if (description is not null)
+            {
+                node["description"] = description.Description;
+            }
+
+            var defaultValue = property.AttributeProvider?.GetCustomAttributes(typeof(DefaultValueAttribute), true)
+                .OfType<DefaultValueAttribute>()
+                .FirstOrDefault();
+            if (defaultValue is not null)
+            {
+                node["default"] = JsonSerializer.SerializeToNode(defaultValue.Value);
+            }
+
+            if (StringValueObjects.Is(property.PropertyType) || DateValueObjects.Is(property.PropertyType))
+            {
+                if (property.IsSetNullable)
+                {
+                    node["type"] = new JsonArray("string", "null");
+                }
+                else
+                {
+                    node["type"] = "string";
+                }
+
+                if (DateValueObjects.Is(property.PropertyType))
+                {
+                    node["format"] = "date";
+                }
+            }
+        }
     }
 
     private static void ApplyParameterNullability(Tool tool, MethodInfo method)

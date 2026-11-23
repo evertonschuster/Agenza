@@ -60,7 +60,7 @@ public sealed class TagsToolsTests
         var error = Error(result);
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("type").GetString().Should().Be("Validation");
-        error.GetProperty("fieldErrors").GetProperty("search")[0].GetProperty("message")
+        error.GetProperty("fieldErrors").GetProperty("query.search")[0].GetProperty("message")
             .GetString().Should().Be(SearchText.Create(search).Error);
         handler.Query.Should().BeNull();
     }
@@ -77,6 +77,35 @@ public sealed class TagsToolsTests
 
         result.IsError.Should().BeFalse();
         handler.Query!.Search!.Value.Should().Be(search);
+    }
+
+    [Fact]
+    public async Task Objeto_query_vazio_reutiliza_os_valores_padrao_da_application()
+    {
+        var handler = new RecordingHandler();
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+
+        var result = await Invoke(scope.ServiceProvider, new { }, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeFalse();
+        handler.Query.Should().Be(new ListTagsQuery());
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Query_ausente_ou_nula_retorna_erro_antes_do_dispatcher(bool includeQuery)
+    {
+        var handler = new RecordingHandler();
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+
+        var result = await Invoke(scope.ServiceProvider, null, TestContext.Current.CancellationToken, includeQuery);
+
+        var error = Error(result);
+        error.GetProperty("fieldErrors").TryGetProperty("query", out _).Should().BeTrue();
+        handler.Query.Should().BeNull();
     }
 
     [Theory]
@@ -148,12 +177,17 @@ public sealed class TagsToolsTests
         contract.Title.Should().Be("Listar etiquetas");
         contract.Description.Should().Contain("empresa autenticada");
         var properties = contract.InputSchema.GetProperty("properties");
-        properties.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("search", "page", "pageSize");
-        properties.GetProperty("search").GetProperty("description").GetString().Should().Contain("não aplica filtro");
-        properties.GetProperty("search").GetProperty("type").EnumerateArray().Select(type => type.GetString())
+        properties.EnumerateObject().Select(property => property.Name).Should().Equal("query");
+        contract.InputSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString()).Should().Contain("query");
+        var queryProperties = properties.GetProperty("query").GetProperty("properties");
+        queryProperties.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("search", "page", "pageSize");
+        queryProperties.GetProperty("search").GetProperty("description").GetString().Should().Contain("Trecho do nome da etiqueta").And.Contain("não aplica filtro");
+        queryProperties.GetProperty("search").GetProperty("type").EnumerateArray().Select(type => type.GetString())
             .Should().BeEquivalentTo("string", "null");
-        properties.GetProperty("page").GetProperty("default").GetInt32().Should().Be(PageRequest.FirstPage);
-        properties.GetProperty("pageSize").GetProperty("default").GetInt32().Should().Be(PageRequest.DefaultPageSize);
+        queryProperties.GetProperty("page").GetProperty("description").GetString().Should().Contain("começando em 1");
+        queryProperties.GetProperty("pageSize").GetProperty("description").GetString().Should().Contain("entre 1 e 100");
+        queryProperties.GetProperty("page").GetProperty("default").GetInt32().Should().Be(PageRequest.FirstPage);
+        queryProperties.GetProperty("pageSize").GetProperty("default").GetInt32().Should().Be(PageRequest.DefaultPageSize);
         contract.OutputSchema.Should().NotBeNull();
         contract.OutputSchema!.Value.GetProperty("properties").EnumerateObject().Select(property => property.Name)
             .Should().BeEquivalentTo("items", "totalCount", "page", "pageSize");
@@ -181,17 +215,23 @@ public sealed class TagsToolsTests
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
 
-    private static async Task<CallToolResult> Invoke(IServiceProvider services, object arguments, CancellationToken cancellationToken = default)
+    private static async Task<CallToolResult> Invoke(IServiceProvider services, object? arguments, CancellationToken cancellationToken = default, bool includeQuery = true)
     {
         var tool = services.GetServices<McpServerTool>().Single();
         await using var transport = new StreamServerTransport(Stream.Null, Stream.Null);
         await using var server = McpServer.Create(transport, new McpServerOptions(), serviceProvider: services);
+        var payload = JsonSerializer.SerializeToElement(new { query = arguments });
+        if (!includeQuery)
+        {
+            payload = JsonSerializer.SerializeToElement(new { });
+        }
+
         var context = new RequestContext<CallToolRequestParams>(server,
             new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" },
             new CallToolRequestParams
             {
                 Name = "list_tags",
-                Arguments = JsonSerializer.SerializeToElement(arguments).Deserialize<Dictionary<string, JsonElement>>(),
+                Arguments = payload.Deserialize<Dictionary<string, JsonElement>>(),
             })
         { Services = services };
         return await tool.InvokeAsync(context, cancellationToken);

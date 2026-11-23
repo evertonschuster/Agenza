@@ -4,6 +4,7 @@ import path from 'node:path';
 import openapiTS, { astToString } from 'openapi-typescript';
 import prettier from 'prettier';
 import ts from 'typescript';
+import { normalizeClientStatusContract } from './clientStatusContractCompatibility.mjs';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const GENERATED_DIR = path.join(__dirname, '..', 'src', 'shared', 'api', 'generated');
@@ -202,7 +203,7 @@ export async function generate() {
   const dateFieldsCode = `export const DATE_FIELDS: ReadonlySet<string> = new Set(${JSON.stringify(dateFields)});\n`;
 
   return {
-    [TYPES_PATH]: bannerFor(OPENAPI_URL) + (await format(types)),
+    [TYPES_PATH]: bannerFor(OPENAPI_URL) + normalizeClientStatusContract(await format(types)),
     [DATE_FIELDS_PATH]: bannerFor(OPENAPI_URL) + (await format(dateFieldsCode)),
   };
 }

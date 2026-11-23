@@ -1,5 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { matchesClientStatusContract } from './clientStatusContractCompatibility.mjs';
+import {
+  matchesClientStatusContract,
+  normalizeClientStatusContract,
+} from './clientStatusContractCompatibility.mjs';
 
 const current = `export interface paths {
   '/api/v{version}/clients': {
@@ -31,6 +34,19 @@ const legacy = current
   );
 
 describe('checagem de contrato do filtro Status', () => {
+  it('gera o filtro equivalente com os valores usados pelo painel', () => {
+    expect(normalizeClientStatusContract(current)).toBe(
+      current.replace("'Active' | 'Inactive' | 'All'", "'active' | 'inactive' | 'all'"),
+    );
+  });
+
+  it('nao normaliza outro endpoint nem um conjunto diferente de valores', () => {
+    const other = current.replace('/clients', '/tags');
+    const extended = current.replace(" | 'All'", " | 'All' | 'Pending'");
+    expect(normalizeClientStatusContract(other)).toBe(other);
+    expect(normalizeClientStatusContract(extended)).toBe(extended);
+  });
+
   it('aceita a representação equivalente do filtro opcional', () => {
     expect(matchesClientStatusContract(legacy, current)).toBe(true);
   });
