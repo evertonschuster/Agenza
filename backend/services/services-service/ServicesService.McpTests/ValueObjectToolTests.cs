@@ -187,6 +187,37 @@ public sealed class ValueObjectToolTests
         probe.CancellationToken.Should().Be(TestContext.Current.CancellationToken);
     }
 
+    [Theory]
+    [InlineData("{\"name\":\"Maria\"}", "Maria|-|-|False")]
+    [InlineData("{\"name\":\"Maria\",\"count\":null,\"kind\":null}", "Maria|-|-|False")]
+    [InlineData("{\"name\":\"Maria\",\"count\":3,\"kind\":\"vip\",\"flag\":true}", "Maria|3|Vip|True")]
+    public async Task Entradas_aceitas_pelo_wrapper_tambem_sao_aceitas_pelo_sdk(string arguments, string expected)
+    {
+        using var provider = Services();
+
+        var result = await Invoke(provider, "wire", arguments, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().NotBeTrue();
+        result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>().Which.Text.Should().Be(expected);
+    }
+
+    [Theory]
+    [InlineData("{\"name\":\"Maria\",\"count\":\"abc\"}", "count", "Informe um número inteiro.")]
+    [InlineData("{\"name\":\"Maria\",\"count\":1.5}", "count", "Informe um número inteiro.")]
+    [InlineData("{\"name\":\"Maria\",\"kind\":\"premium\"}", "kind", "Use um destes valores: regular, vip.")]
+    [InlineData("{\"name\":\"Maria\",\"kind\":1}", "kind", "Use um destes valores: regular, vip.")]
+    [InlineData("{\"name\":\"Maria\",\"flag\":\"sim\"}", "flag", "Informe verdadeiro ou falso.")]
+    [InlineData("{\"name\":\"Maria\",\"nested\":{\"count\":\"x\"}}", "nested.count", "Informe um número inteiro.")]
+    [InlineData("{\"name\":\"Maria\",\"nested\":{\"kinds\":[\"regular\",\"x\"]}}", "nested.kinds[1]", "Use um destes valores: regular, vip.")]
+    public async Task Erro_estrutural_informa_o_tipo_esperado_sem_ecoar_o_valor(string arguments, string field, string message)
+    {
+        using var provider = Services();
+
+        var result = await Invoke(provider, "wire", arguments, TestContext.Current.CancellationToken);
+
+        Error(result).GetProperty("fieldErrors").GetProperty(field)[0].GetProperty("message").GetString().Should().Be(message);
+    }
+
     [Fact]
     public void Servico_com_chave_e_recusado_no_registro_porque_o_sdk_nao_o_resolve()
     {
@@ -251,6 +282,14 @@ public sealed class ValueObjectToolTests
 
     public sealed record ContactInput(EmailAddress Email);
 
+    public enum Kind
+    {
+        Regular = 1,
+        Vip = 2,
+    }
+
+    public sealed record NestedInput(int? Count = null, IReadOnlyList<Kind>? Kinds = null);
+
     private sealed class KeyedTools
     {
         [McpServerTool(Name = "keyed")]
@@ -283,6 +322,10 @@ public sealed class ValueObjectToolTests
             probe.CancellationToken = cancellationToken;
             return name.Value + "|" + email.Value;
         }
+
+        [McpServerTool(Name = "wire")]
+        public static string Wire(FullName name, int? count = null, Kind? kind = null, bool flag = false, NestedInput? nested = null) =>
+            $"{name.Value}|{count?.ToString(CultureInfo.InvariantCulture) ?? "-"}|{kind?.ToString() ?? "-"}|{flag}";
 
         [McpServerTool(Name = "failure")]
         public static string Failure(SearchText? search = null) => throw new JsonException("Falha interna de serialização.");

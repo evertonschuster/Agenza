@@ -30,7 +30,8 @@ public static class ValueObjectToolExtensions
             builder.Services.AddSingleton<McpServerTool>(services =>
             {
                 var serializerOptions = new JsonSerializerOptions(McpJsonUtilities.DefaultOptions)
-                    .AddValueObjectConverters(services.GetService<TimeProvider>() ?? TimeProvider.System);
+                    .AddValueObjectConverters(services.GetService<TimeProvider>() ?? TimeProvider.System)
+                    .AddEnumNameConverter();
                 var options = new McpServerToolCreateOptions
                 {
                     Services = services,
