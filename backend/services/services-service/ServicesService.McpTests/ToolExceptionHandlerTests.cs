@@ -15,18 +15,21 @@ namespace ServicesService.McpTests;
 public sealed class ToolExceptionHandlerTests
 {
     [Theory]
-    [InlineData(false, null)]
-    [InlineData(true, "correlation-123")]
-    [InlineData(false, "")]
-    [InlineData(false, "correlation\r\nlinha falsa")]
+    [InlineData(false, null, "http-trace-123", "http-trace-123", "http-trace-123")]
+    [InlineData(true, "correlation-123", "http-trace-123", "http-trace-123", "correlation-123")]
+    [InlineData(false, "", "http-trace-123", "http-trace-123", "http-trace-123")]
+    [InlineData(false, "correlation\r\nlinha falsa", "http-trace-123", "http-trace-123", "correlation__linha falsa")]
+    [InlineData(false, "correlation\tentry\0\u007f", "http-trace-123", "http-trace-123", "correlation_entry__")]
+    [InlineData(false, null, "trace\r\n\tentry", "trace___entry", "trace___entry")]
     public async Task Filtro_registrado_oculta_excecao_e_registra_detalhes_no_servidor(
-        bool cancellationNotRequested, string? correlationId)
+        bool cancellationNotRequested, string? correlationId, string traceId,
+        string expectedTrace, string expectedCorrelation)
     {
         using var logs = new CapturingLoggerProvider();
         var services = new ServiceCollection().AddLogging(builder => builder.AddProvider(logs));
         services.AddMcpServer().WithToolExceptionHandling();
         using var provider = services.BuildServiceProvider();
-        var httpContext = new DefaultHttpContext { TraceIdentifier = "http-trace-123" };
+        var httpContext = new DefaultHttpContext { TraceIdentifier = traceId };
         if (correlationId is not null)
         {
             httpContext.Request.Headers["X-Correlation-Id"] = correlationId;
@@ -38,7 +41,7 @@ public sealed class ToolExceptionHandlerTests
         await using var server = McpServer.Create(transport, options, serviceProvider: provider);
         var context = new RequestContext<CallToolRequestParams>(server,
             new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" },
-            new CallToolRequestParams { Name = "who_am_i\r\nlinha falsa" }) { Services = provider };
+            new CallToolRequestParams { Name = "who_am_i\r\n\tlinha falsa" }) { Services = provider };
         Exception exception = cancellationNotRequested
             ? new OperationCanceledException("timeout interno")
             : new InvalidOperationException("connection string secreta");
@@ -57,15 +60,16 @@ public sealed class ToolExceptionHandlerTests
         error.GetProperty("code").GetString().Should().Be("Unexpected.Error");
         error.GetProperty("message").GetString().Should().Be("Ocorreu um erro inesperado.");
         error.GetProperty("type").GetString().Should().Be("Failure");
-        error.GetProperty("traceId").GetString().Should().Be(httpContext.TraceIdentifier);
-        var expectedCorrelation = string.IsNullOrEmpty(correlationId) ? httpContext.TraceIdentifier : correlationId;
+        error.GetProperty("traceId").GetString().Should().Be(expectedTrace);
         error.GetProperty("correlationId").GetString().Should().Be(expectedCorrelation);
         text.Text.Should().NotContain(exception.Message);
         var entry = logs.Entries.Should().ContainSingle(entry => entry.Level == LogLevel.Error).Subject;
         entry.Exception.Should().BeSameAs(exception);
-        entry.Message.Should().Contain(context.Params.Name);
-        entry.Message.Should().Contain(httpContext.TraceIdentifier)
+        entry.Message.Should().Contain("who_am_i___linha falsa");
+        entry.Message.Should().Contain(expectedTrace)
             .And.Contain(expectedCorrelation);
+        entry.Message.Should().NotContain("\r").And.NotContain("\n").And.NotContain("\t");
+        entry.Message.Any(char.IsControl).Should().BeFalse();
     }
 
     [Theory]

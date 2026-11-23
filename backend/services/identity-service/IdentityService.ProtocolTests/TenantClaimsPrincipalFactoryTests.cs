@@ -30,7 +30,7 @@ public sealed class TenantClaimsPrincipalFactoryTests
         var principal = await factory.CreateAsync(user);
 
         principal.FindFirst("tenant_id")!.Value.Should().Be(user.TenantId.ToString());
-        principal.FindFirst("tenant_name")?.Value.Should().Be(tenantName);
+        (principal.FindFirst("tenant_name")?.Value).Should().Be(tenantName);
         await tenants.Received(1).GetByIdAsync(user.TenantId, Arg.Any<CancellationToken>());
     }
 }

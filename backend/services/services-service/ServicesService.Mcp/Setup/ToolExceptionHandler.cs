@@ -23,12 +23,12 @@ public sealed class ToolExceptionHandler(
         catch (Exception exception) when (IsUnexpected(exception, cancellationToken))
         {
             var httpContext = httpContextAccessor.HttpContext;
-            var traceId = httpContext?.TraceIdentifier;
-            var correlationId = GetCorrelationId(httpContext);
+            var traceId = SanitizeForLog(httpContext?.TraceIdentifier);
+            var correlationId = SanitizeForLog(GetCorrelationId(httpContext));
 
             logger.LogError(exception,
                 "Unhandled exception invoking MCP tool {ToolName} with TraceId {TraceId} and CorrelationId {CorrelationId}",
-                context.Params?.Name,
+                SanitizeForLog(context.Params?.Name),
                 traceId,
                 correlationId);
 
@@ -54,5 +54,15 @@ public sealed class ToolExceptionHandler(
         }
 
         return httpContext?.TraceIdentifier;
+    }
+
+    private static string? SanitizeForLog(string? value)
+    {
+        if (value is null)
+        {
+            return null;
+        }
+
+        return string.Concat(value.Select(character => char.IsControl(character) ? '_' : character));
     }
 }
