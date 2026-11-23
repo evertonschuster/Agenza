@@ -107,7 +107,9 @@ public static class ValueObjectToolExtensions
 
     private static object? BindService(ParameterInfo parameter, AIFunctionArguments arguments)
     {
-        var service = arguments.Services?.GetService(parameter.ParameterType);
+        var service = parameter.GetCustomAttribute<FromKeyedServicesAttribute>() is { } keyed
+            ? (arguments.Services as IKeyedServiceProvider)?.GetKeyedService(parameter.ParameterType, keyed.Key)
+            : arguments.Services?.GetService(parameter.ParameterType);
         if (service is not null)
         {
             return service;
@@ -129,9 +131,13 @@ public static class ValueObjectToolExtensions
             ApplyPropertyMetadata(context.TypeInfo, objectSchema);
         }
 
-        var type = context.TypeInfo.Type;
-        var description = context.GetCustomAttribute<DescriptionAttribute>();
-        var defaultValue = context.GetCustomAttribute<DefaultValueAttribute>();
+        return ApplySchemaMetadata(schema, context.TypeInfo.Type, context.PropertyInfo?.IsSetNullable ?? false,
+            context.GetCustomAttribute<DescriptionAttribute>(), context.GetCustomAttribute<DefaultValueAttribute>());
+    }
+
+    private static JsonNode ApplySchemaMetadata(JsonNode schema, Type type, bool nullable,
+        DescriptionAttribute? description, DefaultValueAttribute? defaultValue)
+    {
         var isValueObject = StringValueObjects.Is(type) || DateValueObjects.Is(type);
         if (!isValueObject && description is null && defaultValue is null)
         {
@@ -154,16 +160,7 @@ public static class ValueObjectToolExtensions
             return node;
         }
 
-        var nullable = context.PropertyInfo?.IsSetNullable ?? false;
-
-        if (nullable)
-        {
-            node["type"] = new JsonArray("string", "null");
-        }
-        else
-        {
-            node["type"] = "string";
-        }
+        node["type"] = nullable ? new JsonArray("string", "null") : JsonValue.Create("string");
 
         if (DateValueObjects.Is(type))
         {
@@ -190,35 +187,10 @@ public static class ValueObjectToolExtensions
             var description = property.AttributeProvider?.GetCustomAttributes(typeof(DescriptionAttribute), true)
                 .OfType<DescriptionAttribute>()
                 .FirstOrDefault();
-            if (description is not null)
-            {
-                node["description"] = description.Description;
-            }
-
             var defaultValue = property.AttributeProvider?.GetCustomAttributes(typeof(DefaultValueAttribute), true)
                 .OfType<DefaultValueAttribute>()
                 .FirstOrDefault();
-            if (defaultValue is not null)
-            {
-                node["default"] = JsonSerializer.SerializeToNode(defaultValue.Value);
-            }
-
-            if (StringValueObjects.Is(property.PropertyType) || DateValueObjects.Is(property.PropertyType))
-            {
-                if (property.IsSetNullable)
-                {
-                    node["type"] = new JsonArray("string", "null");
-                }
-                else
-                {
-                    node["type"] = "string";
-                }
-
-                if (DateValueObjects.Is(property.PropertyType))
-                {
-                    node["format"] = "date";
-                }
-            }
+            ApplySchemaMetadata(node, property.PropertyType, property.IsSetNullable, description, defaultValue);
         }
     }
 

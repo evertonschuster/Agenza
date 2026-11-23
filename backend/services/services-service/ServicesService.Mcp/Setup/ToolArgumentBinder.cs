@@ -22,7 +22,7 @@ internal static class ToolArgumentBinder
         var nullable = new NullabilityInfoContext().Create(parameter).ReadState != NullabilityState.NotNull;
         try
         {
-            var json = JsonSerializer.SerializeToElement(raw, options);
+            var json = raw is JsonElement element ? element : JsonSerializer.SerializeToElement(raw, options);
             var value = json.Deserialize(parameter.ParameterType, options);
             if (value is null && !nullable)
             {

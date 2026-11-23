@@ -185,6 +185,26 @@ public sealed class ValueObjectToolTests
         probe.CancellationToken.Should().Be(TestContext.Current.CancellationToken);
     }
 
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Servico_com_chave_respeita_a_chave_sem_recorrer_ao_servico_padrao(bool registered)
+    {
+        using var provider = Services(registered);
+        using var scope = provider.CreateScope();
+        var action = async () => await Invoke(scope.ServiceProvider, "keyed", "{\"name\":\" Maria \"}", TestContext.Current.CancellationToken);
+
+        if (!registered)
+        {
+            await action.Should().ThrowAsync<InvalidOperationException>();
+            return;
+        }
+
+        var result = await action();
+        result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>()
+            .Which.Text.Should().Be("Maria|selecionado");
+    }
+
     private static JsonElement Error(CallToolResult result)
     {
         result.IsError.Should().BeTrue();
@@ -195,11 +215,16 @@ public sealed class ValueObjectToolTests
         return error.Clone();
     }
 
-    private static ServiceProvider Services()
+    private static ServiceProvider Services(bool keyedService = true)
     {
         var services = new ServiceCollection().AddLogging();
         services.AddSingleton<TimeProvider>(new FixedTimeProvider());
         services.AddScoped<InvocationProbe>();
+        services.AddSingleton(new ToolLabel("padrão"));
+        if (keyedService)
+        {
+            services.AddKeyedScoped<ToolLabel>("selected", (_, _) => new("selecionado"));
+        }
         services.AddAuthorization();
         services.AddMcpServer().AddAuthorizationFilters().WithValueObjectTools<ExampleTools>();
         return services.BuildServiceProvider();
@@ -241,6 +266,8 @@ public sealed class ValueObjectToolTests
 
     public sealed record ContactInput(EmailAddress Email);
 
+    private sealed record ToolLabel(string Value);
+
     [Authorize]
     private sealed class ExampleTools(InvocationProbe probe)
     {
@@ -270,5 +297,8 @@ public sealed class ValueObjectToolTests
 
         [McpServerTool(Name = "failure")]
         public static string Failure(SearchText? search = null) => throw new JsonException("Falha interna de serialização.");
+
+        [McpServerTool(Name = "keyed")]
+        public static string Keyed(FullName name, [FromKeyedServices("selected")] ToolLabel label) => name.Value + "|" + label.Value;
     }
 }
