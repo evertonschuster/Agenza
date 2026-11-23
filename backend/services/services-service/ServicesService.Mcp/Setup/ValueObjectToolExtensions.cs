@@ -21,6 +21,12 @@ public static class ValueObjectToolExtensions
 
         foreach (var method in methods)
         {
+            // O SDK injetaria o serviço sem chave no lugar do serviço com chave.
+            if (method.GetParameters().Any(parameter => parameter.GetCustomAttribute<FromKeyedServicesAttribute>() is not null))
+            {
+                throw new NotSupportedException($"A ferramenta {typeof(T).Name}.{method.Name} usa [FromKeyedServices], que o SDK MCP não resolve.");
+            }
+
             builder.Services.AddSingleton<McpServerTool>(services =>
             {
                 var serializerOptions = new JsonSerializerOptions(McpJsonUtilities.DefaultOptions)
@@ -43,84 +49,16 @@ public static class ValueObjectToolExtensions
                 }
 
                 ApplyParameterNullability(tool.ProtocolTool, method);
-                var inputProperties = tool.ProtocolTool.InputSchema.GetProperty("properties");
                 var bindingOptions = new JsonSerializerOptions(serializerOptions)
                 {
                     RespectNullableAnnotations = true,
                     RespectRequiredConstructorParameters = true,
                 };
-                var functionOptions = new AIFunctionFactoryOptions
-                {
-                    Name = tool.ProtocolTool.Name,
-                    Description = tool.ProtocolTool.Description,
-                    SerializerOptions = serializerOptions,
-                    ExcludeResultSchema = true,
-                    MarshalResult = (result, _, _) => new ValueTask<object?>(result),
-                    ConfigureParameterBinding = parameter =>
-                    {
-                        if (parameter.ParameterType == typeof(IServiceProvider)
-                            || parameter.ParameterType == typeof(AIFunctionArguments))
-                        {
-                            return default;
-                        }
-
-                        var name = parameter.Name!;
-                        if (inputProperties.TryGetProperty(name, out _))
-                        {
-                            return new()
-                            {
-                                BindParameter = (parameter, arguments) => ToolArgumentBinder.Bind(parameter, name, arguments, bindingOptions),
-                            };
-                        }
-
-                        return new()
-                        {
-                            ExcludeFromSchema = true,
-                            BindParameter = BindService,
-                        };
-                    },
-                };
-                AIFunction function;
-                if (method.IsStatic)
-                {
-                    function = AIFunctionFactory.Create(method, target: null, functionOptions);
-                }
-                else
-                {
-                    function = AIFunctionFactory.Create(method,
-                        arguments => ActivatorUtilities.CreateInstance<T>(arguments.Services!), functionOptions);
-                }
-
-                var invocationTool = McpServerTool.Create(function, new McpServerToolCreateOptions
-                {
-                    SerializerOptions = serializerOptions,
-                    Metadata = tool.Metadata,
-                    UseStructuredContent = method.GetCustomAttribute<McpServerToolAttribute>()!.UseStructuredContent,
-                    OutputSchema = tool.ProtocolTool.OutputSchema,
-                });
-                return new ValueObjectMcpServerTool(tool, invocationTool);
+                return new ValueObjectMcpServerTool(tool, method, bindingOptions);
             });
         }
 
         return builder;
-    }
-
-    private static object? BindService(ParameterInfo parameter, AIFunctionArguments arguments)
-    {
-        var service = parameter.GetCustomAttribute<FromKeyedServicesAttribute>() is { } keyed
-            ? (arguments.Services as IKeyedServiceProvider)?.GetKeyedService(parameter.ParameterType, keyed.Key)
-            : arguments.Services?.GetService(parameter.ParameterType);
-        if (service is not null)
-        {
-            return service;
-        }
-
-        if (parameter.HasDefaultValue)
-        {
-            return parameter.DefaultValue;
-        }
-
-        throw new InvalidOperationException($"Missing service: {parameter.ParameterType.Name}.");
     }
 
     private static JsonNode TransformSchema(AIJsonSchemaCreateContext context, JsonNode schema)

@@ -127,14 +127,16 @@ public sealed class ValueObjectToolTests
     }
 
     [Fact]
-    public async Task Falha_de_vo_dependente_de_tempo_nao_repete_a_conversao()
+    public async Task Todos_os_campos_invalidos_voltam_na_mesma_resposta()
     {
         using var provider = Services();
+        using var scope = provider.CreateScope();
 
-        var result = await Invoke(provider, "birthday", "{\"date\":\"2030-01-01\"}", TestContext.Current.CancellationToken);
+        var result = await Invoke(scope.ServiceProvider, "pair", "{\"name\":\"\",\"email\":\"invalido\"}", TestContext.Current.CancellationToken);
 
-        result.IsError.Should().BeTrue();
-        ((FixedTimeProvider)provider.GetRequiredService<TimeProvider>()).Calls.Should().Be(1);
+        var fieldErrors = Error(result).GetProperty("fieldErrors");
+        fieldErrors.EnumerateObject().Select(field => field.Name).Should().BeEquivalentTo("name", "email");
+        fieldErrors.GetProperty("email")[0].GetProperty("message").GetString().Should().Be(EmailAddress.Create("invalido").Error);
     }
 
     [Theory]
@@ -185,24 +187,12 @@ public sealed class ValueObjectToolTests
         probe.CancellationToken.Should().Be(TestContext.Current.CancellationToken);
     }
 
-    [Theory]
-    [InlineData(true)]
-    [InlineData(false)]
-    public async Task Servico_com_chave_respeita_a_chave_sem_recorrer_ao_servico_padrao(bool registered)
+    [Fact]
+    public void Servico_com_chave_e_recusado_no_registro_porque_o_sdk_nao_o_resolve()
     {
-        using var provider = Services(registered);
-        using var scope = provider.CreateScope();
-        var action = async () => await Invoke(scope.ServiceProvider, "keyed", "{\"name\":\" Maria \"}", TestContext.Current.CancellationToken);
+        var action = () => new ServiceCollection().AddMcpServer().WithValueObjectTools<KeyedTools>();
 
-        if (!registered)
-        {
-            await action.Should().ThrowAsync<InvalidOperationException>();
-            return;
-        }
-
-        var result = await action();
-        result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>()
-            .Which.Text.Should().Be("Maria|selecionado");
+        action.Should().Throw<NotSupportedException>().WithMessage("*FromKeyedServices*");
     }
 
     private static JsonElement Error(CallToolResult result)
@@ -215,16 +205,11 @@ public sealed class ValueObjectToolTests
         return error.Clone();
     }
 
-    private static ServiceProvider Services(bool keyedService = true)
+    private static ServiceProvider Services()
     {
         var services = new ServiceCollection().AddLogging();
         services.AddSingleton<TimeProvider>(new FixedTimeProvider());
         services.AddScoped<InvocationProbe>();
-        services.AddSingleton(new ToolLabel("padrão"));
-        if (keyedService)
-        {
-            services.AddKeyedScoped<ToolLabel>("selected", (_, _) => new("selecionado"));
-        }
         services.AddAuthorization();
         services.AddMcpServer().AddAuthorizationFilters().WithValueObjectTools<ExampleTools>();
         return services.BuildServiceProvider();
@@ -266,7 +251,11 @@ public sealed class ValueObjectToolTests
 
     public sealed record ContactInput(EmailAddress Email);
 
-    private sealed record ToolLabel(string Value);
+    private sealed class KeyedTools
+    {
+        [McpServerTool(Name = "keyed")]
+        public static string Keyed(FullName name, [FromKeyedServices("selected")] object label) => name.Value;
+    }
 
     [Authorize]
     private sealed class ExampleTools(InvocationProbe probe)
@@ -297,8 +286,5 @@ public sealed class ValueObjectToolTests
 
         [McpServerTool(Name = "failure")]
         public static string Failure(SearchText? search = null) => throw new JsonException("Falha interna de serialização.");
-
-        [McpServerTool(Name = "keyed")]
-        public static string Keyed(FullName name, [FromKeyedServices("selected")] ToolLabel label) => name.Value + "|" + label.Value;
     }
 }
