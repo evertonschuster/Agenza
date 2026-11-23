@@ -41,11 +41,82 @@ public static class ValueObjectToolExtensions
                 }
 
                 ApplyParameterNullability(tool.ProtocolTool, method);
-                return new ValueObjectMcpServerTool(tool, method, serializerOptions);
+                var inputProperties = tool.ProtocolTool.InputSchema.GetProperty("properties");
+                var bindingOptions = new JsonSerializerOptions(serializerOptions)
+                {
+                    RespectNullableAnnotations = true,
+                    RespectRequiredConstructorParameters = true,
+                };
+                var functionOptions = new AIFunctionFactoryOptions
+                {
+                    Name = tool.ProtocolTool.Name,
+                    Description = tool.ProtocolTool.Description,
+                    SerializerOptions = serializerOptions,
+                    ExcludeResultSchema = true,
+                    MarshalResult = (result, _, _) => new ValueTask<object?>(result),
+                    ConfigureParameterBinding = parameter =>
+                    {
+                        if (parameter.ParameterType == typeof(IServiceProvider)
+                            || parameter.ParameterType == typeof(AIFunctionArguments))
+                        {
+                            return default;
+                        }
+
+                        var name = parameter.Name!;
+                        if (inputProperties.TryGetProperty(name, out _))
+                        {
+                            return new()
+                            {
+                                BindParameter = (parameter, arguments) => ToolArgumentBinder.Bind(parameter, name, arguments, bindingOptions),
+                            };
+                        }
+
+                        return new()
+                        {
+                            ExcludeFromSchema = true,
+                            BindParameter = BindService,
+                        };
+                    },
+                };
+                AIFunction function;
+                if (method.IsStatic)
+                {
+                    function = AIFunctionFactory.Create(method, target: null, functionOptions);
+                }
+                else
+                {
+                    function = AIFunctionFactory.Create(method,
+                        arguments => ActivatorUtilities.CreateInstance<T>(arguments.Services!), functionOptions);
+                }
+
+                var invocationTool = McpServerTool.Create(function, new McpServerToolCreateOptions
+                {
+                    SerializerOptions = serializerOptions,
+                    Metadata = tool.Metadata,
+                    UseStructuredContent = method.GetCustomAttribute<McpServerToolAttribute>()!.UseStructuredContent,
+                    OutputSchema = tool.ProtocolTool.OutputSchema,
+                });
+                return new ValueObjectMcpServerTool(tool, invocationTool);
             });
         }
 
         return builder;
+    }
+
+    private static object? BindService(ParameterInfo parameter, AIFunctionArguments arguments)
+    {
+        var service = arguments.Services?.GetService(parameter.ParameterType);
+        if (service is not null)
+        {
+            return service;
+        }
+
+        if (parameter.HasDefaultValue)
+        {
+            return parameter.DefaultValue;
+        }
+
+        throw new InvalidOperationException($"Missing service: {parameter.ParameterType.Name}.");
     }
 
     private static JsonNode TransformSchema(AIJsonSchemaCreateContext context, JsonNode schema)

@@ -1,9 +1,11 @@
 using System.ComponentModel;
 using System.Globalization;
+using System.Security.Claims;
 using System.Text.Json;
 using Admin.SharedKernel.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -90,11 +92,116 @@ public sealed class ValueObjectToolTests
         await action.Should().ThrowAsync<JsonException>().WithMessage("Falha interna de serialização.");
     }
 
+    [Theory]
+    [InlineData("{}", "name")]
+    [InlineData("{\"name\":null,\"email\":\"maria@exemplo.com\"}", "name")]
+    [InlineData("{\"name\":\"Maria\",\"email\":null}", "email")]
+    [InlineData("{\"name\":\"Maria\",\"email\":\"  \"}", "email")]
+    [InlineData("{\"name\":\"\",\"email\":\"invalido\"}", "name")]
+    public async Task Dois_vos_recusam_ausencia_null_e_valores_invalidos_antes_da_execucao(string arguments, string field)
+    {
+        using var provider = Services();
+        using var scope = provider.CreateScope();
+
+        var result = await Invoke(scope.ServiceProvider, "pair", arguments, TestContext.Current.CancellationToken);
+
+        var error = Error(result);
+        error.GetProperty("fieldErrors").TryGetProperty(field, out _).Should().BeTrue();
+        scope.ServiceProvider.GetRequiredService<InvocationProbe>().Calls.Should().Be(0);
+    }
+
+    [Theory]
+    [InlineData("birthday", "{\"date\":\"nao-e-data\"}", "date")]
+    [InlineData("birthday", "{\"date\":123}", "date")]
+    [InlineData("contacts", "{\"contacts\":[{\"email\":\"invalido\"}]}", "contacts[0].email")]
+    public async Task Erros_estruturais_e_de_colecao_tem_campo_identificado_e_mensagem_em_portugues(
+        string name, string arguments, string field)
+    {
+        using var provider = Services();
+
+        var result = await Invoke(provider, name, arguments, TestContext.Current.CancellationToken);
+
+        var error = Error(result);
+        error.GetProperty("fieldErrors").GetProperty(field)[0].GetProperty("message").GetString()
+            .Should().BeOneOf("O valor informado é inválido para este campo.", EmailAddress.Create("invalido").Error);
+    }
+
+    [Fact]
+    public async Task Falha_de_vo_dependente_de_tempo_nao_repete_a_conversao()
+    {
+        using var provider = Services();
+
+        var result = await Invoke(provider, "birthday", "{\"date\":\"2030-01-01\"}", TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        ((FixedTimeProvider)provider.GetRequiredService<TimeProvider>()).Calls.Should().Be(1);
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Pipeline_de_autorizacao_permite_ou_recusa_ferramenta_com_dois_vos(bool authenticated)
+    {
+        using var provider = Services();
+        using var scope = provider.CreateScope();
+        var services = scope.ServiceProvider;
+        var tool = services.GetServices<McpServerTool>().Single(tool => tool.ProtocolTool.Name == "pair");
+        var options = services.GetRequiredService<IOptions<McpServerOptions>>().Value;
+        await using var transport = new StreamServerTransport(Stream.Null, Stream.Null);
+        await using var server = McpServer.Create(transport, options, serviceProvider: services);
+        var identity = new ClaimsIdentity();
+        if (authenticated)
+        {
+            identity = new ClaimsIdentity("Bearer");
+        }
+
+        var context = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" },
+            new CallToolRequestParams
+            {
+                Name = "pair",
+                Arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>("{\"name\":\" Maria \" ,\"email\":\" MARIA@EXEMPLO.COM \"}"),
+            })
+        { Services = services, User = new ClaimsPrincipal(identity), MatchedPrimitive = tool };
+        McpRequestHandler<CallToolRequestParams, CallToolResult> handler = (request, token) => tool.InvokeAsync(request, token);
+        foreach (var filter in options.Filters.Request.CallToolFilters.Reverse())
+        {
+            handler = filter(handler);
+        }
+
+        var action = async () => await handler(context, TestContext.Current.CancellationToken);
+        var probe = services.GetRequiredService<InvocationProbe>();
+        if (!authenticated)
+        {
+            await action.Should().ThrowAsync<McpProtocolException>();
+            probe.Calls.Should().Be(0);
+            return;
+        }
+
+        var result = await action();
+        result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>()
+            .Which.Text.Should().Be("Maria|maria@exemplo.com");
+        probe.Calls.Should().Be(1);
+        probe.CancellationToken.Should().Be(TestContext.Current.CancellationToken);
+    }
+
+    private static JsonElement Error(CallToolResult result)
+    {
+        result.IsError.Should().BeTrue();
+        var text = result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>().Subject.Text;
+        using var json = JsonDocument.Parse(text);
+        var error = json.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        return error.Clone();
+    }
+
     private static ServiceProvider Services()
     {
         var services = new ServiceCollection().AddLogging();
         services.AddSingleton<TimeProvider>(new FixedTimeProvider());
-        services.AddMcpServer().WithValueObjectTools<ExampleTools>();
+        services.AddScoped<InvocationProbe>();
+        services.AddAuthorization();
+        services.AddMcpServer().AddAuthorizationFilters().WithValueObjectTools<ExampleTools>();
         return services.BuildServiceProvider();
     }
 
@@ -116,13 +223,26 @@ public sealed class ValueObjectToolTests
 
     private sealed class FixedTimeProvider : TimeProvider
     {
-        public override DateTimeOffset GetUtcNow() => new(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        public int Calls { get; private set; }
+
+        public override DateTimeOffset GetUtcNow()
+        {
+            Calls++;
+            return new(2030, 1, 1, 0, 0, 0, TimeSpan.Zero);
+        }
+    }
+
+    private sealed class InvocationProbe
+    {
+        public int Calls { get; set; }
+
+        public CancellationToken CancellationToken { get; set; }
     }
 
     public sealed record ContactInput(EmailAddress Email);
 
     [Authorize]
-    private sealed class ExampleTools
+    private sealed class ExampleTools(InvocationProbe probe)
     {
         [McpServerTool(Name = "email")]
         public static string Email([Description("E-mail de contato.")] EmailAddress? email = null) => email?.Value ?? "ausente";
@@ -135,6 +255,18 @@ public sealed class ValueObjectToolTests
 
         [McpServerTool(Name = "contact")]
         public static string Contact(ContactInput contact) => contact.Email.Value;
+
+        [McpServerTool(Name = "contacts")]
+        public static string Contacts(IReadOnlyList<ContactInput> contacts) => contacts[0].Email.Value;
+
+        [McpServerTool(Name = "pair")]
+        public string Pair(FullName name, EmailAddress email, InvocationProbe methodProbe, CancellationToken cancellationToken)
+        {
+            ReferenceEquals(probe, methodProbe).Should().BeTrue();
+            probe.Calls++;
+            probe.CancellationToken = cancellationToken;
+            return name.Value + "|" + email.Value;
+        }
 
         [McpServerTool(Name = "failure")]
         public static string Failure(SearchText? search = null) => throw new JsonException("Falha interna de serialização.");
