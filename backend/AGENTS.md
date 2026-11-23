@@ -43,6 +43,8 @@ API and MCP share the authenticated-tenant policy, without additional subject-fo
 requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses the tenant claim.
 MCP tools receive shared value objects directly; their conversion and primitive schemas belong to
 the MCP setup, not to individual tool methods.
+MCP schemas reuse standard `Description` and `DefaultValue` metadata from the owning types,
+including Domain and Application members.
 
 ## Validation and delivery
 
