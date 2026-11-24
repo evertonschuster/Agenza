@@ -73,10 +73,13 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
+          fetch-depth: 0 # Sonar needs history for accurate blame/new-code detection
 
       - uses: actions/setup-node@v7
         with:
@@ -106,6 +109,25 @@ jobs:
 
       - name: Test
         run: npm run test:coverage --workspace=apps/admin-frontend
+
+      # Reuses coverage/lcov.info from the step above. continue-on-error: a SonarCloud
+      # outage must not block merges. Skips without the secret (forks, unconfigured repo).
+      - name: Sonar analysis
+        if: env.SONAR_TOKEN != ''
+        continue-on-error: true
+        uses: SonarSource/sonarqube-scan-action@v8
+        env:
+          SONAR_HOST_URL: https://sonarcloud.io
+        with:
+          projectBaseDir: apps/admin-frontend
+          args: >
+            -Dsonar.organization=evertonschuster
+            -Dsonar.projectKey=agenza-frontend
+            -Dsonar.sources=src
+            -Dsonar.tests=src
+            -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx
+            -Dsonar.exclusions=**/*.test.ts,**/*.test.tsx,src/test/**
+            -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
 
   # e2e/*.spec.ts drives real identity-service logins, so it needs the full Aspire
   # stack running - that only happens in api-contract-check below, not here.
