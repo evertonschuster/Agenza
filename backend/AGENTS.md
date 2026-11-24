@@ -43,9 +43,10 @@ API and MCP share the authenticated-tenant policy, without additional subject-fo
 requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses the tenant claim.
 MCP tools receive shared value objects directly; their conversion and primitive schemas belong to
 the MCP setup, not to individual tool methods. Their wire format is the API's (same value object and
-enum converters); the SDK exposes no binding hook, so the tool wrapper validates arguments first and
-answers every invalid field at once. `[FromKeyedServices]` is refused in MCP tools: the SDK would
-inject the unkeyed service.
+enum converters). The SDK owns argument binding and exception responses; do not pre-deserialize
+arguments or reproduce REST error messages and field details for conversion failures. Native MCP
+error messages may remain in the SDK's language; Application Result failures keep their mapping.
+`[FromKeyedServices]` is refused in MCP tools: the SDK would inject the unkeyed service.
 MCP schemas reuse standard `Description` and `DefaultValue` metadata from the owning types,
 including Domain and Application members.
 
