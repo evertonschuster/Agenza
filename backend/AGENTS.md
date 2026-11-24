@@ -41,14 +41,12 @@ OAuth resource scopes;
 OAuth audiences still identify the destination of each token.
 API and MCP share the authenticated-tenant policy, without additional subject-format or scope
 requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses the tenant claim.
-MCP tools receive shared value objects directly; their conversion and primitive schemas belong to
-the MCP setup, not to individual tool methods. Their wire format is the API's (same value object and
-enum converters). The SDK owns argument binding and exception responses; do not pre-deserialize
-arguments or reproduce REST error messages and field details for conversion failures. Native MCP
-error messages may remain in the SDK's language; Application Result failures keep their mapping.
-`[FromKeyedServices]` is refused in MCP tools: the SDK would inject the unkeyed service.
-MCP schemas reuse standard `Description` and `DefaultValue` metadata from the owning types,
-including Domain and Application members.
+MCP tools use primitive input contracts with `Description` metadata and constructor defaults,
+registered through the SDK's `WithTools<T>()`. Map inputs explicitly to Application requests using
+the existing value object factories; do not add generic binding or schema infrastructure for VOs.
+The SDK owns argument binding, schema generation and exception responses. Native MCP error messages
+may remain in the SDK's language; expected value object and Application Result failures keep their
+mapping. MCP output uses the shared value object and enum converters.
 
 ## Validation and delivery
 
