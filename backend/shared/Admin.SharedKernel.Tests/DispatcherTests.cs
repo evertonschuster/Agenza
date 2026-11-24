@@ -66,6 +66,39 @@ public class DispatcherTests
     }
 
     [Fact]
+    public async Task Comando_nulo_retorna_erro_de_validacao()
+    {
+        var dispatcher = BuildDispatcher();
+
+        var result = await dispatcher.Send(null, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Error.Validation("Validation.Failed", "Informe os dados da operação."));
+    }
+
+    [Fact]
+    public async Task Comando_nulo_com_tipo_de_resposta_retorna_erro_de_validacao()
+    {
+        var dispatcher = BuildDispatcher();
+
+        var result = await dispatcher.Send<string>(null, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Error.Validation("Validation.Failed", "Informe os dados da operação."));
+    }
+
+    [Fact]
+    public async Task Consulta_nula_retorna_erro_de_validacao()
+    {
+        var dispatcher = BuildDispatcher();
+
+        var result = await dispatcher.Query<int>(null, TestContext.Current.CancellationToken);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Should().Be(Error.Validation("Validation.Failed", "Informe os parâmetros da consulta."));
+    }
+
+    [Fact]
     public async Task Send_Generic_ResolvesAndInvokesTheRegisteredHandler()
     {
         var dispatcher = BuildDispatcher();

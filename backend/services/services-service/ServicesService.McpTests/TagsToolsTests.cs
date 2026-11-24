@@ -47,8 +47,52 @@ public sealed class TagsToolsTests
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("type").GetString().Should().Be("Validation");
-        error.GetProperty("message").GetString().Should().Be(SearchText.Create(search).Error);
-        error.GetProperty("fieldErrors").GetProperty("search")[0].GetProperty("message").GetString().Should().Be(SearchText.Create(search).Error);
+        error.GetProperty("message").GetString().Should().Be("O valor informado é inválido.");
+        error.GetProperty("fieldErrors").GetProperty("query.search")[0].GetProperty("message").GetString()
+            .Should().Be("O valor informado é inválido.");
+        handler.Query.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("page")]
+    [InlineData("pageSize")]
+    public async Task Paginacao_fracionaria_identifica_o_campo_sem_executar_a_listagem(string field)
+    {
+        var handler = new RecordingHandler();
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+
+        var result = await Invoke(scope.ServiceProvider, new Dictionary<string, double> { [field] = 1.5 },
+            TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("type").GetString().Should().Be("Validation");
+        error.GetProperty("message").GetString().Should().Be("Informe um número inteiro.");
+        var fieldError = error.GetProperty("fieldErrors").GetProperty($"query.{field}")[0];
+        fieldError.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        fieldError.GetProperty("message").GetString().Should().Be("Informe um número inteiro.");
+        handler.Query.Should().BeNull();
+    }
+
+    [Fact]
+    public async Task Consulta_nula_retorna_erro_de_validacao_sem_executar_a_listagem()
+    {
+        var handler = new RecordingHandler();
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+
+        var result = await Invoke(scope.ServiceProvider, null, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("type").GetString().Should().Be("Validation");
+        error.GetProperty("message").GetString().Should().Be("Informe os parâmetros da consulta.");
+        error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
         handler.Query.Should().BeNull();
     }
 
@@ -115,7 +159,7 @@ public sealed class TagsToolsTests
         return provider;
     }
 
-    private static Task<CallToolResult> Invoke(IServiceProvider services, object query, CancellationToken cancellationToken) =>
+    private static Task<CallToolResult> Invoke(IServiceProvider services, object? query, CancellationToken cancellationToken) =>
         McpToolCall.InvokeAsync(services, "list_tags", new Dictionary<string, object?> { ["query"] = query }, cancellationToken);
 
     private sealed class RecordingHandler : IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>

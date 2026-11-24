@@ -6,6 +6,9 @@ namespace Admin.SharedKernel;
 // Hand-rolled instead of MediatR, which needs a commercial license from version 13.
 public sealed class Dispatcher : IDispatcher
 {
+    private static readonly Error MissingCommand = Error.Validation("Validation.Failed", "Informe os dados da operação.");
+    private static readonly Error MissingQuery = Error.Validation("Validation.Failed", "Informe os parâmetros da consulta.");
+
     private readonly IServiceProvider _serviceProvider;
 
     public Dispatcher(IServiceProvider serviceProvider)
@@ -15,6 +18,11 @@ public sealed class Dispatcher : IDispatcher
 
     public async Task<Result> Send(ICommand command, CancellationToken cancellationToken = default)
     {
+        if (command is null)
+        {
+            return Result.Failure(MissingCommand);
+        }
+
         var commandType = command.GetType();
 
         var validationError = await ValidateAsync(_serviceProvider, command, commandType, cancellationToken);
@@ -34,6 +42,11 @@ public sealed class Dispatcher : IDispatcher
         ICommand<TResponse> command,
         CancellationToken cancellationToken = default)
     {
+        if (command is null)
+        {
+            return Result.Failure<TResponse>(MissingCommand);
+        }
+
         var commandType = command.GetType();
 
         var validationError = await ValidateAsync(_serviceProvider, command, commandType, cancellationToken);
@@ -53,6 +66,11 @@ public sealed class Dispatcher : IDispatcher
         IQuery<TResponse> query,
         CancellationToken cancellationToken = default)
     {
+        if (query is null)
+        {
+            return Result.Failure<TResponse>(MissingQuery);
+        }
+
         var queryType = query.GetType();
 
         var validationError = await ValidateAsync(_serviceProvider, query, queryType, cancellationToken);
