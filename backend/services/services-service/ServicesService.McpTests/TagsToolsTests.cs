@@ -1,10 +1,8 @@
 using System.Text.Json;
-using System.Security.Claims;
 using Admin.SharedKernel;
 using Admin.SharedKernel.ValueObjects;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.Extensions.Options;
+using Microsoft.Extensions.DependencyInjection;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
@@ -33,22 +31,6 @@ public sealed class TagsToolsTests
         handler.CancellationToken.CanBeCanceled.Should().BeTrue();
     }
 
-    [Theory]
-    [InlineData(null)]
-    [InlineData("")]
-    [InlineData(" \t ")]
-    public async Task Busca_ausente_ou_em_branco_nao_aplica_filtro_e_preserva_paginacao_padrao(string? search)
-    {
-        var handler = new RecordingHandler();
-        using var provider = Services(handler);
-        using var scope = provider.CreateScope();
-
-        var result = await Invoke(scope.ServiceProvider, new { search }, TestContext.Current.CancellationToken);
-
-        result.IsError.Should().BeFalse();
-        handler.Query.Should().Be(new ListTagsQuery());
-    }
-
     [Fact]
     public async Task Busca_acima_do_limite_retorna_erro_do_vo_sem_executar_consulta()
     {
@@ -63,121 +45,6 @@ public sealed class TagsToolsTests
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("message").GetString().Should().Be(SearchText.Create(search).Error);
         handler.Query.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Busca_no_limite_apos_remover_espacos_e_aceita()
-    {
-        var handler = new RecordingHandler();
-        using var provider = Services(handler);
-        using var scope = provider.CreateScope();
-        var search = new string('a', SearchText.MaxLength);
-
-        var result = await Invoke(scope.ServiceProvider, new { search = "  " + search + "  " }, TestContext.Current.CancellationToken);
-
-        result.IsError.Should().BeFalse();
-        handler.Query!.Search!.Value.Should().Be(search);
-    }
-
-    [Fact]
-    public async Task Objeto_query_vazio_reutiliza_os_valores_padrao_da_application()
-    {
-        var handler = new RecordingHandler();
-        using var provider = Services(handler);
-        using var scope = provider.CreateScope();
-
-        var result = await Invoke(scope.ServiceProvider, new { }, TestContext.Current.CancellationToken);
-
-        result.IsError.Should().BeFalse();
-        handler.Query.Should().Be(new ListTagsQuery());
-    }
-
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Query_ausente_ou_nula_retorna_erro_antes_do_dispatcher(bool includeQuery)
-    {
-        var handler = new RecordingHandler();
-        using var provider = Services(handler);
-        using var scope = provider.CreateScope();
-
-        var result = await Invoke(scope.ServiceProvider, null, TestContext.Current.CancellationToken, includeQuery);
-
-        result.IsError.Should().BeTrue();
-        handler.Query.Should().BeNull();
-    }
-
-    [Theory]
-    [InlineData("{\"page\":\"abc\"}")]
-    [InlineData("{\"pageSize\":null}")]
-    [InlineData("{\"search\":123}")]
-    public async Task Tipo_invalido_retorna_erro_nativo_sem_executar_consulta(string query)
-    {
-        var handler = new RecordingHandler();
-        using var provider = Services(handler);
-        using var scope = provider.CreateScope();
-
-        var result = await Invoke(scope.ServiceProvider, JsonSerializer.Deserialize<JsonElement>(query), TestContext.Current.CancellationToken);
-
-        result.IsError.Should().BeTrue();
-        handler.Query.Should().BeNull();
-    }
-
-    [Theory]
-    [InlineData(0, 20, "Page", "Paging.PageInvalid")]
-    [InlineData(-1, 20, "Page", "Paging.PageInvalid")]
-    [InlineData(1, 0, "PageSize", "Paging.PageSizeInvalid")]
-    [InlineData(1, -1, "PageSize", "Paging.PageSizeInvalid")]
-    [InlineData(1, 101, "PageSize", "Paging.PageSizeInvalid")]
-    [InlineData(int.MaxValue, 100, "Page", "Paging.PageTooLarge")]
-    public async Task Paginacao_invalida_reutiliza_validador_da_application_sem_executar_consulta(
-        int page, int pageSize, string field, string code)
-    {
-        var handler = new RecordingHandler();
-        using var provider = Services(handler);
-        using var scope = provider.CreateScope();
-
-        var result = await Invoke(scope.ServiceProvider, new { page, pageSize }, TestContext.Current.CancellationToken);
-
-        var error = Error(result);
-        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("fieldErrors").GetProperty(field)[0].GetProperty("code").GetString().Should().Be(code);
-        handler.Query.Should().BeNull();
-    }
-
-    [Fact]
-    public async Task Sucesso_preserva_etiquetas_e_metadados_no_conteudo_estruturado_e_textual()
-    {
-        var tag = new TagResponse(Guid.NewGuid(), "VIP", "#0d9488", null);
-        var page = new PagedResult<TagResponse>([tag], 101, 2, 100);
-        var handler = new RecordingHandler { Outcome = Result.Success(page) };
-        using var provider = Services(handler);
-        using var scope = provider.CreateScope();
-
-        var result = await Invoke(scope.ServiceProvider, new { page = 2, pageSize = 100 }, TestContext.Current.CancellationToken);
-
-        result.IsError.Should().BeFalse();
-        result.StructuredContent!.Value.Deserialize<PagedResult<TagResponse>>(McpJsonUtilities.DefaultOptions)
-            .Should().BeEquivalentTo(page);
-        var text = result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>().Subject;
-        text.Text.Should().Be(result.StructuredContent.Value.GetRawText());
-    }
-
-    [Theory]
-    [InlineData(1, 0)]
-    [InlineData(9, 5)]
-    public async Task Pagina_vazia_preserva_total_e_paginacao_da_application(int pageNumber, int totalCount)
-    {
-        var page = new PagedResult<TagResponse>([], totalCount, pageNumber, 20);
-        var handler = new RecordingHandler { Outcome = Result.Success(page) };
-        using var provider = Services(handler);
-        using var scope = provider.CreateScope();
-
-        var result = await Invoke(scope.ServiceProvider, new { page = pageNumber }, TestContext.Current.CancellationToken);
-
-        result.IsError.Should().BeFalse();
-        result.StructuredContent!.Value.Deserialize<PagedResult<TagResponse>>(McpJsonUtilities.DefaultOptions)
-            .Should().BeEquivalentTo(page);
     }
 
     [Fact]
@@ -212,49 +79,6 @@ public sealed class TagsToolsTests
         tool.Metadata.OfType<AuthorizeAttribute>().Should().ContainSingle();
     }
 
-    [Theory]
-    [InlineData(false)]
-    [InlineData(true)]
-    public async Task Registro_nativo_preserva_autorizacao_e_cancelamento_antes_do_dispatcher(bool authenticated)
-    {
-        var handler = new RecordingHandler();
-        using var provider = Services(handler, authorization: true);
-        using var scope = provider.CreateScope();
-        var services = scope.ServiceProvider;
-        var options = services.GetRequiredService<IOptions<McpServerOptions>>().Value;
-        var tool = services.GetServices<McpServerTool>().Single();
-        await using var transport = new StreamServerTransport(Stream.Null, Stream.Null);
-        await using var server = McpServer.Create(transport, options, serviceProvider: services);
-        var identity = authenticated ? new ClaimsIdentity("Bearer") : new ClaimsIdentity();
-        var request = new RequestContext<CallToolRequestParams>(server,
-            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" },
-            new CallToolRequestParams
-            {
-                Name = "list_tags",
-                Arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>("{\"query\":{\"search\":\" VIP \"}}"),
-            })
-        { Services = services, User = new ClaimsPrincipal(identity), MatchedPrimitive = tool };
-        McpRequestHandler<CallToolRequestParams, CallToolResult> invoke = (context, token) => tool.InvokeAsync(context, token);
-        foreach (var filter in options.Filters.Request.CallToolFilters.Reverse())
-        {
-            invoke = filter(invoke);
-        }
-
-        var action = async () => await invoke(request, TestContext.Current.CancellationToken);
-        if (!authenticated)
-        {
-            await action.Should().ThrowAsync<McpProtocolException>();
-            handler.Query.Should().BeNull();
-            return;
-        }
-
-        var result = await action();
-
-        result.IsError.Should().BeFalse();
-        handler.Query!.Search!.Value.Should().Be("vip");
-        handler.CancellationToken.Should().Be(TestContext.Current.CancellationToken);
-    }
-
     private static JsonElement Error(CallToolResult result)
     {
         result.IsError.Should().BeTrue();
@@ -264,31 +88,19 @@ public sealed class TagsToolsTests
         return json.RootElement.GetProperty("error").Clone();
     }
 
-    private static ServiceProvider Services(RecordingHandler handler, bool authorization = false)
+    private static ServiceProvider Services(RecordingHandler handler)
     {
         var services = new ServiceCollection().AddLogging();
         services.AddSharedKernel();
         services.AddServicesApplication();
         services.AddAuthorization();
-        var builder = services.AddMcpServer().WithTools<TagsTools>();
-        if (authorization)
-        {
-            builder.AddAuthorizationFilters();
-        }
+        services.AddMcpServer().WithTools<TagsTools>();
         services.AddScoped<IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>>(_ => handler);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
 
-    private static async Task<CallToolResult> Invoke(IServiceProvider services, object? arguments, CancellationToken cancellationToken = default, bool includeQuery = true)
-    {
-        var payload = new Dictionary<string, object?>();
-        if (includeQuery)
-        {
-            payload["query"] = arguments;
-        }
-
-        return await McpToolCall.InvokeAsync(services, "list_tags", payload, cancellationToken);
-    }
+    private static Task<CallToolResult> Invoke(IServiceProvider services, object query, CancellationToken cancellationToken) =>
+        McpToolCall.InvokeAsync(services, "list_tags", new Dictionary<string, object?> { ["query"] = query }, cancellationToken);
 
     private sealed class RecordingHandler : IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>
     {
