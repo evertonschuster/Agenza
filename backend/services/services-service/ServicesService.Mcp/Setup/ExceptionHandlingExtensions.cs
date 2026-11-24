@@ -19,6 +19,17 @@ public static class ExceptionHandlingExtensions
             {
                 return await next(context, cancellationToken);
             }
+            catch (Exception exception) when (ValueObjectFailure(exception) is not null)
+            {
+                var validation = ValueObjectFailure(exception)!;
+                var field = validation.Path is { } path && path.StartsWith("$.", StringComparison.Ordinal) ? path[2..] : string.Empty;
+                var error = Error.Validation("Validation.Failed", validation.ValidationMessage,
+                    new Dictionary<string, IReadOnlyList<FieldError>>
+                    {
+                        [field] = [new FieldError("Validation.Failed", validation.ValidationMessage)],
+                    });
+                return error.ToToolResult();
+            }
             catch (Exception exception) when (exception is not (McpException or InputRequiredException or ArgumentException or JsonException)
                 && !(exception is OperationCanceledException && cancellationToken.IsCancellationRequested))
             {
@@ -35,6 +46,24 @@ public static class ExceptionHandlingExtensions
                 return Error.Failure("Unexpected.Error", "Ocorreu um erro inesperado.").ToToolResult(traceId, correlationId);
             }
         }));
+    }
+
+    private static ValueObjectValidationException? ValueObjectFailure(Exception exception)
+    {
+        while (true)
+        {
+            if (exception is ValueObjectValidationException validation)
+            {
+                return validation;
+            }
+
+            if (exception is not (ArgumentException or JsonException) || exception.InnerException is not { } inner)
+            {
+                return null;
+            }
+
+            exception = inner;
+        }
     }
 
     private static string? Clean(string? value) =>

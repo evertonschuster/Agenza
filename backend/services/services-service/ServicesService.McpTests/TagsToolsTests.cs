@@ -3,12 +3,13 @@ using Admin.SharedKernel;
 using Admin.SharedKernel.ValueObjects;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.Extensions.DependencyInjection;
-using ModelContextProtocol;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ServicesService.Application;
 using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.ListTags;
+using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
 using Result = Admin.SharedKernel.Result;
 
@@ -32,7 +33,7 @@ public sealed class TagsToolsTests
     }
 
     [Fact]
-    public async Task Busca_acima_do_limite_retorna_erro_do_vo_sem_executar_consulta()
+    public async Task Busca_acima_do_limite_falha_no_binding_sem_executar_consulta()
     {
         var handler = new RecordingHandler();
         using var provider = Services(handler);
@@ -41,10 +42,31 @@ public sealed class TagsToolsTests
 
         var result = await Invoke(scope.ServiceProvider, new { search }, TestContext.Current.CancellationToken);
 
-        var error = Error(result);
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("type").GetString().Should().Be("Validation");
         error.GetProperty("message").GetString().Should().Be(SearchText.Create(search).Error);
+        error.GetProperty("fieldErrors").GetProperty("search")[0].GetProperty("message").GetString().Should().Be(SearchText.Create(search).Error);
         handler.Query.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    [InlineData("   ")]
+    public async Task Busca_ausente_ou_em_branco_chega_sem_filtro_com_paginacao_padrao(string? search)
+    {
+        var handler = new RecordingHandler();
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+        var query = search is null ? new Dictionary<string, object?>() : new Dictionary<string, object?> { ["search"] = search };
+
+        var result = await Invoke(scope.ServiceProvider, query, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeFalse();
+        handler.Query.Should().BeEquivalentTo(new ListTagsQuery());
     }
 
     [Fact]
@@ -52,7 +74,7 @@ public sealed class TagsToolsTests
     {
         using var provider = Services(new RecordingHandler());
         using var scope = provider.CreateScope();
-        var tool = scope.ServiceProvider.GetServices<McpServerTool>().Single();
+        var tool = scope.ServiceProvider.GetServices<McpServerTool>().Single(tool => tool.ProtocolTool.Name == "list_tags");
         var contract = tool.ProtocolTool;
 
         contract.Name.Should().Be("list_tags");
@@ -79,24 +101,18 @@ public sealed class TagsToolsTests
         tool.Metadata.OfType<AuthorizeAttribute>().Should().ContainSingle();
     }
 
-    private static JsonElement Error(CallToolResult result)
-    {
-        result.IsError.Should().BeTrue();
-        result.StructuredContent.Should().BeNull();
-        var text = result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>().Subject;
-        using var json = JsonDocument.Parse(text.Text);
-        return json.RootElement.GetProperty("error").Clone();
-    }
-
     private static ServiceProvider Services(RecordingHandler handler)
     {
         var services = new ServiceCollection().AddLogging();
         services.AddSharedKernel();
         services.AddServicesApplication();
         services.AddAuthorization();
-        services.AddMcpServer().WithTools<TagsTools>();
+        var jsonOptions = services.AddMcpValueObjectInputs(TimeProvider.System);
+        services.AddMcpServer().WithToolExceptionHandling().WithTools<TagsTools>(jsonOptions);
         services.AddScoped<IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>>(_ => handler);
-        return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+        _ = provider.GetRequiredService<IOptions<McpServerOptions>>().Value;
+        return provider;
     }
 
     private static Task<CallToolResult> Invoke(IServiceProvider services, object query, CancellationToken cancellationToken) =>

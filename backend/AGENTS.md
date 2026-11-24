@@ -41,14 +41,19 @@ OAuth resource scopes;
 OAuth audiences still identify the destination of each token.
 API and MCP share the authenticated-tenant policy, without additional subject-format or scope
 requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses the tenant claim.
-MCP tools use primitive input contracts with `Description` metadata and constructor defaults,
-registered through the SDK's `WithTools<T>()`. Map inputs explicitly to Application requests using
-the existing value object factories; do not add generic binding or schema infrastructure for VOs.
-The SDK owns argument binding and schema generation. Keep one small tool filter for safe unexpected
-error responses with trace and correlation IDs; argument/JSON exceptions, MCP control flow and
+Register MCP tools through the SDK's `WithTools`, without application-owned discovery or registration.
+`AddMcpValueObjectInputs` supplies the shared JSON options to that registration and adjusts schemas
+of the registered tools. Queries and commands may be parameters directly, including shared value
+objects; tool methods do not duplicate input contracts or parse VOs. Preserve descriptions,
+defaults and nullability in the published schema.
+The SDK owns argument binding and invocation; do not pre-deserialize arguments or duplicate VO factories.
+Keep one small tool filter for safe unexpected error responses with trace and correlation IDs;
+argument/JSON exceptions, MCP control flow and
 requested cancellation stay with the SDK. Native MCP error messages may remain in the SDK's language;
-expected value object and Application Result failures keep their mapping. MCP output uses the shared
-value object and enum converters.
+VO factory failures during binding return MCP tool errors with `Validation.Failed`, the safe factory
+message and field errors. Only the shared converter's typed validation failure is mapped this way;
+other JSON/argument exceptions stay with the SDK. Application Result failures keep their mapping.
+MCP output uses the shared value object and enum converters.
 
 ## Validation and delivery
 

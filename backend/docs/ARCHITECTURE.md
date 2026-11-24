@@ -417,7 +417,9 @@ Adapters over a framework or SDK (controllers, MCP tools) are not tested for wha
 Application already proves: binding, native error texts, cancellation, authorization filters,
 validators, defaults and value object rules. Test what the adapter owns: its mapping to the Application
 request, the contract it publishes (schema, annotations, `[Authorize]`) and the shared wire format.
-A test that would break only when the SDK changes its message is not worth keeping.
+A test that would break only when the SDK changes its message is not worth keeping. The host's
+shared-converter and schema integration is adapter behavior: prove that typed Application inputs
+reach handlers normalized, invalid VOs do not reach them and the published schema matches the wire format.
 
 IdentityService.ProtocolTests exercises published OAuth metadata and token issuance with application
 and scope-manager doubles. It does not host HTTP in process or replace the real Aspire smoke;

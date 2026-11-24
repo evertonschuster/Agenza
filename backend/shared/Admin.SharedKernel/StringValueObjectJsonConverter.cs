@@ -11,7 +11,7 @@ internal sealed class StringValueObjectJsonConverter<T> : JsonConverter<T>
     {
         if (reader.TokenType != JsonTokenType.String)
         {
-            throw new JsonException(T.Create(null).Error);
+            throw new ValueObjectValidationException(T.Create(null).Error);
         }
 
         var text = reader.GetString();
@@ -23,12 +23,12 @@ internal sealed class StringValueObjectJsonConverter<T> : JsonConverter<T>
                 return null;
             }
 
-            throw new JsonException(T.Create(text).Error);
+            throw new ValueObjectValidationException(T.Create(text).Error);
         }
 
         var result = T.Create(text);
 
-        return result.IsSuccess ? result.Value : throw new JsonException(result.Error);
+        return result.IsSuccess ? result.Value : throw new ValueObjectValidationException(result.Error);
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)
