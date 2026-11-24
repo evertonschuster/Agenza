@@ -28,7 +28,7 @@ public sealed class TagsToolsTests
 
         result.IsError.Should().BeFalse();
         handler.Query.Should().BeEquivalentTo(new ListTagsQuery(SearchText.Create("vip").Value) { Page = 3, PageSize = 50 });
-        handler.CancellationToken.Should().Be(cancellationToken);
+        handler.CancellationToken.CanBeCanceled.Should().BeTrue();
     }
 
     [Theory]
@@ -48,7 +48,7 @@ public sealed class TagsToolsTests
     }
 
     [Fact]
-    public async Task Busca_acima_do_limite_retorna_erro_no_campo_sem_executar_consulta()
+    public async Task Busca_acima_do_limite_retorna_erro_nativo_sem_executar_consulta()
     {
         var handler = new RecordingHandler();
         using var provider = Services(handler);
@@ -57,11 +57,9 @@ public sealed class TagsToolsTests
 
         var result = await Invoke(scope.ServiceProvider, new { search }, TestContext.Current.CancellationToken);
 
-        var error = Error(result);
-        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("type").GetString().Should().Be("Validation");
-        error.GetProperty("fieldErrors").GetProperty("query.search")[0].GetProperty("message")
-            .GetString().Should().Be(SearchText.Create(search).Error);
+        result.IsError.Should().BeTrue();
+        result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>()
+            .Which.Text.Should().NotBeNullOrWhiteSpace().And.NotContain("Unexpected.Error");
         handler.Query.Should().BeNull();
     }
 
@@ -103,8 +101,23 @@ public sealed class TagsToolsTests
 
         var result = await Invoke(scope.ServiceProvider, null, TestContext.Current.CancellationToken, includeQuery);
 
-        var error = Error(result);
-        error.GetProperty("fieldErrors").TryGetProperty("query", out _).Should().BeTrue();
+        result.IsError.Should().BeTrue();
+        handler.Query.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("{\"page\":\"abc\"}")]
+    [InlineData("{\"pageSize\":null}")]
+    [InlineData("{\"search\":123}")]
+    public async Task Tipo_invalido_retorna_erro_nativo_sem_executar_consulta(string query)
+    {
+        var handler = new RecordingHandler();
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+
+        var result = await Invoke(scope.ServiceProvider, JsonSerializer.Deserialize<JsonElement>(query), TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
         handler.Query.Should().BeNull();
     }
 
@@ -217,24 +230,13 @@ public sealed class TagsToolsTests
 
     private static async Task<CallToolResult> Invoke(IServiceProvider services, object? arguments, CancellationToken cancellationToken = default, bool includeQuery = true)
     {
-        var tool = services.GetServices<McpServerTool>().Single();
-        await using var transport = new StreamServerTransport(Stream.Null, Stream.Null);
-        await using var server = McpServer.Create(transport, new McpServerOptions(), serviceProvider: services);
-        var payload = JsonSerializer.SerializeToElement(new { query = arguments });
-        if (!includeQuery)
+        var payload = new Dictionary<string, object?>();
+        if (includeQuery)
         {
-            payload = JsonSerializer.SerializeToElement(new { });
+            payload["query"] = arguments;
         }
 
-        var context = new RequestContext<CallToolRequestParams>(server,
-            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" },
-            new CallToolRequestParams
-            {
-                Name = "list_tags",
-                Arguments = payload.Deserialize<Dictionary<string, JsonElement>>(),
-            })
-        { Services = services };
-        return await tool.InvokeAsync(context, cancellationToken);
+        return await McpToolCall.InvokeAsync(services, "list_tags", payload, cancellationToken);
     }
 
     private sealed class RecordingHandler : IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>

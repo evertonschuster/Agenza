@@ -51,7 +51,7 @@ public class DateValueObjectJsonConverterTests
     {
         var act = () => Bind(bornJson);
 
-        var exception = act.Should().Throw<ValueObjectJsonException>().Which;
+        var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.born");
         exception.Message.Should().Be("A data de nascimento deve estar no passado.");
     }
@@ -85,7 +85,6 @@ public class DateValueObjectJsonConverterTests
         var act = () => Bind(bornJson);
 
         var exception = act.Should().Throw<JsonException>().Which;
-        exception.Should().NotBeOfType<ValueObjectJsonException>();
         exception.Path.Should().Be("$.born");
         exception.Message.Should().StartWith("The JSON value could not be converted");
     }

@@ -30,6 +30,8 @@ public static class ValueObjectToolExtensions
             builder.Services.AddSingleton<McpServerTool>(services =>
             {
                 var serializerOptions = McpWireFormat.Create(services.GetService<TimeProvider>() ?? TimeProvider.System);
+                serializerOptions.RespectNullableAnnotations = true;
+                serializerOptions.RespectRequiredConstructorParameters = true;
                 var options = new McpServerToolCreateOptions
                 {
                     Services = services,
@@ -48,12 +50,7 @@ public static class ValueObjectToolExtensions
                 }
 
                 ApplyParameterNullability(tool.ProtocolTool, method);
-                var bindingOptions = new JsonSerializerOptions(serializerOptions)
-                {
-                    RespectNullableAnnotations = true,
-                    RespectRequiredConstructorParameters = true,
-                };
-                return new ValueObjectMcpServerTool(tool, method, bindingOptions);
+                return tool;
             });
         }
 

@@ -32,6 +32,7 @@ public sealed class TagsTools(IDispatcher dispatcher)
         ListTagsQuery query,
         CancellationToken cancellationToken = default)
     {
+        ArgumentNullException.ThrowIfNull(query);
         var result = await dispatcher.Query(query, cancellationToken);
         return result.ToToolResult();
     }

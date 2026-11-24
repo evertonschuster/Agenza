@@ -90,7 +90,7 @@ public class StringValueObjectJsonConverterTests
     {
         var act = () => Bind($$"""{ "code": {{codeJson}} }""");
 
-        var exception = act.Should().Throw<ValueObjectJsonException>().Which;
+        var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.code");
         exception.Message.Should().Be(expectedMessage);
     }
