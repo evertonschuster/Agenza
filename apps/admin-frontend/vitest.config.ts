@@ -23,7 +23,7 @@ export default defineConfig({
     exclude: ['e2e/**', 'node_modules/**', '.claude/**'],
     coverage: {
       provider: 'v8',
-      reporter: ['text', 'html', 'lcov'],
+      reporter: ['text', 'lcov'],
       include: ['src/**'],
       exclude: [
         'src/main.tsx',

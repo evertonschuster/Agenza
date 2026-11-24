@@ -21,12 +21,17 @@ jobs:
   # (see https://github.blog/2021-06-16-handling-skipped-but-required-checks/).
   # Gating with a job-level `if:` instead makes the job report "skipped",
   # which GitHub does count as passing a required check.
+  #
+  # `contract` is a wider gate than `frontend`: a services-service response shape
+  # change is exactly the kind of drift
+  # src/shared/api/generated/services-api.d.ts needs to
+  # catch, even on a PR that never touches apps/admin-frontend itself.
   changes:
-    name: detect-frontend-changes
+    name: detect-changes
     runs-on: ubuntu-latest
     outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-      workspace_exists: ${{ steps.workspace.outputs.exists }}
+      frontend: ${{ steps.filter.outputs.frontend }}
+      contract: ${{ steps.filter.outputs.contract }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -37,30 +42,36 @@ jobs:
         run: |
           BASE="${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
           if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
+            echo "contract=true" >> "$GITHUB_OUTPUT"
             exit 0
           fi
+
           if git diff --name-only "$BASE" "${{ github.sha }}" | grep -qE '^(apps/admin-frontend/|package\.json$|package-lock\.json$|\.npmrc$|\.nvmrc$|\.editorconfig$|\.github/workflows/frontend-ci\.yml$)'; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
+            echo "frontend=true" >> "$GITHUB_OUTPUT"
           else
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
+            echo "frontend=false" >> "$GITHUB_OUTPUT"
           fi
 
-      # Transitional repo-restructure PRs can land with apps/admin-frontend not yet
-      # recreated (the app scaffold lands in a follow-up PR) - treat that the same as
-      # "nothing to check" instead of failing every npm --workspace command.
-      - id: workspace
-        run: |
-          if [ -f apps/admin-frontend/package.json ]; then
-            echo "exists=true" >> "$GITHUB_OUTPUT"
+          if git diff --quiet "$BASE" "${{ github.sha }}" -- \
+            apps/admin-frontend/ package.json package-lock.json .npmrc .nvmrc .editorconfig \
+            backend/AppHost/ backend/ServiceDefaults/ backend/shared/ \
+            backend/services/identity-service/ backend/services/services-service/ \
+            backend/AdminBackend.slnx backend/Directory.Build.props backend/Directory.Build.targets \
+            backend/Directory.Packages.props backend/NuGet.Config backend/global.json \
+            ai-services/assistant-service/app/ ai-services/assistant-service/pyproject.toml \
+            ai-services/assistant-service/uv.lock ai-services/assistant-service/.python-version \
+            infra/postgres/init/ scripts/smoke_oidc_contract.py scripts/smoke_tenant_foreign_keys.sql \
+            .github/workflows/frontend-ci.yml; then
+            echo "contract=false" >> "$GITHUB_OUTPUT"
           else
-            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "contract=true" >> "$GITHUB_OUTPUT"
           fi
 
   frontend-build-and-test:
     name: frontend-build-and-test
     needs: changes
-    if: needs.changes.outputs.relevant == 'true' && needs.changes.outputs.workspace_exists == 'true'
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -99,47 +110,10 @@ jobs:
   # e2e/*.spec.ts drives real identity-service logins, so it needs the full Aspire
   # stack running - that only happens in api-contract-check below, not here.
 
-  # Separate gate from `changes` above: a services-service response shape
-  # change is exactly the kind of drift
-  # src/shared/api/generated/services-api.d.ts needs to
-  # catch, even on a PR that never touches apps/admin-frontend itself.
-  api-contract-changes:
-    name: detect-api-contract-changes
-    runs-on: ubuntu-latest
-    outputs:
-      relevant: ${{ steps.filter.outputs.relevant }}
-    steps:
-      - uses: actions/checkout@v7
-        with:
-          persist-credentials: false
-          fetch-depth: 0
-
-      - id: filter
-        run: |
-          BASE="${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || github.event.before }}"
-          if [ -z "$BASE" ] || ! git cat-file -e "$BASE" 2>/dev/null; then
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-            exit 0
-          fi
-          if git diff --quiet "$BASE" "${{ github.sha }}" -- \
-            apps/admin-frontend/ package.json package-lock.json .npmrc .nvmrc .editorconfig \
-            backend/AppHost/ backend/ServiceDefaults/ backend/shared/ \
-            backend/services/identity-service/ backend/services/services-service/ \
-            backend/AdminBackend.slnx backend/Directory.Build.props backend/Directory.Build.targets \
-            backend/Directory.Packages.props backend/NuGet.Config backend/global.json \
-            ai-services/assistant-service/app/ ai-services/assistant-service/pyproject.toml \
-            ai-services/assistant-service/uv.lock ai-services/assistant-service/.python-version \
-            infra/postgres/init/ scripts/smoke_oidc_contract.py scripts/smoke_tenant_foreign_keys.sql \
-            .github/workflows/frontend-ci.yml; then
-            echo "relevant=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "relevant=true" >> "$GITHUB_OUTPUT"
-          fi
-
   api-contract-check:
     name: api-contract-check
-    needs: api-contract-changes
-    if: needs.api-contract-changes.outputs.relevant == 'true'
+    needs: changes
+    if: needs.changes.outputs.contract == 'true'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -205,13 +179,9 @@ jobs:
           ' < scripts/smoke_tenant_foreign_keys.sql
 
       - name: Check generated API types are up to date
-        # See detect-frontend-changes' workspace check above - skip rather than fail
-        # when apps/admin-frontend hasn't been (re)created yet in this branch.
-        if: hashFiles('apps/admin-frontend/package.json') != ''
         run: npm run generate:api-types:check --workspace=apps/admin-frontend
 
       - name: Install Playwright browser
-        if: hashFiles('apps/admin-frontend/package.json') != ''
         run: npm exec --workspace=apps/admin-frontend -- playwright install --with-deps chromium
 
       - name: Browser tests
@@ -219,7 +189,6 @@ jobs:
         # why this needs the Aspire stack above rather than living in frontend-build-and-test.
         # playwright.config.ts's webServer waits for :5173 itself (reusing Aspire's Vite server),
         # so there's no separate readiness step here.
-        if: hashFiles('apps/admin-frontend/package.json') != ''
         env:
           AGENZA_DISPOSABLE_TEST_DB: '1'
           AGENZA_TENANT_PROVISIONING_SECRET: postgres
