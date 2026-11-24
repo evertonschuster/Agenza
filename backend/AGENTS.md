@@ -44,9 +44,11 @@ requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses th
 MCP tools use primitive input contracts with `Description` metadata and constructor defaults,
 registered through the SDK's `WithTools<T>()`. Map inputs explicitly to Application requests using
 the existing value object factories; do not add generic binding or schema infrastructure for VOs.
-The SDK owns argument binding, schema generation and exception responses. Native MCP error messages
-may remain in the SDK's language; expected value object and Application Result failures keep their
-mapping. MCP output uses the shared value object and enum converters.
+The SDK owns argument binding and schema generation. Keep one small tool filter for safe unexpected
+error responses with trace and correlation IDs; argument/JSON exceptions, MCP control flow and
+requested cancellation stay with the SDK. Native MCP error messages may remain in the SDK's language;
+expected value object and Application Result failures keep their mapping. MCP output uses the shared
+value object and enum converters.
 
 ## Validation and delivery
 
