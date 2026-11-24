@@ -12,7 +12,7 @@ internal sealed class DateValueObjectJsonConverter<T>(TimeProvider timeProvider)
         var today = DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
         var result = T.Create(date, today);
 
-        return result.IsSuccess ? result.Value : throw new ValueObjectValidationException(result.Error);
+        return result.IsSuccess ? result.Value : throw new JsonException(result.Error);
     }
 
     public override void Write(Utf8JsonWriter writer, T value, JsonSerializerOptions options)

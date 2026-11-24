@@ -47,7 +47,7 @@ public sealed class ValueObjectToolTests
     [InlineData("name", "", "O nome completo é obrigatório.")]
     [InlineData("email", "valor-privado-invalido", "Informe um e-mail válido.")]
     [InlineData("birthDate", "2042-01-01", "A data de nascimento deve estar no passado.")]
-    public async Task Vo_invalido_retorna_validacao_por_campo_sem_executar_command(string field, string value, string message)
+    public async Task Vo_invalido_retorna_validacao_por_campo_sem_executar_command(string field, string value, string expectedMessage)
     {
         using var provider = Services();
         var command = new Dictionary<string, object?> { ["name"] = "Maria Silva", ["email"] = "maria@exemplo.com", ["birthDate"] = "2040-01-01" };
@@ -61,10 +61,33 @@ public sealed class ValueObjectToolTests
         using var document = JsonDocument.Parse(text);
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("message").GetString().Should().Be(message);
-        error.GetProperty("fieldErrors").GetProperty(field)[0].GetProperty("message").GetString().Should().Be(message);
+        var message = error.GetProperty("message").GetString();
+        message.Should().StartWith(expectedMessage);
+        error.GetProperty("fieldErrors").GetProperty($"$.{field}")[0].GetProperty("message").GetString()
+            .Should().Be(message);
         text.Should().NotContain("valor-privado-invalido");
         provider.GetRequiredService<RecordingInput>().CommandCalls.Should().Be(0);
+    }
+
+    [Fact]
+    public async Task Falha_em_item_da_lista_preserva_o_indice_no_caminho_do_campo()
+    {
+        using var provider = Services();
+        var result = await McpToolCall.InvokeAsync(provider, "probe", new Dictionary<string, object?>
+        {
+            ["input"] = new
+            {
+                contact = new { email = "maria@example.com" },
+                searches = new[] { "vip", new string('x', SearchText.MaxLength + 1) },
+                kind = "vip",
+            },
+        }, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("fieldErrors").TryGetProperty("$.searches[1]", out _).Should().BeTrue();
+        provider.GetRequiredService<RecordingInput>().Value.Should().BeNull();
     }
 
     [Fact]

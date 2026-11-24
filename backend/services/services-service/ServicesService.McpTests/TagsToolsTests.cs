@@ -47,9 +47,10 @@ public sealed class TagsToolsTests
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("type").GetString().Should().Be("Validation");
-        error.GetProperty("message").GetString().Should().Be("O valor informado é inválido.");
-        error.GetProperty("fieldErrors").GetProperty("query.search")[0].GetProperty("message").GetString()
-            .Should().Be("O valor informado é inválido.");
+        var message = error.GetProperty("message").GetString();
+        message.Should().StartWith(SearchText.Create(search).Error);
+        error.GetProperty("fieldErrors").GetProperty("$.search")[0].GetProperty("message").GetString()
+            .Should().Be(message);
         handler.Query.Should().BeNull();
     }
 
@@ -70,10 +71,11 @@ public sealed class TagsToolsTests
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("type").GetString().Should().Be("Validation");
-        error.GetProperty("message").GetString().Should().Be("Informe um número inteiro.");
-        var fieldError = error.GetProperty("fieldErrors").GetProperty($"query.{field}")[0];
+        var message = error.GetProperty("message").GetString();
+        message.Should().Contain("System.Int32");
+        var fieldError = error.GetProperty("fieldErrors").GetProperty($"$.{field}")[0];
         fieldError.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        fieldError.GetProperty("message").GetString().Should().Be("Informe um número inteiro.");
+        fieldError.GetProperty("message").GetString().Should().Be(message);
         handler.Query.Should().BeNull();
     }
 

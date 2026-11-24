@@ -52,7 +52,7 @@ public sealed class ExceptionHandlingExtensionsTests
     }
 
     [Fact]
-    public async Task Entrada_invalida_continua_com_a_resposta_nativa_do_sdk()
+    public async Task Entrada_invalida_na_raiz_retorna_validacao_sem_campo()
     {
         var services = new ServiceCollection().AddLogging();
         services.AddMcpServer().WithToolExceptionHandling().WithTools<FailingTools>();
@@ -62,13 +62,33 @@ public sealed class ExceptionHandlingExtensionsTests
             TestContext.Current.CancellationToken);
 
         result.IsError.Should().BeTrue();
-        result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>()
-            .Which.Text.Should().NotContain("Unexpected.Error");
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("message").GetString().Should().Contain("System.Boolean");
+        error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
+    public async Task Excecao_json_sem_caminho_preserva_a_mensagem_sem_adicionar_campo()
+    {
+        using var provider = Services();
+        var filter = provider.GetRequiredService<IOptions<McpServerOptions>>().Value.Filters.Request.CallToolFilters.Single();
+        var exception = new JsonException("JSON inválido");
+        var invoke = filter((_, _) => ValueTask.FromException<CallToolResult>(exception));
+
+        var result = await invoke(null!, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("message").GetString().Should().Be(exception.Message);
+        error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     public static TheoryData<Exception> NativeExceptions() => new()
     {
-        new JsonException("JSON inválido"),
         new ArgumentException("Argumento inválido"),
         new McpException("Falha controlada"),
         new McpProtocolException("Protocolo inválido", McpErrorCode.InvalidParams),
