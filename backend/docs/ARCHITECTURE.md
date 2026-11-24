@@ -413,6 +413,12 @@ for input rules assert the code; use a fixed clock when the day matters. Verify 
 property outside the smoke's scope by hand on a **disposable** database initialised from
 `infra/postgres/init/`, never the persistent development volume, and record what ran in the PR.
 
+Adapters over a framework or SDK (controllers, MCP tools) are not tested for what the framework or the
+Application already proves: binding, native error texts, cancellation, authorization filters,
+validators, defaults and value object rules. Test what the adapter owns: its mapping to the Application
+request, the contract it publishes (schema, annotations, `[Authorize]`) and the shared wire format.
+A test that would break only when the SDK changes its message is not worth keeping.
+
 IdentityService.ProtocolTests exercises published OAuth metadata and token issuance with application
 and scope-manager doubles. It does not host HTTP in process or replace the real Aspire smoke;
 the Domain/Application coverage gate remains separate from these protocol checks.
