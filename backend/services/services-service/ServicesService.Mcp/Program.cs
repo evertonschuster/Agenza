@@ -21,7 +21,7 @@ builder.Services.AddMcpServer()
     .AddAuthorizationFilters()
     .WithTools<HelloWorldTools>()
     .WithTools<IdentityTools>()
-    .WithValueObjectTools<TagsTools>();
+    .WithTools<TagsTools>();
 
 var app = builder.Build();
 

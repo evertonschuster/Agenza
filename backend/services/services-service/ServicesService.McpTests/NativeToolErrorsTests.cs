@@ -4,7 +4,6 @@ using Microsoft.Extensions.Logging;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
-using ServicesService.Mcp.Setup;
 
 namespace ServicesService.McpTests;
 
@@ -18,7 +17,7 @@ public sealed class NativeToolErrorsTests
     {
         using var logs = new CapturingLoggerProvider();
         var services = new ServiceCollection().AddLogging(builder => builder.AddProvider(logs));
-        services.AddMcpServer().WithValueObjectTools<FailingTools>();
+        services.AddMcpServer().WithTools<FailingTools>();
         using var provider = services.BuildServiceProvider();
 
         var result = await McpToolCall.InvokeAsync(provider, name, new Dictionary<string, object?>(), TestContext.Current.CancellationToken);

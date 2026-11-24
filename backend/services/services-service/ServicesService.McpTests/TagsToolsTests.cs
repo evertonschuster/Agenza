@@ -1,14 +1,16 @@
 using System.Text.Json;
+using System.Security.Claims;
 using Admin.SharedKernel;
 using Admin.SharedKernel.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.Extensions.Options;
 using ModelContextProtocol;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ServicesService.Application;
 using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.ListTags;
-using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
 using Result = Admin.SharedKernel.Result;
 
@@ -48,7 +50,7 @@ public sealed class TagsToolsTests
     }
 
     [Fact]
-    public async Task Busca_acima_do_limite_retorna_erro_nativo_sem_executar_consulta()
+    public async Task Busca_acima_do_limite_retorna_erro_do_vo_sem_executar_consulta()
     {
         var handler = new RecordingHandler();
         using var provider = Services(handler);
@@ -57,9 +59,9 @@ public sealed class TagsToolsTests
 
         var result = await Invoke(scope.ServiceProvider, new { search }, TestContext.Current.CancellationToken);
 
-        result.IsError.Should().BeTrue();
-        result.Content.Should().ContainSingle().Subject.Should().BeOfType<TextContentBlock>()
-            .Which.Text.Should().NotBeNullOrWhiteSpace().And.NotContain("Unexpected.Error");
+        var error = Error(result);
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("message").GetString().Should().Be(SearchText.Create(search).Error);
         handler.Query.Should().BeNull();
     }
 
@@ -207,6 +209,50 @@ public sealed class TagsToolsTests
         contract.Annotations!.ReadOnlyHint.Should().BeTrue();
         contract.Annotations.DestructiveHint.Should().BeFalse();
         contract.Annotations.OpenWorldHint.Should().BeFalse();
+        tool.Metadata.OfType<AuthorizeAttribute>().Should().ContainSingle();
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Registro_nativo_preserva_autorizacao_e_cancelamento_antes_do_dispatcher(bool authenticated)
+    {
+        var handler = new RecordingHandler();
+        using var provider = Services(handler, authorization: true);
+        using var scope = provider.CreateScope();
+        var services = scope.ServiceProvider;
+        var options = services.GetRequiredService<IOptions<McpServerOptions>>().Value;
+        var tool = services.GetServices<McpServerTool>().Single();
+        await using var transport = new StreamServerTransport(Stream.Null, Stream.Null);
+        await using var server = McpServer.Create(transport, options, serviceProvider: services);
+        var identity = authenticated ? new ClaimsIdentity("Bearer") : new ClaimsIdentity();
+        var request = new RequestContext<CallToolRequestParams>(server,
+            new JsonRpcRequest { Id = new RequestId(1), Method = "tools/call" },
+            new CallToolRequestParams
+            {
+                Name = "list_tags",
+                Arguments = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>("{\"query\":{\"search\":\" VIP \"}}"),
+            })
+        { Services = services, User = new ClaimsPrincipal(identity), MatchedPrimitive = tool };
+        McpRequestHandler<CallToolRequestParams, CallToolResult> invoke = (context, token) => tool.InvokeAsync(context, token);
+        foreach (var filter in options.Filters.Request.CallToolFilters.Reverse())
+        {
+            invoke = filter(invoke);
+        }
+
+        var action = async () => await invoke(request, TestContext.Current.CancellationToken);
+        if (!authenticated)
+        {
+            await action.Should().ThrowAsync<McpProtocolException>();
+            handler.Query.Should().BeNull();
+            return;
+        }
+
+        var result = await action();
+
+        result.IsError.Should().BeFalse();
+        handler.Query!.Search!.Value.Should().Be("vip");
+        handler.CancellationToken.Should().Be(TestContext.Current.CancellationToken);
     }
 
     private static JsonElement Error(CallToolResult result)
@@ -218,12 +264,17 @@ public sealed class TagsToolsTests
         return json.RootElement.GetProperty("error").Clone();
     }
 
-    private static ServiceProvider Services(RecordingHandler handler)
+    private static ServiceProvider Services(RecordingHandler handler, bool authorization = false)
     {
         var services = new ServiceCollection().AddLogging();
         services.AddSharedKernel();
         services.AddServicesApplication();
-        services.AddMcpServer().WithValueObjectTools<TagsTools>();
+        services.AddAuthorization();
+        var builder = services.AddMcpServer().WithTools<TagsTools>();
+        if (authorization)
+        {
+            builder.AddAuthorizationFilters();
+        }
         services.AddScoped<IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>>(_ => handler);
         return services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
     }
