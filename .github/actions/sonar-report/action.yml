@@ -19,6 +19,7 @@ runs:
   using: composite
   steps:
     - name: Summarize the analysis
+      continue-on-error: true
       shell: bash
       env:
         SONAR_TOKEN: ${{ inputs.sonar-token }}
@@ -32,6 +33,7 @@ runs:
 
     - name: Comment on the pull request
       if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      continue-on-error: true
       shell: bash
       env:
         GH_TOKEN: ${{ inputs.github-token }}

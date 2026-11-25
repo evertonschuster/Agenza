@@ -9,12 +9,13 @@ from __future__ import annotations
 
 import argparse
 import base64
+import http.client
 import json
 import os
 import sys
 import time
 from typing import Any
-from urllib import error, parse, request
+from urllib import parse, request
 
 API = "https://sonarcloud.io/api"
 DASHBOARD = "https://sonarcloud.io/dashboard"
@@ -33,6 +34,8 @@ PERCENT_METRICS = {
     "new_duplicated_lines_density",
     "new_security_hotspots_reviewed",
 }
+STATUS_MARKS = {"OK": "✅", "ERROR": "❌"}
+GATE_LABELS = {"OK": "✅ aprovado", "ERROR": "❌ reprovado", "WARN": "⚠️ com alerta"}
 SEVERITIES = {"BLOCKER": "🔴", "CRITICAL": "🔴", "MAJOR": "🟠", "MINOR": "🟡", "INFO": "⚪"}
 MAX_ISSUES = 10
 MARKER = "<!-- sonar-report:{project} -->"
@@ -86,7 +89,7 @@ def render_gate(gate: dict[str, Any]) -> list[str]:
     rows = ["| Condição | Resultado | Atual | Limite |", "|---|---|---|---|"]
     for condition in gate["conditions"]:
         metric = condition["metricKey"]
-        mark = "✅" if condition["status"] == "OK" else "❌"
+        mark = STATUS_MARKS.get(condition["status"], "⚠️")
         rows.append(
             f"| {METRIC_LABELS.get(metric, metric)} | {mark} "
             f"| {fmt_value(metric, condition.get('actualValue'))} | {fmt_limit(condition)} |"
@@ -127,10 +130,9 @@ def build_report(project: str, token: str, pull_request: str, branch: str) -> st
         gate = fetch_gate(project, token, where)
         if gate is None:
             return "\n".join(header + ["Análise ainda não disponível no SonarCloud.", "", f"[Abrir]({link})"])
-        passed = gate["status"] == "OK"
-        body = [f"**Quality Gate:** {'✅ aprovado' if passed else '❌ reprovado'}", ""]
+        body = [f"**Quality Gate:** {GATE_LABELS.get(gate['status'], gate['status'])}", ""]
         body += render_gate(gate) + [""] + render_issues(project, token, where)
-    except (error.URLError, TimeoutError, KeyError, ValueError) as failure:
+    except (OSError, http.client.HTTPException, KeyError, ValueError) as failure:
         return "\n".join(header + [f"Não foi possível ler o SonarCloud: `{failure}`.", "", f"[Abrir]({link})"])
     return "\n".join(header + body + ["", f"[Abrir no SonarCloud]({link})"])
 

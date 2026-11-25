@@ -134,7 +134,7 @@ jobs:
             -Dsonar.qualitygate.wait=true
 
       - name: Sonar report
-        if: always() && steps.sonar.conclusion != 'skipped' && steps.sonar.conclusion != ''
+        if: ${{ !cancelled() && steps.sonar.conclusion != 'skipped' && steps.sonar.conclusion != '' }}
         uses: ./.github/actions/sonar-report
         with:
           project-key: agenza-frontend
