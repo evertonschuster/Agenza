@@ -161,8 +161,17 @@ public sealed class TagMutationToolTests
     }
 
     [Fact]
-    public Task Omitir_descricao_na_edicao_retorna_validacao_antes_da_gravacao() =>
-        AssertValidationFailure(new { tagId = Guid.NewGuid(), name = "VIP", color = "#22c55e" }, "description", "update_tag");
+    public async Task Edicao_sem_descricao_usa_o_valor_nulo_do_comando()
+    {
+        var tag = CreateExistingTag();
+        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
+
+        var result = await Invoke(new { tagId = tag.Id, name = tag.Name, color = "#22c55e" }, "update_tag");
+
+        result.IsError.Should().BeFalse();
+        result.StructuredContent!.Value.GetProperty("description").ValueKind.Should().Be(JsonValueKind.Null);
+        tag.Description.Should().BeNull();
+    }
 
     [Theory]
     [InlineData("", "#22c55e", "O nome da etiqueta é obrigatório.")]
