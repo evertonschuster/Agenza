@@ -16,12 +16,12 @@ builder.Services.AddSharedKernel();
 builder.Services.AddServicesApplication();
 builder.Services.AddServicesInfrastructure(builder.Configuration);
 
+var mcpJsonOptions = builder.Services.AddMcpValueObjectInputs(TimeProvider.System);
 builder.Services.AddMcpServer()
     .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
     .AddAuthorizationFilters()
     .WithToolExceptionHandling()
-    .WithTools<HelloWorldTools>()
-    .WithTools<IdentityTools>();
+    .WithTools([typeof(HelloWorldTools), typeof(IdentityTools), typeof(TagsTools)], mcpJsonOptions);
 
 var app = builder.Build();
 

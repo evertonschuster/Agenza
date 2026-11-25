@@ -52,4 +52,19 @@ public sealed class ResultExtensionsTests
             fieldErrors.ValueKind.Should().Be(JsonValueKind.Null);
         }
     }
+
+    [Fact]
+    public void Saida_segue_o_formato_da_api_com_nulos_explicitos_enum_por_nome_e_vo_como_texto()
+    {
+        var result = Result.Success(new Wire(null, Kind.Vip, Admin.SharedKernel.ValueObjects.EmailAddress.Create("maria@exemplo.com").Value)).ToToolResult();
+
+        result.StructuredContent!.Value.GetRawText().Should().Be("{\"note\":null,\"kind\":\"vip\",\"email\":\"maria@exemplo.com\"}");
+    }
+
+    private enum Kind
+    {
+        Vip = 1,
+    }
+
+    private sealed record Wire(string? Note, Kind Kind, Admin.SharedKernel.ValueObjects.EmailAddress Email);
 }

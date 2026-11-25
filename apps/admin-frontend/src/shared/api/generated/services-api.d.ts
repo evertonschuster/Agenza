@@ -463,8 +463,10 @@ export interface paths {
       parameters: {
         query?: {
           Search?: string;
-          Status?: components['schemas']['ClientStatusFilter'];
+          Status?: 'active' | 'inactive' | 'all';
+          /** @description Página dos resultados, começando em 1. Padrão: 1. */
           Page?: number;
+          /** @description Quantidade de itens por página, entre 1 e 100. Padrão: 20. */
           PageSize?: number;
         };
         header?: never;
@@ -1120,7 +1122,9 @@ export interface paths {
           Search?: string;
           CategoryId?: string;
           TagId?: string;
+          /** @description Página dos resultados, começando em 1. Padrão: 1. */
           Page?: number;
+          /** @description Quantidade de itens por página, entre 1 e 100. Padrão: 20. */
           PageSize?: number;
         };
         header?: never;
@@ -1489,8 +1493,11 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          /** @description Trecho do nome da etiqueta. Ignora maiúsculas e minúsculas. Ausente, vazio ou somente espaços não aplica filtro. Limite de 254 caracteres após remover espaços nas extremidades. */
           Search?: string;
+          /** @description Página dos resultados, começando em 1. Padrão: 1. */
           Page?: number;
+          /** @description Quantidade de itens por página, entre 1 e 100. Padrão: 20. */
           PageSize?: number;
         };
         header?: never;
@@ -2045,8 +2052,6 @@ export interface components {
     };
     /** @enum {unknown} */
     ClientStatus: 'active' | 'inactive';
-    /** @enum {unknown} */
-    ClientStatusFilter: 'active' | 'inactive' | 'all' | null;
     /** @enum {unknown} */
     ContactPurpose: 'emergency' | 'operationalSupport' | 'dailyCommunication';
     CreateCategoryCommand: {

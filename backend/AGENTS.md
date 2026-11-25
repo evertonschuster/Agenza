@@ -41,6 +41,26 @@ OAuth resource scopes;
 OAuth audiences still identify the destination of each token.
 API and MCP share the authenticated-tenant policy, without additional subject-format or scope
 requirements. Only the REST API requires and compares `X-Tenant-Id`; MCP uses the tenant claim.
+Register MCP tools through the SDK's `WithTools`, without application-owned discovery or registration.
+`AddMcpValueObjectInputs` supplies the shared JSON options to that registration and adjusts schemas
+of the registered tools. Queries and commands may be parameters directly, including shared value
+objects; tool methods do not duplicate input contracts or parse VOs. Preserve descriptions,
+defaults and nullability in the published schema.
+The SDK owns argument binding and invocation; do not pre-deserialize arguments or duplicate VO factories.
+The tool filter maps `ArgumentException` to a global `Validation.Failed` naming only the parameter,
+never the exception message, which may carry sensitive data; the original is logged as a warning
+with trace and correlation IDs.
+The tool filter maps `JsonException` to `Validation.Failed`. Each tool takes one request object (a query or a command), so the field
+path always carries its name (`query.page`); with several arguments it stays relative to the
+deserialized argument, and the message reports only the kind of value received, never the value.
+The schema-derived text can never fail the error path: any problem reading it falls back to the
+serializer's message.
+When the value's kind contradicts the published schema (type or enum), the message is derived from
+the schema (`query.page: esperado número inteiro.`); otherwise the exception's original message
+stays, which is where value object messages come from. Without a path the error is global. `McpException` (including protocol errors), requests for additional input and requested cancellation stay with the SDK.
+Timeouts and unexpected failures return trace and correlation IDs. Application Result failures keep
+their mapping.
+MCP output uses the shared value object and enum converters.
 
 ## Validation and delivery
 

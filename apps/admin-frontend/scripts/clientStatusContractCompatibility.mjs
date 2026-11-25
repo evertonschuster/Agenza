@@ -5,6 +5,11 @@ const legacySchema =
   /^    \/\*\* @enum \{unknown\} \*\/\n    ClientStatusFilter: 'active' \| 'inactive' \| 'all' \| null;\n/m;
 const statusUnion = "'active' | 'inactive' | 'all'";
 
+export function normalizeClientStatusContract(types) {
+  if (types.match(clientsStatus)?.[2]?.toLowerCase() !== statusUnion) return types;
+  return types.replace(clientsStatus, '$1' + statusUnion + ';');
+}
+
 export function matchesClientStatusContract(committed, fresh) {
   if (
     committed.match(clientsStatus)?.[2] !== legacyReference ||
