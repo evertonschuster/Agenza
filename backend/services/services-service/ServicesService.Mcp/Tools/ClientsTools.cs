@@ -5,6 +5,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ServicesService.Application.Clients;
 using ServicesService.Application.Clients.CreateClient;
+using ServicesService.Application.Clients.DeactivateClient;
 using ServicesService.Application.Clients.GetClientById;
 using ServicesService.Application.Clients.ListClients;
 using ServicesService.Application.Clients.UpdateClient;
@@ -115,6 +116,33 @@ public sealed class ClientsTools(IDispatcher dispatcher)
     public async Task<CallToolResult> UpdateClient(
         [Description("ID do cliente e valores finais de todos os campos editáveis.")]
         UpdateClientCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dispatcher.Send(command, cancellationToken);
+        return result.ToToolResult();
+    }
+
+    [McpServerTool(
+        Name = "deactivate_client",
+        Title = "Desativar cliente",
+        ReadOnly = false,
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(ClientResponse))]
+    [Description(
+        "Desativa um cliente da empresa autenticada, mudando a situação para inativo, e retorna o cadastro atualizado. " +
+        "O cadastro e o histórico são preservados e a operação é reversível. " +
+        "Use o ID retornado por list_clients ou get_client_by_id; se você só tiver o nome, o e-mail ou o CPF, use list_clients. " +
+        "Desativar um cliente que já está inativo não altera nada e retorna o cadastro atual. " +
+        "A desativação é recusada com conflito (Client.HasUpcomingAppointments) quando o cliente tem agendamentos futuros " +
+        "não cancelados; nesse caso, informe o usuário, porque esses agendamentos precisam ser resolvidos antes. " +
+        "Um cliente inativo deixa de bloquear o uso do seu e-mail por outro cliente ativo. " +
+        "Desative apenas quando o usuário pedir explicitamente.")]
+    public async Task<CallToolResult> DeactivateClient(
+        [Description("ID do cliente a desativar.")]
+        DeactivateClientCommand command,
         CancellationToken cancellationToken = default)
     {
         var result = await dispatcher.Send(command, cancellationToken);
