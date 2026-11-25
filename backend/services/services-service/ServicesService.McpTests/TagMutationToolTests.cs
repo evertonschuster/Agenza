@@ -42,7 +42,9 @@ public sealed class TagMutationToolTests
         command.GetProperty("required").EnumerateArray()
             .Select(item => item.GetString()).Should().BeEquivalentTo("name", "color");
         fields.GetProperty("name").GetProperty("description").GetString().Should().Contain("Nome da etiqueta");
-        fields.GetProperty("color").GetProperty("description").GetString().Should().Contain("paleta do Agenza");
+        var colorDescription = fields.GetProperty("color").GetProperty("description").GetString();
+        Regex.Matches(colorDescription!, "#[0-9a-f]{6}").Select(match => match.Value)
+            .Should().BeEquivalentTo(TagColor.Palette);
         fields.GetProperty("description").GetProperty("description").GetString().Should().Contain("Descrição opcional");
         tool.OutputSchema!.Value.GetProperty("properties").EnumerateObject()
             .Select(property => property.Name).Should().BeEquivalentTo("id", "name", "color", "description");
@@ -132,6 +134,8 @@ public sealed class TagMutationToolTests
             .Should().BeEquivalentTo(TagColor.Palette);
         fields.GetProperty("description").GetProperty("type").EnumerateArray().Select(item => item.GetString())
             .Should().BeEquivalentTo("string", "null");
+        fields.GetProperty("description").GetProperty("description").GetString()
+            .Should().Contain("Omitir o campo ou enviar null limpa a descrição.");
         tool.OutputSchema!.Value.GetProperty("properties").EnumerateObject()
             .Select(property => property.Name).Should().BeEquivalentTo("id", "name", "color", "description");
     }

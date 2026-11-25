@@ -13,5 +13,6 @@ public sealed record UpdateTagCommand(
         "rosa #ec4899, vermelho #ef4444, âmbar #f59e0b, verde #22c55e e cinza #64748b.")]
     string Color,
     [Description(
-        "Descrição final da etiqueta, com até 200 caracteres. Envie o texto atual para manter a descrição ou null para removê-la.")]
+        "Descrição final da etiqueta, com até 200 caracteres. Reenvie o texto atual para preservá-la. " +
+        "Omitir o campo ou enviar null limpa a descrição.")]
     string? Description) : ICommand<TagResponse>;
