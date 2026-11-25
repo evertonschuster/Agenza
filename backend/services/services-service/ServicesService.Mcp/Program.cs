@@ -21,7 +21,7 @@ builder.Services.AddMcpServer()
     .WithHttpTransport(options => options.SessionMode = HttpServerSessionMode.Stateless)
     .AddAuthorizationFilters()
     .WithToolExceptionHandling()
-    .WithTools([typeof(HelloWorldTools), typeof(IdentityTools), typeof(TagsTools)], mcpJsonOptions);
+    .WithTools([typeof(HelloWorldTools), typeof(IdentityTools), typeof(TagsTools), typeof(ClientsTools)], mcpJsonOptions);
 
 var app = builder.Build();
 

@@ -1,9 +1,12 @@
+using System.ComponentModel;
 using Admin.SharedKernel;
 
 namespace ServicesService.Application.Clients.ListClients;
 
 public sealed record ListClientsQuery(
+    [property: Description("Trecho do nome, do e-mail ou do CPF do cliente, com ou sem máscara. Ignora maiúsculas e minúsculas. Ausente, vazio ou somente espaços não aplica filtro. Limite de 254 caracteres após remover espaços nas extremidades.")]
     SearchText? Search = null,
+    [property: Description("Situação do cliente: active (somente ativos), inactive (somente inativos) ou all (todos). Ausente lista todos.")]
     ClientStatusFilter? Status = null) : PagedQuery, IQuery<PagedResult<ClientListItemResponse>>
 {
     public ClientListFilter ToFilter()

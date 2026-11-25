@@ -462,7 +462,9 @@ export interface paths {
     get: {
       parameters: {
         query?: {
+          /** @description Trecho do nome, do e-mail ou do CPF do cliente, com ou sem máscara. Ignora maiúsculas e minúsculas. Ausente, vazio ou somente espaços não aplica filtro. Limite de 254 caracteres após remover espaços nas extremidades. */
           Search?: string;
+          /** @description Situação do cliente: active (somente ativos), inactive (somente inativos) ou all (todos). Ausente lista todos. */
           Status?: 'active' | 'inactive' | 'all';
           /** @description Página dos resultados, começando em 1. Padrão: 1. */
           Page?: number;
