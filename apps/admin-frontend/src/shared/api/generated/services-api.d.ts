@@ -2215,29 +2215,51 @@ export interface components {
       name: string;
     };
     UpdateClientCommand: {
-      /** Format: uuid */
+      /**
+       * Format: uuid
+       * @description ID do cliente a editar, em formato UUID. Use o valor do campo id retornado por list_clients ou get_client_by_id.
+       */
       clientId: string;
+      /** @description Nome completo final do cliente, de 2 a 150 caracteres. */
       fullName: string;
-      /** Format: date */
+      /**
+       * Format: date
+       * @description Data de nascimento final no formato AAAA-MM-DD, no passado e com até 120 anos. Menores de 18 anos exigem ao menos um responsável. Envie null para ficar sem data.
+       */
       birthDate: null | Date;
+      /** @description Telefone final com até 20 caracteres, só dígitos, espaços, +, parênteses e hífen, com ao menos um dígito. Envie null para ficar sem telefone. */
       phone: null | string;
+      /** @description E-mail final com até 254 caracteres. Não pode já estar em uso por outro cliente ativo. Envie null para ficar sem e-mail. */
       email: null | string;
+      /** @description CPF final com 11 dígitos válidos, com ou sem pontos e hífen. Não pode já estar cadastrado em outro cliente. Envie null para ficar sem CPF. */
       cpf: null | string;
+      /** @description Observações administrativas internas finais, com até 500 caracteres. Envie null para ficar sem observações. */
       administrativeNotes: null | string;
+      /** @description Lista final de responsáveis, até 10. Substitui a lista atual: envie todos os que devem permanecer. Envie null ou lista vazia para remover todos. Obrigatório ao menos um para menores de 18 anos. */
       guardians: null | components['schemas']['UpdateGuardianInput'][];
+      /** @description Lista final de pessoas de referência, até 10, cada uma com ao menos uma finalidade. Substitui a lista atual: envie todas as que devem permanecer. Envie null ou lista vazia para remover todas. */
       referenceContacts: null | components['schemas']['UpdateReferenceContactInput'][];
+      /** @description Lista final de IDs de etiquetas, até 20 e sem repetição. Substitui a lista atual: envie todas as que devem permanecer. Use os IDs retornados por list_tags. Envie null ou lista vazia para remover todas. */
       tagIds: null | string[];
     };
     UpdateGuardianInput: {
+      /** @description Nome do responsável, de 2 a 150 caracteres. */
       name: string;
+      /** @description Vínculo do responsável com o cliente, como mãe, pai ou tutor, com até 60 caracteres. */
       relationship: string;
+      /** @description Telefone do responsável, no mesmo formato do telefone do cliente. Envie null se não houver. */
       phone: null | string;
+      /** @description CPF do responsável, no mesmo formato do CPF do cliente. Envie null se não houver. */
       cpf: null | string;
     };
     UpdateReferenceContactInput: {
+      /** @description Nome da pessoa de referência, de 2 a 150 caracteres. */
       name: string;
+      /** @description Vínculo da pessoa de referência com o cliente, com até 60 caracteres. */
       relationship: string;
+      /** @description Telefone da pessoa de referência, no mesmo formato do telefone do cliente. Envie null se não houver. */
       phone: null | string;
+      /** @description Finalidades do contato, ao menos uma: emergency (emergência), operationalSupport (apoio operacional) ou dailyCommunication (comunicação diária). */
       purposes: null | components['schemas']['ContactPurpose'][];
     };
     UpdateServiceCommand: {

@@ -7,6 +7,7 @@ using ServicesService.Application.Clients;
 using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Application.Clients.GetClientById;
 using ServicesService.Application.Clients.ListClients;
+using ServicesService.Application.Clients.UpdateClient;
 using ServicesService.Mcp.Extensions;
 
 namespace ServicesService.Mcp.Tools;
@@ -85,6 +86,35 @@ public sealed class ClientsTools(IDispatcher dispatcher)
     public async Task<CallToolResult> CreateClient(
         [Description("Dados do cliente a criar.")]
         CreateClientCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dispatcher.Send(command, cancellationToken);
+        return result.ToToolResult();
+    }
+
+    [McpServerTool(
+        Name = "update_client",
+        Title = "Editar cliente",
+        ReadOnly = false,
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(ClientResponse))]
+    [Description(
+        "Edita um cliente da empresa autenticada e retorna o cadastro salvo. " +
+        "A edição substitui o cadastro inteiro: envie o ID e os valores finais de todos os campos. " +
+        "Antes de editar, consulte o cliente com get_client_by_id e repita os valores atuais dos campos que não mudam; " +
+        "se você só tiver o nome, o e-mail ou o CPF, comece com list_clients. " +
+        "Um campo enviado como null fica vazio e uma lista vazia (ou null) em guardians, referenceContacts ou tagIds remove " +
+        "todos os itens atuais, então envie todos os itens que devem permanecer. " +
+        "A situação (ativo ou inativo) não muda por esta ferramenta. " +
+        "Um CPF já cadastrado em outro cliente, ou um e-mail já usado por outro cliente ativo, retorna conflito com o ID " +
+        "do outro cliente em fieldErrors. " +
+        "Menores de 18 anos exigem ao menos um responsável. Para etiquetas, use os IDs retornados por list_tags. " +
+        "Se a pessoa for editada ao mesmo tempo em outro lugar, vale a última gravação.")]
+    public async Task<CallToolResult> UpdateClient(
+        [Description("ID do cliente e valores finais de todos os campos editáveis.")]
+        UpdateClientCommand command,
         CancellationToken cancellationToken = default)
     {
         var result = await dispatcher.Send(command, cancellationToken);

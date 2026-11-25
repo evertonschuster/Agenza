@@ -13,6 +13,11 @@ public sealed class UpdateClientCommandValidator : AbstractValidator<UpdateClien
             .WithErrorCode("Client.IdRequired")
             .WithMessage("O id da pessoa é obrigatório.");
 
+        RuleFor(command => command.FullName)
+            .NotNull()
+            .WithErrorCode("Client.FullNameRequired")
+            .WithMessage("O nome completo é obrigatório.");
+
         RuleFor(command => command.Guardians)
             .Must(guardians => guardians is null || guardians.Count <= Client.MaxGuardians)
             .WithErrorCode(Client.TooManyGuardians.Code)
