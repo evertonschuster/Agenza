@@ -80,7 +80,7 @@ public class CreateClientCommandHandlerTests
             guardians: [new GuardianInput("Ana Souza", "Mãe", ClientTestData.Phone("(11) 98888-0000"), ClientTestData.Cpf(ClientTestData.OtherValidCpf))],
             referenceContacts:
             [
-                new ReferenceContactInput(ClientTestData.Name(" Carlos Lima "), "Tio", ClientTestData.Phone("11 4000-1000"), [ContactPurpose.DailyCommunication, ContactPurpose.Emergency, ContactPurpose.Emergency]),
+                new ReferenceContactInput(ClientTestData.Name(" Carlos Lima "), "Tio", [ContactPurpose.DailyCommunication, ContactPurpose.Emergency, ContactPurpose.Emergency], ClientTestData.Phone("11 4000-1000")),
             ]);
 
         var result = await Handler().Handle(command, CancellationToken.None);

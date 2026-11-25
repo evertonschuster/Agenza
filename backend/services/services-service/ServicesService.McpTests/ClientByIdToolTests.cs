@@ -12,6 +12,7 @@ using ServicesService.Application.Tags;
 using ServicesService.Domain.Entities;
 using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
+using static ServicesService.McpTests.ClientToolAssertions;
 using Result = Admin.SharedKernel.Result;
 
 namespace ServicesService.McpTests;
@@ -110,6 +111,7 @@ public sealed class ClientByIdToolTests
 
         contract.Title.Should().Be("Consultar cliente por ID");
         contract.Description.Should().Contain("empresa autenticada").And.Contain("list_clients");
+        MissingDescriptions(contract.InputSchema, "input").Should().BeEmpty();
         contract.Annotations!.ReadOnlyHint.Should().BeTrue();
         contract.Annotations.DestructiveHint.Should().BeFalse();
         contract.Annotations.OpenWorldHint.Should().BeFalse();
@@ -122,17 +124,12 @@ public sealed class ClientByIdToolTests
         var id = fields.GetProperty("clientId");
         id.GetProperty("type").GetString().Should().Be("string");
         id.GetProperty("format").GetString().Should().Be("uuid");
-        id.GetProperty("description").GetString().Should().Contain("ID do cliente").And.Contain("list_clients");
+        id.GetProperty("description").GetString().Should().Contain("ID do cliente");
         contract.OutputSchema!.Value.GetProperty("properties").EnumerateObject().Select(property => property.Name)
             .Should().BeEquivalentTo("id", "fullName", "birthDate", "phone", "email", "cpf", "administrativeNotes",
                 "status", "guardians", "referenceContacts", "tags");
     }
 
-    private static JsonElement ErrorOf(CallToolResult result)
-    {
-        var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
-        return document.RootElement.GetProperty("error").Clone();
-    }
 
     private static ServiceProvider Services(RecordingHandler handler)
     {

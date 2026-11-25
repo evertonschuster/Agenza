@@ -12,6 +12,7 @@ using ServicesService.Application.Tags;
 using ServicesService.Domain.Entities;
 using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
+using static ServicesService.McpTests.ClientToolAssertions;
 using Result = Admin.SharedKernel.Result;
 
 namespace ServicesService.McpTests;
@@ -240,17 +241,13 @@ public sealed class ClientsToolsTests
         contract.OutputSchema.Should().NotBeNull();
         contract.OutputSchema!.Value.GetProperty("properties").EnumerateObject().Select(property => property.Name)
             .Should().BeEquivalentTo("items", "totalCount", "page", "pageSize");
+        MissingDescriptions(contract.InputSchema, "input").Should().BeEmpty();
         contract.Annotations!.ReadOnlyHint.Should().BeTrue();
         contract.Annotations.DestructiveHint.Should().BeFalse();
         contract.Annotations.OpenWorldHint.Should().BeFalse();
         tool.Metadata.OfType<AuthorizeAttribute>().Should().ContainSingle();
     }
 
-    private static JsonElement ErrorOf(CallToolResult result)
-    {
-        var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
-        return document.RootElement.GetProperty("error").Clone();
-    }
 
     private static ServiceProvider Services(RecordingHandler handler)
     {

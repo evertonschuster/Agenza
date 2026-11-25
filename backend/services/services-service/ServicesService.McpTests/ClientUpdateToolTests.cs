@@ -12,16 +12,14 @@ using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
+using static ServicesService.McpTests.ClientToolAssertions;
 
 namespace ServicesService.McpTests;
 
-public sealed class ClientUpdateToolTests
+public sealed class ClientUpdateToolTests() : ClientCommandToolTestBase("update_client")
 {
     private const string ValidCpf = "52998224725";
     private const string OtherCpf = "11144477735";
-    private readonly IClientRepository _clients = Substitute.For<IClientRepository>();
-    private readonly ITagRepository _tags = Substitute.For<ITagRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 
     [Fact]
     public void Publica_contrato_de_edicao_com_todos_os_campos_obrigatorios_e_descritos()
@@ -36,6 +34,7 @@ public sealed class ClientUpdateToolTests
             .And.Contain("substitui o cadastro inteiro").And.Contain("list_tags").And.Contain("última gravação");
         tool.Annotations!.ReadOnlyHint.Should().BeFalse();
         tool.Annotations.DestructiveHint.Should().BeTrue();
+        tool.Annotations.IdempotentHint.Should().BeTrue();
         tool.Annotations.OpenWorldHint.Should().BeFalse();
         tool.InputSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString()).Should().Equal("command");
         var command = tool.InputSchema.GetProperty("properties").GetProperty("command");
@@ -63,7 +62,7 @@ public sealed class ClientUpdateToolTests
     {
         var client = ExistingClient();
         var newTag = Tag.Create(Guid.NewGuid(), "Recorrente", TagColor.Create("#0ea5e9").Value, null).Value;
-        _tags.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>()).Returns(new List<Tag> { newTag });
+        Tags.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>()).Returns(new List<Tag> { newTag });
         SaveSucceeds();
 
         var result = await Invoke(new
@@ -98,8 +97,8 @@ public sealed class ClientUpdateToolTests
             .Select(item => item.GetString()).Should().Equal("operationalSupport");
         saved.GetProperty("tags").EnumerateArray().Select(item => item.GetProperty("name").GetString()).Should().Equal("Recorrente");
         client.FullName.Value.Should().Be("Maria S. Souza");
-        await _clients.Received(1).UpdateAsync(client, Arg.Any<CancellationToken>());
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        await Clients.Received(1).UpdateAsync(client, Arg.Any<CancellationToken>());
+        await UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -168,7 +167,7 @@ public sealed class ClientUpdateToolTests
     {
         var client = ExistingClient();
         var other = ExistingClient("Outra Maria", OtherCpf);
-        _clients.FindByCpfAsync(Arg.Is<CpfNumber>(cpf => cpf.Value == OtherCpf), client.Id, Arg.Any<CancellationToken>())
+        Clients.FindByCpfAsync(Arg.Is<CpfNumber>(cpf => cpf.Value == OtherCpf), client.Id, Arg.Any<CancellationToken>())
             .Returns(other);
 
         var result = await Invoke(new { clientId = client.Id, fullName = "Maria Souza", cpf = OtherCpf });
@@ -179,8 +178,8 @@ public sealed class ClientUpdateToolTests
         var meta = error.GetProperty("fieldErrors").EnumerateObject().Single().Value.EnumerateArray().Single().GetProperty("meta");
         meta.GetProperty("clientId").GetString().Should().Be(other.Id.ToString());
         meta.GetProperty("clientName").GetString().Should().Be("Outra Maria");
-        await _clients.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
-        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        await Clients.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
+        await UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -188,7 +187,7 @@ public sealed class ClientUpdateToolTests
     {
         var client = ExistingClient();
         var other = ExistingClient("Outra Maria", OtherCpf);
-        _clients.FindActiveByEmailAsync(Arg.Is<EmailAddress>(email => email.Value == "usado@example.com"), client.Id,
+        Clients.FindActiveByEmailAsync(Arg.Is<EmailAddress>(email => email.Value == "usado@example.com"), client.Id,
             Arg.Any<CancellationToken>()).Returns(other);
 
         var result = await Invoke(new { clientId = client.Id, fullName = "Maria Souza", email = "Usado@Example.com" });
@@ -198,7 +197,7 @@ public sealed class ClientUpdateToolTests
         error.GetProperty("code").GetString().Should().Be("Client.DuplicateEmail");
         var meta = error.GetProperty("fieldErrors").EnumerateObject().Single().Value.EnumerateArray().Single().GetProperty("meta");
         meta.GetProperty("clientId").GetString().Should().Be(other.Id.ToString());
-        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        await UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -212,7 +211,7 @@ public sealed class ClientUpdateToolTests
 
         result.IsError.Should().BeFalse();
         result.StructuredContent!.Value.GetProperty("status").GetString().Should().Be("inactive");
-        await _clients.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
+        await Clients.DidNotReceive().FindActiveByEmailAsync(Arg.Any<EmailAddress>(), Arg.Any<Guid?>(), Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -234,7 +233,7 @@ public sealed class ClientUpdateToolTests
     public async Task Etiqueta_inexistente_retorna_validacao_sem_gravar()
     {
         var client = ExistingClient();
-        _tags.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>()).Returns(new List<Tag>());
+        Tags.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>()).Returns(new List<Tag>());
 
         var result = await Invoke(new { clientId = client.Id, fullName = "Maria Souza", tagIds = new[] { Guid.NewGuid() } });
 
@@ -247,7 +246,7 @@ public sealed class ClientUpdateToolTests
     public async Task Falha_ao_salvar_retorna_conflito_de_gravacao()
     {
         var client = ExistingClient();
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Failure<int>(
+        UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Failure<int>(
             new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Clients_TenantId_CpfNormalized")));
 
         var result = await Invoke(new { clientId = client.Id, fullName = "Maria Souza" });
@@ -286,18 +285,15 @@ public sealed class ClientUpdateToolTests
         var error = ErrorOf(result);
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("message").GetString().Should().Contain(message);
-        await _clients.DidNotReceive().GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
+        await Clients.DidNotReceive().GetByIdAsync(Arg.Any<Guid>(), Arg.Any<CancellationToken>());
         NothingWasSaved();
     }
 
-    private void SaveSucceeds() =>
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
-
     private void NothingWasSaved()
     {
-        _clients.DidNotReceive().Add(Arg.Any<Client>());
-        _clients.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
-        _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        Clients.DidNotReceive().Add(Arg.Any<Client>());
+        Clients.DidNotReceive().UpdateAsync(Arg.Any<Client>(), Arg.Any<CancellationToken>());
+        UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     private Client ExistingClient(string name = "Maria Souza", string cpf = ValidCpf)
@@ -313,69 +309,8 @@ public sealed class ClientUpdateToolTests
             [new ReferenceContactData(FullName.Create("João Lima").Value, "Vizinho", null, new HashSet<ContactPurpose> { ContactPurpose.Emergency })],
             [Guid.NewGuid()]);
         var client = Client.Create(data, DateOnly.FromDateTime(DateTime.UtcNow)).Value;
-        _clients.GetByIdAsync(client.Id, Arg.Any<CancellationToken>()).Returns(client);
+        Clients.GetByIdAsync(client.Id, Arg.Any<CancellationToken>()).Returns(client);
         return client;
     }
 
-    private static IEnumerable<string> MissingDescriptions(JsonElement schema, string path)
-    {
-        if (schema.TryGetProperty("items", out var items))
-        {
-            foreach (var missing in MissingDescriptions(items, path + "[]"))
-            {
-                yield return missing;
-            }
-        }
-
-        if (!schema.TryGetProperty("properties", out var properties))
-        {
-            yield break;
-        }
-
-        foreach (var property in properties.EnumerateObject())
-        {
-            var fullPath = $"{path}.{property.Name}";
-            if (!property.Value.TryGetProperty("description", out var description) || string.IsNullOrWhiteSpace(description.GetString()))
-            {
-                yield return fullPath;
-            }
-
-            foreach (var missing in MissingDescriptions(property.Value, fullPath))
-            {
-                yield return missing;
-            }
-        }
-    }
-
-    private static JsonElement ErrorOf(CallToolResult result)
-    {
-        var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
-        return document.RootElement.GetProperty("error").Clone();
-    }
-
-    private async Task<CallToolResult> Invoke(object command)
-    {
-        using var provider = Services();
-        using var scope = provider.CreateScope();
-        var argument = JsonSerializer.SerializeToElement(command, JsonSerializerOptions.Web);
-        return await McpToolCall.InvokeAsync(scope.ServiceProvider, "update_client",
-            new Dictionary<string, object?> { ["command"] = argument }, TestContext.Current.CancellationToken);
-    }
-
-    private ServiceProvider Services()
-    {
-        var services = new ServiceCollection().AddLogging();
-        services.AddSharedKernel();
-        services.AddServicesApplication();
-        services.AddAuthorization();
-        services.AddSingleton(TimeProvider.System);
-        services.AddSingleton(_clients);
-        services.AddSingleton(_tags);
-        services.AddSingleton(_unitOfWork);
-        var jsonOptions = services.AddMcpValueObjectInputs(TimeProvider.System);
-        services.AddMcpServer().WithToolExceptionHandling().WithTools<ClientsTools>(jsonOptions);
-        var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
-        _ = provider.GetRequiredService<IOptions<McpServerOptions>>().Value;
-        return provider;
-    }
 }

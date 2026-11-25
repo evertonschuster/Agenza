@@ -99,6 +99,7 @@ public sealed class ClientsTools(IDispatcher dispatcher)
         Title = "Editar cliente",
         ReadOnly = false,
         Destructive = true,
+        Idempotent = true,
         OpenWorld = false,
         UseStructuredContent = true,
         OutputSchemaType = typeof(ClientResponse))]

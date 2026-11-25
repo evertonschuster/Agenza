@@ -12,15 +12,13 @@ using ServicesService.Domain.Entities;
 using ServicesService.Domain.ValueObjects;
 using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
+using static ServicesService.McpTests.ClientToolAssertions;
 
 namespace ServicesService.McpTests;
 
-public sealed class ClientCreateToolTests
+public sealed class ClientCreateToolTests() : ClientCommandToolTestBase("create_client")
 {
     private const string ValidCpf = "52998224725";
-    private readonly IClientRepository _clients = Substitute.For<IClientRepository>();
-    private readonly ITagRepository _tags = Substitute.For<ITagRepository>();
-    private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
 
     [Fact]
     public void Publica_contrato_de_criacao_com_so_o_nome_obrigatorio_e_todos_os_campos_descritos()
@@ -48,7 +46,7 @@ public sealed class ClientCreateToolTests
         guardian.GetProperty("required").EnumerateArray().Select(item => item.GetString()).Should().BeEquivalentTo("name", "relationship");
         var contact = command.GetProperty("properties").GetProperty("referenceContacts").GetProperty("items");
         contact.GetProperty("required").EnumerateArray().Select(item => item.GetString())
-            .Should().BeEquivalentTo("name", "relationship", "phone", "purposes");
+            .Should().BeEquivalentTo("name", "relationship", "purposes");
         tool.OutputSchema!.Value.GetProperty("properties").EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo(
             "id", "fullName", "birthDate", "phone", "email", "cpf", "administrativeNotes", "status", "guardians", "referenceContacts", "tags");
     }
@@ -69,8 +67,8 @@ public sealed class ClientCreateToolTests
         client.GetProperty("guardians").GetArrayLength().Should().Be(0);
         client.GetProperty("referenceContacts").GetArrayLength().Should().Be(0);
         client.GetProperty("tags").GetArrayLength().Should().Be(0);
-        _clients.Received(1).Add(Arg.Is<Client>(entity => entity.Id == id));
-        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+        Clients.Received(1).Add(Arg.Is<Client>(entity => entity.Id == id));
+        await UnitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
@@ -78,7 +76,7 @@ public sealed class ClientCreateToolTests
     {
         SaveSucceeds();
         var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
-        _tags.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
+        Tags.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>())
             .Returns(new List<Tag> { tag });
 
         var result = await Invoke(new
@@ -112,14 +110,36 @@ public sealed class ClientCreateToolTests
         contact.GetProperty("purposes").EnumerateArray().Select(purpose => purpose.GetString())
             .Should().Equal("emergency", "dailyCommunication");
         client.GetProperty("tags").EnumerateArray().Single().GetProperty("id").GetGuid().Should().Be(tag.Id);
-        _clients.Received(1).Add(Arg.Any<Client>());
+        Clients.Received(1).Add(Arg.Any<Client>());
+    }
+
+    [Fact]
+    public async Task Contato_de_referencia_e_responsavel_sem_telefone_nem_cpf_sao_aceitos_quando_omitidos()
+    {
+        SaveSucceeds();
+
+        var result = await Invoke(new
+        {
+            fullName = "Maria Souza",
+            guardians = new[] { new { name = "Ana Souza", relationship = "Mãe" } },
+            referenceContacts = new[] { new { name = "João Lima", relationship = "Vizinho", purposes = new[] { "emergency" } } },
+        });
+
+        result.IsError.Should().BeFalse();
+        var client = result.StructuredContent!.Value;
+        var guardian = client.GetProperty("guardians").EnumerateArray().Single();
+        guardian.GetProperty("phone").ValueKind.Should().Be(JsonValueKind.Null);
+        guardian.GetProperty("cpf").ValueKind.Should().Be(JsonValueKind.Null);
+        var contact = client.GetProperty("referenceContacts").EnumerateArray().Single();
+        contact.GetProperty("name").GetString().Should().Be("João Lima");
+        contact.GetProperty("phone").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
     [Fact]
     public async Task Cpf_ja_cadastrado_retorna_conflito_com_o_id_do_cliente_existente_sem_gravar()
     {
         var existing = ExistingClient("Maria Antiga");
-        _clients.FindByCpfAsync(Arg.Is<CpfNumber>(cpf => cpf.Value == ValidCpf), null, Arg.Any<CancellationToken>())
+        Clients.FindByCpfAsync(Arg.Is<CpfNumber>(cpf => cpf.Value == ValidCpf), null, Arg.Any<CancellationToken>())
             .Returns(existing);
 
         var result = await Invoke(new { fullName = "Maria Souza", cpf = "529.982.247-25" });
@@ -139,7 +159,7 @@ public sealed class ClientCreateToolTests
     public async Task Email_ja_usado_por_cliente_ativo_retorna_conflito_com_o_id_do_cliente_existente_sem_gravar()
     {
         var existing = ExistingClient("Maria Antiga");
-        _clients.FindActiveByEmailAsync(Arg.Is<EmailAddress>(email => email.Value == "maria@example.com"), null,
+        Clients.FindActiveByEmailAsync(Arg.Is<EmailAddress>(email => email.Value == "maria@example.com"), null,
             Arg.Any<CancellationToken>()).Returns(existing);
 
         var result = await Invoke(new { fullName = "Maria Souza", email = "Maria@Example.com" });
@@ -169,7 +189,7 @@ public sealed class ClientCreateToolTests
     [Fact]
     public async Task Etiqueta_inexistente_retorna_validacao_sem_gravar()
     {
-        _tags.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>()).Returns(new List<Tag>());
+        Tags.GetByIdsAsync(Arg.Any<IReadOnlyCollection<Guid>>(), Arg.Any<CancellationToken>()).Returns(new List<Tag>());
 
         var result = await Invoke(new { fullName = "Maria Souza", tagIds = new[] { Guid.NewGuid() } });
 
@@ -183,7 +203,7 @@ public sealed class ClientCreateToolTests
     [Fact]
     public async Task Falha_ao_salvar_retorna_conflito_de_gravacao()
     {
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Failure<int>(
+        UnitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Failure<int>(
             new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Clients_TenantId_CpfNormalized")));
 
         var result = await Invoke(new { fullName = "Maria Souza" });
@@ -235,13 +255,10 @@ public sealed class ClientCreateToolTests
         NothingWasSaved();
     }
 
-    private void SaveSucceeds() =>
-        _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
-
     private void NothingWasSaved()
     {
-        _clients.DidNotReceive().Add(Arg.Any<Client>());
-        _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        Clients.DidNotReceive().Add(Arg.Any<Client>());
+        UnitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     private static Client ExistingClient(string name)
@@ -250,65 +267,4 @@ public sealed class ClientCreateToolTests
         return Client.Create(data, DateOnly.FromDateTime(DateTime.UtcNow)).Value;
     }
 
-    private static IEnumerable<string> MissingDescriptions(JsonElement schema, string path)
-    {
-        if (schema.TryGetProperty("items", out var items))
-        {
-            foreach (var missing in MissingDescriptions(items, path + "[]"))
-            {
-                yield return missing;
-            }
-        }
-
-        if (!schema.TryGetProperty("properties", out var properties))
-        {
-            yield break;
-        }
-
-        foreach (var property in properties.EnumerateObject())
-        {
-            var fullPath = $"{path}.{property.Name}";
-            if (!property.Value.TryGetProperty("description", out var description) || string.IsNullOrWhiteSpace(description.GetString()))
-            {
-                yield return fullPath;
-            }
-
-            foreach (var missing in MissingDescriptions(property.Value, fullPath))
-            {
-                yield return missing;
-            }
-        }
-    }
-
-    private static JsonElement ErrorOf(CallToolResult result)
-    {
-        var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
-        return document.RootElement.GetProperty("error").Clone();
-    }
-
-    private async Task<CallToolResult> Invoke(object command)
-    {
-        using var provider = Services();
-        using var scope = provider.CreateScope();
-        var argument = JsonSerializer.SerializeToElement(command, JsonSerializerOptions.Web);
-        return await McpToolCall.InvokeAsync(scope.ServiceProvider, "create_client",
-            new Dictionary<string, object?> { ["command"] = argument }, TestContext.Current.CancellationToken);
-    }
-
-    private ServiceProvider Services()
-    {
-        var services = new ServiceCollection().AddLogging();
-        services.AddSharedKernel();
-        services.AddServicesApplication();
-        services.AddAuthorization();
-        services.AddSingleton(TimeProvider.System);
-        services.AddSingleton(_clients);
-        services.AddSingleton(_tags);
-        services.AddSingleton(_unitOfWork);
-        var jsonOptions = services.AddMcpValueObjectInputs(TimeProvider.System);
-        services.AddMcpServer().WithToolExceptionHandling().WithTools<ClientsTools>(jsonOptions);
-        var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
-        _ = provider.GetRequiredService<IOptions<McpServerOptions>>().Value;
-        return provider;
-    }
 }

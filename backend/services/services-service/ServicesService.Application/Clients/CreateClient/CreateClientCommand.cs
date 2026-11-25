@@ -20,7 +20,7 @@ public sealed record CreateClientCommand(
     IReadOnlyList<GuardianInput>? Guardians = null,
     [property: Description("Pessoas de referência do cliente, até 10, cada uma com ao menos uma finalidade. Omita se não houver.")]
     IReadOnlyList<ReferenceContactInput>? ReferenceContacts = null,
-    [property: Description("IDs das etiquetas do cliente, até 20 e sem repetição. Use os IDs retornados por list_tags. Omita se não houver.")]
+    [property: Description("IDs das etiquetas do cliente, até 20 e sem repetição. Omita se não houver.")]
     IReadOnlyList<Guid>? TagIds = null) : ICommand<ClientResponse>;
 
 public sealed record GuardianInput(
@@ -38,7 +38,7 @@ public sealed record ReferenceContactInput(
     FullName Name,
     [property: Description("Vínculo da pessoa de referência com o cliente, com até 60 caracteres.")]
     string Relationship,
-    [property: Description("Telefone da pessoa de referência, no mesmo formato do telefone do cliente. Envie null se não houver.")]
-    PhoneNumber? Phone,
     [property: Description("Finalidades do contato, ao menos uma: emergency (emergência), operationalSupport (apoio operacional) ou dailyCommunication (comunicação diária).")]
-    IReadOnlyList<ContactPurpose>? Purposes);
+    IReadOnlyList<ContactPurpose>? Purposes,
+    [property: Description("Telefone da pessoa de referência, no mesmo formato do telefone do cliente. Omita se não houver.")]
+    PhoneNumber? Phone = null);

@@ -4,7 +4,7 @@ using Admin.SharedKernel;
 namespace ServicesService.Application.Clients.UpdateClient;
 
 public sealed record UpdateClientCommand(
-    [property: Description("ID do cliente a editar, em formato UUID. Use o valor do campo id retornado por list_clients ou get_client_by_id.")]
+    [property: Description("ID do cliente a editar, em formato UUID. Use o valor do campo id do cliente.")]
     Guid ClientId,
     [property: Description("Nome completo final do cliente, de 2 a 150 caracteres.")]
     FullName FullName,
@@ -22,7 +22,7 @@ public sealed record UpdateClientCommand(
     IReadOnlyList<UpdateGuardianInput>? Guardians,
     [property: Description("Lista final de pessoas de referência, até 10, cada uma com ao menos uma finalidade. Substitui a lista atual: envie todas as que devem permanecer. Envie null ou lista vazia para remover todas.")]
     IReadOnlyList<UpdateReferenceContactInput>? ReferenceContacts,
-    [property: Description("Lista final de IDs de etiquetas, até 20 e sem repetição. Substitui a lista atual: envie todas as que devem permanecer. Use os IDs retornados por list_tags. Envie null ou lista vazia para remover todas.")]
+    [property: Description("Lista final de IDs de etiquetas, até 20 e sem repetição. Substitui a lista atual: envie todas as que devem permanecer. Envie null ou lista vazia para remover todas.")]
     IReadOnlyList<Guid>? TagIds) : ICommand<ClientResponse>;
 
 public sealed record UpdateGuardianInput(
