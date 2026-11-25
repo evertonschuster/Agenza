@@ -7,6 +7,7 @@ using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.CreateTag;
 using ServicesService.Application.Tags.GetTagById;
 using ServicesService.Application.Tags.ListTags;
+using ServicesService.Application.Tags.UpdateTag;
 using ServicesService.Mcp.Extensions;
 
 namespace ServicesService.Mcp.Tools;
@@ -77,6 +78,28 @@ public sealed class TagsTools(IDispatcher dispatcher)
         CancellationToken cancellationToken = default)
     {
         var result = await dispatcher.Query(query, cancellationToken);
+        return result.ToToolResult();
+    }
+
+    [McpServerTool(
+        Name = "update_tag",
+        Title = "Editar etiqueta",
+        ReadOnly = false,
+        Destructive = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TagResponse))]
+    [Description(
+        "Edita uma etiqueta da empresa autenticada e retorna os dados salvos. " +
+        "Envie o ID, o nome, a cor e a descrição finais. Para mudar apenas um campo, consulte a etiqueta com get_tag_by_id " +
+        "e repita os valores atuais dos demais campos. Se você só tiver o nome, comece com list_tags. " +
+        "Envie null em description apenas para salvar a etiqueta sem descrição.")]
+    public async Task<CallToolResult> UpdateTag(
+        [Description("ID da etiqueta e valores finais de todos os campos editáveis.")]
+        UpdateTagCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dispatcher.Send(command, cancellationToken);
         return result.ToToolResult();
     }
 }
