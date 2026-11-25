@@ -234,6 +234,17 @@ public class UpdateClientCommandValidatorTests
     }
 
     [Fact]
+    public async Task Nome_ausente_da_pessoa_de_referencia_e_recusado()
+    {
+        var contact = new UpdateReferenceContactInput(null!, "Tio", null, [ContactPurpose.Emergency]);
+
+        var result = await Validate(Command(referenceContacts: [contact]));
+
+        result.Errors.Select(error => error.ErrorCode).Should().Equal(ClientContact.NameRequired.Code);
+        MessagesFor(result, "ReferenceContacts[0].Name").Should().Equal("O nome da pessoa de referência é obrigatório.");
+    }
+
+    [Fact]
     public async Task Nome_completo_ausente_e_recusado_com_o_codigo_de_nome_obrigatorio()
     {
         var result = await Validate(new UpdateClientCommand(ClientId, null!, null, null, null, null, null, null, null, null));

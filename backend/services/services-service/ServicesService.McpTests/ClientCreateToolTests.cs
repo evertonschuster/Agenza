@@ -203,6 +203,10 @@ public sealed class ClientCreateToolTests
     [InlineData("""{"fullName":"Maria Souza","guardians":[{"name":"Ana Souza"}]}""", "O vínculo do responsável é obrigatório.")]
     [InlineData("""{"fullName":"Maria Souza","referenceContacts":[{"name":"João Lima","relationship":"Vizinho","phone":null,"purposes":[]}]}""",
         "Informe ao menos uma finalidade")]
+    [InlineData("""{"fullName":"Maria Souza","referenceContacts":[{"name":null,"relationship":"Vizinho","phone":null,"purposes":["emergency"]}]}""",
+        "O nome da pessoa de referência é obrigatório.")]
+    [InlineData("""{"fullName":"Maria Souza","referenceContacts":[{"relationship":"Vizinho","phone":null,"purposes":["emergency"]}]}""",
+        "O nome da pessoa de referência é obrigatório.")]
     public async Task Valores_invalidos_retornam_validacao_sem_consultar_nem_gravar(string json, string message)
     {
         using var command = JsonDocument.Parse(json);

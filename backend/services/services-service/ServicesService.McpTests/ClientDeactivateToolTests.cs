@@ -33,7 +33,8 @@ public sealed class ClientDeactivateToolTests
 
         contract.Title.Should().Be("Desativar cliente");
         contract.Description.Should().Contain("empresa autenticada").And.Contain("list_clients")
-            .And.Contain("Client.HasUpcomingAppointments").And.Contain("reversível").And.Contain("já está inativo");
+            .And.Contain("Client.HasUpcomingAppointments").And.Contain("reversível").And.Contain("já está inativo")
+            .And.Contain("ainda não consulta agendamentos");
         contract.Annotations!.ReadOnlyHint.Should().BeFalse();
         contract.Annotations.DestructiveHint.Should().BeFalse();
         contract.Annotations.IdempotentHint.Should().BeTrue();

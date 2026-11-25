@@ -137,8 +137,9 @@ public sealed class ClientsTools(IDispatcher dispatcher)
         "O cadastro e o histórico são preservados e a operação é reversível. " +
         "Use o ID retornado por list_clients ou get_client_by_id; se você só tiver o nome, o e-mail ou o CPF, use list_clients. " +
         "Desativar um cliente que já está inativo não altera nada e retorna o cadastro atual. " +
-        "A desativação é recusada com conflito (Client.HasUpcomingAppointments) quando o cliente tem agendamentos futuros " +
-        "não cancelados; nesse caso, informe o usuário, porque esses agendamentos precisam ser resolvidos antes. " +
+        "Se a desativação for recusada com conflito (Client.HasUpcomingAppointments) por agendamentos futuros não cancelados, " +
+        "informe o usuário, porque esses agendamentos precisam ser resolvidos antes. " +
+        "Hoje o sistema ainda não consulta agendamentos, então essa recusa não ocorre e não se deve afirmar que o cliente tem ou não agendamentos. " +
         "Um cliente inativo deixa de bloquear o uso do seu e-mail por outro cliente ativo. " +
         "Desative apenas quando o usuário pedir explicitamente.")]
     public async Task<CallToolResult> DeactivateClient(

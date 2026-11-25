@@ -94,6 +94,11 @@ public sealed class ReferenceContactInputValidator : AbstractValidator<Reference
 {
     public ReferenceContactInputValidator()
     {
+        RuleFor(contact => contact.Name)
+            .NotNull()
+            .WithErrorCode(ClientContact.NameRequired.Code)
+            .WithMessage("O nome da pessoa de referência é obrigatório.");
+
         RuleFor(contact => contact.Relationship)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()

@@ -99,6 +99,11 @@ public sealed class UpdateReferenceContactInputValidator : AbstractValidator<Upd
 {
     public UpdateReferenceContactInputValidator()
     {
+        RuleFor(contact => contact.Name)
+            .NotNull()
+            .WithErrorCode(ClientContact.NameRequired.Code)
+            .WithMessage("O nome da pessoa de referência é obrigatório.");
+
         RuleFor(contact => contact.Relationship)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()
