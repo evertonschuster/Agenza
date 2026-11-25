@@ -80,6 +80,25 @@ public sealed class TagsToolsTests
     }
 
     [Fact]
+    public async Task Consulta_ausente_identifica_o_argumento_obrigatorio_sem_executar_a_listagem()
+    {
+        var handler = new RecordingHandler();
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+
+        var result = await McpToolCall.InvokeAsync(scope.ServiceProvider, "list_tags", new Dictionary<string, object?>(),
+            TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("message").GetString().Should().Contain("required parameter 'query'");
+        error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
+        handler.Query.Should().BeNull();
+    }
+
+    [Fact]
     public async Task Consulta_nula_retorna_erro_de_validacao_sem_executar_a_listagem()
     {
         var handler = new RecordingHandler();

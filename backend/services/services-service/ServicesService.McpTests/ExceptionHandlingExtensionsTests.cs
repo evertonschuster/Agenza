@@ -52,6 +52,24 @@ public sealed class ExceptionHandlingExtensionsTests
     }
 
     [Fact]
+    public async Task Argumento_ausente_em_outra_ferramenta_preserva_a_mensagem_do_sdk()
+    {
+        var services = new ServiceCollection().AddLogging();
+        services.AddMcpServer().WithToolExceptionHandling().WithTools<FailingTools>();
+        using var provider = services.BuildServiceProvider();
+
+        var result = await McpToolCall.InvokeAsync(provider, "required_arguments", new Dictionary<string, object?> { ["name"] = "Teste" },
+            TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("message").GetString().Should().Contain("required parameter 'count'");
+        error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
+    }
+
+    [Fact]
     public async Task Entrada_invalida_na_raiz_retorna_validacao_sem_campo()
     {
         var services = new ServiceCollection().AddLogging();
@@ -69,12 +87,18 @@ public sealed class ExceptionHandlingExtensionsTests
         error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
-    [Fact]
-    public async Task Excecao_json_sem_caminho_preserva_a_mensagem_sem_adicionar_campo()
+    public static TheoryData<Exception> ValidationExceptionsWithoutField() => new()
+    {
+        new JsonException("JSON inválido"),
+        new ArgumentException("Argumento inválido", "value"),
+    };
+
+    [Theory]
+    [MemberData(nameof(ValidationExceptionsWithoutField))]
+    public async Task Excecao_de_validacao_sem_campo_preserva_a_mensagem(Exception exception)
     {
         using var provider = Services();
         var filter = provider.GetRequiredService<IOptions<McpServerOptions>>().Value.Filters.Request.CallToolFilters.Single();
-        var exception = new JsonException("JSON inválido");
         var invoke = filter((_, _) => ValueTask.FromException<CallToolResult>(exception));
 
         var result = await invoke(null!, TestContext.Current.CancellationToken);
@@ -87,17 +111,15 @@ public sealed class ExceptionHandlingExtensionsTests
         error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
-    public static TheoryData<Exception> NativeExceptions() => new()
+    public static TheoryData<Exception> ProtocolControlExceptions() => new()
     {
-        new ArgumentException("Argumento inválido"),
-        new McpException("Falha controlada"),
         new McpProtocolException("Protocolo inválido", McpErrorCode.InvalidParams),
         new InputRequiredException(requestState: "continuar"),
     };
 
     [Theory]
-    [MemberData(nameof(NativeExceptions))]
-    public async Task Falhas_tratadas_pelo_sdk_nao_sao_reclassificadas_como_inesperadas(Exception exception)
+    [MemberData(nameof(ProtocolControlExceptions))]
+    public async Task Falhas_de_protocolo_e_pedidos_de_entrada_seguem_para_o_sdk(Exception exception)
     {
         using var provider = Services();
         var filter = provider.GetRequiredService<IOptions<McpServerOptions>>().Value.Filters.Request.CallToolFilters.Single();
@@ -106,6 +128,33 @@ public sealed class ExceptionHandlingExtensionsTests
         var action = async () => await invoke(null!, TestContext.Current.CancellationToken);
 
         (await action.Should().ThrowAsync<Exception>()).Which.Should().BeSameAs(exception);
+    }
+
+    [Fact]
+    public async Task Tempo_limite_retorna_codigo_especifico_e_registra_detalhe_somente_no_servidor()
+    {
+        using var logs = new CapturingLoggerProvider();
+        var services = new ServiceCollection().AddLogging(builder => builder.AddProvider(logs));
+        services.AddMcpServer().WithToolExceptionHandling().WithTools<FailingTools>();
+        using var provider = services.BuildServiceProvider();
+        var httpContext = new DefaultHttpContext { TraceIdentifier = "trace-id" };
+        httpContext.Request.Headers["X-Correlation-Id"] = "correlation-id";
+        provider.GetRequiredService<IHttpContextAccessor>().HttpContext = httpContext;
+
+        var result = await McpToolCall.InvokeAsync(provider, "expired", new Dictionary<string, object?>(),
+            TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        var text = result.Content.OfType<TextContentBlock>().Single().Text;
+        using var document = JsonDocument.Parse(text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Operation.Timeout");
+        error.GetProperty("message").GetString().Should().Be("A operação excedeu o tempo limite.");
+        error.GetProperty("traceId").GetString().Should().Be("trace-id");
+        error.GetProperty("correlationId").GetString().Should().Be("correlation-id");
+        text.Should().NotContain("detalhe interno");
+        var entry = logs.Entries.Should().ContainSingle().Subject;
+        entry.Exception.Should().BeOfType<TimeoutException>().Which.Message.Should().Be("detalhe interno");
     }
 
     [Fact]
@@ -149,6 +198,12 @@ public sealed class ExceptionHandlingExtensionsTests
 
     private sealed class FailingTools
     {
+        [McpServerTool(Name = "expired")]
+        public static string Expired() => throw new TimeoutException("detalhe interno");
+
+        [McpServerTool(Name = "required_arguments")]
+        public static string RequiredArguments(string name, int count, bool active = true) => $"{name}: {count}, {active}";
+
         [McpServerTool(Name = "failure")]
         public static string Failure(bool timeout) => timeout
             ? throw new OperationCanceledException("detalhe interno")

@@ -30,21 +30,42 @@ public static class ExceptionHandlingExtensions
                     });
                 return error.ToToolResult();
             }
+            catch (ArgumentException exception)
+            {
+                return Error.Validation("Validation.Failed", exception.Message).ToToolResult();
+            }
+            catch (McpProtocolException)
+            {
+                throw;
+            }
+            catch (InputRequiredException)
+            {
+                throw;
+            }
+            catch (TimeoutException exception)
+            {
+                return ReportFailure(context, exception, Error.Failure("Operation.Timeout", "A operação excedeu o tempo limite."));
+            }
             catch (Exception exception) when (!(exception is OperationCanceledException && cancellationToken.IsCancellationRequested))
             {
-                var services = context.Services!;
-                var httpContext = services.GetRequiredService<IHttpContextAccessor>().HttpContext;
-                var traceId = Clean(httpContext?.TraceIdentifier ?? Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N"));
-                var correlationId = httpContext?.Request.Headers["X-Correlation-Id"].ToString();
-                correlationId = string.IsNullOrWhiteSpace(correlationId) ? traceId : Clean(correlationId);
-                var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("ServicesService.Mcp.Tools");
-                logger.LogError(exception,
-                    "Unhandled exception invoking MCP tool {ToolName} with TraceId {TraceId} and CorrelationId {CorrelationId}",
-                    Clean(context.Params?.Name), traceId, correlationId);
-
-                return Error.Failure("Unexpected.Error", "Ocorreu um erro inesperado.").ToToolResult(traceId, correlationId);
+                return ReportFailure(context, exception, Error.Failure("Unexpected.Error", "Ocorreu um erro inesperado."));
             }
         }));
+    }
+
+    private static CallToolResult ReportFailure(RequestContext<CallToolRequestParams> context, Exception exception, Error error)
+    {
+        var services = context.Services!;
+        var httpContext = services.GetRequiredService<IHttpContextAccessor>().HttpContext;
+        var traceId = Clean(httpContext?.TraceIdentifier ?? Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N"));
+        var correlationId = httpContext?.Request.Headers["X-Correlation-Id"].ToString();
+        correlationId = string.IsNullOrWhiteSpace(correlationId) ? traceId : Clean(correlationId);
+        var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("ServicesService.Mcp.Tools");
+        logger.LogError(exception,
+            "Unhandled exception invoking MCP tool {ToolName} with TraceId {TraceId} and CorrelationId {CorrelationId}",
+            Clean(context.Params?.Name), traceId, correlationId);
+
+        return error.ToToolResult(traceId, correlationId);
     }
 
     private static string? Clean(string? value) =>

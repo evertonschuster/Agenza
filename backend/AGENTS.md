@@ -47,10 +47,12 @@ of the registered tools. Queries and commands may be parameters directly, includ
 objects; tool methods do not duplicate input contracts or parse VOs. Preserve descriptions,
 defaults and nullability in the published schema.
 The SDK owns argument binding and invocation; do not pre-deserialize arguments or duplicate VO factories.
+The tool filter maps `ArgumentException` to a global `Validation.Failed` using the original message.
 The tool filter maps `JsonException` to `Validation.Failed` using the exception's original message
 and path. The path is relative to the deserialized argument. A missing or root-only path yields a
-global error. Argument exceptions, MCP control flow and requested cancellation stay with the SDK.
-Unexpected failures return trace and correlation IDs. Application Result failures keep their mapping.
+global error. Protocol errors, requests for additional input and requested cancellation stay with the SDK.
+Timeouts and unexpected failures return trace and correlation IDs. Application Result failures keep
+their mapping.
 MCP output uses the shared value object and enum converters.
 
 ## Validation and delivery
