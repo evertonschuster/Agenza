@@ -105,8 +105,8 @@ public sealed class ClientsTools(IDispatcher dispatcher)
         "A edição substitui o cadastro inteiro: envie o ID e os valores finais de todos os campos. " +
         "Antes de editar, consulte o cliente com get_client_by_id e repita os valores atuais dos campos que não mudam; " +
         "se você só tiver o nome, o e-mail ou o CPF, comece com list_clients. " +
-        "Um campo enviado como null fica vazio e uma lista vazia (ou null) em guardians, referenceContacts ou tagIds remove " +
-        "todos os itens atuais, então envie todos os itens que devem permanecer. " +
+        "Um campo enviado como null, ou omitido, fica vazio, e uma lista vazia, nula ou omitida em guardians, referenceContacts " +
+        "ou tagIds remove todos os itens atuais, então envie sempre todos os campos e todos os itens que devem permanecer. " +
         "A situação (ativo ou inativo) não muda por esta ferramenta. " +
         "Um CPF já cadastrado em outro cliente, ou um e-mail já usado por outro cliente ativo, retorna conflito com o ID " +
         "do outro cliente em fieldErrors. " +
