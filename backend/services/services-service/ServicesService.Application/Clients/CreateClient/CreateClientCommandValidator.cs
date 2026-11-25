@@ -8,6 +8,11 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
     {
         DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
+        RuleFor(command => command.FullName)
+            .NotNull()
+            .WithErrorCode("Client.FullNameRequired")
+            .WithMessage("O nome completo é obrigatório.");
+
         RuleFor(command => command.Guardians)
             .Must(guardians => guardians is null || guardians.Count <= Client.MaxGuardians)
             .WithErrorCode(Client.TooManyGuardians.Code)
@@ -89,6 +94,11 @@ public sealed class ReferenceContactInputValidator : AbstractValidator<Reference
 {
     public ReferenceContactInputValidator()
     {
+        RuleFor(contact => contact.Name)
+            .NotNull()
+            .WithErrorCode(ClientContact.NameRequired.Code)
+            .WithMessage("O nome da pessoa de referência é obrigatório.");
+
         RuleFor(contact => contact.Relationship)
             .Cascade(CascadeMode.Stop)
             .NotEmpty()

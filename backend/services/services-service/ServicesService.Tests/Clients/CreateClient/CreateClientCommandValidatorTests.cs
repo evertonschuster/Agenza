@@ -41,7 +41,7 @@ public class CreateClientCommandValidatorTests
         string relationship = "Tio",
         string? phone = null,
         params ContactPurpose[] purposes) =>
-        new(ClientTestData.Name(name), relationship, phone is null ? null : ClientTestData.Phone(phone), purposes.Length == 0 ? [ContactPurpose.Emergency] : purposes);
+        new(ClientTestData.Name(name), relationship, purposes.Length == 0 ? [ContactPurpose.Emergency] : purposes, phone is null ? null : ClientTestData.Phone(phone));
 
     private async Task<ValidationResult> Validate(CreateClientCommand command) =>
         await _validator.ValidateAsync(command);
@@ -66,7 +66,7 @@ public class CreateClientCommandValidatorTests
             { "guardian name too short", Command(guardians: [Guardian(name: "A")]), "Guardians[0].Name", "ClientContact.InvalidNameLength" },
             { "guardian relationship missing", Command(guardians: [Guardian(relationship: "")]), "Guardians[0].Relationship", "ClientContact.RelationshipRequired" },
             { "guardian relationship too long", Command(guardians: [Guardian(relationship: new string('a', 61))]), "Guardians[0].Relationship", "ClientContact.RelationshipTooLong" },
-            { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, [])]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
+            { "reference without purposes", Command(referenceContacts: [new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", [], null)]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
             { "reference with an undefined purpose", Command(referenceContacts: [Reference(purposes: [(ContactPurpose)3])]), "ReferenceContacts[0].Purposes[0]", "ClientReferenceContact.PurposeUnknown" },
             { "reference with null purposes", Command(referenceContacts: [new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, null)]), "ReferenceContacts[0].Purposes", "ClientReferenceContact.PurposesRequired" },
             { "too many tags", Command(tagIds: Enumerable.Range(0, Client.MaxTags + 1).Select(_ => Guid.NewGuid()).ToArray()), "TagIds", "Client.TooManyTags" },
@@ -191,8 +191,8 @@ public class CreateClientCommandValidatorTests
     {
         var result = await Validate(Command(referenceContacts:
         [
-            new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "", null, []),
-            new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", null, []),
+            new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "", [], null),
+            new ReferenceContactInput(ClientTestData.Name("Carlos Lima"), "Tio", [], null),
         ]));
 
         MessagesFor(result, "ReferenceContacts[0].Relationship").Should()
@@ -241,7 +241,7 @@ public class CreateClientCommandValidatorTests
     public async Task Validate_WithListsOverTheLimit_DoesNotValidateTheirItems()
     {
         var guardians = Enumerable.Range(0, 5_000).Select(_ => Guardian(name: "", relationship: "")).ToList();
-        var contacts = Enumerable.Range(0, 5_000).Select(_ => new ReferenceContactInput(ClientTestData.Name(), "", null, [])).ToList();
+        var contacts = Enumerable.Range(0, 5_000).Select(_ => new ReferenceContactInput(ClientTestData.Name(), "", [], null)).ToList();
 
         var result = await Validate(Command(guardians: guardians, referenceContacts: contacts));
 
@@ -278,5 +278,25 @@ public class CreateClientCommandValidatorTests
         var result = await Validate(Command(tagIds: tagIds));
 
         result.Errors.Select(error => error.ErrorCode).Should().Equal("Client.TooManyTags");
+    }
+
+    [Fact]
+    public async Task Nome_ausente_da_pessoa_de_referencia_e_recusado()
+    {
+        var contact = new ReferenceContactInput(null!, "Tio", [ContactPurpose.Emergency], null);
+
+        var result = await Validate(Command(referenceContacts: [contact]));
+
+        result.Errors.Select(error => error.ErrorCode).Should().Equal(ClientContact.NameRequired.Code);
+        MessagesFor(result, "ReferenceContacts[0].Name").Should().Equal("O nome da pessoa de referência é obrigatório.");
+    }
+
+    [Fact]
+    public async Task Nome_completo_ausente_e_recusado_com_o_codigo_de_nome_obrigatorio()
+    {
+        var result = await Validate(new CreateClientCommand(null!));
+
+        result.Errors.Select(error => error.ErrorCode).Should().Equal("Client.FullNameRequired");
+        MessagesFor(result, "FullName").Should().Equal("O nome completo é obrigatório.");
     }
 }
