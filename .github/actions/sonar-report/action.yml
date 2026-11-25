@@ -27,9 +27,13 @@ runs:
         PULL_REQUEST: ${{ github.event.pull_request.number }}
         BRANCH: ${{ github.ref_name }}
         COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
+        GH_TOKEN: ${{ inputs.github-token }}
+        REPOSITORY: ${{ github.repository }}
         REPORT: ${{ runner.temp }}/sonar-report.md
       run: |
-        python3 "$GITHUB_WORKSPACE/scripts/sonar_report.py" --project "$PROJECT_KEY" --pull-request "$PULL_REQUEST" --branch "$BRANCH" --commit "$COMMIT" > "$REPORT"
+        # run_started_at restarts on a re-run, so an analysis from an earlier attempt of the same commit is ignored.
+        since="$(gh api "repos/$REPOSITORY/actions/runs/$GITHUB_RUN_ID" --jq .run_started_at)" || since=""
+        python3 "$GITHUB_WORKSPACE/scripts/sonar_report.py" --project "$PROJECT_KEY" --pull-request "$PULL_REQUEST" --branch "$BRANCH" --commit "$COMMIT" --since "$since" > "$REPORT"
         cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Comment on the pull request

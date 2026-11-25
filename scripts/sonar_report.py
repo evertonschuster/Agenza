@@ -14,6 +14,7 @@ import json
 import os
 import sys
 import time
+from datetime import datetime
 from typing import Any
 from urllib import parse, request
 
@@ -57,23 +58,40 @@ def scope(pull_request: str, branch: str) -> dict[str, str]:
     return {"pullRequest": pull_request} if pull_request else {"branch": branch}
 
 
-def analyzed_commit(project: str, token: str, pull_request: str, branch: str) -> str | None:
+def latest_analysis(project: str, token: str, pull_request: str, branch: str) -> dict[str, Any] | None:
     if pull_request:
         listing = get("project_pull_requests/list", token, project=project)
         entries = [entry for entry in listing.get("pullRequests", []) if entry["key"] == pull_request]
     else:
         listing = get("project_branches/list", token, project=project)
         entries = [entry for entry in listing.get("branches", []) if entry["name"] == branch]
-    return entries[0].get("commit", {}).get("sha") if entries else None
+    return entries[0] if entries else None
+
+
+def is_current(analysis: dict[str, Any] | None, commit: str, since: datetime | None) -> bool:
+    if analysis is None:
+        return False
+    if commit and analysis.get("commit", {}).get("sha") != commit:
+        return False
+    if since is None:
+        return True
+    analyzed_at = analysis.get("analysisDate")
+    return analyzed_at is not None and datetime.strptime(analyzed_at, "%Y-%m-%dT%H:%M:%S%z") >= since
 
 
 def fetch_gate(
-    project: str, token: str, where: dict[str, str], pull_request: str, branch: str, commit: str
+    project: str,
+    token: str,
+    where: dict[str, str],
+    pull_request: str,
+    branch: str,
+    commit: str,
+    since: datetime | None,
 ) -> dict[str, Any] | None:
     for attempt in range(ATTEMPTS):
         gate = get("qualitygates/project_status", token, projectKey=project, **where)["projectStatus"]
-        analyzed = analyzed_commit(project, token, pull_request, branch)
-        if gate["status"] != "NONE" and (not commit or not analyzed or analyzed == commit):
+        analysis = latest_analysis(project, token, pull_request, branch)
+        if gate["status"] != "NONE" and is_current(analysis, commit, since):
             return gate
         if attempt < ATTEMPTS - 1:
             time.sleep(5)
@@ -138,13 +156,15 @@ def render_issues(project: str, token: str, where: dict[str, str]) -> list[str]:
     return lines
 
 
-def build_report(project: str, token: str, pull_request: str, branch: str, commit: str) -> str:
+def build_report(
+    project: str, token: str, pull_request: str, branch: str, commit: str, since: datetime | None
+) -> str:
     where = scope(pull_request, branch)
     target = f"PR #{pull_request}" if pull_request else f"branch {branch}"
     link = f"{DASHBOARD}?{parse.urlencode({'id': project, **where})}"
     header = [MARKER.format(project=project), f"### Sonar · `{project}` · {target}", ""]
     try:
-        gate = fetch_gate(project, token, where, pull_request, branch, commit)
+        gate = fetch_gate(project, token, where, pull_request, branch, commit, since)
     except READ_FAILURES as failure:
         return "\n".join(header + [f"Não foi possível ler o SonarCloud: `{failure}`.", "", f"[Abrir]({link})"])
     if gate is None:
@@ -165,6 +185,7 @@ def main() -> int:
     parser.add_argument("--pull-request", default="")
     parser.add_argument("--branch", default="main")
     parser.add_argument("--commit", default="")
+    parser.add_argument("--since", default="", help="Start of this run (ISO 8601); older analyses are ignored")
     arguments = parser.parse_args()
     report = build_report(
         arguments.project,
@@ -172,6 +193,7 @@ def main() -> int:
         arguments.pull_request,
         arguments.branch,
         arguments.commit,
+        datetime.fromisoformat(arguments.since) if arguments.since else None,
     )
     sys.stdout.reconfigure(encoding="utf-8")
     print(report)
