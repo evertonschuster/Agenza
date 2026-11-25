@@ -8,6 +8,7 @@ using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Application.Clients.DeactivateClient;
 using ServicesService.Application.Clients.GetClientById;
 using ServicesService.Application.Clients.ListClients;
+using ServicesService.Application.Clients.ReactivateClient;
 using ServicesService.Application.Clients.UpdateClient;
 using ServicesService.Mcp.Extensions;
 
@@ -143,6 +144,34 @@ public sealed class ClientsTools(IDispatcher dispatcher)
     public async Task<CallToolResult> DeactivateClient(
         [Description("ID do cliente a desativar.")]
         DeactivateClientCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dispatcher.Send(command, cancellationToken);
+        return result.ToToolResult();
+    }
+
+    [McpServerTool(
+        Name = "reactivate_client",
+        Title = "Reativar cliente",
+        ReadOnly = false,
+        Destructive = false,
+        Idempotent = true,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(ClientResponse))]
+    [Description(
+        "Reativa um cliente inativo da empresa autenticada, mudando a situação para ativo, e retorna o cadastro atualizado. " +
+        "Use o ID retornado por list_clients ou get_client_by_id; se você só tiver o nome, o e-mail ou o CPF, use list_clients " +
+        "com status inactive. " +
+        "Reativar um cliente que já está ativo não altera nada e retorna o cadastro atual. " +
+        "A reativação é recusada com conflito quando o CPF do cliente já é usado por outra pessoa (Client.DuplicateCpf) " +
+        "ou o e-mail já é usado por outra pessoa ativa (Client.DuplicateEmail); o ID e o nome da outra pessoa vêm em fieldErrors. " +
+        "Nesse caso, informe o usuário e, se ele pedir, corrija o CPF ou o e-mail deste cadastro com update_client " +
+        "antes de tentar de novo. " +
+        "Reative apenas quando o usuário pedir explicitamente.")]
+    public async Task<CallToolResult> ReactivateClient(
+        [Description("ID do cliente a reativar.")]
+        ReactivateClientCommand command,
         CancellationToken cancellationToken = default)
     {
         var result = await dispatcher.Send(command, cancellationToken);
