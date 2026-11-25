@@ -39,6 +39,8 @@ GATE_LABELS = {"OK": "✅ aprovado", "ERROR": "❌ reprovado", "WARN": "⚠️ c
 SEVERITIES = {"BLOCKER": "🔴", "CRITICAL": "🔴", "MAJOR": "🟠", "MINOR": "🟡", "INFO": "⚪"}
 MAX_ISSUES = 10
 MARKER = "<!-- sonar-report:{project} -->"
+READ_FAILURES = (OSError, http.client.HTTPException, KeyError, ValueError)
+ATTEMPTS = 6
 
 
 def get(path: str, token: str, **params: str) -> dict[str, Any]:
@@ -55,12 +57,25 @@ def scope(pull_request: str, branch: str) -> dict[str, str]:
     return {"pullRequest": pull_request} if pull_request else {"branch": branch}
 
 
-def fetch_gate(project: str, token: str, where: dict[str, str]) -> dict[str, Any] | None:
-    for attempt in range(6):
-        gate = get("qualitygates/project_status", token, projectKey=project, **where)
-        if gate["projectStatus"]["status"] != "NONE":
-            return gate["projectStatus"]
-        if attempt < 5:
+def analyzed_commit(project: str, token: str, pull_request: str, branch: str) -> str | None:
+    if pull_request:
+        listing = get("project_pull_requests/list", token, project=project)
+        entries = [entry for entry in listing.get("pullRequests", []) if entry["key"] == pull_request]
+    else:
+        listing = get("project_branches/list", token, project=project)
+        entries = [entry for entry in listing.get("branches", []) if entry["name"] == branch]
+    return entries[0].get("commit", {}).get("sha") if entries else None
+
+
+def fetch_gate(
+    project: str, token: str, where: dict[str, str], pull_request: str, branch: str, commit: str
+) -> dict[str, Any] | None:
+    for attempt in range(ATTEMPTS):
+        gate = get("qualitygates/project_status", token, projectKey=project, **where)["projectStatus"]
+        analyzed = analyzed_commit(project, token, pull_request, branch)
+        if gate["status"] != "NONE" and (not commit or not analyzed or analyzed == commit):
+            return gate
+        if attempt < ATTEMPTS - 1:
             time.sleep(5)
     return None
 
@@ -98,6 +113,7 @@ def render_gate(gate: dict[str, Any]) -> list[str]:
 
 
 def render_issues(project: str, token: str, where: dict[str, str]) -> list[str]:
+    new_code = {"inNewCodePeriod": "true"} if "branch" in where else {}
     issues = get(
         "issues/search",
         token,
@@ -106,6 +122,7 @@ def render_issues(project: str, token: str, where: dict[str, str]) -> list[str]:
         ps=str(MAX_ISSUES),
         s="SEVERITY",
         asc="false",
+        **new_code,
         **where,
     )
     total = issues.get("total", 0)
@@ -121,19 +138,24 @@ def render_issues(project: str, token: str, where: dict[str, str]) -> list[str]:
     return lines
 
 
-def build_report(project: str, token: str, pull_request: str, branch: str) -> str:
+def build_report(project: str, token: str, pull_request: str, branch: str, commit: str) -> str:
     where = scope(pull_request, branch)
     target = f"PR #{pull_request}" if pull_request else f"branch {branch}"
     link = f"{DASHBOARD}?{parse.urlencode({'id': project, **where})}"
     header = [MARKER.format(project=project), f"### Sonar · `{project}` · {target}", ""]
     try:
-        gate = fetch_gate(project, token, where)
-        if gate is None:
-            return "\n".join(header + ["Análise ainda não disponível no SonarCloud.", "", f"[Abrir]({link})"])
-        body = [f"**Quality Gate:** {GATE_LABELS.get(gate['status'], gate['status'])}", ""]
-        body += render_gate(gate) + [""] + render_issues(project, token, where)
-    except (OSError, http.client.HTTPException, KeyError, ValueError) as failure:
+        gate = fetch_gate(project, token, where, pull_request, branch, commit)
+    except READ_FAILURES as failure:
         return "\n".join(header + [f"Não foi possível ler o SonarCloud: `{failure}`.", "", f"[Abrir]({link})"])
+    if gate is None:
+        unavailable = "A análise deste commit não está disponível no SonarCloud: o scan pode não ter terminado."
+        return "\n".join(header + [unavailable, "", f"[Abrir]({link})"])
+    body = [f"**Quality Gate:** {GATE_LABELS.get(gate['status'], gate['status'])}", ""]
+    body += render_gate(gate) + [""]
+    try:
+        body += render_issues(project, token, where)
+    except READ_FAILURES as failure:
+        body += [f"Não foi possível ler as issues: `{failure}`."]
     return "\n".join(header + body + ["", f"[Abrir no SonarCloud]({link})"])
 
 
@@ -142,12 +164,14 @@ def main() -> int:
     parser.add_argument("--project", required=True)
     parser.add_argument("--pull-request", default="")
     parser.add_argument("--branch", default="main")
+    parser.add_argument("--commit", default="")
     arguments = parser.parse_args()
     report = build_report(
         arguments.project,
         os.environ.get("SONAR_TOKEN", ""),
         arguments.pull_request,
         arguments.branch,
+        arguments.commit,
     )
     sys.stdout.reconfigure(encoding="utf-8")
     print(report)

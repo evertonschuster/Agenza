@@ -26,9 +26,10 @@ runs:
         PROJECT_KEY: ${{ inputs.project-key }}
         PULL_REQUEST: ${{ github.event.pull_request.number }}
         BRANCH: ${{ github.ref_name }}
+        COMMIT: ${{ github.event.pull_request.head.sha || github.sha }}
         REPORT: ${{ runner.temp }}/sonar-report.md
       run: |
-        python3 "$GITHUB_WORKSPACE/scripts/sonar_report.py" --project "$PROJECT_KEY" --pull-request "$PULL_REQUEST" --branch "$BRANCH" > "$REPORT"
+        python3 "$GITHUB_WORKSPACE/scripts/sonar_report.py" --project "$PROJECT_KEY" --pull-request "$PULL_REQUEST" --branch "$BRANCH" --commit "$COMMIT" > "$REPORT"
         cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
 
     - name: Comment on the pull request
@@ -43,7 +44,7 @@ runs:
         REPORT: ${{ runner.temp }}/sonar-report.md
       run: |
         comment_id="$(gh api "repos/$REPOSITORY/issues/$PULL_REQUEST/comments" --paginate \
-          --jq ".[] | select(.body | contains(\"<!-- sonar-report:$PROJECT_KEY -->\")) | .id" | head -n 1)" || comment_id=""
+          --jq ".[] | select(.user.login == \"github-actions[bot]\" and (.body | contains(\"<!-- sonar-report:$PROJECT_KEY -->\"))) | .id" | head -n 1)" || comment_id=""
         if [ -n "$comment_id" ]; then
           gh api -X PATCH "repos/$REPOSITORY/issues/comments/$comment_id" -F body=@"$REPORT" > /dev/null \
             || echo "::warning::Could not update the Sonar comment."
