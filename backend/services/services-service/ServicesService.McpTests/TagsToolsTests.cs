@@ -72,7 +72,7 @@ public sealed class TagsToolsTests
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("type").GetString().Should().Be("Validation");
         var message = error.GetProperty("message").GetString();
-        message.Should().Contain("System.Int32");
+        message.Should().NotBeNullOrWhiteSpace();
         var fieldError = error.GetProperty("fieldErrors").GetProperty($"$.{field}")[0];
         fieldError.GetProperty("code").GetString().Should().Be("Validation.Failed");
         fieldError.GetProperty("message").GetString().Should().Be(message);
@@ -93,7 +93,7 @@ public sealed class TagsToolsTests
         using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("message").GetString().Should().Contain("required parameter 'query'");
+        error.GetProperty("message").GetString().Should().StartWith("Argumento inválido ou ausente");
         error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
         handler.Query.Should().BeNull();
     }

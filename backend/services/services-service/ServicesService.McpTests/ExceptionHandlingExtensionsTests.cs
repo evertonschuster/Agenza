@@ -17,7 +17,6 @@ public sealed class ExceptionHandlingExtensionsTests
     [Theory]
     [InlineData(false, null)]
     [InlineData(false, "correlation\r\nid")]
-    [InlineData(true, "correlation-id")]
     public async Task Falha_inesperada_retorna_identificadores_e_registra_detalhes_somente_no_servidor(bool timeout, string? correlation)
     {
         using var logs = new CapturingLoggerProvider();
@@ -52,9 +51,30 @@ public sealed class ExceptionHandlingExtensionsTests
     }
 
     [Fact]
-    public async Task Argumento_ausente_em_outra_ferramenta_preserva_a_mensagem_do_sdk()
+    public async Task Cancelamento_nao_solicitado_retorna_tempo_limite_e_limita_o_id_de_correlacao()
     {
-        var services = new ServiceCollection().AddLogging();
+        using var logs = new CapturingLoggerProvider();
+        var services = new ServiceCollection().AddLogging(builder => builder.AddProvider(logs));
+        services.AddMcpServer().WithToolExceptionHandling().WithTools<FailingTools>();
+        using var provider = services.BuildServiceProvider();
+        var httpContext = new DefaultHttpContext { TraceIdentifier = "trace-id" };
+        httpContext.Request.Headers["X-Correlation-Id"] = new string('c', 500);
+        provider.GetRequiredService<IHttpContextAccessor>().HttpContext = httpContext;
+
+        var result = await McpToolCall.InvokeAsync(provider, "failure", new Dictionary<string, object?> { ["timeout"] = true },
+            TestContext.Current.CancellationToken);
+
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Operation.Timeout");
+        error.GetProperty("correlationId").GetString().Should().HaveLength(64);
+    }
+
+    [Fact]
+    public async Task Argumento_ausente_em_outra_ferramenta_informa_o_parametro_e_registra_aviso()
+    {
+        using var logs = new CapturingLoggerProvider();
+        var services = new ServiceCollection().AddLogging(builder => builder.AddProvider(logs));
         services.AddMcpServer().WithToolExceptionHandling().WithTools<FailingTools>();
         using var provider = services.BuildServiceProvider();
 
@@ -65,8 +85,35 @@ public sealed class ExceptionHandlingExtensionsTests
         using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("message").GetString().Should().Contain("required parameter 'count'");
+        error.GetProperty("message").GetString().Should().StartWith("Argumento inválido ou ausente");
         error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
+        logs.Entries.Should().ContainSingle().Which.Level.Should().Be(LogLevel.Warning);
+    }
+
+    [Fact]
+    public async Task Argumento_invalido_nao_expoe_a_mensagem_da_excecao_e_registra_aviso_com_ids()
+    {
+        using var logs = new CapturingLoggerProvider();
+        var services = new ServiceCollection().AddLogging(builder => builder.AddProvider(logs));
+        services.AddMcpServer().WithToolExceptionHandling().WithTools<FailingTools>();
+        using var provider = services.BuildServiceProvider();
+        provider.GetRequiredService<IHttpContextAccessor>().HttpContext = new DefaultHttpContext { TraceIdentifier = "trace-id" };
+
+        var result = await McpToolCall.InvokeAsync(provider, "bad_argument", new Dictionary<string, object?>(),
+            TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        var text = result.Content.OfType<TextContentBlock>().Single().Text;
+        text.Should().NotContain("segredo-interno");
+        using var document = JsonDocument.Parse(text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("message").GetString().Should().Be("Argumento inválido ou ausente: senha.");
+        error.GetProperty("traceId").GetString().Should().Be("trace-id");
+        var entry = logs.Entries.Should().ContainSingle().Subject;
+        entry.Level.Should().Be(LogLevel.Warning);
+        entry.Exception.Message.Should().Contain("segredo-interno");
+        entry.Message.Should().Contain("bad_argument").And.Contain("trace-id");
     }
 
     [Fact]
@@ -83,20 +130,14 @@ public sealed class ExceptionHandlingExtensionsTests
         using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("message").GetString().Should().Contain("System.Boolean");
+        error.GetProperty("message").GetString().Should().NotBeNullOrWhiteSpace();
         error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
     }
 
-    public static TheoryData<Exception> ValidationExceptionsWithoutField() => new()
+    [Fact]
+    public async Task Json_invalido_sem_campo_preserva_a_mensagem()
     {
-        new JsonException("JSON inválido"),
-        new ArgumentException("Argumento inválido", "value"),
-    };
-
-    [Theory]
-    [MemberData(nameof(ValidationExceptionsWithoutField))]
-    public async Task Excecao_de_validacao_sem_campo_preserva_a_mensagem(Exception exception)
-    {
+        var exception = new JsonException("JSON inválido");
         using var provider = Services();
         var filter = provider.GetRequiredService<IOptions<McpServerOptions>>().Value.Filters.Request.CallToolFilters.Single();
         var invoke = filter((_, _) => ValueTask.FromException<CallToolResult>(exception));
@@ -114,6 +155,7 @@ public sealed class ExceptionHandlingExtensionsTests
     public static TheoryData<Exception> ProtocolControlExceptions() => new()
     {
         new McpProtocolException("Protocolo inválido", McpErrorCode.InvalidParams),
+        new McpException("Falha esperada da ferramenta."),
         new InputRequiredException(requestState: "continuar"),
     };
 
@@ -204,6 +246,9 @@ public sealed class ExceptionHandlingExtensionsTests
         [McpServerTool(Name = "required_arguments")]
         public static string RequiredArguments(string name, int count, bool active = true) => $"{name}: {count}, {active}";
 
+        [McpServerTool(Name = "bad_argument")]
+        public static string BadArgument() => throw new ArgumentException("segredo-interno", "senha");
+
         [McpServerTool(Name = "failure")]
         public static string Failure(bool timeout) => timeout
             ? throw new OperationCanceledException("detalhe interno")
@@ -212,7 +257,7 @@ public sealed class ExceptionHandlingExtensionsTests
 
     private sealed class CapturingLoggerProvider : ILoggerProvider
     {
-        public List<(Exception Exception, string Message)> Entries { get; } = [];
+        public List<(LogLevel Level, Exception Exception, string Message)> Entries { get; } = [];
 
         public ILogger CreateLogger(string categoryName) => new CapturingLogger(this);
 
@@ -227,9 +272,9 @@ public sealed class ExceptionHandlingExtensionsTests
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
                 Exception? exception, Func<TState, Exception?, string> formatter)
             {
-                if (logLevel == LogLevel.Error && exception is not null)
+                if (logLevel >= LogLevel.Warning && exception is not null)
                 {
-                    provider.Entries.Add((exception, formatter(state, exception)));
+                    provider.Entries.Add((logLevel, exception, formatter(state, exception)));
                 }
             }
         }

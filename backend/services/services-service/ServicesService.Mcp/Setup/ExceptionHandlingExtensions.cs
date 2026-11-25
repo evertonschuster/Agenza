@@ -32,9 +32,13 @@ public static class ExceptionHandlingExtensions
             }
             catch (ArgumentException exception)
             {
-                return Error.Validation("Validation.Failed", exception.Message).ToToolResult();
+                // The SDK reports a missing argument with its generic "arguments" parameter name, which says nothing.
+                var message = string.IsNullOrWhiteSpace(exception.ParamName) || exception.ParamName == "arguments"
+                    ? "Argumento inválido ou ausente."
+                    : $"Argumento inválido ou ausente: {Clean(exception.ParamName)}.";
+                return ReportFailure(context, exception, Error.Validation("Validation.Failed", message), LogLevel.Warning);
             }
-            catch (McpProtocolException)
+            catch (McpException)
             {
                 throw;
             }
@@ -42,7 +46,8 @@ public static class ExceptionHandlingExtensions
             {
                 throw;
             }
-            catch (TimeoutException exception)
+            catch (Exception exception) when (exception is TimeoutException
+                || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
             {
                 return ReportFailure(context, exception, Error.Failure("Operation.Timeout", "A operação excedeu o tempo limite."));
             }
@@ -53,16 +58,17 @@ public static class ExceptionHandlingExtensions
         }));
     }
 
-    private static CallToolResult ReportFailure(RequestContext<CallToolRequestParams> context, Exception exception, Error error)
+    private static CallToolResult ReportFailure(RequestContext<CallToolRequestParams> context, Exception exception, Error error,
+        LogLevel level = LogLevel.Error)
     {
         var services = context.Services!;
         var httpContext = services.GetRequiredService<IHttpContextAccessor>().HttpContext;
         var traceId = Clean(httpContext?.TraceIdentifier ?? Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N"));
         var correlationId = httpContext?.Request.Headers["X-Correlation-Id"].ToString();
-        correlationId = string.IsNullOrWhiteSpace(correlationId) ? traceId : Clean(correlationId);
+        correlationId = string.IsNullOrWhiteSpace(correlationId) ? traceId : Clean(correlationId[..Math.Min(correlationId.Length, 64)]);
         var logger = services.GetRequiredService<ILoggerFactory>().CreateLogger("ServicesService.Mcp.Tools");
-        logger.LogError(exception,
-            "Unhandled exception invoking MCP tool {ToolName} with TraceId {TraceId} and CorrelationId {CorrelationId}",
+        logger.Log(level, exception,
+            "Failed invoking MCP tool {ToolName} with TraceId {TraceId} and CorrelationId {CorrelationId}",
             Clean(context.Params?.Name), traceId, correlationId);
 
         return error.ToToolResult(traceId, correlationId);

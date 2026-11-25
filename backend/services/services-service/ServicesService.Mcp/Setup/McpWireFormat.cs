@@ -15,6 +15,12 @@ internal static class McpWireFormat
             DefaultIgnoreCondition = JsonIgnoreCondition.Never,
         };
 
-        return options.AddValueObjectConverters(timeProvider).AddEnumNameConverter();
+        options.AddValueObjectConverters(timeProvider).AddEnumNameConverter();
+
+        // The SDK's defaults already hold a lenient enum converter that would win over ours if ours stayed last.
+        var enumConverter = options.Converters[^1];
+        options.Converters.RemoveAt(options.Converters.Count - 1);
+        options.Converters.Insert(0, enumConverter);
+        return options;
     }
 }
