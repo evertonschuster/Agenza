@@ -50,9 +50,11 @@ The SDK owns argument binding and invocation; do not pre-deserialize arguments o
 The tool filter maps `ArgumentException` to a global `Validation.Failed` naming only the parameter,
 never the exception message, which may carry sensitive data; the original is logged as a warning
 with trace and correlation IDs.
-The tool filter maps `JsonException` to `Validation.Failed` using the exception's original message
-and path. The path is relative to the deserialized argument. A missing or root-only path yields a
-global error. `McpException` (including protocol errors), requests for additional input and requested cancellation stay with the SDK.
+The tool filter maps `JsonException` to `Validation.Failed`. With a single tool argument the field
+path carries its name (`query.page`); with several, it stays relative to the deserialized argument.
+When the value's kind contradicts the published schema (type or enum), the message is derived from
+the schema (`query.page: esperado número inteiro.`); otherwise the exception's original message
+stays, which is where value object messages come from. Without a path the error is global. `McpException` (including protocol errors), requests for additional input and requested cancellation stay with the SDK.
 Timeouts and unexpected failures return trace and correlation IDs. Application Result failures keep
 their mapping.
 MCP output uses the shared value object and enum converters.

@@ -28,11 +28,11 @@ public sealed class TagsTools(IDispatcher dispatcher)
         "Uma busca sem correspondência ou uma página além dos resultados retorna uma lista vazia. " +
         "Não informe usuário ou empresa como entrada.")]
     public async Task<CallToolResult> ListTags(
-        [Description("Filtros de busca e paginação das etiquetas. Informe um objeto vazio para usar a paginação padrão, sem filtro.")]
-        ListTagsQuery query,
+        [Description("Filtros opcionais de busca e paginação das etiquetas. Omita para usar a paginação padrão, sem filtro.")]
+        ListTagsQuery? query = null,
         CancellationToken cancellationToken = default)
     {
-        var result = await dispatcher.Query(query, cancellationToken);
+        var result = await dispatcher.Query(query ?? new ListTagsQuery(), cancellationToken);
         return result.ToToolResult();
     }
 }

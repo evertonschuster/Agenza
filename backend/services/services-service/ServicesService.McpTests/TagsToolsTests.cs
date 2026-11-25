@@ -49,7 +49,7 @@ public sealed class TagsToolsTests
         error.GetProperty("type").GetString().Should().Be("Validation");
         var message = error.GetProperty("message").GetString();
         message.Should().StartWith(SearchText.Create(search).Error);
-        error.GetProperty("fieldErrors").GetProperty("$.search")[0].GetProperty("message").GetString()
+        error.GetProperty("fieldErrors").GetProperty("query.search")[0].GetProperty("message").GetString()
             .Should().Be(message);
         handler.Query.Should().BeNull();
     }
@@ -72,15 +72,15 @@ public sealed class TagsToolsTests
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("type").GetString().Should().Be("Validation");
         var message = error.GetProperty("message").GetString();
-        message.Should().NotBeNullOrWhiteSpace();
-        var fieldError = error.GetProperty("fieldErrors").GetProperty($"$.{field}")[0];
+        message.Should().Be($"query.{field}: esperado número inteiro.");
+        var fieldError = error.GetProperty("fieldErrors").GetProperty($"query.{field}")[0];
         fieldError.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        fieldError.GetProperty("message").GetString().Should().Be(message);
+        fieldError.GetProperty("message").GetString().Should().Be("Esperado número inteiro.");
         handler.Query.Should().BeNull();
     }
 
     [Fact]
-    public async Task Consulta_ausente_identifica_o_argumento_obrigatorio_sem_executar_a_listagem()
+    public async Task Consulta_omitida_lista_com_paginacao_padrao_e_sem_filtro()
     {
         var handler = new RecordingHandler();
         using var provider = Services(handler);
@@ -89,17 +89,12 @@ public sealed class TagsToolsTests
         var result = await McpToolCall.InvokeAsync(scope.ServiceProvider, "list_tags", new Dictionary<string, object?>(),
             TestContext.Current.CancellationToken);
 
-        result.IsError.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
-        var error = document.RootElement.GetProperty("error");
-        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("message").GetString().Should().StartWith("Argumento inválido ou ausente");
-        error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
-        handler.Query.Should().BeNull();
+        result.IsError.Should().BeFalse();
+        handler.Query.Should().BeEquivalentTo(new ListTagsQuery());
     }
 
     [Fact]
-    public async Task Consulta_nula_retorna_erro_de_validacao_sem_executar_a_listagem()
+    public async Task Consulta_nula_lista_com_paginacao_padrao_e_sem_filtro()
     {
         var handler = new RecordingHandler();
         using var provider = Services(handler);
@@ -107,14 +102,8 @@ public sealed class TagsToolsTests
 
         var result = await Invoke(scope.ServiceProvider, null, TestContext.Current.CancellationToken);
 
-        result.IsError.Should().BeTrue();
-        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
-        var error = document.RootElement.GetProperty("error");
-        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("type").GetString().Should().Be("Validation");
-        error.GetProperty("message").GetString().Should().Be("Informe os parâmetros da consulta.");
-        error.GetProperty("fieldErrors").ValueKind.Should().Be(JsonValueKind.Null);
-        handler.Query.Should().BeNull();
+        result.IsError.Should().BeFalse();
+        handler.Query.Should().BeEquivalentTo(new ListTagsQuery());
     }
 
     [Theory]
@@ -147,7 +136,9 @@ public sealed class TagsToolsTests
         contract.Description.Should().Contain("empresa autenticada");
         var properties = contract.InputSchema.GetProperty("properties");
         properties.EnumerateObject().Select(property => property.Name).Should().Equal("query");
-        contract.InputSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString()).Should().Contain("query");
+        (contract.InputSchema.TryGetProperty("required", out var required)
+            ? required.EnumerateArray().Select(item => item.GetString())
+            : []).Should().NotContain("query");
         var queryProperties = properties.GetProperty("query").GetProperty("properties");
         queryProperties.EnumerateObject().Select(property => property.Name).Should().BeEquivalentTo("search", "page", "pageSize");
         queryProperties.GetProperty("search").GetProperty("description").GetString().Should().Contain("Trecho do nome da etiqueta").And.Contain("não aplica filtro");

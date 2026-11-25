@@ -21,14 +21,7 @@ public static class ExceptionHandlingExtensions
             }
             catch (JsonException exception)
             {
-                const string code = "Validation.Failed";
-                var error = string.IsNullOrWhiteSpace(exception.Path) || exception.Path == "$"
-                    ? Error.Validation(code, exception.Message)
-                    : Error.Validation(code, exception.Message, new Dictionary<string, IReadOnlyList<FieldError>>
-                    {
-                        [exception.Path] = [new FieldError(code, exception.Message)],
-                    });
-                return error.ToToolResult();
+                return BindingError.From(exception, context).ToToolResult();
             }
             catch (ArgumentException exception)
             {

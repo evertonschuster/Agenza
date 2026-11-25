@@ -63,7 +63,7 @@ public sealed class ValueObjectToolTests
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         var message = error.GetProperty("message").GetString();
         message.Should().StartWith(expectedMessage);
-        error.GetProperty("fieldErrors").GetProperty($"$.{field}")[0].GetProperty("message").GetString()
+        error.GetProperty("fieldErrors").GetProperty($"command.{field}")[0].GetProperty("message").GetString()
             .Should().Be(message);
         text.Should().NotContain("valor-privado-invalido");
         provider.GetRequiredService<RecordingInput>().CommandCalls.Should().Be(0);
@@ -86,7 +86,31 @@ public sealed class ValueObjectToolTests
         result.IsError.Should().BeTrue();
         using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
         var error = document.RootElement.GetProperty("error");
-        error.GetProperty("fieldErrors").TryGetProperty("$.searches[1]", out _).Should().BeTrue();
+        error.GetProperty("fieldErrors").TryGetProperty("input.searches[1]", out _).Should().BeTrue();
+        provider.GetRequiredService<RecordingInput>().Value.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("kind", "\"inexistente\"", "input.kind: esperado um de: vip.")]
+    [InlineData("searches", "[\"vip\", 7]", "input.searches[1]: esperado texto.")]
+    [InlineData("contact", "{\"email\": 5}", "input.contact.email: esperado texto.")]
+    public async Task Erro_de_tipo_no_binding_informa_o_caminho_completo_e_o_valor_esperado(string field, string json, string expected)
+    {
+        using var provider = Services();
+        var input = new Dictionary<string, object?>
+        {
+            ["contact"] = new { email = "maria@exemplo.com" },
+            ["searches"] = new[] { "vip" },
+            ["kind"] = "vip",
+        };
+        input[field] = JsonDocument.Parse(json).RootElement.Clone();
+
+        var result = await McpToolCall.InvokeAsync(provider, "probe", new Dictionary<string, object?> { ["input"] = input },
+            TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        document.RootElement.GetProperty("error").GetProperty("message").GetString().Should().Be(expected);
         provider.GetRequiredService<RecordingInput>().Value.Should().BeNull();
     }
 
