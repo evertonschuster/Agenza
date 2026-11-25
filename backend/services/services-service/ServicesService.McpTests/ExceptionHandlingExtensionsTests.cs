@@ -257,13 +257,15 @@ public sealed class ExceptionHandlingExtensionsTests
 
     private sealed class CapturingLoggerProvider : ILoggerProvider
     {
+        private const string ToolsCategory = "ServicesService.Mcp.Tools";
+
         public List<(LogLevel Level, Exception Exception, string Message)> Entries { get; } = [];
 
-        public ILogger CreateLogger(string categoryName) => new CapturingLogger(this);
+        public ILogger CreateLogger(string categoryName) => new CapturingLogger(this, categoryName);
 
         public void Dispose() { }
 
-        private sealed class CapturingLogger(CapturingLoggerProvider provider) : ILogger
+        private sealed class CapturingLogger(CapturingLoggerProvider provider, string category) : ILogger
         {
             public IDisposable? BeginScope<TState>(TState state) where TState : notnull => null;
 
@@ -272,7 +274,8 @@ public sealed class ExceptionHandlingExtensionsTests
             public void Log<TState>(LogLevel logLevel, EventId eventId, TState state,
                 Exception? exception, Func<TState, Exception?, string> formatter)
             {
-                if (logLevel >= LogLevel.Warning && exception is not null)
+                // The SDK also logs warnings while its transport shuts down (a canceled write), at a point that races with the test.
+                if (category == ToolsCategory && logLevel >= LogLevel.Warning && exception is not null)
                 {
                     provider.Entries.Add((logLevel, exception, formatter(state, exception)));
                 }
