@@ -8,7 +8,6 @@ using NSubstitute;
 using ServicesService.Application;
 using ServicesService.Application.Abstractions;
 using ServicesService.Domain.Entities;
-using ServicesService.Domain.ValueObjects;
 using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
 
@@ -40,8 +39,9 @@ public sealed class CreateTagToolTests
             .Should().BeEquivalentTo("name", "color", "description");
         command.GetProperty("required").EnumerateArray()
             .Select(item => item.GetString()).Should().BeEquivalentTo("name", "color");
-        fields.GetProperty("color").GetProperty("description").GetString()
-            .Should().Contain(string.Join(", ", TagColor.Palette));
+        fields.GetProperty("name").GetProperty("description").GetString().Should().Contain("Nome da etiqueta");
+        fields.GetProperty("color").GetProperty("description").GetString().Should().Contain("paleta do Agenza");
+        fields.GetProperty("description").GetProperty("description").GetString().Should().Contain("Descrição opcional");
         tool.OutputSchema!.Value.GetProperty("properties").EnumerateObject()
             .Select(property => property.Name).Should().BeEquivalentTo("id", "name", "color", "description");
     }

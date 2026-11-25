@@ -2087,11 +2087,8 @@ export interface components {
       tagIds: null | string[];
     };
     CreateTagCommand: {
-      /** @description Nome da etiqueta, com até 40 caracteres. */
       name: string;
-      /** @description Cor da etiqueta em hexadecimal. Valores da paleta: #0d9488, #0ea5e9, #8b5cf6, #ec4899, #ef4444, #f59e0b, #22c55e, #64748b. */
       color: string;
-      /** @description Descrição opcional da etiqueta, com até 200 caracteres. */
       description?: null | string;
     };
     FieldError: {
