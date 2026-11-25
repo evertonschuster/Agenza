@@ -9,7 +9,7 @@ export default defineConfig({
   use: {
     baseURL: 'http://localhost:5173',
     locale: 'pt-BR',
-    trace: 'on-first-retry',
+    trace: 'retain-on-failure',
   },
   // reuseExistingServer: true so this reuses the Vite dev server Aspire's AppHost already
   // started in CI, instead of racing it for port 5173.

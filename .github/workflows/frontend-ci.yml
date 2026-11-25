@@ -159,7 +159,6 @@ jobs:
         run: |
           npm ci
           pip install uv==0.11.32
-          uv sync --frozen --extra dev --directory ai-services/assistant-service
 
       - name: Build the Aspire application
         # Default (Debug) configuration: `dotnet run` hands the AppHost to the Aspire CLI,
@@ -223,6 +222,19 @@ jobs:
         # The Aspire log is the only evidence of a server-side failure the browser tests cannot see.
         if: failure()
         run: tail -n 300 "$RUNNER_TEMP/agenza-apphost.log" || true
+
+      - name: Upload failure evidence
+        # Playwright traces (retain-on-failure) and the full Aspire log; short retention because
+        # the log is the only record of the stack's side of a failed run.
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: contract-check-failure
+          path: |
+            apps/admin-frontend/test-results/
+            ${{ runner.temp }}/agenza-apphost.log
+          if-no-files-found: ignore
+          retention-days: 7
 
       - name: Tear down
         if: always()
