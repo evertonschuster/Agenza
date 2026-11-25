@@ -3,6 +3,8 @@ using Admin.SharedKernel;
 using Microsoft.AspNetCore.Authorization;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
+using ServicesService.Application.Clients;
+using ServicesService.Application.Clients.GetClientById;
 using ServicesService.Application.Clients.ListClients;
 using ServicesService.Mcp.Extensions;
 
@@ -35,6 +37,29 @@ public sealed class ClientsTools(IDispatcher dispatcher)
         CancellationToken cancellationToken = default)
     {
         var result = await dispatcher.Query(query ?? new ListClientsQuery(), cancellationToken);
+        return result.ToToolResult();
+    }
+
+    [McpServerTool(
+        Name = "get_client_by_id",
+        Title = "Consultar cliente por ID",
+        ReadOnly = true,
+        Destructive = false,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(ClientResponse))]
+    [Description(
+        "Consulta um cliente da empresa autenticada pelo ID e retorna o cadastro completo: " +
+        "nome, data de nascimento, telefone, e-mail, CPF, observações administrativas, situação, " +
+        "responsáveis, contatos de referência com suas finalidades e etiquetas. " +
+        "Use o ID retornado por list_clients. Se você só tiver o nome, o e-mail ou o CPF, use list_clients. " +
+        "Um ID que não existe na empresa retorna não encontrado.")]
+    public async Task<CallToolResult> GetClientById(
+        [Description("Identificador do cliente a consultar.")]
+        GetClientByIdQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dispatcher.Query(query, cancellationToken);
         return result.ToToolResult();
     }
 }
