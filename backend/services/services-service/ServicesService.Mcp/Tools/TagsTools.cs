@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ServicesService.Application.Tags;
+using ServicesService.Application.Tags.CreateTag;
 using ServicesService.Application.Tags.ListTags;
 using ServicesService.Mcp.Extensions;
 
@@ -33,6 +34,28 @@ public sealed class TagsTools(IDispatcher dispatcher)
         CancellationToken cancellationToken = default)
     {
         var result = await dispatcher.Query(query ?? new ListTagsQuery(), cancellationToken);
+        return result.ToToolResult();
+    }
+
+    [McpServerTool(
+        Name = "create_tag",
+        Title = "Criar etiqueta",
+        ReadOnly = false,
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TagResponse))]
+    [Description(
+        "Cria uma etiqueta na empresa autenticada e retorna seus dados. " +
+        "Informe o nome e uma cor da paleta. A descrição é opcional. " +
+        "Se o nome já estiver em uso na empresa, a criação retorna um conflito.")]
+    public async Task<CallToolResult> CreateTag(
+        [Description("Dados da etiqueta a criar.")]
+        CreateTagCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dispatcher.Send(command, cancellationToken);
         return result.ToToolResult();
     }
 }

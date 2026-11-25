@@ -1,17 +1,25 @@
+using System.Security.Claims;
+using Admin.Identity.Client;
 using Admin.SharedKernel;
+using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
 using ServicesService.Infrastructure.Persistence;
 using ServicesService.Infrastructure.Persistence.Interceptors;
+using ServicesService.Infrastructure.Security;
 
 namespace ServicesService.PersistenceTests;
 
 public class AuditableEntitySaveChangesInterceptorTests
 {
-    private static ServicesDataContext CreateContext(string databaseName, ICurrentTenantProvider currentTenantProvider)
+    private static ServicesDataContext CreateContext(string databaseName, ICurrentTenantProvider currentTenantProvider,
+        ICurrentUserAccessor? currentUserAccessor = null)
     {
-        var currentUserAccessor = Substitute.For<ICurrentUserAccessor>();
-        currentUserAccessor.UserId.Returns((Guid?)Guid.NewGuid());
+        if (currentUserAccessor is null)
+        {
+            currentUserAccessor = Substitute.For<ICurrentUserAccessor>();
+            currentUserAccessor.UserId.Returns((Guid?)Guid.NewGuid());
+        }
         var interceptor = new AuditableEntitySaveChangesInterceptor(
             currentUserAccessor, currentTenantProvider, TimeProvider.System);
 
@@ -76,6 +84,37 @@ public class AuditableEntitySaveChangesInterceptorTests
 
         service.CreatedAt.Should().NotBe(default);
         service.CreatedBy.Should().NotBeNull();
+    }
+
+    [Fact]
+    public async Task Gravacao_de_etiqueta_usa_empresa_e_autor_das_claims_do_usuario()
+    {
+        var tenantId = Guid.NewGuid();
+        var otherTenantId = Guid.NewGuid();
+        var userId = Guid.NewGuid();
+        var httpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+                [new Claim("tenant_id", tenantId.ToString()), new Claim("sub", userId.ToString())], "Bearer")),
+        };
+        httpContext.Request.Headers["X-Tenant-Id"] = otherTenantId.ToString();
+        var http = Substitute.For<IHttpContextAccessor>();
+        http.HttpContext.Returns(httpContext);
+        var tenantProvider = new CurrentTenantProvider(new HttpContextTenantAccessor(http));
+        var databaseName = Guid.NewGuid().ToString();
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using var context = CreateContext(databaseName, tenantProvider, new HttpContextCurrentUserAccessor(http));
+        var tag = Tag.Create(Guid.NewGuid(), "VIP", TagColor.Create("#0d9488").Value, null).Value;
+
+        context.Tags.Add(tag);
+        await context.SaveChangesAsync(cancellationToken);
+        context.ChangeTracker.Clear();
+
+        var saved = await context.Tags.SingleAsync(cancellationToken);
+        saved.TenantId.Should().Be(tenantId);
+        saved.CreatedBy.Should().Be(userId);
+        await using var otherContext = CreateContext(databaseName, TenantProvider(otherTenantId));
+        (await otherContext.Tags.AnyAsync(cancellationToken)).Should().BeFalse();
     }
 
     [Fact]
