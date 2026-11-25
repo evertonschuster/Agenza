@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Authorization;
 using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ServicesService.Application.Clients;
+using ServicesService.Application.Clients.CreateClient;
 using ServicesService.Application.Clients.GetClientById;
 using ServicesService.Application.Clients.ListClients;
 using ServicesService.Mcp.Extensions;
@@ -60,6 +61,33 @@ public sealed class ClientsTools(IDispatcher dispatcher)
         CancellationToken cancellationToken = default)
     {
         var result = await dispatcher.Query(query, cancellationToken);
+        return result.ToToolResult();
+    }
+
+    [McpServerTool(
+        Name = "create_client",
+        Title = "Criar cliente",
+        ReadOnly = false,
+        Destructive = false,
+        Idempotent = false,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(ClientResponse))]
+    [Description(
+        "Cria um cliente na empresa autenticada e retorna o cadastro criado, com o ID. " +
+        "Só o nome completo é obrigatório; omita os campos que você não tiver, sem inventar dados. " +
+        "Cada chamada bem-sucedida cria um novo cliente: esta ferramenta não é idempotente e não deve ser repetida para o mesmo cadastro. " +
+        "Antes de criar, procure o cliente com list_clients (por nome, e-mail ou CPF) para não duplicar. " +
+        "Um CPF já cadastrado, ou um e-mail já usado por cliente ativo, retorna conflito com o ID do cliente existente em fieldErrors; " +
+        "consulte-o com get_client_by_id. Sem CPF e sem e-mail, o sistema não detecta duplicidade. " +
+        "Menores de 18 anos exigem ao menos um responsável. " +
+        "Para etiquetas, use os IDs retornados por list_tags.")]
+    public async Task<CallToolResult> CreateClient(
+        [Description("Dados do cliente a criar.")]
+        CreateClientCommand command,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dispatcher.Send(command, cancellationToken);
         return result.ToToolResult();
     }
 }

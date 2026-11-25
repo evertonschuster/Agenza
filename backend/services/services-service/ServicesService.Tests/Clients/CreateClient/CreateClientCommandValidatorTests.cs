@@ -279,4 +279,13 @@ public class CreateClientCommandValidatorTests
 
         result.Errors.Select(error => error.ErrorCode).Should().Equal("Client.TooManyTags");
     }
+
+    [Fact]
+    public async Task Nome_completo_ausente_e_recusado_com_o_codigo_de_nome_obrigatorio()
+    {
+        var result = await Validate(new CreateClientCommand(null!));
+
+        result.Errors.Select(error => error.ErrorCode).Should().Equal("Client.FullNameRequired");
+        MessagesFor(result, "FullName").Should().Equal("O nome completo é obrigatório.");
+    }
 }

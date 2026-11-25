@@ -8,6 +8,11 @@ public sealed class CreateClientCommandValidator : AbstractValidator<CreateClien
     {
         DateOnly Today() => DateOnly.FromDateTime(timeProvider.GetUtcNow().UtcDateTime);
 
+        RuleFor(command => command.FullName)
+            .NotNull()
+            .WithErrorCode("Client.FullNameRequired")
+            .WithMessage("O nome completo é obrigatório.");
+
         RuleFor(command => command.Guardians)
             .Must(guardians => guardians is null || guardians.Count <= Client.MaxGuardians)
             .WithErrorCode(Client.TooManyGuardians.Code)
