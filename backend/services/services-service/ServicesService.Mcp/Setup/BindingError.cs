@@ -85,6 +85,7 @@ internal static partial class BindingError
         return Describe(schema, value);
     }
 
+    // Only a value whose kind contradicts the schema is a type error; anything else carries the domain's own message.
     private static string? Describe(JsonElement schema, JsonElement value)
     {
         if (schema.TryGetProperty("enum", out var options) && options.ValueKind == JsonValueKind.Array)
@@ -115,16 +116,7 @@ internal static partial class BindingError
             "null" => value.ValueKind == JsonValueKind.Null,
             _ => true,
         });
-        if (!accepted)
-        {
-            return Label(types.First(item => item != "null"), value);
-        }
-
-        return value.ValueKind == JsonValueKind.String
-            && schema.TryGetProperty("format", out var format)
-            && format.ValueEquals("uuid")
-            ? "esperado um ID no formato UUID"
-            : null;
+        return accepted ? null : Label(types.First(item => item != "null"), value);
     }
 
     private static string? Label(string? type, JsonElement value)

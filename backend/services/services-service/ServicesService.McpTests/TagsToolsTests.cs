@@ -217,7 +217,7 @@ public sealed class TagsToolsTests
     [InlineData(null, "Informe os parâmetros da consulta.")]
     [InlineData("{}", "O ID da etiqueta é obrigatório.")]
     [InlineData("""{"tagId":"00000000-0000-0000-0000-000000000000"}""", "O ID da etiqueta é obrigatório.")]
-    [InlineData("""{"tagId":"id-invalido"}""", "query.tagId: esperado um ID no formato UUID.")]
+    [InlineData("""{"tagId":"VIP"}""", "Path: $.tagId")]
     [InlineData("""{"tagId":123}""", "query.tagId: esperado texto, recebeu número.")]
     public async Task Consulta_com_id_ausente_ou_invalido_retorna_validacao_sem_consultar(string? json, string message)
     {
@@ -232,7 +232,7 @@ public sealed class TagsToolsTests
         using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("message").GetString().Should().Be(message);
+        error.GetProperty("message").GetString().Should().Contain(message);
         handler.Query.Should().BeNull();
     }
 
