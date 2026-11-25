@@ -2089,7 +2089,7 @@ export interface components {
     CreateTagCommand: {
       name: string;
       color: string;
-      description: null | string;
+      description?: null | string;
     };
     FieldError: {
       code?: string;

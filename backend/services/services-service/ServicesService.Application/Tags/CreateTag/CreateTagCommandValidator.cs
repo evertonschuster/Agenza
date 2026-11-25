@@ -12,6 +12,7 @@ public sealed class CreateTagCommandValidator : AbstractValidator<CreateTagComma
             .WithMessage($"O nome da etiqueta deve ter no máximo {Tag.NameMaxLength} caracteres.");
 
         RuleFor(command => command.Color)
+            .Cascade(CascadeMode.Stop)
             .NotEmpty().WithMessage("A cor da etiqueta é obrigatória.")
             .Must(color => TagColor.Palette.Contains(color.Trim().ToLowerInvariant()))
             .WithMessage($"A cor da etiqueta deve ser uma das seguintes: {string.Join(", ", TagColor.Palette)}.");
