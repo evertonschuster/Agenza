@@ -1,0 +1,51 @@
+name: Report the SonarCloud result
+description: >-
+  Writes the quality gate, its conditions and the new issues of a SonarCloud analysis to the
+  job summary and, on same-repository pull requests, to one comment per project that later runs
+  update in place. It never fails the job: the scanner enforces the gate.
+
+inputs:
+  project-key:
+    description: SonarCloud project key.
+    required: true
+  sonar-token:
+    description: SonarCloud token, used only to read the analysis.
+    required: true
+  github-token:
+    description: Token that may write pull request comments.
+    required: true
+
+runs:
+  using: composite
+  steps:
+    - name: Summarize the analysis
+      shell: bash
+      env:
+        SONAR_TOKEN: ${{ inputs.sonar-token }}
+        PROJECT_KEY: ${{ inputs.project-key }}
+        PULL_REQUEST: ${{ github.event.pull_request.number }}
+        BRANCH: ${{ github.ref_name }}
+        REPORT: ${{ runner.temp }}/sonar-report.md
+      run: |
+        python3 "$GITHUB_WORKSPACE/scripts/sonar_report.py" --project "$PROJECT_KEY" --pull-request "$PULL_REQUEST" --branch "$BRANCH" > "$REPORT"
+        cat "$REPORT" >> "$GITHUB_STEP_SUMMARY"
+
+    - name: Comment on the pull request
+      if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+      shell: bash
+      env:
+        GH_TOKEN: ${{ inputs.github-token }}
+        PROJECT_KEY: ${{ inputs.project-key }}
+        PULL_REQUEST: ${{ github.event.pull_request.number }}
+        REPOSITORY: ${{ github.repository }}
+        REPORT: ${{ runner.temp }}/sonar-report.md
+      run: |
+        comment_id="$(gh api "repos/$REPOSITORY/issues/$PULL_REQUEST/comments" --paginate \
+          --jq ".[] | select(.body | contains(\"<!-- sonar-report:$PROJECT_KEY -->\")) | .id" | head -n 1)" || comment_id=""
+        if [ -n "$comment_id" ]; then
+          gh api -X PATCH "repos/$REPOSITORY/issues/comments/$comment_id" -F body=@"$REPORT" > /dev/null \
+            || echo "::warning::Could not update the Sonar comment."
+        else
+          gh api -X POST "repos/$REPOSITORY/issues/$PULL_REQUEST/comments" -F body=@"$REPORT" > /dev/null \
+            || echo "::warning::Could not post the Sonar comment."
+        fi
