@@ -130,8 +130,8 @@ public sealed class ExceptionHandlingExtensionsTests
         using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        error.GetProperty("message").GetString().Should().Be("timeout: esperado verdadeiro ou falso.");
-        error.GetProperty("fieldErrors").GetProperty("timeout")[0].GetProperty("message").GetString().Should().Be("Esperado verdadeiro ou falso.");
+        error.GetProperty("message").GetString().Should().Be("timeout: esperado verdadeiro ou falso, recebeu texto.");
+        error.GetProperty("fieldErrors").GetProperty("timeout")[0].GetProperty("message").GetString().Should().Be("Esperado verdadeiro ou falso, recebeu texto.");
     }
 
     [Fact]

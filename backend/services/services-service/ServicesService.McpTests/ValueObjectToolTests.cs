@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using Admin.SharedKernel.ValueObjects;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
@@ -91,9 +92,9 @@ public sealed class ValueObjectToolTests
     }
 
     [Theory]
-    [InlineData("kind", "\"inexistente\"", "input.kind: esperado um de: vip.")]
-    [InlineData("searches", "[\"vip\", 7]", "input.searches[1]: esperado texto.")]
-    [InlineData("contact", "{\"email\": 5}", "input.contact.email: esperado texto.")]
+    [InlineData("kind", "\"inexistente\"", "input.kind: esperado um de: \"vip\".")]
+    [InlineData("searches", "[\"vip\", 7]", "input.searches[1]: esperado texto, recebeu número.")]
+    [InlineData("contact", "{\"email\": 5}", "input.contact.email: esperado texto, recebeu número.")]
     public async Task Erro_de_tipo_no_binding_informa_o_caminho_completo_e_o_valor_esperado(string field, string json, string expected)
     {
         using var provider = Services();
@@ -112,6 +113,23 @@ public sealed class ValueObjectToolTests
         using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
         document.RootElement.GetProperty("error").GetProperty("message").GetString().Should().Be(expected);
         provider.GetRequiredService<RecordingInput>().Value.Should().BeNull();
+    }
+
+    [Theory]
+    [InlineData("numeric_enum", "{\"level\": \"x\"}")]
+    [InlineData("numeric_enum", "{\"level\": true}")]
+    [InlineData("recursive", "{\"value\": 1, \"child\": {\"value\": \"x\"}}")]
+    public async Task Esquemas_com_enum_numerico_ou_referencia_nunca_quebram_o_tratamento_de_erro(string tool, string json)
+    {
+        using var provider = Services();
+
+        var result = await McpToolCall.InvokeAsync(provider, tool,
+            new Dictionary<string, object?> { ["input"] = JsonDocument.Parse(json).RootElement.Clone() },
+            TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        document.RootElement.GetProperty("error").GetProperty("code").GetString().Should().Be("Validation.Failed");
     }
 
     [Fact]
@@ -187,7 +205,7 @@ public sealed class ValueObjectToolTests
         var services = new ServiceCollection().AddLogging();
         services.AddSingleton<RecordingInput>();
         var jsonOptions = services.AddMcpValueObjectInputs(new FixedClock());
-        services.AddMcpServer().WithToolExceptionHandling().WithTools([typeof(ProbeTools), typeof(CollectionTools)], jsonOptions);
+        services.AddMcpServer().WithToolExceptionHandling().WithTools([typeof(ProbeTools), typeof(CollectionTools), typeof(EdgeTools)], jsonOptions);
         var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         _ = provider.GetRequiredService<IOptions<McpServerOptions>>().Value;
         return provider;
@@ -234,6 +252,22 @@ public sealed class ValueObjectToolTests
     public sealed record CollectionInput(IReadOnlyList<SearchText?> Searches, IReadOnlyDictionary<string, EmailAddress> Emails);
 
     public enum Kind { Vip }
+
+    [McpServerToolType]
+    public sealed class EdgeTools
+    {
+        [McpServerTool(Name = "numeric_enum", UseStructuredContent = false)]
+        public static string NumericEnum(NumericInput input) => input.Level.ToString();
+
+        [McpServerTool(Name = "recursive", UseStructuredContent = false)]
+        public static string Recursive(Node input) => input.Value.ToString();
+    }
+
+    public sealed record NumericInput([property: JsonConverter(typeof(JsonNumberEnumConverter<Level>))] Level Level);
+
+    public sealed record Node(int Value, Node? Child);
+
+    public enum Level { Low = 1, High = 2 }
 
     private sealed class FixedClock : TimeProvider
     {

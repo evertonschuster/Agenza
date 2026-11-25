@@ -50,8 +50,11 @@ The SDK owns argument binding and invocation; do not pre-deserialize arguments o
 The tool filter maps `ArgumentException` to a global `Validation.Failed` naming only the parameter,
 never the exception message, which may carry sensitive data; the original is logged as a warning
 with trace and correlation IDs.
-The tool filter maps `JsonException` to `Validation.Failed`. With a single tool argument the field
-path carries its name (`query.page`); with several, it stays relative to the deserialized argument.
+The tool filter maps `JsonException` to `Validation.Failed`. Each tool takes one request object (a query or a command), so the field
+path always carries its name (`query.page`); with several arguments it stays relative to the
+deserialized argument, and the message reports only the kind of value received, never the value.
+The schema-derived text can never fail the error path: any problem reading it falls back to the
+serializer's message.
 When the value's kind contradicts the published schema (type or enum), the message is derived from
 the schema (`query.page: esperado número inteiro.`); otherwise the exception's original message
 stays, which is where value object messages come from. Without a path the error is global. `McpException` (including protocol errors), requests for additional input and requested cancellation stay with the SDK.

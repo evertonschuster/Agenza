@@ -10,21 +10,31 @@ namespace ServicesService.Mcp.Setup;
 internal static partial class BindingError
 {
     private const string Code = "Validation.Failed";
+    private const int MaxListedValues = 10;
 
     public static Error From(JsonException exception, RequestContext<CallToolRequestParams>? context)
     {
         var segments = Segments(exception.Path);
+        var original = Build(segments.Count == 0 ? null : exception.Path, exception.Message, null);
         if (context?.Params?.Arguments is not { Count: 1 } arguments)
         {
-            return Build(segments.Count == 0 ? null : exception.Path, exception.Message, null);
+            return original;
         }
 
-        var (argument, value) = arguments.Single();
-        var path = Format(argument, segments);
-        var expected = Expected(context, argument, value, segments);
-        return expected is null
-            ? Build(path, exception.Message, null)
-            : Build(path, $"{path}: {expected}.", Capitalize(expected) + ".");
+        // The error path must never fail: anything unexpected in the schema falls back to the serializer's own message.
+        try
+        {
+            var (argument, value) = arguments.Single();
+            var path = Format(argument, segments);
+            var expected = Expected(context, argument, value, segments);
+            return expected is null
+                ? Build(path, exception.Message, null)
+                : Build(path, $"{path}: {expected}.", Capitalize(expected) + ".");
+        }
+        catch (Exception)
+        {
+            return original;
+        }
     }
 
     private static Error Build(string? path, string message, string? fieldMessage) =>
@@ -80,10 +90,11 @@ internal static partial class BindingError
     {
         if (schema.TryGetProperty("enum", out var options) && options.ValueKind == JsonValueKind.Array)
         {
-            var allowed = options.EnumerateArray().Select(option => option.GetString()).ToList();
-            return value.ValueKind == JsonValueKind.String && allowed.Contains(value.GetString())
+            var allowed = options.EnumerateArray().ToList();
+            return allowed.Any(option => option.ValueKind == value.ValueKind && option.GetRawText() == value.GetRawText())
                 ? null
-                : $"esperado um de: {string.Join(", ", allowed)}";
+                : $"esperado um de: {string.Join(", ", allowed.Take(MaxListedValues).Select(option => option.GetRawText()))}"
+                    + (allowed.Count > MaxListedValues ? ", ..." : string.Empty);
         }
 
         if (!schema.TryGetProperty("type", out var type))
@@ -105,18 +116,34 @@ internal static partial class BindingError
             "null" => value.ValueKind == JsonValueKind.Null,
             _ => true,
         });
-        return accepted ? null : Label(types.First(item => item != "null"));
+        return accepted ? null : Label(types.First(item => item != "null"), value);
     }
 
-    private static string? Label(string? type) => type switch
+    private static string? Label(string? type, JsonElement value)
     {
-        "integer" => "esperado número inteiro",
-        "number" => "esperado número",
-        "boolean" => "esperado verdadeiro ou falso",
-        "string" => "esperado texto",
-        "array" => "esperado lista",
-        "object" => "esperado objeto",
-        _ => null,
+        var expected = type switch
+        {
+            "integer" => "esperado número inteiro",
+            "number" => "esperado número",
+            "boolean" => "esperado verdadeiro ou falso",
+            "string" => "esperado texto",
+            "array" => "esperado lista",
+            "object" => "esperado objeto",
+            _ => null,
+        };
+        return expected is null ? null : $"{expected}, recebeu {Received(value, type)}";
+    }
+
+    // Only the kind is reported, never the value: the sent data may be sensitive.
+    private static string Received(JsonElement value, string? expectedType) => value.ValueKind switch
+    {
+        JsonValueKind.String => "texto",
+        JsonValueKind.Number => expectedType == "integer" ? "número não inteiro" : "número",
+        JsonValueKind.True or JsonValueKind.False => "verdadeiro ou falso",
+        JsonValueKind.Array => "lista",
+        JsonValueKind.Object => "objeto",
+        JsonValueKind.Null => "nulo",
+        _ => "valor desconhecido",
     };
 
     private static List<object> Segments(string? path) =>

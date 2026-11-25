@@ -72,10 +72,10 @@ public sealed class TagsToolsTests
         error.GetProperty("code").GetString().Should().Be("Validation.Failed");
         error.GetProperty("type").GetString().Should().Be("Validation");
         var message = error.GetProperty("message").GetString();
-        message.Should().Be($"query.{field}: esperado número inteiro.");
+        message.Should().Be($"query.{field}: esperado número inteiro, recebeu número não inteiro.");
         var fieldError = error.GetProperty("fieldErrors").GetProperty($"query.{field}")[0];
         fieldError.GetProperty("code").GetString().Should().Be("Validation.Failed");
-        fieldError.GetProperty("message").GetString().Should().Be("Esperado número inteiro.");
+        fieldError.GetProperty("message").GetString().Should().Be("Esperado número inteiro, recebeu número não inteiro.");
         handler.Query.Should().BeNull();
     }
 
