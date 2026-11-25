@@ -73,10 +73,10 @@ def is_current(analysis: dict[str, Any] | None, commit: str, since: datetime | N
         return False
     if commit and analysis.get("commit", {}).get("sha") != commit:
         return False
-    if since is None:
-        return True
     analyzed_at = analysis.get("analysisDate")
-    return analyzed_at is not None and datetime.strptime(analyzed_at, "%Y-%m-%dT%H:%M:%S%z") >= since
+    if since is None or analyzed_at is None:
+        return False
+    return datetime.strptime(analyzed_at, "%Y-%m-%dT%H:%M:%S%z") >= since
 
 
 def fetch_gate(
@@ -89,9 +89,11 @@ def fetch_gate(
     since: datetime | None,
 ) -> dict[str, Any] | None:
     for attempt in range(ATTEMPTS):
+        before = latest_analysis(project, token, pull_request, branch)
         gate = get("qualitygates/project_status", token, projectKey=project, **where)["projectStatus"]
-        analysis = latest_analysis(project, token, pull_request, branch)
-        if gate["status"] != "NONE" and is_current(analysis, commit, since):
+        after = latest_analysis(project, token, pull_request, branch)
+        # The same analysis before and after the gate request: it cannot have changed in between.
+        if gate["status"] != "NONE" and before == after and is_current(after, commit, since):
             return gate
         if attempt < ATTEMPTS - 1:
             time.sleep(5)
@@ -185,7 +187,11 @@ def main() -> int:
     parser.add_argument("--pull-request", default="")
     parser.add_argument("--branch", default="main")
     parser.add_argument("--commit", default="")
-    parser.add_argument("--since", default="", help="Start of this run (ISO 8601); older analyses are ignored")
+    parser.add_argument(
+        "--since",
+        default="",
+        help="Start of this run (ISO 8601); without it no analysis can be shown, older ones are ignored",
+    )
     arguments = parser.parse_args()
     report = build_report(
         arguments.project,
