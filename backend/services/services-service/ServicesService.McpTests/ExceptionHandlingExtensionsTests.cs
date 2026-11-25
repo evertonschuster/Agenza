@@ -191,7 +191,7 @@ public sealed class ExceptionHandlingExtensionsTests
         using var document = JsonDocument.Parse(text);
         var error = document.RootElement.GetProperty("error");
         error.GetProperty("code").GetString().Should().Be("Operation.Timeout");
-        error.GetProperty("message").GetString().Should().Be("A operação excedeu o tempo limite.");
+        error.GetProperty("message").GetString().Should().StartWith("A operação excedeu o tempo limite.").And.Contain("Tente novamente");
         error.GetProperty("traceId").GetString().Should().Be("trace-id");
         error.GetProperty("correlationId").GetString().Should().Be("correlation-id");
         text.Should().NotContain("detalhe interno");

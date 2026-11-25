@@ -42,7 +42,7 @@ public static class ExceptionHandlingExtensions
             catch (Exception exception) when (exception is TimeoutException
                 || (exception is OperationCanceledException && !cancellationToken.IsCancellationRequested))
             {
-                return ReportFailure(context, exception, Error.Failure("Operation.Timeout", "A operação excedeu o tempo limite."));
+                return ReportFailure(context, exception, Error.Failure("Operation.Timeout", "A operação excedeu o tempo limite. Tente novamente; se persistir, use menos dados na chamada, como uma página menor ou filtros mais específicos."));
             }
             catch (Exception exception) when (!(exception is OperationCanceledException && cancellationToken.IsCancellationRequested))
             {
