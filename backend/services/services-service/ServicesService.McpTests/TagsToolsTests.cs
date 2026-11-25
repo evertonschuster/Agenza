@@ -8,6 +8,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ServicesService.Application;
 using ServicesService.Application.Tags;
+using ServicesService.Application.Tags.GetTagById;
 using ServicesService.Application.Tags.ListTags;
 using ServicesService.Mcp.Setup;
 using ServicesService.Mcp.Tools;
@@ -157,7 +158,86 @@ public sealed class TagsToolsTests
         tool.Metadata.OfType<AuthorizeAttribute>().Should().ContainSingle();
     }
 
-    private static ServiceProvider Services(RecordingHandler handler)
+    [Fact]
+    public void Consulta_por_id_publica_uuid_obrigatorio_e_orienta_a_busca_por_nome()
+    {
+        using var provider = Services(new RecordingHandler());
+        using var scope = provider.CreateScope();
+        var tool = scope.ServiceProvider.GetServices<McpServerTool>()
+            .Single(tool => tool.ProtocolTool.Name == "get_tag_by_id").ProtocolTool;
+
+        tool.Annotations!.ReadOnlyHint.Should().BeTrue();
+        tool.Description.Should().Contain("empresa autenticada").And.Contain("list_tags");
+        tool.InputSchema.GetProperty("required").EnumerateArray().Select(item => item.GetString())
+            .Should().Equal("query");
+        var query = tool.InputSchema.GetProperty("properties").GetProperty("query");
+        query.GetProperty("required").EnumerateArray().Select(item => item.GetString()).Should().Equal("tagId");
+        var fields = query.GetProperty("properties");
+        fields.EnumerateObject().Select(property => property.Name).Should().Equal("tagId");
+        var id = fields.GetProperty("tagId");
+        id.GetProperty("type").GetString().Should().Be("string");
+        id.GetProperty("format").GetString().Should().Be("uuid");
+        id.GetProperty("description").GetString().Should().Contain("ID da etiqueta");
+        tool.OutputSchema!.Value.GetProperty("properties").EnumerateObject().Select(property => property.Name)
+            .Should().BeEquivalentTo("id", "name", "color", "description");
+    }
+
+    [Fact]
+    public async Task Consulta_por_id_encaminha_a_consulta_e_retorna_a_etiqueta_estruturada()
+    {
+        var tag = new TagResponse(Guid.NewGuid(), "VIP", "#0d9488", "Clientes recorrentes");
+        var handler = new RecordingByIdHandler(Result.Success(tag));
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+
+        var result = await InvokeById(scope.ServiceProvider, new { tagId = tag.Id }, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeFalse();
+        result.StructuredContent!.Value.Deserialize<TagResponse>(JsonSerializerOptions.Web).Should().Be(tag);
+        handler.Query.Should().Be(new GetTagByIdQuery(tag.Id));
+    }
+
+    [Fact]
+    public async Task Consulta_sem_etiqueta_visivel_retorna_o_codigo_de_nao_encontrado()
+    {
+        var handler = new RecordingByIdHandler(Result.Failure<TagResponse>(
+            Error.NotFound("Tag.NotFound", "Etiqueta não encontrada.")));
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+
+        var result = await InvokeById(scope.ServiceProvider, new { tagId = Guid.NewGuid() }, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        result.StructuredContent.Should().BeNull();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        document.RootElement.GetProperty("error").GetProperty("code").GetString().Should().Be("Tag.NotFound");
+    }
+
+    [Theory]
+    [InlineData(null, "Informe os parâmetros da consulta.")]
+    [InlineData("{}", "O ID da etiqueta é obrigatório.")]
+    [InlineData("""{"tagId":"00000000-0000-0000-0000-000000000000"}""", "O ID da etiqueta é obrigatório.")]
+    [InlineData("""{"tagId":"id-invalido"}""", "query.tagId: esperado um ID no formato UUID.")]
+    [InlineData("""{"tagId":123}""", "query.tagId: esperado texto, recebeu número.")]
+    public async Task Consulta_com_id_ausente_ou_invalido_retorna_validacao_sem_consultar(string? json, string message)
+    {
+        var handler = new RecordingByIdHandler(Result.Failure<TagResponse>(Error.NotFound("Tag.NotFound", "Etiqueta não encontrada.")));
+        using var provider = Services(handler);
+        using var scope = provider.CreateScope();
+        using var query = json is null ? null : JsonDocument.Parse(json);
+
+        var result = await InvokeById(scope.ServiceProvider, query?.RootElement, TestContext.Current.CancellationToken);
+
+        result.IsError.Should().BeTrue();
+        using var document = JsonDocument.Parse(result.Content.OfType<TextContentBlock>().Single().Text);
+        var error = document.RootElement.GetProperty("error");
+        error.GetProperty("code").GetString().Should().Be("Validation.Failed");
+        error.GetProperty("message").GetString().Should().Be(message);
+        handler.Query.Should().BeNull();
+    }
+
+    private static ServiceProvider Services<TQuery, TResponse>(IQueryHandler<TQuery, TResponse> handler)
+        where TQuery : IQuery<TResponse>
     {
         var services = new ServiceCollection().AddLogging();
         services.AddSharedKernel();
@@ -165,7 +245,7 @@ public sealed class TagsToolsTests
         services.AddAuthorization();
         var jsonOptions = services.AddMcpValueObjectInputs(TimeProvider.System);
         services.AddMcpServer().WithToolExceptionHandling().WithTools<TagsTools>(jsonOptions);
-        services.AddScoped<IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>>(_ => handler);
+        services.AddScoped<IQueryHandler<TQuery, TResponse>>(_ => handler);
         var provider = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
         _ = provider.GetRequiredService<IOptions<McpServerOptions>>().Value;
         return provider;
@@ -173,6 +253,20 @@ public sealed class TagsToolsTests
 
     private static Task<CallToolResult> Invoke(IServiceProvider services, object? query, CancellationToken cancellationToken) =>
         McpToolCall.InvokeAsync(services, "list_tags", new Dictionary<string, object?> { ["query"] = query }, cancellationToken);
+
+    private static Task<CallToolResult> InvokeById(IServiceProvider services, object? query, CancellationToken cancellationToken) =>
+        McpToolCall.InvokeAsync(services, "get_tag_by_id", new Dictionary<string, object?> { ["query"] = query }, cancellationToken);
+
+    private sealed class RecordingByIdHandler(Result<TagResponse> outcome) : IQueryHandler<GetTagByIdQuery, TagResponse>
+    {
+        public GetTagByIdQuery? Query { get; private set; }
+
+        public Task<Result<TagResponse>> Handle(GetTagByIdQuery query, CancellationToken cancellationToken)
+        {
+            Query = query;
+            return Task.FromResult(outcome);
+        }
+    }
 
     private sealed class RecordingHandler : IQueryHandler<ListTagsQuery, PagedResult<TagResponse>>
     {

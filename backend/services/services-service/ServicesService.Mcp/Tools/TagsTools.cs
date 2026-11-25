@@ -5,6 +5,7 @@ using ModelContextProtocol.Protocol;
 using ModelContextProtocol.Server;
 using ServicesService.Application.Tags;
 using ServicesService.Application.Tags.CreateTag;
+using ServicesService.Application.Tags.GetTagById;
 using ServicesService.Application.Tags.ListTags;
 using ServicesService.Mcp.Extensions;
 
@@ -56,6 +57,26 @@ public sealed class TagsTools(IDispatcher dispatcher)
         CancellationToken cancellationToken = default)
     {
         var result = await dispatcher.Send(command, cancellationToken);
+        return result.ToToolResult();
+    }
+
+    [McpServerTool(
+        Name = "get_tag_by_id",
+        Title = "Consultar etiqueta por ID",
+        ReadOnly = true,
+        Destructive = false,
+        OpenWorld = false,
+        UseStructuredContent = true,
+        OutputSchemaType = typeof(TagResponse))]
+    [Description(
+        "Consulta uma etiqueta da empresa autenticada pelo ID e retorna seu nome, cor e descrição. " +
+        "Use o ID retornado por list_tags ou create_tag. Se você só tiver o nome, use list_tags.")]
+    public async Task<CallToolResult> GetTagById(
+        [Description("Identificador da etiqueta a consultar.")]
+        GetTagByIdQuery query,
+        CancellationToken cancellationToken = default)
+    {
+        var result = await dispatcher.Query(query, cancellationToken);
         return result.ToToolResult();
     }
 }

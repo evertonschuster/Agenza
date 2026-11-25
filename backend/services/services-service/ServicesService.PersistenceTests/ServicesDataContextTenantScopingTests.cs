@@ -1,6 +1,8 @@
 using Microsoft.EntityFrameworkCore;
 using ServicesService.Application.Abstractions;
+using ServicesService.Application.Tags.GetTagById;
 using ServicesService.Infrastructure.Persistence;
+using ServicesService.Infrastructure.Repositories;
 
 namespace ServicesService.PersistenceTests;
 
@@ -150,5 +152,39 @@ public class ServicesDataContextTenantScopingTests
         await using var contextForB = CreateContext(databaseName, tenantB);
 
         (await contextForB.Services.AnyAsync(TestContext.Current.CancellationToken)).Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Consulta_por_id_oculta_etiquetas_excluidas_e_de_outra_empresa()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var otherTenantId = Guid.NewGuid();
+        var color = TagColor.Create("#0d9488").Value;
+        var visible = Tag.Create(Guid.NewGuid(), "VIP", color, null).Value;
+        var deleted = Tag.Create(Guid.NewGuid(), "Excluída", color, null).Value;
+        var foreign = Tag.Create(Guid.NewGuid(), "Outra empresa", color, null).Value;
+        visible.AssignTenant(tenantId);
+        deleted.AssignTenant(tenantId);
+        deleted.MarkDeleted(null, DateTimeOffset.UtcNow);
+        foreign.AssignTenant(otherTenantId);
+        var cancellationToken = TestContext.Current.CancellationToken;
+        await using (var seed = CreateContext(databaseName, tenantId))
+        {
+            seed.Tags.AddRange(visible, deleted, foreign);
+            await seed.SaveChangesAsync(cancellationToken);
+        }
+
+        await using var context = CreateContext(databaseName, tenantId);
+        var handler = new GetTagByIdQueryHandler(new TagRepository(context));
+        var found = await handler.Handle(new GetTagByIdQuery(visible.Id), cancellationToken);
+        found.Value.Id.Should().Be(visible.Id);
+
+        foreach (var hiddenId in new[] { Guid.NewGuid(), deleted.Id, foreign.Id })
+        {
+            var result = await handler.Handle(new GetTagByIdQuery(hiddenId), cancellationToken);
+            result.IsFailure.Should().BeTrue();
+            result.Error.Code.Should().Be("Tag.NotFound");
+        }
     }
 }

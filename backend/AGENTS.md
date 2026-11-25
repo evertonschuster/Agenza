@@ -55,8 +55,8 @@ path always carries its name (`query.page`); with several arguments it stays rel
 deserialized argument, and the message reports only the kind of value received, never the value.
 The schema-derived text can never fail the error path: any problem reading it falls back to the
 serializer's message.
-When the value's kind contradicts the published schema (type or enum), the message is derived from
-the schema (`query.page: esperado número inteiro.`); otherwise the exception's original message
+For a type or enum mismatch, or a rejected string for a UUID field, derive the message from
+the published schema (`query.page: esperado número inteiro.`); otherwise the exception's original message
 stays, which is where value object messages come from. Without a path the error is global. `McpException` (including protocol errors), requests for additional input and requested cancellation stay with the SDK.
 Timeouts and unexpected failures return trace and correlation IDs. Application Result failures keep
 their mapping.
