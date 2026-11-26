@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services.DeactivateService;
 
@@ -16,8 +15,7 @@ public class DeactivateServiceCommandHandlerTests
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
         _handler = new DeactivateServiceCommandHandler(
             _serviceRepository,
-            _unitOfWork,
-            Substitute.For<ILogger<DeactivateServiceCommandHandler>>());
+            _unitOfWork);
     }
 
     private static Service NewService(Guid? categoryId = null) =>
@@ -93,5 +91,6 @@ public class DeactivateServiceCommandHandlerTests
 
         result.IsFailure.Should().BeTrue();
         result.Error.Type.Should().Be(ErrorType.Conflict);
+        result.Error.Code.Should().Be("Service.SaveFailed");
     }
 }

@@ -21,6 +21,7 @@ public class DeactivateServiceCommandValidatorTests
 
         var error = result.Errors.Should().ContainSingle().Subject;
         error.PropertyName.Should().Be(nameof(DeactivateServiceCommand.ServiceId));
+        error.ErrorCode.Should().Be("Service.IdRequired");
         error.ErrorMessage.Should().Be("O id do serviço é obrigatório.");
     }
 }

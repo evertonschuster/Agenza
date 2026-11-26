@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 using ServicesService.Application.Services.ReactivateService;
 
@@ -16,8 +15,7 @@ public class ReactivateServiceCommandHandlerTests
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
         _handler = new ReactivateServiceCommandHandler(
             _serviceRepository,
-            _unitOfWork,
-            Substitute.For<ILogger<ReactivateServiceCommandHandler>>());
+            _unitOfWork);
     }
 
     private static Service NewInactiveService()

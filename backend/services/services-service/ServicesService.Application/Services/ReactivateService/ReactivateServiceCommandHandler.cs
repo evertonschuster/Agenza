@@ -1,5 +1,4 @@
 using Admin.SharedKernel;
-using Microsoft.Extensions.Logging;
 using ServicesService.Application.Abstractions;
 
 namespace ServicesService.Application.Services.ReactivateService;
@@ -8,16 +7,13 @@ public sealed class ReactivateServiceCommandHandler : ICommandHandler<Reactivate
 {
     private readonly IServiceRepository _serviceRepository;
     private readonly IUnitOfWork _unitOfWork;
-    private readonly ILogger<ReactivateServiceCommandHandler> _logger;
 
     public ReactivateServiceCommandHandler(
         IServiceRepository serviceRepository,
-        IUnitOfWork unitOfWork,
-        ILogger<ReactivateServiceCommandHandler> logger)
+        IUnitOfWork unitOfWork)
     {
         _serviceRepository = serviceRepository;
         _unitOfWork = unitOfWork;
-        _logger = logger;
     }
 
     public async Task<Result<ServiceResponse>> Handle(ReactivateServiceCommand command, CancellationToken cancellationToken)
@@ -45,8 +41,9 @@ public sealed class ReactivateServiceCommandHandler : ICommandHandler<Reactivate
         var saveResult = await _unitOfWork.SaveChangesAsync(cancellationToken);
         if (saveResult.IsFailure)
         {
-            return Result.Failure<ServiceResponse>(
-                ServicePersistenceErrorMapper.Map(saveResult.Error, service.Name, _logger));
+            return Result.Failure<ServiceResponse>(Error.Conflict(
+                "Service.SaveFailed",
+                "Não foi possível salvar o serviço. Tente novamente."));
         }
 
         return ServiceResponse.FromService(service, service.Category?.Name);

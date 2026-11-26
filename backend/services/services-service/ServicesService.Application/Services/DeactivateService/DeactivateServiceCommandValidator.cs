@@ -7,6 +7,8 @@ public sealed class DeactivateServiceCommandValidator : AbstractValidator<Deacti
     public DeactivateServiceCommandValidator()
     {
         RuleFor(command => command.ServiceId)
-            .NotEmpty().WithMessage("O id do serviço é obrigatório.");
+            .NotEmpty()
+            .WithErrorCode("Service.IdRequired")
+            .WithMessage("O id do serviço é obrigatório.");
     }
 }

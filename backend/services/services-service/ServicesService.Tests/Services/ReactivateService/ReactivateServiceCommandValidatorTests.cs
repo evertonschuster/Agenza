@@ -21,6 +21,7 @@ public class ReactivateServiceCommandValidatorTests
 
         var error = result.Errors.Should().ContainSingle().Subject;
         error.PropertyName.Should().Be(nameof(ReactivateServiceCommand.ServiceId));
+        error.ErrorCode.Should().Be("Service.IdRequired");
         error.ErrorMessage.Should().Be("O id do serviço é obrigatório.");
     }
 }
