@@ -4,8 +4,10 @@ using Asp.Versioning;
 using Microsoft.AspNetCore.Mvc;
 using ServicesService.Application.Services;
 using ServicesService.Application.Services.CreateService;
+using ServicesService.Application.Services.DeactivateService;
 using ServicesService.Application.Services.DeleteService;
 using ServicesService.Application.Services.ListServices;
+using ServicesService.Application.Services.ReactivateService;
 using ServicesService.Application.Services.UpdateService;
 
 namespace ServicesService.Api.Controllers;
@@ -49,6 +51,28 @@ public class ServicesController : AgenzaControllerBase
     public async Task<IActionResult> Update(Guid id, UpdateServiceCommand command, CancellationToken cancellationToken)
     {
         var result = await _dispatcher.Send(command with { ServiceId = id }, cancellationToken);
+        return result.ToActionResult(this, service => Ok(service));
+    }
+
+    [HttpPost("{id:guid}/deactivate")]
+    [ProducesResponseType<ApiResponse<ServiceResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Deactivate(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Send(new DeactivateServiceCommand(id), cancellationToken);
+        return result.ToActionResult(this, service => Ok(service));
+    }
+
+    [HttpPost("{id:guid}/reactivate")]
+    [ProducesResponseType<ApiResponse<ServiceResponse>>(StatusCodes.Status200OK)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status400BadRequest)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status404NotFound)]
+    [ProducesResponseType<ApiProblemDetails>(StatusCodes.Status409Conflict)]
+    public async Task<IActionResult> Reactivate(Guid id, CancellationToken cancellationToken)
+    {
+        var result = await _dispatcher.Send(new ReactivateServiceCommand(id), cancellationToken);
         return result.ToActionResult(this, service => Ok(service));
     }
 

@@ -7,7 +7,16 @@ public class Service : TenantOwnedEntity
     public const int NameMaxLength = 80;
     public const int DescriptionMaxLength = 500;
 
+    public static readonly DomainError AlreadyInactive = new(
+        "Service.AlreadyInactive",
+        "O serviço já está indisponível para agendamento.");
+
+    public static readonly DomainError AlreadyActive = new(
+        "Service.AlreadyActive",
+        "O serviço já está disponível para agendamento.");
+
     public int Code { get; private set; }
+    public ServiceStatus Status { get; private set; }
     public string Name { get; private set; }
     public string? Description { get; private set; }
     public int DurationMinutes { get; private set; }
@@ -38,6 +47,7 @@ public class Service : TenantOwnedEntity
         : base(id)
     {
         Code = code;
+        Status = ServiceStatus.Active;
         CategoryId = categoryId;
         Name = name;
         Description = description;
@@ -136,6 +146,30 @@ public class Service : TenantOwnedEntity
         MaxDurationMinutes = duration.MaxDurationMinutes;
         Price = priceResult.Value;
         MaxDiscountPercentage = maxDiscountResult.Value;
+
+        return DomainResult.Success();
+    }
+
+    public DomainResult Inactivate()
+    {
+        if (Status == ServiceStatus.Inactive)
+        {
+            return DomainResult.Failure(AlreadyInactive);
+        }
+
+        Status = ServiceStatus.Inactive;
+
+        return DomainResult.Success();
+    }
+
+    public DomainResult Reactivate()
+    {
+        if (Status == ServiceStatus.Active)
+        {
+            return DomainResult.Failure(AlreadyActive);
+        }
+
+        Status = ServiceStatus.Active;
 
         return DomainResult.Success();
     }

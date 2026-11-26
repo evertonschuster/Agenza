@@ -7,7 +7,10 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
 {
     public void Configure(EntityTypeBuilder<Service> builder)
     {
-        builder.ToTable("Services");
+        var statuses = string.Join(", ", Enum.GetNames<ServiceStatus>().Select(status => $"'{status}'"));
+        builder.ToTable(
+            "Services",
+            table => table.HasCheckConstraint("CK_Services_Status", $"\"Status\" IN ({statuses})"));
         builder.HasKey(s => s.Id);
         builder.HasAlternateKey(s => new { s.TenantId, s.Id });
 
@@ -20,6 +23,7 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.MaxDurationMinutes).IsRequired();
         builder.Property(s => s.Price).IsRequired().HasPrecision(10, 2);
         builder.Property(s => s.MaxDiscountPercentage).IsRequired().HasPrecision(5, 2);
+        builder.Property(s => s.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
         builder.Property(s => s.CategoryId);
         builder.HasOne<Category>()
             .WithMany()
