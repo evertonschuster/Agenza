@@ -23,7 +23,7 @@ public static class DocumentationExtensions
 
         services.AddOpenApi(options =>
         {
-            options.MapValueObjectsToStrings();
+            options.MapValueObjects();
 
             options.AddDocumentTransformer((document, _, _) =>
             {

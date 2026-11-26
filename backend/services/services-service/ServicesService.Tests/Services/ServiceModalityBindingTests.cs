@@ -49,7 +49,7 @@ public class ServiceModalityBindingTests
 
         var exception = act.Should().Throw<JsonException>().Which;
         exception.Path.Should().Be("$.modality");
-        exception.Message.Should().Be(ServiceModality.Required.Message);
+        exception.Message.Should().Be(ServiceModality.Required);
     }
 
     [Theory]
@@ -60,8 +60,7 @@ public class ServiceModalityBindingTests
     {
         var act = () => BindCreate(modalityJson);
 
-        act.Should().Throw<JsonException>().Which.Message
-            .Should().Be("Informe se o serviço atende presencialmente e se atende online.");
+        act.Should().Throw<JsonException>().Which.Message.Should().Be(ServiceModality.BothRequired);
     }
 
     [Theory]

@@ -2376,8 +2376,8 @@ export interface components {
       purposes: components['schemas']['ContactPurpose'][];
     };
     ServiceModality: {
-      attendsInPerson?: boolean;
-      attendsOnline?: boolean;
+      attendsInPerson: boolean;
+      attendsOnline: boolean;
     };
     ServiceResponse: {
       /** Format: uuid */

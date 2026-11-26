@@ -177,6 +177,10 @@ follows the backend-slice skill's
   up in logs.
 - A date whose rules depend on the day implements `IDateValueObject<T>` (`Create(date, today)`);
   anything else stays in the service.
+- A value made of several parts implements `IObjectValueObject<T, TInput>`: `TInput` is a record of
+  nullable parts, which is the wire shape, `Create(input)` returns `ParseResult<T>` and `ToInput`
+  writes it back. It may live in the service's Domain: the kernel reads the marker, so the JSON
+  converter and the OpenAPI schema (every part required) apply with no attribute on the member.
 
 ### Errors and lifecycle
 

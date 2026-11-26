@@ -1,4 +1,3 @@
-using System.Text.Json.Serialization;
 using ServicesService.Application.Tags;
 
 namespace ServicesService.Application.Services;
@@ -17,7 +16,7 @@ public sealed record ServiceResponse(
     string? CategoryName,
     IReadOnlyList<TagSummary> Tags,
     ServiceStatus Status,
-    [property: JsonConverter(typeof(ServiceModalityJsonConverter))] ServiceModality Modality)
+    ServiceModality Modality)
 {
     public static ServiceResponse FromService(Service service, string? categoryName) =>
         new(

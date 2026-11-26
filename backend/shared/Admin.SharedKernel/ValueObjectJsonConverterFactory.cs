@@ -6,13 +6,21 @@ namespace Admin.SharedKernel;
 internal sealed class ValueObjectJsonConverterFactory(TimeProvider timeProvider) : JsonConverterFactory
 {
     public override bool CanConvert(Type typeToConvert) =>
-        StringValueObjects.Is(typeToConvert) || DateValueObjects.Is(typeToConvert);
+        StringValueObjects.Is(typeToConvert) || DateValueObjects.Is(typeToConvert) || ObjectValueObjects.Is(typeToConvert);
 
     public override JsonConverter CreateConverter(Type typeToConvert, JsonSerializerOptions options)
     {
         if (StringValueObjects.Is(typeToConvert))
         {
             return (JsonConverter)Activator.CreateInstance(typeof(StringValueObjectJsonConverter<>).MakeGenericType(typeToConvert))!;
+        }
+
+        if (ObjectValueObjects.Is(typeToConvert))
+        {
+            var converterType = typeof(ObjectValueObjectJsonConverter<,>)
+                .MakeGenericType(typeToConvert, ObjectValueObjects.InputOf(typeToConvert));
+
+            return (JsonConverter)Activator.CreateInstance(converterType)!;
         }
 
         return (JsonConverter)Activator.CreateInstance(typeof(DateValueObjectJsonConverter<>).MakeGenericType(typeToConvert), timeProvider)!;
