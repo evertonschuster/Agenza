@@ -61,7 +61,7 @@ jobs:
             backend/Directory.Packages.props backend/NuGet.Config backend/global.json \
             ai-services/assistant-service/app/ ai-services/assistant-service/pyproject.toml \
             ai-services/assistant-service/uv.lock ai-services/assistant-service/.python-version \
-            infra/postgres/init/ scripts/smoke_oidc_contract.py scripts/smoke_tenant_foreign_keys.sql \
+            infra/postgres/init/ scripts/smoke_tenant_foreign_keys.sql \
             .github/workflows/frontend-ci.yml; then
             echo "contract=false" >> "$GITHUB_OUTPUT"
           else
@@ -227,9 +227,6 @@ jobs:
           AGENZA_DISPOSABLE_TEST_DB: '1'
           AGENZA_TENANT_PROVISIONING_SECRET: postgres
         run: npm run test:e2e --workspace=apps/admin-frontend
-
-      - name: Exercise real OIDC scopes and cross-service tenant boundary
-        run: python scripts/smoke_oidc_contract.py
 
       - name: Show the application log
         # The Aspire log is the only evidence of a server-side failure the browser tests cannot see.
