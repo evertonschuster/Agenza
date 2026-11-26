@@ -52,6 +52,9 @@ jobs:
     needs: check-token
     if: needs.check-token.outputs.has-token == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # the Sonar report comment
     steps:
       - uses: actions/checkout@v7
         with:
@@ -82,6 +85,7 @@ jobs:
           /d:sonar.host.url="https://sonarcloud.io"
           /d:sonar.cs.opencover.reportsPaths="**/coverage.opencover.xml"
           /d:sonar.scanner.scanAll=false
+          /d:sonar.qualitygate.wait=true
 
       - name: Build
         run: dotnet build backend/AdminBackend.slnx -c Release
@@ -91,16 +95,29 @@ jobs:
           dotnet test backend/AdminBackend.slnx -c Release --no-build
           -p:CollectCoverage=true -p:CoverletOutputFormat=opencover
 
+      # With qualitygate.wait, a failed quality gate fails this step.
       - name: End analysis
+        id: sonar
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
         run: dotnet-sonarscanner end /d:sonar.token="$SONAR_TOKEN"
+
+      - name: Sonar report
+        if: ${{ !cancelled() && steps.sonar.conclusion != 'skipped' && steps.sonar.conclusion != '' }}
+        uses: ./.github/actions/sonar-report
+        with:
+          project-key: agenza-backend
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          github-token: ${{ github.token }}
 
   ai-services:
     name: sonar-ai-services
     needs: check-token
     if: needs.check-token.outputs.has-token == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # the Sonar report comment
     defaults:
       run:
         working-directory: ai-services/assistant-service
@@ -122,7 +139,9 @@ jobs:
       - name: Test with coverage (produces coverage.xml)
         run: pytest --cov-report=xml
 
-      - uses: SonarSource/sonarqube-scan-action@v8
+      - name: Sonar analysis
+        id: sonar
+        uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: https://sonarcloud.io
@@ -134,3 +153,12 @@ jobs:
             -Dsonar.sources=app
             -Dsonar.tests=tests
             -Dsonar.python.coverage.reportPaths=coverage.xml
+            -Dsonar.qualitygate.wait=true
+
+      - name: Sonar report
+        if: ${{ !cancelled() && steps.sonar.conclusion != 'skipped' && steps.sonar.conclusion != '' }}
+        uses: ./.github/actions/sonar-report
+        with:
+          project-key: agenza-ai-services
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          github-token: ${{ github.token }}

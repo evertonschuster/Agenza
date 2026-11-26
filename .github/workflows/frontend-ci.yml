@@ -73,6 +73,9 @@ jobs:
     needs: changes
     if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write # the Sonar report comment
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
     steps:
@@ -110,11 +113,11 @@ jobs:
       - name: Test
         run: npm run test:coverage --workspace=apps/admin-frontend
 
-      # Reuses coverage/lcov.info from the step above. continue-on-error: a SonarCloud
-      # outage must not block merges. Skips without the secret (forks, unconfigured repo).
+      # Reuses coverage/lcov.info from the step above. qualitygate.wait makes a failed quality
+      # gate fail this job. Skips without the secret (forks, unconfigured repo).
       - name: Sonar analysis
+        id: sonar
         if: env.SONAR_TOKEN != ''
-        continue-on-error: true
         uses: SonarSource/sonarqube-scan-action@v8
         env:
           SONAR_HOST_URL: https://sonarcloud.io
@@ -128,6 +131,15 @@ jobs:
             -Dsonar.test.inclusions=**/*.test.ts,**/*.test.tsx
             -Dsonar.exclusions=**/*.test.ts,**/*.test.tsx,src/test/**
             -Dsonar.javascript.lcov.reportPaths=coverage/lcov.info
+            -Dsonar.qualitygate.wait=true
+
+      - name: Sonar report
+        if: ${{ !cancelled() && steps.sonar.conclusion != 'skipped' && steps.sonar.conclusion != '' }}
+        uses: ./.github/actions/sonar-report
+        with:
+          project-key: agenza-frontend
+          sonar-token: ${{ secrets.SONAR_TOKEN }}
+          github-token: ${{ github.token }}
 
   # e2e/*.spec.ts drives real identity-service logins, so it needs the full Aspire
   # stack running - that only happens in api-contract-check below, not here.
