@@ -57,6 +57,10 @@ function Set-OwnerOnlyAccess {
         else { [System.IO.File]::SetAccessControl($Path, $acl) }
     }
     else {
+        # Another owner would keep access to the credentials whatever the mode (typical when run as root).
+        if ($IsDirectory -and (& stat -c %u $Path) -ne (& id -u)) {
+            throw "$Path is owned by another user; use a directory owned by the user running this script."
+        }
         & chmod $(if ($IsDirectory) { '700' } else { '600' }) $Path
         if ($LASTEXITCODE -ne 0) { throw "Could not restrict access to $Path." }
     }
@@ -126,6 +130,7 @@ if (-not $onWindows) {
         & chgrp $Group $Directory $signingPath $encryptionPath $envFile
         if ($LASTEXITCODE -ne 0) { throw "Could not assign group '$Group'." }
         & chmod 750 $Directory
+        if ($LASTEXITCODE -ne 0) { throw "Could not set permissions on $Directory." }
         & chmod 640 $signingPath $encryptionPath $envFile
         if ($LASTEXITCODE -ne 0) { throw 'Could not set the final permissions.' }
     }

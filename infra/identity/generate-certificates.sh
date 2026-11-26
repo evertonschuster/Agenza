@@ -25,6 +25,10 @@ for file in "$dir/signing.pfx" "$dir/encryption.pfx" "$env_file"; do
   fi
 done
 
+if [ "$(stat -c %u "$dir")" != "$(id -u)" ]; then
+  echo "$dir is owned by another user; use a directory owned by the user running this script." >&2
+  exit 1
+fi
 chmod 700 "$dir"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
