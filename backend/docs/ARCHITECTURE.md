@@ -180,7 +180,10 @@ follows the backend-slice skill's
 - A value made of several parts implements `IObjectValueObject<T, TInput>`: `TInput` is a record of
   nullable parts, which is the wire shape, `Create(input)` returns `ParseResult<T>` and `ToInput`
   writes it back. It may live in the service's Domain: the kernel reads the marker, so the JSON
-  converter and the OpenAPI schema (every part required) apply with no attribute on the member.
+  converter and the OpenAPI schema apply with no attribute on the member. The schema keeps only the
+  parts of `TInput`, so the value object exposes each one under the same name; a part is required
+  unless its constructor parameter has a default. The service's contract tests scan its Domain for
+  these.
 
 ### Errors and lifecycle
 

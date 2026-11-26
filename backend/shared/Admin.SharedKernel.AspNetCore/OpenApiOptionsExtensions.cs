@@ -17,7 +17,7 @@ public static class OpenApiOptionsExtensions
 
             if (ObjectValueObjects.Is(valueObject))
             {
-                schema.Required = schema.Properties is { Count: > 0 } ? new HashSet<string>(schema.Properties.Keys) : null;
+                ObjectValueObjectSchema.Apply(schema, valueObject);
                 return Task.CompletedTask;
             }
 
