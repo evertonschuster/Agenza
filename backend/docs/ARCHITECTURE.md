@@ -425,7 +425,8 @@ reach handlers normalized, invalid VOs do not reach them and the published schem
 
 IdentityService.ProtocolTests exercises published OAuth metadata and token issuance with application
 and scope-manager doubles. It does not host HTTP in process or replace the real Aspire smoke;
-the Domain/Application coverage gate remains separate from these protocol checks.
+the Domain/Application coverage gate remains separate from these protocol checks. The Sonar run
+also collects their coverage (`coverlet.msbuild`), so new code in the Api project is measured.
 
 ## 10. Reference code and the older generation
 
