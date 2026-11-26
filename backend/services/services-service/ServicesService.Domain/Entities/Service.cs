@@ -25,6 +25,7 @@ public class Service : TenantOwnedEntity
     public decimal Price { get; private set; }
     public decimal MaxDiscountPercentage { get; private set; }
     public Guid? CategoryId { get; private set; }
+    public Category? Category { get; private set; }
 
     private readonly List<Tag> _tags = [];
     public IReadOnlyCollection<Tag> Tags => _tags;

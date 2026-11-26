@@ -8,7 +8,6 @@ namespace ServicesService.Tests.Services.ReactivateService;
 public class ReactivateServiceCommandHandlerTests
 {
     private readonly IServiceRepository _serviceRepository = Substitute.For<IServiceRepository>();
-    private readonly ICategoryRepository _categoryRepository = Substitute.For<ICategoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly ReactivateServiceCommandHandler _handler;
 
@@ -17,7 +16,6 @@ public class ReactivateServiceCommandHandlerTests
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
         _handler = new ReactivateServiceCommandHandler(
             _serviceRepository,
-            _categoryRepository,
             _unitOfWork,
             Substitute.For<ILogger<ReactivateServiceCommandHandler>>());
     }

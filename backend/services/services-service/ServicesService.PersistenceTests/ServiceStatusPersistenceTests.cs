@@ -49,6 +49,42 @@ public class ServiceStatusPersistenceTests
         (await StatusOf(databaseName, tenantId, serviceId)).Should().Be(ServiceStatus.Active);
     }
 
+    [Fact]
+    public async Task GetByIdAsync_TrazACategoriaDoServico()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var category = Category.Create(Guid.NewGuid(), "Odontologia").Value;
+        var service = Service.Create(
+            Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, category.Id, 1).Value;
+
+        await using (var context = PersistenceContext.Create(databaseName, tenantId))
+        {
+            new CategoryRepository(context).Add(category);
+            new ServiceRepository(context).Add(service);
+            await context.SaveChangesAsync(TestContext.Current.CancellationToken);
+        }
+
+        await using var readContext = PersistenceContext.Create(databaseName, tenantId);
+        var loaded = await new ServiceRepository(readContext).GetByIdAsync(service.Id, CancellationToken.None);
+
+        loaded!.Category.Should().NotBeNull();
+        loaded.Category!.Name.Should().Be("Odontologia");
+    }
+
+    [Fact]
+    public async Task GetByIdAsync_SemCategoria_DevolveCategoriaNula()
+    {
+        var databaseName = Guid.NewGuid().ToString();
+        var tenantId = Guid.NewGuid();
+        var serviceId = await SaveNewService(databaseName, tenantId);
+
+        await using var context = PersistenceContext.Create(databaseName, tenantId);
+        var loaded = await new ServiceRepository(context).GetByIdAsync(serviceId, CancellationToken.None);
+
+        loaded!.Category.Should().BeNull();
+    }
+
     private static async Task ChangeStatus(
         string databaseName,
         Guid tenantId,

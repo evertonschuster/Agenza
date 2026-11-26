@@ -8,7 +8,6 @@ namespace ServicesService.Tests.Services.DeactivateService;
 public class DeactivateServiceCommandHandlerTests
 {
     private readonly IServiceRepository _serviceRepository = Substitute.For<IServiceRepository>();
-    private readonly ICategoryRepository _categoryRepository = Substitute.For<ICategoryRepository>();
     private readonly IUnitOfWork _unitOfWork = Substitute.For<IUnitOfWork>();
     private readonly DeactivateServiceCommandHandler _handler;
 
@@ -17,7 +16,6 @@ public class DeactivateServiceCommandHandlerTests
         _unitOfWork.SaveChangesAsync(Arg.Any<CancellationToken>()).Returns(PersistenceResult.Success(1));
         _handler = new DeactivateServiceCommandHandler(
             _serviceRepository,
-            _categoryRepository,
             _unitOfWork,
             Substitute.For<ILogger<DeactivateServiceCommandHandler>>());
     }
@@ -74,8 +72,8 @@ public class DeactivateServiceCommandHandlerTests
     {
         var category = Category.Create(Guid.NewGuid(), "Odontologia").Value;
         var service = NewService(category.Id);
+        typeof(Service).GetProperty(nameof(Service.Category))!.SetValue(service, category);
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
-        _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
         var result = await _handler.Handle(new DeactivateServiceCommand(service.Id), CancellationToken.None);
 

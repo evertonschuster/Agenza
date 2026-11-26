@@ -7,18 +7,15 @@ namespace ServicesService.Application.Services.ReactivateService;
 public sealed class ReactivateServiceCommandHandler : ICommandHandler<ReactivateServiceCommand, ServiceResponse>
 {
     private readonly IServiceRepository _serviceRepository;
-    private readonly ICategoryRepository _categoryRepository;
     private readonly IUnitOfWork _unitOfWork;
     private readonly ILogger<ReactivateServiceCommandHandler> _logger;
 
     public ReactivateServiceCommandHandler(
         IServiceRepository serviceRepository,
-        ICategoryRepository categoryRepository,
         IUnitOfWork unitOfWork,
         ILogger<ReactivateServiceCommandHandler> logger)
     {
         _serviceRepository = serviceRepository;
-        _categoryRepository = categoryRepository;
         _unitOfWork = unitOfWork;
         _logger = logger;
     }
@@ -32,11 +29,9 @@ public sealed class ReactivateServiceCommandHandler : ICommandHandler<Reactivate
                 Error.NotFound("Service.NotFound", $"Serviço '{command.ServiceId}' não foi encontrado."));
         }
 
-        var categoryName = await CategoryNameAsync(service, cancellationToken);
-
         if (service.Status == ServiceStatus.Active)
         {
-            return ServiceResponse.FromService(service, categoryName);
+            return ServiceResponse.FromService(service, service.Category?.Name);
         }
 
         var transitionResult = service.Reactivate();
@@ -54,17 +49,6 @@ public sealed class ReactivateServiceCommandHandler : ICommandHandler<Reactivate
                 ServicePersistenceErrorMapper.Map(saveResult.Error, service.Name, _logger));
         }
 
-        return ServiceResponse.FromService(service, categoryName);
-    }
-
-    private async Task<string?> CategoryNameAsync(Service service, CancellationToken cancellationToken)
-    {
-        if (service.CategoryId is not { } categoryId)
-        {
-            return null;
-        }
-
-        var category = await _categoryRepository.GetByIdAsync(categoryId, cancellationToken);
-        return category?.Name;
+        return ServiceResponse.FromService(service, service.Category?.Name);
     }
 }

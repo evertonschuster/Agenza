@@ -25,7 +25,7 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.MaxDiscountPercentage).IsRequired().HasPrecision(5, 2);
         builder.Property(s => s.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
         builder.Property(s => s.CategoryId);
-        builder.HasOne<Category>()
+        builder.HasOne(s => s.Category)
             .WithMany()
             .HasForeignKey(s => new { s.TenantId, s.CategoryId })
             .HasPrincipalKey(c => new { c.TenantId, c.Id })

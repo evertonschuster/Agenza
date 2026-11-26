@@ -45,7 +45,7 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
     }
 
     public Task<Service?> GetByIdAsync(Guid serviceId, CancellationToken cancellationToken) =>
-        Set.Include(s => s.Tags).FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
+        Set.Include(s => s.Tags).Include(s => s.Category).FirstOrDefaultAsync(s => s.Id == serviceId, cancellationToken);
 
     public async Task UpdateAsync(Service service, CancellationToken cancellationToken)
     {
