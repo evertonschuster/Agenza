@@ -24,6 +24,8 @@ public class Service : TenantOwnedEntity
     public int MaxDurationMinutes { get; private set; }
     public decimal Price { get; private set; }
     public decimal MaxDiscountPercentage { get; private set; }
+    public bool AttendsInPerson { get; private set; }
+    public bool AttendsOnline { get; private set; }
     public Guid? CategoryId { get; private set; }
     public Category? Category { get; private set; }
 
@@ -43,11 +45,14 @@ public class Service : TenantOwnedEntity
         DurationRange duration,
         decimal price,
         decimal maxDiscountPercentage,
+        ServiceModality modality,
         Guid? categoryId,
         int code)
         : base(id)
     {
         Code = code;
+        AttendsInPerson = modality.AttendsInPerson;
+        AttendsOnline = modality.AttendsOnline;
         Status = ServiceStatus.Active;
         CategoryId = categoryId;
         Name = name;
@@ -67,7 +72,8 @@ public class Service : TenantOwnedEntity
         decimal price,
         decimal maxDiscountPercentage,
         Guid? categoryId,
-        int code)
+        int code,
+        ServiceModality? modality = null)
     {
         var nameResult = ValidateName(name);
         if (nameResult.IsFailure)
@@ -100,6 +106,7 @@ public class Service : TenantOwnedEntity
             duration,
             priceResult.Value,
             maxDiscountResult.Value,
+            modality ?? ServiceModality.InPersonOnly,
             categoryId,
             code));
     }
@@ -110,7 +117,8 @@ public class Service : TenantOwnedEntity
         DurationRange duration,
         decimal price,
         decimal maxDiscountPercentage,
-        Guid? categoryId)
+        Guid? categoryId,
+        ServiceModality? modality = null)
     {
         // Every new value is validated before anything is assigned, so a
         // later validation failure (e.g. an invalid discount) can never leave
@@ -147,6 +155,12 @@ public class Service : TenantOwnedEntity
         MaxDurationMinutes = duration.MaxDurationMinutes;
         Price = priceResult.Value;
         MaxDiscountPercentage = maxDiscountResult.Value;
+
+        if (modality is not null)
+        {
+            AttendsInPerson = modality.AttendsInPerson;
+            AttendsOnline = modality.AttendsOnline;
+        }
 
         return DomainResult.Success();
     }

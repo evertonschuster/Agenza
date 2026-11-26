@@ -353,6 +353,12 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("AttendsInPerson")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("AttendsOnline")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
 
@@ -434,6 +440,8 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Services", "services", t =>
                         {
+                            t.HasCheckConstraint("CK_Services_Modality", "\"AttendsInPerson\" OR \"AttendsOnline\"");
+
                             t.HasCheckConstraint("CK_Services_Status", "\"Status\" IN ('Active', 'Inactive')");
                         });
                 });
@@ -570,11 +578,13 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ServicesService.Domain.Entities.Service", b =>
                 {
-                    b.HasOne("ServicesService.Domain.Entities.Category", null)
+                    b.HasOne("ServicesService.Domain.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("TenantId", "CategoryId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("ServicesService.Domain.Entities.Client", b =>

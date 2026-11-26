@@ -11,4 +11,6 @@ public sealed record CreateServiceCommand(
     decimal Price,
     decimal MaxDiscountPercentage,
     Guid? CategoryId,
-    IReadOnlyList<Guid>? TagIds) : ICommand<ServiceResponse>;
+    IReadOnlyList<Guid>? TagIds,
+    bool? AttendsInPerson = null,
+    bool? AttendsOnline = null) : ICommand<ServiceResponse>;

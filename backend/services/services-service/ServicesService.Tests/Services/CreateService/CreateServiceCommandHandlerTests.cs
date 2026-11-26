@@ -52,6 +52,43 @@ public class CreateServiceCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_SemModalidade_CriaOServicoSomentePresencial()
+    {
+        var result = await _handler.Handle(
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.AttendsInPerson.Should().BeTrue();
+        result.Value.AttendsOnline.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_ComModalidadeOnline_CriaOServicoComAModalidadeInformada()
+    {
+        var result = await _handler.Handle(
+            new CreateServiceCommand("Terapia", null, 30, 15, 60, 45.50m, 10m, null, null, AttendsInPerson: true, AttendsOnline: true),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.AttendsInPerson.Should().BeTrue();
+        result.Value.AttendsOnline.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Handle_ComModalidadeSemNenhumFormato_RetornaErroDeValidacaoSemSalvar()
+    {
+        var result = await _handler.Handle(
+            new CreateServiceCommand("Terapia", null, 30, 15, 60, 45.50m, 10m, null, null, AttendsInPerson: false, AttendsOnline: false),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.ModalityRequired");
+        _serviceRepository.DidNotReceive().Add(Arg.Any<Service>());
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Handle_WithValidCategoryAndTags_SetsThemOnTheService()
     {
         var category = Category.Create(Guid.NewGuid(), "Hair").Value;

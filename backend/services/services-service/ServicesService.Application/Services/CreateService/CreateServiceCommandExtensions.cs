@@ -12,6 +12,12 @@ public static class CreateServiceCommandExtensions
             return DomainResult.Failure<Service>(durationResult.Error);
         }
 
+        var modalityResult = ServiceModalityMapping.ToModality(command.AttendsInPerson, command.AttendsOnline);
+        if (modalityResult.IsFailure)
+        {
+            return DomainResult.Failure<Service>(modalityResult.Error);
+        }
+
         var serviceResult = Service.Create(
             Guid.CreateVersion7(),
             command.Name,
@@ -20,7 +26,8 @@ public static class CreateServiceCommandExtensions
             command.Price,
             command.MaxDiscountPercentage,
             command.CategoryId,
-            code);
+            code,
+            modalityResult.Value);
 
         if (serviceResult.IsFailure)
         {

@@ -49,5 +49,15 @@ public sealed class CreateServiceCommandValidator : AbstractValidator<CreateServ
         RuleFor(command => command.TagIds)
             .Must(tagIds => tagIds is null || tagIds.Distinct().Count() == tagIds.Count)
             .WithMessage("A lista de etiquetas não pode conter ids duplicados.");
+
+        RuleFor(command => command)
+            .Must(command => (command.AttendsInPerson is null) == (command.AttendsOnline is null))
+            .WithMessage("Informe se o serviço atende presencialmente e se atende online, os dois juntos.")
+            .OverridePropertyName(nameof(CreateServiceCommand.AttendsOnline));
+
+        RuleFor(command => command)
+            .Must(command => command.AttendsInPerson != false || command.AttendsOnline != false)
+            .WithMessage(ServiceModality.Required.Message)
+            .OverridePropertyName(nameof(CreateServiceCommand.AttendsOnline));
     }
 }

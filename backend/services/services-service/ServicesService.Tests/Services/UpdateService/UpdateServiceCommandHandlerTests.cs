@@ -49,6 +49,53 @@ public class UpdateServiceCommandHandlerTests
     }
 
     [Fact]
+    public async Task Handle_SemModalidade_MantemAModalidadeAtual()
+    {
+        var service = ValidService();
+        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+
+        var result = await _handler.Handle(
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.AttendsInPerson.Should().BeTrue();
+        result.Value.AttendsOnline.Should().BeFalse();
+    }
+
+    [Fact]
+    public async Task Handle_ComModalidade_SubstituiAModalidadeEPersiste()
+    {
+        var service = ValidService();
+        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+
+        var result = await _handler.Handle(
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, AttendsInPerson: false, AttendsOnline: true),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.AttendsInPerson.Should().BeFalse();
+        result.Value.AttendsOnline.Should().BeTrue();
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ComModalidadeSemNenhumFormato_RetornaErroDeValidacaoSemSalvar()
+    {
+        var service = ValidService();
+        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+
+        var result = await _handler.Handle(
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, AttendsInPerson: false, AttendsOnline: false),
+            CancellationToken.None);
+
+        result.IsFailure.Should().BeTrue();
+        result.Error.Code.Should().Be("Service.ModalityRequired");
+        service.AttendsInPerson.Should().BeTrue();
+        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
     public async Task Handle_WithValidCategoryAndTags_SetsThemOnTheService()
     {
         var service = ValidService();

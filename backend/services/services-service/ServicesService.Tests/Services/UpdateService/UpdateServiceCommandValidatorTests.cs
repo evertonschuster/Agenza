@@ -16,6 +16,38 @@ public class UpdateServiceCommandValidatorTests
         (await _validator.ValidateAsync(ValidCommand(), TestContext.Current.CancellationToken)).IsValid.Should().BeTrue();
     }
 
+    [Theory]
+    [InlineData(true, false)]
+    [InlineData(false, true)]
+    [InlineData(true, true)]
+    public async Task Validate_ComModalidadeInformada_Passa(bool presencial, bool online)
+    {
+        var command = ValidCommand() with { AttendsInPerson = presencial, AttendsOnline = online };
+
+        (await _validator.ValidateAsync(command, TestContext.Current.CancellationToken)).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_ComModalidadeSemNenhumFormato_FalhaNoCampoAttendsOnline()
+    {
+        var command = ValidCommand() with { AttendsInPerson = false, AttendsOnline = false };
+
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(error => error.PropertyName == nameof(UpdateServiceCommand.AttendsOnline));
+    }
+
+    [Theory]
+    [InlineData(true, null)]
+    [InlineData(null, false)]
+    public async Task Validate_ComSoUmDosCamposDeModalidade_Falha(bool? presencial, bool? online)
+    {
+        var command = ValidCommand() with { AttendsInPerson = presencial, AttendsOnline = online };
+
+        (await _validator.ValidateAsync(command, TestContext.Current.CancellationToken)).IsValid.Should().BeFalse();
+    }
+
     [Fact]
     public async Task Validate_WithEmptyServiceId_Fails()
     {
