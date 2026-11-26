@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using Admin.SharedKernel;
 
 namespace ServicesService.Application.Services.UpdateService;
@@ -13,5 +14,4 @@ public sealed record UpdateServiceCommand(
     decimal MaxDiscountPercentage,
     Guid? CategoryId,
     IReadOnlyList<Guid>? TagIds,
-    bool? AttendsInPerson = null,
-    bool? AttendsOnline = null) : ICommand<ServiceResponse>;
+    [property: JsonConverter(typeof(ServiceModalityJsonConverter))] ServiceModality? Modality = null) : ICommand<ServiceResponse>;

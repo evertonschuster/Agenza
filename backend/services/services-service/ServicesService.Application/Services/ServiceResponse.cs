@@ -1,3 +1,4 @@
+using System.Text.Json.Serialization;
 using ServicesService.Application.Tags;
 
 namespace ServicesService.Application.Services;
@@ -16,8 +17,7 @@ public sealed record ServiceResponse(
     string? CategoryName,
     IReadOnlyList<TagSummary> Tags,
     ServiceStatus Status,
-    bool AttendsInPerson,
-    bool AttendsOnline)
+    [property: JsonConverter(typeof(ServiceModalityJsonConverter))] ServiceModality Modality)
 {
     public static ServiceResponse FromService(Service service, string? categoryName) =>
         new(
@@ -34,6 +34,5 @@ public sealed record ServiceResponse(
             categoryName,
             service.Tags.Select(TagSummary.FromTag).ToList(),
             service.Status,
-            service.AttendsInPerson,
-            service.AttendsOnline);
+            ServiceModality.Restore(service.AttendsInPerson, service.AttendsOnline));
 }

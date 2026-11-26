@@ -10,12 +10,6 @@ public static class UpdateServiceCommandExtensions
             return DomainResult.Failure(durationResult.Error);
         }
 
-        var modalityResult = ServiceModalityMapping.ToModality(command.AttendsInPerson, command.AttendsOnline);
-        if (modalityResult.IsFailure)
-        {
-            return DomainResult.Failure(modalityResult.Error);
-        }
-
         return service.Update(
             command.Name,
             command.Description,
@@ -23,6 +17,6 @@ public static class UpdateServiceCommandExtensions
             command.Price,
             command.MaxDiscountPercentage,
             command.CategoryId,
-            modalityResult.Value);
+            command.Modality);
     }
 }

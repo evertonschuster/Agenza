@@ -59,33 +59,22 @@ public class CreateServiceCommandHandlerTests
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.AttendsInPerson.Should().BeTrue();
-        result.Value.AttendsOnline.Should().BeFalse();
+        result.Value.Modality.AttendsInPerson.Should().BeTrue();
+        result.Value.Modality.AttendsOnline.Should().BeFalse();
     }
 
     [Fact]
     public async Task Handle_ComModalidadeOnline_CriaOServicoComAModalidadeInformada()
     {
+        var modality = ServiceModality.Create(attendsInPerson: true, attendsOnline: true).Value;
+
         var result = await _handler.Handle(
-            new CreateServiceCommand("Terapia", null, 30, 15, 60, 45.50m, 10m, null, null, AttendsInPerson: true, AttendsOnline: true),
+            new CreateServiceCommand("Terapia", null, 30, 15, 60, 45.50m, 10m, null, null, modality),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.AttendsInPerson.Should().BeTrue();
-        result.Value.AttendsOnline.Should().BeTrue();
-    }
-
-    [Fact]
-    public async Task Handle_ComModalidadeSemNenhumFormato_RetornaErroDeValidacaoSemSalvar()
-    {
-        var result = await _handler.Handle(
-            new CreateServiceCommand("Terapia", null, 30, 15, 60, 45.50m, 10m, null, null, AttendsInPerson: false, AttendsOnline: false),
-            CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Service.ModalityRequired");
-        _serviceRepository.DidNotReceive().Add(Arg.Any<Service>());
-        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
+        result.Value.Modality.AttendsInPerson.Should().BeTrue();
+        result.Value.Modality.AttendsOnline.Should().BeTrue();
     }
 
     [Fact]

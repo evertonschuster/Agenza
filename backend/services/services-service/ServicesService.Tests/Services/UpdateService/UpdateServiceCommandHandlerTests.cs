@@ -59,8 +59,8 @@ public class UpdateServiceCommandHandlerTests
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.AttendsInPerson.Should().BeTrue();
-        result.Value.AttendsOnline.Should().BeFalse();
+        result.Value.Modality.AttendsInPerson.Should().BeTrue();
+        result.Value.Modality.AttendsOnline.Should().BeFalse();
     }
 
     [Fact]
@@ -68,31 +68,16 @@ public class UpdateServiceCommandHandlerTests
     {
         var service = ValidService();
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        var modality = ServiceModality.Create(attendsInPerson: false, attendsOnline: true).Value;
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, AttendsInPerson: false, AttendsOnline: true),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, modality),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
-        result.Value.AttendsInPerson.Should().BeFalse();
-        result.Value.AttendsOnline.Should().BeTrue();
+        result.Value.Modality.AttendsInPerson.Should().BeFalse();
+        result.Value.Modality.AttendsOnline.Should().BeTrue();
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_ComModalidadeSemNenhumFormato_RetornaErroDeValidacaoSemSalvar()
-    {
-        var service = ValidService();
-        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
-
-        var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, AttendsInPerson: false, AttendsOnline: false),
-            CancellationToken.None);
-
-        result.IsFailure.Should().BeTrue();
-        result.Error.Code.Should().Be("Service.ModalityRequired");
-        service.AttendsInPerson.Should().BeTrue();
-        await _unitOfWork.DidNotReceive().SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
     [Fact]
