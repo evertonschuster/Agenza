@@ -167,6 +167,17 @@ public sealed class OpenIddictCertificateExtensionsTests : IDisposable
     }
 
     [Fact]
+    public void Falha_quando_o_certificado_de_criptografia_so_permite_cifrar_dados()
+    {
+        var signing = CreatePfx("signing", SigningPassword, X509KeyUsageFlags.DigitalSignature);
+        var dataOnly = CreatePfx("encryption", EncryptionPassword, X509KeyUsageFlags.DataEncipherment);
+
+        var act = () => Register(Configure(signing, SigningPassword, dataOnly, EncryptionPassword));
+
+        act.Should().Throw<InvalidOperationException>().WithMessage("*Encryption:Path*key usage*encryption*");
+    }
+
+    [Fact]
     public void Falha_quando_assinatura_e_criptografia_sao_o_mesmo_certificado()
     {
         var shared = CreatePfx("shared", SigningPassword, usage: null);

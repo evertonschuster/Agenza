@@ -24,6 +24,8 @@ if (-not $Directory) {
     $Directory = if ($onWindows) { Join-Path $env:ProgramData 'Agenza\identity' } else { '/etc/agenza/identity' }
 }
 
+# Absolute path: the paths written to certificates.env must not depend on the service's working directory.
+$Directory = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($Directory)
 $signingPath = Join-Path $Directory 'signing.pfx'
 $encryptionPath = Join-Path $Directory 'encryption.pfx'
 $envFile = Join-Path $Directory 'certificates.env'
@@ -34,7 +36,34 @@ foreach ($file in @($signingPath, $encryptionPath, $envFile)) {
     }
 }
 
+function Set-OwnerOnlyAccess {
+    param([string] $Path, [bool] $IsDirectory)
+
+    if ($onWindows) {
+        # Protect the ACL (drops inherited grants), then drop every explicit grant before adding the owner's.
+        $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User
+        $flags = if ($IsDirectory) { 'ContainerInherit, ObjectInherit' } else { 'None' }
+        # Loading only the Access section keeps Set-Acl from needing SeSecurityPrivilege (audit rules).
+        $acl = if ($IsDirectory) { New-Object System.Security.AccessControl.DirectorySecurity($Path, 'Access') } else { New-Object System.Security.AccessControl.FileSecurity($Path, 'Access') }
+        $acl.SetAccessRuleProtection($true, $false)
+        foreach ($existing in @($acl.Access)) { [void] $acl.RemoveAccessRule($existing) }
+        $acl.AddAccessRule((New-Object System.Security.AccessControl.FileSystemAccessRule($sid, 'FullControl', $flags, 'None', 'Allow')))
+        # Set-Acl also writes the owner and audit sections, which needs SeSecurityPrivilege on an existing item.
+        if ($PSVersionTable.PSEdition -eq 'Core') {
+            if ($IsDirectory) { [System.IO.FileSystemAclExtensions]::SetAccessControl((New-Object System.IO.DirectoryInfo($Path)), $acl) }
+            else { [System.IO.FileSystemAclExtensions]::SetAccessControl((New-Object System.IO.FileInfo($Path)), $acl) }
+        }
+        elseif ($IsDirectory) { [System.IO.Directory]::SetAccessControl($Path, $acl) }
+        else { [System.IO.File]::SetAccessControl($Path, $acl) }
+    }
+    else {
+        & chmod $(if ($IsDirectory) { '700' } else { '600' }) $Path
+        if ($LASTEXITCODE -ne 0) { throw "Could not restrict access to $Path." }
+    }
+}
+
 New-Item -ItemType Directory -Force -Path $Directory | Out-Null
+Set-OwnerOnlyAccess -Path $Directory -IsDirectory $true
 
 function New-Password {
     $alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'
@@ -87,22 +116,18 @@ $content = @(
 ) -join "`n"
 [System.IO.File]::WriteAllText($envFile, $content + "`n", (New-Object System.Text.UTF8Encoding($false)))
 
-if ($onWindows) {
-    # Only the current user keeps access; grant the service account on top of this if it differs.
-    $sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User.Value
-    foreach ($path in @($Directory, $signingPath, $encryptionPath, $envFile)) {
-        $grant = if ($path -eq $Directory) { "*${sid}:(OI)(CI)F" } else { "*${sid}:F" }
-        & icacls.exe $path /grant:r $grant | Out-Null
-        if ($LASTEXITCODE -eq 0) { & icacls.exe $path /inheritance:r | Out-Null }
-        if ($LASTEXITCODE -ne 0) { throw "Could not restrict access to $path." }
-    }
+foreach ($file in @($signingPath, $encryptionPath, $envFile)) {
+    Set-OwnerOnlyAccess -Path $file -IsDirectory $false
 }
-else {
-    & chmod 750 $Directory
-    & chmod 640 $signingPath $encryptionPath $envFile
+
+if (-not $onWindows) {
     & getent group $Group *> $null
     if ($LASTEXITCODE -eq 0) {
         & chgrp $Group $Directory $signingPath $encryptionPath $envFile
+        if ($LASTEXITCODE -ne 0) { throw "Could not assign group '$Group'." }
+        & chmod 750 $Directory
+        & chmod 640 $signingPath $encryptionPath $envFile
+        if ($LASTEXITCODE -ne 0) { throw 'Could not set the final permissions.' }
     }
     else {
         Write-Warning "Group '$Group' not found; files left readable only by the current user."

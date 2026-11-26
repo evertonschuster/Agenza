@@ -20,7 +20,7 @@ public static class OpenIddictCertificateExtensions
             configuration,
             "Encryption",
             now,
-            X509KeyUsageFlags.KeyEncipherment | X509KeyUsageFlags.DataEncipherment);
+            X509KeyUsageFlags.KeyEncipherment);
 
         if (signing.Thumbprint == encryption.Thumbprint)
         {

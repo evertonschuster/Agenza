@@ -12,6 +12,10 @@ umask 077
 dir="${1:-/etc/agenza/identity}"
 days="${DAYS:-1825}"
 group="${OWNER_GROUP:-agenza-app}"
+
+# Absolute path: the paths written to certificates.env must not depend on the service's working directory.
+mkdir -p "$dir"
+dir="$(cd "$dir" && pwd)"
 env_file="$dir/certificates.env"
 
 for file in "$dir/signing.pfx" "$dir/encryption.pfx" "$env_file"; do
@@ -21,7 +25,7 @@ for file in "$dir/signing.pfx" "$dir/encryption.pfx" "$env_file"; do
   fi
 done
 
-mkdir -p "$dir"
+chmod 700 "$dir"
 work="$(mktemp -d)"
 trap 'rm -rf "$work"' EXIT
 
