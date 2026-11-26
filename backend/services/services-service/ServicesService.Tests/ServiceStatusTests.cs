@@ -77,7 +77,7 @@ public class ServiceStatusTests
         var service = NewService();
         service.Inactivate();
 
-        var result = service.Update("Limpeza 2", null, DurationRange.Create(15, 30, 60).Value, 130m, 10m, null);
+        var result = service.Update("Limpeza 2", null, DurationRange.Create(15, 30, 60).Value, 130m, 10m, null, ServiceModality.InPersonOnly);
 
         result.IsSuccess.Should().BeTrue();
         service.Status.Should().Be(ServiceStatus.Inactive);

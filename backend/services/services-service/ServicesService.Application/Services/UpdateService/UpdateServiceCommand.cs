@@ -13,4 +13,4 @@ public sealed record UpdateServiceCommand(
     decimal MaxDiscountPercentage,
     Guid? CategoryId,
     IReadOnlyList<Guid>? TagIds,
-    ServiceModality? Modality = null) : ICommand<ServiceResponse>;
+    ServiceModality Modality) : ICommand<ServiceResponse>;

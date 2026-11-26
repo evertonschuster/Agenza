@@ -117,7 +117,7 @@ public class Service : TenantOwnedEntity
         decimal price,
         decimal maxDiscountPercentage,
         Guid? categoryId,
-        ServiceModality? modality = null)
+        ServiceModality modality)
     {
         // Every new value is validated before anything is assigned, so a
         // later validation failure (e.g. an invalid discount) can never leave
@@ -155,10 +155,7 @@ public class Service : TenantOwnedEntity
         Price = priceResult.Value;
         MaxDiscountPercentage = maxDiscountResult.Value;
 
-        if (modality is not null)
-        {
-            Modality = modality;
-        }
+        Modality = modality;
 
         return DomainResult.Success();
     }

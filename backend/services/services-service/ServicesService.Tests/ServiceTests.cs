@@ -80,7 +80,7 @@ public class ServiceTests
         var categoryId = Guid.NewGuid();
 
         var result = service.Update(
-            "  Deep Tissue Massage  ", null, DurationRange.Create(60, 90, 120).Value, 90.00m, 25m, categoryId);
+            "  Deep Tissue Massage  ", null, DurationRange.Create(60, 90, 120).Value, 90.00m, 25m, categoryId, ServiceModality.InPersonOnly);
 
         result.IsSuccess.Should().BeTrue();
         service.Name.Should().Be("Deep Tissue Massage");
@@ -154,7 +154,7 @@ public class ServiceTests
     {
         var service = CreateValidService();
 
-        var result = service.Update("   ", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null);
+        var result = service.Update("   ", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, ServiceModality.InPersonOnly);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Service.Invalid");
@@ -179,7 +179,7 @@ public class ServiceTests
         // field validated before it (name, description, duration, price)
         // would already be overwritten by the time this fails.
         var result = service.Update(
-            "Deep Tissue Massage", null, DurationRange.Create(60, 90, 120).Value, 90.00m, 150m, Guid.NewGuid());
+            "Deep Tissue Massage", null, DurationRange.Create(60, 90, 120).Value, 90.00m, 150m, Guid.NewGuid(), ServiceModality.InPersonOnly);
 
         result.IsFailure.Should().BeTrue();
         service.CategoryId.Should().Be(originalCategoryId);

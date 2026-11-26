@@ -8,12 +8,24 @@ public class UpdateServiceCommandValidatorTests
     private readonly Guid _serviceId = Guid.NewGuid();
 
     private UpdateServiceCommand ValidCommand() =>
-        new(_serviceId, "Haircut", "Note", 30, 15, 60, 45.50m, 10m, null, null);
+        new(_serviceId, "Haircut", "Note", 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly);
 
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
     {
         (await _validator.ValidateAsync(ValidCommand(), TestContext.Current.CancellationToken)).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_SemModalidade_FalhaNoCampoModality()
+    {
+        var command = ValidCommand() with { Modality = null! };
+
+        var result = await _validator.ValidateAsync(command, TestContext.Current.CancellationToken);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(error => error.PropertyName == nameof(UpdateServiceCommand.Modality))
+            .Which.ErrorMessage.Should().Be("A modalidade do serviço é obrigatória.");
     }
 
     [Fact]

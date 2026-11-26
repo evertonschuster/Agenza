@@ -126,7 +126,7 @@ public class ServicePersistenceTests
             var services = new ServiceRepository(context);
             var service = (await services.GetByIdAsync(serviceId, CancellationToken.None))!;
 
-            service.Update("Massage", "Relaxing", DurationRange.Create(30, 60, 90).Value, 90m, 20m, null).IsSuccess.Should().BeTrue();
+            service.Update("Massage", "Relaxing", DurationRange.Create(30, 60, 90).Value, 90m, 20m, null, ServiceModality.InPersonOnly).IsSuccess.Should().BeTrue();
             await services.UpdateAsync(service, CancellationToken.None);
             await context.SaveChangesAsync(TestContext.Current.CancellationToken);
         }

@@ -87,18 +87,6 @@ public class ServiceModalityTests
     }
 
     [Fact]
-    public void ServiceUpdate_SemModalidade_MantemAModalidadeAtual()
-    {
-        var service = NewService(ServiceModality.Create(attendsInPerson: true, attendsOnline: true).Value);
-
-        var result = service.Update("Consulta nova", null, Duration, 150m, 0m, null);
-
-        result.IsSuccess.Should().BeTrue();
-        service.Modality.AttendsInPerson.Should().BeTrue();
-        service.Modality.AttendsOnline.Should().BeTrue();
-    }
-
-    [Fact]
     public void ServiceUpdate_ComModalidade_SubstituiAModalidade()
     {
         var service = NewService();

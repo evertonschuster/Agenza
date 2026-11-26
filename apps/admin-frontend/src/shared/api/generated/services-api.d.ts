@@ -2489,7 +2489,7 @@ export interface components {
       /** Format: uuid */
       categoryId: null | string;
       tagIds: null | string[];
-      modality?: null | components['schemas']['ServiceModality'];
+      modality: components['schemas']['ServiceModality'];
     };
     UpdateTagCommand: {
       /** Format: uuid */
