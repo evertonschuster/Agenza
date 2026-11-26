@@ -15,7 +15,7 @@ group="${OWNER_GROUP:-agenza-app}"
 
 # Absolute path: the paths written to certificates.env must not depend on the service's working directory.
 mkdir -p "$dir"
-dir="$(cd "$dir" && pwd)"
+dir="$(cd "$dir" && pwd -P)"
 env_file="$dir/certificates.env"
 
 for file in "$dir/signing.pfx" "$dir/encryption.pfx" "$env_file"; do
@@ -25,7 +25,7 @@ for file in "$dir/signing.pfx" "$dir/encryption.pfx" "$env_file"; do
   fi
 done
 
-if [ "$(stat -c %u "$dir")" != "$(id -u)" ]; then
+if [ "$(stat -L -c %u "$dir")" != "$(id -u)" ]; then
   echo "$dir is owned by another user; use a directory owned by the user running this script." >&2
   exit 1
 fi

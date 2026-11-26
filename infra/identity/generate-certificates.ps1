@@ -58,7 +58,7 @@ function Set-OwnerOnlyAccess {
     }
     else {
         # Another owner would keep access to the credentials whatever the mode (typical when run as root).
-        if ($IsDirectory -and (& stat -c %u $Path) -ne (& id -u)) {
+        if ($IsDirectory -and (& stat -L -c %u $Path) -ne (& id -u)) {
             throw "$Path is owned by another user; use a directory owned by the user running this script."
         }
         & chmod $(if ($IsDirectory) { '700' } else { '600' }) $Path
