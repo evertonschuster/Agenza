@@ -33,5 +33,5 @@ public sealed record ServiceResponse(
             categoryName,
             service.Tags.Select(TagSummary.FromTag).ToList(),
             service.Status,
-            ServiceModality.Restore(service.AttendsInPerson, service.AttendsOnline));
+            service.Modality);
 }

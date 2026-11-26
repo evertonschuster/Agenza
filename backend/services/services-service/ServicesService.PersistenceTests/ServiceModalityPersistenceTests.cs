@@ -22,7 +22,7 @@ public class ServiceModalityPersistenceTests
         await using var context = PersistenceContext.Create(databaseName, tenantId);
         var service = await new ServiceRepository(context).GetByIdAsync(serviceId, CancellationToken.None);
 
-        return (service!.AttendsInPerson, service.AttendsOnline);
+        return (service!.Modality.AttendsInPerson, service.Modality.AttendsOnline);
     }
 
     [Fact]

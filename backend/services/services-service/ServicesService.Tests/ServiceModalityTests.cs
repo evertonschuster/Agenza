@@ -73,8 +73,8 @@ public class ServiceModalityTests
     {
         var service = NewService();
 
-        service.AttendsInPerson.Should().BeTrue();
-        service.AttendsOnline.Should().BeFalse();
+        service.Modality.AttendsInPerson.Should().BeTrue();
+        service.Modality.AttendsOnline.Should().BeFalse();
     }
 
     [Fact]
@@ -82,8 +82,8 @@ public class ServiceModalityTests
     {
         var service = NewService(ServiceModality.Create(attendsInPerson: false, attendsOnline: true).Value);
 
-        service.AttendsInPerson.Should().BeFalse();
-        service.AttendsOnline.Should().BeTrue();
+        service.Modality.AttendsInPerson.Should().BeFalse();
+        service.Modality.AttendsOnline.Should().BeTrue();
     }
 
     [Fact]
@@ -94,8 +94,8 @@ public class ServiceModalityTests
         var result = service.Update("Consulta nova", null, Duration, 150m, 0m, null);
 
         result.IsSuccess.Should().BeTrue();
-        service.AttendsInPerson.Should().BeTrue();
-        service.AttendsOnline.Should().BeTrue();
+        service.Modality.AttendsInPerson.Should().BeTrue();
+        service.Modality.AttendsOnline.Should().BeTrue();
     }
 
     [Fact]
@@ -107,8 +107,8 @@ public class ServiceModalityTests
             "Consulta", null, Duration, 150m, 0m, null, ServiceModality.Create(attendsInPerson: false, attendsOnline: true).Value);
 
         result.IsSuccess.Should().BeTrue();
-        service.AttendsInPerson.Should().BeFalse();
-        service.AttendsOnline.Should().BeTrue();
+        service.Modality.AttendsInPerson.Should().BeFalse();
+        service.Modality.AttendsOnline.Should().BeTrue();
     }
 
     [Fact]
@@ -120,7 +120,7 @@ public class ServiceModalityTests
             "Consulta", null, Duration, -1m, 0m, null, ServiceModality.Create(attendsInPerson: false, attendsOnline: true).Value);
 
         result.IsFailure.Should().BeTrue();
-        service.AttendsInPerson.Should().BeTrue();
-        service.AttendsOnline.Should().BeFalse();
+        service.Modality.AttendsInPerson.Should().BeTrue();
+        service.Modality.AttendsOnline.Should().BeFalse();
     }
 }

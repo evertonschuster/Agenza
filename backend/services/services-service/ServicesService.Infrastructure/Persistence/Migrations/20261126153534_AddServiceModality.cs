@@ -10,27 +10,19 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
-            migrationBuilder.AddColumn<bool>(
-                name: "AttendsInPerson",
+            migrationBuilder.AddColumn<int>(
+                name: "Modality",
                 schema: "services",
                 table: "Services",
-                type: "boolean",
+                type: "integer",
                 nullable: false,
-                defaultValue: true);
-
-            migrationBuilder.AddColumn<bool>(
-                name: "AttendsOnline",
-                schema: "services",
-                table: "Services",
-                type: "boolean",
-                nullable: false,
-                defaultValue: false);
+                defaultValue: 1);
 
             migrationBuilder.AddCheckConstraint(
                 name: "CK_Services_Modality",
                 schema: "services",
                 table: "Services",
-                sql: "\"AttendsInPerson\" OR \"AttendsOnline\"");
+                sql: "\"Modality\" BETWEEN 1 AND 3");
         }
 
         /// <inheritdoc />
@@ -42,12 +34,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                 table: "Services");
 
             migrationBuilder.DropColumn(
-                name: "AttendsInPerson",
-                schema: "services",
-                table: "Services");
-
-            migrationBuilder.DropColumn(
-                name: "AttendsOnline",
+                name: "Modality",
                 schema: "services",
                 table: "Services");
         }

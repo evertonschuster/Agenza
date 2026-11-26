@@ -353,12 +353,6 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<bool>("AttendsInPerson")
-                        .HasColumnType("boolean");
-
-                    b.Property<bool>("AttendsOnline")
-                        .HasColumnType("boolean");
-
                     b.Property<Guid?>("CategoryId")
                         .HasColumnType("uuid");
 
@@ -392,6 +386,9 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int>("MinDurationMinutes")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Modality")
                         .HasColumnType("integer");
 
                     b.Property<string>("Name")
@@ -440,7 +437,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Services", "services", t =>
                         {
-                            t.HasCheckConstraint("CK_Services_Modality", "\"AttendsInPerson\" OR \"AttendsOnline\"");
+                            t.HasCheckConstraint("CK_Services_Modality", "\"Modality\" BETWEEN 1 AND 3");
 
                             t.HasCheckConstraint("CK_Services_Status", "\"Status\" IN ('Active', 'Inactive')");
                         });

@@ -13,7 +13,7 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
             table =>
             {
                 table.HasCheckConstraint("CK_Services_Status", $"\"Status\" IN ({statuses})");
-                table.HasCheckConstraint("CK_Services_Modality", "\"AttendsInPerson\" OR \"AttendsOnline\"");
+                table.HasCheckConstraint("CK_Services_Modality", "\"Modality\" BETWEEN 1 AND 3");
             });
         builder.HasKey(s => s.Id);
         builder.HasAlternateKey(s => new { s.TenantId, s.Id });
@@ -28,8 +28,12 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.Price).IsRequired().HasPrecision(10, 2);
         builder.Property(s => s.MaxDiscountPercentage).IsRequired().HasPrecision(5, 2);
         builder.Property(s => s.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
-        builder.Property(s => s.AttendsInPerson).IsRequired();
-        builder.Property(s => s.AttendsOnline).IsRequired();
+        // Fixed codes summed in one column: in person = 1, online = 2.
+        builder.Property(s => s.Modality)
+            .IsRequired()
+            .HasConversion(
+                modality => (modality.AttendsInPerson ? 1 : 0) | (modality.AttendsOnline ? 2 : 0),
+                stored => ServiceModality.Restore((stored & 1) != 0, (stored & 2) != 0));
         builder.Property(s => s.CategoryId);
         builder.HasOne(s => s.Category)
             .WithMany()

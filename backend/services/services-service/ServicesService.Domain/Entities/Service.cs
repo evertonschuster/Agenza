@@ -24,8 +24,7 @@ public class Service : TenantOwnedEntity
     public int MaxDurationMinutes { get; private set; }
     public decimal Price { get; private set; }
     public decimal MaxDiscountPercentage { get; private set; }
-    public bool AttendsInPerson { get; private set; }
-    public bool AttendsOnline { get; private set; }
+    public ServiceModality Modality { get; private set; }
     public Guid? CategoryId { get; private set; }
     public Category? Category { get; private set; }
 
@@ -36,6 +35,7 @@ public class Service : TenantOwnedEntity
     private Service()
     {
         Name = string.Empty;
+        Modality = ServiceModality.InPersonOnly;
     }
 
     private Service(
@@ -51,8 +51,7 @@ public class Service : TenantOwnedEntity
         : base(id)
     {
         Code = code;
-        AttendsInPerson = modality.AttendsInPerson;
-        AttendsOnline = modality.AttendsOnline;
+        Modality = modality;
         Status = ServiceStatus.Active;
         CategoryId = categoryId;
         Name = name;
@@ -158,8 +157,7 @@ public class Service : TenantOwnedEntity
 
         if (modality is not null)
         {
-            AttendsInPerson = modality.AttendsInPerson;
-            AttendsOnline = modality.AttendsOnline;
+            Modality = modality;
         }
 
         return DomainResult.Success();
