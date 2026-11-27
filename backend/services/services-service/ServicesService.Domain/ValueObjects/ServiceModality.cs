@@ -30,7 +30,4 @@ public sealed record ServiceModality : IObjectValueObject<ServiceModality>
 
         return ParseResult<ServiceModality>.Success(new ServiceModality(inPerson, online));
     }
-
-    public static ServiceModality Restore(bool attendsInPerson, bool attendsOnline) =>
-        new(attendsInPerson, attendsOnline);
 }

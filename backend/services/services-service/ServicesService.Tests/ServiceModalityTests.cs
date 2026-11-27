@@ -42,15 +42,6 @@ public class ServiceModalityTests
     }
 
     [Fact]
-    public void Restore_ReconstroiSemValidar()
-    {
-        var modality = ServiceModality.Restore(attendsInPerson: false, attendsOnline: false);
-
-        modality.AttendsInPerson.Should().BeFalse();
-        modality.AttendsOnline.Should().BeFalse();
-    }
-
-    [Fact]
     public void ServiceCreate_ComModalidade_GuardaAModalidade()
     {
         var service = NewService(ServiceModality.Create(attendsInPerson: false, attendsOnline: true).Value);

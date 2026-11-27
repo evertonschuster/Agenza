@@ -388,9 +388,6 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                     b.Property<int>("MinDurationMinutes")
                         .HasColumnType("integer");
 
-                    b.Property<int>("Modality")
-                        .HasColumnType("integer");
-
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasMaxLength(80)
@@ -437,7 +434,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Services", "services", t =>
                         {
-                            t.HasCheckConstraint("CK_Services_Modality", "\"Modality\" BETWEEN 1 AND 3");
+                            t.HasCheckConstraint("CK_Services_Modality", "\"AttendsInPerson\" OR \"AttendsOnline\"");
 
                             t.HasCheckConstraint("CK_Services_Status", "\"Status\" IN ('Active', 'Inactive')");
                         });
@@ -581,7 +578,31 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.OwnsOne("ServicesService.Domain.ValueObjects.ServiceModality", "Modality", b1 =>
+                        {
+                            b1.Property<Guid>("ServiceId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool>("AttendsInPerson")
+                                .HasColumnType("boolean")
+                                .HasColumnName("AttendsInPerson");
+
+                            b1.Property<bool>("AttendsOnline")
+                                .HasColumnType("boolean")
+                                .HasColumnName("AttendsOnline");
+
+                            b1.HasKey("ServiceId");
+
+                            b1.ToTable("Services", "services");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ServiceId");
+                        });
+
                     b.Navigation("Category");
+
+                    b.Navigation("Modality")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ServicesService.Domain.Entities.Client", b =>
