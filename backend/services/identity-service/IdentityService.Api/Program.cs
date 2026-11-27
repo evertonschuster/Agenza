@@ -38,6 +38,11 @@ builder.Services.AddIdentityApplication();
 builder.Services.AddHostedService<DatabaseSeeder>();
 
 builder.Services.AddIdentityCors(builder.Configuration);
+if (!builder.Environment.IsDevelopment())
+{
+    builder.Services.AddIdentityReverseProxy();
+}
+
 builder.Services.AddOpenIddict()
     .AddServer(options =>
     {
@@ -94,6 +99,11 @@ builder.Services.AddOpenIddict()
     });
 
 var app = builder.Build();
+
+if (!app.Environment.IsDevelopment())
+{
+    app.UseForwardedHeaders();
+}
 
 app.UseExceptionHandler();
 
