@@ -18,7 +18,7 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 #pragma warning disable 612, 618
             modelBuilder
                 .HasDefaultSchema("services")
-                .HasAnnotation("ProductVersion", "10.0.12")
+                .HasAnnotation("ProductVersion", "10.0.15")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -402,6 +402,11 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .HasPrecision(10, 2)
                         .HasColumnType("numeric(10,2)");
 
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
                     b.Property<Guid>("TenantId")
                         .HasColumnType("uuid");
 
@@ -427,7 +432,10 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
                         .IsUnique()
                         .HasFilter("\"DeletedAt\" IS NULL");
 
-                    b.ToTable("Services", "services");
+                    b.ToTable("Services", "services", t =>
+                        {
+                            t.HasCheckConstraint("CK_Services_Status", "\"Status\" IN ('Active', 'Inactive')");
+                        });
                 });
 
             modelBuilder.Entity("ServicesService.Domain.Entities.Tag", b =>

@@ -14,7 +14,8 @@ public sealed record ServiceResponse(
     decimal MaxDiscountPercentage,
     Guid? CategoryId,
     string? CategoryName,
-    IReadOnlyList<TagSummary> Tags)
+    IReadOnlyList<TagSummary> Tags,
+    ServiceStatus Status)
 {
     public static ServiceResponse FromService(Service service, string? categoryName) =>
         new(
@@ -29,5 +30,6 @@ public sealed record ServiceResponse(
             service.MaxDiscountPercentage,
             service.CategoryId,
             categoryName,
-            service.Tags.Select(TagSummary.FromTag).ToList());
+            service.Tags.Select(TagSummary.FromTag).ToList(),
+            service.Status);
 }
