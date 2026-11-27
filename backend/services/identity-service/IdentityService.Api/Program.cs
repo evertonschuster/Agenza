@@ -10,6 +10,7 @@ using OpenIddict.Abstractions;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.Services.AddIdentityForwardedHeaders();
 
 var publicIssuer = builder.Configuration["Identity:PublicIssuer"]
     ?? builder.Configuration["Identity:Authority"]
@@ -98,6 +99,7 @@ builder.Services.AddOpenIddict()
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
 if (string.IsNullOrEmpty(publicIssuer) && !app.Environment.IsDevelopment())

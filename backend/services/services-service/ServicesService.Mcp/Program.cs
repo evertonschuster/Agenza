@@ -9,6 +9,7 @@ using ServicesService.Mcp.Tools;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.Services.AddMcpForwardedHeaders();
 builder.Services.AddMcpAuthentication(builder.Configuration);
 builder.Services.AddMcpCors(builder.Configuration);
 
@@ -25,6 +26,7 @@ builder.Services.AddMcpServer()
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseCors(CorsExtensions.PolicyName);
 app.UseMcpChallengeParameters(AuthenticationExtensions.ChallengeScope);
 app.UseAuthentication();
