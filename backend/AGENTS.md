@@ -71,3 +71,6 @@ example the change invalidates, without creating feature inventories, counts or 
 
 For simple forwarded-header configuration, validate with a build and an operational check; do not
 add dedicated tests or test projects.
+
+Do not recreate a dedicated Identity protocol test suite; validate OAuth behavior through the real
+Aspire smokes.

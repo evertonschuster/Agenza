@@ -423,10 +423,6 @@ adapter behavior: assert the code, the type and the path, never the SDK's text. 
 shared-converter and schema integration is adapter behavior: prove that typed Application inputs
 reach handlers normalized, invalid VOs do not reach them and the published schema matches the wire format.
 
-IdentityService.ProtocolTests exercises published OAuth metadata and token issuance with application
-and scope-manager doubles. It does not host HTTP in process or replace the real Aspire smoke;
-the Domain/Application coverage gate remains separate from these protocol checks.
-
 ## 10. Reference code and the older generation
 
 Generations coexist. Compare the relevant example and its callers with §§2–8; a disagreement needs
