@@ -122,6 +122,38 @@ public class ObjectValueObjectJsonConverterTests
     }
 
     [Fact]
+    public void Read_WithARepeatedPart_Throws()
+    {
+        var act = () => Read("""{ "window": { "from": 1, "from": 2, "to": 5 } }""");
+
+        act.Should().Throw<JsonException>().Which.Message.Should().Be("Informe cada campo do valor uma única vez.");
+    }
+
+    [Fact]
+    public void Read_WithANamingPolicy_RoundTripsWhatWriteEmits()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower }
+            .AddValueObjectConverters(TimeProvider.System);
+        var label = Label.Create("Retorno", FullName.Create("Maria Souza").Value).Value;
+
+        var json = JsonSerializer.Serialize(new Sample(null, null, label), options);
+        var sample = JsonSerializer.Deserialize<Sample>(json, options)!;
+
+        sample.Label.Should().Be(label);
+    }
+
+    [Fact]
+    public void Read_WithCaseSensitiveOptions_DoesNotMatchADifferentCase()
+    {
+        var options = new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = false }
+            .AddValueObjectConverters(TimeProvider.System);
+
+        var act = () => JsonSerializer.Deserialize<Sample>("""{ "window": { "FROM": 1, "TO": 5 } }""", options);
+
+        act.Should().Throw<JsonException>().Which.Message.Should().Be(Window.BothRequired);
+    }
+
+    [Fact]
     public void Read_InsideACollection_ThrowsAtTheIndexedField()
     {
         var act = () => Read("""{ "windows": [{ "from": 1, "to": 2 }, { "from": 9, "to": 3 }] }""");
