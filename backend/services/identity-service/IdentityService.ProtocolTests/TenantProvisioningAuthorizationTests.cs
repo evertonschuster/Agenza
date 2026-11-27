@@ -35,6 +35,8 @@ public sealed class TenantProvisioningAuthorizationTests
         var builder = WebApplication.CreateBuilder();
         builder.Logging.ClearProviders();
         builder.WebHost.UseUrls("http://127.0.0.1:0");
+        // The Api appsettings are copied next to the tests and may restrict AllowedHosts, which would answer 400 before authentication.
+        builder.Configuration["AllowedHosts"] = "*";
 
         builder.Services.AddControllers().AddApplicationPart(typeof(TenantsController).Assembly);
         builder.Services.AddProblemDetails();
