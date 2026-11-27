@@ -3,7 +3,7 @@ namespace ServicesService.Tests;
 public class ServiceStatusTests
 {
     private static Service NewService() =>
-        Service.Create(Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, null, 1).Value;
+        Service.Create(Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, null, 1, ServiceModality.InPersonOnly).Value;
 
     [Fact]
     public void Criar_ComecaDisponivelParaAgendamento()
@@ -77,7 +77,7 @@ public class ServiceStatusTests
         var service = NewService();
         service.Inactivate();
 
-        var result = service.Update("Limpeza 2", null, DurationRange.Create(15, 30, 60).Value, 130m, 10m, null);
+        var result = service.Update("Limpeza 2", null, DurationRange.Create(15, 30, 60).Value, 130m, 10m, null, ServiceModality.InPersonOnly);
 
         result.IsSuccess.Should().BeTrue();
         service.Status.Should().Be(ServiceStatus.Inactive);

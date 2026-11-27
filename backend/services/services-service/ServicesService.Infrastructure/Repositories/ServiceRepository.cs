@@ -60,6 +60,7 @@ public class ServiceRepository : RepositoryBase<Service>, IServiceRepository
             .ToListAsync(cancellationToken);
 
         DbContext.Entry(persisted).CurrentValues.SetValues(service);
+        DbContext.Entry(persisted.Modality).CurrentValues.SetValues(service.Modality);
         persisted.SetTags(tags);
     }
 

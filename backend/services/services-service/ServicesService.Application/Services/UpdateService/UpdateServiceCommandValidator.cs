@@ -52,5 +52,8 @@ public sealed class UpdateServiceCommandValidator : AbstractValidator<UpdateServ
         RuleFor(command => command.TagIds)
             .Must(tagIds => tagIds is null || tagIds.Distinct().Count() == tagIds.Count)
             .WithMessage("A lista de etiquetas não pode conter ids duplicados.");
+
+        RuleFor(command => command.Modality)
+            .NotNull().WithMessage("A modalidade do serviço é obrigatória.");
     }
 }

@@ -21,7 +21,7 @@ public class ServiceListPersistenceTests
             45.50m,
             10m,
             categoryId,
-            Interlocked.Increment(ref _code)).Value;
+            Interlocked.Increment(ref _code), ServiceModality.InPersonOnly).Value;
     }
 
     private static Tag NewTag(string name)

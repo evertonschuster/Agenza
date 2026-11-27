@@ -26,7 +26,7 @@ public class UpdateServiceCommandHandlerTests
     }
 
     private static Service ValidService() =>
-        Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
+        Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1, ServiceModality.InPersonOnly).Value;
 
     [Fact]
     public async Task Handle_WithValidCommand_UpdatesAndPersists()
@@ -35,7 +35,7 @@ public class UpdateServiceCommandHandlerTests
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Massage", "Relaxing", 90, 60, 120, 90.00m, 25m, null, null),
+            new UpdateServiceCommand(service.Id, "Massage", "Relaxing", 90, 60, 120, 90.00m, 25m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -45,6 +45,23 @@ public class UpdateServiceCommandHandlerTests
         result.Value.MaxDurationMinutes.Should().Be(120);
         result.Value.MaxDiscountPercentage.Should().Be(25m);
         await _serviceRepository.Received(1).UpdateAsync(service, Arg.Any<CancellationToken>());
+        await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Handle_ComModalidade_SubstituiAModalidadeEPersiste()
+    {
+        var service = ValidService();
+        _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
+        var modality = ServiceModality.Create(attendsInPerson: false, attendsOnline: true).Value;
+
+        var result = await _handler.Handle(
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, modality),
+            CancellationToken.None);
+
+        result.IsSuccess.Should().BeTrue();
+        result.Value.Modality.AttendsInPerson.Should().BeFalse();
+        result.Value.Modality.AttendsOnline.Should().BeTrue();
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
     }
 
@@ -60,7 +77,7 @@ public class UpdateServiceCommandHandlerTests
             .Returns(new List<Tag> { tag });
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, [tag.Id]),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, [tag.Id], ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -82,7 +99,7 @@ public class UpdateServiceCommandHandlerTests
             .Returns(new List<Tag>());
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, []),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, [], ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -100,7 +117,7 @@ public class UpdateServiceCommandHandlerTests
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -117,7 +134,7 @@ public class UpdateServiceCommandHandlerTests
         _serviceRepository.GetByIdAsync(unknownId, Arg.Any<CancellationToken>()).Returns((Service?)null);
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(unknownId, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new UpdateServiceCommand(unknownId, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -135,7 +152,7 @@ public class UpdateServiceCommandHandlerTests
         _serviceRepository.NameExistsAsync("Massage", service.Id, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Massage", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new UpdateServiceCommand(service.Id, "Massage", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -154,7 +171,7 @@ public class UpdateServiceCommandHandlerTests
         _categoryRepository.GetByIdAsync(categoryId, Arg.Any<CancellationToken>()).Returns((Category?)null);
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, categoryId, null),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, categoryId, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -171,7 +188,7 @@ public class UpdateServiceCommandHandlerTests
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "  ", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new UpdateServiceCommand(service.Id, "  ", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -187,7 +204,7 @@ public class UpdateServiceCommandHandlerTests
         _serviceRepository.GetByIdAsync(service.Id, Arg.Any<CancellationToken>()).Returns(service);
 
         await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         await _serviceRepository.Received(1).GetByIdAsync(service.Id, Arg.Any<CancellationToken>());
@@ -203,7 +220,7 @@ public class UpdateServiceCommandHandlerTests
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_NameNormalized")));
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -221,7 +238,7 @@ public class UpdateServiceCommandHandlerTests
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_Code")));
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -239,7 +256,7 @@ public class UpdateServiceCommandHandlerTests
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));
 
         var result = await _handler.Handle(
-            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new UpdateServiceCommand(service.Id, "Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();

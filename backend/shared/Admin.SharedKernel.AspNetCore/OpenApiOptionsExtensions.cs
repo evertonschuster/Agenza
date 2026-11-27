@@ -5,7 +5,7 @@ namespace Admin.SharedKernel.AspNetCore;
 
 public static class OpenApiOptionsExtensions
 {
-    public static OpenApiOptions MapValueObjectsToStrings(this OpenApiOptions options)
+    public static OpenApiOptions MapValueObjects(this OpenApiOptions options)
     {
         options.CreateSchemaReferenceId = typeInfo => IsValueObject(typeInfo.Type)
             ? null
@@ -14,6 +14,12 @@ public static class OpenApiOptionsExtensions
         options.AddSchemaTransformer((schema, context, _) =>
         {
             var valueObject = context.JsonTypeInfo.Type;
+
+            if (ObjectValueObjects.Is(valueObject))
+            {
+                ObjectValueObjectSchema.Apply(schema, valueObject);
+                return Task.CompletedTask;
+            }
 
             if (!IsValueObject(valueObject))
             {

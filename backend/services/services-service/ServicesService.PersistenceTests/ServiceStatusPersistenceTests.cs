@@ -7,7 +7,7 @@ public class ServiceStatusPersistenceTests
     private static async Task<Guid> SaveNewService(string databaseName, Guid tenantId)
     {
         var service = Service.Create(
-            Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, null, 1).Value;
+            Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, null, 1, ServiceModality.InPersonOnly).Value;
 
         await using var context = PersistenceContext.Create(databaseName, tenantId);
         new ServiceRepository(context).Add(service);
@@ -56,7 +56,7 @@ public class ServiceStatusPersistenceTests
         var tenantId = Guid.NewGuid();
         var category = Category.Create(Guid.NewGuid(), "Odontologia").Value;
         var service = Service.Create(
-            Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, category.Id, 1).Value;
+            Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, category.Id, 1, ServiceModality.InPersonOnly).Value;
 
         await using (var context = PersistenceContext.Create(databaseName, tenantId))
         {

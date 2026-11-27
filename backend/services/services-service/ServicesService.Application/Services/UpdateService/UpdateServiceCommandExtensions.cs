@@ -16,6 +16,7 @@ public static class UpdateServiceCommandExtensions
             durationResult.Value,
             command.Price,
             command.MaxDiscountPercentage,
-            command.CategoryId);
+            command.CategoryId,
+            command.Modality);
     }
 }

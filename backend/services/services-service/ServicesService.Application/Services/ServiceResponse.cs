@@ -15,7 +15,8 @@ public sealed record ServiceResponse(
     Guid? CategoryId,
     string? CategoryName,
     IReadOnlyList<TagSummary> Tags,
-    ServiceStatus Status)
+    ServiceStatus Status,
+    ServiceModality Modality)
 {
     public static ServiceResponse FromService(Service service, string? categoryName) =>
         new(
@@ -31,5 +32,6 @@ public sealed record ServiceResponse(
             service.CategoryId,
             categoryName,
             service.Tags.Select(TagSummary.FromTag).ToList(),
-            service.Status);
+            service.Status,
+            service.Modality);
 }

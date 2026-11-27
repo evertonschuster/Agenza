@@ -434,6 +434,8 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
                     b.ToTable("Services", "services", t =>
                         {
+                            t.HasCheckConstraint("CK_Services_Modality", "\"AttendsInPerson\" OR \"AttendsOnline\"");
+
                             t.HasCheckConstraint("CK_Services_Status", "\"Status\" IN ('Active', 'Inactive')");
                         });
                 });
@@ -570,11 +572,37 @@ namespace ServicesService.Infrastructure.Persistence.Migrations
 
             modelBuilder.Entity("ServicesService.Domain.Entities.Service", b =>
                 {
-                    b.HasOne("ServicesService.Domain.Entities.Category", null)
+                    b.HasOne("ServicesService.Domain.Entities.Category", "Category")
                         .WithMany()
                         .HasForeignKey("TenantId", "CategoryId")
                         .HasPrincipalKey("TenantId", "Id")
                         .OnDelete(DeleteBehavior.Restrict);
+
+                    b.OwnsOne("ServicesService.Domain.ValueObjects.ServiceModality", "Modality", b1 =>
+                        {
+                            b1.Property<Guid>("ServiceId")
+                                .HasColumnType("uuid");
+
+                            b1.Property<bool>("AttendsInPerson")
+                                .HasColumnType("boolean")
+                                .HasColumnName("AttendsInPerson");
+
+                            b1.Property<bool>("AttendsOnline")
+                                .HasColumnType("boolean")
+                                .HasColumnName("AttendsOnline");
+
+                            b1.HasKey("ServiceId");
+
+                            b1.ToTable("Services", "services");
+
+                            b1.WithOwner()
+                                .HasForeignKey("ServiceId");
+                        });
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Modality")
+                        .IsRequired();
                 });
 
             modelBuilder.Entity("ServicesService.Domain.Entities.Client", b =>

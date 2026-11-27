@@ -23,7 +23,7 @@ public static class DocumentationExtensions
 
         services.AddOpenApi(options =>
         {
-            options.MapValueObjectsToStrings();
+            options.MapValueObjects();
 
             options.AddDocumentTransformer((document, _, _) =>
             {
@@ -100,7 +100,7 @@ public static class DocumentationExtensions
                             Schema = new OpenApiSchema
                             {
                                 Type = JsonSchemaType.String,
-                                Default = JsonValue.Create("01a1f94b-0a1f-7e38-8c55-295dd79fcfeb"),
+                                Default = JsonValue.Create("01a21f2a-f797-7689-ae46-38a5620056a2"),
                             },
                         });
                     }

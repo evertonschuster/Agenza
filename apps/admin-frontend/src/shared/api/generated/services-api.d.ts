@@ -2298,6 +2298,7 @@ export interface components {
       /** Format: uuid */
       categoryId: null | string;
       tagIds: null | string[];
+      modality: components['schemas']['ServiceModality'];
     };
     CreateTagCommand: {
       name: string;
@@ -2374,6 +2375,10 @@ export interface components {
       phone: null | string;
       purposes: components['schemas']['ContactPurpose'][];
     };
+    ServiceModality: {
+      attendsInPerson: boolean;
+      attendsOnline: boolean;
+    };
     ServiceResponse: {
       /** Format: uuid */
       id: string;
@@ -2396,6 +2401,7 @@ export interface components {
       categoryName: null | string;
       tags: components['schemas']['TagSummary'][];
       status: components['schemas']['ServiceStatus'];
+      modality: components['schemas']['ServiceModality'];
     };
     /** @enum {unknown} */
     ServiceStatus: 'active' | 'inactive';
@@ -2483,6 +2489,7 @@ export interface components {
       /** Format: uuid */
       categoryId: null | string;
       tagIds: null | string[];
+      modality: components['schemas']['ServiceModality'];
     };
     UpdateTagCommand: {
       /** Format: uuid */

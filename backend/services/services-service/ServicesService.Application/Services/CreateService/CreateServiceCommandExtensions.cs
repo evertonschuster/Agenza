@@ -20,7 +20,8 @@ public static class CreateServiceCommandExtensions
             command.Price,
             command.MaxDiscountPercentage,
             command.CategoryId,
-            code);
+            code,
+            command.Modality);
 
         if (serviceResult.IsFailure)
         {

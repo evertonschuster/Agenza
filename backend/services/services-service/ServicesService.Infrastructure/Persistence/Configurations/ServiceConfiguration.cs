@@ -10,7 +10,11 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         var statuses = string.Join(", ", Enum.GetNames<ServiceStatus>().Select(status => $"'{status}'"));
         builder.ToTable(
             "Services",
-            table => table.HasCheckConstraint("CK_Services_Status", $"\"Status\" IN ({statuses})"));
+            table =>
+            {
+                table.HasCheckConstraint("CK_Services_Status", $"\"Status\" IN ({statuses})");
+                table.HasCheckConstraint("CK_Services_Modality", "\"AttendsInPerson\" OR \"AttendsOnline\"");
+            });
         builder.HasKey(s => s.Id);
         builder.HasAlternateKey(s => new { s.TenantId, s.Id });
 
@@ -24,6 +28,12 @@ public class ServiceConfiguration : IEntityTypeConfiguration<Service>
         builder.Property(s => s.Price).IsRequired().HasPrecision(10, 2);
         builder.Property(s => s.MaxDiscountPercentage).IsRequired().HasPrecision(5, 2);
         builder.Property(s => s.Status).IsRequired().HasConversion<string>().HasMaxLength(16);
+        builder.OwnsOne(s => s.Modality, modality =>
+        {
+            modality.Property(m => m.AttendsInPerson).HasColumnName("AttendsInPerson").IsRequired();
+            modality.Property(m => m.AttendsOnline).HasColumnName("AttendsOnline").IsRequired();
+        });
+        builder.Navigation(s => s.Modality).IsRequired();
         builder.Property(s => s.CategoryId);
         builder.HasOne(s => s.Category)
             .WithMany()
