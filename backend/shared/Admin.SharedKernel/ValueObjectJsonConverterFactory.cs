@@ -17,7 +17,7 @@ internal sealed class ValueObjectJsonConverterFactory(TimeProvider timeProvider)
 
         if (ObjectValueObjects.Is(typeToConvert))
         {
-            return (JsonConverter)Activator.CreateInstance(typeof(ObjectValueObjectJsonConverter<>).MakeGenericType(typeToConvert))!;
+            return (JsonConverter)Activator.CreateInstance(typeof(ObjectValueObjectJsonConverter<>).MakeGenericType(typeToConvert), options)!;
         }
 
         return (JsonConverter)Activator.CreateInstance(typeof(DateValueObjectJsonConverter<>).MakeGenericType(typeToConvert), timeProvider)!;

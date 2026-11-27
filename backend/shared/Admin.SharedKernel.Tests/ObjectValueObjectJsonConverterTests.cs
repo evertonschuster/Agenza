@@ -74,6 +74,15 @@ public class ObjectValueObjectJsonConverterTests
     }
 
     [Fact]
+    public void Read_IgnoresUnknownMembersAndTheOrderOfTheParts()
+    {
+        var sample = Read("""{ "window": { "extra": { "a": [1, 2] }, "to": 5, "ignored": null, "from": 1 }, "label": { "text": "Retorno" } }""");
+
+        sample.Window.Should().Be(Read("""{ "window": { "from": 1, "to": 5 } }""").Window);
+        sample.Label!.Text.Should().Be("Retorno");
+    }
+
+    [Fact]
     public void Read_WithAbsentOrNullMember_LeavesItNull()
     {
         Read("{}").Window.Should().BeNull();

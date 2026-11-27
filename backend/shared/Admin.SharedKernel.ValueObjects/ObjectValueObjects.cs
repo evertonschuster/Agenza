@@ -30,8 +30,6 @@ public static class ObjectValueObjects
             .Select(parameter => new ObjectPart(parameter.Name!, !parameter.HasDefaultValue))
             .ToList();
 
-    public static IEnumerable<Type> InThisProject() => ValueObjectContract.InThisProject(typeof(IObjectValueObject<>));
-
     public static IEnumerable<Type> InAssembly(Assembly assembly) =>
         assembly.GetExportedTypes().Where(Is);
 }
