@@ -1,5 +1,6 @@
 using System.Collections.Concurrent;
 using System.Reflection;
+using System.Text.Json;
 
 namespace Admin.SharedKernel.ValueObjects;
 
@@ -35,6 +36,16 @@ public static class ObjectValueObjects
             .GetParameters()
             .Select(parameter => new ObjectPart(parameter.Name!, !parameter.HasDefaultValue))
             .ToList());
+
+    // The JSON name of a part: the property named like the Create parameter, run through the naming policy.
+    public static string WireNameOf(Type valueObject, string parameterName, JsonNamingPolicy? namingPolicy)
+    {
+        var name = valueObject
+            .GetProperty(parameterName, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)?.Name
+            ?? parameterName;
+
+        return namingPolicy?.ConvertName(name) ?? name;
+    }
 
     public static IEnumerable<Type> InAssembly(Assembly assembly) =>
         assembly.GetExportedTypes().Where(Is);

@@ -36,6 +36,26 @@ public class ObjectValueObjectJsonConverterTests
         }
     }
 
+    private sealed record Person : IObjectValueObject<Person>
+    {
+        public string FirstName { get; }
+        public string? LastName { get; }
+        public string FullName => $"{FirstName} {LastName}".Trim();
+
+        private Person(string firstName, string? lastName)
+        {
+            FirstName = firstName;
+            LastName = lastName;
+        }
+
+        public static ParseResult<Person> Create(string? firstName, string? lastName = null) =>
+            string.IsNullOrWhiteSpace(firstName)
+                ? ParseResult<Person>.Failure("Informe o nome.")
+                : ParseResult<Person>.Success(new Person(firstName, lastName));
+    }
+
+    private sealed record PersonSample(Person? Person);
+
     private sealed record Label : IObjectValueObject<Label>
     {
         public string Text { get; }
@@ -134,12 +154,24 @@ public class ObjectValueObjectJsonConverterTests
     {
         var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower }
             .AddValueObjectConverters(TimeProvider.System);
-        var label = Label.Create("Retorno", FullName.Create("Maria Souza").Value).Value;
+        var person = Person.Create("Ana", "Silva").Value;
 
-        var json = JsonSerializer.Serialize(new Sample(null, null, label), options);
-        var sample = JsonSerializer.Deserialize<Sample>(json, options)!;
+        var json = JsonSerializer.Serialize(new PersonSample(person), options);
+        var read = JsonSerializer.Deserialize<PersonSample>(json, options)!;
 
-        sample.Label.Should().Be(label);
+        json.Should().Contain("\"person\":{\"first_name\":\"Ana\",\"last_name\":\"Silva\"}");
+        read.Person.Should().Be(person);
+    }
+
+    [Fact]
+    public void Read_WithANamingPolicy_DoesNotMatchTheNameOfTheCreateParameter()
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.Web) { PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower }
+            .AddValueObjectConverters(TimeProvider.System);
+
+        var act = () => JsonSerializer.Deserialize<PersonSample>("""{ "person": { "firstName": "Ana" } }""", options);
+
+        act.Should().Throw<JsonException>().Which.Message.Should().Be("Informe o nome.");
     }
 
     [Fact]

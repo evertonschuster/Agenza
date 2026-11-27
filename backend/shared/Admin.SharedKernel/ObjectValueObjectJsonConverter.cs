@@ -24,8 +24,8 @@ internal sealed class ObjectValueObjectJsonConverter<T> : JsonConverter<T>
             .Select(part => typeof(T).GetProperty(part.Name!, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)
                 ?? throw new InvalidOperationException($"{typeof(T).Name} must expose a property named like its Create parameter '{part.Name}'."))
             .ToArray();
-        var names = _properties
-            .Select(property => options.PropertyNamingPolicy?.ConvertName(property.Name) ?? property.Name)
+        var names = _parts
+            .Select(part => ObjectValueObjects.WireNameOf(typeof(T), part.Name!, options.PropertyNamingPolicy))
             .ToArray();
         _names = names.Select(name => JsonEncodedText.Encode(name)).ToArray();
         _defaults = _parts.Select(part => part.HasDefaultValue ? part.DefaultValue : null).ToArray();

@@ -1,17 +1,20 @@
+using System.Text.Json;
 using Microsoft.OpenApi;
 
 namespace Admin.SharedKernel.AspNetCore;
 
 public static class ObjectValueObjectSchema
 {
-    public static void Apply(OpenApiSchema schema, Type valueObject)
+    public static void Apply(OpenApiSchema schema, Type valueObject, JsonNamingPolicy? namingPolicy = null)
     {
         if (schema.Properties is not { } properties)
         {
             return;
         }
 
-        var parts = ObjectValueObjects.PartsOf(valueObject);
+        var parts = ObjectValueObjects.PartsOf(valueObject)
+            .Select(part => part with { Name = ObjectValueObjects.WireNameOf(valueObject, part.Name, namingPolicy) })
+            .ToList();
 
         foreach (var name in properties.Keys.Where(name => !parts.Any(part => Matches(part, name))).ToList())
         {

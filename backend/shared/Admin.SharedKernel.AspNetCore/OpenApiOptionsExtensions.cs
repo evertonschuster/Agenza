@@ -17,7 +17,7 @@ public static class OpenApiOptionsExtensions
 
             if (ObjectValueObjects.Is(valueObject))
             {
-                ObjectValueObjectSchema.Apply(schema, valueObject);
+                ObjectValueObjectSchema.Apply(schema, valueObject, context.JsonTypeInfo.Options.PropertyNamingPolicy);
                 return Task.CompletedTask;
             }
 
