@@ -204,6 +204,21 @@ public class ObjectValueObjectJsonConverterTests
         ObjectValueObjects.Is(typeof(Sample)).Should().BeFalse();
     }
 
+    private sealed record Throwing : IObjectValueObject<Throwing>
+    {
+        public int Value { get; }
+
+        public static ParseResult<Throwing> Create(int? value) => throw new ArgumentException("boom");
+    }
+
+    [Fact]
+    public void Read_WhenCreateThrows_ThrowsTheOriginalExceptionNotAWrappedOne()
+    {
+        var act = () => JsonSerializer.Deserialize<Throwing>("""{ "value": 1 }""", Options);
+
+        act.Should().Throw<ArgumentException>().WithMessage("boom");
+    }
+
     private sealed record NoCreate : IObjectValueObject<NoCreate>;
 
     private sealed record TwoCreates : IObjectValueObject<TwoCreates>
