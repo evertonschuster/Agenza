@@ -42,6 +42,21 @@ public class ObjectValueObjectContractTests
 
     [Theory]
     [MemberData(nameof(ServiceObjectValueObjects))]
+    public void EveryCreateParameter_HasTheTypeOfItsProperty_IgnoringNullability(Type valueObject)
+    {
+        foreach (var parameter in ObjectValueObjects.CreateOf(valueObject).GetParameters())
+        {
+            var property = valueObject.GetProperty(
+                parameter.Name!, BindingFlags.Public | BindingFlags.Instance | BindingFlags.IgnoreCase)!;
+
+            WithoutNullable(parameter.ParameterType).Should().Be(
+                WithoutNullable(property.PropertyType),
+                $"the wire type of '{parameter.Name}' must be the same on read and on write");
+        }
+    }
+
+    [Theory]
+    [MemberData(nameof(ServiceObjectValueObjects))]
     public void Create_WithoutAnyPart_FailsWithAMessage_WhenSomePartIsRequired(Type valueObject)
     {
         var create = ObjectValueObjects.CreateOf(valueObject);
@@ -56,4 +71,6 @@ public class ObjectValueObjectContractTests
             ((string)result.GetType().GetProperty("Error")!.GetValue(result)!).Should().NotBeEmpty();
         }
     }
+
+    private static Type WithoutNullable(Type type) => Nullable.GetUnderlyingType(type) ?? type;
 }
