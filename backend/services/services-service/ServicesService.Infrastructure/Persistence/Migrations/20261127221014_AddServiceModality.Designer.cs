@@ -12,7 +12,7 @@ using ServicesService.Infrastructure.Persistence;
 namespace ServicesService.Infrastructure.Persistence.Migrations
 {
     [DbContext(typeof(ServicesDataContext))]
-    [Migration("20261126153534_AddServiceModality")]
+    [Migration("20261127221014_AddServiceModality")]
     partial class AddServiceModality
     {
         /// <inheritdoc />
