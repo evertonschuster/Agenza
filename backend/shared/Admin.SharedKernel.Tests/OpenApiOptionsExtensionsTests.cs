@@ -25,9 +25,7 @@ public class OpenApiOptionsExtensionsTests
         options.CreateSchemaReferenceId(typeInfo).Should().Be(OpenApiOptions.CreateDefaultSchemaReferenceId(typeInfo));
     }
 
-    public sealed record PairInput(int? Left, int? Right);
-
-    public sealed record Pair : IObjectValueObject<Pair, PairInput>
+    public sealed record Pair : IObjectValueObject<Pair>
     {
         public int Left { get; }
         public int Right { get; }
@@ -38,10 +36,8 @@ public class OpenApiOptionsExtensionsTests
             Right = right;
         }
 
-        public static ParseResult<Pair> Create(PairInput input) =>
-            ParseResult<Pair>.Success(new Pair(input.Left ?? 0, input.Right ?? 0));
-
-        public static PairInput ToInput(Pair value) => new(value.Left, value.Right);
+        public static ParseResult<Pair> Create(int? left, int? right) =>
+            ParseResult<Pair>.Success(new Pair(left ?? 0, right ?? 0));
     }
 
     [Theory]
