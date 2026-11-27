@@ -58,7 +58,7 @@ builder.Services.AddOpenIddict()
             server.ClientAuthenticationMethods.Add(OpenIddictConstants.ClientAuthenticationMethods.None);
         });
 
-        DatabaseSeeder.ConfigureScopes(options);
+        DatabaseSeeder.ConfigureScopes(options, builder.Configuration);
 
         if (builder.Environment.IsDevelopment())
         {

@@ -42,7 +42,7 @@ public class DatabaseSeeder : IHostedService
     private async Task SeedOAuthAsync(IServiceProvider services, CancellationToken cancellationToken)
     {
         var scopeManager = services.GetRequiredService<IOpenIddictScopeManager>();
-        foreach (var descriptor in ScopeDefinitions())
+        foreach (var descriptor in ScopeDefinitions(_configuration))
         {
             var scope = await scopeManager.FindByNameAsync(descriptor.Name!, cancellationToken);
             if (scope is null)
@@ -70,15 +70,16 @@ public class DatabaseSeeder : IHostedService
         }
     }
 
-    public static void ConfigureScopes(OpenIddictServerBuilder options)
+    public static void ConfigureScopes(OpenIddictServerBuilder options, IConfiguration configuration)
     {
-        options.RegisterScopes(ScopeDefinitions().Select(scope => scope.Name!).ToArray());
-        options.RegisterResources(ScopeDefinitions().SelectMany(scope => scope.Resources)
+        var scopes = ScopeDefinitions(configuration);
+        options.RegisterScopes(scopes.Select(scope => scope.Name!).ToArray());
+        options.RegisterResources(scopes.SelectMany(scope => scope.Resources)
             .Where(resource => Uri.TryCreate(resource, UriKind.Absolute, out _))
             .Distinct(StringComparer.Ordinal).ToArray());
     }
 
-    private static List<OpenIddictScopeDescriptor> ScopeDefinitions()
+    private static List<OpenIddictScopeDescriptor> ScopeDefinitions(IConfiguration configuration)
     {
         return
         [
@@ -97,7 +98,11 @@ public class DatabaseSeeder : IHostedService
             {
                 Name = "services-mcp",
                 DisplayName = "MCP de serviços",
-                Resources = { "https://localhost:7091/mcp" },
+                Resources =
+                {
+                    configuration["OAuth:ServicesMcpResource"]
+                        ?? throw new InvalidOperationException("Missing 'OAuth:ServicesMcpResource' configuration."),
+                },
             },
             new()
             {
@@ -176,7 +181,9 @@ public class DatabaseSeeder : IHostedService
                     OpenIddictConstants.Permissions.Scopes.Email,
                     OpenIddictConstants.Permissions.Prefixes.Scope + "tenant_id",
                     OpenIddictConstants.Permissions.Prefixes.Scope + "services-mcp",
-                    OpenIddictConstants.Permissions.Prefixes.Resource + "https://localhost:7091/mcp",
+                    OpenIddictConstants.Permissions.Prefixes.Resource +
+                        (configuration["OAuth:ServicesMcpResource"]
+                            ?? throw new InvalidOperationException("Missing 'OAuth:ServicesMcpResource' configuration.")),
                 },
                 Requirements = { OpenIddictConstants.Requirements.Features.ProofKeyForCodeExchange },
             },
