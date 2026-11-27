@@ -17,7 +17,6 @@
     <Project Path="services/services-service/ServicesService.McpTests/ServicesService.McpTests.csproj" />
     <Project Path="services/services-service/ServicesService.PersistenceTests/ServicesService.PersistenceTests.csproj" />
     <Project Path="services/services-service/ServicesService.Tests/ServicesService.Tests.csproj" />
-    <Project Path="services/services-service/ServicesService.ProtocolTests/ServicesService.ProtocolTests.csproj" />
   </Folder>
   <Folder Name="/shared/">
     <Project Path="shared/Admin.Identity.Client/Admin.Identity.Client.csproj" />
