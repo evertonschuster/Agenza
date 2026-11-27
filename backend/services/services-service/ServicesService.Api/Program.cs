@@ -9,6 +9,7 @@ using ServicesService.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.AddServiceDefaults();
+builder.Services.AddApiForwardedHeaders();
 
 builder.Services
     .AddControllers(options =>
@@ -50,6 +51,7 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
+app.UseForwardedHeaders();
 app.UseExceptionHandler();
 
 if (app.Environment.IsDevelopment())
