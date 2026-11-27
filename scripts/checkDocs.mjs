@@ -18,6 +18,7 @@ export const entryDocuments = [
   'ai-services/assistant-service/README.md',
   'docs/API.md',
   'docs/DEVELOPMENT.md',
+  'docs/PRODUCTION.md',
   'docs/VISION.md',
 ];
 
