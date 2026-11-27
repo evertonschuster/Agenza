@@ -68,3 +68,6 @@ Use the [README commands](README.md#commands) and the
 [applicable gates](../docs/DEVELOPMENT.md#quality-gates). Choose tests by the behavior and risk
 changed; PostgreSQL-only properties follow the disposable verification in §9. Update the rule or
 example the change invalidates, without creating feature inventories, counts or extra run reports.
+
+For simple forwarded-header configuration, validate with a build and an operational check; do not
+add dedicated tests or test projects.
