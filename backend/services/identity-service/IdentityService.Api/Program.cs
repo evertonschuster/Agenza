@@ -61,9 +61,12 @@ builder.Services.AddOpenIddict()
 
         if (builder.Environment.IsDevelopment())
         {
-            // Dev-only: production must configure real signing/encryption certs, or OpenIddict intentionally fails startup validation.
             options.AddDevelopmentEncryptionCertificate()
                    .AddDevelopmentSigningCertificate();
+        }
+        else
+        {
+            options.AddConfiguredCertificates(builder.Configuration, TimeProvider.System);
         }
 
         // Resource servers verify the JWT themselves, so it can't use OpenIddict's default encrypted token format.
