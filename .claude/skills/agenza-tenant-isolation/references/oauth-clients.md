@@ -22,9 +22,8 @@ Registration changes go through the OpenIddict manager.
 Test provisioning changes on a new PostgreSQL volume: set `Postgres__DataVolume` before starting
 Aspire. The [development guide](../../../../docs/DEVELOPMENT.md) covers the orchestration.
 
-`dotnet test backend/services/identity-service/IdentityService.ProtocolTests` checks grants and
-configuration with simulated managers; it proves neither HTTP nor PostgreSQL. For those, run the
-real [OIDC smoke](../../../../scripts/smoke_oidc_contract.py) and the [MCP proof](mcp-oauth.md).
+Verify grants and configuration with the real [OIDC smoke](../../../../scripts/smoke_oidc_contract.py)
+and the [MCP proof](mcp-oauth.md).
 
 For MCP requests, the `resource` parameter selects the MCP audience. `OAuth:DefaultResource` selects
 the default audience for requests without that parameter, such as the SPA and worker, when it is
