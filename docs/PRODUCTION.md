@@ -89,35 +89,3 @@ nas [decisões de plataforma](decisions/platform.md).
 O Nginx termina o HTTPS e encaminha as requisições aos backends em loopback. Seus certificados TLS
 são distintos dos certificados de tokens do Identity. Os logs dos backends ficam no journal do
 systemd.
-
-## Publicador no computador de publicação
-
-A pasta operacional `oracle/` fica fora do repositório e mantém scripts e chaves separados:
-
-```text
-oracle/
-├── publicador/
-│   ├── publicar-frontend.ps1 + publicar-frontend.local.json
-│   ├── publicar-identity.ps1 + publicar-identity.local.json
-│   ├── publicar-api.ps1 + publicar-api.local.json
-│   └── publicar-mcp.ps1 + publicar-mcp.local.json
-├── chaves/
-├── acessar VM.ps1
-├── tunnel.ps1
-└── tunnel.local.json
-```
-
-Os JSON dos publicadores guardam caminhos e endereços públicos. `tunnel.local.json` centraliza os
-dados de conexão SSH e referencia a chave em `chaves/`. Os publicadores geram os pacotes no
-computador de publicação e os enviam por SSH; os segredos da aplicação permanecem na VM.
-
-## Consultas rápidas na VM
-
-```bash
-readlink -f /srv/agenza/backend/mcp/current
-sudo systemctl status agenza-identity.service agenza-api.service agenza-mcp.service --no-pager
-sudo journalctl -u agenza-mcp.service --since "10 min ago" -f
-```
-
-Para consultar outro backend, troque o nome da unidade. No acompanhamento de logs, `Ctrl+C` encerra
-apenas a consulta. Ao compartilhar logs, remova tokens, senhas e outros dados sensíveis.
