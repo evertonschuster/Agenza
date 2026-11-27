@@ -10,7 +10,7 @@ public class ServicePersistenceTests
         Tag.Create(Guid.NewGuid(), name, TagColor.Create("#0d9488").Value, null).Value;
 
     private static Service NewService(string name = "Haircut") =>
-        Service.Create(Guid.NewGuid(), name, null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
+        Service.Create(Guid.NewGuid(), name, null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1, ServiceModality.InPersonOnly).Value;
 
     private static async Task<IReadOnlyList<Guid>> SaveTags(string databaseName, Guid tenantId, params string[] names)
     {

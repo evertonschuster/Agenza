@@ -4,7 +4,7 @@ public class ServiceTests
 {
     private static Service CreateValidService(Guid? categoryId = null) =>
         Service.Create(
-            Guid.NewGuid(), "Haircut", "A classic cut", DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, categoryId, 1).Value;
+            Guid.NewGuid(), "Haircut", "A classic cut", DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, categoryId, 1, ServiceModality.InPersonOnly).Value;
 
     [Fact]
     public void Create_WithValidValues_TrimsAndSets()
@@ -13,7 +13,7 @@ public class ServiceTests
         var categoryId = Guid.NewGuid();
 
         var result = Service.Create(
-            id, "  Haircut  ", "  A classic cut  ", DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, categoryId, 7);
+            id, "  Haircut  ", "  A classic cut  ", DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, categoryId, 7, ServiceModality.InPersonOnly);
 
         result.IsSuccess.Should().BeTrue();
         var service = result.Value;
@@ -67,7 +67,7 @@ public class ServiceTests
     public void Create_WithBlankDescription_StoresNull(string? description)
     {
         var result = Service.Create(
-            Guid.NewGuid(), "Haircut", description, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1);
+            Guid.NewGuid(), "Haircut", description, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1, ServiceModality.InPersonOnly);
 
         result.IsSuccess.Should().BeTrue();
         result.Value.Description.Should().BeNull();
@@ -98,7 +98,7 @@ public class ServiceTests
     public void Create_WithEmptyName_ReturnsFailure()
     {
         var result = Service.Create(
-            Guid.NewGuid(), "   ", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1);
+            Guid.NewGuid(), "   ", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1, ServiceModality.InPersonOnly);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Service.Invalid");
@@ -109,7 +109,7 @@ public class ServiceTests
     {
         var result = Service.Create(
             Guid.NewGuid(), new string('x', Service.NameMaxLength + 1), null,
-            DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1);
+            DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1, ServiceModality.InPersonOnly);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Service.Invalid");
@@ -120,7 +120,7 @@ public class ServiceTests
     {
         var result = Service.Create(
             Guid.NewGuid(), "Haircut", new string('x', Service.DescriptionMaxLength + 1),
-            DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1);
+            DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1, ServiceModality.InPersonOnly);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Service.Invalid");
@@ -130,7 +130,7 @@ public class ServiceTests
     public void Create_WithNegativePrice_ReturnsFailure()
     {
         var result = Service.Create(
-            Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, -0.01m, 10m, null, 1);
+            Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, -0.01m, 10m, null, 1, ServiceModality.InPersonOnly);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Service.Invalid");
@@ -143,7 +143,7 @@ public class ServiceTests
     {
         var result = Service.Create(
             Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value,
-            45.50m, (decimal)maxDiscountPercentage, null, 1);
+            45.50m, (decimal)maxDiscountPercentage, null, 1, ServiceModality.InPersonOnly);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Code.Should().Be("Service.Invalid");

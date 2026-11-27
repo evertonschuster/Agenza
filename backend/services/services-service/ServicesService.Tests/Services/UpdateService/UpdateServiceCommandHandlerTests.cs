@@ -26,7 +26,7 @@ public class UpdateServiceCommandHandlerTests
     }
 
     private static Service ValidService() =>
-        Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1).Value;
+        Service.Create(Guid.NewGuid(), "Haircut", null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, null, 1, ServiceModality.InPersonOnly).Value;
 
     [Fact]
     public async Task Handle_WithValidCommand_UpdatesAndPersists()

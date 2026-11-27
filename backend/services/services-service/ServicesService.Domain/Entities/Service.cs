@@ -72,7 +72,7 @@ public class Service : TenantOwnedEntity
         decimal maxDiscountPercentage,
         Guid? categoryId,
         int code,
-        ServiceModality? modality = null)
+        ServiceModality modality)
     {
         var nameResult = ValidateName(name);
         if (nameResult.IsFailure)
@@ -105,7 +105,7 @@ public class Service : TenantOwnedEntity
             duration,
             priceResult.Value,
             maxDiscountResult.Value,
-            modality ?? ServiceModality.InPersonOnly,
+            modality,
             categoryId,
             code));
     }

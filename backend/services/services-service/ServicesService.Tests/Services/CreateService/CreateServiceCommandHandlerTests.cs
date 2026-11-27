@@ -32,7 +32,7 @@ public class CreateServiceCommandHandlerTests
     public async Task Handle_WithValidCommand_PersistsAndReturnsTheService()
     {
         var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", "A classic cut", 30, 15, 60, 45.50m, 10m, null, null),
+            new CreateServiceCommand("Haircut", "A classic cut", 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -49,18 +49,6 @@ public class CreateServiceCommandHandlerTests
         _serviceRepository.Received(1).Add(
             Arg.Is<Service>(service => service != null && service.Id == createdService.Id));
         await _unitOfWork.Received(1).SaveChangesAsync(Arg.Any<CancellationToken>());
-    }
-
-    [Fact]
-    public async Task Handle_SemModalidade_CriaOServicoSomentePresencial()
-    {
-        var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
-            CancellationToken.None);
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.Modality.AttendsInPerson.Should().BeTrue();
-        result.Value.Modality.AttendsOnline.Should().BeFalse();
     }
 
     [Fact]
@@ -87,7 +75,7 @@ public class CreateServiceCommandHandlerTests
             .Returns(new List<Tag> { tag });
 
         var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, [tag.Id]),
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, [tag.Id], ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsSuccess.Should().BeTrue();
@@ -103,7 +91,7 @@ public class CreateServiceCommandHandlerTests
         _serviceRepository.NameExistsAsync("Haircut", null, Arg.Any<CancellationToken>()).Returns(true);
 
         var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -120,7 +108,7 @@ public class CreateServiceCommandHandlerTests
         _categoryRepository.GetByIdAsync(categoryId, Arg.Any<CancellationToken>()).Returns((Category?)null);
 
         var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, categoryId, null),
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, categoryId, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -136,7 +124,7 @@ public class CreateServiceCommandHandlerTests
             .Returns(new List<Tag>());
 
         var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, [Guid.NewGuid()]),
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, [Guid.NewGuid()], ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -151,7 +139,7 @@ public class CreateServiceCommandHandlerTests
         _categoryRepository.GetByIdAsync(category.Id, Arg.Any<CancellationToken>()).Returns(category);
 
         await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, null),
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, category.Id, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         await _categoryRepository.Received(1).GetByIdAsync(category.Id, Arg.Any<CancellationToken>());
@@ -165,7 +153,7 @@ public class CreateServiceCommandHandlerTests
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_NameNormalized")));
 
         var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -181,7 +169,7 @@ public class CreateServiceCommandHandlerTests
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "IX_Services_TenantId_Code")));
 
         var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -196,7 +184,7 @@ public class CreateServiceCommandHandlerTests
         // ProvisionTenantCommandHandlerTests.Handle_WithBlankTenantName_ReturnsFailure - unit tests call
         // the handler directly and never run FluentValidation.
         var result = await _handler.Handle(
-            new CreateServiceCommand("", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new CreateServiceCommand("", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();
@@ -215,7 +203,7 @@ public class CreateServiceCommandHandlerTests
                 new PersistenceError(PersistenceErrorKind.UniqueConstraintViolation, "some_other_unique_constraint")));
 
         var result = await _handler.Handle(
-            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null),
+            new CreateServiceCommand("Haircut", null, 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly),
             CancellationToken.None);
 
         result.IsFailure.Should().BeTrue();

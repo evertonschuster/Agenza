@@ -19,7 +19,7 @@ public class DeactivateServiceCommandHandlerTests
     }
 
     private static Service NewService(Guid? categoryId = null) =>
-        Service.Create(Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, categoryId, 1).Value;
+        Service.Create(Guid.NewGuid(), "Limpeza", null, DurationRange.Create(15, 30, 60).Value, 120m, 10m, categoryId, 1, ServiceModality.InPersonOnly).Value;
 
     [Fact]
     public async Task Handle_ComServicoDisponivel_TornaIndisponivelEPersiste()

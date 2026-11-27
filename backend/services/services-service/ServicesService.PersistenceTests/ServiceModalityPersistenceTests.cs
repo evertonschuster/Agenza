@@ -6,7 +6,7 @@ public class ServiceModalityPersistenceTests
 {
     private static Service NewService(ServiceModality? modality = null) =>
         Service.Create(
-            Guid.NewGuid(), "Terapia", null, DurationRange.Create(15, 30, 60).Value, 150m, 0m, null, 1, modality).Value;
+            Guid.NewGuid(), "Terapia", null, DurationRange.Create(15, 30, 60).Value, 150m, 0m, null, 1, modality ?? ServiceModality.InPersonOnly).Value;
 
     private static async Task<Guid> Save(string databaseName, Guid tenantId, Service service)
     {
@@ -26,7 +26,7 @@ public class ServiceModalityPersistenceTests
     }
 
     [Fact]
-    public async Task Add_SemModalidade_GravaOServicoComoSomentePresencial()
+    public async Task Add_ComModalidadePresencial_GravaOServicoComoSomentePresencial()
     {
         var databaseName = Guid.NewGuid().ToString();
         var tenantId = Guid.NewGuid();

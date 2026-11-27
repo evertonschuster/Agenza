@@ -7,12 +7,22 @@ public class CreateServiceCommandValidatorTests
     private readonly CreateServiceCommandValidator _validator = new();
 
     private static CreateServiceCommand ValidCommand() =>
-        new("Haircut", "Note", 30, 15, 60, 45.50m, 10m, null, null);
+        new("Haircut", "Note", 30, 15, 60, 45.50m, 10m, null, null, ServiceModality.InPersonOnly);
 
     [Fact]
     public async Task Validate_WithValidCommand_Passes()
     {
         (await _validator.ValidateAsync(ValidCommand(), TestContext.Current.CancellationToken)).IsValid.Should().BeTrue();
+    }
+
+    [Fact]
+    public async Task Validate_SemModalidade_Falha()
+    {
+        var result = await _validator.ValidateAsync(ValidCommand() with { Modality = null! }, TestContext.Current.CancellationToken);
+
+        result.IsValid.Should().BeFalse();
+        result.Errors.Should().ContainSingle(error => error.PropertyName == nameof(CreateServiceCommand.Modality)
+            && error.ErrorMessage == "A modalidade do serviço é obrigatória.");
     }
 
     [Fact]

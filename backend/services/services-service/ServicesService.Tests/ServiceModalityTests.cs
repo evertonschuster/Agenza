@@ -5,7 +5,7 @@ public class ServiceModalityTests
     private static readonly DurationRange Duration = DurationRange.Create(15, 30, 60).Value;
 
     private static Service NewService(ServiceModality? modality = null) =>
-        Service.Create(Guid.NewGuid(), "Consulta", null, Duration, 150m, 0m, null, 1, modality).Value;
+        Service.Create(Guid.NewGuid(), "Consulta", null, Duration, 150m, 0m, null, 1, modality ?? ServiceModality.InPersonOnly).Value;
 
     [Theory]
     [InlineData(true, false)]
@@ -48,15 +48,6 @@ public class ServiceModalityTests
 
         modality.AttendsInPerson.Should().BeFalse();
         modality.AttendsOnline.Should().BeFalse();
-    }
-
-    [Fact]
-    public void ServiceCreate_SemModalidade_AtendeSomentePresencial()
-    {
-        var service = NewService();
-
-        service.Modality.AttendsInPerson.Should().BeTrue();
-        service.Modality.AttendsOnline.Should().BeFalse();
     }
 
     [Fact]

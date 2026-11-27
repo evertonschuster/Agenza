@@ -31,7 +31,7 @@ public class ListServicesQueryHandlerTests
 
     private static Service NewService(string name, Guid? categoryId, int code)
     {
-        return Service.Create(Guid.NewGuid(), name, null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, categoryId, code).Value;
+        return Service.Create(Guid.NewGuid(), name, null, DurationRange.Create(15, 30, 60).Value, 45.50m, 10m, categoryId, code, ServiceModality.InPersonOnly).Value;
     }
 
     [Fact]

@@ -41,7 +41,7 @@ public class TagDeletionUsageCoverageTests
 
     private static async Task AddServiceUsage(ServicesDataContext context, Tag tag)
     {
-        var service = Service.Create(Guid.NewGuid(), "Corte", null, DurationRange.Create(15, 30, 60).Value, 45m, 10m, null, 1).Value;
+        var service = Service.Create(Guid.NewGuid(), "Corte", null, DurationRange.Create(15, 30, 60).Value, 45m, 10m, null, 1, ServiceModality.InPersonOnly).Value;
         service.SetTags([tag]);
         new ServiceRepository(context).Add(service);
         await context.SaveChangesAsync(TestContext.Current.CancellationToken);
