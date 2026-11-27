@@ -25,3 +25,6 @@ from documentation.
 
 [`.mcp.json`](.mcp.json) declares optional MCP servers (GitHub, shadcn, Playwright, Chrome DevTools);
 none is required for development.
+
+Production server folders, releases, secrets and service locations are documented in
+[docs/PRODUCTION.md](docs/PRODUCTION.md).
