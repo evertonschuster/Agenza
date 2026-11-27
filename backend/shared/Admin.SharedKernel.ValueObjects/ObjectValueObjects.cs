@@ -4,35 +4,33 @@ namespace Admin.SharedKernel.ValueObjects;
 
 public static class ObjectValueObjects
 {
-    public static bool Is(Type type) => ValueObjectContract.Implements(type, typeof(IObjectValueObject<,>));
+    public static bool Is(Type type) => ValueObjectContract.Implements(type, typeof(IObjectValueObject<>));
 
-    public static Type InputOf(Type valueObject) =>
-        valueObject.GetInterfaces()
-            .Single(implementedInterface =>
-                implementedInterface.IsGenericType
-                && implementedInterface.GetGenericTypeDefinition() == typeof(IObjectValueObject<,>)
-                && implementedInterface.GenericTypeArguments[0] == valueObject)
-            .GenericTypeArguments[1];
-
-    // A part is required when its constructor parameter has no default value; a default makes it optional.
-    public static IReadOnlyList<ObjectPart> PartsOf(Type valueObject)
+    // The value object's single public static Create is its wire contract: its parameters are the parts.
+    public static MethodInfo CreateOf(Type valueObject)
     {
-        var input = InputOf(valueObject);
-        var parameters = input.GetConstructors()
-            .OrderByDescending(constructor => constructor.GetParameters().Length)
-            .First()
-            .GetParameters();
-
-        return input.GetProperties(BindingFlags.Public | BindingFlags.Instance)
-            .Select(property => new ObjectPart(
-                property.Name,
-                parameters.Any(parameter =>
-                    string.Equals(parameter.Name, property.Name, StringComparison.OrdinalIgnoreCase)
-                    && !parameter.HasDefaultValue)))
+        var candidates = valueObject
+            .GetMethods(BindingFlags.Public | BindingFlags.Static)
+            .Where(method => method.Name == "Create")
             .ToList();
+
+        if (candidates.Count != 1 || candidates[0].ReturnType != typeof(ParseResult<>).MakeGenericType(valueObject))
+        {
+            throw new InvalidOperationException(
+                $"{valueObject.Name} must declare exactly one public static Create returning ParseResult<{valueObject.Name}>.");
+        }
+
+        return candidates[0];
     }
 
-    public static IEnumerable<Type> InThisProject() => ValueObjectContract.InThisProject(typeof(IObjectValueObject<,>));
+    // A part is required when its Create parameter has no default value; a default makes it optional.
+    public static IReadOnlyList<ObjectPart> PartsOf(Type valueObject) =>
+        CreateOf(valueObject)
+            .GetParameters()
+            .Select(parameter => new ObjectPart(parameter.Name!, !parameter.HasDefaultValue))
+            .ToList();
+
+    public static IEnumerable<Type> InThisProject() => ValueObjectContract.InThisProject(typeof(IObjectValueObject<>));
 
     public static IEnumerable<Type> InAssembly(Assembly assembly) =>
         assembly.GetExportedTypes().Where(Is);

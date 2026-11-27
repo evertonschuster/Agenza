@@ -177,13 +177,13 @@ follows the backend-slice skill's
   up in logs.
 - A date whose rules depend on the day implements `IDateValueObject<T>` (`Create(date, today)`);
   anything else stays in the service.
-- A value made of several parts implements `IObjectValueObject<T, TInput>`: `TInput` is a record of
-  nullable parts, which is the wire shape, `Create(input)` returns `ParseResult<T>` and `ToInput`
-  writes it back. It may live in the service's Domain: the kernel reads the marker, so the JSON
-  converter and the OpenAPI schema apply with no attribute on the member. The schema keeps only the
-  parts of `TInput`, so the value object exposes each one under the same name; a part is required
-  unless its constructor parameter has a default. The service's contract tests scan its Domain for
-  these.
+- A value made of several parts implements the `IObjectValueObject<T>` marker. Its single public
+  static `Create` returning `ParseResult<T>` is the wire contract: each parameter is a part, declared
+  nullable so a missing part reaches `Create`, which answers with its own message. It may live in the
+  service's Domain: the kernel reads the marker, so the JSON converter and the OpenAPI schema apply
+  with no attribute on the member. The value object exposes each part as a property named like its
+  parameter; a part is required unless its parameter has a default. The service's contract tests scan
+  its Domain for these.
 
 ### Errors and lifecycle
 

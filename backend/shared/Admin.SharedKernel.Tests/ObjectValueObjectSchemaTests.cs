@@ -5,9 +5,7 @@ namespace Admin.SharedKernel.Tests;
 
 public class ObjectValueObjectSchemaTests
 {
-    public sealed record NoteInput(string? Text, string? Author = null);
-
-    public sealed record Note : IObjectValueObject<Note, NoteInput>
+    public sealed record Note : IObjectValueObject<Note>
     {
         public string Text { get; }
         public string? Author { get; }
@@ -19,12 +17,10 @@ public class ObjectValueObjectSchemaTests
             Author = author;
         }
 
-        public static ParseResult<Note> Create(NoteInput input) =>
-            string.IsNullOrWhiteSpace(input.Text)
+        public static ParseResult<Note> Create(string? text, string? author = null) =>
+            string.IsNullOrWhiteSpace(text)
                 ? ParseResult<Note>.Failure("Informe o texto.")
-                : ParseResult<Note>.Success(new Note(input.Text, input.Author));
-
-        public static NoteInput ToInput(Note value) => new(value.Text, value.Author);
+                : ParseResult<Note>.Success(new Note(text, author));
     }
 
     private static OpenApiSchema SchemaWith(params string[] names) =>
@@ -35,14 +31,14 @@ public class ObjectValueObjectSchemaTests
         };
 
     [Fact]
-    public void PartsOf_MarksAPartRequiredUnlessItsConstructorParameterHasADefault()
+    public void PartsOf_MarksAPartRequiredUnlessItsCreateParameterHasADefault()
     {
         ObjectValueObjects.PartsOf(typeof(Note)).Should().BeEquivalentTo(
-            [new ObjectPart("Text", Required: true), new ObjectPart("Author", Required: false)]);
+            [new ObjectPart("text", Required: true), new ObjectPart("author", Required: false)]);
     }
 
     [Fact]
-    public void Apply_KeepsOnlyThePartsOfTheInput_DroppingWhatTheValueObjectAddsOnItsOwn()
+    public void Apply_KeepsOnlyThePartsOfCreate_DroppingWhatTheValueObjectAddsOnItsOwn()
     {
         var schema = SchemaWith("text", "author", "hasAuthor");
 

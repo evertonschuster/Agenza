@@ -29,34 +29,16 @@ public class ServiceModalityTests
         result.Error.Should().Be(ServiceModality.Required);
     }
 
-    [Fact]
-    public void CreateFromInput_ComOsDoisCamposInformados_MontaOObjeto()
-    {
-        var result = ServiceModality.Create(new ServiceModalityInput(AttendsInPerson: false, AttendsOnline: true));
-
-        result.IsSuccess.Should().BeTrue();
-        result.Value.AttendsInPerson.Should().BeFalse();
-        result.Value.AttendsOnline.Should().BeTrue();
-    }
-
     [Theory]
     [InlineData(true, null)]
     [InlineData(null, false)]
     [InlineData(null, null)]
-    public void CreateFromInput_ComCampoAusente_PedeOsDois(bool? presencial, bool? online)
+    public void Create_ComCampoAusente_PedeOsDois(bool? presencial, bool? online)
     {
-        var result = ServiceModality.Create(new ServiceModalityInput(presencial, online));
+        var result = ServiceModality.Create(presencial, online);
 
         result.IsFailure.Should().BeTrue();
         result.Error.Should().Be(ServiceModality.BothRequired);
-    }
-
-    [Fact]
-    public void ToInput_DevolveOsDoisCamposDoObjeto()
-    {
-        var input = ServiceModality.ToInput(ServiceModality.Create(attendsInPerson: true, attendsOnline: true).Value);
-
-        input.Should().Be(new ServiceModalityInput(AttendsInPerson: true, AttendsOnline: true));
     }
 
     [Fact]

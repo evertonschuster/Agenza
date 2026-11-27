@@ -1,9 +1,6 @@
 namespace Admin.SharedKernel.ValueObjects;
 
-public interface IObjectValueObject<TSelf, TInput>
-    where TSelf : class, IObjectValueObject<TSelf, TInput>
+public interface IObjectValueObject<TSelf>
+    where TSelf : class, IObjectValueObject<TSelf>
 {
-    static abstract ParseResult<TSelf> Create(TInput input);
-
-    static abstract TInput ToInput(TSelf value);
 }
