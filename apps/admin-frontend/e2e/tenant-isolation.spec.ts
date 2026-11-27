@@ -131,6 +131,23 @@ test('isolates client reads and writes between authenticated tenants', async ({
   }
 
   const nonce = randomUUID();
+  const anonymous = await send(request, `${IDENTITY_URL}/internal/v1/tenants`, {
+    method: 'POST',
+    data: {
+      tenantName: `Anonimo ${nonce}`,
+      ownerEmail: `anonimo-${nonce}@demo.local`,
+      ownerPassword: 'NaoCriado1!',
+    },
+  });
+  expect(anonymous.headers()['content-type'], 'Anonymous provisioning content type').toContain(
+    'application/problem+json',
+  );
+  await expectProblem(
+    anonymous,
+    401,
+    'Authorization.Unauthorized',
+    'Anonymous tenant provisioning',
+  );
   const ownerEmail = `tenant-${nonce}@demo.local`;
   const ownerPassword = `Tenant-${randomUUID()}-1!`;
   const tokenResponse = await send(request, `${IDENTITY_URL}/connect/token`, {
